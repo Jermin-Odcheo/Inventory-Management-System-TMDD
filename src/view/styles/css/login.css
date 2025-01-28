@@ -1,0 +1,287 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(to right, #f9c736 25%, grey 50%, #001885 75%); 
+    padding: 10px;
+    padding-left: 6vh;
+    box-sizing: border-box; 
+}
+
+body::before{
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: url("../img/misc/Slu Bakakeng.jpeg");
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+        opacity: 0.2;
+        z-index: -1;
+}
+
+.container {
+    display: flex;
+    height: 87vh;
+    margin-top: 2%;
+    width: 97%;
+    background-color: transparent; 
+}
+
+.left-section {
+    width: 50%;
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.2), rgba(0, 0, 0, 0.2));
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.left-section img {
+    width: 27vh; 
+    height: auto; 
+}
+
+.right-section {
+    width: 50%;
+    background:white;
+    display: flex;
+    justify-content: center;
+    align-items: center;    
+}
+
+.welcome-message {
+    text-align: center;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 35px;
+    background: linear-gradient(45deg, #000a6c, #33386D);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    text-shadow: 2px 2px 4px rgba(0, 10, 108, 0.1);
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+    position: relative;
+    animation: fadeIn 0.8s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.welcome-message::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 3px;
+    border-radius: 2px;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 360px;
+    padding: 20px;
+}
+
+.form-group {
+    position: relative;
+    margin-bottom: 20px;
+    width: 100%;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 14px;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    background-color: #f8f9fa;
+}
+
+.password-group {
+    position: relative;
+}
+
+.toggle-password {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #666;
+    transition: color 0.2s ease;
+}
+
+.toggle-password:hover {
+    color: #33386D;
+}
+
+.form-options {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: -8px 0 16px 0;
+    width: 100%;
+}
+
+.show-password {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.form-check-input {
+    width: 13px !important;
+    height: 13px;
+    margin: 0;
+    cursor: pointer;
+    accent-color: #33386D;
+}
+
+.show-password label {
+    font-size: 11px;
+    color: #666;
+    cursor: pointer;
+    user-select: none;
+}
+
+.show-password:hover label {
+    color: #33386D;
+}
+
+.forgot-link {
+    font-size: 12px;
+    color: #666;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.forgot-link:hover {
+    color: #33386D;
+}
+
+.forgot-link::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 1px;
+    bottom: -2px;
+    left: 0;
+    background-color: #33386D;
+    transform: scaleX(0);
+    transform-origin: bottom right;
+    transition: transform 0.3s ease;
+}
+
+.forgot-link:hover::after {
+    transform: scaleX(1);
+    transform-origin: bottom left;
+}
+
+button {
+    width: 100%;
+    padding: 12px;
+    background-color: #33386D;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: 20px;
+}
+
+button:hover {
+    background-color: #272a54;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(51, 56, 109, 0.2);
+}
+
+.signup-container {
+    text-align: center;
+    margin-top: 10px;
+}
+
+.signup-container span {
+    font-size: 12px;
+    color: #666;
+}
+
+.signup-container a {
+    font-size: 12px;
+    color: #33386D;
+    text-decoration: none;
+    margin-left: 5px;
+    font-weight: 500;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.signup-container a:hover {
+    color: #272a54;
+}
+
+.signup-container a::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 1px;
+    bottom: -2px;
+    left: 0;
+    background-color: #272a54;
+    transform: scaleX(0);
+    transform-origin: bottom right;
+    transition: transform 0.3s ease;
+}
+
+.signup-container a:hover::after {
+    transform: scaleX(1);
+    transform-origin: bottom left;
+}
+
+/* Form input focus states */
+.form-group input:focus {
+    outline: none;
+    border-color: #33386D;
+    box-shadow: 0 0 0 3px rgba(51, 56, 109, 0.1);
+    background-color: #fff;
+}
+
+.form-group input:hover {
+    border-color: #33386D;
+    background-color: #fff;
+}
+
+@media (max-width: 768px) {
+    .container {
+        flex-direction: column;
+    }
+    
+    .left-section, .right-section {
+        width: 100%;
+        padding: 20px;
+    }
+    
+    .login-form {
+        padding: 20px 0;
+    }
+}
