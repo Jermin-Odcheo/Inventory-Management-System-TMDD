@@ -1,0 +1,20 @@
+File Structure
+
+A. Config - all db exports
+B. Public - only assets and index pls
+C. Src - actual coding area natin 
+    c.1 control : anything input management, i.e. yung functionalities and features, processes all the business logic and incoming requests, manipulates data using the Model component, and interact with the View to render the final output.
+        - Receiving user input and interpreting it.
+        - Updating the Model based on user actions.
+        - Selecting and displaying the appropriate View.
+        - Example: In a bookstore application, the Controller would handle actions such as searching for a book, adding a book to the cart, or checking out.
+
+    c.2 model : anything data management, i.e. kung connectors from db to control, The model interacts with the database and gives the required data back to the controller, db queries and connection etc.
+        - Managing data: CRUD (Create, Read, Update, Delete) operations.
+        - Enforcing business rules.
+        - Notifying the View and Controller of state changes.
+        - Example: In a bookstore application, the Model would handle data related to books, such as the book title, author, price, and stock level.
+
+    c.3 view
+        - PHP : all modules na user 
+        - Styles : all css
