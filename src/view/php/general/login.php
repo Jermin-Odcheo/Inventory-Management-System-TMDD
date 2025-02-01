@@ -1,76 +1,112 @@
 <?php
+// Enable error reporting for debugging (Disable in production)
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+// Start the session
 session_start();
-include('../config/db.php');
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $email = $_POST['email'];
-    $password = $_POST['password'];
+// Include the database configuration file
+require_once('../../../../config/ims-tmdd.php'); // Adjust the path as necessary
 
-    $login_query = "SELECT user_id, email, password, account_type, online_status FROM users WHERE email = ?";
-    if ($stmt = $db->prepare($login_query)) {
-        $stmt->bind_param("s", $email);
-        $stmt->execute();
-        $stmt->store_result();
-        $stmt->bind_result($user_id, $db_email, $db_password, $account_type, $online_status);
+// Verify that the PDO connection is established
+if (!isset($pdo)) {
+    die("Database connection not established.");
+}
 
-        if ($stmt->num_rows > 0) {
-            $stmt->fetch();
-            
-            if (password_verify($password, $db_password)) {
-                $_SESSION['user_id'] = $user_id;
-                $_SESSION['email'] = $db_email;
-                $_SESSION['account_type'] = $account_type;
-                $_SESSION['online_status'] = $online_status;
+// Initialize variables
+$error_message = '';
+$email = '';
 
-                if ($account_type == 'Reviewer') {
-                    header("Location: php/reviewer/rev_dashboard.php");
-                } elseif ($account_type == 'Uploader') {
-                    header("Location: php/uploader/upld_dashboard.php");
-                } elseif ($account_type == 'Admin') {
-                    header("Location: php/admin/admin_dashboard.php");
-                } 
-                exit;
-            } else {
-                $error_message = "Incorrect email or password.";
-            }
-        } else {
-            $error_message = "Incorrect email or password.";
-        }
-        $stmt->close();
+// Check if the form is submitted
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Retrieve and sanitize POST data
+    $email = trim($_POST['email']);
+    $password = trim($_POST['password']);
+
+    // Basic validation
+    if (empty($email) || empty($password)) {
+        $error_message = "Please enter both email and password.";
     } else {
-        $error_message = "Database query failed.";
+        // Validate email format
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $error_message = "Please enter a valid email address.";
+        } else {
+            try {
+                // Prepare a SQL statement to prevent SQL injection
+                $stmt = $pdo->prepare("SELECT User_ID, Email, Password, First_Name, Last_Name FROM users WHERE Email = :email AND Status = 'Active'");
+                $stmt->execute(['email' => $email]);
+                $user = $stmt->fetch();
+
+                if ($user) {
+                    // **Security Note:** Currently, passwords are stored in plain text.
+                    // It's highly recommended to hash passwords using password_hash() and verify using password_verify().
+                    if ($password === $user['Password']) { // Plain text comparison
+                        // Regenerate session ID to prevent session fixation
+                        session_regenerate_id(true);
+
+                        // Set session variables
+                        $_SESSION['user'] = [
+                            'User_ID'    => $user['User_ID'],
+                            'Email'      => $user['Email'],
+                            'First_Name' => $user['First_Name'],
+                            'Last_Name'  => $user['Last_Name']
+                        ];
+
+                        // **New Line Added:** Set user_id session variable
+                        $_SESSION['user_id'] = $user['User_ID'];
+
+                        // Redirect to dashboard
+                        header("Location: dashboard.php");
+                        exit();
+                    } else {
+                        $error_message = "Invalid email or password.";
+                    }
+                } else {
+                    $error_message = "Invalid email or password.";
+                }
+            } catch (PDOException $e) {
+                // Handle SQL errors gracefully
+                // In production, log the error instead of displaying it
+                $error_message = "Something went wrong. Please try again later.";
+                // Example of logging:
+                // error_log("Database Error: " . $e->getMessage());
+            }
+        }
     }
-    $db->close();
 }
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TMDD| Inventory System </title>
+    <title>TMDD | Inventory System</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="./assets/styles/index.css">
-    <link rel="icon" type="png" href="./assets/img/SLU Logo.png">
+    <link rel="stylesheet" href="../../styles/css/login.css">
+    <link rel="icon" type="image/png" href="../../../../public/assets/img/SLU Logo.png">
 </head>
+
 <body>
     <div class="container">
         <div class="left-section">
-            <img src="./assets/img/SLU Logo.png" alt="Logo">
+            <img src="../../../../public/assets/img/SLU Logo.png" alt="Logo">
         </div>
         <div class="right-section">
-            <form class="login-form" action="index.php" method="POST">
+            <form class="login-form" action="login.php" method="POST">
                 <h2 class="welcome-message">Welcome Back!</h2>
 
                 <?php if (!empty($error_message)): ?>
-                    <div class="alert alert-danger"><?php echo $error_message; ?></div>
+                    <div class="alert alert-danger"><?php echo htmlspecialchars($error_message); ?></div>
                 <?php endif; ?>
 
                 <div class="form-group">
-                    <input type="email" name="email" placeholder="Email" value="<?php echo htmlspecialchars($email ?? '', ENT_QUOTES); ?>" required>
+                    <input type="email" name="email" placeholder="Email" value="<?php echo htmlspecialchars($email, ENT_QUOTES); ?>" required>
                 </div>
 
                 <div class="form-group password-group">
@@ -105,4 +141,5 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         });
     </script>
 </body>
+
 </html>
