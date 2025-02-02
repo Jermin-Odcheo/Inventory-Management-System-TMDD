@@ -15,12 +15,13 @@ require '../../../../config/ims-tmdd.php';
 <head>
     <meta charset="UTF-8">
     <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="../../styles/css/sidebar.css">
     <link rel="stylesheet" href="../../styles/css/dashboard.css">
     <!-- Font Awesome for Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" integrity="sha512-Fo3rlrZj/k7ujTTX3DJ2m59tJ3qDzB6c0nZZjPjIejM7pwl0KiPxH9M5jJ8yQ0kX1HVhbiq3uOqIqJ6KJ5s2Og==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-</head>
+  </head>
 
 <body>
+    <!-- Include Sidebar -->
     <?php include 'sidebar.php'; ?>
 
     <div class="main-content">
@@ -30,5 +31,5 @@ require '../../../../config/ims-tmdd.php';
         </div>
     </div>
 </body>
-
+    
 </html>

@@ -10,70 +10,29 @@ session_start();
 // Include the database configuration file
 require_once('../../../../config/ims-tmdd.php'); // Adjust the path as necessary
 
-// Verify that the PDO connection is established
-if (!isset($pdo)) {
-    die("Database connection not established.");
-}
-
-// Initialize variables
 $error_message = '';
 $email = '';
 
-// Check if the form is submitted
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Retrieve and sanitize POST data
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Retrieve form data
     $email = trim($_POST['email']);
-    $password = trim($_POST['password']);
+    $password = $_POST['password'];
 
-    // Basic validation
-    if (empty($email) || empty($password)) {
-        $error_message = "Please enter both email and password.";
+    // Prepare and execute the SQL query
+    $stmt = $pdo->prepare("SELECT * FROM users WHERE Email = ?");
+    $stmt->execute([$email]);
+    $user = $stmt->fetch();
+
+    // Verify the password using password_verify()
+    if ($user && password_verify($password, $user['Password'])) {
+        // If the password matches, set session variables and redirect
+        $_SESSION['user_id'] = $user['User_ID'];
+        $_SESSION['email'] = $user['Email'];
+        header("Location: dashboard.php");
+        exit();
     } else {
-        // Validate email format
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $error_message = "Please enter a valid email address.";
-        } else {
-            try {
-                // Prepare a SQL statement to prevent SQL injection
-                $stmt = $pdo->prepare("SELECT User_ID, Email, Password, First_Name, Last_Name FROM users WHERE Email = :email AND Status = 'Active'");
-                $stmt->execute(['email' => $email]);
-                $user = $stmt->fetch();
-
-                if ($user) {
-                    // **Security Note:** Currently, passwords are stored in plain text.
-                    // It's highly recommended to hash passwords using password_hash() and verify using password_verify().
-                    if ($password === $user['Password']) { // Plain text comparison
-                        // Regenerate session ID to prevent session fixation
-                        session_regenerate_id(true);
-
-                        // Set session variables
-                        $_SESSION['user'] = [
-                            'User_ID'    => $user['User_ID'],
-                            'Email'      => $user['Email'],
-                            'First_Name' => $user['First_Name'],
-                            'Last_Name'  => $user['Last_Name']
-                        ];
-
-                        // **New Line Added:** Set user_id session variable
-                        $_SESSION['user_id'] = $user['User_ID'];
-
-                        // Redirect to dashboard
-                        header("Location: dashboard.php");
-                        exit();
-                    } else {
-                        $error_message = "Invalid email or password.";
-                    }
-                } else {
-                    $error_message = "Invalid email or password.";
-                }
-            } catch (PDOException $e) {
-                // Handle SQL errors gracefully
-                // In production, log the error instead of displaying it
-                $error_message = "Something went wrong. Please try again later.";
-                // Example of logging:
-                // error_log("Database Error: " . $e->getMessage());
-            }
-        }
+        // If authentication fails, set an error message
+        $error_message = "Invalid email or password.";
     }
 }
 ?>

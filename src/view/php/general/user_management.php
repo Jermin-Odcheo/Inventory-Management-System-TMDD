@@ -1,168 +1,141 @@
 <?php
 session_start();
+require_once('../../../../config/ims-tmdd.php');
 
-// Redirect to login if the user is not authenticated
+// Check if the logged-in user is allowed to manage users.
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
 
-require '../../../../config/ims-tmdd.php';
-
-// Fetch all users using a prepared statement for security
-try {
-    $stmt = $pdo->prepare("SELECT * FROM users");
-    $stmt->execute();
-    $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
-    // Handle query error
-    die("Error fetching users: " . $e->getMessage());
-}
+// Fetch all users from the database.
+$stmt = $pdo->prepare("SELECT * FROM users");
+$stmt->execute();
+$users = $stmt->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
-    <title>User Management Dashboard</title>
-    <link rel="stylesheet" href="../../styles/css/dashboard.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <title>Manage Users</title>
+    <!-- Sidebar and custom user management CSS -->
+    <link rel="stylesheet" href="../../styles/css/sidebar.css">
+    <link rel="stylesheet" href="../../styles/css/user_management.css">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        /* Unified blue & black theme */
+        body {
+            background-color: #181818;
+            color: #ffffff; /* Lighter text */
+            font-family: 'Arial', sans-serif;
+        }
+        h1 {
+            color: #66b2ff; /* Lighter blue for headings */
+            text-align: center;
+            margin-top: 20px;
+            font-size: 28px;
+        }
+        /* Main content area styled with a dark background and blue accents */
+        .main-content {
+            margin-left: 260px; /* Adjust according to your sidebar width */
+            padding: 20px;
+            background-color: #242424;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+        }
+        /* Table styling */
+        .table-responsive table {
+            background-color: #242424;
+        }
+        .table thead th {
+            background-color: #0d6efd;
+            color: #fff;
+        }
+        .table-striped tbody tr:nth-of-type(odd) {
+            background-color: #2a2a2a;
+        }
+        .table-hover tbody tr:hover {
+            background-color: #343a40;
+        }
+        /* Button overrides */
+        .btn-primary {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+        }
+        .btn-warning {
+            background-color: #ffc107;
+            border-color: #ffc107;
+            color: #000;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+            border-color: #dc3545;
+        }
+        .table td,
+        .table th {
+            color: #ffffff !important;
+        }
+
+    </style>
 </head>
-
 <body>
-    <?php include 'sidebar.php'; ?>
-
-    <div class="main-content">
-        <div class="dashboard-container">
-            <h2>User Management</h2>
-            <div class="table-responsive">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Email</th>
-                            <th>First Name</th>
-                            <th>Last Name</th>
-                            <th>Department</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if ($users): ?>
-                            <?php foreach ($users as $user): ?>
-                                <tr data-user-id="<?= htmlspecialchars($user['User_ID']) ?>">
-                                    <td><?= htmlspecialchars($user['User_ID']) ?></td>
-                                    <td>
-                                        <input type="email" class="editable" name="email" value="<?= htmlspecialchars($user['Email']) ?>" disabled>
-                                    </td>
-                                    <td>
-                                        <input type="text" class="editable" name="first_name" value="<?= htmlspecialchars($user['First_Name']) ?>" disabled>
-                                    </td>
-                                    <td>
-                                        <input type="text" class="editable" name="last_name" value="<?= htmlspecialchars($user['Last_Name']) ?>" disabled>
-                                    </td>
-                                    <td>
-                                        <input type="text" class="editable" name="department" value="<?= htmlspecialchars($user['Department']) ?>" disabled>
-                                    </td>
-                                    <td>
-                                        <select class="editable" name="status" disabled>
-                                            <option value="Online" <?= $user['Status'] === 'Online' ? 'selected' : '' ?>>Online</option>
-                                            <option value="Offline" <?= $user['Status'] === 'Offline' ? 'selected' : '' ?>>Offline</option>
-                                        </select>
-                                    </td>
-                                    <td>
-                                        <button class="edit-btn" onclick="toggleEdit(this)"><i class="fas fa-edit"></i> Edit</button>
-                                        <button class="save-btn" onclick="saveUser(this)" style="display: none;"><i class="fas fa-save"></i> Save</button>
-                                        <button class="delete-btn" onclick="deleteUser(<?= htmlspecialchars($user['User_ID']) ?>)"><i class="fas fa-trash-alt"></i> Delete</button>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <tr>
-                                <td colspan="7">No users found.</td>
-                            </tr>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
-            <a href="add_user.php" class="btn add-user"><i class="fas fa-user-plus"></i> Add New User</a>
-        </div>
+    <!-- Sidebar (styled via sidebar.css) -->
+    <div class="sidebar">
+        <?php include 'sidebar.php'; ?>
     </div>
 
-    <script>
-        function toggleEdit(button) {
-            const row = button.closest('tr');
-            const editables = row.querySelectorAll('.editable');
-            const saveButton = row.querySelector('.save-btn');
-            const editButton = row.querySelector('.edit-btn');
+    <!-- Main Content Area -->
+    <div class="main-content">
+        <h1>User Management</h1>
+        <div class="d-flex justify-content-end mb-3">
+            <a href="add_user.php" class="btn btn-primary">Add New User</a>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>User ID</th>
+                        <th>Email</th>
+                        <th>Name</th>
+                        <th>Department</th>
+                        <th>Status</th>
+                        <th>Roles</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($users as $user): ?>
+                        <?php
+                        // Fetch roles for each user.
+                        $stmtRole = $pdo->prepare("SELECT r.Role_Name 
+                                                   FROM roles r 
+                                                   JOIN user_roles ur ON r.Role_ID = ur.Role_ID 
+                                                   WHERE ur.User_ID = ?");
+                        $stmtRole->execute([$user['User_ID']]);
+                        $roles = $stmtRole->fetchAll(PDO::FETCH_COLUMN);
+                        ?>
+                        <tr>
+                            <td><?php echo $user['User_ID']; ?></td>
+                            <td><?php echo htmlspecialchars($user['Email']); ?></td>
+                            <td><?php echo htmlspecialchars($user['First_Name'] . ' ' . $user['Last_Name']); ?></td>
+                            <td><?php echo htmlspecialchars($user['Department']); ?></td>
+                            <td><?php echo htmlspecialchars($user['Status']); ?></td>
+                            <td><?php echo implode(', ', $roles); ?></td>
+                            <td>
+                                <a href="edit_user.php?id=<?php echo $user['User_ID']; ?>" class="btn btn-sm btn-warning">Edit</a>
+                                <a href="delete_user.php?id=<?php echo $user['User_ID']; ?>" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?');">Delete</a>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div><!-- /.table-responsive -->
+    </div><!-- /.main-content -->
 
-            editables.forEach(input => {
-                input.disabled = !input.disabled;
-            });
-
-            if (saveButton.style.display === 'none') {
-                saveButton.style.display = 'inline-block';
-                editButton.style.display = 'none';
-            } else {
-                saveButton.style.display = 'none';
-                editButton.style.display = 'inline-block';
-            }
-        }
-
-        function saveUser(button) {
-            const row = button.closest('tr');
-            const userId = row.getAttribute('data-user-id');
-            const inputs = row.querySelectorAll('.editable');
-            const data = {};
-
-            inputs.forEach(input => {
-                data[input.name] = input.value;
-            });
-
-            fetch(`update_user.php?id=${userId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(data),
-                })
-                .then(response => response.json())
-                .then(result => {
-                    if (result.success) {
-                        alert('User updated successfully!');
-                        toggleEdit(button); // Switch back to edit mode
-                    } else {
-                        alert('Failed to update user.');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                });
-        }
-
-        function deleteUser(userId) {
-            if (confirm('Are you sure you want to delete this user?')) {
-                fetch(`delete_user.php?id=${userId}`, {
-                        method: 'DELETE',
-                    })
-                    .then(response => response.json())
-                    .then(result => {
-                        if (result.success) {
-                            alert('User deleted successfully!');
-                            window.location.reload();
-                        } else {
-                            alert('Failed to delete user.');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                    });
-            }
-        }
-    </script>
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-
 </html>

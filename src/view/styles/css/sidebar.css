@@ -1,0 +1,56 @@
+ /* Sidebar styling */
+ .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background-color: #343a40;
+    color: #fff;
+    padding: 20px;
+    overflow-y: auto;
+}
+/* Ensure links in the sidebar have a modern look */
+.sidebar a {
+    color: #adb5bd;
+    text-decoration: none;
+}
+.sidebar a:hover {
+    color: #fff;
+    text-decoration: none;
+}
+
+.sidebar h2 {
+text-align: center;
+margin-bottom: 30px;
+font-size: 24px;
+font-weight: 700;
+}
+
+.sidebar nav ul {
+list-style: none;
+}
+
+.sidebar nav ul li {
+margin: 20px 0;
+}
+
+.sidebar nav ul li a {
+color: #ecf0f1;
+text-decoration: none;
+padding: 12px 20px;
+display: flex;
+align-items: center;
+transition: background 0.3s, color 0.3s;
+font-size: 16px;
+}
+
+.sidebar nav ul li a:hover,
+.sidebar nav ul li a.active {
+color: #ffffff;
+}
+
+.sidebar nav ul li a i {
+margin-right: 10px;
+width: 20px;
+text-align: center;
+}

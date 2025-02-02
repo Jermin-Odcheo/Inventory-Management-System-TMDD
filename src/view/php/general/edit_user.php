@@ -110,6 +110,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         <button type="submit"><?php echo $isEditing ? 'Update' : 'Add'; ?> User</button>
     </form>
-    <a href="manage_users.php">Back to User Management</a>
+    <a href="user_management.php">Back to User Management</a>
 </body>
 </html>
