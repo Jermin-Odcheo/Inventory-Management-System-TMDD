@@ -115,6 +115,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         .container {
             padding-bottom: 60px;
         }
+        .custom-link {
+            color: #ff0000; /* Change this to your desired color */
+        }
     </style>
 </head>
 
@@ -212,7 +215,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             </div>
 
                             <div class="text-center mt-3">
-                                <p>Changed your mind? <a href="../../../../../public/index.php" class="link-secondary">Go Back</a></p>
+                                <p>Changed your mind? <a href="../../../../../public/index.php" class="link-secondary text-dark">Go Back</a></p>
                             </div>
                         </form>
                     </div>
