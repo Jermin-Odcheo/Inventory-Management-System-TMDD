@@ -132,7 +132,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             <div class="row g-4">
                                 <div class="col-md-6">
                                     <h1 class="text-start mb-4">Create Account</h1>
-                                    <p class="text-start text-muted mb-4">Create a new account</p>
                                 </div>
                                 <div class="col-md-6 text-end">
                                     <img src="../../../../../public/assets/img/SLU Logo.png" style="height: 50px;">

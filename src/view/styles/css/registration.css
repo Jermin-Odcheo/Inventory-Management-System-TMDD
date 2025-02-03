@@ -120,7 +120,7 @@ body::before {
 
 /* Hover effect for the icon */
 .password-toggle:hover i {
-    color: #007bff; /* Change color on hover */
+    color: #007bff; 
 }
 
 @media (max-width: 768px) {
