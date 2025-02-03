@@ -52,8 +52,6 @@ foreach ($roleData as $row) {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- Bootstrap CSS (CDN) -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Custom Admin CSS (sidebar) -->
-    <link rel="stylesheet" href="../../../styles/css/sidebar.css">
     <style>
         /* Unified blue & black theme */
         body {
