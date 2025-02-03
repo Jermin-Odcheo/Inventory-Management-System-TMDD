@@ -1,6 +1,6 @@
 body {
     font-family: 'Poppins', sans-serif;
-    background: linear-gradient(120deg, #F9C736, #AAAAAA, #33368D);
+    background: linear-gradient(to right, #f9c736 25%, grey 50%, #001885 75%);
     background-attachment: fixed;
     background-size: cover;
     min-height: 100vh;
@@ -22,6 +22,7 @@ body::before {
     z-index: -1;
 }
 
+
 .custom-card-size {
     border-radius: 20px;
     padding: 30px;
@@ -32,21 +33,23 @@ body::before {
 }
 
 .btn-primary {
-    background-color: #007bff;
+    width: 100%;
+    padding: 12px;
+    background-color: #33386D; /* Same color as the terms and conditions */
     color: white;
     border: none;
     border-radius: 8px;
     font-size: 15px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.2s ease; /* Transition for hover effects */
     margin-bottom: 20px;
 }
 
 .btn-primary:hover {
-    background-color: #007bff;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(51, 56, 109, 0.2);
+    background-color: #272a54; /* Darker shade on hover */
+    transform: translateY(-1px); /* Slight upward movement */
+    box-shadow: 0 4px 12px rgba(51, 56, 109, 0.2); /* Shadow effect */
 }
 
 .btn-secondary {
@@ -57,13 +60,13 @@ body::before {
     font-size: 15px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease; /* Smooth transition for hover effects */
 }
 
 .btn-secondary:hover {
     background-color: #545b62;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(108, 117, 125, 0.2);
+    transform: scale(1.05); /* Slightly enlarge on hover */
+    box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3); /* Enhanced shadow on hover */
 }
 
 .form-floating input {
@@ -86,6 +89,7 @@ body::before {
 .link-secondary:hover {
     text-decoration: underline;
 }
+
 /* Aligns the toggle button within the form field */
 .password-toggle {
     position: absolute;
@@ -116,5 +120,15 @@ body::before {
 
     .btn-primary {
         font-size: 16px;
+    }
+}
+
+/* Adding a fade-in animation for the container */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
     }
 }
