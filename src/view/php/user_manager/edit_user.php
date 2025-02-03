@@ -67,7 +67,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <head>
     <meta charset="UTF-8">
     <title><?php echo $isEditing ? 'Edit' : 'Add'; ?> User</title>
-    <link rel="stylesheet" href="../../styles/css/admin.css">
+    <link rel="stylesheet" href="../../../styles/css/admin.css">
 </head>
 <body>
     <h1><?php echo $isEditing ? 'Edit' : 'Add'; ?> User</h1>
@@ -110,6 +110,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         <button type="submit"><?php echo $isEditing ? 'Update' : 'Add'; ?> User</button>
     </form>
-    <a href="manage_users.php">Back to User Management</a>
+    <a href="user_management.php">Back to User Management</a>
 </body>
 </html>

@@ -100,7 +100,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <head>
     <meta charset="UTF-8">
     <title>Edit Role &amp; Privileges: <?php echo htmlspecialchars($role['Role_Name']); ?></title>
-    <link rel="stylesheet" href="../../styles/css/admin.css">
+    <link rel="stylesheet" href="../../../styles/css/admin.css">
     <style>
         body {
             font-family: Arial, sans-serif;

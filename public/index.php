@@ -8,7 +8,7 @@ error_reporting(E_ALL);
 session_start();
 
 // Include the database configuration file
-require_once('../../../../config/ims-tmdd.php'); // Adjust the path as necessary
+require_once('../config/ims-tmdd.php'); // Adjust the path as necessary
 
 $error_message = '';
 $email = '';
@@ -47,14 +47,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="../../styles/css/login.css">
-    <link rel="icon" type="image/png" href="../../../../public/assets/img/SLU Logo.png">
+    <link rel="stylesheet" href="./index.css">
+    <link rel="icon" type="image/png" href="./assets/img/SLU Logo.png">
 </head>
 
 <body>
     <div class="container">
         <div class="left-section">
-            <img src="../../../../public/assets/img/SLU Logo.png" alt="Logo">
+            <img src="./assets/img/SLU Logo.png" alt="Logo">
         </div>
         <div class="right-section">
             <form class="login-form" action="login.php" method="POST">
@@ -77,14 +77,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         <input type="checkbox" id="showPassword" class="form-check-input">
                         <label for="showPassword">Show Password</label>
                     </div>
-                    <a href="./php/general/confirmations/forget_password.php" class="forgot-link">Forgot password?</a>
+                    <a href="../src/view/php/general/login_regis/forget_password.php" class="forgot-link">Forgot password?</a>
                 </div>
 
                 <button type="submit">Log In</button>
 
                 <div class="signup-container">
                     <span>Don't have an account?</span>
-                    <a href="./php/general/registration.php">Create an Account</a>
+                    <a href="../src/view/php/general/login_regis/registration.php">Create an Account</a>
                 </div>
             </form>
         </div>

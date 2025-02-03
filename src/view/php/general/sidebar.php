@@ -8,7 +8,6 @@
             <li><a href="manage_roles.php"><i class="fas fa-cogs"></i> Manage Roles</a></li>
             <li><a href="settings.php"><i class="fas fa-cogs"></i> Settings</a></li>
             <li><a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
-            <!-- Add more navigation items as needed -->
         </ul>
     </nav>
 </div>
