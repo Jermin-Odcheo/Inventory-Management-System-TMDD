@@ -1,41 +1,53 @@
 <?php
-// Enable error reporting for debugging (Disable in production)
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
+    session_start();
+    require_once('../config/ims-tmdd.php'); // Database connection
 
-// Start the session
-session_start();
+    $email = '';  // Initialize the variable
 
-// Include the database configuration file
-require_once('../config/ims-tmdd.php'); // Adjust the path as necessary
+    if ($_SERVER["REQUEST_METHOD"] == "POST") {
+        $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
+        $password = htmlspecialchars($_POST['password'], ENT_QUOTES, 'UTF-8');
 
-$error_message = '';
-$email = '';
+        try {
+            // Fetch user and role from the database
+            $stmt = $pdo->prepare("
+SELECT u.User_ID, u.Email, u.Password, r.Role_Name 
+FROM users u
+JOIN user_roles ur ON u.User_ID = ur.User_ID
+JOIN roles r ON ur.Role_ID = r.Role_ID
+WHERE u.Email = ?
+");
+            $stmt->execute([$email]);
+            $user = $stmt->fetch();
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Retrieve form data
-    $email = trim($_POST['email']);
-    $password = $_POST['password'];
+            if ($user) {
+                // Verify password
+                if (password_verify($password, $user['Password'])) {
+                    // Store user details and role in session
+                    $_SESSION['user_id'] = $user['User_ID'];
+                    $_SESSION['email']   = $user['Email'];
+                    $_SESSION['role']    = $user['Role_Name']; // Correctly setting role
 
-    // Prepare and execute the SQL query
-    $stmt = $pdo->prepare("SELECT * FROM users WHERE Email = ?");
-    $stmt->execute([$email]);
-    $user = $stmt->fetch();
+                    // Debugging: Print Role (Remove this in production)
+                    error_log("User Logged in: " . $_SESSION['email'] . " | Role: " . $_SESSION['role']);
 
-    // Verify the password using password_verify()
-    if ($user && password_verify($password, $user['Password'])) {
-        // If the password matches, set session variables and redirect
-        $_SESSION['user_id'] = $user['User_ID'];
-        $_SESSION['email'] = $user['Email'];
-        header("Location: ../src/view/php/admin/admin_dashboard.php");
-        exit();
-    } else {
-        // If authentication fails, set an error message
-        $error_message = "Invalid email or password.";
+                    // Redirect to dashboard
+                    header("Location: ../src/view/php/admin/dashboard.php");
+                    exit();
+                } else {
+                    $error = "Invalid credentials. Please try again.";
+                }
+            } else {
+                $error = "User not found.";
+            }
+        } catch (PDOException $e) {
+            $error = "Database error: " . $e->getMessage();
+        }
     }
-}
+
 ?>
+
+
 
 <!DOCTYPE html>
 <html lang="en">
@@ -60,8 +72,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <form class="login-form" action="index.php" method="POST">
                 <h2 class="welcome-message">Welcome Back!</h2>
 
-                <?php if (!empty($error_message)): ?>
-                    <div class="alert alert-danger"><?php echo htmlspecialchars($error_message); ?></div>
+                <?php if (!empty($error)): ?>
+                    <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
                 <?php endif; ?>
 
                 <div class="form-group">
@@ -80,7 +92,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     <a href="../src/view/php/general/login_regis/forget_password.php" class="forgot-link">Forgot password?</a>
                 </div>
 
-                <button type="submit">Log In</button>
+                <button type="submit" name="submit">Log In</button>
 
                 <div class="signup-container">
                     <span>Don't have an account?</span>

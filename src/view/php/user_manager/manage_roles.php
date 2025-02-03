@@ -115,7 +115,7 @@ foreach ($roleData as $row) {
 </head>
 <body>
     <!-- Include Sidebar -->
-    <?php include 'sidebar.php'; ?>
+    <?php include '../general/sidebar.php'; ?>
 
     <!-- Main Content Area -->
     <div class="content">
