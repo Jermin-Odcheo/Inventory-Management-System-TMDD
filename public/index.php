@@ -57,7 +57,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <img src="./assets/img/SLU Logo.png" alt="Logo">
         </div>
         <div class="right-section">
-            <form class="login-form" action="../src/view/php/general/login_regis/login.php" method="POST">
+            <form class="login-form" action="index.php" method="POST">
                 <h2 class="welcome-message">Welcome Back!</h2>
 
                 <?php if (!empty($error_message)): ?>

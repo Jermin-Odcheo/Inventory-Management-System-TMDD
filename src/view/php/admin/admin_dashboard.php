@@ -15,12 +15,12 @@ require '../../../../config/ims-tmdd.php';
 <head>
     <meta charset="UTF-8">
     <title>Admin Dashboard</title>
-    <link rel="stylesheet" href="../../../styles/css/sidebar.css">
-    <link rel="stylesheet" href="../../../styles/css/dashboard.css">
+    <link rel="stylesheet" href="../../styles/css/sidebar.css">
+    <link rel="stylesheet" href="../../styles/css/dashboard.css">
   </head>
 
 <body>
-    <?php include 'sidebar.php'; ?>
+    <?php include '../general/sidebar.php'; ?>
     <div class="main-content">
         <div class="dashboard-container">
             <h2>Welcome to the Admin Dashboard</h2>

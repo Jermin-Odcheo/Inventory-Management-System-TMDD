@@ -18,9 +18,7 @@ $users = $stmt->fetchAll();
 <head>
     <meta charset="UTF-8">
     <title>Manage Users</title>
-    <!-- Sidebar and custom user management CSS -->
-    <link rel="stylesheet" href="../../../styles/css/sidebar.css">
-    <link rel="stylesheet" href="../../../styles/css/user_management.css">
+    <link rel="stylesheet" href="../../styles/css/user_management.css">
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -84,7 +82,7 @@ $users = $stmt->fetchAll();
 <body>
     <!-- Sidebar (styled via sidebar.css) -->
     <div class="sidebar">
-        <?php include 'sidebar.php'; ?>
+        <?php include '../general/sidebar.php'; ?>
     </div>
 
     <!-- Main Content Area -->
