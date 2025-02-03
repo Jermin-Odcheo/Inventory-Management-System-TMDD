@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Feb 02, 2025 at 04:24 PM
--- Server version: 9.1.0
--- PHP Version: 8.3.14
+-- Generation Time: Feb 03, 2025 at 03:44 AM
+-- Server version: 8.2.0
+-- PHP Version: 8.2.13
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -119,10 +119,9 @@ CREATE TABLE IF NOT EXISTS `roles` (
 
 INSERT INTO `roles` (`Role_ID`, `Role_Name`) VALUES
 (2, 'Administrator'),
-(4, 'Registrar'),
-(5, 'regsol'),
-(3, 'Sec'),
-(1, 'Super User');
+(4, 'Regular User'),
+(1, 'Super Admin'),
+(3, 'Super User');
 
 -- --------------------------------------------------------
 
@@ -138,28 +137,13 @@ CREATE TABLE IF NOT EXISTS `role_privileges` (
   PRIMARY KEY (`Role_Privilege_ID`),
   KEY `Role_ID` (`Role_ID`),
   KEY `Privilege_ID` (`Privilege_ID`)
-) ENGINE=InnoDB AUTO_INCREMENT=84 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=120 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `role_privileges`
 --
 
 INSERT INTO `role_privileges` (`Role_Privilege_ID`, `Role_ID`, `Privilege_ID`) VALUES
-(1, 5, 22),
-(2, 5, 23),
-(3, 5, 24),
-(4, 5, 25),
-(8, 4, 22),
-(9, 4, 23),
-(10, 4, 24),
-(11, 4, 25),
-(15, 3, 2),
-(16, 3, 6),
-(17, 3, 7),
-(18, 3, 10),
-(19, 3, 11),
-(20, 3, 18),
-(21, 3, 19),
 (22, 2, 1),
 (23, 2, 2),
 (24, 2, 3),
@@ -189,35 +173,42 @@ INSERT INTO `role_privileges` (`Role_Privilege_ID`, `Role_ID`, `Privilege_ID`) V
 (48, 2, 27),
 (49, 2, 28),
 (50, 2, 29),
-(53, 1, 1),
-(54, 1, 2),
-(55, 1, 3),
-(56, 1, 4),
-(57, 1, 5),
-(58, 1, 6),
-(59, 1, 7),
-(60, 1, 8),
-(61, 1, 9),
-(62, 1, 10),
-(63, 1, 11),
-(64, 1, 12),
-(65, 1, 13),
-(66, 1, 14),
-(67, 1, 15),
-(68, 1, 16),
-(69, 1, 17),
-(70, 1, 18),
-(71, 1, 19),
-(72, 1, 20),
-(73, 1, 21),
-(74, 1, 22),
-(75, 1, 23),
-(76, 1, 24),
-(77, 1, 25),
-(78, 1, 26),
-(79, 1, 27),
-(80, 1, 28),
-(81, 1, 29);
+(84, 1, 1),
+(85, 1, 3),
+(86, 1, 5),
+(87, 1, 4),
+(88, 1, 2),
+(89, 1, 7),
+(90, 1, 9),
+(91, 1, 8),
+(92, 1, 6),
+(93, 1, 11),
+(94, 1, 13),
+(95, 1, 12),
+(96, 1, 10),
+(97, 1, 15),
+(98, 1, 17),
+(99, 1, 16),
+(100, 1, 14),
+(101, 1, 19),
+(102, 1, 21),
+(103, 1, 20),
+(104, 1, 18),
+(105, 1, 23),
+(106, 1, 24),
+(107, 1, 25),
+(108, 1, 22),
+(109, 1, 27),
+(110, 1, 29),
+(111, 1, 28),
+(112, 1, 26),
+(113, 3, 14),
+(114, 3, 27),
+(115, 3, 29),
+(116, 3, 28),
+(117, 3, 26),
+(118, 4, 28),
+(119, 4, 26);
 
 -- --------------------------------------------------------
 
@@ -236,17 +227,17 @@ CREATE TABLE IF NOT EXISTS `users` (
   `Status` enum('Online','Offline') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'Offline',
   PRIMARY KEY (`User_ID`),
   UNIQUE KEY `Email` (`Email`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `users`
 --
 
 INSERT INTO `users` (`User_ID`, `Email`, `Password`, `First_Name`, `Last_Name`, `Department`, `Status`) VALUES
-(1, 'admin@example.com', '$2y$12$FIU3vyNy8ud4maTx6TmzaOT2k.ew9fT8h/qpYI7aXcENqlC4a79yS', 'Admin', 'User', 'TMDD', 'Offline'),
-(2, 'registrar@example.com', '$2y$12$fyUTIcK0wmys8xF0wBsWg.Txz39TktOvu6l3STBCgofp9QzWTQQo.', 'John', 'Doe', 'Registrar', 'Offline'),
-(3, 'faculty@example.com', '$2y$12$ILcoVVcqjMDHeeyHRqmrruo65DF7JMziTi9wsWvcVmT5McrPXMENq', 'Jane', 'Smith', 'Faculty', 'Offline'),
-(4, 'student@example.com', '$2y$12$gY5jnhCJTGGyT0dlP9n/Ge1amdop4pvbZhhR1H6TiawmolFLH25Pq', 'Mike', 'Johnson', 'Student Affairs', 'Offline');
+(1, 'superadmin@example.com', '$2y$10$i4ei.yjO/RWfQmsCjZrbUO8PdC8YKip8/JRf8yXYC17AU7RbHt8vq', 'super', 'admin', 'TMDD', 'Offline'),
+(2, 'administrator@example.com', '$2y$10$ScYu3YXjK.lTncFipqz4S.IvGbgEgfxcfH.wD5nkvLyDl5Xkbz7Z.', 'admin', 'strator', 'Department', 'Offline'),
+(3, 'superuser@example.com', '$2y$10$VJoWfKo9G6H37vDA3pvtB.dNL0ig2bBkH4jdo31Ept4HSJ7Ojp/A6', 'super', 'user', 'under department', 'Offline'),
+(4, 'regularuser@example.com', '$2y$10$OboOl8t8zAEU8E1prxQo7u2I0Z/yf1T0Q867ffx.AAgs0H/f1sLMy', 'regular', 'user', 'regular user', 'Offline');
 
 -- --------------------------------------------------------
 
@@ -262,7 +253,7 @@ CREATE TABLE IF NOT EXISTS `user_roles` (
   PRIMARY KEY (`User_Role_ID`),
   KEY `User_ID` (`User_ID`),
   KEY `Role_ID` (`Role_ID`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `user_roles`
