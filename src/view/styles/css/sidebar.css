@@ -2,38 +2,38 @@
 .sidebar {
     width: 250px; /* Fixed width for sidebar */
     height: 100vh; /* Full height */
-    background-color: #2c3e50; /* Darker background for a modern look */
-    color: #ecf0f1; /* Light text color */
+    background-color: #343a40; /* Dark background for sidebar */
+    color: #ffffff; /* White text color */
     position: fixed; /* Fixed position */
     top: 0; /* Align to top */
     left: 0; /* Align to left */
     padding: 20px; /* Padding inside sidebar */
-    box-shadow: 4px 0 15px rgba(0, 0, 0, 0.3); /* Deeper shadow for depth */
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
     transition: width 0.3s; /* Smooth width transition */
 }
 
 /* Sidebar Links */
 .sidebar a {
     display: block; /* Block display for links */
-    color: #ecf0f1; /* Light text color */
+    color: #ffffff; /* White text color */
     text-decoration: none; /* Remove underline */
     padding: 12px 20px; /* Padding for links */
-    border-radius: 8px; /* More rounded corners for links */
-    transition: background-color 0.3s, color 0.3s; /* Smooth background and color transition */
+    border-radius: 25px; /* More rounded corners for links */
+    transition: background-color 0.3s, color 0.3s, transform 0.3s, box-shadow 0.3s; /* Smooth transitions */
     font-size: 16px; /* Consistent font size for links */
 }
 
 /* Hover Effect for Links */
 .sidebar a:hover {
-    background-color: #2980b9; /* Modern blue shade on hover */
+    background-color: #007bff; /* Bright blue on hover */
     color: #ffffff; /* Ensure text remains white on hover */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); /* Add a shadow effect on hover */
     transform: scale(1.05); /* Slightly enlarge the link on hover */
-    transition: background-color 0.3s ease, color 0.3s ease, transform 0.3s ease; /* Smooth transition */
 }
 
 /* Remove Active Link Style */
 .sidebar a.active {
-    background-color: #3498db; /* Highlight active link with a modern blue */
+    background-color: #007bff; /* Highlight active link with a modern blue */
     color: #ffffff; /* Ensure text remains white */
 }
 
@@ -41,7 +41,7 @@
 .sidebar h2 {
     font-size: 24px; /* Font size for header */
     margin-bottom: 20px; /* Space below header */
-    color: #ecf0f1; /* Light text color */
+    color: #ffffff; /* White text color */
     text-align: center; /* Center align header */
     font-weight: bold; /* Bold header for emphasis */
 }
@@ -135,7 +135,7 @@
     top: 100%; /* Align to the bottom of the parent */
     background-color: #34495e; /* Darker background for dropdown */
     padding: 10px 0; /* Add padding for dropdown */
-    border-radius: 8px; /* More rounded corners for dropdown */
+    border-radius: 25px; /* More rounded corners for dropdown */
     z-index: 1000; /* Ensure it appears above other elements */
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); /* Deeper shadow for dropdown */
 }
@@ -156,6 +156,7 @@
     color: #ecf0f1; /* Text color for dropdown links */
     transition: background-color 0.3s, color 0.3s; /* Smooth transition */
     font-size: 16px; /* Consistent font size for dropdown links */
+    border-radius: 25px; /* More rounded corners for dropdown links */
 }
 
 /* Hover effect for dropdown links */
