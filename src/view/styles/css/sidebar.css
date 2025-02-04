@@ -1,56 +1,201 @@
- /* Sidebar styling */
- .sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    height: 100%;
-    background-color: #343a40;
-    color: #fff;
-    padding: 20px;
-    overflow-y: auto;
+/* Sidebar styling */
+.sidebar {
+    width: 250px; /* Fixed width for sidebar */
+    height: 100vh; /* Full height */
+    background-color: #343a40; /* Dark background for sidebar */
+    color: #ffffff; /* White text color */
+    position: fixed; /* Fixed position */
+    top: 0; /* Align to top */
+    left: 0; /* Align to left */
+    padding: 20px; /* Padding inside sidebar */
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+    transition: width 0.3s; /* Smooth width transition */
 }
-/* Ensure links in the sidebar have a modern look */
+
+/* Sidebar Links */
 .sidebar a {
-    color: #adb5bd;
-    text-decoration: none;
+    display: block; /* Block display for links */
+    color: #ffffff; /* White text color */
+    text-decoration: none; /* Remove underline */
+    padding: 12px 20px; /* Padding for links */
+    border-radius: 25px; /* More rounded corners for links */
+    transition: background-color 0.3s, color 0.3s, transform 0.3s, box-shadow 0.3s; /* Smooth transitions */
+    font-size: 16px; /* Consistent font size for links */
 }
+
+/* Hover Effect for Links */
 .sidebar a:hover {
-    color: #fff;
-    text-decoration: none;
+    background-color: #007bff; /* Bright blue on hover */
+    color: #ffffff; /* Ensure text remains white on hover */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); /* Add a shadow effect on hover */
+    transform: scale(1.05); /* Slightly enlarge the link on hover */
 }
 
+/* Remove Active Link Style */
+.sidebar a.active {
+    background-color: #007bff; /* Highlight active link with a modern blue */
+    color: #ffffff; /* Ensure text remains white */
+}
+
+/* Sidebar Header */
 .sidebar h2 {
-text-align: center;
-margin-bottom: 30px;
-font-size: 24px;
-font-weight: 700;
+    font-size: 24px; /* Font size for header */
+    margin-bottom: 20px; /* Space below header */
+    color: #ffffff; /* White text color */
+    text-align: center; /* Center align header */
+    font-weight: bold; /* Bold header for emphasis */
 }
 
+/* Responsive Design */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 200px; /* Adjust width for smaller screens */
+    }
+}
+
+/* New Sidebar Links */
 .sidebar nav ul {
-list-style: none;
+    list-style: none;
+    padding: 0; /* Remove default padding */
 }
 
 .sidebar nav ul li {
-margin: 20px 0;
+    margin: 10px 0; /* Reduced margin for better spacing */
+    position: relative; /* Position relative for dropdown */
 }
 
 .sidebar nav ul li a {
-color: #ecf0f1;
-text-decoration: none;
-padding: 12px 20px;
-display: flex;
-align-items: center;
-transition: background 0.3s, color 0.3s;
-font-size: 16px;
+    color: #ecf0f1; /* Default text color */
+    transition: background 0.3s, color 0.3s; /* Smooth transition */
+    font-size: 16px; /* Font size for links */
 }
 
+/* Hover Effect for New Links */
 .sidebar nav ul li a:hover,
 .sidebar nav ul li a.active {
-color: #ffffff;
+    color: #ffffff; /* White text on hover */
+    background-color: #0056b3; /* Darker shade on hover */
 }
 
+/* Icon styling */
 .sidebar nav ul li a i {
-margin-right: 10px;
-width: 20px;
-text-align: center;
+    margin-right: 10px; /* Space between icon and text */
+    width: 20px; /* Fixed width for icons */
+    text-align: center; /* Center align icons */
+}
+
+/* Specific Links */
+.sidebar nav ul li a.dashboard {
+    /* Specific styles for Dashboard link if needed */
+    transition: none; /* Remove hover effect */
+}
+
+.sidebar nav ul li a.dashboard:hover {
+    background-color: transparent; /* No background change on hover */
+    color: #ecf0f1; /* Keep original color on hover */
+}
+
+.sidebar nav ul li a.user-management {
+    /* Specific styles for User Management link if needed */
+}
+
+.sidebar nav ul li a.equipment-management {
+    /* Specific styles for Equipment Management link if needed */
+}
+
+.sidebar nav ul li a.purchase-order {
+    /* Specific styles for Purchase Order link if needed */
+}
+
+.sidebar nav ul li a.charge-invoice {
+    /* Specific styles for Charge Invoice link if needed */
+}
+
+.sidebar nav ul li a.receiving-report {
+    /* Specific styles for Receiving Report link if needed */
+}
+
+.sidebar nav ul li a.equipment-details {
+    /* Specific styles for Equipment Details link if needed */
+}
+
+.sidebar nav ul li a.equipment-location {
+    /* Specific styles for Equipment Location link if needed */
+}
+
+.sidebar nav ul li a.equipment-status {
+    /* Specific styles for Equipment Status link if needed */
+}
+
+/* Dropdown Menu */
+.sidebar nav ul li .dropdown {
+    display: none; /* Hide dropdown by default */
+    position: absolute; /* Position dropdown */
+    left: 0; /* Align to the left of the parent */
+    top: 100%; /* Align to the bottom of the parent */
+    background-color: #34495e; /* Darker background for dropdown */
+    padding: 10px 0; /* Add padding for dropdown */
+    border-radius: 25px; /* More rounded corners for dropdown */
+    z-index: 1000; /* Ensure it appears above other elements */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); /* Deeper shadow for dropdown */
+}
+
+/* Show dropdown on hover */
+.sidebar nav ul li:hover .dropdown {
+    display: block; /* Show dropdown on hover */
+}
+
+/* Dropdown items */
+.sidebar nav ul li .dropdown li {
+    margin: 0; /* Remove margin for dropdown items */
+}
+
+/* Dropdown link styles */
+.sidebar nav ul li .dropdown li a {
+    padding: 10px 20px; /* Consistent padding for dropdown links */
+    color: #ecf0f1; /* Text color for dropdown links */
+    transition: background-color 0.3s, color 0.3s; /* Smooth transition */
+    font-size: 16px; /* Consistent font size for dropdown links */
+    border-radius: 25px; /* More rounded corners for dropdown links */
+}
+
+/* Hover effect for dropdown links */
+.sidebar nav ul li .dropdown li a:hover {
+    background-color: #2980b9; /* Modern blue shade on hover for dropdown links */
+    color: #ffffff; /* Ensure text remains white on hover */
+}
+
+/* Add a subtle transition effect */
+.sidebar nav ul li .dropdown li a {
+    transition: background-color 0.3s ease, color 0.3s ease; /* Smooth transition */
+}
+
+/* Dropdown styles */
+.dropdown {
+    display: none; /* Hide dropdown by default */
+    position: absolute; /* Position it absolutely */
+    background-color: white; /* Background color */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* Add shadow for depth */
+    z-index: 1000; /* Ensure it appears above other elements */
+}
+
+.dropdown-toggle:hover .dropdown {
+    display: block; /* Show dropdown on hover */
+}
+
+.dropdown li {
+    list-style: none; /* Remove bullet points */
+    padding: 8px 12px; /* Add padding */
+}
+
+.dropdown li a {
+    padding: 8px 12px; /* Add padding */
+    text-decoration: none; /* Remove underline from links */
+    color: black; /* Link color */
+    display: block; /* Make the link fill the list item */
+    transition: background-color 0.5s ease; /* Slower transition for background color */
+}
+
+.dropdown li a:hover {
+    background-color: #f0f0f0; /* Change background on hover */
 }

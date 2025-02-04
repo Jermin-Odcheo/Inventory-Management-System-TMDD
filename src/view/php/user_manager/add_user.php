@@ -4,7 +4,7 @@ require_once('../../../../config/ims-tmdd.php');
 
 // Check for admin privileges (you should implement your privilege check).
 if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
+    header("Location: add_user.php");
     exit();
 }
 
