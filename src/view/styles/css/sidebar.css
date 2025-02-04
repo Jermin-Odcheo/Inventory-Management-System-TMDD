@@ -27,6 +27,8 @@
 .sidebar a:hover {
     background-color: #2980b9; /* Modern blue shade on hover */
     color: #ffffff; /* Ensure text remains white on hover */
+    transform: scale(1.05); /* Slightly enlarge the link on hover */
+    transition: background-color 0.3s ease, color 0.3s ease, transform 0.3s ease; /* Smooth transition */
 }
 
 /* Remove Active Link Style */
