@@ -1,10 +1,10 @@
 <?php
 session_start();
-require '../../../../config/ims-tmdd.php';
+require '../../../../../config/ims-tmdd.php';
 
 // Redirect to login if the user is not logged in
 if (!isset($_SESSION['role'])) {
-    header("Location: ../../../public/index.php");
+    header("Location: ../../../../../public/index.php");
     exit();
 }
 
@@ -42,8 +42,8 @@ switch (strtolower(trim($role))) { // Normalize role to avoid case issues
 <head>
     <meta charset="UTF-8">
     <title><?php echo $dashboardTitle; ?></title>
-    <link rel="stylesheet" href="../../styles/css/sidebar.css">
-    <link rel="stylesheet" href="../../styles/css/dashboard.css">
+    <link rel="stylesheet" href="../../../styles/css/sidebar.css">
+    <link rel="stylesheet" href="../../../styles/css/dashboard.css">
     <style>
         /* Additional styling for the online/offline table */
         table {
@@ -134,7 +134,7 @@ switch (strtolower(trim($role))) { // Normalize role to avoid case issues
 
 <body>
     <!-- Include Sidebar -->
-    <?php include '../general/sidebar.php'; ?>
+    <?php include '../../general/sidebar.php'; ?>
 
     <div class="main-content">
         <div class="dashboard-container">

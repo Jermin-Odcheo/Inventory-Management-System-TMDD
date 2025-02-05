@@ -1,6 +1,6 @@
 <?php
 session_start();
-require '../../../../config/ims-tmdd.php'; // adjust path
+require '../../../../../config/ims-tmdd.php'; // adjust path
 
 // Make sure only logged-in users can fetch this data
 if (!isset($_SESSION['user_id'])) {

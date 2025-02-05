@@ -1,6 +1,6 @@
 <?php
 session_start();
-require '../../../../config/ims-tmdd.php'; // adjust path as needed
+require '../../../../../config/ims-tmdd.php'; // adjust path as needed
 
 if (!isset($_SESSION['user_id'])) {
     echo json_encode(['status' => 'not_logged_in']);

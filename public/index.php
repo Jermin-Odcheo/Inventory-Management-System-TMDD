@@ -32,7 +32,7 @@ WHERE u.Email = ?
                     error_log("User Logged in: " . $_SESSION['email'] . " | Role: " . $_SESSION['role']);
 
                     // Redirect to dashboard
-                    header("Location: ../src/view/php/admin/dashboard.php");
+                    header("Location: ../src/view/php/clients/admins/dashboard.php");
                     exit();
                 } else {
                     $error = "Invalid credentials. Please try again.";
