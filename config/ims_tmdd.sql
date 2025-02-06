@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Feb 05, 2025 at 02:38 AM
+-- Generation Time: Feb 06, 2025 at 05:34 AM
 -- Server version: 8.2.0
 -- PHP Version: 8.2.13
 
@@ -20,6 +20,119 @@ SET time_zone = "+00:00";
 --
 -- Database: `ims_tmdd`
 --
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `chargeinvoice`
+--
+
+DROP TABLE IF EXISTS `chargeinvoice`;
+CREATE TABLE IF NOT EXISTS `chargeinvoice` (
+  `ChargeInvoiceID` int NOT NULL AUTO_INCREMENT,
+  `ChargeInvoiceNo` varchar(50) NOT NULL,
+  `DateOfChargeInvoice` date NOT NULL,
+  `PurchaseOrderNumber` varchar(50) DEFAULT NULL,
+  PRIMARY KEY (`ChargeInvoiceID`),
+  KEY `PurchaseOrderNumber` (`PurchaseOrderNumber`)
+) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `chargeinvoice`
+--
+
+INSERT INTO `chargeinvoice` (`ChargeInvoiceID`, `ChargeInvoiceNo`, `DateOfChargeInvoice`, `PurchaseOrderNumber`) VALUES
+(1, 'CI6789', '2024-02-05', 'PO12345'),
+(2, 'CI6790', '2024-02-06', 'PO12346');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `equipmentdetails`
+--
+
+DROP TABLE IF EXISTS `equipmentdetails`;
+CREATE TABLE IF NOT EXISTS `equipmentdetails` (
+  `EquipmentDetailsID` int NOT NULL AUTO_INCREMENT,
+  `AssetTag` varchar(50) NOT NULL,
+  `AssetDescription1` varchar(255) DEFAULT NULL,
+  `AssetDescription2` varchar(255) DEFAULT NULL,
+  `Specification` varchar(255) DEFAULT NULL,
+  `Brand` varchar(100) DEFAULT NULL,
+  `Model` varchar(100) DEFAULT NULL,
+  `SerialNumber` varchar(100) DEFAULT NULL,
+  `DateAcquired` date DEFAULT NULL,
+  `ReceivingReportFormNumber` varchar(50) DEFAULT NULL,
+  `AccountableIndividualLocation` varchar(255) DEFAULT NULL,
+  `AccountableIndividual` varchar(100) DEFAULT NULL,
+  `Remarks` text,
+  PRIMARY KEY (`EquipmentDetailsID`),
+  UNIQUE KEY `AssetTag` (`AssetTag`),
+  KEY `Specification` (`Specification`(250)),
+  KEY `ReceivingReportFormNumber` (`ReceivingReportFormNumber`),
+  KEY `AccountableIndividualLocation` (`AccountableIndividualLocation`(250)),
+  KEY `AccountableIndividual` (`AccountableIndividual`)
+) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `equipmentdetails`
+--
+
+INSERT INTO `equipmentdetails` (`EquipmentDetailsID`, `AssetTag`, `AssetDescription1`, `AssetDescription2`, `Specification`, `Brand`, `Model`, `SerialNumber`, `DateAcquired`, `ReceivingReportFormNumber`, `AccountableIndividualLocation`, `AccountableIndividual`, `Remarks`) VALUES
+(1, 'AT001', 'Laptop', 'Dell XPS 13', 'Laptops', 'Dell', 'XPS 13', 'SN12345', '2024-02-06', 'RR001', 'IT Department', 'John Doe', 'Assigned to IT Department'),
+(2, 'AT002', 'Printer', 'HP LaserJet', 'Printers', 'HP', 'LaserJet 400', 'SN67890', '2024-02-07', 'RR002', 'Admin Office', 'Jane Smith', 'Assigned to Admin Office');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `equipmentlocation`
+--
+
+DROP TABLE IF EXISTS `equipmentlocation`;
+CREATE TABLE IF NOT EXISTS `equipmentlocation` (
+  `EquipmentLocationID` int NOT NULL AUTO_INCREMENT,
+  `AssetTag` varchar(50) DEFAULT NULL,
+  `BuildingLocation` varchar(255) DEFAULT NULL,
+  `FloorNumber` int DEFAULT NULL,
+  `SpecificArea` varchar(255) DEFAULT NULL,
+  `PersonResponsible` varchar(100) DEFAULT NULL,
+  `Remarks` text,
+  PRIMARY KEY (`EquipmentLocationID`),
+  KEY `AssetTag` (`AssetTag`)
+) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `equipmentlocation`
+--
+
+INSERT INTO `equipmentlocation` (`EquipmentLocationID`, `AssetTag`, `BuildingLocation`, `FloorNumber`, `SpecificArea`, `PersonResponsible`, `Remarks`) VALUES
+(1, 'AT001', 'Main Building', 3, 'IT Room', 'John Doe', 'Setup Completed'),
+(2, 'AT002', 'Admin Block', 1, 'Office', 'Jane Smith', 'In Use');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `equipmentstatus`
+--
+
+DROP TABLE IF EXISTS `equipmentstatus`;
+CREATE TABLE IF NOT EXISTS `equipmentstatus` (
+  `EquipmentStatusID` int NOT NULL AUTO_INCREMENT,
+  `AssetTag` varchar(50) DEFAULT NULL,
+  `Status` varchar(100) DEFAULT NULL,
+  `Action` varchar(255) DEFAULT NULL,
+  `Remarks` text,
+  PRIMARY KEY (`EquipmentStatusID`),
+  KEY `AssetTag` (`AssetTag`)
+) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `equipmentstatus`
+--
+
+INSERT INTO `equipmentstatus` (`EquipmentStatusID`, `AssetTag`, `Status`, `Action`, `Remarks`) VALUES
+(1, 'AT001', 'Operational', 'Deployed', 'Working well'),
+(2, 'AT002', 'Operational', 'Deployed', 'No issues reported');
 
 -- --------------------------------------------------------
 
@@ -98,6 +211,55 @@ INSERT INTO `privileges` (`Privilege_ID`, `Privilege_Name`, `Module_ID`) VALUES
 (27, 'Add', 1),
 (28, 'Edit', 1),
 (29, 'Delete', 1);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `purchaseorder`
+--
+
+DROP TABLE IF EXISTS `purchaseorder`;
+CREATE TABLE IF NOT EXISTS `purchaseorder` (
+  `PurchaseOrderID` int NOT NULL AUTO_INCREMENT,
+  `PurchaseOrderNumber` varchar(50) NOT NULL,
+  `NumberOfUnits` int NOT NULL,
+  `DateOfPurchaseOrder` date NOT NULL,
+  `ItemsSpecification` text,
+  PRIMARY KEY (`PurchaseOrderID`)
+) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `purchaseorder`
+--
+
+INSERT INTO `purchaseorder` (`PurchaseOrderID`, `PurchaseOrderNumber`, `NumberOfUnits`, `DateOfPurchaseOrder`, `ItemsSpecification`) VALUES
+(1, 'PO12345', 10, '2024-02-01', 'Laptops'),
+(2, 'PO12346', 5, '2024-02-02', 'Printers');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `receivingreportform`
+--
+
+DROP TABLE IF EXISTS `receivingreportform`;
+CREATE TABLE IF NOT EXISTS `receivingreportform` (
+  `ReceivingReportFormID` int NOT NULL AUTO_INCREMENT,
+  `ReceivingReportNumber` varchar(50) NOT NULL,
+  `AccountableIndividual` varchar(100) NOT NULL,
+  `PurchaseOrderNumber` varchar(50) DEFAULT NULL,
+  `AccountableIndividualLocation` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`ReceivingReportFormID`),
+  KEY `PurchaseOrderNumber` (`PurchaseOrderNumber`)
+) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `receivingreportform`
+--
+
+INSERT INTO `receivingreportform` (`ReceivingReportFormID`, `ReceivingReportNumber`, `AccountableIndividual`, `PurchaseOrderNumber`, `AccountableIndividualLocation`) VALUES
+(1, 'RR001', 'John Doe', 'PO12345', 'IT Department'),
+(2, 'RR002', 'Jane Smith', 'PO12346', 'Admin Office');
 
 -- --------------------------------------------------------
 
@@ -236,10 +398,10 @@ CREATE TABLE IF NOT EXISTS `users` (
 --
 
 INSERT INTO `users` (`User_ID`, `Email`, `Password`, `First_Name`, `Last_Name`, `Department`, `Status`, `last_active`, `is_deleted`) VALUES
-(1, 'superadmin@example.com', '$2y$10$i4ei.yjO/RWfQmsCjZrbUO8PdC8YKip8/JRf8yXYC17AU7RbHt8vq', 'super', 'admin', 'TMDD', 'Offline', '2025-02-05 10:38:22', 0),
-(2, 'administrator@example.com', '$2y$10$ScYu3YXjK.lTncFipqz4S.IvGbgEgfxcfH.wD5nkvLyDl5Xkbz7Z.', 'admin', 'strator', 'Department', 'Offline', NULL, 0),
-(3, 'superuser@example.com', '$2y$10$VJoWfKo9G6H37vDA3pvtB.dNL0ig2bBkH4jdo31Ept4HSJ7Ojp/A6', 'super', 'user', 'under department', 'Offline', '2025-02-05 10:31:58', 0),
-(4, 'regularuser@example.com', '$2y$10$OboOl8t8zAEU8E1prxQo7u2I0Z/yf1T0Q867ffx.AAgs0H/f1sLMy', 'regular', 'user', 'regular user', 'Offline', '2025-02-03 16:54:02', 0),
+(1, 'superadmin@example.com', '$2y$10$i4ei.yjO/RWfQmsCjZrbUO8PdC8YKip8/JRf8yXYC17AU7RbHt8vq', 'super', 'admin', 'TMDD', 'Online', '2025-02-05 11:08:09', 0),
+(2, 'administrator@example.com', '$2y$10$Pf0uRneLsEex.szkU8vJS.P27ttwz9EtZkND8w4ttadglX6AVQFpe', 'admin', 'strator', 'Department', 'Offline', NULL, 0),
+(3, 'superuser@example.com', '$2y$10$VJoWfKo9G6H37vDA3pvtB.dNL0ig2bBkH4jdo31Ept4HSJ7Ojp/A6', 'super', 'user', 'under department', 'Online', '2025-02-05 11:11:33', 0),
+(4, 'regularuser@example.com', '$2y$10$OboOl8t8zAEU8E1prxQo7u2I0Z/yf1T0Q867ffx.AAgs0H/f1sLMy', 'regular', 'user', 'regular user', 'Online', '2025-02-05 11:19:22', 0),
 (6, 'test@example.com', '$2y$10$OnRvP/ieAMnTCTthCOHpwerURb1UlIkk7fYmMQ2OwcEFNoK3FJF..', 'test', 'case1', 'test case', 'Offline', NULL, 1);
 
 -- --------------------------------------------------------

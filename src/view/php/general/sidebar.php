@@ -6,7 +6,7 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
 ?>
 <!-- Sidebar -->
 <div class="sidebar">
-    <link rel="stylesheet" href="/src/view/styles/css/sidebar.css">
+    <link rel="stylesheet" href="../../../styles/css/sidebar.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 
     <h2><?php echo htmlspecialchars($role); ?> Panel</h2>
@@ -16,7 +16,8 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
             <li><a href="/src/view/php/clients/admins/dashboard.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
             <!-- Show User Management only for Super Users & Administrators -->
             <?php if ($role === 'Super User'): ?>
-                <a href="/src/view/php/modules/user_manager/user_management.php"><i class="fa-solid fa-user"></i> User Management</a>
+                <a href="../../modules/user_manager/user_management.php">
+                    <i class="fa-solid fa-user"></i> User Management</a>
                 <li>
                     <a href="equipment_management.php" class="dropdown-toggle"><i class="fa-solid fa-wrench"></i> Equipment Management</a>
                     <ul class="dropdown">
@@ -51,7 +52,7 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
             <?php endif; ?>
 
             <!-- Logout (Visible to Everyone) -->
-            <li><a href="/src/view/php/general/logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+            <li><a href="../../general/logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
         </ul>
     </nav>
 </div>

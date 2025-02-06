@@ -43,6 +43,7 @@ switch (strtolower(trim($role))) { // Normalize role to avoid case issues
     <meta charset="UTF-8">
     <title><?php echo $dashboardTitle; ?></title>
     <link rel="stylesheet" href="../../../styles/css/dashboard.css">
+
 <body>
     <!-- Include Sidebar -->
     <?php include '../../general/sidebar.php'; ?>
@@ -79,7 +80,7 @@ switch (strtolower(trim($role))) { // Normalize role to avoid case issues
                     <p>You have limited access to the system.</p>
                 </section>
             <?php endif; ?>
-
+            <p>You have limited access to the system.</p>
             <hr>
 
         </div>

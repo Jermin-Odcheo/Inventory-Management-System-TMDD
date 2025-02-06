@@ -44,10 +44,7 @@
             $error = "Database error: " . $e->getMessage();
         }
     }
-
 ?>
-
-
 
 <!DOCTYPE html>
 <html lang="en">
