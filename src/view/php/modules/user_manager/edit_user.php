@@ -1,115 +1,86 @@
-<?php
-session_start();
-require_once('../../../../config/ims-tmdd.php');
+<!-- Bootstrap Edit Modal Template -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editModalLabel">Edit Record</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="editForm">
+          <input type="hidden" id="editID" name="ID">
+          <div id="dynamicFields"></div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="submit" class="btn btn-primary" id="saveChanges">Save changes</button>
+      </div>
+    </div>
+  </div>
+</div>
 
-// Check for admin privileges (you should implement your privilege check).
-if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
-    exit();
-}
-
-// If editing, load user data.
-$isEditing = isset($_GET['id']);
-$userData = [];
-if ($isEditing) {
-    $stmt = $pdo->prepare("SELECT * FROM users WHERE User_ID = ?");
-    $stmt->execute([$_GET['id']]);
-    $userData = $stmt->fetch();
-}
-
-// Fetch available roles.
-$stmt = $pdo->prepare("SELECT * FROM roles");
-$stmt->execute();
-$roles = $stmt->fetchAll();
-
-// If form is submitted.
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $email      = trim($_POST['email']);
-    $firstName  = trim($_POST['first_name']);
-    $lastName   = trim($_POST['last_name']);
-    $department = trim($_POST['department']);
-    $status     = $_POST['status'];
-    $roleIDs    = isset($_POST['roles']) ? $_POST['roles'] : [];
-
-    // If adding a new user, you might also collect and hash the password.
-    if (!$isEditing) {
-        $password = $_POST['password'];
-        // Hash the password.
-        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-        $stmt = $pdo->prepare("INSERT INTO users (Email, Password, First_Name, Last_Name, Department, Status) VALUES (?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$email, $hashedPassword, $firstName, $lastName, $department, $status]);
-        $userID = $pdo->lastInsertId();
-    } else {
-        // For edit, update user details. (Password update might be handled separately.)
-        $stmt = $pdo->prepare("UPDATE users SET Email = ?, First_Name = ?, Last_Name = ?, Department = ?, Status = ? WHERE User_ID = ?");
-        $stmt->execute([$email, $firstName, $lastName, $department, $status, $userData['User_ID']]);
-        $userID = $userData['User_ID'];
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    function getCurrentPage() {
+      const path = window.location.pathname;
+      if (path.includes("purchase_order")) return "PurchaseOrder";
+      if (path.includes("charge_invoice")) return "ChargeInvoice";
+      if (path.includes("receive_report")) return "ReceiveReport";
+      if (path.includes("equipment_details")) return "EquipmentDetails";
+      if (path.includes("equipment_location")) return "EquipmentLocation";
+      if (path.includes("equipment_status")) return "EquipmentStatus";
+      if (path.includes("user")) return "User";
+      if (path.includes("roles")) return "Roles";
+      return "";
     }
 
-    // Update the user's roles.
-    // First, delete existing roles.
-    $stmt = $pdo->prepare("DELETE FROM user_roles WHERE User_ID = ?");
-    $stmt->execute([$userID]);
-
-    // Then, insert the new roles.
-    $stmt = $pdo->prepare("INSERT INTO user_roles (User_ID, Role_ID) VALUES (?, ?)");
-    foreach ($roleIDs as $roleID) {
-        $stmt->execute([$userID, $roleID]);
+    function loadFields(module, data) {
+      let fields = "";
+      switch (module) {
+        case "PurchaseOrder":
+          fields = `
+            <label>PO No:</label><input type='text' class='form-control' name='POno' value='${data.POno}' required>
+            <label>Date of Order:</label><input type='date' class='form-control' name='DateOfOrder' value='${data.DateOfOrder}' required>
+            <label>No. of Units:</label><input type='number' class='form-control' name='NoOfUnits' value='${data.NoOfUnits}' required>
+            <label>Item Specifications:</label><textarea class='form-control' name='ItemSpecifications'>${data.ItemSpecifications}</textarea>
+          `;
+          break;
+        case "ChargeInvoice":
+          fields = `
+            <label>Invoice No:</label><input type='text' class='form-control' name='InvoiceNo' value='${data.InvoiceNo}' required>
+            <label>Date of Purchase:</label><input type='date' class='form-control' name='DateOfPurchase' value='${data.DateOfPurchase}' required>
+            <label>PO No:</label><input type='text' class='form-control' name='PONo' value='${data.PONo}' required>
+          `;
+          break;
+        case "Roles":
+          if (!isAdminOrSuperAdmin()) return alert("Access Denied");
+          fields = `
+            <label>Role Name:</label><input type='text' class='form-control' name='RoleName' value='${data.RoleName}' required>
+            <label>Privileges:</label><textarea class='form-control' name='Privileges'>${data.Privileges}</textarea>
+            <label>Modules:</label><input type='text' class='form-control' name='Modules' value='${data.Modules}' required>
+          `;
+          break;
+      }
+      document.getElementById("dynamicFields").innerHTML = fields;
     }
 
-    header("Location: manage_users.php");
-    exit();
-}
-?>
+    function isAdminOrSuperAdmin() {
+      let userRole = "user"; // Fetch the role from session or API
+      return userRole === "admin" || userRole === "superadmin";
+    }
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title><?php echo $isEditing ? 'Edit' : 'Add'; ?> User</title>
-    <link rel="stylesheet" href="../../../styles/css/admin.css">
-</head>
-<body>
-    <h1><?php echo $isEditing ? 'Edit' : 'Add'; ?> User</h1>
-    <form method="POST" action="">
-        <label>Email:</label>
-        <input type="email" name="email" value="<?php echo htmlspecialchars($userData['Email'] ?? ''); ?>" required><br>
-        
-        <?php if (!$isEditing): ?>
-            <label>Password:</label>
-            <input type="password" name="password" required><br>
-        <?php endif; ?>
+    document.getElementById("saveChanges").addEventListener("click", function () {
+      const formData = new FormData(document.getElementById("editForm"));
+      console.log("Saving:", Object.fromEntries(formData));
+      // Implement the AJAX call here to save the data.
+    });
 
-        <label>First Name:</label>
-        <input type="text" name="first_name" value="<?php echo htmlspecialchars($userData['First_Name'] ?? ''); ?>" required><br>
-        <label>Last Name:</label>
-        <input type="text" name="last_name" value="<?php echo htmlspecialchars($userData['Last_Name'] ?? ''); ?>" required><br>
-        <label>Department:</label>
-        <input type="text" name="department" value="<?php echo htmlspecialchars($userData['Department'] ?? ''); ?>"><br>
-        <label>Status:</label>
-        <select name="status">
-            <option value="Online" <?php echo (isset($userData['Status']) && $userData['Status'] === 'Online') ? 'selected' : ''; ?>>Online</option>
-            <option value="Offline" <?php echo (isset($userData['Status']) && $userData['Status'] === 'Offline') ? 'selected' : ''; ?>>Offline</option>
-        </select><br>
-
-        <fieldset>
-            <legend>Assign Roles:</legend>
-            <?php foreach ($roles as $role): 
-                // If editing, check which roles the user already has.
-                $isAssigned = false;
-                if ($isEditing) {
-                    $stmt = $pdo->prepare("SELECT 1 FROM user_roles WHERE User_ID = ? AND Role_ID = ?");
-                    $stmt->execute([$userData['User_ID'], $role['Role_ID']]);
-                    $isAssigned = (bool) $stmt->fetch();
-                }
-            ?>
-                <input type="checkbox" name="roles[]" value="<?php echo $role['Role_ID']; ?>" <?php echo $isAssigned ? 'checked' : ''; ?>>
-                <label><?php echo htmlspecialchars($role['Role_Name']); ?></label><br>
-            <?php endforeach; ?>
-        </fieldset>
-
-        <button type="submit"><?php echo $isEditing ? 'Update' : 'Add'; ?> User</button>
-    </form>
-    <a href="user_management.php">Back to User Management</a>
-</body>
-</html>
+    window.showEditModal = function (data) {
+      const module = getCurrentPage();
+      document.getElementById("editID").value = data.ID;
+      loadFields(module, data);
+      new bootstrap.Modal(document.getElementById("editModal")).show();
+    };
+  });
+</script>
