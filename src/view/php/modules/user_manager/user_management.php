@@ -41,6 +41,7 @@ function toggleDirection($currentSort, $currentDir, $column)
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Manage Users</title>
@@ -50,71 +51,81 @@ function toggleDirection($currentSort, $currentDir, $column)
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
 </head>
+<style>
+    .main-content {
+        margin-left: 300px;
+        /* Adjust according to your sidebar width */
+        padding: 20px;
+        margin-bottom: 20px;
+        width: auto;
+    }
+</style>
+
 <body>
 
-<div class="sidebar">
-    <?php include '../../general/sidebar.php'; ?>
-</div>
+    <div class="sidebar">
+        <?php include '../../general/sidebar.php'; ?>
+    </div>
 
-<div class="main-content">
-    <h1>User Management</h1>
+    <div class="main-content">
+        <h1>User Management</h1>
 
-    <div class="table-responsive">
-        <table class="table table-striped table-hover">
-            <thead>
-                <tr>
-                    <th>First Name</th>
-                    <th>Last Name</th>
-                    <th>Email</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($users as $user): ?>
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
                     <tr>
-                        <td><?php echo htmlspecialchars($user['First_Name']); ?></td>
-                        <td><?php echo htmlspecialchars($user['Last_Name']); ?></td>
-                        <td><?php echo htmlspecialchars($user['Email']); ?></td>
-                        <td>
-                            <button class="btn btn-warning btn-edit"
+                        <th>First Name</th>
+                        <th>Last Name</th>
+                        <th>Email</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($users as $user): ?>
+                        <tr>
+                            <td><?php echo htmlspecialchars($user['First_Name']); ?></td>
+                            <td><?php echo htmlspecialchars($user['Last_Name']); ?></td>
+                            <td><?php echo htmlspecialchars($user['Email']); ?></td>
+                            <td>
+                                <button class="btn btn-warning btn-edit"
                                     data-id="<?php echo $user['User_ID']; ?>"
                                     data-email="<?php echo htmlspecialchars($user['Email']); ?>"
                                     data-first-name="<?php echo htmlspecialchars($user['First_Name']); ?>"
                                     data-last-name="<?php echo htmlspecialchars($user['Last_Name']); ?>"
                                     data-department="<?php echo htmlspecialchars($user['Department']); ?>"
                                     data-status="<?php echo htmlspecialchars($user['Status']); ?>">
-                                Edit
-                            </button>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
+                                    Edit
+                                </button>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
     </div>
-</div>
 
-<!-- Include Edit Modal -->
-<?php include 'edit_user.php'; ?>
+    <!-- Include Edit Modal -->
+    <?php include 'edit_user.php'; ?>
 
-<script>
-$(document).ready(function () {
-    $(".btn-edit").click(function () {
-        let userData = {
-            ID: $(this).data("id"),
-            Email: $(this).data("email"),
-            First_Name: $(this).data("first-name"),
-            Last_Name: $(this).data("last-name"),
-            Department: $(this).data("department"),
-            Status: $(this).data("status")
-        };
+    <script>
+        $(document).ready(function() {
+            $(".btn-edit").click(function() {
+                let userData = {
+                    ID: $(this).data("id"),
+                    Email: $(this).data("email"),
+                    First_Name: $(this).data("first-name"),
+                    Last_Name: $(this).data("last-name"),
+                    Department: $(this).data("department"),
+                    Status: $(this).data("status")
+                };
 
-        showEditModal(userData);
-    });
+                showEditModal(userData);
+            });
 
-    window.showEditModal = function (data) {
-        $("#editID").val(data.ID);
+            window.showEditModal = function(data) {
+                $("#editID").val(data.ID);
 
-        let fields = `
+                let fields = `
             <label>Email:</label><input type='email' class='form-control' name='Email' value='${data.Email}' required>
             <label>First Name:</label><input type='text' class='form-control' name='First_Name' value='${data.First_Name}' required>
             <label>Last Name:</label><input type='text' class='form-control' name='Last_Name' value='${data.Last_Name}' required>
@@ -128,33 +139,34 @@ $(document).ready(function () {
             <input type='password' class='form-control' name='Password'>
         `;
 
-        $("#dynamicFields").html(fields);
+                $("#dynamicFields").html(fields);
 
-        new bootstrap.Modal(document.getElementById("editModal")).show();
-    };
+                new bootstrap.Modal(document.getElementById("editModal")).show();
+            };
 
-    $("#saveChanges").click(function (event) {
-        event.preventDefault();
+            $("#saveChanges").click(function(event) {
+                event.preventDefault();
 
-        let formData = new FormData($("#editForm")[0]);
+                let formData = new FormData($("#editForm")[0]);
 
-        $.ajax({
-            url: "update_user.php",
-            type: "POST",
-            data: formData,
-            contentType: false,
-            processData: false,
-            success: function (response) {
-                alert(response);
-                location.reload();
-            },
-            error: function () {
-                alert("Failed to update user.");
-            }
+                $.ajax({
+                    url: "update_user.php",
+                    type: "POST",
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function(response) {
+                        alert(response);
+                        location.reload();
+                    },
+                    error: function() {
+                        alert("Failed to update user.");
+                    }
+                });
+            });
         });
-    });
-});
-</script>
+    </script>
 
 </body>
+
 </html>
