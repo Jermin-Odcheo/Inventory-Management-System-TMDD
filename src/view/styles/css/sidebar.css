@@ -1,6 +1,6 @@
 /* Sidebar styling */
 .sidebar {
-    width: 250px; /* Fixed width for sidebar */
+    width: 300px; /* Fixed width for sidebar */
     height: 100vh; /* Full height */
     background-color: #343a40; /* Dark background for sidebar */
     color: #ffffff; /* White text color */
@@ -12,15 +12,43 @@
     transition: width 0.3s; /* Smooth width transition */
 }
 
+.sidebar,
+.sidebar * {
+    box-sizing: border-box;
+}
+
 /* Sidebar Links */
 .sidebar a {
-    display: block; /* Block display for links */
-    color: #ffffff; /* White text color */
-    text-decoration: none; /* Remove underline */
-    padding: 12px 20px; /* Padding for links */
-    border-radius: 25px; /* More rounded corners for links */
-    transition: background-color 0.3s, color 0.3s, transform 0.3s, box-shadow 0.3s; /* Smooth transitions */
-    font-size: 16px; /* Consistent font size for links */
+    display: block;
+    color: #ffffff;
+    text-decoration: none;
+    padding: 12px 0; /* Only vertical padding; horizontal space comes from the pseudo-element */
+    border-radius: 25px;
+    transition: background-color 0.3s, color 0.3s, transform 0.3s, box-shadow 0.3s;
+    font-size: 16px;
+    position: relative;  /* For pseudo-element positioning if needed */
+}
+
+/* Pseudo-element to reserve space for icons on all links */
+.sidebar a::before {
+    content: "";
+    display: inline-block;
+    width: 20px;  /* Reserve space equivalent to the icon width */
+    margin-right: 10px;  /* Gap between the placeholder and the link text */
+    vertical-align: middle; /* Align with text */
+}
+
+/* If a link already has an icon element, hide the pseudo-element */
+.sidebar a i {
+    margin-right: 10px; /* Space between icon and text */
+    width: 20px;      /* Fixed width for icons */
+    text-align: center;
+    vertical-align: middle;
+}
+
+/* Remove the pseudo-element for links that already include an icon */
+.sidebar a i + span::before {
+    content: none;
 }
 
 /* Hover Effect for Links */
@@ -77,54 +105,14 @@
     background-color: #0056b3; /* Darker shade on hover */
 }
 
-/* Icon styling */
-.sidebar nav ul li a i {
-    margin-right: 10px; /* Space between icon and text */
-    width: 20px; /* Fixed width for icons */
-    text-align: center; /* Center align icons */
-}
-
-/* Specific Links */
+/* Specific Links (if needed, you can adjust further) */
 .sidebar nav ul li a.dashboard {
-    /* Specific styles for Dashboard link if needed */
-    transition: none; /* Remove hover effect */
+    transition: none; /* Remove hover effect if needed */
 }
 
 .sidebar nav ul li a.dashboard:hover {
     background-color: transparent; /* No background change on hover */
     color: #ecf0f1; /* Keep original color on hover */
-}
-
-.sidebar nav ul li a.user-management {
-    /* Specific styles for User Management link if needed */
-}
-
-.sidebar nav ul li a.equipment-management {
-    /* Specific styles for Equipment Management link if needed */
-}
-
-.sidebar nav ul li a.purchase-order {
-    /* Specific styles for Purchase Order link if needed */
-}
-
-.sidebar nav ul li a.charge-invoice {
-    /* Specific styles for Charge Invoice link if needed */
-}
-
-.sidebar nav ul li a.receiving-report {
-    /* Specific styles for Receiving Report link if needed */
-}
-
-.sidebar nav ul li a.equipment-details {
-    /* Specific styles for Equipment Details link if needed */
-}
-
-.sidebar nav ul li a.equipment-location {
-    /* Specific styles for Equipment Location link if needed */
-}
-
-.sidebar nav ul li a.equipment-status {
-    /* Specific styles for Equipment Status link if needed */
 }
 
 /* Dropdown Menu */
@@ -163,11 +151,6 @@
 .sidebar nav ul li .dropdown li a:hover {
     background-color: #2980b9; /* Modern blue shade on hover for dropdown links */
     color: #ffffff; /* Ensure text remains white on hover */
-}
-
-/* Add a subtle transition effect */
-.sidebar nav ul li .dropdown li a {
-    transition: background-color 0.3s ease, color 0.3s ease; /* Smooth transition */
 }
 
 /* Dropdown styles */

@@ -42,96 +42,7 @@ switch (strtolower(trim($role))) { // Normalize role to avoid case issues
 <head>
     <meta charset="UTF-8">
     <title><?php echo $dashboardTitle; ?></title>
-    <link rel="stylesheet" href="../../../styles/css/sidebar.css">
     <link rel="stylesheet" href="../../../styles/css/dashboard.css">
-    <style>
-        /* Additional styling for the online/offline table */
-        table {
-            background-color: #242424;
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        table th {
-            background-color: #0d6efd;
-            color: #fff;
-            padding: 8px;
-        }
-
-        table td {
-            padding: 8px;
-            color: #ffffff;
-            border-bottom: 1px solid #343a40;
-        }
-
-        .status-online {
-            color: #00ff00;
-            font-weight: bold;
-        }
-
-        .status-offline {
-            color: #ff3333;
-            font-weight: bold;
-        }
-
-        .dashboard-container hr {
-            margin: 20px 0;
-            border-color: #343a40;
-        }
-    </style>
-    <!-- JavaScript to update last_active periodically (the Heartbeat) -->
-    <script>
-        function sendHeartbeat() {
-            fetch('heartbeat.php', {
-                    method: 'POST'
-                })
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Heartbeat response:', data);
-                })
-                .catch(error => console.error('Error in heartbeat:', error));
-        }
-
-        // Send a heartbeat every 30 seconds
-        setInterval(sendHeartbeat, 30000);
-        sendHeartbeat(); // Also call once immediately
-
-
-        // Fetch the user status every 5 seconds
-        setInterval(fetchUserStatus, 5000);
-        // Or fetch once when the page loads
-        fetchUserStatus();
-
-        function fetchUserStatus() {
-            fetch('fetch_user_status.php')
-                .then(response => response.json())
-                .then(users => {
-                    const tbody = document.getElementById('userTableBody');
-                    tbody.innerHTML = ''; // Clear existing rows
-
-                    users.forEach(user => {
-                        const row = document.createElement('tr');
-
-                        // Use the isOnline property from the server
-                        const statusHTML = user.isOnline ?
-                            '<span style="color: lime; font-weight: bold;">Online</span>' :
-                            '<span style="color: red; font-weight: bold;">Offline</span>';
-
-                        row.innerHTML = `
-                    <td>${user.User_ID}</td>
-                    <td>${user.First_Name} ${user.Last_Name}</td>
-                    <td>${user.Email}</td>
-                    <td>${user.Department}</td>
-                    <td>${statusHTML}</td>
-                `;
-                        tbody.appendChild(row);
-                    });
-                })
-                .catch(error => console.error('Error fetching user status:', error));
-        }
-    </script>
-</head>
-
 <body>
     <!-- Include Sidebar -->
     <?php include '../../general/sidebar.php'; ?>
@@ -171,25 +82,6 @@ switch (strtolower(trim($role))) { // Normalize role to avoid case issues
 
             <hr>
 
-            <!-- Online/Offline User Listing -->
-            <section>
-                <h3>User Online Status</h3>
-                <table class="table table-striped table-hover">
-                    <thead>
-                        <tr>
-                            <th>User ID</th>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Department</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="userTableBody">
-                        <!-- Dynamically loaded via JavaScript -->
-                        <!-- (You can keep the original PHP rows for fallback if JS is disabled) -->
-                    </tbody>
-                </table>
-            </section>
         </div>
     </div>
 </body>

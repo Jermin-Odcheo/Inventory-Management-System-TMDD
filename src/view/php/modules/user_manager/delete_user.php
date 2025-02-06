@@ -1,24 +1,37 @@
 <?php
 session_start();
-require_once('../../../../config/ims-tmdd.php');
+require_once('../../../../../config/ims-tmdd.php');
 
-// Check for proper privileges here.
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $userId = $_POST['id'];
+    $password = $_POST['password'];
+    // Check whether this is a permanent deletion or soft deletion.
+    $permanent = isset($_POST['permanent']) && $_POST['permanent'] == "1";
 
-if (isset($_GET['id'])) {
-    $userID = $_GET['id'];
+    // Assume the current superuser's ID is stored in session
+    $currentUserId = $_SESSION['user_id'];
 
-    // Instead of deleting from user_roles, you could either:
-    //   (1) Leave user_roles as-is, preserving them for potential restore.
-    //   (2) Soft-delete user roles (if the table supports it).
-    // Remove or modify this statement accordingly:
-    // $stmt = $pdo->prepare("DELETE FROM user_roles WHERE User_ID = ?");
-    // $stmt->execute([$userID]);
+    // Retrieve the current superuser's hashed password from the database
+    $stmt = $pdo->prepare("SELECT password FROM users WHERE User_ID = ?");
+    $stmt->execute([$currentUserId]);
+    $storedHash = $stmt->fetchColumn();
 
-    // Soft-delete the user by setting is_deleted = 1 instead of physically removing.
-    $stmt = $pdo->prepare("UPDATE users SET is_deleted = 1 WHERE User_ID = ?");
-    $stmt->execute([$userID]);
+    if (password_verify($password, $storedHash)) {
+        if ($permanent) {
+            // Permanent deletion: actually delete the record
+            $stmtDelete = $pdo->prepare("DELETE FROM users WHERE User_ID = ?");
+            $stmtDelete->execute([$userId]);
+        } else {
+            // Soft deletion: mark the user as deleted
+            $stmtDelete = $pdo->prepare("UPDATE users SET is_deleted = 1 WHERE User_ID = ?");
+            $stmtDelete->execute([$userId]);
+        }
+        header("Location: user_management.php");
+        exit();
+    } else {
+        // Password incorrect; set an error message or handle as needed
+        $_SESSION['delete_error'] = "Incorrect password. Operation aborted.";
+        header("Location: user_management.php");
+        exit();
+    }
 }
-
-header("Location: user_management.php");
-exit();
-?>

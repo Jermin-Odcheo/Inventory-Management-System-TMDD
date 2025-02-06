@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once('../../../../config/ims-tmdd.php');
+require_once('../../../../../config/ims-tmdd.php');
 
 // Check for admin privileges (you should implement your privilege check).
 if (!isset($_SESSION['user_id'])) {

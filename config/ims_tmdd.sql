@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Feb 03, 2025 at 03:44 AM
+-- Generation Time: Feb 05, 2025 at 02:38 AM
 -- Server version: 8.2.0
 -- PHP Version: 8.2.13
 
@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS `roles` (
   `Role_Name` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`Role_ID`),
   UNIQUE KEY `Role_Name` (`Role_Name`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `roles`
@@ -225,19 +225,22 @@ CREATE TABLE IF NOT EXISTS `users` (
   `Last_Name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `Department` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `Status` enum('Online','Offline') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'Offline',
+  `last_active` datetime DEFAULT NULL,
+  `is_deleted` tinyint(1) DEFAULT '0',
   PRIMARY KEY (`User_ID`),
   UNIQUE KEY `Email` (`Email`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`User_ID`, `Email`, `Password`, `First_Name`, `Last_Name`, `Department`, `Status`) VALUES
-(1, 'superadmin@example.com', '$2y$10$i4ei.yjO/RWfQmsCjZrbUO8PdC8YKip8/JRf8yXYC17AU7RbHt8vq', 'super', 'admin', 'TMDD', 'Offline'),
-(2, 'administrator@example.com', '$2y$10$ScYu3YXjK.lTncFipqz4S.IvGbgEgfxcfH.wD5nkvLyDl5Xkbz7Z.', 'admin', 'strator', 'Department', 'Offline'),
-(3, 'superuser@example.com', '$2y$10$VJoWfKo9G6H37vDA3pvtB.dNL0ig2bBkH4jdo31Ept4HSJ7Ojp/A6', 'super', 'user', 'under department', 'Offline'),
-(4, 'regularuser@example.com', '$2y$10$OboOl8t8zAEU8E1prxQo7u2I0Z/yf1T0Q867ffx.AAgs0H/f1sLMy', 'regular', 'user', 'regular user', 'Offline');
+INSERT INTO `users` (`User_ID`, `Email`, `Password`, `First_Name`, `Last_Name`, `Department`, `Status`, `last_active`, `is_deleted`) VALUES
+(1, 'superadmin@example.com', '$2y$10$i4ei.yjO/RWfQmsCjZrbUO8PdC8YKip8/JRf8yXYC17AU7RbHt8vq', 'super', 'admin', 'TMDD', 'Offline', '2025-02-05 10:38:22', 0),
+(2, 'administrator@example.com', '$2y$10$ScYu3YXjK.lTncFipqz4S.IvGbgEgfxcfH.wD5nkvLyDl5Xkbz7Z.', 'admin', 'strator', 'Department', 'Offline', NULL, 0),
+(3, 'superuser@example.com', '$2y$10$VJoWfKo9G6H37vDA3pvtB.dNL0ig2bBkH4jdo31Ept4HSJ7Ojp/A6', 'super', 'user', 'under department', 'Offline', '2025-02-05 10:31:58', 0),
+(4, 'regularuser@example.com', '$2y$10$OboOl8t8zAEU8E1prxQo7u2I0Z/yf1T0Q867ffx.AAgs0H/f1sLMy', 'regular', 'user', 'regular user', 'Offline', '2025-02-03 16:54:02', 0),
+(6, 'test@example.com', '$2y$10$OnRvP/ieAMnTCTthCOHpwerURb1UlIkk7fYmMQ2OwcEFNoK3FJF..', 'test', 'case1', 'test case', 'Offline', NULL, 1);
 
 -- --------------------------------------------------------
 
@@ -253,7 +256,7 @@ CREATE TABLE IF NOT EXISTS `user_roles` (
   PRIMARY KEY (`User_Role_ID`),
   KEY `User_ID` (`User_ID`),
   KEY `Role_ID` (`Role_ID`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `user_roles`
@@ -263,7 +266,8 @@ INSERT INTO `user_roles` (`User_Role_ID`, `User_ID`, `Role_ID`) VALUES
 (1, 1, 1),
 (2, 2, 2),
 (3, 3, 3),
-(4, 4, 4);
+(4, 4, 4),
+(8, 6, 4);
 
 --
 -- Constraints for dumped tables
