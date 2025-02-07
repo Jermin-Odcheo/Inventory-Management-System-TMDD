@@ -28,6 +28,19 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                 </li>
             <?php endif; ?>
 
+            <!-- Show User Management only for Super Admins & Admins -->
+            <?php if ($role === 'Super User' || $role === 'User'): ?>
+                <li><a href="#"><i class="fas fa-history"></i> Audit Logs</a></li>
+                <li>
+                    <a href="#" class="dropdown-toggle"><i class="fa-solid fa-user"></i> User Management</a>
+                    <ul class="dropdown">
+                        <li><a href="../../modules/user_manager/user_management.php">Manage Accounts</a></li>
+                        <li><a href="../../modules/user_manager/user_management.php">Manage Roles</a></li>
+                        <li><a href="#">Manage Privileges</a></li>
+                    </ul>
+                </li>
+            <?php endif; ?>
+
             <!-- Equipment Management -->
             <li>
                 <a href="#" class="dropdown-toggle"><i class="fa-solid fa-wrench"></i> Equipment Management</a>
