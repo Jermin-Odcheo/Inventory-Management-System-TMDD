@@ -2,7 +2,6 @@
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
 
-
 // Set the audit log session variables for MySQL triggers.
 if (isset($_SESSION['user_id'])) {
     // Use the logged-in user's ID.
@@ -12,31 +11,37 @@ if (isset($_SESSION['user_id'])) {
     $pdo->exec("SET @current_user_id = NULL");
 }
 
-// Set IP address; adjust as needed if you use a proxy, etc.
-$ipAddress = $_SERVER['REMOTE_ADDR'];
-$pdo->exec("SET @current_ip = '" . $ipAddress . "'");
-
-// Set IP address; adjust as needed if you use a proxy, etc.
+// Set IP address for logging.
 $ipAddress = $_SERVER['REMOTE_ADDR'];
 $pdo->exec("SET @current_ip = '" . $ipAddress . "'");
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $userId = $_POST['id'];
-    $password = $_POST['password'];
-    // Check whether this is a permanent deletion or soft deletion.
+    // Retrieve the user ID and password
+    $userId = $_POST['user_id'];
+    $password = isset($_POST['password']) ? $_POST['password'] : ''; // Password is optional for soft delete
+
+    // Check if the action is for permanent deletion or soft deletion
     $permanent = isset($_POST['permanent']) && $_POST['permanent'] == "1";
 
-    // Assume the current superuser's ID is stored in session
-    $currentUserId = $_SESSION['user_id'];
+    // Retrieve the current superuser's hashed password from the database (if required for security)
+    if (!empty($password)) {
+        $currentUserId = $_SESSION['user_id'];
+        $stmt = $pdo->prepare("SELECT password FROM users WHERE User_ID = ?");
+        $stmt->execute([$currentUserId]);
+        $storedHash = $stmt->fetchColumn();
 
-    // Retrieve the current superuser's hashed password from the database
-    $stmt = $pdo->prepare("SELECT password FROM users WHERE User_ID = ?");
-    $stmt->execute([$currentUserId]);
-    $storedHash = $stmt->fetchColumn();
+        // Verify password if required
+        if (!password_verify($password, $storedHash)) {
+            $_SESSION['delete_error'] = "Incorrect password. Operation aborted.";
+            header("Location: user_management.php");
+            exit();
+        }
+    }
 
-    if (password_verify($password, $storedHash)) {
+    // Perform the deletion operation
+    try {
         if ($permanent) {
-            // Permanent deletion: actually delete the record
+            // Permanent deletion: delete the user record
             $stmtDelete = $pdo->prepare("DELETE FROM users WHERE User_ID = ?");
             $stmtDelete->execute([$userId]);
         } else {
@@ -44,12 +49,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmtDelete = $pdo->prepare("UPDATE users SET is_deleted = 1 WHERE User_ID = ?");
             $stmtDelete->execute([$userId]);
         }
+
+        // Redirect after operation
         header("Location: user_management.php");
         exit();
-    } else {
-        // Password incorrect; set an error message or handle as needed
-        $_SESSION['delete_error'] = "Incorrect password. Operation aborted.";
+    } catch (PDOException $e) {
+        // Handle database errors
+        $_SESSION['delete_error'] = "Error during deletion: " . $e->getMessage();
         header("Location: user_management.php");
         exit();
     }
 }
+?>
