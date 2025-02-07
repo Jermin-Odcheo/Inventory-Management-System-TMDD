@@ -18,11 +18,20 @@ if (!isset($_SESSION['user_id'])) {
 
 // Define allowed sorting columns
 $allowedSortColumns = ['User_ID', 'Email', 'First_Name', 'Last_Name', 'Department', 'Status', 'is_deleted'];
+
+// Default sort column
 $sortBy = isset($_GET['sort']) && in_array($_GET['sort'], $allowedSortColumns) ? $_GET['sort'] : 'User_ID';
-$sortDir = isset($_GET['dir']) && in_array($_GET['dir'], ['asc', 'desc']) ? $_GET['dir'] : 'asc';
+
+// Default sort direction
+$sortDir = isset($_GET['dir']) && $_GET['dir'] == 'desc' ? 'desc' : 'asc';
+
+// Check if 'tab' is set to switch between active and deleted users
+$isDeletedTab = isset($_GET['tab']) && $_GET['tab'] == 'deleted';
+
+// Modify the query based on the tab (active or deleted users)
+$query = $isDeletedTab ? "SELECT * FROM users WHERE is_deleted = 1 ORDER BY `$sortBy` $sortDir" : "SELECT * FROM users WHERE is_deleted = 0 ORDER BY `$sortBy` $sortDir";
 
 try {
-    $query = "SELECT * FROM users ORDER BY `$sortBy` $sortDir";
     $stmt = $pdo->prepare($query);
     $stmt->execute();
     $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -76,7 +85,6 @@ function sortIcon($currentSort, $column, $sortDir)
         margin-bottom: 20px;
         width: auto;
     }
- 
 </style>
 
 <body>
@@ -95,47 +103,51 @@ function sortIcon($currentSort, $column, $sortDir)
         <!-- Bootstrap Nav Tabs to toggle between Active and Deleted Users -->
         <ul class="nav nav-tabs" id="userTabs" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="active-tab" data-bs-toggle="tab" data-bs-target="#active-users" type="button" role="tab" aria-controls="active-users" aria-selected="true">Active Users</button>
+                <a class="nav-link <?php echo !$isDeletedTab ? 'active' : ''; ?>" href="?tab=active&sort=<?php echo $sortBy; ?>&dir=<?php echo $sortDir; ?>">
+                    Active Users
+                </a>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="deleted-tab" data-bs-toggle="tab" data-bs-target="#deleted-users" type="button" role="tab" aria-controls="deleted-users" aria-selected="false">Deleted Users</button>
+                <a class="nav-link <?php echo $isDeletedTab ? 'active' : ''; ?>" href="?tab=deleted&sort=<?php echo $sortBy; ?>&dir=<?php echo $sortDir; ?>">
+                    Deleted Users
+                </a>
             </li>
         </ul>
 
         <div class="tab-content" id="userTabsContent">
             <!-- Active Users Tab -->
-            <div class="tab-pane fade show active" id="active-users" role="tabpanel" aria-labelledby="active-tab">
+            <div class="tab-pane fade <?php echo !$isDeletedTab ? 'show active' : ''; ?>" id="active-users" role="tabpanel" aria-labelledby="active-tab">
                 <div class="table-responsive">
                     <table class="table table-striped table-hover">
                         <thead class="table-dark">
                             <tr>
                                 <th>
-                                    <a class="text-white text-decoration-none" href="?sort=User_ID&dir=<?php echo toggleDirection($sortBy, $sortDir, 'User_ID'); ?>">
+                                    <a class="text-white text-decoration-none" href="?tab=active&sort=User_ID&dir=<?php echo toggleDirection($sortBy, $sortDir, 'User_ID'); ?>">
                                         User ID<?php echo sortIcon($sortBy, 'User_ID', $sortDir); ?>
                                     </a>
                                 </th>
                                 <th>
-                                    <a class="text-white text-decoration-none" href="?sort=Email&dir=<?php echo toggleDirection($sortBy, $sortDir, 'Email'); ?>">
+                                    <a class="text-white text-decoration-none" href="?tab=active&sort=Email&dir=<?php echo toggleDirection($sortBy, $sortDir, 'Email'); ?>">
                                         Email<?php echo sortIcon($sortBy, 'Email', $sortDir); ?>
                                     </a>
                                 </th>
                                 <th>
-                                    <a class="text-white text-decoration-none" href="?sort=First_Name&dir=<?php echo toggleDirection($sortBy, $sortDir, 'First_Name'); ?>">
+                                    <a class="text-white text-decoration-none" href="?tab=active&sort=First_Name&dir=<?php echo toggleDirection($sortBy, $sortDir, 'First_Name'); ?>">
                                         Name<?php echo sortIcon($sortBy, 'First_Name', $sortDir); ?>
                                     </a>
                                 </th>
                                 <th>
-                                    <a class="text-white text-decoration-none" href="?sort=Department&dir=<?php echo toggleDirection($sortBy, $sortDir, 'Department'); ?>">
+                                    <a class="text-white text-decoration-none" href="?tab=active&sort=Department&dir=<?php echo toggleDirection($sortBy, $sortDir, 'Department'); ?>">
                                         Department<?php echo sortIcon($sortBy, 'Department', $sortDir); ?>
                                     </a>
                                 </th>
                                 <th>
-                                    <a class="text-white text-decoration-none" href="?sort=Status&dir=<?php echo toggleDirection($sortBy, $sortDir, 'Status'); ?>">
+                                    <a class="text-white text-decoration-none" href="?tab=active&sort=Status&dir=<?php echo toggleDirection($sortBy, $sortDir, 'Status'); ?>">
                                         Status<?php echo sortIcon($sortBy, 'Status', $sortDir); ?>
                                     </a>
                                 </th>
                                 <th>
-                                    <a class="text-white text-decoration-none" href="?sort=Roles&dir=<?php echo toggleDirection($sortBy, $sortDir, 'Roles'); ?>">
+                                    <a class="text-white text-decoration-none" href="?tab=active&sort=Roles&dir=<?php echo toggleDirection($sortBy, $sortDir, 'Roles'); ?>">
                                         Roles<?php echo sortIcon($sortBy, 'Roles', $sortDir); ?>
                                     </a>
                                 </th>
@@ -144,34 +156,41 @@ function sortIcon($currentSort, $column, $sortDir)
                         </thead>
                         <tbody>
                             <?php foreach ($users as $user): ?>
-                                <?php if ($user['is_deleted'] == 0): // Only active users 
-                                ?>
-                                    <?php
-                                    // Fetch roles for each user.
-                                    $stmtRole = $pdo->prepare("
-                                        SELECT r.Role_Name
-                                        FROM roles r 
-                                        JOIN user_roles ur ON r.Role_ID = ur.Role_ID 
-                                        WHERE ur.User_ID = ?
-                                    ");
-                                    $stmtRole->execute([$user['User_ID']]);
-                                    $roles = $stmtRole->fetchAll(PDO::FETCH_COLUMN);
-                                    ?>
-                                    <tr>
-                                        <td><?php echo $user['User_ID']; ?></td>
-                                        <td><?php echo htmlspecialchars($user['Email']); ?></td>
-                                        <td><?php echo htmlspecialchars($user['First_Name'] . ' ' . $user['Last_Name']); ?></td>
-                                        <td><?php echo htmlspecialchars($user['Department']); ?></td>
-                                        <td><?php echo htmlspecialchars($user['Status']); ?></td>
-                                        <td><?php echo implode(', ', $roles); ?></td>
-                                        <td>
-                                            <a href="edit_user.php?id=<?php echo $user['User_ID']; ?>" class="btn btn-sm btn-warning">Edit</a>
-                                            <button type="button" class="btn btn-sm btn-danger" onclick="openDeleteModal(<?php echo $user['User_ID']; ?>)">
-                                                Delete
-                                            </button>
-                                        </td>
-                                    </tr>
-                                <?php endif; ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($user['User_ID']); ?></td>
+                                    <td><?php echo htmlspecialchars($user['Email']); ?></td>
+                                    <td><?php echo htmlspecialchars($user['First_Name'] . ' ' . $user['Last_Name']); ?></td>
+                                    <td><?php echo htmlspecialchars($user['Department']); ?></td>
+                                    <td><?php echo htmlspecialchars($user['Status']); ?></td>
+                                    <td>
+                                        <?php
+                                        // Fetch roles for each user.
+                                        $stmtRole = $pdo->prepare("
+                                            SELECT r.Role_Name
+                                            FROM roles r 
+                                            JOIN user_roles ur ON r.Role_ID = ur.Role_ID 
+                                            WHERE ur.User_ID = ?
+                                        ");
+                                        $stmtRole->execute([$user['User_ID']]);
+                                        $roles = $stmtRole->fetchAll(PDO::FETCH_COLUMN);
+                                        echo implode(', ', $roles);
+                                        ?>
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-warning btn-edit"
+                                            data-id="<?php echo $user['User_ID']; ?>"
+                                            data-email="<?php echo htmlspecialchars($user['Email']); ?>"
+                                            data-first-name="<?php echo htmlspecialchars($user['First_Name']); ?>"
+                                            data-last-name="<?php echo htmlspecialchars($user['Last_Name']); ?>"
+                                            data-department="<?php echo htmlspecialchars($user['Department']); ?>"
+                                            data-status="<?php echo htmlspecialchars($user['Status']); ?>">
+                                            Edit
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-danger" onclick="openDeleteModal(<?php echo $user['User_ID']; ?>)">
+                                            Delete
+                                        </button>
+                                    </td>
+                                </tr>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
@@ -179,7 +198,7 @@ function sortIcon($currentSort, $column, $sortDir)
             </div>
 
             <!-- Deleted Users Tab -->
-            <div class="tab-pane fade" id="deleted-users" role="tabpanel" aria-labelledby="deleted-tab">
+            <div class="tab-pane fade <?php echo $isDeletedTab ? 'show active' : ''; ?>" id="deleted-users" role="tabpanel" aria-labelledby="deleted-tab">
                 <div class="table-responsive">
                     <table class="table table-striped table-hover">
                         <thead class="table-dark">
@@ -195,38 +214,41 @@ function sortIcon($currentSort, $column, $sortDir)
                         </thead>
                         <tbody>
                             <?php foreach ($users as $user): ?>
-                                <?php if ($user['is_deleted'] == 1): // Only deleted users 
-                                ?>
-                                    <?php
-                                    // Fetch roles for each user.
-                                    $stmtRole = $pdo->prepare("
-                                        SELECT r.Role_Name
-                                        FROM roles r 
-                                        JOIN user_roles ur ON r.Role_ID = ur.Role_ID 
-                                        WHERE ur.User_ID = ?
-                                    ");
-                                    $stmtRole->execute([$user['User_ID']]);
-                                    $roles = $stmtRole->fetchAll(PDO::FETCH_COLUMN);
-                                    ?>
-                                    <tr>
-                                        <td><?php echo $user['User_ID']; ?></td>
-                                        <td><?php echo htmlspecialchars($user['Email']); ?></td>
-                                        <td><?php echo htmlspecialchars($user['First_Name'] . ' ' . $user['Last_Name']); ?></td>
-                                        <td><?php echo htmlspecialchars($user['Department']); ?></td>
-                                        <td><?php echo htmlspecialchars($user['Status']); ?></td>
-                                        <td><?php echo implode(', ', $roles); ?></td>
-                                        <td>
-                                            <!-- Restore button-->
-                                            <button type="button" class="btn btn-sm btn-primary" onclick="openRestoreModal(<?php echo $user['User_ID']; ?>)">
-                                                Restore
-                                            </button>
-                                            <!-- Permanent Delete button -->
-                                            <button type="button" class="btn btn-sm btn-danger" onclick="openDeleteModal(<?php echo $user['User_ID']; ?>, true)">
-                                                Permanently Delete
-                                            </button>
-                                        </td>
-                                    </tr>
-                                <?php endif; ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($user['User_ID']); ?></td>
+                                    <td><?php echo htmlspecialchars($user['Email']); ?></td>
+                                    <td><?php echo htmlspecialchars($user['First_Name'] . ' ' . $user['Last_Name']); ?></td>
+                                    <td><?php echo htmlspecialchars($user['Department']); ?></td>
+                                    <td><?php echo htmlspecialchars($user['Status']); ?></td>
+                                    <td>
+                                        <?php
+                                        // Fetch roles for each user
+                                        $stmtRole = $pdo->prepare("
+                                            SELECT r.Role_Name
+                                            FROM roles r 
+                                            JOIN user_roles ur ON r.Role_ID = ur.Role_ID 
+                                            WHERE ur.User_ID = ?
+                                        ");
+                                        $stmtRole->execute([$user['User_ID']]);
+                                        $roles = $stmtRole->fetchAll(PDO::FETCH_COLUMN);
+                                        echo implode(', ', $roles);
+                                        ?>
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-warning btn-edit"
+                                            data-id="<?php echo $user['User_ID']; ?>"
+                                            data-email="<?php echo htmlspecialchars($user['Email']); ?>"
+                                            data-first-name="<?php echo htmlspecialchars($user['First_Name']); ?>"
+                                            data-last-name="<?php echo htmlspecialchars($user['Last_Name']); ?>"
+                                            data-department="<?php echo htmlspecialchars($user['Department']); ?>"
+                                            data-status="<?php echo htmlspecialchars($user['Status']); ?>">
+                                            Edit
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-danger" onclick="openDeleteModal(<?php echo $user['User_ID']; ?>)">
+                                            Delete
+                                        </button>
+                                    </td>
+                                </tr>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
@@ -239,63 +261,64 @@ function sortIcon($currentSort, $column, $sortDir)
     <?php include 'edit_user.php'; ?>
 
     <script>
-        $(document).ready(function() {
-            $(".btn-edit").click(function() {
-                let userData = {
-                    ID: $(this).data("id"),
-                    Email: $(this).data("email"),
-                    First_Name: $(this).data("first-name"),
-                    Last_Name: $(this).data("last-name"),
-                    Department: $(this).data("department"),
-                    Status: $(this).data("status")
-                };
-
-                showEditModal(userData);
-            });
-
-            window.showEditModal = function(data) {
-                $("#editID").val(data.ID);
-
-                let fields = `
-                    <label>Email:</label><input type='email' class='form-control' name='Email' value='${data.Email}' required>
-                    <label>First Name:</label><input type='text' class='form-control' name='First_Name' value='${data.First_Name}' required>
-                    <label>Last Name:</label><input type='text' class='form-control' name='Last_Name' value='${data.Last_Name}' required>
-                    <label>Department:</label><input type='text' class='form-control' name='Department' value='${data.Department}' required>
-                    <label>Status:</label>
-                    <select class='form-control' name='Status'>
-                        <option value='Active' ${data.Status === 'Active' ? 'selected' : ''}>Active</option>
-                        <option value='Inactive' ${data.Status === 'Inactive' ? 'selected' : ''}>Inactive</option>
-                    </select>
-                    <label>New Password (Leave blank to keep current password):</label>
-                    <input type='password' class='form-control' name='Password'>
-                `;
-
-                $("#dynamicFields").html(fields);
-
-                new bootstrap.Modal(document.getElementById("editModal")).show();
+    $(document).ready(function() {
+        // Click event for Edit button
+        $(".btn-edit").click(function() {
+            let userData = {
+                ID: $(this).data("id"),
+                Email: $(this).data("email"),
+                First_Name: $(this).data("firstname"),
+                Last_Name: $(this).data("lastname"),
+                Department: $(this).data("department"),
+                Status: $(this).data("status")
             };
 
-            $("#saveChanges").click(function(event) {
-                event.preventDefault();
+            showEditModal(userData);
+        });
 
-                let formData = new FormData($("#editForm")[0]);
+        window.showEditModal = function(data) {
+            $("#editID").val(data.ID);
 
-                $.ajax({
-                    url: "update_user.php",
-                    type: "POST",
-                    data: formData,
-                    contentType: false,
-                    processData: false,
-                    success: function(response) {
-                        alert(response);
-                        location.reload();
-                    },
-                    error: function() {
-                        alert("Failed to update user.");
-                    }
-                });
+            let fields = `
+                <label>Email:</label><input type='email' class='form-control' name='Email' value='${data.Email}' required>
+                <label>First Name:</label><input type='text' class='form-control' name='First_Name' value='${data.First_Name}' required>
+                <label>Last Name:</label><input type='text' class='form-control' name='Last_Name' value='${data.Last_Name}' required>
+                <label>Department:</label><input type='text' class='form-control' name='Department' value='${data.Department}' required>
+                <label>Status:</label>
+                <select class='form-control' name='Status'>
+                    <option value='Active' ${data.Status === 'Active' ? 'selected' : ''}>Active</option>
+                    <option value='Inactive' ${data.Status === 'Inactive' ? 'selected' : ''}>Inactive</option>
+                </select>
+                <label>New Password (Leave blank to keep current password):</label>
+                <input type='password' class='form-control' name='Password'>
+            `;
+
+            $("#dynamicFields").html(fields);
+
+            new bootstrap.Modal(document.getElementById("editModal")).show();
+        };
+
+        $("#saveChanges").click(function(event) {
+            event.preventDefault();
+
+            let formData = new FormData($("#editForm")[0]);
+
+            $.ajax({
+                url: "update_user.php",
+                type: "POST",
+                data: formData,
+                contentType: false,
+                processData: false,
+                success: function(response) {
+                    alert(response);
+                    location.reload();
+                },
+                error: function() {
+                    alert("Failed to update user.");
+                }
             });
         });
+    });
     </script>
 
 </body>
