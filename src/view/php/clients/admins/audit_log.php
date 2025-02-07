@@ -8,24 +8,17 @@ require_once('../../../../../config/ims-tmdd.php'); // adjust the path as needed
 //     exit();
 // }
 
-// Query audit logs for the "users" table joined with the users table to get the email.
-$query = "SELECT a.*, u.Email AS ChangedByEmail 
-          FROM audit_log a 
-          LEFT JOIN users u ON a.ChangedBy = u.User_ID 
-          WHERE a.TableName = 'users' 
-          ORDER BY a.ChangeTime DESC";
+// Query audit logs from the audit_log table.
+$query = "SELECT * FROM audit_log WHERE Module = 'User Management' ORDER BY Date_Time DESC";
 $stmt = $pdo->prepare($query);
 $stmt->execute();
 $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 /**
- * Helper function to format audit data as a full HTML unordered list.
- * Used for INSERT and DELETE actions.
- *
- * @param string $jsonStr The JSON string from the audit_log.
- * @return string An HTML unordered list of key/value pairs, or a placeholder if empty.
+ * Helper function to pretty-print JSON data.
+ * This function is used for non-update actions.
  */
-function formatAuditDataToHtml($jsonStr)
+function formatJsonData($jsonStr)
 {
     if (empty($jsonStr)) {
         return '<em>No data</em>';
@@ -36,7 +29,7 @@ function formatAuditDataToHtml($jsonStr)
     }
     $html = '<ul class="list-unstyled mb-0">';
     foreach ($decoded as $key => $value) {
-        $html .= '<li><strong>' . htmlspecialchars(ucfirst($key)) . ':</strong> ' . htmlspecialchars($value) . '</li>';
+        $html .= '<li><strong>' . htmlspecialchars($key) . ':</strong> ' . htmlspecialchars($value) . '</li>';
     }
     $html .= '</ul>';
     return $html;
@@ -44,82 +37,59 @@ function formatAuditDataToHtml($jsonStr)
 
 /**
  * Helper function to compare old and new JSON data and return only changed fields.
- * It displays for each field: "FieldName: old value → new value"
+ * It displays each changed field as:
+ *    FieldName: Old value → New value
  *
  * @param string $oldJson The JSON string for the old data.
  * @param string $newJson The JSON string for the new data.
- * @return string An HTML unordered list of only the fields that changed.
- */
-function formatAuditUpdateData($oldJson, $newJson)
+ * @return string HTML displaying only the fields that changed.
+ */function formatAuditDiff($oldJson, $newJson)
 {
     $oldData = json_decode($oldJson, true);
     $newData = json_decode($newJson, true);
-
+    
     if (!is_array($oldData) || !is_array($newData)) {
         return '<span>' . htmlspecialchars($newJson) . '</span>';
     }
-
-    $allKeys = array_unique(array_merge(array_keys($oldData), array_keys($newData)));
+    
+    // Combine all keys from both old and new data.
+    $keys = array_unique(array_merge(array_keys($oldData), array_keys($newData)));
     $diffs = [];
-    foreach ($allKeys as $key) {
-        $oldValue = isset($oldData[$key]) ? $oldData[$key] : '';
-        $newValue = isset($newData[$key]) ? $newData[$key] : '';
-        if ($oldValue !== $newValue) {
-            $diffs[] = '<li><strong>' . htmlspecialchars(ucfirst($key)) . '</strong>: ' .
-                '<em>' . htmlspecialchars($oldValue) . '</em> &rarr; ' .
-                '<em>' . htmlspecialchars($newValue) . '</em></li>';
+    
+    foreach ($keys as $key) {
+        // Special handling for password field.
+        if (strtolower($key) === 'password') {
+            if (isset($oldData[$key], $newData[$key]) && $oldData[$key] !== $newData[$key]) {
+                $diffs[] = '<li><strong>Password</strong>: Changed</li>';
+            }
+            // Skip further processing of the password field.
+            continue;
+        }
+        
+        $oldVal = isset($oldData[$key]) ? $oldData[$key] : '';
+        $newVal = isset($newData[$key]) ? $newData[$key] : '';
+        
+        if ($oldVal !== $newVal) {
+            $diffs[] = '<li><strong>' . htmlspecialchars(ucfirst($key)) . '</strong>: ' 
+                     . htmlspecialchars($oldVal) . ' &rarr; ' . htmlspecialchars($newVal) . '</li>';
         }
     }
+    
     if (empty($diffs)) {
         return '<em>No changes detected.</em>';
     }
+    
     return '<ul class="list-unstyled mb-0">' . implode('', $diffs) . '</ul>';
 }
 
-/**
- * Helper function to decide which display action to use.
- * For UPDATE actions that change only the is_deleted field, return:
- *   "Account Deleted" if is_deleted changes from 0 to 1, or
- *   "Account Restored" if is_deleted changes from 1 to 0.
- *
- * @param array $log The audit log entry.
- * @return string The display action.
- */
-function getDisplayAction($log)
-{
-    $action = $log['Action'];
-    if ($action === 'UPDATE') {
-        $oldData = json_decode($log['OldData'], true);
-        $newData = json_decode($log['NewData'], true);
-        if (is_array($oldData) && is_array($newData)) {
-            $allKeys = array_unique(array_merge(array_keys($oldData), array_keys($newData)));
-            $changedKeys = [];
-            foreach ($allKeys as $key) {
-                $oldValue = isset($oldData[$key]) ? $oldData[$key] : '';
-                $newValue = isset($newData[$key]) ? $newData[$key] : '';
-                if ($oldValue !== $newValue) {
-                    $changedKeys[] = $key;
-                }
-            }
-            if (count($changedKeys) === 1 && in_array('is_deleted', $changedKeys)) {
-                if (isset($newData['is_deleted']) && $newData['is_deleted'] == 1) {
-                    $action = 'Account Deleted';
-                } elseif (isset($newData['is_deleted']) && $newData['is_deleted'] == 0) {
-                    $action = 'Account Restored';
-                }
-            }
-        }
-    }
-    return $action;
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
-    <title>User Audit Logs</title>
-    <!-- Bootstrap CSS (using Bootstrap 4; upgrade to v5 if desired) -->
+    <title>Audit Logs</title>
+    <!-- Bootstrap CSS (you can upgrade to v5 if desired) -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
         .data-container {
@@ -136,10 +106,6 @@ function getDisplayAction($log)
             margin-left: 300px;
             /* Adjust according to your sidebar width */
             padding: 20px;
-
-            border-radius: 8px;
-            margin-bottom: 20px;
-            width: auto;
         }
     </style>
 </head>
@@ -148,46 +114,56 @@ function getDisplayAction($log)
     <?php include '../../general/sidebar.php'; ?>
     <div class="main-content">
         <div class="container mt-4">
-            <h1 class="mb-4">User Audit Logs</h1>
+            <h1 class="mb-4">Audit Logs</h1>
             <table class="table table-bordered table-striped table-responsive-sm">
                 <thead class="thead-dark">
                     <tr>
-                        <th>ID</th>
+                        <th>TrackID</th>
+                        <th>User</th>
                         <th>Action</th>
-                        <th>Changed By (Email)</th>
-                        <th>Change Details</th>
-                        <th>IP Address</th>
-                        <th>Change Time</th>
+                        <th>Details</th>
+                        <th>Changes</th>
+                        <th>Module</th>
+                        <th>Status</th>
+                        <th>Date &amp; Time</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (count($auditLogs) > 0): ?>
                         <?php foreach ($auditLogs as $log): ?>
-                            <?php $displayAction = getDisplayAction($log); ?>
                             <tr>
-                                <td><?php echo htmlspecialchars($log['AuditLogID']); ?></td>
-                                <td><?php echo htmlspecialchars($displayAction); ?></td>
-                                <td><?php echo htmlspecialchars($log['ChangedByEmail'] ?? 'N/A'); ?></td>
+                                <td><?php echo htmlspecialchars($log['TrackID']); ?></td>
+                                <td><?php echo htmlspecialchars($log['User']); ?></td>
+                                <td><?php echo htmlspecialchars($log['Action']); ?></td>
+                                <td class="data-container"><?php echo nl2br(htmlspecialchars($log['Details'])); ?></td>
+                                
                                 <td class="data-container">
                                     <?php
-                                    if ($log['Action'] === 'UPDATE') {
-                                        echo formatAuditUpdateData($log['OldData'], $log['NewData']);
-                                    } elseif ($log['Action'] === 'INSERT') {
-                                        echo formatAuditDataToHtml($log['NewData']);
-                                    } elseif ($log['Action'] === 'DELETE') {
-                                        echo formatAuditDataToHtml($log['OldData']);
+                                    if ($log['Action'] === 'Modified') {
+                                        echo formatAuditDiff($log['OldVal'], $log['NewVal']);
                                     } else {
-                                        echo '<span>' . htmlspecialchars($log['NewData']) . '</span>';
+                                        // For Add or Delete actions, show the full data as needed.
+                                        if ($log['Action'] === 'Add') {
+                                            echo formatJsonData($log['NewVal']);
+                                        } elseif ($log['Action'] === 'Delete') {
+                                            echo formatJsonData($log['OldVal']);
+                                        } else {
+                                            echo formatJsonData($log['NewVal']);
+                                        }
                                     }
                                     ?>
                                 </td>
-                                <td><?php echo htmlspecialchars($log['IPAddress']); ?></td>
-                                <td><?php echo htmlspecialchars($log['ChangeTime']); ?></td>
+
+
+                                </td>
+                                <td><?php echo htmlspecialchars($log['Module']); ?></td>
+                                <td><?php echo htmlspecialchars($log['Status']); ?></td>
+                                <td><?php echo htmlspecialchars($log['Date_Time']); ?></td>
                             </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="6" class="text-center">No audit log entries found for the users table.</td>
+                            <td colspan="8" class="text-center">No audit log entries found.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
