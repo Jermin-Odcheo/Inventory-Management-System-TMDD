@@ -15,7 +15,7 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
         <ul>
             <li><a href="../../clients/admins/dashboard.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
             <!-- Show User Management only for Super Users & Administrators -->
-            <?php if ($role === 'Super User'): ?>
+            <?php if ($role === 'Super Admin'): ?>
                 <a href="../../../modules/user_manager/user_management.php">
                     <i class="fa-solid fa-user"></i> User Management</a>
                 <li>
