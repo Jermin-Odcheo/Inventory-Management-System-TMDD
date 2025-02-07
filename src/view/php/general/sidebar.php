@@ -17,12 +17,12 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
 
             <!-- Show User Management only for Super Admins & Admins -->
             <?php if ($role === 'Super Admin' || $role === 'Admin'): ?>
-                <li><a href="#"><i class="fas fa-history"></i> Audit Logs</a></li>
+                <li><a href="/src/view/php/clients/admins/audit_log.php"><i class="fas fa-history"></i> Audit Logs</a></li>
                 <li>
                     <a href="#" class="dropdown-toggle"><i class="fa-solid fa-user"></i> User Management</a>
                     <ul class="dropdown">
                         <li><a href="../../modules/user_manager/user_management.php">Manage Accounts</a></li>
-                        <li><a href="../../modules/user_manager/user_management.php">Manage Roles</a></li>
+                        <li><a href="../../modules/user_manager/manage_roles.php">Manage Roles</a></li>
                         <li><a href="#">Manage Privileges</a></li>
                     </ul>
                 </li>
