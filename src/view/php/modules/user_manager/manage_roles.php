@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once('../../../../config/ims-tmdd.php');
+require_once('../../../../../config/ims-tmdd.php');
 
 // Optional: Check if the logged-in user has permission to manage roles.
 if (!isset($_SESSION['user_id'])) {
@@ -70,7 +70,7 @@ foreach ($roleData as $row) {
         }
 
         .content {
-            margin-left: 260px;
+            margin-left: 300px;
             padding: 20px;
             background-color: #242424;
             border-radius: 8px;
@@ -125,7 +125,7 @@ foreach ($roleData as $row) {
 
 <body>
     <!-- Include Sidebar -->
-    <?php include '../general/sidebar.php'; ?>
+    <?php include '../../../php/general/sidebar.php'; ?>
 
     <!-- Main Content Area -->
     <div class="content">

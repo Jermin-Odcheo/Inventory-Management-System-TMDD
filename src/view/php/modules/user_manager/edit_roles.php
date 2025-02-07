@@ -1,12 +1,13 @@
 <?php
 session_start();
-require_once('../../../../config/ims-tmdd.php');
+require_once('../../../../../config/ims-tmdd.php');
 
-// Optional: Check if the logged-in user has permission to edit roles.
+// Optional: Check if the logged-in user has permission to manage roles.
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
+
 
 // Check if a Role ID is provided via GET.
 if (!isset($_GET['id'])) {
