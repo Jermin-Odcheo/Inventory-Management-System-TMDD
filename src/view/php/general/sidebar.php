@@ -13,16 +13,46 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
     <h2>Menu</h2>
     <nav>
         <ul>
+<<<<<<< HEAD
+=======
+            <li><a href="/src/view/php/clients/admins/dashboard.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+
+            <!-- Show User Management only for Super Admins & Admins -->
+            <?php if ($role === 'Super Admin' || $role === 'Admin'): ?>
+                <li><a href="../../../view/php/clients/admins/audit_log.php"><i class="fas fa-history"></i> Audit Logs</a></li>
+>>>>>>> 164376e384b7b29d2e9a59d88461be4821295e69
                 <li>
                     <a href="#" class="dropdown-toggle"><i class="fa-solid fa-user"></i> User Management</a>
                     <ul class="dropdown">
                         <li><a href="../../modules/user_manager/user_management.php">Manage Accounts</a></li>
+<<<<<<< HEAD
+=======
+                        <li><a href="../../modules/user_manager/user_management.php">Manage Roles</a></li>
+>>>>>>> 164376e384b7b29d2e9a59d88461be4821295e69
                         <li><a href="#">Manage Privileges</a></li>
                     </ul>
                 </li>
             <?php endif; ?>
 
+<<<<<<< HEAD
 
+=======
+            <!-- Equipment Management -->
+            <li>
+                <a href="#" class="dropdown-toggle"><i class="fa-solid fa-wrench"></i> Equipment Management</a>
+                <ul class="dropdown">
+                    <li><a href="purchase_order.php">Purchase Order</a></li>
+                    <li><a href="charge_invoice.php">Charge Invoice</a></li>
+                    <li><a href="receiving_report.php">Receiving Report</a></li>
+                    <li><a href="equipment_details.php">Equipment Details</a></li>
+                    <li><a href="equipment_location.php">Equipment Location</a></li>
+                    <li><a href="equipment_status.php">Equipment Status</a></li>
+                </ul>
+            </li>
+
+            <!-- Settings & Logout -->
+            <li><a href="settings.php"><i class="fas fa-cogs"></i> Settings</a></li>
+>>>>>>> 164376e384b7b29d2e9a59d88461be4821295e69
             <li><a href="../../general/logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
         </ul>
     </nav>
