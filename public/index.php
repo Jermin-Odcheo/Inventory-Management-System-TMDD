@@ -99,7 +99,7 @@
         </div>
     </div>
     <footer>
-        <p class="mb-0">&copy; 2025 TMDD Interns | Alagad ni SLU</p>
+        <?php include '../src/view/php/general/footer.php';?>
     </footer>
 
     <script>
