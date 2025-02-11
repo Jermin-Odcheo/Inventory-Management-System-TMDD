@@ -32,7 +32,7 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
             <li>
                 <a href="#" class="dropdown-toggle"><i class="fa-solid fa-wrench"></i> Equipment Management</a>
                 <ul class="dropdown">
-                    <li><a href="purchase_order.php">Purchase Order</a></li>
+                    <li><a href="../../modules/equipment_manager/purchase_order.php">Purchase Order</a></li>
                     <li><a href="charge_invoice.php">Charge Invoice</a></li>
                     <li><a href="receiving_report.php">Receiving Report</a></li>
                     <li><a href="equipment_details.php">Equipment Details</a></li>
