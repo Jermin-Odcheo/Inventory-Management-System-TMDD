@@ -39,25 +39,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Perform the deletion operation
-    try {
-        if ($permanent) {
-            // Permanent deletion: delete the user record
-            $stmtDelete = $pdo->prepare("DELETE FROM users WHERE User_ID = ?");
-            $stmtDelete->execute([$userId]);
-        } else {
-            // Soft deletion: mark the user as deleted
-            $stmtDelete = $pdo->prepare("UPDATE users SET is_deleted = 1 WHERE User_ID = ?");
-            $stmtDelete->execute([$userId]);
+    // Check for multiple IDs
+    if (isset($_POST['user_ids']) && is_array($_POST['user_ids'])) {
+        $userIds = $_POST['user_ids'];
+        try {
+            $stmt = $pdo->prepare("UPDATE users SET is_deleted = 1 WHERE User_ID IN (" . implode(",", array_fill(0, count($userIds), '?')) . ")");
+            $stmt->execute($userIds);
+            echo "Selected users have been deleted.";
+        } catch (PDOException $e) {
+            echo "Error: " . $e->getMessage();
         }
-
-        // Redirect after operation
-        header("Location: user_management.php");
-        exit();
-    } catch (PDOException $e) {
-        // Handle database errors
-        $_SESSION['delete_error'] = "Error during deletion: " . $e->getMessage();
-        header("Location: user_management.php");
-        exit();
+    }
+    // Fallback for individual deletion:
+    else if (isset($_POST['user_id'])) {
+        $userId = $_POST['user_id'];
+        try {
+            $stmt = $pdo->prepare("UPDATE users SET is_deleted = 1 WHERE User_ID = ?");
+            $stmt->execute([$userId]);
+            echo "User has been deleted.";
+        } catch (PDOException $e) {
+            echo "Error: " . $e->getMessage();
+        }
+    } else {
+        echo "No users selected.";
     }
 }
 ?>

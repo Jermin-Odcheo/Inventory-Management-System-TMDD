@@ -13,11 +13,11 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
     <h2>Menu</h2>
     <nav>
         <ul>
-            <li><a href="src/view/php/clients/admins/dashboard.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+            <li><a href="/src/view/php/clients/admins/dashboard.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
 
             <!-- Show User Management only for Super Admins & Admins -->
             <?php if ($role === 'Super Admin' || $role === 'Admin'): ?>
-                <li><a href="../admins/audit_log.php"><i class="fas fa-history"></i> Audit Logs</a></li>
+                <li><a href="/src/view/php/clients/admins/audit_log.php"><i class="fas fa-history"></i> Audit Logs</a></li>
                 <li>
                     <a href="#" class="dropdown-toggle"><i class="fa-solid fa-user"></i> User Management</a>
                     <ul class="dropdown">

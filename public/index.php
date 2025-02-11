@@ -11,7 +11,7 @@
         try {
             // Fetch user and role from the database
             $stmt = $pdo->prepare("
-            SELECT u.User_ID, u.Email, u.Password, r.Role_Name 
+            SELECT u.User_ID, u.Email, u.Password, r.Role_Name
             FROM users u
             JOIN user_roles ur ON u.User_ID = ur.User_ID
             JOIN roles r ON ur.Role_ID = r.Role_ID

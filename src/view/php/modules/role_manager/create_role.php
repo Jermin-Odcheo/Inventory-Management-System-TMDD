@@ -37,6 +37,7 @@ try {
     die("Database error: " . $e->getMessage());
 }
 
+
 //Process privilege updates
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update'])) {
     try {
@@ -117,6 +118,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <div></div>
         <button type="cancel">Cancel</button>
     </form>
+    <a href="roles_list.php" class="button-class">Role and Module List</a>
+
     <h1>Roles and Privileges</h1>
     <form method="POST">
         <table border="1">
