@@ -6,7 +6,7 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
 ?>
 <!-- Sidebar -->
 <div class="sidebar">
-    <link rel="stylesheet" href="../../../styles/css/sidebar.css">
+<link rel="stylesheet" href="/Inventory-Managment-System-TMDD/src/view/styles/css/sidebar.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 
     <h2><?php echo htmlspecialchars($role); ?> Panel</h2>
@@ -17,12 +17,12 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
 
             <!-- Show User Management only for Super Admins & Admins -->
             <?php if ($role === 'Super Admin' || $role === 'Admin'): ?>
-                <li><a href="/src/view/php/clients/admins/audit_log.php"><i class="fas fa-history"></i> Audit Logs</a></li>
+                <li><a href="../../clients/admins/audit_log.php"><i class="fas fa-history"></i> Audit Logs</a></li>
                 <li>
                     <a href="#" class="dropdown-toggle"><i class="fa-solid fa-user"></i> User Management</a>
                     <ul class="dropdown">
                         <li><a href="../../modules/user_manager/user_management.php">Manage Accounts</a></li>
-                        <li><a href="../../modules/user_manager/user_management.php">Manage Roles</a></li>
+                        <li><a href="../../modules/role_manager/roles_list.php">Manage Roles</a></li>
                         <li><a href="#">Manage Privileges</a></li>
                     </ul>
                 </li>

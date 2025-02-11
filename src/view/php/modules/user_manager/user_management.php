@@ -96,7 +96,7 @@ function sortIcon($currentSort, $column, $sortDir)
     <div class="main-content container-fluid">
         <h1>User Management</h1>
         <div class="d-flex justify-content-end mb-3">
-            <a href="/src//view/php/modules/user_manager/add_user.php" class="btn btn-primary">Add New User</a>
+            <a href="add_user.php" class="btn btn-primary">Add New User</a>
         </div>
 
         <!-- Bootstrap Nav Tabs to toggle between Active and Deleted Users -->
