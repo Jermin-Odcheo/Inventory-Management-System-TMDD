@@ -2,7 +2,7 @@
 session_start();
 require_once('..\..\..\..\..\config\ims-tmdd.php'); // Database connection
 
-// Fetch roles and their associated modules
+//fetch roles and their associated modules
 try {
     $stmt = $pdo->prepare("
         SELECT 
@@ -22,7 +22,7 @@ try {
     die("Database error: " . $e->getMessage());
 }
 
-// Fetch modules for modal
+//Fetch modules for modal
 try {
     $moduleStmt = $pdo->prepare("
         SELECT 
@@ -40,7 +40,7 @@ try {
     die("Database error: " . $e->getMessage());
 }
 
-// Handle role selection for the modal
+//handle role selection for the modal
 $selectedRoleName = "";
 $selectedRoleId = "";
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['open_modal'])) {
@@ -48,13 +48,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['open_modal'])) {
     $selectedRoleId = $_POST['selected_role_id'];
 }
 
-// Assign a module to a role
+//add module to role
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['assign_module'])) {
     $roleId = $_POST['role_id'];
     $moduleId = $_POST['module_id'];
 
     try {
-        // Check if the module is already assigned
         $checkStmt = $pdo->prepare("
             SELECT * FROM role_privileges 
             WHERE Role_ID = ? 
@@ -63,20 +62,38 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['assign_module'])) {
         $checkStmt->execute([$roleId, $moduleId]);
 
         if ($checkStmt->rowCount() == 0) {
-            // Assign the module by inserting privileges
             $insertStmt = $pdo->prepare("
                 INSERT INTO role_privileges (Role_ID, Privilege_ID) 
                 SELECT ?, Privilege_ID FROM privileges WHERE Module_ID = ?
             ");
             $insertStmt->execute([$roleId, $moduleId]);
-            $message = "Module successfully assigned!";
-        } else {
-            $message = "Module already assigned!";
-        }
+            echo("Module successfully assigned!");
+        } 
     } catch (PDOException $e) {
         $message = "Database error: " . $e->getMessage();
     }
 }
+
+//remove module from a role
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['remove_module'])) {
+    $roleId = $_POST['role_id'];
+    $moduleId = $_POST['module_id'];
+
+    try {
+        $deleteStmt = $pdo->prepare("
+            DELETE FROM role_privileges 
+            WHERE Role_ID = ? 
+            AND Privilege_ID IN (SELECT Privilege_ID FROM privileges WHERE Module_ID = ?)
+        ");
+        $deleteStmt->execute([$roleId, $moduleId]);
+
+        $message = "Module successfully removed!";
+    } catch (PDOException $e) {
+        $message = "Database error: " . $e->getMessage();
+    }
+}
+
+
 ?>
 
 <!DOCTYPE html>
@@ -91,6 +108,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['assign_module'])) {
 <main>
     <h1>Roles and Their Associated Modules</h1>
     <a href="create_role.php" class="button-class">Role and Module List</a>
+    <div></div>
+    <a href="create_module.php" class="button-class">Available Modules & Priveleges</a>
 
     <!-- Roles Table -->
     <table border="1">
@@ -114,19 +133,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['assign_module'])) {
         <?php endforeach; ?>
     </table>
 
-    <!-- Modal (Displayed when a role is selected) -->
+    <!-- Modal -->
     <?php if (!empty($selectedRoleName) && !empty($selectedRoleId)): ?>
-        <div class="modal show" style="display: block; background: rgba(0,0,0,0.5); position: fixed; top: 0; left: 0; width: 100%; height: 100%;">
+        <div class="modal show">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h4 class="modal-title">Assign Module to <?= htmlspecialchars($selectedRoleName) ?></h4>
+                        <h4 class="modal-title">Assign Module to Role: <?= htmlspecialchars($selectedRoleName) ?></h4>
                         <form method="POST">
                             <button type="submit" name="close_modal" class="close">&times;</button>
                         </form>
                     </div>
                     <div class="modal-body">
-                        <?php if (isset($message)) echo "<p style='color: red;'>$message</p>"; ?>
                         <h2>Available Modules</h2>
                         <table border="1">
                             <thead>
@@ -148,6 +166,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['assign_module'])) {
                                                 <input type="hidden" name="role_id" value="<?= $selectedRoleId ?>">
                                                 <input type="hidden" name="module_id" value="<?= $module['Module_ID'] ?>">
                                                 <button type="submit" name="assign_module" class="btn btn-success">Assign</button>
+                                                <button type="submit" name="remove_module">Remove</button>
                                             </form>
                                         </td>
                                     </tr>

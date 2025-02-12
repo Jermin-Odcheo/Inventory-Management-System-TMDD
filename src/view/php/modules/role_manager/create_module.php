@@ -52,7 +52,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <body>
 <main>
     <form action="create_module.php" method="post">
-        <h1>New Module</h1>
+        <h1>Create Module</h1>
         <div>
             <label for="module_name">Module Name:</label>
             <input type="text" name="module_name" id="module_name">
@@ -62,6 +62,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <div></div>
         <button type="cancel">Cancel</button>
     </form>
+    <a href="create_role.php" class="button-class">Role and Priveleges</a>
+    <div></div>
+    <a href="roles_list.php" class="button-class">Roles and Their Associated Modules</a>
 
     <?php if (isset($_GET['success'])): ?>
         <p style="color: green;">Module added successfully!</p>
@@ -75,6 +78,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     <th>Module ID</th>
                     <th>Module Name</th>
                     <th>Privileges</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -83,6 +87,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         <td><?= htmlspecialchars($module['Module_ID']) ?></td>
                         <td><?= htmlspecialchars($module['Module_Name']) ?></td>
                         <td><?= htmlspecialchars($module['Privileges'] ?? 'None') ?></td>
+                        <td>asdasd</td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>

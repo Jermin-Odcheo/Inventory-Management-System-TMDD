@@ -119,6 +119,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <button type="cancel">Cancel</button>
     </form>
     <a href="roles_list.php" class="button-class">Role and Module List</a>
+    <div></div>
+    <a href="create_module.php" class="button-class">Available Modules & Priveleges</a>
 
     <h1>Roles and Privileges</h1>
     <form method="POST">
