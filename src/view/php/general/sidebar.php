@@ -10,7 +10,7 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="stylesheet" href="/src/view/styles/css/sidebar.css">
-    <h2><?php echo htmlspecialchars($role); ?> Panel</h2>
+    <h2>Inventory Management System</h2>
     <h2>Menu</h2>
     <nav>
         <ul>
