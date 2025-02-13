@@ -32,7 +32,7 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                     <a href="#" class="dropdown-toggle"><i class="fa-solid fa-user"></i> User Management</a>
                     <ul class="dropdown">
                         <li><a href="../../modules/user_manager/user_management.php">Manage Accounts</a></li>
-                        <li><a href="../../modules/role_manager/roles_list.php">Manage Roles</a></li>
+                        <li><a href="../../modules/role_manager/manage_roles.php">Manage Roles</a></li>
                         <li><a href="#">Manage Privileges</a></li>
                     </ul>
                 </li>

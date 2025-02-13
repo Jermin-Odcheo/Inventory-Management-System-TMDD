@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once('../../../../config/ims-tmdd.php'); // Adjust path as needed
+require_once('../../../../../config/ims-tmdd.php'); // Adjust path as needed
 
 // Optional: Check if the logged-in user has permission to manage roles.
 if (!isset($_SESSION['user_id'])) {
