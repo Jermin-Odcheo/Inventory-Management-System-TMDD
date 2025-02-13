@@ -5,19 +5,34 @@ require_once('..\..\..\..\..\config\ims-tmdd.php'); // Database connection
 // Fetch roles grouped by module with privileges
 try {
     $stmt = $pdo->prepare("
-        SELECT 
-            m.Module_ID, 
-            m.Module_Name, 
-            r.Role_ID, 
-            r.Role_Name,
-            GROUP_CONCAT(p.Privilege_Name ORDER BY p.Privilege_ID SEPARATOR ', ') AS Privileges
+    SELECT 
+        r.Role_ID, 
+        r.Role_Name, 
+        m.Module_ID, 
+        m.Module_Name,
+        GROUP_CONCAT(p.Privilege_Name ORDER BY p.Privilege_ID SEPARATOR ', ') AS Privileges
         FROM roles AS r
         INNER JOIN role_privileges AS rp ON r.Role_ID = rp.Role_ID
         INNER JOIN privileges AS p ON rp.Privilege_ID = p.Privilege_ID
         INNER JOIN modules AS m ON p.Module_ID = m.Module_ID
-        GROUP BY m.Module_ID, m.Module_Name, r.Role_ID, r.Role_Name
-        ORDER BY m.Module_ID, r.Role_Name
-    ");
+        GROUP BY r.Role_ID, r.Role_Name, m.Module_ID, m.Module_Name
+        ORDER BY r.Role_Name, m.Module_ID
+        ");
+
+$stmt->execute();
+$getData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Organize data by Role_ID
+$roles = [];
+foreach ($getData as $row) {
+    $roles[$row['Role_ID']]['Role_Name'] = $row['Role_Name'];
+    $roles[$row['Role_ID']]['Modules'][] = [
+        'Module_ID' => $row['Module_ID'],
+        'Module_Name' => $row['Module_Name'],
+        'Privileges' => explode(', ', $row['Privileges'])
+    ];
+}
+
     
     $stmt->execute();
     $getData = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -126,23 +141,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <form method="POST">
         <table border="1">
             <tr>
-                <th>Module Name</th>
                 <th>Role Name</th>
+                <th>Module Name</th>
                 <th>Privileges</th>
             </tr>
-            <?php foreach ($modules as $moduleID => $moduleData): ?>
-                <?php foreach ($moduleData['Roles'] as $index => $role): ?>
+            <?php foreach ($roles as $roleID => $roleData): ?>
+                <?php foreach ($roleData['Modules'] as $index => $module): ?>
                     <tr>
                         <?php if ($index === 0): ?>
-                            <td rowspan="<?= count($moduleData['Roles']) ?>"><?= htmlspecialchars($moduleData['Module_Name']) ?></td>
+                            <td rowspan="<?= count($roleData['Modules']) ?>"><?= htmlspecialchars($roleData['Role_Name']) ?></td>
                         <?php endif; ?>
-                        <td><?= htmlspecialchars($role['Role_Name']) ?></td>
+                        <td><?= htmlspecialchars($module['Module_Name']) ?></td>
                         <td>
                             <?php
                             $allPrivileges = ["View", "Add", "Edit", "Delete"];
                             foreach ($allPrivileges as $privilege) {
-                                $checked = in_array($privilege, $role['Privileges']) ? "checked" : "";
-                                echo "<input type='checkbox' name='privileges[{$role['Role_ID']}][{$moduleID}][]' value='{$privilege}' {$checked}> {$privilege} ";
+                                $checked = in_array($privilege, $module['Privileges']) ? "checked" : "";
+                                echo "<input type='checkbox' name='privileges[{$roleID}][{$module['Module_ID']}][]' value='{$privilege}' {$checked}> {$privilege} ";
                             }
                             ?>
                         </td>
@@ -153,6 +168,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <br>
         <input type="submit" name="update" value="Update Privileges">
     </form>
+
 </main>
 </body>
 </html>

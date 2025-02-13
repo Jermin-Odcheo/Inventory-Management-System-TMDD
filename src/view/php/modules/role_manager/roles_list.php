@@ -126,7 +126,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['remove_module'])) {
                     <form method="POST">
                         <input type="hidden" name="selected_role_name" value="<?= $role['Role_Name'] ?>">
                         <input type="hidden" name="selected_role_id" value="<?= $role['Role_ID'] ?>">
-                        <button type="submit" name="open_modal" class="btn btn-info btn-lg">Open Modal</button>
+                        <button type="submit" name="open_modal" class="btn btn-info btn-lg">Edit Modules</button>
                     </form>
                 </td>
             </tr>

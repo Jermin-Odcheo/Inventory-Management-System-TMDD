@@ -1,7 +1,7 @@
 <?php
 require_once('..\..\..\..\..\config\ims-tmdd.php'); // Database connection
 
-// Fetch all modules with grouped privileges
+//fetch all modules with grouped privileges
 try {
     $stmt = $pdo->prepare("
         SELECT 
@@ -19,23 +19,68 @@ try {
     die("Database error: " . $e->getMessage());
 }
 
+//add module
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (!empty($_POST['module_name'])) {
         $moduleName = trim($_POST['module_name']); // Sanitize input
 
         try {
-            // Insert the module name into the database
+            $pdo->beginTransaction(); // Start transaction
+
+            // Insert the module
             $stmt = $pdo->prepare("INSERT INTO modules (Module_Name) VALUES (?)");
             $stmt->execute([$moduleName]);
 
-            // Redirect to prevent form resubmission
+            // Retrieve the Module_ID using the module name
+            $query = $pdo->prepare("SELECT Module_ID FROM modules WHERE Module_Name = ? LIMIT 1");
+            $query->execute([$moduleName]);
+            $module = $query->fetch(PDO::FETCH_ASSOC);
+
+            if ($module) {
+                $moduleId = $module['Module_ID'];
+
+                // Insert default privileges for the new module
+                $privileges = ['View', 'Add', 'Edit', 'Delete'];
+                $privilegeStmt = $pdo->prepare("INSERT INTO privileges (Module_ID, Privilege_Name) VALUES (?, ?)");
+
+                foreach ($privileges as $privilege) {
+                    $privilegeStmt->execute([$moduleId, $privilege]);
+                }
+            }
+
+            $pdo->commit(); // Commit transaction
             header("Location: create_module.php?success=1");
             exit();
         } catch (PDOException $e) {
+            $pdo->rollBack(); // Rollback if an error occurs
             die("Database error: " . $e->getMessage());
         }
     } else {
         echo "<p style='color: red;'>Module Name cannot be empty.</p>";
+    }
+}
+
+//remove selected module
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['remove_module'])) {
+    $moduleId = $_POST['remove_module'];
+
+    try {
+        $pdo->beginTransaction(); 
+
+        //delete from privileges where `Module_ID` matches
+        $deletePrivilegesStmt = $pdo->prepare("DELETE FROM privileges WHERE Module_ID = ?");
+        $deletePrivilegesStmt->execute([$moduleId]);
+
+        //elete from modules
+        $deleteModulesStmt = $pdo->prepare("DELETE FROM modules WHERE Module_ID = ?");
+        $deleteModulesStmt->execute([$moduleId]);
+
+        $pdo->commit(); 
+
+        $message = "Module successfully removed!";
+    } catch (PDOException $e) {
+        $pdo->rollBack(); //rollback 
+        $message = "Database error: " . $e->getMessage();
     }
 }
 
@@ -84,10 +129,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <tbody>
                 <?php foreach ($modules as $module): ?>
                     <tr>
+                        
                         <td><?= htmlspecialchars($module['Module_ID']) ?></td>
                         <td><?= htmlspecialchars($module['Module_Name']) ?></td>
                         <td><?= htmlspecialchars($module['Privileges'] ?? 'None') ?></td>
-                        <td>asdasd</td>
+                        <td>
+                        <form method="POST">
+                            <button type="submit" name="remove_module"  value="<?=$module['Module_ID']?>">Remove</button>
+                        </form>
+                        </td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>
