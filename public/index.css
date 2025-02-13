@@ -1,7 +1,7 @@
 body {
     margin: 0;
     font-family: Arial, sans-serif;
-    background: linear-gradient(to right, #f9c736 25%, grey 50%, #001885 75%); 
+    background: linear-gradient(to right, rgba(249, 199, 54, 0.5) 25%, rgba(128, 128, 128, 0.5) 50%, rgba(0, 24, 133, 0.5) 75%); 
     padding: 10px;
     padding-left: 6vh;
     box-sizing: border-box; 
