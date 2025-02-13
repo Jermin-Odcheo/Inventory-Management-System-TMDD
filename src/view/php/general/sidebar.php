@@ -39,7 +39,7 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                     <li><a href="receiving_report.php">Receiving Report</a></li>
                     <li><a href="equipment_details.php">Equipment Details</a></li>
                     <li><a href="equipment_location.php">Equipment Location</a></li>
-                    <li><a href="equipment_status.php">Equipment Status</a></li>
+                    <li><a href="../../modules/equipment_manager/equipment_status.php">Equipment Status</a></li>
                 </ul>
             </li>
 
