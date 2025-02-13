@@ -2,20 +2,18 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-require_once(__DIR__ . '/../../../../config/config.php');
 $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
 ?>
 <!-- Sidebar -->
 <div class="sidebar">
-
+<link rel="stylesheet" href="/Inventory-Managment-System-TMDD/src/view/styles/css/sidebar.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
-    <link rel="stylesheet" href="/src/view/styles/css/sidebar.css">
+
     <h2><?php echo htmlspecialchars($role); ?> Panel</h2>
     <h2>Menu</h2>
     <nav>
         <ul>
-            <li><a href="<?php echo BASE_URL; ?>src/view/php/clients/admins/dashboard.php"><i
-                            class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+            <li><a href="/src/view/php/clients/admins/dashboard.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
 
             <!-- Show User Management only for Super Admins & Admins -->
             <?php if ($role === 'Super Admin' || $role === 'Admin'): ?>
