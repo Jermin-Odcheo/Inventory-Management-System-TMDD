@@ -10,7 +10,7 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="stylesheet" href="/src/view/styles/css/sidebar.css">
-    <h2><?php echo htmlspecialchars($role); ?> Panel</h2>
+    <h2>Inventory Management System</h2>
     <h2>Menu</h2>
     <nav>
         <ul>
@@ -19,12 +19,20 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
 
             <!-- Show User Management only for Super Admins & Admins -->
             <?php if ($role === 'Super Admin' || $role === 'Admin'): ?>
-                <li><a href="../../clients/admins/audit_log.php"><i class="fas fa-history"></i> Audit Logs</a></li>
+
+                <li>
+                    <a href="#" class="dropdown-toggle"><i class="fas fa-history"></i> Logs</a>
+                    <ul class="dropdown">
+                        <li><a href="../../clients/admins/audit_log.php"><i class="fas fa-history"></i> Audit Logs</a></li>
+                        <li><a href="../../clients/admins/audit_log.php"><i class="fas fa-archive"></i> Archives</a></li>
+
+                    </ul>
+                </li>
                 <li>
                     <a href="#" class="dropdown-toggle"><i class="fa-solid fa-user"></i> User Management</a>
                     <ul class="dropdown">
                         <li><a href="../../modules/user_manager/user_management.php">Manage Accounts</a></li>
-                        <li><a href="../../modules/role_manager/roles_list.php">Manage Roles</a></li>
+                        <li><a href="../../modules/role_manager/manage_roles.php">Manage Roles</a></li>
                         <li><a href="#">Manage Privileges</a></li>
                     </ul>
                 </li>
@@ -39,7 +47,7 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                     <li><a href="receiving_report.php">Receiving Report</a></li>
                     <li><a href="equipment_details.php">Equipment Details</a></li>
                     <li><a href="equipment_location.php">Equipment Location</a></li>
-                    <li><a href="../../modules/equipment_manager/equipment_status.php">Equipment Status</a></li>
+                    <li><a href="equipment_status.php">Equipment Status</a></li>
                 </ul>
             </li>
 

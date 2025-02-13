@@ -34,6 +34,8 @@ $stmt = $pdo->prepare("SELECT * FROM roles");
 $stmt->execute();
 $roles = $stmt->fetchAll();
 
+$successMessage = ''; // Variable to hold the success message
+
 // If form is submitted.
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $email      = trim($_POST['email']);
@@ -51,11 +53,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $stmt = $pdo->prepare("INSERT INTO users (Email, Password, First_Name, Last_Name, Department, Status) VALUES (?, ?, ?, ?, ?, ?)");
         $stmt->execute([$email, $hashedPassword, $firstName, $lastName, $department, $status]);
         $userID = $pdo->lastInsertId();
+        $successMessage = "User added successfully!";
     } else {
         // For edit, update user details. (Password update might be handled separately.)
         $stmt = $pdo->prepare("UPDATE users SET Email = ?, First_Name = ?, Last_Name = ?, Department = ?, Status = ? WHERE User_ID = ?");
         $stmt->execute([$email, $firstName, $lastName, $department, $status, $userData['User_ID']]);
         $userID = $userData['User_ID'];
+        $successMessage = "User updated successfully!";
     }
 
     // Update the user's roles.
@@ -68,9 +72,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     foreach ($roleIDs as $roleID) {
         $stmt->execute([$userID, $roleID]);
     }
-
-    header("Location: manage_users.php");
-    exit();
 }
 ?>
 
@@ -79,34 +80,58 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <head>
     <meta charset="UTF-8">
     <title><?php echo $isEditing ? 'Edit' : 'Add'; ?> User</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
     <link rel="stylesheet" href="../../../../styles/css/admin.css">
 </head>
 <body>
-    <h1><?php echo $isEditing ? 'Edit' : 'Add'; ?> User</h1>
+<?php include '../../general/sidebar.php'; ?>
+<div class="container mt-5">
+    <h1 class="mb-4"><?php echo $isEditing ? 'Edit' : 'Add'; ?> User</h1>
+
+    <?php if ($successMessage): ?>
+        <div class="alert alert-success" role="alert">
+            <?php echo $successMessage; ?>
+        </div>
+    <?php endif; ?>
+
     <form method="POST" action="">
-        <label>Email:</label>
-        <input type="email" name="email" value="<?php echo htmlspecialchars($userData['Email'] ?? ''); ?>" required><br>
-        
+        <div class="mb-3">
+            <label for="email" class="form-label">Email:</label>
+            <input type="email" name="email" id="email" value="<?php echo htmlspecialchars($userData['Email'] ?? ''); ?>" class="form-control" required>
+        </div>
+
         <?php if (!$isEditing): ?>
-            <label>Password:</label>
-            <input type="password" name="password" required><br>
+            <div class="mb-3">
+                <label for="password" class="form-label">Password:</label>
+                <input type="password" name="password" id="password" class="form-control" required>
+            </div>
         <?php endif; ?>
 
-        <label>First Name:</label>
-        <input type="text" name="first_name" value="<?php echo htmlspecialchars($userData['First_Name'] ?? ''); ?>" required><br>
-        <label>Last Name:</label>
-        <input type="text" name="last_name" value="<?php echo htmlspecialchars($userData['Last_Name'] ?? ''); ?>" required><br>
-        <label>Department:</label>
-        <input type="text" name="department" value="<?php echo htmlspecialchars($userData['Department'] ?? ''); ?>"><br>
-        <label>Status:</label>
-        <select name="status">
-            <option value="Online" <?php echo (isset($userData['Status']) && $userData['Status'] === 'Online') ? 'selected' : ''; ?>>Online</option>
-            <option value="Offline" <?php echo (isset($userData['Status']) && $userData['Status'] === 'Offline') ? 'selected' : ''; ?>>Offline</option>
-        </select><br>
+        <div class="mb-3">
+            <label for="first_name" class="form-label">First Name:</label>
+            <input type="text" name="first_name" id="first_name" value="<?php echo htmlspecialchars($userData['First_Name'] ?? ''); ?>" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label for="last_name" class="form-label">Last Name:</label>
+            <input type="text" name="last_name" id="last_name" value="<?php echo htmlspecialchars($userData['Last_Name'] ?? ''); ?>" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label for="department" class="form-label">Department:</label>
+            <input type="text" name="department" id="department" value="<?php echo htmlspecialchars($userData['Department'] ?? ''); ?>" class="form-control">
+        </div>
+        <div class="mb-3">
+            <label for="status" class="form-label">Status:</label>
+            <select name="status" id="status" class="form-select">
+                <option value="Online" <?php echo (isset($userData['Status']) && $userData['Status'] === 'Online') ? 'selected' : ''; ?>>Online</option>
+                <option value="Offline" <?php echo (isset($userData['Status']) && $userData['Status'] === 'Offline') ? 'selected' : ''; ?>>Offline</option>
+            </select>
+        </div>
 
-        <fieldset>
+        <fieldset class="mb-3">
             <legend>Assign Roles:</legend>
-            <?php foreach ($roles as $role): 
+            <?php foreach ($roles as $role):
                 // If editing, check which roles the user already has.
                 $isAssigned = false;
                 if ($isEditing) {
@@ -114,14 +139,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     $stmt->execute([$userData['User_ID'], $role['Role_ID']]);
                     $isAssigned = (bool) $stmt->fetch();
                 }
-            ?>
-                <input type="checkbox" name="roles[]" value="<?php echo $role['Role_ID']; ?>" <?php echo $isAssigned ? 'checked' : ''; ?>>
-                <label><?php echo htmlspecialchars($role['Role_Name']); ?></label><br>
+                ?>
+                <div class="form-check">
+                    <input type="checkbox" name="roles[]" value="<?php echo $role['Role_ID']; ?>" id="role_<?php echo $role['Role_ID']; ?>" class="form-check-input" <?php echo $isAssigned ? 'checked' : ''; ?>>
+                    <label for="role_<?php echo $role['Role_ID']; ?>" class="form-check-label"><?php echo htmlspecialchars($role['Role_Name']); ?></label>
+                </div>
             <?php endforeach; ?>
         </fieldset>
 
-        <button type="submit"><?php echo $isEditing ? 'Update' : 'Add'; ?> User</button>
+        <button type="submit" class="btn btn-primary"><?php echo $isEditing ? 'Update' : 'Add'; ?> User</button>
     </form>
-    <a href="user_management.php">Back to User Management</a>
+    <div class="mt-3">
+        <a href="user_management.php" class="btn btn-secondary">Back to User Management</a>
+    </div>
+</div>
+
+<!-- Bootstrap JS Bundle (Optional, if you need interactive components) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

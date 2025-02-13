@@ -1,6 +1,5 @@
 <?php
 // config/config.php
-
 // Define the base URL for your project.
 // If your project is served from http://localhost/Inventory-Managment-System-TMDD/,
 // then:

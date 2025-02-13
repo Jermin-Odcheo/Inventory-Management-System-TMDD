@@ -8,8 +8,8 @@
       </div>
       <div class="modal-body">
         <form id="editForm">
-          <input type="hidden" id="editID" name="ID">
-          <div id="dynamicFields"></div>
+            <input type="hidden" id="editUserID" name="id">
+            <div id="dynamicFields"></div>
         </form>
       </div>
       <div class="modal-footer">

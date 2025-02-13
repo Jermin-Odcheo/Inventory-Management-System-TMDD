@@ -94,6 +94,66 @@ $(document).ready(function () {
     }
   });
 
+  // Open the edit user modal with the user data.
+  $(".btn-edit").click(function() {
+    const userId = $(this).data("id");
+    const email = $(this).data("email");
+    const firstName = $(this).data("first-name");
+    const lastName = $(this).data("last-name");
+    const department = $(this).data("department");
+
+    $("#editUserID").val(userId);
+    $("#editEmail").val(email);
+    $("#editFirstName").val(firstName);
+    $("#editLastName").val(lastName);
+    $("#editDepartment").val(department);
+
+    // Do not prefill the password field
+  });$("#editUserForm").on("submit", function(e) {
+    e.preventDefault(); // Prevent default form submission
+
+    $.ajax({
+      type: "POST",
+      url: $(this).attr("action"),
+      data: $(this).serialize(), // Send the form data
+      success: function(response) {
+        console.log(response); // Log the response if needed
+
+        // Close the modal
+        $("#editUserModal").modal("hide");
+
+        // Inject a Bootstrap success alert into the alertMessage div
+        $("#alertMessage").html(
+            '<div class="alert alert-success alert-dismissible fade show" role="alert">' +
+            'User updated successfully!' +
+            '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
+            '</div>'
+        );
+
+        // Optionally, you can auto-dismiss the alert after a few seconds:
+        setTimeout(function() {
+          $(".alert").alert('close');
+        }, 3000);
+      },
+      error: function(xhr, status, error) {
+        console.error("Error updating user:", error);
+        // Optionally, show an error message:
+        $("#alertMessage").html(
+            '<div class="alert alert-danger alert-dismissible fade show" role="alert">' +
+            'Error updating user: ' + error +
+            '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
+            '</div>'
+        );
+      }
+    });
+  });
+
+
+  /*
+  FOR ARCHIVE (TO BE IMPLEMENTED)
+  RESTORE
+  PERMANENT DELETE
+   */
   // Handler for individual restore.
   $(".restore-individual").click(function () {
     let userId = $(this).data("id");
@@ -112,20 +172,31 @@ $(document).ready(function () {
     }
   });
 
-  // Open the edit user modal with the user data.
-  $(".btn-edit").click(function () {
-    let userEmail = $(this).data("email");
-    let userFirstName = $(this).data("first-name");
-    let userLastName = $(this).data("last-name");
-    let userDepartment = $(this).data("department");
-    let userStatus = $(this).data("status");
-    let userPassword = $(this).data("password"); // if needed
 
-    $("#editUserForm").find("#editEmail").val(userEmail);
-    $("#editUserForm").find("#editFirstName").val(userFirstName);
-    $("#editUserForm").find("#editLastName").val(userLastName);
-    $("#editUserForm").find("#editDepartment").val(userDepartment);
-    $("#editUserForm").find("#editStatus").val(userStatus);
-    $("#editUserForm").find("#editPassword").val(userPassword);
-  });
+
 });
+$(".permanent-delete-btn").on("click", function() {
+  const userId = $(this).data("id");
+  if (confirm("Are you sure you want to permanently delete this user?")) {
+    $.post('delete_user.php',
+        { user_id: userId, permanent: 1 },
+        function(response) {
+          alert(response);
+          location.reload();
+        }
+    );
+  }
+});
+function openDeleteModal(userId) {
+  if (confirm("Are you sure you want to permanently delete this user?")) {
+    $.post('/src/view/php/modules/user_manager/delete_user.php',
+        { user_id: userId, permanent: 1 },
+        function(response) {
+          alert(response);
+          location.reload();
+        }
+    );
+  }
+}
+
+

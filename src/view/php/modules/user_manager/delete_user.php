@@ -39,29 +39,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Perform the deletion operation
-    // Check for multiple IDs
-    if (isset($_POST['user_ids']) && is_array($_POST['user_ids'])) {
-        $userIds = $_POST['user_ids'];
-        try {
-            $stmt = $pdo->prepare("UPDATE users SET is_deleted = 1 WHERE User_ID IN (" . implode(",", array_fill(0, count($userIds), '?')) . ")");
-            $stmt->execute($userIds);
-            echo "Selected users have been deleted.";
-        } catch (PDOException $e) {
-            echo "Error: " . $e->getMessage();
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        // Retrieve user_id(s) ...
+        $permanent = isset($_POST['permanent']) && $_POST['permanent'] == "1";
+
+        // If multiple users:
+        if (isset($_POST['user_ids']) && is_array($_POST['user_ids'])) {
+            if ($permanent) {
+                // Permanent delete multiple users
+                $in  = str_repeat('?,', count($_POST['user_ids']) - 1) . '?';
+                $stmt = $pdo->prepare("DELETE FROM users WHERE User_ID IN ($in)");
+                $stmt->execute($_POST['user_ids']);
+                echo "Selected users permanently deleted.";
+            } else {
+                // Soft delete multiple users
+                $in  = str_repeat('?,', count($_POST['user_ids']) - 1) . '?';
+                $stmt = $pdo->prepare("UPDATE users SET is_deleted = 1 WHERE User_ID IN ($in)");
+                $stmt->execute($_POST['user_ids']);
+                echo "Selected users have been soft-deleted.";
+            }
+        }
+
+        // Else if single user_id:
+        elseif (isset($_POST['user_id'])) {
+            $userId = $_POST['user_id'];
+            if ($permanent) {
+                // **Really** delete from DB
+                $stmt = $pdo->prepare("DELETE FROM users WHERE User_ID = ?");
+                $stmt->execute([$userId]);
+                echo "User permanently deleted from database.";
+            }
+            else {
+                // Soft delete
+                $stmt = $pdo->prepare("UPDATE users SET is_deleted = 1 WHERE User_ID = ?");
+                $stmt->execute([$userId]);
+                echo "User has been soft-deleted.";
+            }
+        } else {
+            echo "No users selected.";
         }
     }
-    // Fallback for individual deletion:
-    else if (isset($_POST['user_id'])) {
-        $userId = $_POST['user_id'];
-        try {
-            $stmt = $pdo->prepare("UPDATE users SET is_deleted = 1 WHERE User_ID = ?");
-            $stmt->execute([$userId]);
-            echo "User has been deleted.";
-        } catch (PDOException $e) {
-            echo "Error: " . $e->getMessage();
-        }
-    } else {
-        echo "No users selected.";
-    }
+
 }
 ?>
