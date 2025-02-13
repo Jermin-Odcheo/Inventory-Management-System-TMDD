@@ -2,31 +2,35 @@
 .sidebar {
     width: 300px; /* Fixed width for sidebar */
     height: 100vh; /* Full height */
-    background-color: #343a40; /* Dark background for sidebar */
-    color: #ffffff; /* White text color */
+    background: linear-gradient(180deg, #343a40, #495057); /* Gradient background for sidebar */
+    color: #ffffff; /* White text color for the sidebar */
     position: fixed; /* Fixed position */
     top: 0; /* Align to top */
     left: 0; /* Align to left */
     padding: 20px; /* Padding inside sidebar */
     box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
-    transition: width 0.3s; /* Smooth width transition */
+    transition: transform 0.3s ease; /* Smooth transition for transform */
+    transform: translateX(-100%); /* Hide sidebar off-screen by default */
+    border-radius: 10px; /* Rounded corners for the sidebar */
 }
 
 .sidebar,
 .sidebar * {
     box-sizing: border-box;
+    color: #ffffff; /* Set all text color to white */
 }
 
 /* Sidebar Links */
 .sidebar a {
     display: block;
-    color: #ffffff;
+    color: #ffffff; /* Default text color */
     text-decoration: none;
     padding: 12px 0; /* Only vertical padding; horizontal space comes from the pseudo-element */
-    border-radius: 25px;
-    transition: background-color 0.3s, color 0.3s, transform 0.3s, box-shadow 0.3s;
-    font-size: 16px;
-    position: relative;  /* For pseudo-element positioning if needed */
+    border-radius: 25px; /* Rounded corners */
+    transition: background-color 0.3s, color 0.3s, transform 0.3s, box-shadow 0.3s; /* Smooth transition */
+    font-size: 14px; /* Decreased font size for links */
+    position: relative; /* For pseudo-element positioning if needed */
+    font-family: 'Arial', sans-serif; /* Change to your desired font */
 }
 
 /* Pseudo-element to reserve space for icons on all links */
@@ -53,7 +57,7 @@
 
 /* Hover Effect for Links */
 .sidebar a:hover {
-    background-color: #007bff; /* Bright blue on hover */
+    background-color: #0056b3; /* Consistent hover color */
     color: #ffffff; /* Ensure text remains white on hover */
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); /* Add a shadow effect on hover */
     transform: scale(1.05); /* Slightly enlarge the link on hover */
@@ -67,17 +71,70 @@
 
 /* Sidebar Header */
 .sidebar h2 {
-    font-size: 24px; /* Font size for header */
-    margin-bottom: 20px; /* Space below header */
+    font-size: 28px; /* Increased font size for header */
+    margin-bottom: 10px; /* Space below header */
     color: #ffffff; /* White text color */
     text-align: center; /* Center align header */
     font-weight: bold; /* Bold header for emphasis */
+    text-transform: uppercase; /* Uppercase for a more modern look */
+    letter-spacing: 1px; /* Slightly increased letter spacing */
+    padding-bottom: 10px; /* Padding below header */
+    position: relative; /* Position relative for pseudo-element */
+}
+
+/* Decorative line below the header */
+.sidebar h2::after {
+    content: ""; /* Empty content for the line */
+    display: block; /* Make it a block element */
+    width: 50%; /* Width of the line */
+    height: 2px; /* Height of the line */
+    background-color: #007bff; /* Color of the line */
+    margin: 10px auto; /* Center the line */
+    border-radius: 5px; /* Rounded corners for the line */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Subtle shadow for depth */
+}
+
+/* Sub-header */
+.sidebar h3 {
+    font-size: 20px; /* Font size for sub-header */
+    margin-bottom: 20px; /* Space below sub-header */
+    color: #ffffff; /* White text color */
+    text-align: center; /* Center align sub-header */
+    font-weight: normal; /* Normal weight for sub-header */
+    text-transform: uppercase; /* Uppercase for a more modern look */
+    letter-spacing: 0.5px; /* Slightly increased letter spacing */
+}
+
+/* Toggle Button */
+.toggle-button {
+    background-color: transparent; /* Transparent background */
+    border: none; /* No border */
+    color: #ffffff; /* White color for icon */
+    font-size: 24px; /* Icon size */
+    cursor: pointer; /* Pointer cursor */
+    position: absolute; /* Positioning */
+    top: 20px; /* Position from top */
+    right: -50px; /* Position off-screen initially */
+    transition: right 0.3s ease; /* Smooth transition for button */
+    z-index: 1000; /* Ensure it appears above other elements */
+}
+
+/* Active state for sidebar */
+.sidebar.active {
+    transform: translateX(0); /* Show sidebar */
+}
+
+.sidebar.active .toggle-button {
+    right: 250px; /* Move button into view when sidebar is active */
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
     .sidebar {
-        width: 200px; /* Adjust width for smaller screens */
+        transform: translateX(-100%); /* Hide sidebar off-screen */
+    }
+    .sidebar.active {
+        transform: translateX(0); /* Show sidebar */
     }
 }
 
@@ -93,92 +150,33 @@
 }
 
 .sidebar nav ul li a {
-    color: #ecf0f1; /* Default text color */
+    color: #ffffff; /* Default text color */
     transition: background 0.3s, color 0.3s; /* Smooth transition */
-    font-size: 16px; /* Font size for links */
+    font-size: 14px; /* Decreased font size for links */
+    font-family: 'Arial', sans-serif; /* Change to your desired font */
 }
 
-/* Hover Effect for New Links */
-.sidebar nav ul li a:hover,
-.sidebar nav ul li a.active {
-    color: #ffffff; /* White text on hover */
-    background-color: #0056b3; /* Darker shade on hover */
-}
-
-/* Specific Links (if needed, you can adjust further) */
-.sidebar nav ul li a.dashboard {
-    transition: none; /* Remove hover effect if needed */
-}
-
-.sidebar nav ul li a.dashboard:hover {
-    background-color: transparent; /* No background change on hover */
-    color: #ecf0f1; /* Keep original color on hover */
-}
-
-/* Dropdown Menu */
+/* Equipment Management Dropdown */
 .sidebar nav ul li .dropdown {
-    display: none; /* Hide dropdown by default */
-    position: absolute; /* Position dropdown */
-    left: 0; /* Align to the left of the parent */
-    top: 100%; /* Align to the bottom of the parent */
-    background-color: #34495e; /* Darker background for dropdown */
-    padding: 10px 0; /* Add padding for dropdown */
-    border-radius: 25px; /* More rounded corners for dropdown */
-    z-index: 1000; /* Ensure it appears above other elements */
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); /* Deeper shadow for dropdown */
+    display: none;
+    position: absolute;
+    left: 0;
+    top: calc(100% + 2px); /* Adjusts the dropdown to appear closer to the link */
+    background-color: #34495e;
+    padding: 10px 0; /* Reduced padding for closer spacing */
+    border-radius: 8px;
+    z-index: 1050; /* Higher value to ensure visibility */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    min-width: 250px; /* Increased minimum width to cover equipment management */
+    overflow: hidden; /* Prevents content from overlapping */
 }
 
-/* Show dropdown on hover */
-.sidebar nav ul li:hover .dropdown {
-    display: block; /* Show dropdown on hover */
+/* Prevent hover issues */
+.sidebar nav ul li:hover > .dropdown {
+    display: block;
 }
 
-/* Dropdown items */
-.sidebar nav ul li .dropdown li {
-    margin: 0; /* Remove margin for dropdown items */
-}
-
-/* Dropdown link styles */
-.sidebar nav ul li .dropdown li a {
-    padding: 10px 20px; /* Consistent padding for dropdown links */
-    color: #ecf0f1; /* Text color for dropdown links */
-    transition: background-color 0.3s, color 0.3s; /* Smooth transition */
-    font-size: 16px; /* Consistent font size for dropdown links */
-    border-radius: 25px; /* More rounded corners for dropdown links */
-}
-
-/* Hover effect for dropdown links */
-.sidebar nav ul li .dropdown li a:hover {
-    background-color: #2980b9; /* Modern blue shade on hover for dropdown links */
-    color: #ffffff; /* Ensure text remains white on hover */
-}
-
-/* Dropdown styles */
-.dropdown {
-    display: none; /* Hide dropdown by default */
-    position: absolute; /* Position it absolutely */
-    background-color: white; /* Background color */
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* Add shadow for depth */
-    z-index: 1000; /* Ensure it appears above other elements */
-}
-
-.dropdown-toggle:hover .dropdown {
-    display: block; /* Show dropdown on hover */
-}
-
-.dropdown li {
-    list-style: none; /* Remove bullet points */
-    padding: 8px 12px; /* Add padding */
-}
-
-.dropdown li a {
-    padding: 8px 12px; /* Add padding */
-    text-decoration: none; /* Remove underline from links */
-    color: black; /* Link color */
-    display: block; /* Make the link fill the list item */
-    transition: background-color 0.5s ease; /* Slower transition for background color */
-}
-
-.dropdown li a:hover {
-    background-color: #f0f0f0; /* Change background on hover */
+/* Hover Effect for Sidebar */
+.sidebar:hover {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); /* Add a shadow effect on hover */
 }
