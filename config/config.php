@@ -1,6 +1,6 @@
 <?php
 // config/config.php
-// Define the base URL for your project.
-// If your project is served from http://localhost/Inventory-Managment-System-TMDD/,
-// then:
+// Define the base URL and root path
 define('BASE_URL', '/Inventory-Managment-System-TMDD/');
+define('ROOT_PATH', $_SERVER['DOCUMENT_ROOT'] . '/Inventory-Managment-System-TMDD/');
+?>
