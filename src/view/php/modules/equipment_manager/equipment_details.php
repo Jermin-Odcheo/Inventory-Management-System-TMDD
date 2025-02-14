@@ -18,18 +18,19 @@ if (isset($_SESSION['success'])) {
 }
 
 // ------------------------
-// DELETE PURCHASE ORDER
+// DELETE EQUIPMENT DETAILS
 // ------------------------
 if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
-    $id = $_GET['id'];
+    $equipmentDetailsID = $_GET['id'];
+    $assetTag = $_GET['assetTag'];
     try {
-        $stmt = $pdo->prepare("DELETE FROM purchaseorder WHERE PurchaseOrderID = ?");
-        $stmt->execute([$id]);
-        $_SESSION['success'] = "Purchase Order deleted successfully.";
+        $stmt = $pdo->prepare("DELETE FROM equipmentdetails WHERE EquipmentDetailsID = ? AND AssetTag = ?");
+        $stmt->execute([$equipmentDetailsID, $assetTag]);
+        $_SESSION['success'] = "Equipment deleted successfully.";
     } catch (PDOException $e) {
-        $_SESSION['errors'] = ["Error deleting Purchase Order: " . $e->getMessage()];
+        $_SESSION['errors'] = ["Error deleting Equipment: " . $e->getMessage()];
     }
-    header("Location: purchase_order.php");
+    header("Location: equipment_details.php");
     exit;
 }
 
@@ -38,56 +39,87 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 // ------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Retrieve and sanitize form input
-    $purchaseOrderNumber = trim($_POST['purchaseOrderNumber'] ?? '');
-    $numberOfUnits       = trim($_POST['numberOfUnits'] ?? '');
-    $dateOfPurchaseOrder = trim($_POST['dateOfPurchaseOrder'] ?? '');
-    $itemsSpecification  = trim($_POST['itemsSpecification'] ?? '');
+    $equipmentDetailsID = trim($_POST['equipmentDetailsID'] ?? '');
+    $assetTag = trim($_POST['assetTag'] ?? '');
+    $assetDescription1 = trim($_POST['assetDescription1'] ?? '');
+    $assetDescription2  = trim($_POST['assetDescription2'] ?? '');
+    $specification = trim($_POST['specification'] ?? '');
+    $brand = trim($_POST['brand'] ?? '');
+    $model = trim($_POST['model'] ?? '');
+    $serialNumber = trim($_POST['serialNumber'] ?? '');
+    $dateAcquired = trim($_POST['dateAcquired'] ?? '');
+    $receivingReportFormNumber = trim($_POST['receivingReportFormNumber'] ?? '');
+    $accountableIndividualLocation = trim($_POST['accountableIndividualLocation'] ?? '');
+    $accountableIndividual = trim($_POST['accountableIndividual'] ?? '');
+    $remarks = trim($_POST['remarks'] ?? '');
 
     // Validate required fields
-    if (empty($purchaseOrderNumber) || empty($numberOfUnits) || empty($dateOfPurchaseOrder)) {
-        $_SESSION['errors'] = ["Please fill in all required fields (PO Number, Number of Units, and Date of Purchase Order)."];
-        header("Location: purchase_order.php");
+    if (empty($assetTag) ||
+     empty($serialNumber) ||
+     empty($specification) ||
+     empty($receivingReportFormNumber) ||
+     empty($accountableIndividualLocation) ||
+     empty($accountableIndividual)
+     ) {
+        $_SESSION['errors'] = ["Please fill in all required fields."];
+        header("Location: equipment_details.php");
         exit;
     }
 
     // Check if the form is for "Add" or "Update"
     if (isset($_POST['action']) && $_POST['action'] === 'add') {
         // Check for an existing PO number
-        $stmt = $pdo->prepare("SELECT PurchaseOrderID FROM purchaseorder WHERE PurchaseOrderNumber = ?");
-        $stmt->execute([$purchaseOrderNumber]);
+   
+        $stmt = $pdo->prepare("SELECT equipmentDetailsID FROM equipmentdetails WHERE AssetTag = ?");
+        $stmt->execute([$assetTag]);
         $existing = $stmt->fetch();
-
+        
         if ($existing) {
             // Instead of adding a duplicate, show a warning with a link to edit
             $_SESSION['errors'] = [
-                "A Purchase Order with this PO number already exists. <a href=\"" . $_SERVER['PHP_SELF'] . "?action=edit&id={$existing['PurchaseOrderID']}\">Click here to edit it.</a>"
+                "Equipment with this asset tag already exists. <a href=\"" . $_SERVER['PHP_SELF'] . "?action=edit&id={$existing['AssetTag']}\">Click here to edit it.</a>"
             ];
         } else {
             try {
-                $stmt = $pdo->prepare("INSERT INTO purchaseorder (PurchaseOrderNumber, NumberOfUnits, DateOfPurchaseOrder, ItemsSpecification)
-                                       VALUES (?, ?, ?, ?)");
-                $stmt->execute([$purchaseOrderNumber, $numberOfUnits, $dateOfPurchaseOrder, $itemsSpecification]);
-                $_SESSION['success'] = "Purchase Order added successfully.";
+                $stmt = $pdo->prepare("INSERT INTO equipmentdetails (equipmentDetailsID, 
+                assetTag, assetDescription1, assetDescription2, specification, brand, 
+                model, serialNumber, dateAcquired, receivingReportFormNumber, accountableIndividualLocation, 
+                accountableIndividual, remarks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$equipmentDetailsID, 
+                $assetTag, $assetDescription1, $assetDescription2, $specification, $brand, 
+                $model, $serialNumber, $dateAcquired, $receivingReportFormNumber, $accountableIndividualLocation, 
+                $accountableIndividual, $remarks]);
+                $_SESSION['success'] = "Equipment details added successfully.";
             } catch (PDOException $e) {
-                $_SESSION['errors'] = ["Error adding Purchase Order: " . $e->getMessage()];
+                $_SESSION['errors'] = ["Error adding Equipment: " . $e->getMessage()];
             }
         }
-        header("Location: purchase_order.php");
+        header("Location: equipment_details.php");
         exit;
     } elseif (isset($_POST['action']) && $_POST['action'] === 'update') {
-        $id = $_POST['id'];
+        $id = $_POST['equipmentDetailsID']; // Assuming ID is passed in the form
         try {
-            $stmt = $pdo->prepare("UPDATE purchaseorder 
-                                   SET PurchaseOrderNumber = ?, NumberOfUnits = ?, DateOfPurchaseOrder = ?, ItemsSpecification = ? 
-                                   WHERE PurchaseOrderID = ?");
-            $stmt->execute([$purchaseOrderNumber, $numberOfUnits, $dateOfPurchaseOrder, $itemsSpecification, $id]);
-            $_SESSION['success'] = "Purchase Order updated successfully.";
+            $stmt = $pdo->prepare("UPDATE equipmentdetails 
+                                   SET assetTag = ?, assetDescription1 = ?, assetDescription2 = ?, 
+                                       specification = ?, brand = ?, model = ?, serialNumber = ?, 
+                                       dateAcquired = ?, receivingReportFormNumber = ?, 
+                                       accountableIndividualLocation = ?, accountableIndividual = ?, remarks = ? 
+                                   WHERE equipmentDetailsID = ?");
+            $stmt->execute([
+                $assetTag, $assetDescription1, $assetDescription2, 
+                $specification, $brand, $model, $serialNumber, 
+                $dateAcquired, $receivingReportFormNumber, 
+                $accountableIndividualLocation, $accountableIndividual, $remarks, 
+                $id
+            ]);
+            $_SESSION['success'] = "Equipment details updated successfully.";
         } catch (PDOException $e) {
-            $_SESSION['errors'] = ["Error updating Purchase Order: " . $e->getMessage()];
+            $_SESSION['errors'] = ["Error updating Equipment Details: " . $e->getMessage()];
         }
-        header("Location: purchase_order.php");
+        header("Location: equipment_details.php");
         exit;
     }
+    
 }
 
 
@@ -171,7 +203,7 @@ try {
                             <i class="bi bi-plus-circle"></i> Add Equipment
                         </div>
                         <div class="card-body">
-                            <form method="post" action="process_purchase_order.php">
+                            <form method="post" action="equipment_details.php">
                                 <input type="hidden" name="action" value="add">
                                 
                                 <div class="mb-3">
@@ -248,69 +280,69 @@ try {
                         </div>
                     </div>
 
-                    <!-- List of Equipment Details Card -->
-                <div class="card shadow-sm">
-                    <div class="card-header d-flex justify-content-between align-items-center bg-dark text-white">
-                        <span><i class="bi bi-list-ul"></i> List of Equipment Details</span>
-                        <!-- Real-Time Search Input -->
-                        <div class="input-group w-auto">
-                            <span class="input-group-text"><i class="bi bi-search"></i></span>
-                            <input type="text" class="form-control" placeholder="Search..." id="equipmentSearch">
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <?php if (!empty($equipmentDetails)): ?>
-                            <div class="table-responsive">
-                                <table class="table table-striped table-hover align-middle" id="equipmentTable">
-                                    <thead class="table-dark">
-                                        <tr>
-                                            <th>ID</th>
-                                            <th>Asset Tag</th>
-                                            <th>Description 1</th>
-                                            <th>Description 2</th>
-                                            <th>Specification</th>
-                                            <th>Brand</th>
-                                            <th>Model</th>
-                                            <th>Serial Number</th>
-                                            <th>Date Acquired</th>
-                                            <th>Accountable Individual</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($equipmentDetails as $equipment): ?>
-                                            <tr>
-                                                <td><?php echo htmlspecialchars($equipment['EquipmentDetailsID']); ?></td>
-                                                <td><?php echo htmlspecialchars($equipment['AssetTag']); ?></td>
-                                                <td><?php echo htmlspecialchars($equipment['AssetDescription1']); ?></td>
-                                                <td><?php echo htmlspecialchars($equipment['AssetDescription2']); ?></td>
-                                                <td><?php echo htmlspecialchars($equipment['Specification']); ?></td>
-                                                <td><?php echo htmlspecialchars($equipment['Brand']); ?></td>
-                                                <td><?php echo htmlspecialchars($equipment['Model']); ?></td>
-                                                <td><?php echo htmlspecialchars($equipment['SerialNumber']); ?></td>
-                                                <td><?php echo htmlspecialchars($equipment['DateAcquired']); ?></td>
-                                                <td><?php echo htmlspecialchars($equipment['AccountableIndividual']); ?></td>
-                                                <td class="text-center">
-                                                    <!-- Inline Button Group for Actions -->
-                                                    <div class="btn-group" role="group">
-                                                        <a class="btn btn-sm btn-outline-primary" href="<?php echo $_SERVER['PHP_SELF']; ?>?action=edit&id=<?php echo htmlspecialchars($equipment['EquipmentDetailsID']); ?>">
-                                                            <i class="bi bi-pencil-square"></i> Edit
-                                                        </a>
-                                                        <a class="btn btn-sm btn-outline-danger" href="<?php echo $_SERVER['PHP_SELF']; ?>?action=delete&id=<?php echo htmlspecialchars($equipment['EquipmentDetailsID']); ?>" onclick="return confirm('Are you sure you want to delete this equipment record?');">
-                                                            <i class="bi bi-trash"></i> Delete
-                                                        </a>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                        <?php else: ?>
-                            <p class="mb-0">No equipment details found.</p>
-                        <?php endif; ?>
+            <!-- List of Equipment Details Card -->
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center bg-dark text-white">
+                    <span><i class="bi bi-list-ul"></i> List of Equipment Details</span>
+                    <!-- Real-Time Search Input -->
+                    <div class="input-group w-auto">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control" placeholder="Search..." id="equipmentSearch">
                     </div>
                 </div>
+                <div class="card-body">
+                    <?php if (!empty($equipmentDetails)): ?>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover align-middle" id="equipmentTable">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Asset Tag</th>
+                                        <th>Description 1</th>
+                                        <th>Description 2</th>
+                                        <th>Specification</th>
+                                        <th>Brand</th>
+                                        <th>Model</th>
+                                        <th>Serial Number</th>
+                                        <th>Date Acquired</th>
+                                        <th>Accountable Individual</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($equipmentDetails as $equipment): ?>
+                                        <tr>
+                                            <td><?php echo htmlspecialchars($equipment['EquipmentDetailsID']); ?></td>
+                                            <td><?php echo htmlspecialchars($equipment['AssetTag']); ?></td>
+                                            <td><?php echo htmlspecialchars($equipment['AssetDescription1']); ?></td>
+                                            <td><?php echo htmlspecialchars($equipment['AssetDescription2']); ?></td>
+                                            <td><?php echo htmlspecialchars($equipment['Specification']); ?></td>
+                                            <td><?php echo htmlspecialchars($equipment['Brand']); ?></td>
+                                            <td><?php echo htmlspecialchars($equipment['Model']); ?></td>
+                                            <td><?php echo htmlspecialchars($equipment['SerialNumber']); ?></td>
+                                            <td><?php echo htmlspecialchars($equipment['DateAcquired']); ?></td>
+                                            <td><?php echo htmlspecialchars($equipment['AccountableIndividual']); ?></td>
+                                            <td class="text-center">
+                                                <!-- Inline Button Group for Actions -->
+                                                <div class="btn-group" role="group">
+                                                    <a class="btn btn-sm btn-outline-primary" href="<?php echo $_SERVER['PHP_SELF']; ?>?action=edit&id=<?php echo htmlspecialchars($equipment['EquipmentDetailsID']); ?>">
+                                                        <i class="bi bi-pencil-square"></i> Edit
+                                                    </a>
+                                                    <a class="btn btn-sm btn-outline-danger" href="equipment_details.php?action=delete&id=<?php echo htmlspecialchars($equipment['EquipmentDetailsID']); ?>&assetTag=<?php echo htmlspecialchars($equipment['AssetTag']); ?>" onclick="return confirm('Are you sure you want to delete this equipment record?');">
+                                                        <i class="bi bi-trash"></i> Delete
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php else: ?>
+                        <p class="mb-0">No equipment details found.</p>
+                    <?php endif; ?>
+                </div>
+            </div>
 
 
                 </main>
