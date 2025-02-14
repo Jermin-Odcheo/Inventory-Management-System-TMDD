@@ -1,8 +1,8 @@
 /* Global styles */
 body {
     font-family: 'Poppins', sans-serif;
-    background: linear-gradient(to right, #f9c736 25%, grey 50%, #001885 75%);
     background-attachment: fixed;
+    background: linear-gradient(to right, rgba(249, 199, 54, 0.5) 25%, rgba(128, 128, 128, 0.5) 50%, rgba(0, 24, 133, 0.5) 75%); 
     background-size: cover;
     min-height: 100vh;
     position: relative;
@@ -13,7 +13,7 @@ body::before {
     content: '';
     position: fixed;
     inset: 0;
-    background: url("/public/assets/img/SLU-Main.jpg") no-repeat center center;
+    background: url("/public/assets/img/SLU Main.jpg") no-repeat center center;
     background-size: cover;
     background-attachment: fixed;
     opacity: 0.2;
@@ -21,13 +21,15 @@ body::before {
 }
 
 
-/* Add keyframes for fade-in animation */
-@keyframes fadeIn {
+/* Add keyframes for slide-in animation */
+@keyframes slideIn {
     from {
-        opacity: 0;
+        transform: translateY(20px); /* Start from below */
+        opacity: 0; /* Start invisible */
     }
     to {
-        opacity: 1;
+        transform: translateY(0); /* End at original position */
+        opacity: 1; /* End visible */
     }
 }
 
@@ -38,7 +40,7 @@ body::before {
     backdrop-filter: blur(15px); /* Glass effect */
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
     border: 1px solid rgba(255, 255, 255, 0.3);
-    animation: fadeIn 1s ease-in; /* Apply fade-in animation */
+    animation: slideIn 0.5s ease-out; /* Updated animation to match forgot_password */
 }
 
 .btn-primary {
@@ -58,7 +60,7 @@ body::before {
 .btn-primary:hover {
     background-color: #0056b3;
     transform: translateY(-1px); /* Slight upward movement */
-    box-shadow: 0 4px 12px rgba(51, 56, 109, 0.2); /* Shadow effect */
+    box-shadow: 0 6px 16px rgba(0, 123, 255, 0.4); /* Shadow effect */
 }
 
 .btn-secondary {
