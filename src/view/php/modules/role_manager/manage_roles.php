@@ -47,76 +47,79 @@ foreach ($roleData as $row) {
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Role Management</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css" rel="stylesheet">
     <style>
-        body { background-color: #ffffff; color: #000000; font-family: 'Arial', sans-serif; }
-        h1 { color: #000000; text-align: center; margin-top: 20px; font-size: 28px; }
-        .content { margin-left: 300px; padding: 20px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5); margin-bottom: 20px; }
-        .table thead th { background-color: #000000; color: #fff; }
-        .table-striped tbody tr:nth-of-type(odd) { background-color: #f8f9fa; }
-        .table-hover tbody tr:hover { background-color: #e9ecef; }
-        .btn-primary { background-color: #0d6efd; border-color: #0d6efd; }
-        .btn-warning { background-color: #ffc107; border-color: #ffc107; color: #000; }
-        .btn-danger { background-color: #dc3545; border-color: #dc3545; }
-        .btn-info { background-color: #17a2b8; border-color: #17a2b8; }
+        .main-content {
+            margin-left: 300px; /* Adjust according to your sidebar width */
+            padding: 20px;
+            margin-bottom: 20px;
+            width: auto;
+        }
     </style>
 </head>
+
 <body>
-    <?php include '../../../php/general/sidebar.php'; ?>
-
-    <div class="content">
-        <div class="container-fluid">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1 class="h3">Role Management</h1>
-                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addRoleModal">Add New Role</button>
-
-            </div>
-
-            <div class="table-responsive">
-                <table class="table table-striped table-hover align-middle">
-                    <thead>
-                        <tr>
-                            <th>Role ID</th>
-                            <th>Role Name</th>
-                            <th>Modules &amp; Privileges</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (!empty($roles)): ?>
-                            <?php foreach ($roles as $roleID => $role): ?>
-                                <tr data-role-id="<?php echo $roleID; ?>">
-                                    <td><?php echo htmlspecialchars($roleID); ?></td>
-                                    <td class="role-name"><?php echo htmlspecialchars($role['Role_Name']); ?></td>
-                                    <td class="privilege-list">
-                                        <?php foreach ($role['Modules'] as $moduleName => $privileges): ?>
-                                            <div>
-                                                <strong><?php echo htmlspecialchars($moduleName); ?></strong>: 
-                                                <?php echo !empty($privileges) ? implode(', ', array_map('htmlspecialchars', $privileges)) : '<em>No privileges</em>'; ?>
-                                            </div>
-                                        <?php endforeach; ?>
-                                    </td>
-                                    <td>
-                                        <button type="button" class="btn btn-sm btn-warning edit-role-btn" data-role-id="<?php echo $roleID; ?>" data-bs-toggle="modal" data-bs-target="#editRoleModal">Edit</button>
-                                        <button type="button" class="btn btn-sm btn-danger delete-role-btn" data-role-id="<?php echo $roleID; ?>" data-role-name="<?php echo htmlspecialchars($role['Role_Name']); ?>" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">Delete</button>
-                                        <a href="assign_privileges.php?id=<?php echo $roleID; ?>" class="btn btn-sm btn-info">Assign Privileges</a>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <tr>
-                                <td colspan="4">No roles found.</td>
-                            </tr>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+    <div class="sidebar">
+        <?php include '../../general/sidebar.php'; ?>
     </div>
+    <!-- Main Content Area -->
+    <div class="main-content container-fluid">
+        <h1>Role Management</h1>
+        <div class="d-flex justify-content-end mb-3">
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addRoleModal">Add New Role</button>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Role ID</th>
+                        <th>Role Name</th>
+                        <th>Modules & Privileges</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (!empty($roles)): ?>
+                        <?php foreach ($roles as $roleID => $role): ?>
+                            <tr data-role-id="<?php echo $roleID; ?>">
+                                <td><?php echo htmlspecialchars($roleID); ?></td>
+                                <td class="role-name"><?php echo htmlspecialchars($role['Role_Name']); ?></td>
+                                <td class="privilege-list">
+                                    <?php foreach ($role['Modules'] as $moduleName => $privileges): ?>
+                                        <div>
+                                            <strong><?php echo htmlspecialchars($moduleName); ?></strong>: 
+                                            <?php echo !empty($privileges) ? implode(', ', array_map('htmlspecialchars', $privileges)) : '<em>No privileges</em>'; ?>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-warning edit-role-btn" data-role-id="<?php echo $roleID; ?>" data-bs-toggle="modal" data-bs-target="#editRoleModal">Edit</button>
+                                    <button type="button" class="btn btn-sm btn-danger delete-role-btn" data-role-id="<?php echo $roleID; ?>" data-role-name="<?php echo htmlspecialchars($role['Role_Name']); ?>" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">Delete</button>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <tr>
+                            <td colspan="4">No roles found.</td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div><!-- /.table-responsive -->
+    </div><!-- /.main-content -->
 
     <!-- Edit Role Modal -->
     <div class="modal fade" id="editRoleModal" tabindex="-1" aria-labelledby="editRoleModalLabel" aria-hidden="true">
@@ -150,8 +153,19 @@ foreach ($roleData as $row) {
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Add Role Modal -->
+    <div class="modal fade" id="addRoleModal" tabindex="-1" aria-labelledby="addRoleModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add New Role</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="addRoleContent">Loading...</div>
+            </div>
+        </div>
+    </div>
+
     <script>
         $(document).ready(function() {
             // Load edit role modal
@@ -181,26 +195,57 @@ foreach ($roleData as $row) {
                 $('#roleNamePlaceholder').text(roleName);
                 $('#confirmDeleteButton').attr('href', 'delete_role.php?id=' + roleID);
             });
-        });
-    </script>
 
-    <!-- Add Role Modal -->
-    <div class="modal fade" id="addRoleModal" tabindex="-1" aria-labelledby="addRoleModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Add New Role</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body" id="addRoleContent">Loading...</div>
-            </div>
-        </div>
-    </div>
+            // Handle form submission via AJAX
+            $(document).on('submit', '#editRoleForm', function(event) {
+                event.preventDefault();
+                let formData = $(this).serialize();
+                let roleID = $(this).closest('.modal-content').find('.edit-role-btn').data('role-id'); // Get roleID dynamically
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script>
-        $(document).ready(function() {
+                $.ajax({
+                    url: 'edit_roles.php?id=' + roleID, // Use the dynamically fetched roleID
+                    type: 'POST',
+                    data: formData,
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            alert('Role updated successfully.');
+
+                            let row = $('tr[data-role-id="' + response.role_id + '"]');
+
+                            // Update role name
+                            row.find('.role-name').text(response.role_name);
+
+                            // Update the privileges display dynamically
+                            let privilegeCell = row.find('.privilege-list');
+                            privilegeCell.empty(); // Clear old privileges
+
+                            let groupedPrivileges = {};
+                            response.privileges.forEach(priv => {
+                                if (!groupedPrivileges[priv.Module_Name]) {
+                                    groupedPrivileges[priv.Module_Name] = [];
+                                }
+                                groupedPrivileges[priv.Module_Name].push(priv.Privilege_Name);
+                            });
+
+                            // Append updated privileges
+                            for (let moduleName in groupedPrivileges) {
+                                let privilegesHTML = `
+                                    <div>
+                                        <strong>${moduleName}</strong>: ${groupedPrivileges[moduleName].join(', ')}
+                                    </div>
+                                `;
+                                privilegeCell.append(privilegesHTML);
+                            }
+
+                            // Hide modal after successful update
+                            $('#editRoleModal').modal('hide');
+                        }     
+                    },
+                });
+            });
+
+            // Load add role modal
             $('#addRoleModal').on('show.bs.modal', function () {
                 $('#addRoleContent').html("Loading...");
                 $.ajax({
@@ -216,6 +261,5 @@ foreach ($roleData as $row) {
             });
         });
     </script>
-
 </body>
 </html>

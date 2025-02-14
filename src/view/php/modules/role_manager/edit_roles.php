@@ -141,17 +141,15 @@ $('#editRoleForm').on('submit', function(event) {
             if (response.success) {
                 alert('Role updated successfully.');
 
-                // Find the row corresponding to the updated role
                 let row = $('tr[data-role-id="' + response.role_id + '"]');
 
-                // Update the role name
+                // Update role name
                 row.find('.role-name').text(response.role_name);
 
-                // Update the privileges display
+                // Update the privileges display dynamically
                 let privilegeCell = row.find('.privilege-list');
                 privilegeCell.empty(); // Clear old privileges
 
-                // Group privileges by module
                 let groupedPrivileges = {};
                 response.privileges.forEach(priv => {
                     if (!groupedPrivileges[priv.Module_Name]) {
@@ -170,8 +168,9 @@ $('#editRoleForm').on('submit', function(event) {
                     privilegeCell.append(privilegesHTML);
                 }
 
-                // Hide modal
+                // Hide modal after successful update
                 $('#editRoleModal').modal('hide');
+
             } else {
                 alert('Error updating role: ' + response.message);
             }
@@ -181,4 +180,5 @@ $('#editRoleForm').on('submit', function(event) {
         }
     });
 });
+
 </script>
