@@ -35,6 +35,7 @@ $stmt->execute();
 $roles = $stmt->fetchAll();
 
 $successMessage = ''; // Variable to hold the success message
+$errorMessage = '';   // Variable to hold error messages
 
 // If form is submitted.
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
@@ -45,32 +46,47 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $status     = $_POST['status'];
     $roleIDs    = isset($_POST['roles']) ? $_POST['roles'] : [];
 
-    // If adding a new user, you might also collect and hash the password.
-    if (!$isEditing) {
-        $password = $_POST['password'];
-        // Hash the password.
-        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-        $stmt = $pdo->prepare("INSERT INTO users (Email, Password, First_Name, Last_Name, Department, Status) VALUES (?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$email, $hashedPassword, $firstName, $lastName, $department, $status]);
-        $userID = $pdo->lastInsertId();
-        $successMessage = "User added successfully!";
+    // Check for duplicate email.
+    // For editing, allow the same email if it's the same user.
+    if ($isEditing) {
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE Email = ? AND User_ID != ?");
+        $stmt->execute([$email, $userData['User_ID']]);
     } else {
-        // For edit, update user details. (Password update might be handled separately.)
-        $stmt = $pdo->prepare("UPDATE users SET Email = ?, First_Name = ?, Last_Name = ?, Department = ?, Status = ? WHERE User_ID = ?");
-        $stmt->execute([$email, $firstName, $lastName, $department, $status, $userData['User_ID']]);
-        $userID = $userData['User_ID'];
-        $successMessage = "User updated successfully!";
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE Email = ?");
+        $stmt->execute([$email]);
     }
+    $emailCount = $stmt->fetchColumn();
 
-    // Update the user's roles.
-    // First, delete existing roles.
-    $stmt = $pdo->prepare("DELETE FROM user_roles WHERE User_ID = ?");
-    $stmt->execute([$userID]);
+    if ($emailCount > 0) {
+        $errorMessage = "The email address is already taken. Please choose a different email.";
+    } else {
+        // No duplicate, proceed with adding or editing.
+        if (!$isEditing) {
+            $password = $_POST['password'];
+            // Hash the password.
+            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+            $stmt = $pdo->prepare("INSERT INTO users (Email, Password, First_Name, Last_Name, Department, Status) VALUES (?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$email, $hashedPassword, $firstName, $lastName, $department, $status]);
+            $userID = $pdo->lastInsertId();
+            $successMessage = "User added successfully!";
+        } else {
+            // For edit, update user details. (Password update might be handled separately.)
+            $stmt = $pdo->prepare("UPDATE users SET Email = ?, First_Name = ?, Last_Name = ?, Department = ?, Status = ? WHERE User_ID = ?");
+            $stmt->execute([$email, $firstName, $lastName, $department, $status, $userData['User_ID']]);
+            $userID = $userData['User_ID'];
+            $successMessage = "User updated successfully!";
+        }
 
-    // Then, insert the new roles.
-    $stmt = $pdo->prepare("INSERT INTO user_roles (User_ID, Role_ID) VALUES (?, ?)");
-    foreach ($roleIDs as $roleID) {
-        $stmt->execute([$userID, $roleID]);
+        // Update the user's roles.
+        // First, delete existing roles.
+        $stmt = $pdo->prepare("DELETE FROM user_roles WHERE User_ID = ?");
+        $stmt->execute([$userID]);
+
+        // Then, insert the new roles.
+        $stmt = $pdo->prepare("INSERT INTO user_roles (User_ID, Role_ID) VALUES (?, ?)");
+        foreach ($roleIDs as $roleID) {
+            $stmt->execute([$userID, $roleID]);
+        }
     }
 }
 ?>
@@ -93,6 +109,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <?php if ($successMessage): ?>
         <div class="alert alert-success" role="alert">
             <?php echo $successMessage; ?>
+        </div>
+    <?php endif; ?>
+
+    <?php if ($errorMessage): ?>
+        <div class="alert alert-danger" role="alert">
+            <?php echo $errorMessage; ?>
         </div>
     <?php endif; ?>
 

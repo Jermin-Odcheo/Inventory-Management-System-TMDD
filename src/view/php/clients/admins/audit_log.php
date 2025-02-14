@@ -6,7 +6,7 @@ require_once('../../../../../config/ims-tmdd.php');
 $query = "
     SELECT a.*, u.Email AS user_email 
     FROM audit_log a
-    LEFT JOIN users u ON a.User = u.User_ID 
+    LEFT JOIN users u ON a.UserID = u.User_ID 
     ORDER BY a.Date_Time DESC
 ";
 $stmt = $pdo->prepare($query);
@@ -25,7 +25,31 @@ function formatJsonData($jsonStr)
 }
 
 /**
+ * New helper function to format a JSON string into a visually appealing list.
+ */
+function formatNewValue($jsonStr)
+{
+    $data = json_decode($jsonStr, true);
+    if (!is_array($data)) {
+        return '<span>' . htmlspecialchars($jsonStr) . '</span>';
+    }
+
+    $html = '<ul class="list-group">';
+    foreach ($data as $key => $value) {
+        // Convert null to a display string
+        $displayValue = is_null($value) ? '<em>null</em>' : htmlspecialchars($value);
+        $friendlyKey = ucwords(str_replace('_', ' ', $key));
+        $html .= '<li class="list-group-item d-flex justify-content-between align-items-center">
+                    <strong>' . $friendlyKey . ':</strong> <span>' . $displayValue . '</span>
+                  </li>';
+    }
+    $html .= '</ul>';
+    return $html;
+}
+
+/**
  * Helper function to compare old/new JSON data for modifications.
+ * Special handling for the "is_deleted" field is included.
  */
 function formatAuditDiff($oldJson, $newJson)
 {
@@ -50,7 +74,7 @@ function formatAuditDiff($oldJson, $newJson)
             continue;
         }
 
-        // Special handling for is_deleted
+        // Special handling for is_deleted field
         if ($lcKey === 'is_deleted') {
             $oldVal = isset($oldData[$key]) ? $oldData[$key] : '';
             $newVal = isset($newData[$key]) ? $newData[$key] : '';
@@ -108,7 +132,7 @@ function getActionIcon($action)
         return '<i class="fas fa-user-edit"></i>';
     } elseif ($action === 'add') {
         return '<i class="fas fa-user-plus"></i>';
-    } elseif ($action === 'deleted' || strpos($action, 'deleted') !== false || $action === 'user permanently deleted') {
+    } elseif ($action === 'soft delete' || $action === 'permanent delete') {
         return '<i class="fas fa-user-slash"></i>';
     } else {
         return '<i class="fas fa-info-circle"></i>';
@@ -134,25 +158,64 @@ function getStatusIcon($status)
           href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Custom CSS to force a fixed table layout that wraps text -->
+    <!-- Custom CSS for improved column spacing -->
     <style>
         .table-responsive {
-            overflow-x: hidden;
+            overflow-x: auto;
         }
         .table {
-            table-layout: fixed;
+            table-layout: auto; /* Allow columns to auto adjust */
             width: 100%;
         }
         .table th, .table td {
             white-space: normal !important;
             word-break: break-word;
             overflow-wrap: break-word;
-            /* Optionally, set a max-width if needed */
-            max-width: 200px; /* Adjust this value as needed */
+            /* Remove fixed max-width and instead add a minimum width */
+            min-width: 150px;
+            padding: 0.75rem;
+        }
+        /* Optionally, use a colgroup to assign widths to specific columns */
+        col.track { width: 80px; }
+        col.user { width: 150px; }
+        col.module { width: 100px; }
+        col.action { width: 120px; }
+        col.details { width: 250px; }
+        col.changes { width: 300px; }
+        col.status { width: 100px; }
+        col.date { width: 150px; }
+        /* Additional styling for action badges */
+        .action-badge {
+            padding: 0.35em 0.65em;
+            border-radius: 0.25rem;
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .action-add {
+            background-color: #e7f5e1;
+            color: #2d7a32;
+        }
+        .action-modified {
+            background-color: #e1ecf5;
+            color: #2d5a7a;
+        }
+        .action-deleted, .action-permanent\ delete {
+            background-color: #f5e1e1;
+            color: #7a2d2d;
+        }
+        .action-restored {
+            background-color: #9ae48a;
+            color: #4f774f;
+            padding: 0.5em 0.75em;
+            border-radius: 50px;
+            display: inline-block;
+            min-width: 80px;
+            text-align: center;
         }
     </style>
-    <link rel="stylesheet"
-          href="/Inventory-Managment-System-TMDD/src/view/styles/css/audit_log.css">
+    <link rel="stylesheet" href="/Inventory-Managment-System-TMDD/src/view/styles/css/audit_log.css">
 </head>
 <body>
 <?php include '../../general/sidebar.php'; ?>
@@ -160,7 +223,7 @@ function getStatusIcon($status)
 <div class="main-content">
     <div class="container-fluid">
         <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="card-header d-flex justify-content-between align-items-center bg-dark">
                 <h3 class="text-white">
                     <i class="fas fa-history me-2"></i>
                     Audit Logs Dashboard
@@ -169,17 +232,27 @@ function getStatusIcon($status)
 
             <div class="card-body">
                 <div class="mb-4">
-                    <div class="search-box">
-                        <i class="fas fa-search search-icon"></i>
-                        <input type="text" id="searchInput" class="form-control"
+                    <div class="search-box position-relative">
+                        <i class="fas fa-search search-icon position-absolute" style="top: 10px; left: 15px;"></i>
+                        <input type="text" id="searchInput" class="form-control ps-5"
                                placeholder="Search in audit logs...">
                     </div>
                 </div>
 
-                <!-- Table container -->
+                <!-- Table container with colgroup for column widths -->
                 <div class="table-responsive">
                     <table class="table table-hover">
-                        <thead>
+                        <colgroup>
+                            <col class="track">
+                            <col class="user">
+                            <col class="module">
+                            <col class="action">
+                            <col class="details">
+                            <col class="changes">
+                            <col class="status">
+                            <col class="date">
+                        </colgroup>
+                        <thead class="table-light">
                         <tr>
                             <th>Track ID</th>
                             <th>User</th>
@@ -214,24 +287,40 @@ function getStatusIcon($status)
                                         </div>
                                     </td>
 
-                                    <!-- MODULE-->
+                                    <!-- MODULE -->
                                     <td>
                                         <?php echo !empty($log['Module']) ? htmlspecialchars(trim($log['Module'])) : '<em class="text-muted">N/A</em>'; ?>
                                     </td>
+
                                     <!-- ACTION -->
                                     <td>
                                         <?php
+                                        // Get the default action text from the log.
                                         $actionText = !empty($log['Action']) ? $log['Action'] : 'Deleted';
+
+                                        // Attempt to decode OldVal and NewVal to see if the is_deleted field indicates a restore.
+                                        $oldData = json_decode($log['OldVal'], true);
+                                        $newData = json_decode($log['NewVal'], true);
+                                        if (is_array($oldData) && is_array($newData)) {
+                                            if (isset($oldData['is_deleted'], $newData['is_deleted']) &&
+                                                (int)$oldData['is_deleted'] === 1 && (int)$newData['is_deleted'] === 0) {
+                                                $actionText = 'Restored';
+                                            }
+                                        }
+
                                         echo "<span class='action-badge action-" . strtolower($actionText) . "'>";
                                         echo getActionIcon($actionText) . ' ' . htmlspecialchars($actionText);
                                         echo "</span>";
                                         ?>
                                     </td>
+
                                     <!-- DETAILS -->
                                     <td class="data-container">
                                         <?php
-                                        if ($actionLower === 'deleted' || $actionLower === 'user permanently deleted') {
-                                            echo nl2br(htmlspecialchars('The user has been deleted from database'));
+                                        if ($actionLower === 'permanent delete') {
+                                            echo nl2br(htmlspecialchars('The user has been permanently deleted from the database'));
+                                        } elseif ($actionLower === 'soft delete') {
+                                            echo nl2br(htmlspecialchars('The user has been soft deleted (is_deleted set to 1)'));
                                         } else {
                                             echo nl2br(htmlspecialchars($log['Details'] ?? ''));
                                         }
@@ -242,14 +331,19 @@ function getStatusIcon($status)
                                     <td class="data-container">
                                         <?php
                                         if ($actionLower === 'modified') {
+                                            // Display a detailed diff: old value -> new value.
                                             echo formatAuditDiff($log['OldVal'], $log['NewVal']);
                                         } elseif ($actionLower === 'add') {
-                                            echo formatJsonData($log['NewVal']);
-                                        } elseif ($actionLower === 'deleted' || $actionLower === 'user permanently deleted') {
-                                            // Display the old record's JSON data
-                                            echo formatJsonData($log['OldVal']);
+                                            echo formatNewValue($log['NewVal']);
+                                        } elseif ($actionLower === 'soft delete') {
+                                            echo !empty($log['NewVal'])
+                                                ? formatNewValue($log['NewVal'])
+                                                : formatJsonData($log['OldVal']);
+                                        } elseif ($actionLower === 'permanent delete') {
+                                            // For permanently deleted users, show details from NewVal (or adjust as needed)
+                                            echo formatNewValue($log['NewVal']);
                                         } else {
-                                            echo formatJsonData($log['OldVal']);
+                                            echo formatNewValue($log['OldVal']);
                                         }
                                         ?>
                                     </td>
@@ -273,8 +367,8 @@ function getStatusIcon($status)
                         <?php else: ?>
                             <tr>
                                 <td colspan="8">
-                                    <div class="empty-state">
-                                        <i class="fas fa-inbox"></i>
+                                    <div class="empty-state text-center py-4">
+                                        <i class="fas fa-inbox fa-3x mb-3"></i>
                                         <h4>No Audit Logs Found</h4>
                                         <p class="text-muted">There are no audit log entries to display.</p>
                                     </div>
