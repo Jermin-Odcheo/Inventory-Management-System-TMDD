@@ -2,13 +2,10 @@
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
 
-// Check if the logged-in user has permission to manage roles
-if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
-    exit();
-}
-
-// SQL to retrieve roles with their modules and privileges.
+// Updated SQL query:
+// - Joins roles to role_privileges.
+// - Joins modules using rp.Module_ID.
+// - Joins privileges using FIND_IN_SET() to match the comma‐separated privilege IDs.
 $sql = "
     SELECT 
         r.Role_ID,
@@ -17,8 +14,8 @@ $sql = "
         p.Privilege_Name
     FROM roles r
     LEFT JOIN role_privileges rp ON r.Role_ID = rp.Role_ID
-    LEFT JOIN privileges p ON rp.Privilege_ID = p.Privilege_ID
-    LEFT JOIN modules m ON p.Module_ID = m.Module_ID
+    LEFT JOIN modules m ON rp.Module_ID = m.Module_ID
+    LEFT JOIN privileges p ON FIND_IN_SET(p.Privilege_ID, rp.Privilege_ID)
     ORDER BY r.Role_ID ASC, m.Module_Name, p.Privilege_Name
 ";
 $stmt = $pdo->prepare($sql);
@@ -44,7 +41,6 @@ foreach ($roleData as $row) {
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -61,205 +57,181 @@ foreach ($roleData as $row) {
     <!-- Bootstrap Icons CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css" rel="stylesheet">
     <style>
+        /* Flex container to hold sidebar and main content */
+        .wrapper {
+            display: flex;
+            min-height: 100vh;
+        }
+        /* Sidebar with fixed width */
+        .sidebar {
+            width: 300px;
+            background-color: #2c3e50;
+            color: #fff;
+        }
+        /* Main content takes remaining space */
         .main-content {
-            margin-left: 300px; /* Adjust according to your sidebar width */
+            flex: 1;
             padding: 20px;
-            margin-bottom: 20px;
-            width: auto;
+            margin-left: 300px;
+        }
+        /* (Optional) Override container-fluid padding if needed */
+        .container-fluid {
+            padding: 0 15px;
         }
     </style>
 </head>
 
 <body>
+<div class="wrapper">
+    <!-- Sidebar -->
     <div class="sidebar">
         <?php include '../../general/sidebar.php'; ?>
     </div>
+
     <!-- Main Content Area -->
     <div class="main-content container-fluid">
         <h1>Role Management</h1>
         <div class="d-flex justify-content-end mb-3">
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addRoleModal">Add New Role</button>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addRoleModal">
+                Add New Role
+            </button>
         </div>
 
         <div class="table-responsive">
             <table class="table table-striped table-hover">
                 <thead class="table-dark">
-                    <tr>
-                        <th>Role ID</th>
-                        <th>Role Name</th>
-                        <th>Modules & Privileges</th>
-                        <th>Actions</th>
-                    </tr>
+                <tr>
+                    <th>Role ID</th>
+                    <th>Role Name</th>
+                    <th>Modules &amp; Privileges</th>
+                    <th>Actions</th>
+                </tr>
                 </thead>
                 <tbody>
-                    <?php if (!empty($roles)): ?>
-                        <?php foreach ($roles as $roleID => $role): ?>
-                            <tr data-role-id="<?php echo $roleID; ?>">
-                                <td><?php echo htmlspecialchars($roleID); ?></td>
-                                <td class="role-name"><?php echo htmlspecialchars($role['Role_Name']); ?></td>
-                                <td class="privilege-list">
-                                    <?php foreach ($role['Modules'] as $moduleName => $privileges): ?>
-                                        <div>
-                                            <strong><?php echo htmlspecialchars($moduleName); ?></strong>: 
-                                            <?php echo !empty($privileges) ? implode(', ', array_map('htmlspecialchars', $privileges)) : '<em>No privileges</em>'; ?>
-                                        </div>
-                                    <?php endforeach; ?>
-                                </td>
-                                <td>
-                                    <button type="button" class="btn btn-sm btn-warning edit-role-btn" data-role-id="<?php echo $roleID; ?>" data-bs-toggle="modal" data-bs-target="#editRoleModal">Edit</button>
-                                    <button type="button" class="btn btn-sm btn-danger delete-role-btn" data-role-id="<?php echo $roleID; ?>" data-role-name="<?php echo htmlspecialchars($role['Role_Name']); ?>" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">Delete</button>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr>
-                            <td colspan="4">No roles found.</td>
+                <?php if (!empty($roles)): ?>
+                    <?php foreach ($roles as $roleID => $role): ?>
+                        <tr data-role-id="<?php echo $roleID; ?>">
+                            <td><?php echo htmlspecialchars($roleID); ?></td>
+                            <td class="role-name"><?php echo htmlspecialchars($role['Role_Name']); ?></td>
+                            <td class="privilege-list">
+                                <?php foreach ($role['Modules'] as $moduleName => $privileges): ?>
+                                    <div>
+                                        <strong><?php echo htmlspecialchars($moduleName); ?></strong>:
+                                        <?php echo !empty($privileges) ? implode(', ', array_map('htmlspecialchars', $privileges)) : '<em>No privileges</em>'; ?>
+                                    </div>
+                                <?php endforeach; ?>
+                            </td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-warning edit-role-btn" data-role-id="<?php echo $roleID; ?>" data-bs-toggle="modal" data-bs-target="#editRoleModal">
+                                    Edit
+                                </button>
+                                <button type="button" class="btn btn-sm btn-danger delete-role-btn" data-role-id="<?php echo $roleID; ?>" data-role-name="<?php echo htmlspecialchars($role['Role_Name']); ?>" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
+                                    Delete
+                                </button>
+                            </td>
                         </tr>
-                    <?php endif; ?>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <tr>
+                        <td colspan="4">No roles found.</td>
+                    </tr>
+                <?php endif; ?>
                 </tbody>
             </table>
         </div><!-- /.table-responsive -->
     </div><!-- /.main-content -->
+</div><!-- /.wrapper -->
 
-    <!-- Edit Role Modal -->
-    <div class="modal fade" id="editRoleModal" tabindex="-1" aria-labelledby="editRoleModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Edit Role & Privileges</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body" id="editRoleContent">
-                    Loading...
-                </div>
+<!-- Edit Role Modal -->
+<div class="modal fade" id="editRoleModal" tabindex="-1" aria-labelledby="editRoleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Role &amp; Privileges</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="editRoleContent">
+                Loading...
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Confirm Delete Modal -->
-    <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Confirm Delete</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">Are you sure you want to delete the role "<span id="roleNamePlaceholder"></span>"?</div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <a id="confirmDeleteButton" href="#" class="btn btn-danger">Delete</a>
-                </div>
+<!-- Confirm Delete Modal -->
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete the role "<span id="roleNamePlaceholder"></span>"?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <a id="confirmDeleteButton" href="#" class="btn btn-danger">Delete</a>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Add Role Modal -->
-    <div class="modal fade" id="addRoleModal" tabindex="-1" aria-labelledby="addRoleModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Add New Role</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body" id="addRoleContent">Loading...</div>
+<!-- Add Role Modal -->
+<div class="modal fade" id="addRoleModal" tabindex="-1" aria-labelledby="addRoleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Role</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
+            <div class="modal-body" id="addRoleContent">Loading...</div>
         </div>
     </div>
+</div>
 
-    <script>
-        $(document).ready(function() {
-            // Load edit role modal
-            $('.edit-role-btn').on('click', function() {
-                var roleID = $(this).data('role-id');
-                $('#editRoleContent').html("Loading...");
-
-                $.ajax({
-                    url: 'edit_roles.php',
-                    type: 'GET',
-                    data: { id: roleID },
-                    success: function(response) {
-                        $('#editRoleContent').html(response);
-                    },
-                    error: function() {
-                        $('#editRoleContent').html('<p class="text-danger">Error loading role data.</p>');
-                    }
-                });
-            });
-
-            // Handle delete role modal
-            $('#confirmDeleteModal').on('show.bs.modal', function(event) {
-                var button = $(event.relatedTarget); 
-                var roleID = button.data('role-id');
-                var roleName = button.data('role-name');
-
-                $('#roleNamePlaceholder').text(roleName);
-                $('#confirmDeleteButton').attr('href', 'delete_role.php?id=' + roleID);
-            });
-
-            // Handle form submission via AJAX
-            $(document).on('submit', '#editRoleForm', function(event) {
-                event.preventDefault();
-                let formData = $(this).serialize();
-                let roleID = $(this).closest('.modal-content').find('.edit-role-btn').data('role-id'); // Get roleID dynamically
-
-                $.ajax({
-                    url: 'edit_roles.php?id=' + roleID, // Use the dynamically fetched roleID
-                    type: 'POST',
-                    data: formData,
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.success) {
-                            alert('Role updated successfully.');
-
-                            let row = $('tr[data-role-id="' + response.role_id + '"]');
-
-                            // Update role name
-                            row.find('.role-name').text(response.role_name);
-
-                            // Update the privileges display dynamically
-                            let privilegeCell = row.find('.privilege-list');
-                            privilegeCell.empty(); // Clear old privileges
-
-                            let groupedPrivileges = {};
-                            response.privileges.forEach(priv => {
-                                if (!groupedPrivileges[priv.Module_Name]) {
-                                    groupedPrivileges[priv.Module_Name] = [];
-                                }
-                                groupedPrivileges[priv.Module_Name].push(priv.Privilege_Name);
-                            });
-
-                            // Append updated privileges
-                            for (let moduleName in groupedPrivileges) {
-                                let privilegesHTML = `
-                                    <div>
-                                        <strong>${moduleName}</strong>: ${groupedPrivileges[moduleName].join(', ')}
-                                    </div>
-                                `;
-                                privilegeCell.append(privilegesHTML);
-                            }
-
-                            // Hide modal after successful update
-                            $('#editRoleModal').modal('hide');
-                        }     
-                    },
-                });
-            });
-
-            // Load add role modal
-            $('#addRoleModal').on('show.bs.modal', function () {
-                $('#addRoleContent').html("Loading...");
-                $.ajax({
-                    url: 'add_role.php',
-                    type: 'GET',
-                    success: function(response) {
-                        $('#addRoleContent').html(response);
-                    },
-                    error: function() {
-                        $('#addRoleContent').html('<p class="text-danger">Error loading form.</p>');
-                    }
-                });
+<script>
+    $(document).ready(function() {
+        // Load edit role modal content via AJAX.
+        $('.edit-role-btn').on('click', function() {
+            var roleID = $(this).data('role-id');
+            $('#editRoleContent').html("Loading...");
+            $.ajax({
+                url: 'edit_roles.php',
+                type: 'GET',
+                data: { id: roleID },
+                success: function(response) {
+                    $('#editRoleContent').html(response);
+                },
+                error: function() {
+                    $('#editRoleContent').html('<p class="text-danger">Error loading role data.</p>');
+                }
             });
         });
-    </script>
+
+        // Handle delete role modal.
+        $('#confirmDeleteModal').on('show.bs.modal', function(event) {
+            var button = $(event.relatedTarget);
+            var roleID = button.data('role-id');
+            var roleName = button.data('role-name');
+            $('#roleNamePlaceholder').text(roleName);
+            $('#confirmDeleteButton').attr('href', 'delete_role.php?id=' + roleID);
+        });
+
+        // Load add role modal content via AJAX.
+        $('#addRoleModal').on('show.bs.modal', function () {
+            $('#addRoleContent').html("Loading...");
+            $.ajax({
+                url: 'add_role.php',
+                type: 'GET',
+                success: function(response) {
+                    $('#addRoleContent').html(response);
+                },
+                error: function() {
+                    $('#addRoleContent').html('<p class="text-danger">Error loading form.</p>');
+                }
+            });
+        });
+    });
+</script>
 </body>
 </html>
