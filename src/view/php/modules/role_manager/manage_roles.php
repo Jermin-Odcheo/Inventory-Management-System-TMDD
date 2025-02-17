@@ -92,7 +92,9 @@ foreach ($roleData as $row) {
     <div class="main-content container-fluid">
         <h1>Role Management</h1>
         <div class="d-flex justify-content-end mb-3">
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addRoleModal">Create New Role</button>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addRoleModal">
+                Add New Role
+            </button>
         </div>
 
         <div class="table-responsive">
@@ -106,28 +108,27 @@ foreach ($roleData as $row) {
                 </tr>
                 </thead>
                 <tbody>
-                    <?php if (!empty($roles)): ?>
-                        <?php foreach ($roles as $roleID => $role): ?>
-                            <tr data-role-id="<?php echo $roleID; ?>">
-                                <td><?php echo htmlspecialchars($roleID); ?></td>
-                                <td class="role-name"><?php echo htmlspecialchars($role['Role_Name']); ?></td>
-                                <td class="privilege-list">
-                                    <?php foreach ($role['Modules'] as $moduleName => $privileges): ?>
-                                        <div>
-                                            <strong><?php echo htmlspecialchars($moduleName); ?></strong>: 
-                                            <?php echo !empty($privileges) ? implode(', ', array_map('htmlspecialchars', $privileges)) : '<em>No privileges</em>'; ?>
-                                        </div>
-                                    <?php endforeach; ?>
-                                </td>
-                                <td>
-                                    <button type="button" class="btn btn-sm btn-warning edit-role-btn" data-role-id="<?php echo $roleID; ?>" data-bs-toggle="modal" data-bs-target="#editRoleModal">MOdify</button>
-                                    <button type="button" class="btn btn-sm btn-danger delete-role-btn" data-role-id="<?php echo $roleID; ?>" data-role-name="<?php echo htmlspecialchars($role['Role_Name']); ?>" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">Delete</button>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr>
-                            <td colspan="4">No roles found.</td>
+                <?php if (!empty($roles)): ?>
+                    <?php foreach ($roles as $roleID => $role): ?>
+                        <tr data-role-id="<?php echo $roleID; ?>">
+                            <td><?php echo htmlspecialchars($roleID); ?></td>
+                            <td class="role-name"><?php echo htmlspecialchars($role['Role_Name']); ?></td>
+                            <td class="privilege-list">
+                                <?php foreach ($role['Modules'] as $moduleName => $privileges): ?>
+                                    <div>
+                                        <strong><?php echo htmlspecialchars($moduleName); ?></strong>:
+                                        <?php echo !empty($privileges) ? implode(', ', array_map('htmlspecialchars', $privileges)) : '<em>No privileges</em>'; ?>
+                                    </div>
+                                <?php endforeach; ?>
+                            </td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-warning edit-role-btn" data-role-id="<?php echo $roleID; ?>" data-bs-toggle="modal" data-bs-target="#editRoleModal">
+                                    Edit
+                                </button>
+                                <button type="button" class="btn btn-sm btn-danger delete-role-btn" data-role-id="<?php echo $roleID; ?>" data-role-name="<?php echo htmlspecialchars($role['Role_Name']); ?>" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
+                                    Delete
+                                </button>
+                            </td>
                         </tr>
                     <?php endforeach; ?>
                 <?php else: ?>
