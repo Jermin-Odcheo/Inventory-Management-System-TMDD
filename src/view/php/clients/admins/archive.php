@@ -307,7 +307,7 @@ function formatNewValue($jsonStr) {
             });
             $.ajax({
                 type: "POST",
-                url: "restore_user.php",
+                url: "../../modules/user_manager/restore_user.php",
                 data: { user_ids: ids },
                 success: function(response){
                     $("#alertMessage").html('<div class="alert alert-success alert-dismissible fade show" role="alert">'+response+
@@ -330,7 +330,7 @@ function formatNewValue($jsonStr) {
             if(confirm("Are you sure you want to permanently delete the selected users?")){
                 $.ajax({
                     type: "POST",
-                    url: "delete_user.php",
+                    url: "../../modules/user_manager/delete_user.php",
                     data: { user_ids: ids, permanent: "1" },
                     success: function(response){
                         $("#alertMessage").html('<div class="alert alert-success alert-dismissible fade show" role="alert">'+response+
