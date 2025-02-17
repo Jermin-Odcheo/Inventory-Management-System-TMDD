@@ -1,5 +1,12 @@
 <?php
+session_start();
 require_once('../../../../../config/ims-tmdd.php');
+
+// Check if user is not logged in
+if (!isset($_SESSION['user_id'])) {
+    header("Location: /index.php");
+    exit();
+}
 
 // Initialize response array
 $response = array('status' => '', 'message' => '');
@@ -281,6 +288,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     });
                 }
             });
+        });
+    </script>
+
+    <!-- Add this before closing body tag -->
+    <script>
+        // Handle logout
+        document.querySelector('.logout-btn').addEventListener('click', function(e) {
+            e.preventDefault();
+            window.location.replace('/src/view/php/general/logout.php');
+        });
+
+        // Prevent back button after logout
+        window.addEventListener('load', function() {
+            if (performance.navigation.type === 2) { // Back/Forward navigation
+                location.reload(true);
+            }
         });
     </script>
 </body>
