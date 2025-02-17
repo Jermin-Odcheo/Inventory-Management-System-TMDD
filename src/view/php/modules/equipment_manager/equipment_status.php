@@ -121,13 +121,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                     echo "<td>" . htmlspecialchars($row['Action']) . "</td>";
                                     echo "<td>" . htmlspecialchars($row['Remarks']) . "</td>";
                                     echo "<td>
-                                            <button class='btn btn-xs btn-primary edit-status' 
+                                            <button class='btn btn-sm btn-warning btn-edit edit-status' 
                                                 data-id='" . htmlspecialchars($row['EquipmentStatusID']) . "'
                                                 data-asset='" . htmlspecialchars($row['AssetTag']) . "'
                                                 data-status='" . htmlspecialchars($row['Status']) . "'
                                                 data-action='" . htmlspecialchars($row['Action']) . "'
                                                 data-remarks='" . htmlspecialchars($row['Remarks']) . "'>Edit</button>
-                                            <button class='btn btn-xs btn-danger delete-status' data-id='" . htmlspecialchars($row['EquipmentStatusID']) . "'>Delete</button>
+                                            <button class='btn btn-sm btn-danger delete-status' 
+                                                data-id='" . htmlspecialchars($row['EquipmentStatusID']) . "'>Delete</button>
                                           </td>";
                                     echo "</tr>";
                                 }
@@ -148,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Add New Status</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="addStatusForm">
@@ -174,7 +175,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             <label for="remarks" class="form-label">Remarks</label>
                             <textarea class="form-control" name="remarks" rows="3"></textarea>
                         </div>
-                        <button type="submit" class="btn btn-primary">Add Status</button>
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-primary">Add Status</button>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -187,7 +190,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Edit Status</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="editStatusForm">
@@ -214,7 +217,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             <label for="edit_remarks" class="form-label">Remarks</label>
                             <textarea class="form-control" name="remarks" id="edit_remarks" rows="3"></textarea>
                         </div>
-                        <button type="submit" class="btn btn-primary">Update Status</button>
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
                     </form>
                 </div>
             </div>
