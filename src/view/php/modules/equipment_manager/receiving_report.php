@@ -2,20 +2,20 @@
 // receiving_report.php
 session_start();
 require_once('../../../../../config/ims-tmdd.php'); // Adjust the path as needed
-
-// Check for admin privileges (you should implement your privilege check).
-if (!isset($_SESSION['user_id'])) {
-    header("Location: add_user.php");
-    exit();
-}
-
-// Set the audit log session variables for MySQL triggers.
-if (isset($_SESSION['user_id'])) {
-    // Use the logged-in user's ID.
-    $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
-} else {
-    $pdo->exec("SET @current_user_id = NULL");
-}
+//
+//// Check for admin privileges (you should implement your privilege check).
+//if (!isset($_SESSION['user_id'])) {
+//    header("Location: add_user.php");
+//    exit();
+//}
+//
+//// Set the audit log session variables for MySQL triggers.
+//if (isset($_SESSION['user_id'])) {
+//    // Use the logged-in user's ID.
+//    $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
+//} else {
+//    $pdo->exec("SET @current_user_id = NULL");
+//}
 
 // Set IP address; adjust as needed if you use a proxy, etc.
 $ipAddress = $_SERVER['REMOTE_ADDR'];
