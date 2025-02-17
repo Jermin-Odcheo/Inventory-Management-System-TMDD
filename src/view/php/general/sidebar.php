@@ -71,7 +71,7 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                 </a>
                 <ul class="dropdown">
                     <li><a href="../../modules/equipment_manager/purchase_order.php">Purchase Order</a></li>
-                    <li><a href="charge_invoice.php">Charge Invoice</a></li>
+                    <li><a href="../../modules/equipment_manager/charge_invoice.php">Charge Invoice</a></li>
                     <li><a href="../../modules/equipment_manager/receiving_report.php">Receiving Report</a></li>
                     <li><a href="equipment_details.php">Equipment Details</a></li>
                     <li><a href="../../modules/equipment_manager/equipment_location.php">Equipment Location</a></li>
