@@ -56,13 +56,13 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                     <li><a href="receiving_report.php">Receiving Report</a></li>
                     <li><a href="equipment_details.php">Equipment Details</a></li>
                     <li><a href="equipment_location.php">Equipment Location</a></li>
-                    <li><a href="equipment_status.php">Equipment Status</a></li>
+                    <li><a href="../../modules/equipment_manager/equipment_status.php">Equipment Status</a></li>
                 </ul>
             </li>
 
             <!-- Settings & Logout -->
             <li><a href="settings.php"><i class="fas fa-cogs"></i> Settings</a></li>
-            <li><a href="../../general/logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+            <li><a href="<?php echo BASE_URL; ?>src/view/php/general/logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
         </ul>
     </nav>
 </div>
