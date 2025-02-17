@@ -455,8 +455,8 @@ CREATE TABLE IF NOT EXISTS `users` (
                                        `Status` enum('Online','Offline') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'Offline',
                                        `last_active` datetime DEFAULT NULL,
                                        `is_deleted` tinyint(1) DEFAULT '0',
-                                       'reset_token' VARCHAR(100) DEFAULT NULL,
-                                       'reset_token_expires' DATETIME DEFAULT NULL;
+                                       `reset_token` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                                       `reset_token_expires` datetime DEFAULT NULL,
                                        PRIMARY KEY (`User_ID`),
                                        UNIQUE KEY `Email` (`Email`)
 ) ENGINE=InnoDB AUTO_INCREMENT=51 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
