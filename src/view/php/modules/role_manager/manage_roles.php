@@ -78,7 +78,7 @@ foreach ($roleData as $row) {
     <div class="main-content container-fluid">
         <h1>Role Management</h1>
         <div class="d-flex justify-content-end mb-3">
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addRoleModal">Add New Role</button>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addRoleModal">Create New Role</button>
         </div>
 
         <div class="table-responsive">
@@ -106,7 +106,7 @@ foreach ($roleData as $row) {
                                     <?php endforeach; ?>
                                 </td>
                                 <td>
-                                    <button type="button" class="btn btn-sm btn-warning edit-role-btn" data-role-id="<?php echo $roleID; ?>" data-bs-toggle="modal" data-bs-target="#editRoleModal">Edit</button>
+                                    <button type="button" class="btn btn-sm btn-warning edit-role-btn" data-role-id="<?php echo $roleID; ?>" data-bs-toggle="modal" data-bs-target="#editRoleModal">MOdify</button>
                                     <button type="button" class="btn btn-sm btn-danger delete-role-btn" data-role-id="<?php echo $roleID; ?>" data-role-name="<?php echo htmlspecialchars($role['Role_Name']); ?>" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">Delete</button>
                                 </td>
                             </tr>
