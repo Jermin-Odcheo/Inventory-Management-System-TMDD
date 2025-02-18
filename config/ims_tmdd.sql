@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Feb 18, 2025 at 06:34 AM
+-- Generation Time: Feb 18, 2025 at 08:54 AM
 -- Server version: 8.2.0
 -- PHP Version: 8.2.13
 
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS `audit_log` (
   `Status` enum('Successful','Failed') NOT NULL,
   `Date_Time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`TrackID`)
-) ENGINE=InnoDB AUTO_INCREMENT=72 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=78 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `audit_log`
@@ -52,7 +52,13 @@ INSERT INTO `audit_log` (`TrackID`, `UserID`, `EntityID`, `Action`, `Details`, `
 (68, 1, 55, '', 'User soft deleted (is_deleted set to 1)', '{\"Email\": \"testcase1@example.com\", \"Status\": \"Online\", \"User_ID\": 55, \"Last_Name\": \"case1\", \"Department\": \"testcase1\", \"First_Name\": \"test1\", \"is_deleted\": 0, \"Last_Active\": null}', '{\"Email\": \"testcase1@example.com\", \"Status\": \"Online\", \"User_ID\": 55, \"Last_Name\": \"case1\", \"Department\": \"testcase1\", \"First_Name\": \"test1\", \"is_deleted\": 1, \"Last_Active\": null}', 'User Management', 'Successful', '2025-02-18 14:33:18'),
 (69, 1, 55, '', 'testcase1@example.com has been restored', '{\"is_deleted\": 1}', '{\"is_deleted\": 0}', 'User Management', 'Successful', '2025-02-18 14:33:20'),
 (70, 1, 55, '', 'User soft deleted (is_deleted set to 1)', '{\"Email\": \"testcase1@example.com\", \"Status\": \"Online\", \"User_ID\": 55, \"Last_Name\": \"case1\", \"Department\": \"testcase1\", \"First_Name\": \"test1\", \"is_deleted\": 0, \"Last_Active\": null}', '{\"Email\": \"testcase1@example.com\", \"Status\": \"Online\", \"User_ID\": 55, \"Last_Name\": \"case1\", \"Department\": \"testcase1\", \"First_Name\": \"test1\", \"is_deleted\": 1, \"Last_Active\": null}', 'User Management', 'Successful', '2025-02-18 14:33:34'),
-(71, 1, 55, '', 'User permanently deleted from the database', '{\"Email\": \"testcase1@example.com\", \"Status\": \"Online\", \"User_ID\": 55, \"Last_Name\": \"case1\", \"Department\": \"testcase1\", \"First_Name\": \"test1\", \"is_deleted\": 1, \"Last_Active\": null}', '', 'User Management', 'Successful', '2025-02-18 14:33:36');
+(71, 1, 55, '', 'User permanently deleted from the database', '{\"Email\": \"testcase1@example.com\", \"Status\": \"Online\", \"User_ID\": 55, \"Last_Name\": \"case1\", \"Department\": \"testcase1\", \"First_Name\": \"test1\", \"is_deleted\": 1, \"Last_Active\": null}', '', 'User Management', 'Successful', '2025-02-18 14:33:36'),
+(72, 1, 2, '', 'User soft deleted (is_deleted set to 1)', '{\"Email\": \"administrator@example.com\", \"Status\": \"\", \"User_ID\": 2, \"Last_Name\": \"Inistrator\", \"Department\": \"Department\", \"First_Name\": \"Admin\", \"is_deleted\": 0, \"Last_Active\": null}', '{\"Email\": \"administrator@example.com\", \"Status\": \"\", \"User_ID\": 2, \"Last_Name\": \"Inistrator\", \"Department\": \"Department\", \"First_Name\": \"Admin\", \"is_deleted\": 1, \"Last_Active\": null}', 'User Management', 'Successful', '2025-02-18 14:57:35'),
+(73, 1, 2, '', 'administrator@example.com has been restored', '{\"is_deleted\": 1}', '{\"is_deleted\": 0}', 'User Management', 'Successful', '2025-02-18 14:57:38'),
+(74, 1, 2, '', 'User soft deleted (is_deleted set to 1)', '{\"Email\": \"administrator@example.com\", \"Status\": \"\", \"User_ID\": 2, \"Last_Name\": \"Inistrator\", \"Department\": \"Department\", \"First_Name\": \"Admin\", \"is_deleted\": 0, \"Last_Active\": null}', '{\"Email\": \"administrator@example.com\", \"Status\": \"\", \"User_ID\": 2, \"Last_Name\": \"Inistrator\", \"Department\": \"Department\", \"First_Name\": \"Admin\", \"is_deleted\": 1, \"Last_Active\": null}', 'User Management', 'Successful', '2025-02-18 16:27:42'),
+(75, 1, 2, '', 'administrator@example.com has been restored', '{\"is_deleted\": 1}', '{\"is_deleted\": 0}', 'User Management', 'Successful', '2025-02-18 16:27:44'),
+(76, 1, 2, '', 'User soft deleted (is_deleted set to 1)', '{\"Email\": \"administrator@example.com\", \"Status\": \"\", \"User_ID\": 2, \"Last_Name\": \"Inistrator\", \"Department\": \"Department\", \"First_Name\": \"Admin\", \"is_deleted\": 0, \"Last_Active\": null}', '{\"Email\": \"administrator@example.com\", \"Status\": \"\", \"User_ID\": 2, \"Last_Name\": \"Inistrator\", \"Department\": \"Department\", \"First_Name\": \"Admin\", \"is_deleted\": 1, \"Last_Active\": null}', 'User Management', 'Successful', '2025-02-18 16:28:13'),
+(77, 1, 2, '', 'administrator@example.com has been restored', '{\"is_deleted\": 1}', '{\"is_deleted\": 0}', 'User Management', 'Successful', '2025-02-18 16:28:17');
 
 -- --------------------------------------------------------
 
