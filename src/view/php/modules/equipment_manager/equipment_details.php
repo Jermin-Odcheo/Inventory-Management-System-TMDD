@@ -268,20 +268,27 @@ try {
                                     <td><?php echo htmlspecialchars($equipment['DateAcquired']); ?></td>
                                     <td><?php echo htmlspecialchars($equipment['AccountableIndividual']); ?></td>
                                     <td class="text-center">
-                                        <button class='btn btn-sm btn-warning btn-edit edit-equipment' 
-                                            data-id='<?php echo htmlspecialchars($equipment['EquipmentDetailsID']); ?>'
-                                            data-asset='<?php echo htmlspecialchars($equipment['AssetTag']); ?>'
-                                            data-desc1='<?php echo htmlspecialchars($equipment['AssetDescription1']); ?>'
-                                            data-desc2='<?php echo htmlspecialchars($equipment['AssetDescription2']); ?>'
-                                            data-spec='<?php echo htmlspecialchars($equipment['Specification']); ?>'
-                                            data-brand='<?php echo htmlspecialchars($equipment['Brand']); ?>'
-                                            data-model='<?php echo htmlspecialchars($equipment['Model']); ?>'
-                                            data-serial='<?php echo htmlspecialchars($equipment['SerialNumber']); ?>'
-                                            data-date='<?php echo htmlspecialchars($equipment['DateAcquired']); ?>'
-                                            data-accountable='<?php echo htmlspecialchars($equipment['AccountableIndividual']); ?>'
-                                            data-remarks='<?php echo htmlspecialchars($equipment['Remarks']); ?>'>Edit</button>
-                                        <button class='btn btn-sm btn-danger delete-equipment' 
-                                            data-id='<?php echo htmlspecialchars($equipment['EquipmentDetailsID']); ?>'>Delete</button>
+                                        <div class="btn-group" role="group">
+                                            <a class="btn btn-sm btn-outline-primary edit-equipment" 
+                                               data-id="<?php echo htmlspecialchars($equipment['EquipmentDetailsID']); ?>"
+                                               data-asset="<?php echo htmlspecialchars($equipment['AssetTag']); ?>"
+                                               data-desc1="<?php echo htmlspecialchars($equipment['AssetDescription1']); ?>"
+                                               data-desc2="<?php echo htmlspecialchars($equipment['AssetDescription2']); ?>"
+                                               data-spec="<?php echo htmlspecialchars($equipment['Specification']); ?>"
+                                               data-brand="<?php echo htmlspecialchars($equipment['Brand']); ?>"
+                                               data-model="<?php echo htmlspecialchars($equipment['Model']); ?>"
+                                               data-serial="<?php echo htmlspecialchars($equipment['SerialNumber']); ?>"
+                                               data-date="<?php echo htmlspecialchars($equipment['DateAcquired']); ?>"
+                                               data-accountable="<?php echo htmlspecialchars($equipment['AccountableIndividual']); ?>"
+                                               data-remarks="<?php echo htmlspecialchars($equipment['Remarks']); ?>">
+                                                <i class="bi bi-pencil-square"></i> Edit
+                                            </a>
+                                            <a class="btn btn-sm btn-outline-danger delete-equipment" 
+                                               data-id="<?php echo htmlspecialchars($equipment['EquipmentDetailsID']); ?>"
+                                               href="#" onclick="return confirm('Are you sure you want to delete this equipment?');">
+                                                <i class="bi bi-trash"></i> Delete
+                                            </a>
+                                        </div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

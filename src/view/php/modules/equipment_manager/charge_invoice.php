@@ -144,7 +144,8 @@ try {
             min-height: 100vh;
         }
         .main-content {
-            margin-left: var(--sidebar-width);
+            margin-left: 300px;
+            padding: 20px;
             transition: margin-left 0.3s ease;
         }
         @media (max-width: 768px) {
@@ -162,7 +163,7 @@ try {
     <div class="container-fluid">
         <div class="row">
             <!-- Main Content -->
-            <main class="col-md-10 ms-sm-auto col-lg-10 px-md-4 py-4">
+            <main class="col-md-12 px-md-4 py-4">
                 <h2 class="mb-4">Charge Invoice</h2>
 
                 <!-- Success Message -->

@@ -150,19 +150,16 @@ try {
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
     <style>
-
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
             background-color: #f8f9fa;
             min-height: 100vh;
         }
-
         .main-content {
-            margin-left: var(--sidebar-width);
-
+            margin-left: 300px;
+            padding: 20px;
             transition: margin-left 0.3s ease;
         }
-
         @media (max-width: 768px) {
             .main-content {
                 margin-left: 0;
@@ -178,7 +175,7 @@ try {
         <div class="container-fluid">
             <div class="row">
                 <!-- Main Content -->
-                <main class="col-md-10 ms-sm-auto col-lg-10 px-md-4 py-4">
+                <main class="col-md-12 px-md-4 py-4">
                     <h2 class="mb-4">Purchase Orders</h2>
 
                     <!-- Success Message -->

@@ -77,68 +77,93 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Add sidebar CSS -->
     <link rel="stylesheet" href="/src/view/styles/css/sidebar.css">
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #f8f9fa;
+            min-height: 100vh;
+        }
+
+        .main-content {
+            margin-left: 300px;
+            padding: 20px;
+            transition: margin-left 0.3s ease;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
 </head>
 <body>
     <!-- Include Sidebar -->
     <?php include('../../general/sidebar.php'); ?>
 
     <!-- Main Content -->
-    <div class="container-fluid" style="margin-left: 320px; padding: 20px; height: calc(100vh - 40px); width: calc(100vw - 340px); overflow-x: hidden;">
-        <div class="card shadow" style="height: 100%;">
-            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-2">
-                <h2 class="card-title mb-0 fs-4">Equipment Status Management</h2>
-            </div>
-            <div class="card-body p-3" style="overflow: auto;">
-                <!-- Add Status Button -->
-                <div class="d-flex justify-content-start mb-2">
-                    <button type="button" class="btn btn-success btn-sm py-1 px-2" data-bs-toggle="modal" data-bs-target="#addStatusModal">
-                        Add New Status
-                    </button>
-                </div>
+    <div class="main-content">
+        <div class="container-fluid">
+            <div class="row">
+                <main class="col-md-12 px-md-4 py-4">
+                    <div class="card shadow">
+                        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-2">
+                            <h2 class="card-title mb-0 fs-4">Equipment Status Management</h2>
+                        </div>
+                        <div class="card-body p-3">
+                            <!-- Add Status Button -->
+                            <div class="d-flex justify-content-start mb-2">
+                                <button type="button" class="btn btn-success btn-sm py-1 px-2" data-bs-toggle="modal" data-bs-target="#addStatusModal">
+                                    Add New Status
+                                </button>
+                            </div>
 
-                <!-- Status List Table -->
-                <div class="table-responsive" style="height: calc(100% - 50px); width: 100%; overflow-x: auto;">
-                    <table class="table table-striped table-bordered table-sm mb-0">
-                        <thead class="table-dark">
-                            <tr>
-                                <th style="width: 7%">Status ID</th>
-                                <th style="width: 13%">Asset Tag</th>
-                                <th style="width: 15%">Status</th>
-                                <th style="width: 18%">Action</th>
-                                <th style="width: 22%">Remarks</th>
-                                <th style="width: 15%">Operations</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php
-                            try {
-                                $stmt = $pdo->query("SELECT * FROM equipmentstatus");
-                                while ($row = $stmt->fetch()) {
-                                    echo "<tr>";
-                                    echo "<td>" . htmlspecialchars($row['EquipmentStatusID']) . "</td>";
-                                    echo "<td>" . htmlspecialchars($row['AssetTag']) . "</td>";
-                                    echo "<td>" . htmlspecialchars($row['Status']) . "</td>";
-                                    echo "<td>" . htmlspecialchars($row['Action']) . "</td>";
-                                    echo "<td>" . htmlspecialchars($row['Remarks']) . "</td>";
-                                    echo "<td>
-                                            <button class='btn btn-sm btn-warning btn-edit edit-status' 
-                                                data-id='" . htmlspecialchars($row['EquipmentStatusID']) . "'
-                                                data-asset='" . htmlspecialchars($row['AssetTag']) . "'
-                                                data-status='" . htmlspecialchars($row['Status']) . "'
-                                                data-action='" . htmlspecialchars($row['Action']) . "'
-                                                data-remarks='" . htmlspecialchars($row['Remarks']) . "'>Edit</button>
-                                            <button class='btn btn-sm btn-danger delete-status' 
-                                                data-id='" . htmlspecialchars($row['EquipmentStatusID']) . "'>Delete</button>
-                                          </td>";
-                                    echo "</tr>";
-                                }
-                            } catch (PDOException $e) {
-                                echo "<tr><td colspan='6'>Error loading data: " . htmlspecialchars($e->getMessage()) . "</td></tr>";
-                            }
-                            ?>
-                        </tbody>
-                    </table>
-                </div>
+                            <!-- Status List Table -->
+                            <div class="table-responsive">
+                                <table class="table table-striped table-bordered table-sm mb-0">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th style="width: 7%">Status ID</th>
+                                            <th style="width: 13%">Asset Tag</th>
+                                            <th style="width: 15%">Status</th>
+                                            <th style="width: 18%">Action</th>
+                                            <th style="width: 22%">Remarks</th>
+                                            <th style="width: 15%">Operations</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php
+                                        try {
+                                            $stmt = $pdo->query("SELECT * FROM equipmentstatus");
+                                            while ($row = $stmt->fetch()) {
+                                                echo "<tr>";
+                                                echo "<td>" . htmlspecialchars($row['EquipmentStatusID']) . "</td>";
+                                                echo "<td>" . htmlspecialchars($row['AssetTag']) . "</td>";
+                                                echo "<td>" . htmlspecialchars($row['Status']) . "</td>";
+                                                echo "<td>" . htmlspecialchars($row['Action']) . "</td>";
+                                                echo "<td>" . htmlspecialchars($row['Remarks']) . "</td>";
+                                                echo "<td class='text-center'>
+                                                        <div class='btn-group' role='group'>
+                                                            <a class='btn btn-sm btn-outline-primary' href='#' onclick='editStatus(" . htmlspecialchars($row['EquipmentStatusID']) . ")'>
+                                                                <i class='bi bi-pencil-square'></i> Edit
+                                                            </a>
+                                                            <a class='btn btn-sm btn-outline-danger' href='#' onclick='deleteStatus(" . htmlspecialchars($row['EquipmentStatusID']) . ")'>
+                                                                <i class='bi bi-trash'></i> Delete
+                                                            </a>
+                                                        </div>
+                                                    </td>";
+                                                echo "</tr>";
+                                            }
+                                        } catch (PDOException $e) {
+                                            echo "<tr><td colspan='6'>Error loading data: " . htmlspecialchars($e->getMessage()) . "</td></tr>";
+                                        }
+                                        ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </main>
             </div>
         </div>
     </div>
