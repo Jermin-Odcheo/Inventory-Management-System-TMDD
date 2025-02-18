@@ -52,19 +52,158 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
             case 'delete':
                 try {
+                    if (!isset($_POST['status_id'])) {
+                        throw new Exception('Status ID is required');
+                    }
+
+                    // Get status details before deletion for audit log
+                    $stmt = $pdo->prepare("SELECT * FROM equipmentstatus WHERE EquipmentStatusID = ?");
+                    $stmt->execute([$_POST['status_id']]);
+                    $statusData = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if (!$statusData) {
+                        throw new Exception('Status not found');
+                    }
+
+                    // Begin transaction
+                    $pdo->beginTransaction();
+                    
+                    // Set current user for audit logging
+                    $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
+                    
+                    // Prepare audit log data
+                    $oldValue = json_encode([
+                        'EquipmentStatusID' => $statusData['EquipmentStatusID'],
+                        'AssetTag' => $statusData['AssetTag'],
+                        'Status' => $statusData['Status'],
+                        'Action' => $statusData['Action'],
+                        'Remarks' => $statusData['Remarks']
+                    ]);
+
+                    // Insert into audit_log
+                    $auditStmt = $pdo->prepare("
+                        INSERT INTO audit_log (
+                            UserID,
+                            EntityID,
+                            Module,
+                            Action,
+                            Details,
+                            OldVal,
+                            NewVal,
+                            Status
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    ");
+
+                    $auditStmt->execute([
+                        $_SESSION['user_id'],
+                        $statusData['EquipmentStatusID'],
+                        'Equipment Management',
+                        'Delete',
+                        'Equipment status has been deleted',
+                        $oldValue,
+                        null,
+                        'Successful'
+                    ]);
+
+                    // Now perform the delete
                     $stmt = $pdo->prepare("DELETE FROM equipmentstatus WHERE EquipmentStatusID = ?");
                     $stmt->execute([$_POST['status_id']]);
-                    $response['status'] = 'success';
-                    $response['message'] = 'Status deleted successfully';
-                } catch (PDOException $e) {
-                    $response['status'] = 'error';
-                    $response['message'] = 'Error deleting status: ' . $e->getMessage();
+                    
+                    // Commit transaction
+                    $pdo->commit();
+                    
+                    $response = [
+                        'status' => 'success',
+                        'message' => 'Status deleted successfully'
+                    ];
+                } catch (Exception $e) {
+                    // Rollback transaction on error
+                    if ($pdo->inTransaction()) {
+                        $pdo->rollBack();
+                    }
+                    $response = [
+                        'status' => 'error',
+                        'message' => 'Error deleting status: ' . $e->getMessage()
+                    ];
                 }
+                
+                header('Content-Type: application/json');
+                echo json_encode($response);
+                exit;
                 break;
         }
         echo json_encode($response);
         exit;
     }
+}
+
+// Add this near the start of your PHP code, after session and database connection
+if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
+    $id = $_GET['id'];
+    try {
+        // Get status details before deletion for audit log
+        $stmt = $pdo->prepare("SELECT * FROM equipmentstatus WHERE EquipmentStatusID = ?");
+        $stmt->execute([$id]);
+        $statusData = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($statusData) {
+            // Begin transaction
+            $pdo->beginTransaction();
+            
+            // Set current user for audit logging
+            $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
+            
+            // Prepare audit log data
+            $oldValue = json_encode([
+                'EquipmentStatusID' => $statusData['EquipmentStatusID'],
+                'AssetTag' => $statusData['AssetTag'],
+                'Status' => $statusData['Status'],
+                'Action' => $statusData['Action'],
+                'Remarks' => $statusData['Remarks']
+            ]);
+
+            // Insert into audit_log
+            $auditStmt = $pdo->prepare("
+                INSERT INTO audit_log (
+                    UserID,
+                    EntityID,
+                    Module,
+                    Action,
+                    Details,
+                    OldVal,
+                    NewVal,
+                    Status
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+
+            $auditStmt->execute([
+                $_SESSION['user_id'],
+                $statusData['EquipmentStatusID'],
+                'Equipment Management',
+                'Delete',
+                'Equipment status has been deleted',
+                $oldValue,
+                null,
+                'Successful'
+            ]);
+
+            // Now perform the delete
+            $stmt = $pdo->prepare("DELETE FROM equipmentstatus WHERE EquipmentStatusID = ?");
+            $stmt->execute([$id]);
+            
+            // Commit transaction
+            $pdo->commit();
+            
+            $_SESSION['success'] = "Equipment Status deleted successfully.";
+        }
+    } catch (PDOException $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        $_SESSION['error'] = "Error deleting Equipment Status: " . $e->getMessage();
+    }
+    header("Location: equipment_status.php");
+    exit;
 }
 ?>
 
@@ -77,68 +216,135 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Add sidebar CSS -->
     <link rel="stylesheet" href="/src/view/styles/css/sidebar.css">
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #f8f9fa;
+            min-height: 100vh;
+        }
+
+        .main-content {
+            margin-left: 300px;
+            padding: 20px;
+            transition: margin-left 0.3s ease;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+            }
+        }
+
+        .search-container {
+            width: 250px;
+        }
+        .search-container input {
+            padding-right: 30px;
+        }
+        .search-container i {
+            color: #6c757d;
+            pointer-events: none;
+        }
+        .form-select-sm {
+            min-width: 150px;
+        }
+        
+        .d-flex.gap-2 {
+            gap: 0.5rem !important;
+        }
+    </style>
 </head>
 <body>
     <!-- Include Sidebar -->
     <?php include('../../general/sidebar.php'); ?>
 
     <!-- Main Content -->
-    <div class="container-fluid" style="margin-left: 320px; padding: 20px; height: calc(100vh - 40px); width: calc(100vw - 340px); overflow-x: hidden;">
-        <div class="card shadow" style="height: 100%;">
-            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-2">
-                <h2 class="card-title mb-0 fs-4">Equipment Status Management</h2>
-            </div>
-            <div class="card-body p-3" style="overflow: auto;">
-                <!-- Add Status Button -->
-                <div class="d-flex justify-content-start mb-2">
-                    <button type="button" class="btn btn-success btn-sm py-1 px-2" data-bs-toggle="modal" data-bs-target="#addStatusModal">
-                        Add New Status
-                    </button>
-                </div>
+    <div class="main-content">
+        <div class="container-fluid">
+            <div class="row">
+                <main class="col-md-12 px-md-4 py-4">
+                    <div class="card shadow">
+                        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-2">
+                            <h2 class="card-title mb-0 fs-4">Equipment Status Management</h2>
+                        </div>
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addStatusModal">
+                                        <i class="bi bi-plus-circle"></i> Add New Status
+                                    </button>
+                                    <select class="form-select form-select-sm" id="filterStatus" style="width: auto;">
+                                        <option value="">Filter By Status</option>
+                                        <?php
+                                        try {
+                                            $statusTypes = $pdo->query("SELECT DISTINCT Status FROM equipmentstatus WHERE Status IS NOT NULL")->fetchAll(PDO::FETCH_COLUMN);
+                                            foreach($statusTypes as $status) {
+                                                echo "<option value='" . htmlspecialchars($status) . "'>" . htmlspecialchars($status) . "</option>";
+                                            }
+                                        } catch (PDOException $e) {
+                                            // Handle error silently
+                                        }
+                                        ?>
+                                    </select>
+                                </div>
+                                <div class="search-container position-relative">
+                                    <input type="text" id="searchStatus" class="form-control form-control-sm" placeholder="Search status...">
+                                    <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-2"></i>
+                                </div>
+                            </div>
 
-                <!-- Status List Table -->
-                <div class="table-responsive" style="height: calc(100% - 50px); width: 100%; overflow-x: auto;">
-                    <table class="table table-striped table-bordered table-sm mb-0">
-                        <thead class="table-dark">
-                            <tr>
-                                <th style="width: 7%">Status ID</th>
-                                <th style="width: 13%">Asset Tag</th>
-                                <th style="width: 15%">Status</th>
-                                <th style="width: 18%">Action</th>
-                                <th style="width: 22%">Remarks</th>
-                                <th style="width: 15%">Operations</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php
-                            try {
-                                $stmt = $pdo->query("SELECT * FROM equipmentstatus");
-                                while ($row = $stmt->fetch()) {
-                                    echo "<tr>";
-                                    echo "<td>" . htmlspecialchars($row['EquipmentStatusID']) . "</td>";
-                                    echo "<td>" . htmlspecialchars($row['AssetTag']) . "</td>";
-                                    echo "<td>" . htmlspecialchars($row['Status']) . "</td>";
-                                    echo "<td>" . htmlspecialchars($row['Action']) . "</td>";
-                                    echo "<td>" . htmlspecialchars($row['Remarks']) . "</td>";
-                                    echo "<td>
-                                            <button class='btn btn-sm btn-warning btn-edit edit-status' 
-                                                data-id='" . htmlspecialchars($row['EquipmentStatusID']) . "'
-                                                data-asset='" . htmlspecialchars($row['AssetTag']) . "'
-                                                data-status='" . htmlspecialchars($row['Status']) . "'
-                                                data-action='" . htmlspecialchars($row['Action']) . "'
-                                                data-remarks='" . htmlspecialchars($row['Remarks']) . "'>Edit</button>
-                                            <button class='btn btn-sm btn-danger delete-status' 
-                                                data-id='" . htmlspecialchars($row['EquipmentStatusID']) . "'>Delete</button>
-                                          </td>";
-                                    echo "</tr>";
-                                }
-                            } catch (PDOException $e) {
-                                echo "<tr><td colspan='6'>Error loading data: " . htmlspecialchars($e->getMessage()) . "</td></tr>";
-                            }
-                            ?>
-                        </tbody>
-                    </table>
-                </div>
+                            <!-- Status List Table -->
+                            <div class="table-responsive">
+                                <table class="table table-striped table-bordered table-sm mb-0">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th style="width: 7%">Status ID</th>
+                                            <th style="width: 13%">Asset Tag</th>
+                                            <th style="width: 15%">Status</th>
+                                            <th style="width: 18%">Action</th>
+                                            <th style="width: 22%">Remarks</th>
+                                            <th style="width: 15%">Operations</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php
+                                        try {
+                                            $stmt = $pdo->query("SELECT * FROM equipmentstatus");
+                                            while ($row = $stmt->fetch()) {
+                                                echo "<tr>";
+                                                echo "<td>" . htmlspecialchars($row['EquipmentStatusID']) . "</td>";
+                                                echo "<td>" . htmlspecialchars($row['AssetTag']) . "</td>";
+                                                echo "<td>" . htmlspecialchars($row['Status']) . "</td>";
+                                                echo "<td>" . htmlspecialchars($row['Action']) . "</td>";
+                                                echo "<td>" . htmlspecialchars($row['Remarks']) . "</td>";
+                                                echo "<td>
+                                                        <div class='d-flex justify-content-center gap-2'>
+                                                            <button class='btn btn-sm btn-outline-primary edit-status' 
+                                                                    data-id='" . htmlspecialchars($row['EquipmentStatusID']) . "'
+                                                                    data-asset='" . htmlspecialchars($row['AssetTag']) . "'
+                                                                    data-status='" . htmlspecialchars($row['Status']) . "'
+                                                                    data-action='" . htmlspecialchars($row['Action']) . "'
+                                                                    data-remarks='" . htmlspecialchars($row['Remarks']) . "'>
+                                                                <i class='far fa-edit'></i> Edit
+                                                            </button>
+                                                            <button class='btn btn-sm btn-outline-danger delete-status' 
+                                                                    data-id='" . htmlspecialchars($row['EquipmentStatusID']) . "'>
+                                                                <i class='far fa-trash-alt'></i> Delete
+                                                            </button>
+                                                        </div>
+                                                    </td>";
+                                                echo "</tr>";
+                                            }
+                                        } catch (PDOException $e) {
+                                            echo "<tr><td colspan='6'>Error loading data: " . htmlspecialchars($e->getMessage()) . "</td></tr>";
+                                        }
+                                        ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </main>
             </div>
         </div>
     </div>
@@ -260,6 +466,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $('#edit_status').val(status);
                 $('#edit_action_taken').val(action);
                 $('#edit_remarks').val(remarks);
+                
                 $('#editStatusModal').modal('show');
             });
 
@@ -276,10 +483,37 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 });
             });
 
+            // Search functionality
+            $('#searchStatus').on('input', function() {
+                filterTable();
+            });
+
+            // Filter functionality
+            $('#filterStatus').on('change', function() {
+                filterTable();
+            });
+
+            function filterTable() {
+                var searchText = $('#searchStatus').val().toLowerCase();
+                var filterStatus = $('#filterStatus').val().toLowerCase();
+
+                $(".table tbody tr").each(function() {
+                    var rowText = $(this).text().toLowerCase();
+                    var statusCell = $(this).find('td:eq(2)').text().toLowerCase(); // Adjust index based on status column
+
+                    var searchMatch = rowText.indexOf(searchText) > -1;
+                    var statusMatch = !filterStatus || statusCell === filterStatus;
+
+                    $(this).toggle(searchMatch && statusMatch);
+                });
+            }
+
             // Delete Status
-            $('.delete-status').click(function() {
+            $('.delete-status').click(function(e) {
+                e.preventDefault();
+                var id = $(this).data('id');
+                
                 if (confirm('Are you sure you want to delete this status?')) {
-                    var id = $(this).data('id');
                     $.ajax({
                         url: 'equipment_status.php',
                         method: 'POST',
@@ -288,6 +522,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             status_id: id
                         },
                         success: function(response) {
+                            try {
+                                var result = JSON.parse(response);
+                                if (result.status === 'success') {
+                                    location.reload();
+                                } else {
+                                    alert(result.message);
+                                }
+                            } catch (e) {
+                                location.reload();
+                            }
+                        },
+                        error: function() {
                             location.reload();
                         }
                     });

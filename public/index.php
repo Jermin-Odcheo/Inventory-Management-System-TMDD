@@ -11,11 +11,12 @@
         try {
             // Fetch user and role from the database
             $stmt = $pdo->prepare("
-            SELECT u.User_ID, u.Email, u.Password, u.First_Name, u.Last_Name, u.Department, u.Status, r.Role_Name
+            SELECT u.User_ID, u.Email, u.Password, r.Role_Name
             FROM users u
-            JOIN roles r ON u.Role = r.Role_ID
+            JOIN user_roles ur ON u.User_ID = ur.User_ID
+            JOIN roles r ON ur.Role_ID = r.Role_ID
             WHERE u.Email = ?
-        ");
+            ");
 
             $stmt->execute([$email]);
             $user = $stmt->fetch();

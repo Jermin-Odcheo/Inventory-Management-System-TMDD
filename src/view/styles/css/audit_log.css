@@ -120,3 +120,100 @@
             font-size: 3rem;
             margin-bottom: 1rem;
         }
+          .table-responsive {
+              overflow-x: auto;
+          }
+.table {
+    table-layout: auto;
+    width: 100%;
+}
+.table th, .table td {
+    white-space: normal !important;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    min-width: 150px;
+    padding: 0.75rem;
+}
+/* Add smooth opacity transitions to rows */
+tbody tr {
+    transition: opacity 0.3s ease;
+}
+col.track { width: 80px; }
+col.user { width: 150px; }
+col.module { width: 100px; }
+col.action { width: 120px; }
+col.details { width: 250px; }
+col.changes { width: 300px; }
+col.status { width: 100px; }
+col.date { width: 150px; }
+.action-badge {
+    padding: 0.35em 0.65em;
+    border-radius: 0.25rem;
+    font-size: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+.action-add {
+    background-color: #e7f5e1;
+    color: #2d7a32;
+}
+.action-modified {
+    background-color: #e1ecf5;
+    color: #2d5a7a;
+}
+.action-deleted, .action-permanent\ delete {
+    background-color: #f5e1e1;
+    color: #7a2d2d;
+}
+.action-restored {
+    background-color: #9ae48a;
+    color: #4f774f;
+    padding: 0.5em 0.75em;
+    border-radius: 50px;
+    display: inline-block;
+    min-width: 80px;
+    text-align: center;
+}
+/* Responsive stacked table */
+@media only screen and (max-width: 768px) {
+    table thead {
+        display: none;
+    }
+    table, table tbody, table tr, table td {
+        display: block;
+        width: 100%;
+    }
+    table tr {
+        margin-bottom: 1rem;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 0.5rem;
+    }
+    table td {
+        text-align: right;
+        padding-left: 50%;
+        position: relative;
+        border: none;
+        border-bottom: 1px solid #eee;
+    }
+    table td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 0;
+        width: 45%;
+        padding-left: 0.5rem;
+        font-weight: bold;
+        text-align: left;
+    }
+    table td:last-child {
+        border-bottom: 0;
+    }
+}
+/* Sort indicator styles */
+th.th-sort-asc::after {
+    content: " ▲";
+}
+th.th-sort-desc::after {
+    content: " ▼";
+}

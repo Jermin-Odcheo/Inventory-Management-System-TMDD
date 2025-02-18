@@ -1,25 +1,43 @@
-/* Sidebar Container */
 .sidebar {
     width: 300px;
     height: 100vh;
-    background-color: #2c3e50;
-    color: #ffffff;
+    background: linear-gradient(135deg, #2c3e50, #34495e);
+    color: #ecf0f1;
     position: fixed;
     top: 0;
     left: 0;
-    padding: 20px;
-    box-shadow: 4px 0 15px rgba(0, 0, 0, 0.2);
+    padding: 30px 20px;
+    box-shadow: 4px 0 15px rgba(0, 0, 0, 0.3);
+    overflow-y: auto; /* Still scrollable */
     transition: width 0.3s;
-    overflow-y: auto;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.sidebar::-webkit-scrollbar {
+    display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.sidebar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+
 
 /* Sidebar Headers */
 .sidebar h2 {
     font-size: 24px;
-    margin-bottom: 20px;
-    color: #ecf0f1;
+    margin-bottom: 10px;
     text-align: center;
     font-weight: bold;
+}
+
+.sidebar h3 {
+    font-size: 20px;
+    margin-bottom: 20px;
+    text-align: center;
+    font-weight: normal;
 }
 
 /* Navigation List */
@@ -30,102 +48,92 @@
 
 /* List Items */
 .sidebar nav ul li {
-    margin: 10px 0;
+    margin: 12px 0;
     position: relative;
 }
 
 /* Sidebar Links */
 .sidebar nav ul li a {
-    display: block;
+    display: flex;
+    align-items: center;
+
     color: #ecf0f1;
     text-decoration: none;
-    padding: 12px 10px;
-    border-radius: 25px;
-    transition: background-color 0.3s, color 0.3s, transform 0.3s, box-shadow 0.3s;
+    padding: 12px 20px;
+    border-radius: 30px;
+    transition: background 0.3s, transform 0.3s;
     font-size: 16px;
 }
-
-.sidebar nav ul li a:hover,
-.sidebar nav ul li a.active {
-    background-color: #3498db;
-    color: #ffffff;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-    transform: scale(1.05);
+.dropdown-icon{
+    position: absolute;
+    right: 0;
 }
-
-/* Icon spacing */
+    /* Icon Styling */
 .sidebar nav ul li a i {
     margin-right: 10px;
-    width: 20px;
-    text-align: center;
 }
 
-/* Make dropdown header a pointer */
-.dropdown-toggle {
-    cursor: pointer;
+/* Dropdown Toggle Arrow Icon */
+.dropdown-icon {
+    transition: transform 0.3s ease;
+    font-size: 0.8em;
 }
 
-/* Dropdown Menu (initially collapsed) */
+/* Hover & Active Link Effects */
+.sidebar nav ul li a:hover,
+.sidebar nav ul li a.active {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateX(5px);
+}
+
+/* Dropdown Menu */
 .sidebar nav ul li .dropdown {
     list-style: none;
     padding-left: 20px;
-    margin-top: 5px;
+    margin-top: 8px;
     max-height: 0;
     overflow: hidden;
     opacity: 0;
-    transition: max-height 0.3s ease, opacity 0.3s ease;
-    background-color: #34495e;
-    border-radius: 15px;
+    transition: max-height 0.35s ease, opacity 0.35s ease;
 }
 
-/* When hovering over the li or when .open is added via click */
-.sidebar nav ul li:hover .dropdown,
-.sidebar nav ul li.open .dropdown {
-    max-height: 500px; /* Ensure this is tall enough for all items */
-    opacity: 1;
-}
-
-/* Dropdown List Items */
+/* Dropdown Items */
 .sidebar nav ul li .dropdown li {
-    margin: 5px 0;
+    margin: 8px 0;
 }
 
 /* Dropdown Links */
 .sidebar nav ul li .dropdown li a {
     padding: 10px 15px;
     color: #ecf0f1;
-    text-decoration: none;
-    display: block;
-    transition: background-color 0.3s;
-    border-radius: 15px;
+    border-radius: 25px;
+    transition: background 0.3s;
+    font-size: 15px;
 }
 
+/* Hover effect for dropdown links */
 .sidebar nav ul li .dropdown li a:hover {
-    background-color: #2980b9;
-}
-/* For items that have NOT been clicked, allow hover to show dropdown */
-.sidebar nav ul li:not(.clicked):hover .dropdown {
-    max-height: 500px;
-    opacity: 1;
-    transition: max-height 0.3s ease, opacity 0.3s ease;
+    background: rgba(255, 255, 255, 0.15);
 }
 
-/* For items that have been clicked, disable the hover effect.
-   Their dropdown state is controlled solely by the .open class. */
-.sidebar nav ul li.clicked .dropdown {
-    max-height: 0;
-    opacity: 0;
-    transition: max-height 0.3s ease, opacity 0.3s ease;
-}
-
-.sidebar nav ul li.clicked.open .dropdown {
-    max-height: 500px;  /* adjust if you have more dropdown items */
+/* Open dropdown state */
+.dropdown-item.open .dropdown {
+    max-height: 500px; /* adjust as needed */
     opacity: 1;
 }
-
+.a{
+    text-align: left;
+}
 /* Responsive Adjustments */
 @media (max-width: 768px) {
     .sidebar {
-        width: 200px;
+        width: 220px;
+        padding: 20px 15px;
+    }
+    .sidebar h2 {
+        font-size: 20px;
+    }
+    .sidebar h3 {
+        font-size: 18px;
     }
 }

@@ -3,7 +3,13 @@ session_start();
 require_once('../../../../../config/ims-tmdd.php');
 
 // Fetch all audit logs (including permanent deletes)
-$query = "SELECT * FROM audit_log ORDER BY Date_Time DESC";
+$query = "SELECT audit_log.*, users.email AS user_email 
+          FROM audit_log 
+          LEFT JOIN users ON audit_log.UserID = users.User_ID
+          ORDER BY audit_log.Date_Time DESC";
+$stmt = $pdo->prepare($query);
+$stmt->execute();
+$auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $stmt = $pdo->prepare($query);
 $stmt->execute();
 $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -61,29 +67,15 @@ function formatAuditDiff($oldJson, $newJson)
     foreach ($keys as $key) {
         $lcKey = strtolower($key);
 
+        // Exclude is_deleted differences entirely.
+        if ($lcKey === 'is_deleted') {
+            continue;
+        }
+
         // Handle password changes
         if ($lcKey === 'password') {
             if (isset($oldData[$key], $newData[$key]) && $oldData[$key] !== $newData[$key]) {
                 $descriptions[] = "The password has been changed.";
-            }
-            continue;
-        }
-
-        // Special handling for is_deleted field
-        if ($lcKey === 'is_deleted') {
-            $oldVal = isset($oldData[$key]) ? $oldData[$key] : '';
-            $newVal = isset($newData[$key]) ? $newData[$key] : '';
-            $oldInt = (int)$oldVal;
-            $newInt = (int)$newVal;
-
-            if ($oldInt !== $newInt) {
-                if ($oldInt === 0 && $newInt === 1) {
-                    $descriptions[] = "The user has been moved to soft delete.";
-                } elseif ($oldInt === 1 && $newInt === 0) {
-                    $descriptions[] = "The user has been restored from soft delete.";
-                } else {
-                    $descriptions[] = "The deletion status changed from '<em>{$oldVal}</em>' to '<strong>{$newVal}</strong>'.";
-                }
             }
             continue;
         }
@@ -117,6 +109,7 @@ function formatAuditDiff($oldJson, $newJson)
     return $html;
 }
 
+
 /**
  * Helper function to return an icon based on action.
  */
@@ -143,6 +136,95 @@ function getStatusIcon($status)
         ? '<i class="fas fa-check-circle"></i>'
         : '<i class="fas fa-times-circle"></i>';
 }
+/**
+ * Format the "Details" and "Changes" columns based on the action.
+ * Returns an array: [ $detailsHTML, $changesHTML ]
+ */
+/**
+ * Format the "Details" and "Changes" columns based on the action.
+ * Returns an array: [ $detailsHTML, $changesHTML ]
+ */
+function formatDetailsAndChanges($log) {
+    // Normalize action to lowercase
+    $action = strtolower($log['Action'] ?? '');
+
+    // Parse JSON fields for old/new data
+    $oldData = json_decode($log['OldVal'], true) ?: [];
+    $newData = json_decode($log['NewVal'], true) ?: [];
+
+    // Use user_email from the log if available, or fallback to newData email
+    $userEmail = $log['user_email'] ?? ($newData['Email'] ?? 'User');
+
+    // For soft delete, try to use the target's name (if available)
+    $targetName = $userEmail;
+    if ($action === 'soft delete') {
+        if (isset($newData['First_Name'], $newData['Last_Name'])) {
+            $targetName = $newData['First_Name'] . ' ' . $newData['Last_Name'];
+        }
+    }
+
+    // Prepare default strings
+    $details = '';
+    $changes = '';
+
+    switch ($action) {
+        case 'add':
+            $details = htmlspecialchars("$userEmail has been created");
+            $changes = formatNewValue($log['NewVal']);
+            break;
+
+        case 'modified':
+            $changedFields = getChangedFieldNames($oldData, $newData);
+            if (!empty($changedFields)) {
+                $details = "Updated Fields: " . htmlspecialchars(implode(', ', $changedFields));
+            } else {
+                $details = "Updated Fields: None";
+            }
+            $changes = formatAuditDiff($log['OldVal'], $log['NewVal']);
+            break;
+
+        case 'restored':
+            $details = htmlspecialchars("$userEmail has been restored");
+            $changes = "is_deleted 1 -> 0";
+            break;
+
+        case 'soft delete':
+            // Use the target's name instead of a generic message
+            $details = htmlspecialchars("$targetName has been soft deleted");
+            $changes = "is_deleted 0 -> 1";
+            break;
+
+        case 'permanent delete':
+            $details = htmlspecialchars("$userEmail has been deleted from the database");
+            $changes = formatNewValue($log['NewVal']);
+            break;
+
+        default:
+            $details = htmlspecialchars($log['Details'] ?? '');
+            $changes = formatNewValue($log['OldVal']);
+            break;
+    }
+
+    return [$details, $changes];
+}
+
+/**
+ * Helper function to find which fields changed (just the field names).
+ */
+function getChangedFieldNames(array $oldData, array $newData) {
+    $changed = [];
+    // We combine the keys
+    $allKeys = array_unique(array_merge(array_keys($oldData), array_keys($newData)));
+    foreach ($allKeys as $key) {
+        $oldVal = $oldData[$key] ?? null;
+        $newVal = $newData[$key] ?? null;
+        if ($oldVal !== $newVal) {
+            $changed[] = ucwords(str_replace('_', ' ', $key));
+        }
+    }
+    return $changed;
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -153,63 +235,8 @@ function getStatusIcon($status)
           href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Custom CSS for improved column spacing -->
-    <style>
-        .table-responsive {
-            overflow-x: auto;
-        }
-        .table {
-            table-layout: auto; /* Allow columns to auto adjust */
-            width: 100%;
-        }
-        .table th, .table td {
-            white-space: normal !important;
-            word-break: break-word;
-            overflow-wrap: break-word;
-            /* Remove fixed max-width and instead add a minimum width */
-            min-width: 150px;
-            padding: 0.75rem;
-        }
-        /* Optionally, use a colgroup to assign widths to specific columns */
-        col.track { width: 80px; }
-        col.user { width: 150px; }
-        col.module { width: 100px; }
-        col.action { width: 120px; }
-        col.details { width: 250px; }
-        col.changes { width: 300px; }
-        col.status { width: 100px; }
-        col.date { width: 150px; }
-        /* Additional styling for action badges */
-        .action-badge {
-            padding: 0.35em 0.65em;
-            border-radius: 0.25rem;
-            font-size: 0.9rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-        }
-        .action-add {
-            background-color: #e7f5e1;
-            color: #2d7a32;
-        }
-        .action-modified {
-            background-color: #e1ecf5;
-            color: #2d5a7a;
-        }
-        .action-deleted, .action-permanent\ delete {
-            background-color: #f5e1e1;
-            color: #7a2d2d;
-        }
-        .action-restored {
-            background-color: #9ae48a;
-            color: #4f774f;
-            padding: 0.5em 0.75em;
-            border-radius: 50px;
-            display: inline-block;
-            min-width: 80px;
-            text-align: center;
-        }
-    </style>
+
+
     <link rel="stylesheet" href="/Inventory-Managment-System-TMDD/src/view/styles/css/audit_log.css">
 </head>
 <body>
@@ -226,11 +253,31 @@ function getStatusIcon($status)
             </div>
 
             <div class="card-body">
-                <div class="mb-4">
-                    <div class="search-box position-relative">
-                        <i class="fas fa-search search-icon position-absolute" style="top: 10px; left: 15px;"></i>
-                        <input type="text" id="searchInput" class="form-control ps-5"
-                               placeholder="Search in audit logs...">
+                <!-- Filter Section -->
+                <div class="row mb-4">
+                    <div class="col-md-4 mb-2">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            <input type="text" id="searchInput" class="form-control"
+                                   placeholder="Search audit logs...">
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <select id="filterAction" class="form-select">
+                            <option value="">All Actions</option>
+                            <option value="add">Add</option>
+                            <option value="modified">Modified</option>
+                            <option value="soft delete">Soft Delete</option>
+                            <option value="permanent delete">Permanent Delete</option>
+                            <option value="restored">Restored</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <select id="filterStatus" class="form-select">
+                            <option value="">All Status</option>
+                            <option value="successful">Successful</option>
+                            <option value="failed">Failed</option>
+                        </select>
                     </div>
                 </div>
 
@@ -268,14 +315,14 @@ function getStatusIcon($status)
                                 ?>
                                 <tr>
                                     <!-- TRACK ID -->
-                                    <td>
+                                    <td data-label="Track ID">
                                         <span class="badge bg-secondary">
                                             <?php echo htmlspecialchars($log['TrackID']); ?>
                                         </span>
                                     </td>
 
                                     <!-- USER WHO PERFORMED -->
-                                    <td>
+                                    <td data-label="User">
                                         <div class="d-flex align-items-center">
                                             <i class="fas fa-user-circle me-2"></i>
                                             <?php echo htmlspecialchars($log['user_email'] ?? 'N/A'); ?>
@@ -283,17 +330,15 @@ function getStatusIcon($status)
                                     </td>
 
                                     <!-- MODULE -->
-                                    <td>
+                                    <td data-label="Module">
                                         <?php echo !empty($log['Module']) ? htmlspecialchars(trim($log['Module'])) : '<em class="text-muted">N/A</em>'; ?>
                                     </td>
 
                                     <!-- ACTION -->
-                                    <td>
+                                    <td data-label="Action">
                                         <?php
-                                        // Get the default action text from the log.
                                         $actionText = !empty($log['Action']) ? $log['Action'] : 'Deleted';
-
-                                        // Attempt to decode OldVal and NewVal to see if the is_deleted field indicates a restore.
+                                        // Check for restore action based on JSON values.
                                         $oldData = json_decode($log['OldVal'], true);
                                         $newData = json_decode($log['NewVal'], true);
                                         if (is_array($oldData) && is_array($newData)) {
@@ -302,56 +347,35 @@ function getStatusIcon($status)
                                                 $actionText = 'Restored';
                                             }
                                         }
-
                                         echo "<span class='action-badge action-" . strtolower($actionText) . "'>";
                                         echo getActionIcon($actionText) . ' ' . htmlspecialchars($actionText);
                                         echo "</span>";
                                         ?>
                                     </td>
+                                    <?php
+                                    list($detailsHTML, $changesHTML) = formatDetailsAndChanges($log);
+                                    ?>
 
                                     <!-- DETAILS -->
-                                    <td class="data-container">
-                                        <?php
-                                        if ($actionLower === 'permanent delete') {
-                                            echo nl2br(htmlspecialchars('The user has been permanently deleted from the database'));
-                                        } elseif ($actionLower === 'soft delete') {
-                                            echo nl2br(htmlspecialchars('The user has been soft deleted (is_deleted set to 1)'));
-                                        } else {
-                                            echo nl2br(htmlspecialchars($log['Details'] ?? ''));
-                                        }
-                                        ?>
+                                    <td data-label="Details" class="data-container">
+                                        <?php echo nl2br($detailsHTML); ?>
                                     </td>
 
                                     <!-- CHANGES -->
-                                    <td class="data-container">
-                                        <?php
-                                        if ($actionLower === 'modified') {
-                                            // Display a detailed diff: old value -> new value.
-                                            echo formatAuditDiff($log['OldVal'], $log['NewVal']);
-                                        } elseif ($actionLower === 'add') {
-                                            echo formatNewValue($log['NewVal']);
-                                        } elseif ($actionLower === 'soft delete') {
-                                            echo !empty($log['NewVal'])
-                                                ? formatNewValue($log['NewVal'])
-                                                : formatJsonData($log['OldVal']);
-                                        } elseif ($actionLower === 'permanent delete') {
-                                            // For permanently deleted users, show details from NewVal (or adjust as needed)
-                                            echo formatNewValue($log['NewVal']);
-                                        } else {
-                                            echo formatNewValue($log['OldVal']);
-                                        }
-                                        ?>
+                                    <td data-label="Changes" class="data-container">
+                                        <?php echo nl2br($changesHTML); ?>
                                     </td>
 
+
                                     <!-- STATUS -->
-                                    <td>
+                                    <td data-label="Status">
                                         <span class="badge <?php echo (strtolower($log['Status'] ?? '') === 'successful') ? 'bg-success' : 'bg-danger'; ?>">
                                             <?php echo getStatusIcon($log['Status']) . ' ' . htmlspecialchars($log['Status']); ?>
                                         </span>
                                     </td>
 
                                     <!-- DATE & TIME -->
-                                    <td>
+                                    <td data-label="Date & Time">
                                         <div class="d-flex align-items-center">
                                             <i class="far fa-clock me-2"></i>
                                             <?php echo htmlspecialchars($log['Date_Time'] ?? ''); ?>
@@ -378,26 +402,105 @@ function getStatusIcon($status)
     </div><!-- /.container-fluid -->
 </div><!-- /.main-content -->
 
+<!-- Scripts: Bootstrap, Filtering, and Sorting with Smooth Transitions -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Simple search functionality
-    document.getElementById('searchInput').addEventListener('keyup', function () {
-        const filter = this.value.toLowerCase();
+    // Combined filtering function for search, action, and status filters.
+    function filterTable() {
+        const searchFilter = document.getElementById('searchInput').value.toLowerCase();
+        const actionFilter = document.getElementById('filterAction').value.toLowerCase();
+        const statusFilter = document.getElementById('filterStatus').value.toLowerCase();
         const rows = document.querySelectorAll('#auditTable tr');
 
         rows.forEach(row => {
-            const text = row.textContent.toLowerCase();
-            const match = text.includes(filter);
+            const actionText = row.querySelector('[data-label="Action"]').textContent.toLowerCase();
+            const statusText = row.querySelector('[data-label="Status"]').textContent.toLowerCase();
+            const rowText = row.textContent.toLowerCase();
 
-            if (match) {
+            const matchesSearch = rowText.includes(searchFilter);
+            const matchesAction = actionFilter === '' || actionText.includes(actionFilter);
+            const matchesStatus = statusFilter === '' || statusText.includes(statusFilter);
+
+            if (matchesSearch && matchesAction && matchesStatus) {
                 row.style.display = '';
                 row.style.opacity = '1';
             } else {
                 row.style.opacity = '0';
                 setTimeout(() => {
                     row.style.display = 'none';
-                }, 200);
+                }, 300); // Match the CSS transition duration.
             }
+        });
+    }
+
+    document.getElementById('searchInput').addEventListener('keyup', filterTable);
+    document.getElementById('filterAction').addEventListener('change', filterTable);
+    document.getElementById('filterStatus').addEventListener('change', filterTable);
+
+    // Sorting functionality with smooth fade-out and fade-in transitions.
+    function sortTableByColumn(table, column, asc = true) {
+        const tbody = table.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+
+        // Fade out rows.
+        rows.forEach(row => {
+            row.style.opacity = '0';
+        });
+
+        // Wait for the fade-out transition.
+        setTimeout(() => {
+            const dirModifier = asc ? 1 : -1;
+            const sortedRows = rows.sort((a, b) => {
+                const aText = a.querySelector(`td:nth-child(${column + 1})`).textContent.trim();
+                const bText = b.querySelector(`td:nth-child(${column + 1})`).textContent.trim();
+
+                // Check if values are numeric.
+                const aNum = parseFloat(aText.replace(/[^0-9.-]+/g, ""));
+                const bNum = parseFloat(bText.replace(/[^0-9.-]+/g, ""));
+                if (!isNaN(aNum) && !isNaN(bNum)) {
+                    return (aNum - bNum) * dirModifier;
+                }
+
+                // Check if values are dates.
+                const aDate = new Date(aText);
+                const bDate = new Date(bText);
+                if (!isNaN(aDate) && !isNaN(bDate)) {
+                    return (aDate - bDate) * dirModifier;
+                }
+
+                // Fallback to text comparison.
+                return aText.localeCompare(bText) * dirModifier;
+            });
+
+            // Remove existing rows and re-add sorted rows.
+            while (tbody.firstChild) {
+                tbody.removeChild(tbody.firstChild);
+            }
+            sortedRows.forEach(row => {
+                row.style.opacity = '0';  // Ensure they start faded out.
+                tbody.appendChild(row);
+            });
+
+            // Fade in sorted rows.
+            setTimeout(() => {
+                sortedRows.forEach(row => {
+                    row.style.opacity = '1';
+                });
+            }, 50);
+
+            // Update header classes for sort indicators.
+            table.querySelectorAll('th').forEach(th => th.classList.remove('th-sort-asc', 'th-sort-desc'));
+            table.querySelector(`thead th:nth-child(${column + 1})`).classList.toggle('th-sort-asc', asc);
+            table.querySelector(`thead th:nth-child(${column + 1})`).classList.toggle('th-sort-desc', !asc);
+        }, 300); // 300ms matches the CSS transition duration.
+    }
+
+    // Attach click event listeners to each table header.
+    document.querySelectorAll('thead th').forEach((header, index) => {
+        header.addEventListener('click', () => {
+            const tableElement = header.closest('table');
+            const currentIsAscending = header.classList.contains('th-sort-asc');
+            sortTableByColumn(tableElement, index, !currentIsAscending);
         });
     });
 </script>

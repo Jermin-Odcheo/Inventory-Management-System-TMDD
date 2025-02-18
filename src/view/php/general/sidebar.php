@@ -7,12 +7,11 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
 ?>
 <!-- Sidebar -->
 <div class="sidebar">
-    <!-- Font Awesome & Sidebar CSS -->
+    <!-- Font Awesome CSS (Ideally load this in your <head> for performance) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/sidebar.css">
-
     <h2>Inventory Management System</h2>
-    <h2>Menu</h2>
+    <h3>Menu</h3>
     <nav>
         <ul>
             <li>
@@ -23,12 +22,13 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
 
             <!-- Example: Only show User Management for Super Admins & Admins -->
             <?php if ($role === 'Super Admin' || $role === 'Admin'): ?>
-                <!-- Admin-specific links could go here -->
+                <!-- Add admin-specific links here -->
             <?php endif; ?>
 
-            <li>
+            <li class="dropdown-item">
                 <a href="#" class="dropdown-toggle">
                     <i class="fas fa-history"></i> Logs
+                    <i class="fas fa-chevron-down dropdown-icon"></i>
                 </a>
                 <ul class="dropdown">
                     <li>
@@ -44,9 +44,10 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                 </ul>
             </li>
 
-            <li>
+            <li class="dropdown-item">
                 <a href="#" class="dropdown-toggle">
                     <i class="fa-solid fa-user"></i> User Management
+                    <i class="fas fa-chevron-down dropdown-icon"></i>
                 </a>
                 <ul class="dropdown">
                     <li>
@@ -67,17 +68,42 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                 </ul>
             </li>
 
-            <li>
+            <li class="dropdown-item">
                 <a href="#" class="dropdown-toggle">
                     <i class="fa-solid fa-wrench"></i> Equipment Management
+                    <i class="fas fa-chevron-down dropdown-icon"></i>
                 </a>
                 <ul class="dropdown">
-                    <li><a href="../../modules/equipment_manager/purchase_order.php">Purchase Order</a></li>
-                    <li><a href="../../modules/equipment_manager/charge_invoice.php">Charge Invoice</a></li>
-                    <li><a href="../../modules/equipment_manager/receiving_report.php">Receiving Report</a></li>
-                    <li><a href="../../modules/equipment_manager/equipment_details.php">Equipment Details</a></li>
-                    <li><a href="../../modules/equipment_manager/equipment_location.php">Equipment Location</a></li>
-                    <li><a href="../../modules/equipment_manager/equipment_status.php">Equipment Status</a></li>
+                    <li>
+                        <a href="../../modules/equipment_manager/purchase_order.php">
+                            Purchase Order
+                        </a>
+                    </li>
+                    <li>
+                        <a href="../../modules/equipment_manager/charge_invoice.php">
+                            Charge Invoice
+                        </a>
+                    </li>
+                    <li>
+                        <a href="../../modules/equipment_manager/receiving_report.php">
+                            Receiving Report
+                        </a>
+                    </li>
+                    <li>
+                        <a href="../../modules/equipment_manager/equipment_details.php">
+                            Equipment Details
+                        </a>
+                    </li>
+                    <li>
+                        <a href="../../modules/equipment_manager/equipment_location.php">
+                            Equipment Location
+                        </a>
+                    </li>
+                    <li>
+                        <a href="../../modules/equipment_manager/equipment_status.php">
+                            Equipment Status
+                        </a>
+                    </li>
                 </ul>
             </li>
 
@@ -93,50 +119,38 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
             </li>
         </ul>
     </nav>
-
 </div>
+
+<!-- JavaScript to handle dropdown interactions -->
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        // Handle clicks on dropdown toggles
-        var toggles = document.querySelectorAll('.dropdown-toggle');
-        toggles.forEach(function (toggle) {
+        var dropdownToggles = document.querySelectorAll('.dropdown-toggle');
+        dropdownToggles.forEach(function (toggle) {
             toggle.addEventListener('click', function (e) {
                 e.preventDefault();
-                e.stopPropagation(); // Prevent click from bubbling to document
-                var li = this.parentElement;
+                e.stopPropagation();
+                var parentLi = this.parentElement;
+                parentLi.classList.toggle('open');
 
-                // If already clicked (locked open), remove the lock and close the dropdown.
-                // Also add a temporary class to disable immediate hover reopening.
-                if (li.classList.contains('clicked')) {
-                    li.classList.remove('clicked', 'open');
-                    li.classList.add('disable-hover');
+                // Rotate the dropdown arrow
+                var icon = this.querySelector('.dropdown-icon');
+                if (parentLi.classList.contains('open')) {
+                    icon.style.transform = 'rotate(180deg)';
                 } else {
-                    // Otherwise, lock it open via click.
-                    li.classList.add('clicked', 'open');
+                    icon.style.transform = 'rotate(0deg)';
                 }
             });
         });
 
-        // When the mouse leaves the dropdown item, remove the temporary disable-hover class.
-        var listItems = document.querySelectorAll('.sidebar nav ul li');
-        listItems.forEach(function (li) {
-            li.addEventListener('mouseleave', function () {
-                li.classList.remove('disable-hover');
-            });
-        });
-
-        // Clicking anywhere outside the sidebar resets all dropdowns back to default.
+        // Close dropdowns when clicking outside the sidebar
         document.addEventListener('click', function (e) {
             if (!e.target.closest('.sidebar')) {
-                document.querySelectorAll('.sidebar nav ul li.clicked').forEach(function (li) {
-                    li.classList.remove('clicked', 'open');
-                });
-                document.querySelectorAll('.sidebar nav ul li.disable-hover').forEach(function (li) {
-                    li.classList.remove('disable-hover');
+                document.querySelectorAll('.dropdown-item.open').forEach(function (item) {
+                    item.classList.remove('open');
+                    var icon = item.querySelector('.dropdown-icon');
+                    if (icon) icon.style.transform = 'rotate(0deg)';
                 });
             }
         });
     });
 </script>
-
-
