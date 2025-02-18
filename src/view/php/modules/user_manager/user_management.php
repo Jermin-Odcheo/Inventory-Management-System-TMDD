@@ -46,6 +46,32 @@ function sortIcon($currentSort, $column, $sortDir) {
     }
     return '';
 }
+
+// Add this function near the top of the file, after session_start()
+function getCurrentUserRoles($pdo, $userId) {
+    $stmt = $pdo->prepare("
+        SELECT r.Role_Name 
+        FROM roles r 
+        JOIN user_roles ur ON r.Role_ID = ur.Role_ID 
+        WHERE ur.User_ID = ?
+    ");
+    $stmt->execute([$userId]);
+    return $stmt->fetchAll(PDO::FETCH_COLUMN);
+}
+
+// Get current user's roles
+$currentUserRoles = getCurrentUserRoles($pdo, $_SESSION['user_id']);
+
+// Add this function to check if current user can delete target user
+function canDeleteUser($currentUserRoles, $targetUserRoles) {
+    if (in_array('Super Admin', $currentUserRoles)) {
+        return true;
+    }
+    if (in_array('Super User', $currentUserRoles)) {
+        return count($targetUserRoles) === 1 && in_array('Regular User', $targetUserRoles);
+    }
+    return false;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -74,9 +100,43 @@ function sortIcon($currentSort, $column, $sortDir) {
 <!-- Main Content Area -->
 <div class="main-content container-fluid">
     <h1>User Management</h1>
+    
+    <?php if (isset($_GET['success'])): ?>
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        User added successfully!
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <?php endif; ?>
+
+    <?php if (isset($_SESSION['delete_success'])): ?>
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <?php 
+        if (isset($_SESSION['deleted_count'])) {
+            echo "{$_SESSION['deleted_count']} user(s) have been successfully deleted.";
+            unset($_SESSION['deleted_count']);
+        } else {
+            echo "User has been successfully deleted.";
+        }
+        ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <?php 
+    unset($_SESSION['delete_success']);
+    endif; 
+    ?>
+
+    <!-- Add this new div for delete messages -->
+    <div id="deleteMessage" class="alert alert-success alert-dismissible fade show" style="display: none;" role="alert">
+        <span id="deleteMessageText"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    
     <div class="d-flex justify-content-end mb-3">
-        <a href="add_user.php" class="btn btn-primary">Add New User</a>
-       </div>
+        <a href="add_user.php" class="btn btn-primary me-2">Add New User</a>
+        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+            Delete My Account
+        </button>
+    </div>
     <div id="alertMessage"></div>
     <div class="table-responsive">
         <table class="table table-striped table-hover">
@@ -153,10 +213,16 @@ function sortIcon($currentSort, $column, $sortDir) {
                                 data-bs-toggle="modal" data-bs-target="#editUserModal">
                             Edit
                         </button>
+                        <?php
+                        $targetUserRoles = getCurrentUserRoles($pdo, $user['User_ID']);
+                        $canDelete = canDeleteUser($currentUserRoles, $targetUserRoles);
+                        if ($canDelete):
+                        ?>
                         <button type="button" class="btn btn-sm btn-danger"
                                 data-id="<?php echo $user['User_ID']; ?>">
                             Delete
                         </button>
+                        <?php endif; ?>
                     </td>
                 </tr>
             <?php endforeach; ?>
@@ -212,6 +278,25 @@ function sortIcon($currentSort, $column, $sortDir) {
     </div>
 </div>
 
+<!-- Delete Account Modal -->
+<div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteAccountModalLabel">Delete Account</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete your account? This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteAccount">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Custom JavaScript for bulk actions and form handling -->
 <script>
     $(document).ready(function() {
@@ -230,7 +315,7 @@ function sortIcon($currentSort, $column, $sortDir) {
             updateBulkActionButtons();
         });
 
-        // Bulk delete handler for active users
+        // Bulk delete handler
         $("#delete-selected").click(function() {
             let selected = [];
             $(".select-row:checked").each(function () {
@@ -239,31 +324,49 @@ function sortIcon($currentSort, $column, $sortDir) {
             if (selected.length > 0 && confirm("Are you sure you want to delete the selected users? They will be moved to archive.")) {
                 $.ajax({
                     type: "POST",
-                    url: "/src/view/php/modules/user_manager/delete_user.php",
-                    data: { user_ids: selected, action: "soft_delete" },
-                    success: function(response) {
-                        location.reload();
+                    url: "delete_user.php",
+                    data: { 
+                        user_ids: selected, 
+                        action: "soft_delete" 
                     },
-                    error: function() {
-                        alert("Failed to delete selected users. Please try again.");
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            window.location.reload();
+                        } else {
+                            alert(response.message || "Failed to delete selected users. Please try again.");
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Error details:", {xhr, status, error});
+                        alert("Failed to delete selected users. Error: " + error);
                     }
                 });
             }
         });
 
-        // Handler for individual deletion
+        // Individual delete handler
         $(".btn-danger[data-id]").click(function() {
             let userId = $(this).data("id");
             if (confirm("Are you sure you want to delete this user? They will be moved to archive.")) {
                 $.ajax({
                     type: "POST",
-                    url: "/src/view/php/modules/user_manager/delete_user.php",
-                    data: { user_id: userId, action: "soft_delete" },
-                    success: function(response) {
-                        location.reload();
+                    url: "delete_user.php",
+                    data: { 
+                        user_id: userId, 
+                        action: "soft_delete"
                     },
-                    error: function() {
-                        alert("Failed to delete user. Please try again.");
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            window.location.reload();
+                        } else {
+                            alert(response.message || "Failed to delete user. Please try again.");
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Error details:", {xhr, status, error});
+                        alert("Failed to delete user. Error: " + error);
                     }
                 });
             }
@@ -302,12 +405,40 @@ function sortIcon($currentSort, $column, $sortDir) {
                 success: function(response) {
                     console.log("Response from server:", response);
                     $("#editUserModal").modal("hide");
+                    
+                    // Get the updated user data from the form
+                    var userId = $("#editUserID").val();
+                    var email = $("#editEmail").val();
+                    var firstName = $("#editFirstName").val();
+                    var lastName = $("#editLastName").val();
+                    var department = $("#editDepartment").val();
+                    
+                    // Find and update the corresponding table row
+                    var row = $("button.btn-edit[data-id='" + userId + "']").closest('tr');
+                    row.find('td:eq(2)').text(email); // Update email cell
+                    row.find('td:eq(3)').text(firstName + ' ' + lastName); // Update name cell
+                    row.find('td:eq(4)').text(department); // Update department cell
+                    
+                    // Update the edit button's data attributes
+                    var editButton = row.find('.btn-edit');
+                    editButton.data('email', email);
+                    editButton.data('first-name', firstName);
+                    editButton.data('last-name', lastName);
+                    editButton.data('department', department);
+                    
+                    // Show success message
                     $("#alertMessage").html(
                         '<div class="alert alert-success alert-dismissible fade show" role="alert">' +
                         response +
                         '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>'
                     );
-                    // Do not reload the page so the message stays visible
+                    
+                    // Automatically dismiss the alert after 3 seconds
+                    setTimeout(function() {
+                        $('.alert').fadeOut('slow', function() {
+                            $(this).remove();
+                        });
+                    }, 3000);
                 },
                 error: function(xhr, status, error) {
                     console.error("AJAX Error:", error);
@@ -318,6 +449,31 @@ function sortIcon($currentSort, $column, $sortDir) {
                     );
                 }
             });
+        });
+
+        // Handle delete account confirmation
+        $("#confirmDeleteAccount").click(function() {
+            $.ajax({
+                type: "POST",
+                url: "delete_account.php",
+                data: { action: "delete_account" },
+                success: function(response) {
+                    if (response.success) {
+                        alert("Account deleted successfully.");
+                        window.location.href = "../../../../../public/index.php";
+                    } else {
+                        alert("Error: " + response.message);
+                    }
+                },
+                error: function() {
+                    alert("An error occurred while deleting the account.");
+                }
+            });
+        });
+
+        // Add this to handle the close button click
+        $(document).on('click', '.btn-close', function() {
+            $(this).closest('.alert').hide();
         });
     });
 </script>

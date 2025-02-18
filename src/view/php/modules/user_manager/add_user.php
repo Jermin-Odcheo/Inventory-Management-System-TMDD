@@ -4,7 +4,7 @@ require_once('../../../../../config/ims-tmdd.php');
 
 // Check for admin privileges (you should implement your privilege check).
 if (!isset($_SESSION['user_id'])) {
-    header("Location: add_user.php");
+    header("Location: ../../../../../public/index.php");  // Fix redirect to login page
     exit();
 }
 // Set the audit log session variables for MySQL triggers.
@@ -37,38 +37,80 @@ $roles = $stmt->fetchAll();
 $successMessage = ''; // Variable to hold the success message
 $errorMessage = '';   // Variable to hold error messages
 
+// Add error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 // If form is submitted.
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $email      = trim($_POST['email']);
-    $firstName  = trim($_POST['first_name']);
-    $lastName   = trim($_POST['last_name']);
-    $department = trim($_POST['department']);
-    $status     = $_POST['status'];
-    $roleIDs    = isset($_POST['roles']) ? $_POST['roles'] : [];
+    try {
+        $email      = trim($_POST['email']);
+        $firstName  = trim($_POST['first_name']);
+        $lastName   = trim($_POST['last_name']);
+        $department = trim($_POST['department']);
+        $status     = $_POST['status'];
+        $roleIDs    = isset($_POST['roles']) ? $_POST['roles'] : [];
+        $password   = $_POST['password'];
 
-    // Check for duplicate email.
-    // For editing, allow the same email if it's the same user.
-    if ($isEditing) {
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE Email = ? AND User_ID != ?");
-        $stmt->execute([$email, $userData['User_ID']]);
-    } else {
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE Email = ?");
-        $stmt->execute([$email]);
-    }
-    $emailCount = $stmt->fetchColumn();
+        // Validate required fields
+        if (empty($email) || empty($firstName) || empty($lastName) || empty($department) || (!$isEditing && empty($password))) {
+            throw new Exception("Please fill in all required fields.");
+        }
 
-    if ($emailCount > 0) {
-        $errorMessage = "The email address is already taken. Please choose a different email.";
-    } else {
-        // No duplicate, proceed with adding or editing.
+        // Validate that at least one role is selected
+        if (empty($roleIDs)) {
+            throw new Exception("Please assign at least one role to the user.");
+        }
+
+        // Check for duplicate email
+        if ($isEditing) {
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE Email = ? AND User_ID != ?");
+            $stmt->execute([$email, $userData['User_ID']]);
+        } else {
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE Email = ?");
+            $stmt->execute([$email]);
+        }
+        $emailCount = $stmt->fetchColumn();
+
+        if ($emailCount > 0) {
+            throw new Exception("The email address is already taken. Please choose a different email.");
+        }
+
+        // Begin transaction
+        $pdo->beginTransaction();
+
         if (!$isEditing) {
-            $password = $_POST['password'];
-            // Hash the password.
+            // Hash the password
             $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = $pdo->prepare("INSERT INTO users (Email, Password, First_Name, Last_Name, Department, Status) VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$email, $hashedPassword, $firstName, $lastName, $department, $status]);
+            
+            // Insert new user
+            $stmt = $pdo->prepare("
+                INSERT INTO users (Email, Password, First_Name, Last_Name, Department, Status) 
+                VALUES (?, ?, ?, ?, ?, ?)
+            ");
+            
+            if (!$stmt->execute([$email, $hashedPassword, $firstName, $lastName, $department, $status])) {
+                throw new Exception("Failed to insert user data.");
+            }
+            
             $userID = $pdo->lastInsertId();
+            
+            // Insert user roles
+            if (!empty($roleIDs)) {
+                $stmt = $pdo->prepare("INSERT INTO user_roles (User_ID, Role_ID) VALUES (?, ?)");
+                foreach ($roleIDs as $roleID) {
+                    if (!$stmt->execute([$userID, $roleID])) {
+                        throw new Exception("Failed to assign roles.");
+                    }
+                }
+            }
+            
+            $pdo->commit();
             $successMessage = "User added successfully!";
+            
+            // Redirect to user management page after successful addition
+            header("Location: user_management.php?success=1");
+            exit();
         } else {
             // For edit, update user details. (Password update might be handled separately.)
             $stmt = $pdo->prepare("UPDATE users SET Email = ?, First_Name = ?, Last_Name = ?, Department = ?, Status = ? WHERE User_ID = ?");
@@ -87,6 +129,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         foreach ($roleIDs as $roleID) {
             $stmt->execute([$userID, $roleID]);
         }
+
+        $pdo->commit();
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        $errorMessage = $e->getMessage();
     }
 }
 ?>
@@ -100,10 +147,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="../../../../styles/css/admin.css">
+    <style>
+        /* Add styling for main content positioning */
+        .main-content {
+            margin-left: 300px; /* Match sidebar width */
+            padding: 20px;
+            margin-bottom: 20px;
+            width: auto;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 200px; /* Match sidebar responsive width */
+            }
+        }
+    </style>
 </head>
 <body>
 <?php include '../../general/sidebar.php'; ?>
-<div class="container mt-5">
+<div class="main-content">
     <h1 class="mb-4"><?php echo $isEditing ? 'Edit' : 'Add'; ?> User</h1>
 
     <?php if ($successMessage): ?>
@@ -141,7 +203,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </div>
         <div class="mb-3">
             <label for="department" class="form-label">Department:</label>
-            <input type="text" name="department" id="department" value="<?php echo htmlspecialchars($userData['Department'] ?? ''); ?>" class="form-control">
+            <input type="text" name="department" id="department" value="<?php echo htmlspecialchars($userData['Department'] ?? ''); ?>" class="form-control" required>
         </div>
         <div class="mb-3">
             <label for="status" class="form-label">Status:</label>
@@ -152,7 +214,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </div>
 
         <fieldset class="mb-3">
-            <legend>Assign Roles:</legend>
+            <legend>Assign Roles: <span class="text-danger">*</span></legend>
+            <div class="text-muted mb-2">At least one role must be selected</div>
             <?php foreach ($roles as $role):
                 // If editing, check which roles the user already has.
                 $isAssigned = false;
@@ -163,7 +226,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 }
                 ?>
                 <div class="form-check">
-                    <input type="checkbox" name="roles[]" value="<?php echo $role['Role_ID']; ?>" id="role_<?php echo $role['Role_ID']; ?>" class="form-check-input" <?php echo $isAssigned ? 'checked' : ''; ?>>
+                    <input type="checkbox" name="roles[]" value="<?php echo $role['Role_ID']; ?>" id="role_<?php echo $role['Role_ID']; ?>" class="form-check-input role-checkbox" <?php echo $isAssigned ? 'checked' : ''; ?>>
                     <label for="role_<?php echo $role['Role_ID']; ?>" class="form-check-label"><?php echo htmlspecialchars($role['Role_Name']); ?></label>
                 </div>
             <?php endforeach; ?>
@@ -178,5 +241,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 <!-- Bootstrap JS Bundle (Optional, if you need interactive components) -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const roleCheckboxes = document.querySelectorAll('.role-checkbox');
+        let hasRole = false;
+        
+        roleCheckboxes.forEach(checkbox => {
+            if (checkbox.checked) {
+                hasRole = true;
+            }
+        });
+        
+        if (!hasRole) {
+            e.preventDefault();
+            alert('Please assign at least one role to the user.');
+        }
+    });
+});
+</script>
 </body>
 </html>
