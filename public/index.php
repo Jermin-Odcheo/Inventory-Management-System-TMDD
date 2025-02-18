@@ -10,7 +10,6 @@
 
         try {
             // Fetch user and role from the database
-            // Fetch user and role from the database
             $stmt = $pdo->prepare("
             SELECT u.User_ID, u.Email, u.Password, u.First_Name, u.Last_Name, u.Department, u.Status, r.Role_Name
             FROM users u

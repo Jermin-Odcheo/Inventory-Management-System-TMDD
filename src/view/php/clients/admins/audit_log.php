@@ -3,12 +3,7 @@ session_start();
 require_once('../../../../../config/ims-tmdd.php');
 
 // Fetch all audit logs (including permanent deletes)
-$query = "
-    SELECT a.*, u.Email AS user_email 
-    FROM audit_log a
-    LEFT JOIN users u ON a.UserID = u.User_ID 
-    ORDER BY a.Date_Time DESC
-";
+$query = "SELECT * FROM audit_log ORDER BY Date_Time DESC";
 $stmt = $pdo->prepare($query);
 $stmt->execute();
 $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);

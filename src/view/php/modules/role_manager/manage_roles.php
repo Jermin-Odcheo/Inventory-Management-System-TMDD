@@ -14,8 +14,8 @@ $sql = "
         p.Privilege_Name
     FROM roles r
     LEFT JOIN role_privileges rp ON r.Role_ID = rp.Role_ID
-    LEFT JOIN modules m ON rp.Module_ID = m.Module_ID
-    LEFT JOIN privileges p ON FIND_IN_SET(p.Privilege_ID, rp.Privilege_ID)
+    LEFT JOIN privileges p ON rp.Privilege_ID = p.Privilege_ID
+    LEFT JOIN modules m ON p.Module_ID = m.Module_ID
     ORDER BY r.Role_ID ASC, m.Module_Name, p.Privilege_Name
 ";
 $stmt = $pdo->prepare($sql);

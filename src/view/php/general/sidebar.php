@@ -32,12 +32,12 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                 </a>
                 <ul class="dropdown">
                     <li>
-                        <a href="<?php echo BASE_URL; ?>view/php/clients/admins/audit_log.php">
+                        <a href="<?php echo BASE_URL; ?>src/view/php/clients/admins/audit_log.php">
                             <i class="fas fa-history"></i> Audit Logs
                         </a>
                     </li>
                     <li>
-                        <a href="<?php echo BASE_URL; ?>view/php/clients/admins/archive.php">
+                        <a href="<?php echo BASE_URL; ?>src/view/php/clients/admins/archive.php">
                             <i class="fas fa-archive"></i> Archives
                         </a>
                     </li>
@@ -60,7 +60,9 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                         </a>
                     </li>
                     <li>
-                        <a href="#">Manage Privileges</a>
+                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/role_manager/manage_privilege.php">
+                            Manage Privileges
+                        </a>
                     </li>
                 </ul>
             </li>
@@ -73,7 +75,7 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                     <li><a href="../../modules/equipment_manager/purchase_order.php">Purchase Order</a></li>
                     <li><a href="../../modules/equipment_manager/charge_invoice.php">Charge Invoice</a></li>
                     <li><a href="../../modules/equipment_manager/receiving_report.php">Receiving Report</a></li>
-                    <li><a href="equipment_details.php">Equipment Details</a></li>
+                    <li><a href="../../modules/equipment_manager/equipment_details.php">Equipment Details</a></li>
                     <li><a href="../../modules/equipment_manager/equipment_location.php">Equipment Location</a></li>
                     <li><a href="../../modules/equipment_manager/equipment_status.php">Equipment Status</a></li>
                 </ul>
@@ -94,11 +96,11 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
 
 </div>
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         // Handle clicks on dropdown toggles
         var toggles = document.querySelectorAll('.dropdown-toggle');
-        toggles.forEach(function(toggle) {
-            toggle.addEventListener('click', function(e) {
+        toggles.forEach(function (toggle) {
+            toggle.addEventListener('click', function (e) {
                 e.preventDefault();
                 e.stopPropagation(); // Prevent click from bubbling to document
                 var li = this.parentElement;
@@ -117,19 +119,19 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
 
         // When the mouse leaves the dropdown item, remove the temporary disable-hover class.
         var listItems = document.querySelectorAll('.sidebar nav ul li');
-        listItems.forEach(function(li) {
-            li.addEventListener('mouseleave', function() {
+        listItems.forEach(function (li) {
+            li.addEventListener('mouseleave', function () {
                 li.classList.remove('disable-hover');
             });
         });
 
         // Clicking anywhere outside the sidebar resets all dropdowns back to default.
-        document.addEventListener('click', function(e) {
+        document.addEventListener('click', function (e) {
             if (!e.target.closest('.sidebar')) {
-                document.querySelectorAll('.sidebar nav ul li.clicked').forEach(function(li) {
+                document.querySelectorAll('.sidebar nav ul li.clicked').forEach(function (li) {
                     li.classList.remove('clicked', 'open');
                 });
-                document.querySelectorAll('.sidebar nav ul li.disable-hover').forEach(function(li) {
+                document.querySelectorAll('.sidebar nav ul li.disable-hover').forEach(function (li) {
                     li.classList.remove('disable-hover');
                 });
             }

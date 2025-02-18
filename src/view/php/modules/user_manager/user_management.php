@@ -132,11 +132,11 @@ function sortIcon($currentSort, $column, $sortDir) {
                         <?php
                         // Fetch roles for each user.
                         $stmtRole = $pdo->prepare("
-            SELECT u.User_ID, u.Email, u.Password, u.First_Name, u.Last_Name, u.Department, u.Status, r.Role_Name
-            FROM users u
-            JOIN roles r ON u.Role = r.Role_ID
-            WHERE u.Email = ?
-        ");
+                            SELECT r.Role_Name
+                            FROM roles r 
+                            JOIN user_roles ur ON r.Role_ID = ur.Role_ID 
+                            WHERE ur.User_ID = ?
+                        ");
                         $stmtRole->execute([$user['User_ID']]);
                         $roles = $stmtRole->fetchAll(PDO::FETCH_COLUMN);
                         echo implode(', ', $roles);
