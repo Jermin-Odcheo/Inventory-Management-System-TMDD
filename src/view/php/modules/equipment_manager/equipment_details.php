@@ -141,6 +141,54 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
             case 'delete':
                 try {
+                    // Get equipment details before deletion for audit log
+                    $stmt = $pdo->prepare("SELECT * FROM equipmentdetails WHERE EquipmentDetailsID = ?");
+                    $stmt->execute([$_POST['equipment_id']]);
+                    $equipmentData = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    // Set current user for audit logging
+                    $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
+                    
+                    // Prepare audit log data
+                    $oldValue = json_encode([
+                        'EquipmentDetailsID' => $equipmentData['EquipmentDetailsID'],
+                        'AssetTag' => $equipmentData['AssetTag'],
+                        'AssetDescription1' => $equipmentData['AssetDescription1'],
+                        'AssetDescription2' => $equipmentData['AssetDescription2'],
+                        'Specification' => $equipmentData['Specification'],
+                        'Brand' => $equipmentData['Brand'],
+                        'Model' => $equipmentData['Model'],
+                        'SerialNumber' => $equipmentData['SerialNumber'],
+                        'DateAcquired' => $equipmentData['DateAcquired'],
+                        'AccountableIndividual' => $equipmentData['AccountableIndividual']
+                    ]);
+
+                    // Insert into audit_log
+                    $auditStmt = $pdo->prepare("
+                        INSERT INTO audit_log (
+                            UserID,
+                            EntityID,
+                            Module,
+                            Action,
+                            Details,
+                            OldVal,
+                            NewVal,
+                            Status
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    ");
+
+                    $auditStmt->execute([
+                        $_SESSION['user_id'],
+                        $equipmentData['EquipmentDetailsID'],
+                        'Equipment Management',
+                        'Delete',
+                        'Equipment has been deleted',
+                        $oldValue,
+                        null,
+                        'Successful'
+                    ]);
+
+                    // Now perform the delete
                     $stmt = $pdo->prepare("DELETE FROM equipmentdetails WHERE EquipmentDetailsID = ?");
                     $stmt->execute([$_POST['equipment_id']]);
                     
@@ -217,6 +265,17 @@ try {
                 max-width: 100% !important;
             }
         }
+
+        .search-container {
+            width: 250px;
+        }
+        .search-container input {
+            padding-right: 30px;
+        }
+        .search-container i {
+            color: #6c757d;
+            pointer-events: none;
+        }
     </style>
 </head>
 
@@ -230,10 +289,28 @@ try {
             </div>
             <div class="card-body p-3">
                 <!-- Add Equipment Details Button -->
-                <div class="d-flex justify-content-start mb-2">
-                    <button type="button" class="btn btn-success btn-sm py-1 px-2" data-bs-toggle="modal" data-bs-target="#addEquipmentModal">
-                        Add Equipment Details
-                    </button>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addEquipmentModal">
+                            <i class="bi bi-plus-circle"></i> Add Equipment
+                        </button>
+                        <select class="form-select form-select-sm" id="filterEquipment" style="width: auto;">
+                            <option value="">Filter Equipment Type</option>
+                            <?php
+                            // Get unique Description1 values instead of brands
+                            $equipmentTypes = array_unique(array_column($equipmentDetails, 'AssetDescription1'));
+                            foreach($equipmentTypes as $type) {
+                                if(!empty($type)) {
+                                    echo "<option value='" . htmlspecialchars($type) . "'>" . htmlspecialchars($type) . "</option>";
+                                }
+                            }
+                            ?>
+                        </select>
+                    </div>
+                    <div class="search-container position-relative">
+                        <input type="text" id="searchEquipment" class="form-control form-control-sm" placeholder="Search equipment...">
+                        <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-2"></i>
+                    </div>
                 </div>
 
                 <!-- Equipment Details List Table -->
@@ -426,13 +503,31 @@ try {
 
     <!-- JavaScript for Real-Time Table Filtering -->
     <script>
-        document.getElementById('poSearch').addEventListener('keyup', function() {
-            const searchValue = this.value.toLowerCase();
-            const rows = document.querySelectorAll('#poTable tbody tr');
-            rows.forEach(function(row) {
-                const rowText = row.textContent.toLowerCase();
-                row.style.display = rowText.indexOf(searchValue) > -1 ? '' : 'none';
+        $(document).ready(function() {
+            // Search functionality
+            $('#searchEquipment').on('input', function() {
+                filterTable();
             });
+
+            // Filter functionality
+            $('#filterEquipment').on('change', function() {
+                filterTable();
+            });
+
+            function filterTable() {
+                var searchText = $('#searchEquipment').val().toLowerCase();
+                var filterType = $('#filterEquipment').val().toLowerCase();
+
+                $(".table tbody tr").each(function() {
+                    var rowText = $(this).text().toLowerCase();
+                    var typeCell = $(this).find('td:eq(2)').text().toLowerCase(); // Index 2 is Description1 column
+
+                    var searchMatch = rowText.indexOf(searchText) > -1;
+                    var typeMatch = !filterType || typeCell === filterType;
+
+                    $(this).toggle(searchMatch && typeMatch);
+                });
+            }
         });
     </script>
 
@@ -503,9 +598,11 @@ try {
         });
 
         // Delete Equipment
-        $('.delete-equipment').click(function() {
+        $('.delete-equipment').off('click').on('click', function(e) {
+            e.preventDefault(); // Prevent any default action
+            var id = $(this).data('id');
+            
             if (confirm('Are you sure you want to delete this equipment?')) {
-                var id = $(this).data('id');
                 $.ajax({
                     url: 'equipment_details.php',
                     method: 'POST',
@@ -514,7 +611,15 @@ try {
                         equipment_id: id
                     },
                     success: function(response) {
-                        location.reload();
+                        var result = JSON.parse(response);
+                        if (result.status === 'success') {
+                            location.reload();
+                        } else {
+                            alert('Error: ' + result.message);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        alert('Error deleting equipment: ' + error);
                     }
                 });
             }

@@ -36,20 +36,14 @@ function canDelete($currentUserRoles, $targetUserRoles) {
     error_log("Current user roles: " . print_r($currentUserRoles, true));
     error_log("Target user roles: " . print_r($targetUserRoles, true));
     
-    // Super Admin can delete anyone
     if (in_array('Super Admin', $currentUserRoles)) {
-        error_log("User is Super Admin - can delete");
         return true;
     }
     
-    // Super User can only delete Regular Users
     if (in_array('Super User', $currentUserRoles)) {
-        $canDelete = count($targetUserRoles) === 1 && in_array('Regular User', $targetUserRoles);
-        error_log("User is Super User - can delete: " . ($canDelete ? 'yes' : 'no'));
-        return $canDelete;
+        return count($targetUserRoles) === 1 && in_array('Regular User', $targetUserRoles);
     }
     
-    error_log("User has no delete permissions");
     return false;
 }
 
@@ -59,8 +53,11 @@ try {
     // Set current user for audit logging
     $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
     
+    // Check if this is a permanent delete
+    $isPermanentDelete = isset($_POST['permanent']) && $_POST['permanent'] === '1';
+    
     // Handle single user deletion
-    if (isset($_POST['user_id']) && $_POST['action'] === 'soft_delete') {
+    if (isset($_POST['user_id'])) {
         $targetUserId = $_POST['user_id'];
         
         // Get roles of both users
@@ -71,16 +68,23 @@ try {
             throw new Exception("You don't have permission to delete this user.");
         }
         
-        $stmt = $pdo->prepare("UPDATE users SET is_deleted = 1 WHERE User_ID = ?");
-        if (!$stmt->execute([$targetUserId])) {
-            throw new Exception("Failed to update user status.");
+        if ($isPermanentDelete) {
+            // For permanent delete
+            $stmt = $pdo->prepare("DELETE FROM users WHERE User_ID = ? AND is_deleted = 1");
+        } else {
+            // For soft delete
+            $stmt = $pdo->prepare("UPDATE users SET is_deleted = 1 WHERE User_ID = ?");
         }
         
-        $_SESSION['delete_success'] = true; // Set success message flag
+        if (!$stmt->execute([$targetUserId])) {
+            throw new Exception("Failed to " . ($isPermanentDelete ? "permanently delete" : "soft delete") . " user.");
+        }
+        
+        $_SESSION['delete_success'] = true;
         
     } 
     // Handle bulk deletion
-    else if (isset($_POST['user_ids']) && $_POST['action'] === 'soft_delete') {
+    else if (isset($_POST['user_ids']) && is_array($_POST['user_ids'])) {
         $targetUserIds = $_POST['user_ids'];
         $currentUserRoles = getUserRoles($pdo, $_SESSION['user_id']);
         
@@ -92,13 +96,21 @@ try {
         }
         
         $placeholders = str_repeat('?,', count($targetUserIds) - 1) . '?';
-        $stmt = $pdo->prepare("UPDATE users SET is_deleted = 1 WHERE User_ID IN ($placeholders)");
-        if (!$stmt->execute($targetUserIds)) {
-            throw new Exception("Failed to update users status.");
+        
+        if ($isPermanentDelete) {
+            // For permanent delete
+            $stmt = $pdo->prepare("DELETE FROM users WHERE User_ID IN ($placeholders) AND is_deleted = 1");
+        } else {
+            // For soft delete
+            $stmt = $pdo->prepare("UPDATE users SET is_deleted = 1 WHERE User_ID IN ($placeholders)");
         }
         
-        $_SESSION['delete_success'] = true; // Set success message flag
-        $_SESSION['deleted_count'] = count($targetUserIds); // Store number of deleted users
+        if (!$stmt->execute($targetUserIds)) {
+            throw new Exception("Failed to " . ($isPermanentDelete ? "permanently delete" : "soft delete") . " users.");
+        }
+        
+        $_SESSION['delete_success'] = true;
+        $_SESSION['deleted_count'] = count($targetUserIds);
     }
     
     $pdo->commit();
