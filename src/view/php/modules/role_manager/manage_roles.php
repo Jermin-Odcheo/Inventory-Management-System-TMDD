@@ -2,10 +2,6 @@
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
 
-// Updated SQL query:
-// - Joins roles to role_privileges.
-// - Joins modules using rp.Module_ID.
-// - Joins privileges using FIND_IN_SET() to match the comma‐separated privilege IDs.
 $sql = "
     SELECT 
         r.Role_ID,
@@ -18,6 +14,7 @@ $sql = "
     LEFT JOIN modules m ON p.Module_ID = m.Module_ID
     ORDER BY r.Role_ID ASC, m.Module_Name, p.Privilege_Name
 ";
+
 $stmt = $pdo->prepare($sql);
 $stmt->execute();
 $roleData = $stmt->fetchAll(PDO::FETCH_ASSOC);
