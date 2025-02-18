@@ -210,7 +210,17 @@ try {
                                 <label for="AssetTag" class="form-label">
                                     <i class="bi bi-tag"></i> Asset Tag <span class="text-danger">*</span>
                                 </label>
-                                <input type="text" class="form-control" id="AssetTag" name="AssetTag" placeholder="Enter Asset Tag" required value="<?php echo $editEquipmentLocation ? htmlspecialchars($editEquipmentLocation['AssetTag']) : ''; ?>">
+                                <select name="AssetTag">
+                                    <option disabled hidden>Select an Asset Tag</option>
+                                    <?php
+                                    $stmt = $pdo->prepare("SELECT AssetTag FROM equipmentdetails");
+                                    $stmt->execute();
+                                    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                                        $selected = ($editEquipmentLocation && $editEquipmentLocation['AssetTag'] == $row['AssetTag']) ? 'selected' : '';
+                                        echo '<option value="' . htmlspecialchars($row['AssetTag']) . '" ' . $selected . '>' . htmlspecialchars($row['AssetTag']) . '</option>';
+                                    }
+                                    ?>
+                                </select>
                             </div>
 
                             <div class="mb-3">

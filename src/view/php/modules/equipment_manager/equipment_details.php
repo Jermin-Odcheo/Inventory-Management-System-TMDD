@@ -1,19 +1,19 @@
 <?php
 // purchase_order.php
-session_start();
+// session_start();
 require_once('../../../../../config/ims-tmdd.php'); // Adjust the path as needed
 
-// Check if user is logged in
-if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
-    // Set cache-control headers
-    header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
-    header("Cache-Control: post-check=0, pre-check=0", false);
-    header("Pragma: no-cache");
+// // Check if user is logged in
+// if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
+//     // Set cache-control headers
+//     header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+//     header("Cache-Control: post-check=0, pre-check=0", false);
+//     header("Pragma: no-cache");
     
-    // Redirect to login page
-    header("Location: /public/index.php");
-    exit();
-}
+//     // Redirect to login page
+//     header("Location: /public/index.php");
+//     exit();
+// }
 
 // Initialize messages
 $errors = [];
