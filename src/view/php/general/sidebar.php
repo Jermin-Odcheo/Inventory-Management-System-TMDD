@@ -5,18 +5,18 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once(__DIR__ . '/../../../../config/config.php');
 $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
 ?>
-<!-- Sidebar -->
-<div class="sidebar">
-    <!-- Font Awesome CSS (Ideally load this in your <head> for performance) -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
-    <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/sidebar.css">
+<link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/sidebar.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+<aside class="sidebar">
     <h2>Inventory Management System</h2>
     <h3>Menu</h3>
     <nav>
         <ul>
             <li>
                 <a href="<?php echo BASE_URL; ?>src/view/php/clients/admins/dashboard.php">
-                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
                 </a>
             </li>
 
@@ -26,131 +26,267 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
             <?php endif; ?>
 
             <li class="dropdown-item">
-                <a href="#" class="dropdown-toggle">
-                    <i class="fas fa-history"></i> Logs
+                <button class="dropdown-toggle" aria-expanded="false">
+                    <i class="fas fa-history"></i>
+                    <span>Logs</span>
                     <i class="fas fa-chevron-down dropdown-icon"></i>
-                </a>
+                </button>
                 <ul class="dropdown">
                     <li>
                         <a href="<?php echo BASE_URL; ?>src/view/php/clients/admins/audit_log.php">
-                            <i class="fas fa-history"></i> Audit Logs
+                            <i class="fas fa-history"></i>
+                            <span>Audit Logs</span>
                         </a>
                     </li>
                     <li>
                         <a href="<?php echo BASE_URL; ?>src/view/php/clients/admins/archive.php">
-                            <i class="fas fa-archive"></i> Archives
+                            <i class="fas fa-archive"></i>
+                            <span>Archives</span>
                         </a>
                     </li>
                 </ul>
             </li>
 
             <li class="dropdown-item">
-                <a href="#" class="dropdown-toggle">
-                    <i class="fa-solid fa-user"></i> User Management
+                <button class="dropdown-toggle" aria-expanded="false">
+                    <i class="fa-solid fa-user"></i>
+                    <span>User Management</span>
                     <i class="fas fa-chevron-down dropdown-icon"></i>
-                </a>
+                </button>
                 <ul class="dropdown">
                     <li>
                         <a href="<?php echo BASE_URL; ?>src/view/php/modules/user_manager/user_management.php">
-                            Manage Accounts
+                            <span>Manage Accounts</span>
                         </a>
                     </li>
                     <li>
                         <a href="<?php echo BASE_URL; ?>src/view/php/modules/role_manager/manage_roles.php">
-                            Manage Roles
+                            <span>Manage Roles</span>
                         </a>
                     </li>
                     <li>
                         <a href="<?php echo BASE_URL; ?>src/view/php/modules/role_manager/manage_privilege.php">
-                            Manage Privileges
+                            <span>Manage Privileges</span>
                         </a>
                     </li>
                 </ul>
             </li>
 
             <li class="dropdown-item">
-                <a href="#" class="dropdown-toggle">
-                    <i class="fa-solid fa-wrench"></i> Equipment Management
+                <button class="dropdown-toggle" aria-expanded="false">
+                    <i class="fa-solid fa-wrench"></i>
+                    <span>Equipment Management</span>
                     <i class="fas fa-chevron-down dropdown-icon"></i>
-                </a>
+                </button>
                 <ul class="dropdown">
                     <li>
                         <a href="../../modules/equipment_manager/purchase_order.php">
-                            Purchase Order
+                            <span>Purchase Order</span>
                         </a>
                     </li>
                     <li>
                         <a href="../../modules/equipment_manager/charge_invoice.php">
-                            Charge Invoice
+                            <span>Charge Invoice</span>
                         </a>
                     </li>
                     <li>
                         <a href="../../modules/equipment_manager/receiving_report.php">
-                            Receiving Report
+                            <span>Receiving Report</span>
                         </a>
                     </li>
                     <li>
                         <a href="../../modules/equipment_manager/equipment_details.php">
-                            Equipment Details
+                            <span>Equipment Details</span>
                         </a>
                     </li>
                     <li>
                         <a href="../../modules/equipment_manager/equipment_location.php">
-                            Equipment Location
+                            <span>Equipment Location</span>
                         </a>
                     </li>
                     <li>
                         <a href="../../modules/equipment_manager/equipment_status.php">
-                            Equipment Status
+                            <span>Equipment Status</span>
                         </a>
+                    </li>
+                </ul>
+            </li>
+
+            <!-- Departments with nested dropdowns -->
+            <li class="dropdown-item">
+                <button class="dropdown-toggle" aria-expanded="false">
+                    <i class="fas fa-building"></i>
+                    <span>Departments</span>
+                    <i class="fas fa-chevron-down dropdown-icon"></i>
+                </button>
+                <ul class="dropdown">
+                    <li>
+                        <a href="#"><span>Office of the President</span></a>
+                    </li>
+                    <li>
+                        <a href="#"><span>Office of the Executive Assistant to the President</span></a>
+                    </li>
+                    <li>
+                        <a href="#"><span>Office of the Internal Auditor</span></a>
+                    </li>
+                    <li class="dropdown-item">
+                        <button class="dropdown-toggle" aria-expanded="false">
+                            <span>Mission and Identity Cluster</span>
+                            <i class="fas fa-chevron-down dropdown-icon"></i>
+                        </button>
+                        <ul class="dropdown">
+                            <li>
+                                <a href="#"><span>Office of the Vice President for Mission and Identity</span></a>
+                            </li>
+                            <li>
+                                <a href="#"><span>Center for Campus Ministry</span></a>
+                            </li>
+                            <li>
+                                <a href="#"><span>Community Extension and Outreach Programs Office</span></a>
+                            </li>
+                            <li>
+                                <a href="#"><span>St. Aloysius Gonzaga Parish Office</span></a>
+                            </li>
+                            <li>
+                                <a href="#"><span>Sunflower Child and Youth Wellness Center</span></a>
+                            </li>
+                        </ul>
+                    </li>
+                    <li class="dropdown-item">
+                        <button class="dropdown-toggle" aria-expanded="false">
+                            <span>Academic Cluster</span>
+                            <i class="fas fa-chevron-down dropdown-icon"></i>
+                        </button>
+                        <ul class="dropdown">
+                            <li>
+                                <a href="#"><span>Office of the Vice President for Academic Affairs</span></a>
+                            </li>
+                            <li>
+                                <a href="#"><span>School of Accountancy, Management, Computing and Information Studies (SAMCIS)</span></a>
+                            </li>
+                            <li>
+                                <a href="#"><span>School of Advanced Studies (SAS)</span></a>
+                            </li>
+                            <li>
+                                <a href="#"><span>School of Engineering and Architecture (SEA)</span></a>
+                            </li>
+                            <li>
+                                <a href="#"><span>School of Law (SOL)</span></a>
+                            </li>
+                            <li>
+                                <a href="#"><span>School of Medicine (SOM)</span></a>
+                            </li>
+                            <li>
+                                <a href="#"><span>School of Nursing, Allied Health, and Biological Sciences Natural Sciences (SONAHBS)</span></a>
+                            </li>
+                            <li>
+                                <a href="#"><span>School of Teacher Education and Liberal Arts (STELA)</span></a>
+                            </li>
+                            <li>
+                                <a href="#"><span>Basic Education School (SLU BEdS)</span></a>
+                            </li>
+                        </ul>
+                    </li>
+                    <li class="dropdown-item">
+                        <button class="dropdown-toggle" aria-expanded="false">
+                            <span>External Relations, Media and Communications and Alumni Affairs</span>
+                            <i class="fas fa-chevron-down dropdown-icon"></i>
+                        </button>
+                        <ul class="dropdown">
+                            <li>
+                                <a href="#"><span>Office of Institutional Development and Quality Assurance</span></a>
+                            </li>
+                            <li>
+                                <a href="#"><span>University Libraries</span></a>
+                            </li>
+                            <li>
+                                <a href="#"><span>University Registrar’s Office</span></a>
+                            </li>
+                            <li>
+                                <a href="#"><span>University Research and Innovation Center</span></a>
+                            </li>
+                        </ul>
+                    </li>
+                    <li class="dropdown-item">
+                        <button class="dropdown-toggle" aria-expanded="false">
+                            <span>Finance Cluster</span>
+                            <i class="fas fa-chevron-down dropdown-icon"></i>
+                        </button>
+                        <ul class="dropdown">
+                            <li>
+                                <a href="#"><span>Office of the Vice President for Finance</span></a>
+                            </li>
+                            <li>
+                                <a href="#"><span>Asset Management and Inventory Control Office</span></a>
+                            </li>
+                            <li>
+                                <a href="#"><span>Finance Office</span></a>
+                            </li>
+                            <li>
+                                <a href="#"><span>Printing Operations Office</span></a>
+                            </li>
+                            <li>
+                                <a href="#"><span>Technology Management and Development Department (TMDD)</span></a>
+                            </li>
+                        </ul>
+                    </li>
+                    <li class="dropdown-item">
+                        <button class="dropdown-toggle" aria-expanded="false">
+                            <span>Administration Cluster</span>
+                            <i class="fas fa-chevron-down dropdown-icon"></i>
+                        </button>
+                        <ul class="dropdown">
+                            <li>
+                                <a href="#"><span>Office of the Vice President for Administration</span></a>
+                            </li>
+                            <li>
+                                <a href="#"><span>Athletics and Fitness Center</span></a>
+                            </li>
+                            <li>
+                                <a href="#"><span>Campus Planning, Maintenance, and Security Department (CPMSD)</span></a>
+                            </li>
+                            <li>
+                                <a href="#"><span>Center for Culture and the Arts (CCA)</span></a>
+                            </li>
+                            <li>
+                                <a href="#"><span>Dental Clinic</span></a>
+                            </li>
+                            <li>
+                                <a href="#"><span>Guidance Center</span></a>
+                            </li>
+                            <li>
+                                <a href="#"><span>Human Resource Department (HRD)</span></a>
+                            </li>
+                            <li>
+                                <a href="#"><span>Students’ Residence Hall</span></a>
+                            </li>
+                            <li>
+                                <a href="#"><span>Medical Clinic</span></a>
+                            </li>
+                            <li>
+                                <a href="#"><span>Office for Legal Affairs (OLA)</span></a>
+                            </li>
+                            <li>
+                                <a href="#"><span>Office of Student Affairs (OSA)</span></a>
+                            </li>
+                        </ul>
                     </li>
                 </ul>
             </li>
 
             <li>
                 <a href="settings.php">
-                    <i class="fas fa-cogs"></i> Settings
+                    <i class="fas fa-cogs"></i>
+                    <span>Settings</span>
                 </a>
             </li>
             <li>
                 <a href="<?php echo BASE_URL; ?>src/view/php/general/logout.php">
-                    <i class="fas fa-sign-out-alt"></i> Logout
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
                 </a>
             </li>
         </ul>
     </nav>
-</div>
-
-<!-- JavaScript to handle dropdown interactions -->
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        var dropdownToggles = document.querySelectorAll('.dropdown-toggle');
-        dropdownToggles.forEach(function (toggle) {
-            toggle.addEventListener('click', function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-                var parentLi = this.parentElement;
-                parentLi.classList.toggle('open');
-
-                // Rotate the dropdown arrow
-                var icon = this.querySelector('.dropdown-icon');
-                if (parentLi.classList.contains('open')) {
-                    icon.style.transform = 'rotate(180deg)';
-                } else {
-                    icon.style.transform = 'rotate(0deg)';
-                }
-            });
-        });
-
-        // Close dropdowns when clicking outside the sidebar
-        document.addEventListener('click', function (e) {
-            if (!e.target.closest('.sidebar')) {
-                document.querySelectorAll('.dropdown-item.open').forEach(function (item) {
-                    item.classList.remove('open');
-                    var icon = item.querySelector('.dropdown-icon');
-                    if (icon) icon.style.transform = 'rotate(0deg)';
-                });
-            }
-        });
-    });
-</script>
+</aside>
+<script src="/src/control/js/sidebar.js"></script>
