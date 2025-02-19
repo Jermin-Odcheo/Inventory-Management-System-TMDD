@@ -1,14 +1,21 @@
+:root {
+    --sidebar-bg-start: #2c3e50;
+    --sidebar-bg-end: #34495e;
+    --sidebar-text: #ecf0f1;
+    --hover-bg: rgba(255, 255, 255, 0.1);
+}
+
 .sidebar {
     width: 300px;
     height: 100vh;
     background: linear-gradient(145deg, #0F172A, #1E293B);
-    color: #ecf0f1;
+    color: var(--sidebar-text);
     position: fixed;
     top: 0;
     left: 0;
     padding: 30px 20px;
     box-shadow: 4px 0 15px rgba(0, 0, 0, 0.3);
-    overflow-y: auto; /* Still scrollable */
+    overflow-y: auto;
     transition: width 0.3s;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
@@ -20,23 +27,26 @@
 
 /* Hide scrollbar for IE, Edge and Firefox */
 .sidebar {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 
+/* Headers */
+.sidebar h2,
+.sidebar h3 {
+    text-align: center;
+    margin: 0;
+}
 
-/* Sidebar Headers */
 .sidebar h2 {
     font-size: 24px;
     margin-bottom: 10px;
-    text-align: center;
     font-weight: bold;
 }
 
 .sidebar h3 {
     font-size: 20px;
     margin-bottom: 20px;
-    text-align: center;
     font-weight: normal;
 }
 
@@ -44,6 +54,7 @@
 .sidebar nav ul {
     list-style: none;
     padding: 0;
+    margin: 0;
 }
 
 /* List Items */
@@ -52,38 +63,47 @@
     position: relative;
 }
 
-/* Sidebar Links */
-.sidebar nav ul li a {
+/* Links & Dropdown Buttons */
+.sidebar nav ul li a,
+.sidebar nav ul li button.dropdown-toggle {
     display: flex;
     align-items: center;
-
-    color: #ecf0f1;
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: var(--sidebar-text);
     text-decoration: none;
     padding: 12px 20px;
     border-radius: 30px;
     transition: background 0.3s, transform 0.3s;
     font-size: 16px;
+    cursor: pointer;
 }
-.dropdown-icon{
-    position: absolute;
-    right: 0;
+
+/* Hover & Active Effects */
+.sidebar nav ul li a:hover,
+.sidebar nav ul li button.dropdown-toggle:hover,
+.sidebar nav ul li a.active {
+    background: var(--hover-bg);
+    transform: translateX(5px);
 }
-    /* Icon Styling */
-.sidebar nav ul li a i {
+
+/* Icon Styling */
+.sidebar nav ul li a i,
+.sidebar nav ul li button.dropdown-toggle i {
     margin-right: 10px;
 }
 
-/* Dropdown Toggle Arrow Icon */
+/* Dropdown Icon */
 .dropdown-icon {
+    margin-left: auto;
     transition: transform 0.3s ease;
     font-size: 0.8em;
 }
 
-/* Hover & Active Link Effects */
-.sidebar nav ul li a:hover,
-.sidebar nav ul li a.active {
-    background: rgba(255, 255, 255, 0.1);
-    transform: translateX(5px);
+/* Rotate icon when dropdown is expanded */
+.dropdown-toggle[aria-expanded="true"] .dropdown-icon {
+    transform: rotate(180deg);
 }
 
 /* Dropdown Menu */
@@ -97,43 +117,34 @@
     transition: max-height 0.35s ease, opacity 0.35s ease;
 }
 
+/* When dropdown is active (you can toggle a class or update aria-expanded via JS) */
+.dropdown-item.open > .dropdown,
+.sidebar nav ul li .dropdown[aria-expanded="true"] {
+    max-height: 5000px; /* Adjust as needed */
+    opacity: 1;
+}
+
 /* Dropdown Items */
 .sidebar nav ul li .dropdown li {
     margin: 8px 0;
 }
 
-/* Dropdown Links */
 .sidebar nav ul li .dropdown li a {
     padding: 10px 15px;
-    color: #ecf0f1;
+    color: var(--sidebar-text);
     border-radius: 25px;
     transition: background 0.3s;
     font-size: 15px;
 }
 
-/* Hover effect for dropdown links */
 .sidebar nav ul li .dropdown li a:hover {
     background: rgba(255, 255, 255, 0.15);
 }
 
-/* Open dropdown state */
-.dropdown-item.open .dropdown {
-    max-height: 500px; /* adjust as needed */
-    opacity: 1;
-}
-.a{
-    text-align: left;
-}
 /* Responsive Adjustments */
 @media (max-width: 768px) {
     .sidebar {
         width: 220px;
         padding: 20px 15px;
-    }
-    .sidebar h2 {
-        font-size: 20px;
-    }
-    .sidebar h3 {
-        font-size: 18px;
     }
 }

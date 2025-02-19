@@ -5,18 +5,18 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once(__DIR__ . '/../../../../config/config.php');
 $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
 ?>
-<link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/sidebar.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
-
-<aside class="sidebar">
+<!-- Sidebar -->
+<div class="sidebar">
+    <!-- Font Awesome CSS (Ideally load this in your <head> for performance) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/sidebar.css">
     <h2>Inventory Management System</h2>
     <h3>Menu</h3>
     <nav>
         <ul>
             <li>
                 <a href="<?php echo BASE_URL; ?>src/view/php/clients/admins/dashboard.php">
-                    <i class="fas fa-tachometer-alt"></i>
-                    <span>Dashboard</span>
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
                 </a>
             </li>
 
@@ -26,87 +26,82 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
             <?php endif; ?>
 
             <li class="dropdown-item">
-                <button class="dropdown-toggle" aria-expanded="false">
-                    <i class="fas fa-history"></i>
-                    <span>Logs</span>
+                <button class="dropdown-toggle">
+                    <i class="fas fa-history"></i> Logs
                     <i class="fas fa-chevron-down dropdown-icon"></i>
                 </button>
                 <ul class="dropdown">
                     <li>
                         <a href="<?php echo BASE_URL; ?>src/view/php/clients/admins/audit_log.php">
-                            <i class="fas fa-history"></i>
-                            <span>Audit Logs</span>
+                            <i class="fas fa-history"></i> Audit Logs
                         </a>
                     </li>
                     <li>
                         <a href="<?php echo BASE_URL; ?>src/view/php/clients/admins/archive.php">
-                            <i class="fas fa-archive"></i>
-                            <span>Archives</span>
+                            <i class="fas fa-archive"></i> Archives
                         </a>
                     </li>
                 </ul>
             </li>
 
             <li class="dropdown-item">
-                <button class="dropdown-toggle" aria-expanded="false">
-                    <i class="fa-solid fa-user"></i>
-                    <span>User Management</span>
+                <button class="dropdown-toggle">
+                    <i class="fa-solid fa-user"></i> User Management
                     <i class="fas fa-chevron-down dropdown-icon"></i>
                 </button>
                 <ul class="dropdown">
                     <li>
                         <a href="<?php echo BASE_URL; ?>src/view/php/modules/user_manager/user_management.php">
-                            <span>Manage Accounts</span>
+                            Manage Accounts
                         </a>
                     </li>
                     <li>
                         <a href="<?php echo BASE_URL; ?>src/view/php/modules/role_manager/manage_roles.php">
-                            <span>Manage Roles</span>
+                            Manage Roles
                         </a>
                     </li>
                     <li>
                         <a href="<?php echo BASE_URL; ?>src/view/php/modules/role_manager/manage_privilege.php">
-                            <span>Manage Privileges</span>
+                            Manage Privileges
                         </a>
                     </li>
                 </ul>
             </li>
 
             <li class="dropdown-item">
-                <button class="dropdown-toggle" aria-expanded="false">
-                    <i class="fa-solid fa-wrench"></i>
-                    <span>Equipment Management</span>
+                <button class="dropdown-toggle">
+                    <i class="fa-solid fa-wrench"></i> Equipment Management
                     <i class="fas fa-chevron-down dropdown-icon"></i>
                 </button>
                 <ul class="dropdown">
                     <li>
                         <a href="../../modules/equipment_manager/purchase_order.php">
-                            <span>Purchase Order</span>
+                            Purchase Order
                         </a>
                     </li>
                     <li>
                         <a href="../../modules/equipment_manager/charge_invoice.php">
-                            <span>Charge Invoice</span>
+                            Charge Invoice
                         </a>
                     </li>
                     <li>
                         <a href="../../modules/equipment_manager/receiving_report.php">
-                            <span>Receiving Report</span>
+                            Receiving Report
                         </a>
                     </li>
                     <li>
                         <a href="../../modules/equipment_manager/equipment_details.php">
-                            <span>Equipment Details</span>
+                            Equipment Details
                         </a>
                     </li>
                     <li>
                         <a href="../../modules/equipment_manager/equipment_location.php">
-                            <span>Equipment Location</span>
+                            Equipment Location
                         </a>
                     </li>
                     <li>
                         <a href="../../modules/equipment_manager/equipment_status.php">
-                            <span>Equipment Status</span>
+                            Equipment Status
                         </a>
                     </li>
                 </ul>
@@ -114,9 +109,9 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
 
             <!-- Departments with nested dropdowns -->
             <li class="dropdown-item">
-                <button class="dropdown-toggle" aria-expanded="false">
+                <button class="dropdown-toggle">
                     <i class="fas fa-building"></i>
-                    <span>Departments</span>
+                     Departments
                     <i class="fas fa-chevron-down dropdown-icon"></i>
                 </button>
                 <ul class="dropdown">
@@ -273,10 +268,8 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                     </li>
                 </ul>
             </li>
-
-
-
         </ul>
+
     </nav>
-</aside>
-<script src="/src/control/js/sidebar.js"></script>
+</div>
+<script src="<?php echo BASE_URL; ?>src/control/js/sidebar.js"></script>
