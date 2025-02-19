@@ -13,7 +13,7 @@
     position: fixed;
     top: 0;
     left: 0;
-    padding: 30px 20px;
+    padding: 80px 20px;
     box-shadow: 4px 0 15px rgba(0, 0, 0, 0.3);
     overflow-y: auto;
     transition: width 0.3s;
@@ -45,9 +45,9 @@
 }
 
 .sidebar h3 {
-    font-size: 20px;
+    font-size: 24px;
     margin-bottom: 20px;
-    font-weight: normal;
+    font-weight: bold;
 }
 
 /* Navigation List */
@@ -132,7 +132,6 @@
 .sidebar nav ul li .dropdown li a {
     padding: 10px 15px;
     color: var(--sidebar-text);
-    border-radius: 25px;
     transition: background 0.3s;
     font-size: 15px;
 }
