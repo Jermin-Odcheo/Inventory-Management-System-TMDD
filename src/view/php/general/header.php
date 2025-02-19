@@ -24,7 +24,7 @@
         
         <div class="header-widgets">
             <div class="user-profile" onclick="toggleDropdown()">
-                <img src="profile.jpg" alt="User Profile" class="profile-picture">
+                <img src="../../../../../../public/assets/img/profile.jpg" alt="User Profile" class="profile-picture">
                 <div class="user-info">
                     <div class="user-name">Lebron N. James</div>
                     <div class="user-role">WAREHOUSE MANAGER</div>

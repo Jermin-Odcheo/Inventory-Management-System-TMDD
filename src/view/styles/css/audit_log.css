@@ -21,6 +21,9 @@ body {
         margin-left: 0;
     }
 }
+col.changes {
+    width: 400px;
+}
 
 .card {
     border: none;
@@ -59,15 +62,14 @@ body {
 }
 
 .table {
-    margin-bottom: 0;
+    table-layout: fixed;
+    width: 100%;
 }
-
 .table th {
     font-weight: 600;
     background-color: #f8f9fa;
     border-bottom: 2px solid #dee2e6;
 }
-
 .table td {
     vertical-align: middle;
     font-size: 0.875rem;
@@ -125,11 +127,6 @@ body {
     overflow-x: auto;
 }
 
-.table {
-    table-layout: auto;
-    width: 100%;
-}
-
 .table th, .table td {
     white-space: normal !important;
     word-break: break-word;
@@ -141,6 +138,15 @@ body {
 /* Add smooth opacity transitions to rows */
 tbody tr {
     transition: opacity 0.3s ease;
+}
+col.checkbox {
+    width: 25px;
+}
+col.actions {
+    width: 150px;
+}
+.vertical-btn-group {
+    flex-direction: column !important;
 }
 
 col.track {
@@ -204,9 +210,12 @@ col.date {
     color: #4f774f;
     padding: 0.5em 0.75em;
     border-radius: 50px;
-    display: inline-block;
     min-width: 80px;
     text-align: center;
+    display: block;
+}
+.btn-group {
+    flex-direction: column !important;
 }
 
 /* Responsive stacked table */

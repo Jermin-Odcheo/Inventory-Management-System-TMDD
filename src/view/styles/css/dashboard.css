@@ -1,32 +1,34 @@
 /* dashboard.css */
 body {
-background-color: #181818;
-color: #ffffff;
-font-family: 'Arial', sans-serif;
+    background-color: #181818;
+    color: #ffffff;
+    font-family: 'Arial', sans-serif;
 }
 
 h1 {
-color: #66b2ff;
-text-align: center;
-margin-top: 20px;
-font-size: 28px;
+    color: #66b2ff;
+    text-align: center;
+    margin-top: 20px;
+    font-size: 28px;
 }
+
 .main-content {
-margin-left: 350px;
-/* Adjust according to your sidebar width */
-padding: 20px;
-background-color: #242424;
-border-radius: 8px;
-box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-margin-bottom: 20px;
-width: auto;
+    margin-left: 350px;
+    /* Adjust according to your sidebar width */
+    padding: 20px;
+    background-color: #242424;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    margin-bottom: 20px;
+    width: auto;
 }
+
 /* Responsive Design */
 @media (max-width: 768px) {
 
-.main-content {
-margin-left: 0; /* Remove left margin on smaller screens */
-padding: 10px; /* Adjust padding */
-}
+    .main-content {
+        margin-left: 0; /* Remove left margin on smaller screens */
+        padding: 10px; /* Adjust padding */
+    }
 
 }
