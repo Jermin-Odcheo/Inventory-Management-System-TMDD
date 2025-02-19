@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
+include '../../general/header.php';
 
 // Set the audit log session variables for MySQL triggers.
 if (isset($_SESSION['user_id'])) {

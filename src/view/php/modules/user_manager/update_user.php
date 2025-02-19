@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
+include '../../general/header.php';
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 

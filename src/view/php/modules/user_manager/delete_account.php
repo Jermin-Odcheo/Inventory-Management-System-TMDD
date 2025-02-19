@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
+include '../../general/header.php';
 
 header('Content-Type: application/json');
 
