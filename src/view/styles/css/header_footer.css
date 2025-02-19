@@ -13,10 +13,10 @@ body {
     justify-content: space-between;
     align-items: center;
     background: linear-gradient(145deg, #0F172A, #1E293B);
-    padding: 1.5rem 6%;
-    border-bottom: 3px solid #38BDF8;
+    padding: 10px 20px;
     box-shadow: 0 4px 30px rgba(11, 25, 51, 0.15);
     position: relative;
+    z-index: 1100;
 }
 
 .logo-container {
@@ -33,6 +33,7 @@ body {
     display: grid;
     place-items: center;
     box-shadow: 0 4px 12px rgba(56, 189, 248, 0.25);
+    margin-left: 290px;
 }
 
 .logo-icon svg {
@@ -47,6 +48,7 @@ body {
     font-weight: 600;
     color: #E2E8F0;
     letter-spacing: -0.5px;
+    margin-left: 5px;
 }
 
 .logo-subtext {

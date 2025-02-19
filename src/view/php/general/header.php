@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inventory Management System</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&family=Roboto+Mono:wght@300;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../../styles/css/header_footer.css">
+    <link rel="stylesheet" href="../../../styles/css/header_footer.css">
 
 </head>
 <body>
@@ -26,7 +26,7 @@
             <div class="user-profile" onclick="toggleDropdown()">
                 <img src="profile.jpg" alt="User Profile" class="profile-picture">
                 <div class="user-info">
-                    <div class="user-name">Justine B. Lucas</div>
+                    <div class="user-name">Lebron N. James</div>
                     <div class="user-role">WAREHOUSE MANAGER</div>
                 </div>
                 <div class="dropdown-menu" id="dropdownMenu">

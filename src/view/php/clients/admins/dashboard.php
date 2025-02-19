@@ -2,6 +2,9 @@
 session_start();
 require '../../../../../config/ims-tmdd.php';
 
+// Include Header
+include '../../general/header.php';
+
 // Redirect to login if the user is not logged in
 if (!isset($_SESSION['role'])) {
     header("Location: ../../../../../public/index.php");
