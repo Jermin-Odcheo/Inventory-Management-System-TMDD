@@ -16,7 +16,7 @@ body {
     padding: 10px 20px;
     box-shadow: 0 4px 30px rgba(11, 25, 51, 0.15);
     position: relative;
-    z-index: 1100;
+    z-index: 1000 !important;
 }
 
 .logo-container {

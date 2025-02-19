@@ -20,6 +20,7 @@
   </div>
 </div>
 
+
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     function getCurrentPage() {
@@ -83,4 +84,16 @@
       new bootstrap.Modal(document.getElementById("editModal")).show();
     };
   });
+  document.addEventListener("DOMContentLoaded", function () {
+    const modalElement = document.getElementById("editModal");
+    
+    modalElement.addEventListener("show.bs.modal", function () {
+        document.querySelector(".header").style.zIndex = "1000"; // Lower header while modal is open
+    });
+
+    modalElement.addEventListener("hidden.bs.modal", function () {
+        document.querySelector(".header").style.zIndex = "1100"; // Restore header after closing modal
+    });
+});
+
 </script>
