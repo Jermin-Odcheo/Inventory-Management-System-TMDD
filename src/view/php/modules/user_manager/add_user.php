@@ -41,13 +41,29 @@ $errorMessage = '';   // Variable to hold error messages
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
+// Update the departments array to use abbreviations as keys and full names as values
+$departments = [
+    'SAS' => 'School of Advanced Studies',
+    'SOM' => 'School of Medicine',
+    'SOL' => 'School of Law',
+    'STELA' => 'School of Teacher Education and Liberal Arts',
+    'SONAHBS' => 'School of Nursing, Allied Health, and Biological Sciences',
+    'SEA' => 'School of Engineering and Architecture',
+    'SAMCIS' => 'School of Accountancy, Management, Computing, and Information Studies'
+];
+
 // If form is submitted.
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     try {
         $email      = trim($_POST['email']);
         $firstName  = trim($_POST['first_name']);
         $lastName   = trim($_POST['last_name']);
-        $department = trim($_POST['department']);
+        
+        // Store only the department abbreviation
+        $department = isset($_POST['custom_department']) && !empty($_POST['custom_department']) 
+            ? trim($_POST['custom_department']) 
+            : trim($_POST['department']);
+        
         $status     = $_POST['status'];
         $roleIDs    = isset($_POST['roles']) ? $_POST['roles'] : [];
         $password   = $_POST['password'];
@@ -203,7 +219,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </div>
         <div class="mb-3">
             <label for="department" class="form-label">Department:</label>
-            <input type="text" name="department" id="department" value="<?php echo htmlspecialchars($userData['Department'] ?? ''); ?>" class="form-control" required>
+            <select name="department" id="department" class="form-select mb-2" required>
+                <option value="">Select Department</option>
+                <?php foreach ($departments as $code => $name): ?>
+                    <option value="<?php echo htmlspecialchars($code); ?>" 
+                        <?php echo (isset($userData['Department']) && $userData['Department'] === $code) ? 'selected' : ''; ?>>
+                        <?php echo htmlspecialchars($name); ?>
+                    </option>
+                <?php endforeach; ?>
+                <option value="custom">Custom Department</option>
+            </select>
+            <input type="text" id="custom-department" name="custom_department" 
+                class="form-control" 
+                style="display: none;" 
+                placeholder="Enter custom department">
         </div>
         <div class="mb-3">
             <label for="status" class="form-label">Status:</label>
@@ -244,6 +273,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.querySelector('form');
+    const departmentSelect = document.getElementById('department');
+    const customDepartment = document.getElementById('custom-department');
+
+    // Role validation
     form.addEventListener('submit', function(e) {
         const roleCheckboxes = document.querySelectorAll('.role-checkbox');
         let hasRole = false;
@@ -257,6 +290,26 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!hasRole) {
             e.preventDefault();
             alert('Please assign at least one role to the user.');
+        }
+
+        // Handle custom department validation
+        if (departmentSelect.value === 'custom') {
+            if (customDepartment.value.trim() === '') {
+                e.preventDefault();
+                alert('Please enter a custom department name.');
+            }
+        }
+    });
+
+    // Department dropdown handling
+    departmentSelect.addEventListener('change', function() {
+        if (this.value === 'custom') {
+            customDepartment.style.display = 'block';
+            customDepartment.required = true;
+        } else {
+            customDepartment.style.display = 'none';
+            customDepartment.required = false;
+            customDepartment.value = ''; // Clear the custom input when switching back
         }
     });
 });

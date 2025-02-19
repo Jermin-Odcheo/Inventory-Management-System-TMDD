@@ -74,7 +74,7 @@
     color: var(--sidebar-text);
     text-decoration: none;
     padding: 12px 20px;
-    border-radius: 30px;
+    text-align: left;
     transition: background 0.3s, transform 0.3s;
     font-size: 16px;
     cursor: pointer;

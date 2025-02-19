@@ -21,10 +21,43 @@ $allowedSortColumns = ['User_ID', 'Email', 'First_Name', 'Last_Name', 'Departmen
 $sortBy = isset($_GET['sort']) && in_array($_GET['sort'], $allowedSortColumns) ? $_GET['sort'] : 'User_ID';
 $sortDir = isset($_GET['dir']) && $_GET['dir'] == 'desc' ? 'desc' : 'asc';
 
-// Query active users only (is_deleted = 0)
-$query = "SELECT * FROM users WHERE is_deleted = 0 ORDER BY `$sortBy` $sortDir";
+// Define departments array with both short codes and full names
+$departments = [
+    'SAS' => 'School of Advanced Studies',
+    'SOM' => 'School of Medicine',
+    'SOL' => 'School of Law',
+    'STELA' => 'School of Teacher Education and Liberal Arts',
+    'SONAHBS' => 'School of Nursing, Allied Health, and Biological Sciences',
+    'SEA' => 'School of Engineering and Architecture',
+    'SAMCIS' => 'School of Accountancy, Management, Computing, and Information Studies'
+];
+
+// Modify the query to include department and search filters
+$query = "SELECT * FROM users WHERE is_deleted = 0";
+
+// Add department filter if selected
+if (isset($_GET['department']) && $_GET['department'] !== 'all') {
+    $query .= " AND Department = :department";
+}
+
+// Add search filter if provided
+if (isset($_GET['search']) && !empty($_GET['search'])) {
+    $query .= " AND (Email LIKE :search OR First_Name LIKE :search OR Last_Name LIKE :search)";
+}
+
+$query .= " ORDER BY `$sortBy` $sortDir";
+
 try {
     $stmt = $pdo->prepare($query);
+    
+    if (isset($_GET['department']) && $_GET['department'] !== 'all') {
+        $stmt->bindValue(':department', $_GET['department']);
+    }
+    
+    if (isset($_GET['search']) && !empty($_GET['search'])) {
+        $stmt->bindValue(':search', '%' . $_GET['search'] . '%');
+    }
+    
     $stmt->execute();
     $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
     if (!$users) {
@@ -91,6 +124,16 @@ function canDeleteUser($currentUserRoles, $targetUserRoles) {
             margin-bottom: 20px;
             width: auto;
         }
+        .search-container {
+            width: 250px;
+        }
+        .search-container input {
+            padding-right: 30px;
+        }
+        .search-container i {
+            color: #6c757d;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -137,6 +180,31 @@ function canDeleteUser($currentUserRoles, $targetUserRoles) {
             Delete My Account
         </button>
     </div>
+
+    <!-- Add the filter controls -->
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <form class="d-flex" method="GET">
+                <select name="department" class="form-select me-2" style="width: 400px;">
+                    <option value="all">All Departments</option>
+                    <?php foreach ($departments as $code => $name): ?>
+                        <option value="<?php echo htmlspecialchars($code); ?>"
+                            <?php echo (isset($_GET['department']) && $_GET['department'] === $code) ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($name); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <div class="search-container position-relative">
+                    <input type="text" name="search" id="searchUsers" class="form-control" 
+                           placeholder="Search users..." 
+                           value="<?php echo htmlspecialchars($_GET['search'] ?? ''); ?>"
+                           style="width: 250px;">
+                    <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-2"></i>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div id="alertMessage"></div>
     <div class="table-responsive">
         <table class="table table-striped table-hover">
@@ -186,7 +254,11 @@ function canDeleteUser($currentUserRoles, $targetUserRoles) {
                     <td><?php echo htmlspecialchars($user['User_ID']); ?></td>
                     <td><?php echo htmlspecialchars($user['Email']); ?></td>
                     <td><?php echo htmlspecialchars($user['First_Name'] . ' ' . $user['Last_Name']); ?></td>
-                    <td><?php echo htmlspecialchars($user['Department']); ?></td>
+                    <td><?php 
+                        echo htmlspecialchars(isset($departments[$user['Department']]) 
+                            ? $departments[$user['Department']] 
+                            : $user['Department']); 
+                    ?></td>
                     <td><?php echo htmlspecialchars($user['Status'] ?? ''); ?></td>
                     <td>
                         <?php
@@ -474,6 +546,20 @@ function canDeleteUser($currentUserRoles, $targetUserRoles) {
         // Add this to handle the close button click
         $(document).on('click', '.btn-close', function() {
             $(this).closest('.alert').hide();
+        });
+
+        // Department filter change handler
+        $('select[name="department"]').on('change', function() {
+            this.form.submit();
+        });
+
+        // Search input handler with debounce
+        let searchTimeout;
+        $('#searchUsers').on('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                this.form.submit();
+            }, 500);
         });
     });
 </script>
