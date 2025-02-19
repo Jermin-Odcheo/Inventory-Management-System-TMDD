@@ -1,12 +1,12 @@
 <?php
-$servername = "localhost";
+$host = "127.0.0.1";
 $username = "root";
-$password = "";
-$dbname = "ims_tmdd4";
+$password = "";  // Change if you have a MySQL password
+$database = "ims_tmdd4";
 
-$conn = new mysqli($servername, $username, $password, $dbname);
+$conn = new mysqli($host, $username, $password, $database);
 
 if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+    die("Database connection failed: " . $conn->connect_error);
 }
 ?>
