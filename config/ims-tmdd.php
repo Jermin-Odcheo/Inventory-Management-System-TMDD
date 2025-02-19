@@ -1,19 +1,12 @@
 <?php
-$host = 'localhost';
-$db   = 'ims_tmdd';
-$user = 'root'; // default username for localhost
-$pass = ''; // default password for localhost
-$charset = 'utf8mb4';
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "ims_tmdd4";
 
-$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
-$options = [
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    PDO::ATTR_EMULATE_PREPARES   => false,
-];
+$conn = new mysqli($servername, $username, $password, $dbname);
 
-try {
-    $pdo = new PDO($dsn, $user, $pass, $options);
-} catch (\PDOException $e) {
-    throw new \PDOException($e->getMessage(), (int)$e->getCode());
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
 }
+?>

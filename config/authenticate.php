@@ -1,42 +1,38 @@
 <?php
 session_start();
-require 'ims-tmdd.php';
+include 'ims-tmdd.php';
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $email = $_POST['email'];
-    $password = $_POST['password'];
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    $email = trim($_POST['email']);
+    $password = trim($_POST['password']);
 
-    $stmt = $pdo->prepare("SELECT * FROM users WHERE Email = ?");
-    $stmt->execute([$email]);
-    $user = $stmt->fetch();
+    $stmt = $conn->prepare("SELECT id, password FROM users WHERE email = ?");
+    $stmt->bind_param("s", $email);
+    $stmt->execute();
+    $stmt->store_result();
 
-    if ($user && password_verify($password, $user['Password'])) {
-        $_SESSION['user_id'] = $user['User_ID'];
-        $_SESSION['email'] = $user['Email'];
-        header("Location: dashboard.php");
-        exit();
+    if ($stmt->num_rows > 0) {
+        $stmt->bind_result($id, $hashed_password);
+        $stmt->fetch();
+        
+        if (password_verify($password, $hashed_password)) {
+            $_SESSION['user_id'] = $id;
+            $_SESSION['email'] = $email;
+
+            // Correct absolute path for successful login redirection
+            header("Location: ../src/view/php/clients/admins/dashboard.php");
+            exit();
+        } else {
+            $_SESSION['error'] = "Invalid email or password.";
+            // Correct path for failed login redirection
+            header("Location: ../public/index.php");
+            exit();
+        }
     } else {
-        echo "Invalid email or password.";
+        $_SESSION['error'] = "No user found.";
+        header("Location: ../public/index.php");
+        exit();
     }
+    $stmt->close();
 }
 ?>
-<!DOCTYPE html>
-<html>
-
-<head>
-    <title>Login</title>
-    <link rel="stylesheet" type="text/css" href="style.css">
-</head>
-
-<body>
-    <div class="login-container">
-        <h2>Login</h2>
-        <form method="post">
-            <input type="email" name="email" placeholder="Email" required>
-            <input type="password" name="password" placeholder="Password" required>
-            <button type="submit">Login</button>
-        </form>
-    </div>
-</body>
-
-</html>

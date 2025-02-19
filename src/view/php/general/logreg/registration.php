@@ -1,101 +1,41 @@
 <?php
-$error_message = '';
-$password_class = '';
-$email_class = '';
-$fname_class = '';
-$lname_class = '';
-$form_valid = true;
-$registration_success = false;
+session_start();
+include 'db.php'; // Include your database connection
 
-$first_name = isset($_POST['first_name']) ? $_POST['first_name'] : '';
-$last_name = isset($_POST['last_name']) ? $_POST['last_name'] : '';
-$email = isset($_POST['email']) ? $_POST['email'] : '';
-$password = isset($_POST['password']) ? $_POST['password'] : '';
-$confirm_password = isset($_POST['confirm_password']) ? $_POST['confirm_password'] : '';
-$account_type = 'Uploader';
-$online_status = '0';
-$forgot_pass = '0';
+// Check if the user is logged in
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    include '../../../../model/db_connection.php';
+$user_id = $_SESSION['user_id'];
 
-    $first_name = $db->real_escape_string(trim(preg_replace('/\s+/', ' ', $_POST['first_name'])));
-    $last_name = $db->real_escape_string(trim(preg_replace('/\s+/', ' ', $_POST['last_name'])));
-    $email = $db->real_escape_string($_POST['email']);
-    $password = $_POST['password'];
-    $confirm_password = $_POST['confirm_password'];
+// Fetch user details, roles, and departments
+$query = "SELECT u.id, u.username, u.roles, u.departments FROM users u WHERE u.id = ?";
+$stmt = $conn->prepare($query);
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$user = $result->fetch_assoc();
 
-    if (empty($first_name)) {
-        $error_message = "This field is required.";
-        $fname_class = 'is-invalid';
-        $form_valid = false;
-    }
-    if (empty($last_name)) {
-        $error_message = "This field is required.";
-        $lname_class = 'is-invalid';
-        $form_valid = false;
-    }
-    if (empty($email)) {
-        $error_message = "This field is required.";
-        $email_class = 'is-invalid';
-        $form_valid = false;
-    }
-    if (empty($password)) {
-        $error_message = "This field is required.";
-        $password_class = 'is-invalid';
-        $form_valid = false;
-    }
-    if (empty($confirm_password)) {
-        $error_message = "This field is required.";
-        $password_class = 'is-invalid';
-        $form_valid = false;
-    }
+// Fetch allowed modules based on roles
+$roles = explode(',', $user['roles']);
+$modules = [];
 
-    if ($form_valid) {
-        if (!preg_match("/^[a-zA-ZÀ-ÿ\s'-.]+$/", $first_name)) {
-            $error_message = "First Name contains invalid characters.";
-            $fname_class = 'is-invalid';
-            $form_valid = false;
-        }
-        if (!preg_match("/^[a-zA-ZÀ-ÿ\s'-.]+$/", $last_name)) {
-            $error_message = "Last Name contains invalid characters.";
-            $lname_class = 'is-invalid';
-            $form_valid = false;
-        }
-
-        $email_check_sql = "SELECT * FROM users WHERE email = '$email'";
-        $result = $db->query($email_check_sql);
-
-        if ($result->num_rows > 0) {
-            $error_message = "The email address is already taken.";
-            $email_class = 'is-invalid';
-            $form_valid = false;
-        } elseif ($password === $confirm_password) {
-            if (strlen($password) < 8 || strlen($password) > 16) {
-                $error_message = "Password must be between 8 and 16 characters.";
-                $password_class = 'is-invalid';
-                $form_valid = false;
-            } else {
-                if ($form_valid) {
-                    $hashed_password = password_hash($password, PASSWORD_BCRYPT);
-
-                    $sql = "INSERT INTO users (first_name, last_name, email, password, account_type, online_status, forgot_pass) 
-                            VALUES ('$first_name', '$last_name', '$email', '$hashed_password', '$account_type', '$online_status', '$forgot_pass')";
-
-                    if ($db->query($sql) === TRUE) {
-                        $registration_success = true;
-                    } else {
-                        $error_message = "Error: " . $sql . "<br>" . $db->error;
-                    }
-                }
-            }
-        } else {
-            $error_message = "Passwords do not match.";
-            $password_class = 'is-invalid';
-            $form_valid = false;
+foreach ($roles as $role) {
+    $role = trim($role);
+    $query = "SELECT m.name FROM role_privileges rp 
+              JOIN modules m ON rp.module_id = m.id 
+              WHERE rp.role_name = ?";
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("s", $role);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    while ($row = $result->fetch_assoc()) {
+        if (!in_array($row['name'], $modules)) {
+            $modules[] = $row['name'];
         }
     }
-    $db->close();
 }
 ?>
 

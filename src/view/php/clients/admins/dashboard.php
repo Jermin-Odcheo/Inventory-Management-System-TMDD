@@ -1,90 +1,73 @@
 <?php
 session_start();
-require '../../../../../config/ims-tmdd.php';
+include '../../../../../config/ims-tmdd.php'; // Include your database connection
 
-// Redirect to login if the user is not logged in
-if (!isset($_SESSION['role'])) {
-    header("Location: ../../../../../public/index.php");
+// Check if the user is logged in
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
     exit();
 }
 
-// Debug: Log the current role (remove in production)
-error_log("Current Session Role: " . $_SESSION['role']);
+$user_id = $_SESSION['user_id'];
 
-$role = $_SESSION['role'];
-$email = $_SESSION['email']; // Assuming you stored email in session
+// Fetch user details, roles, and departments
+$query = "SELECT u.id, u.username, u.roles, u.departments FROM users u WHERE u.id = ?";
+$stmt = $conn->prepare($query);
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$user = $result->fetch_assoc();
 
-// Define page title dynamically based on role
-$dashboardTitle = "Dashboard"; // Default title
-switch (strtolower(trim($role))) { // Normalize role to avoid case issues
-    case 'super admin':
-        $dashboardTitle = "Super Admin Dashboard";
-        break;
-    case 'administrator':
-        $dashboardTitle = "Administrator Dashboard";
-        break;
-    case 'super user':
-        $dashboardTitle = "Super User Dashboard";
-        break;
-    case 'regular':
-        $dashboardTitle = "Regular User Dashboard";
-        break;
-    default:
-        $dashboardTitle = "User Dashboard"; // Fallback
+// Fetch allowed modules based on roles
+$roles = explode(',', $user['roles']);
+$modules = [];
+
+foreach ($roles as $role) {
+    $role = trim($role);
+    $query = "SELECT m.name FROM role_privileges rp 
+              JOIN modules m ON rp.module_id = m.id 
+              WHERE rp.role_name = ?";
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("s", $role);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    while ($row = $result->fetch_assoc()) {
+        if (!in_array($row['name'], $modules)) {
+            $modules[] = $row['name'];
+        }
+    }
 }
-
-// No need to retrieve all users here if you're going to do it via fetch_user_status.php
-// But if you want a fallback server-side render, you can keep it.
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
-    <title><?php echo $dashboardTitle; ?></title>
-    <link rel="stylesheet" href="../../../styles/css/dashboard.css">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="styles.css"> <!-- Add Bootstrap or custom styles -->
+</head>
 <body>
-    <!-- Include Sidebar -->
-    <?php include '../../general/sidebar.php'; ?>
-
-    <div class="main-content">
-        <div class="dashboard-container">
-            <h2>Welcome to the <?php echo $dashboardTitle; ?></h2>
-            <p>Hello, <?php echo htmlspecialchars($email); ?>!</p>
-
-            <!-- Role-Based Dashboard Content -->
-            <?php if (strtolower(trim($role)) === 'super admin'): ?>
-                <section>
-                    <h3>Super Admin Panel</h3>
-                    <p>Audit Trail, Roles &amp; Permissions, User Accounts, Equipment Modules, etc.</p>
-                </section>
-            <?php elseif (strtolower(trim($role)) === 'administrator'): ?>
-                <section>
-                    <h3>Administrator Panel</h3>
-                    <p>Audit Trail (Dept), Roles &amp; Permissions (Dept), etc.</p>
-                </section>
-            <?php elseif (strtolower(trim($role)) === 'super user'): ?>
-                <section>
-                    <h3>Super User Panel</h3>
-                    <p>Roles &amp; Permissions (Group), User Accounts (Group), etc.</p>
-                </section>
-            <?php elseif (strtolower(trim($role)) === 'regular user'): ?>
-                <section>
-                    <h3>Regular User Panel</h3>
-                    <p>User Accounts (Own), Equipment Modules (Dept), etc.</p>
-                </section>
-            <?php else: ?>
-                <section>
-                    <h3>Standard User Panel</h3>
-                    <p>You have limited access to the system.</p>
-                </section>
-            <?php endif; ?>
-            <p>You have limited access to the system.</p>
-            <hr>
-
-        </div>
+    <nav>
+        <h2>Welcome, <?php echo htmlspecialchars($user['username']); ?>!</h2>
+        <a href="logout.php">Logout</a>
+    </nav>
+    
+    <div class="container">
+        <aside>
+            <h3>Accessible Modules</h3>
+            <ul>
+                <?php foreach ($modules as $module): ?>
+                    <li><?php echo htmlspecialchars($module); ?></li>
+                <?php endforeach; ?>
+            </ul>
+        </aside>
+        
+        <main>
+            <h2>Dashboard</h2>
+            <p>Your assigned roles: <?php echo htmlspecialchars($user['roles']); ?></p>
+            <p>Your departments: <?php echo htmlspecialchars($user['departments']); ?></p>
+        </main>
     </div>
 </body>
-
 </html>

@@ -1,21 +1,30 @@
 <?php
-require 'ims-tmdd.php'; // Your DB connection file
+include 'ims-tmdd.php'; // Ensure your database connection file is correct
 
-// Fetch all users with plain text passwords (be cautious and test this on a backup first)
-$stmt = $pdo->query("SELECT User_ID, Password FROM users");
-$users = $stmt->fetchAll();
+// Fetch all users who have non-hashed passwords
+$sql = "SELECT id, password_hash FROM users";
+$result = $conn->query($sql);
 
-foreach ($users as $user) {
-    // Check if the password is already hashed (you might add a condition if you can distinguish them)
-    // For example, if your plain text passwords are known to be shorter than 60 characters (bcrypt hash length)
-    if (strlen($user['Password']) < 60) {
-        $hashedPassword = password_hash($user['Password'], PASSWORD_DEFAULT);
-        
-        // Update the user record with the hashed password
-        $updateStmt = $pdo->prepare("UPDATE users SET Password = ? WHERE User_ID = ?");
-        $updateStmt->execute([$hashedPassword, $user['User_ID']]);
+if ($result->num_rows > 0) {
+    while ($row = $result->fetch_assoc()) {
+        $userId = $row['id'];
+        $plainPassword = $row['password_hash'];
+
+        // Check if password is already hashed (skip if it's hashed)
+        if (password_needs_rehash($plainPassword, PASSWORD_DEFAULT)) {
+            $hashedPassword = password_hash($plainPassword, PASSWORD_DEFAULT);
+
+            // Update database with hashed password
+            $updateSql = "UPDATE users SET password_hash = ? WHERE id = ?";
+            $stmt = $conn->prepare($updateSql);
+            $stmt->bind_param("si", $hashedPassword, $userId);
+            $stmt->execute();
+        }
     }
+    echo "Passwords updated successfully!";
+} else {
+    echo "No users found!";
 }
 
-echo "Migration complete!";
+$conn->close();
 ?>
