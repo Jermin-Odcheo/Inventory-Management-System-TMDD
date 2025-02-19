@@ -274,18 +274,8 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                 </ul>
             </li>
 
-            <li>
-                <a href="settings.php">
-                    <i class="fas fa-cogs"></i>
-                    <span>Settings</span>
-                </a>
-            </li>
-            <li>
-                <a href="<?php echo BASE_URL; ?>src/view/php/general/logout.php">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Logout</span>
-                </a>
-            </li>
+
+ 
         </ul>
     </nav>
 </aside>
