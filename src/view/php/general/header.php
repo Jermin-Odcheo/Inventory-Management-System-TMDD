@@ -1,3 +1,11 @@
+<?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+require_once(__DIR__ . '/../../../../config/config.php');
+$role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,7 +13,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inventory Management System</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&family=Roboto+Mono:wght@300;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../../../styles/css/header_footer.css">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/header_footer.css">
 
 </head>
 <body>
@@ -21,41 +29,47 @@
                 <div class="logo-text">Inventory Management System</div>
             </div>
         </div>
-        
+
         <div class="header-widgets">
             <div class="user-profile" onclick="toggleDropdown()">
-                <img src="../../../../../../public/assets/img/profile.jpg" alt="User Profile" class="profile-picture">
+                <div class="profile-picture-container">
+                    <img src="../../../../../../public/assets/img/profile.jpg" alt="User Profile" class="profile-picture">
+                    <!-- Small drop-down indicator inside the profile photo -->
+                    <span class="dropdown-indicator"><i class="fas fa-caret-down"></i></span>
+                </div>
                 <div class="user-info">
                     <div class="user-name">Lebron N. James</div>
                     <div class="user-role">WAREHOUSE MANAGER</div>
                 </div>
                 <div class="dropdown-menu" id="dropdownMenu">
                     <a href="#">Settings</a>
-                    <a href="#">Logout</a>
+                    <a href="<?php echo BASE_URL; ?>src/view/php/general/logout.php">Logout</a>
                 </div>
             </div>
+
         </div>
     </header>
 
+    <!-- Include a small script to toggle aria-expanded on click -->
     <script>
-    function toggleDropdown() {
-        const dropdownMenu = document.getElementById('dropdownMenu');
-        dropdownMenu.classList.toggle('show');
-    }
+        function toggleDropdown() {
+            const dropdownMenu = document.getElementById('dropdownMenu');
+            dropdownMenu.classList.toggle('show');
+            document.querySelector('.user-profile').classList.toggle('active');
+        }
 
         // Close the dropdown if the user clicks outside of it
         window.onclick = function(event) {
-            if (!event.target.matches('.user-profile')) {
-                const dropdowns = document.getElementsByClassName('dropdown-menu');
-                for (let i = 0; i < dropdowns.length; i++) {
-                    const openDropdown = dropdowns[i];
-                    if (openDropdown.classList.contains('show')) {
-                        openDropdown.classList.remove('show');
-                    }
+            if (!event.target.closest('.user-profile')) {
+                const dropdownMenu = document.getElementById('dropdownMenu');
+                if (dropdownMenu.classList.contains('show')) {
+                    dropdownMenu.classList.remove('show');
+                    document.querySelector('.user-profile').classList.remove('active');
                 }
             }
         }
     </script>
+
 
 </body>
 </html>

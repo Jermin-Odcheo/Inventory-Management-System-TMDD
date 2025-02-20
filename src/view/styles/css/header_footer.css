@@ -1,4 +1,4 @@
-*{
+* {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -78,15 +78,6 @@ body {
     width: 100%;
 }
 
-.profile-picture {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    border: 2px solid #38BDF8;
-    object-fit: cover;
-    padding: 2px;
-    background: #0F172A;
-}
 
 .user-info {
     display: flex;
@@ -108,20 +99,41 @@ body {
     letter-spacing: 0.5px;
 }
 
+/* Style for the dropdown arrow */
+.dropdown-icon {
+    margin-left: 0.5rem;
+    font-size: 1rem;
+    color: #E2E8F0;
+    transition: transform 0.3s;
+}
+
+/* Optionally rotate the arrow when dropdown is active */
+.user-profile.active .dropdown-icon {
+    transform: rotate(180deg);
+}
+
+/* Adjusted dropdown menu */
 .dropdown-menu {
     display: none;
     opacity: 0;
     transition: opacity 0.3s ease;
     position: absolute;
-    top: 100%;
+    top: 110%; /* positions the dropdown just below the profile area */
     right: 0;
-    width: 100%;
     background: #1E293B;
     border-radius: 10px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     overflow: hidden;
     z-index: 1000;
+    /* Remove width: 100% if you prefer an auto width or set a fixed width */
+    /* width: auto; */
 }
+
+.dropdown-menu.show {
+    display: block;
+    opacity: 1;
+}
+
 
 .dropdown-menu.show {
     display: block;
@@ -131,7 +143,7 @@ body {
 .dropdown-menu a {
     display: block;
     padding: 0.75rem 1.5rem;
-    color: #E2E8F0;
+    color: #555559;
     font-family: 'Poppins', sans-serif;
     font-size: 0.9rem;
     text-decoration: none;
@@ -141,6 +153,40 @@ body {
 
 .dropdown-menu a:hover {
     background: rgba(255, 255, 255, 0.05);
+}
+
+/* Wrap the profile image to position the indicator */
+.profile-picture-container {
+    position: relative;
+    display: inline-block;
+}
+
+/* Profile picture styling remains unchanged */
+.profile-picture {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid #38BDF8;
+    object-fit: cover;
+    padding: 2px;
+    background: #0F172A;
+}
+
+/* Style for the drop-down indicator */
+.dropdown-indicator {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    background-color: #38bdf8;
+    color: white;
+    font-size: 0.7rem;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    border: 1px solid white;
+    pointer-events: none; /* so that clicking still activates the parent container */
 }
 
 @media (max-width: 768px) {
