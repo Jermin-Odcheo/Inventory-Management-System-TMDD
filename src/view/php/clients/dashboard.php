@@ -22,33 +22,11 @@ $query = "SELECT u.id, u.username,
           WHERE u.id = ?
           GROUP BY u.id";
 
-
 $stmt = $conn->prepare($query);
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $result = $stmt->get_result();
 $user = $result->fetch_assoc();
-
-$roles = explode(',', $user['roles'] ?? '');
-$departments = explode(',', $user['departments'] ?? '');
-
-$modules = [];
-
-// Fetch allowed modules based on roles and department filtering
-$query = "SELECT DISTINCT m.module_name 
-          FROM role_module_privileges rp
-          JOIN modules m ON rp.module_id = m.id
-          JOIN roles r ON rp.role_id = r.id
-          WHERE FIND_IN_SET(r.role_name, ?) > 0";
-$stmt = $conn->prepare($query);
-$roles_str = implode(',', $roles);
-$stmt->bind_param("s", $roles_str);
-$stmt->execute();
-$result = $stmt->get_result();
-
-while ($row = $result->fetch_assoc()) {
-    $modules[] = $row['module_name'];
-}
 ?>
 
 <!DOCTYPE html>
@@ -77,23 +55,12 @@ while ($row = $result->fetch_assoc()) {
     </nav>
 
     <div class="container">
-        <aside>
-            <h3>Accessible Modules</h3>
-            <ul>
-                <?php if (!empty($modules)): ?>
-                    <?php foreach ($modules as $module): ?>
-                        <li><?php echo htmlspecialchars($module); ?></li>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <li>No modules assigned.</li>
-                <?php endif; ?>
-            </ul>
-        </aside>
+        <?php include '../general/sidebar.php'; ?> <!-- Sidebar included here -->
 
         <main>
             <h2>Dashboard</h2>
-            <p><strong>Your Assigned Roles:</strong> <?php echo htmlspecialchars($user['roles']); ?></p>
-            <p><strong>Your Departments:</strong> <?php echo htmlspecialchars($user['departments']); ?></p>
+            <p><strong>Your Assigned Roles:</strong> <?php echo htmlspecialchars($user['roles'] ?? 'N/A'); ?></p>
+            <p><strong>Your Departments:</strong> <?php echo htmlspecialchars($user['departments'] ?? 'N/A'); ?></p>
 
             <h3>Department-Specific Information</h3>
             <p>Content based on department access can be displayed here.</p>
