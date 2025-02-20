@@ -9,8 +9,10 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
 <div class="sidebar">
     <!-- Font Awesome CSS (Ideally load this in your <head> for performance) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+    <!-- If you haven't already, link your main CSS, or place the .tree CSS below in that file -->
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/sidebar.css">
-    <div></div>
+
     <h3>Menu</h3>
     <nav>
         <ul>
@@ -20,17 +22,19 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                 </a>
             </li>
 
-            <!-- Example: Only show User Management for Super Admins & Admins -->
+            <!-- Example: Only show certain links for specific roles -->
             <?php if ($role === 'Super Admin' || $role === 'Admin'): ?>
-                <!-- Add admin-specific links here -->
+                <!-- Admin-specific links here -->
             <?php endif; ?>
 
+            <!-- Logs Dropdown -->
             <li class="dropdown-item">
-                <button class="dropdown-toggle">
+                <button class="dropdown-toggle" aria-expanded="false">
                     <i class="fas fa-history"></i> Logs
                     <i class="fas fa-chevron-down dropdown-icon"></i>
                 </button>
-                <ul class="dropdown">
+                <!-- Add .tree and aria-expanded to the <ul> -->
+                <ul class="dropdown tree" aria-expanded="false">
                     <li>
                         <a href="<?php echo BASE_URL; ?>src/view/php/clients/admins/audit_log.php">
                             <i class="fas fa-history"></i> Audit Logs
@@ -44,12 +48,13 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                 </ul>
             </li>
 
+            <!-- User Management Dropdown -->
             <li class="dropdown-item">
-                <button class="dropdown-toggle">
+                <button class="dropdown-toggle" aria-expanded="false">
                     <i class="fa-solid fa-user"></i> User Management
                     <i class="fas fa-chevron-down dropdown-icon"></i>
                 </button>
-                <ul class="dropdown">
+                <ul class="dropdown tree" aria-expanded="false">
                     <li>
                         <a href="<?php echo BASE_URL; ?>src/view/php/modules/user_manager/user_management.php">
                             Manage Accounts
@@ -68,12 +73,13 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                 </ul>
             </li>
 
+            <!-- Equipment Management Dropdown -->
             <li class="dropdown-item">
-                <button class="dropdown-toggle">
+                <button class="dropdown-toggle" aria-expanded="false">
                     <i class="fa-solid fa-wrench"></i> Equipment Management
                     <i class="fas fa-chevron-down dropdown-icon"></i>
                 </button>
-                <ul class="dropdown">
+                <ul class="dropdown tree" aria-expanded="false">
                     <li>
                         <a href="../../modules/equipment_manager/purchase_order.php">
                             Purchase Order
@@ -109,12 +115,12 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
 
             <!-- Departments with nested dropdowns -->
             <li class="dropdown-item">
-                <button class="dropdown-toggle">
+                <button class="dropdown-toggle" aria-expanded="false">
                     <i class="fas fa-building"></i>
-                     Departments
+                    Departments
                     <i class="fas fa-chevron-down dropdown-icon"></i>
                 </button>
-                <ul class="dropdown">
+                <ul class="dropdown tree" aria-expanded="false">
                     <li>
                         <a href="#"><span>Office of the President</span></a>
                     </li>
@@ -124,12 +130,13 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                     <li>
                         <a href="#"><span>Office of the Internal Auditor</span></a>
                     </li>
+                    <!-- Nested dropdown item -->
                     <li class="dropdown-item">
                         <button class="dropdown-toggle" aria-expanded="false">
                             <span>Mission and Identity Cluster</span>
                             <i class="fas fa-chevron-down dropdown-icon"></i>
                         </button>
-                        <ul class="dropdown">
+                        <ul class="dropdown tree" aria-expanded="false">
                             <li>
                                 <a href="#"><span>Office of the Vice President for Mission and Identity</span></a>
                             </li>
@@ -152,7 +159,7 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                             <span>Academic Cluster</span>
                             <i class="fas fa-chevron-down dropdown-icon"></i>
                         </button>
-                        <ul class="dropdown">
+                        <ul class="dropdown tree" aria-expanded="false">
                             <li>
                                 <a href="#"><span>Office of the Vice President for Academic Affairs</span></a>
                             </li>
@@ -187,7 +194,7 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                             <span>External Relations, Media and Communications and Alumni Affairs</span>
                             <i class="fas fa-chevron-down dropdown-icon"></i>
                         </button>
-                        <ul class="dropdown">
+                        <ul class="dropdown tree" aria-expanded="false">
                             <li>
                                 <a href="#"><span>Office of Institutional Development and Quality Assurance</span></a>
                             </li>
@@ -207,7 +214,7 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                             <span>Finance Cluster</span>
                             <i class="fas fa-chevron-down dropdown-icon"></i>
                         </button>
-                        <ul class="dropdown">
+                        <ul class="dropdown tree" aria-expanded="false">
                             <li>
                                 <a href="#"><span>Office of the Vice President for Finance</span></a>
                             </li>
@@ -230,7 +237,7 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                             <span>Administration Cluster</span>
                             <i class="fas fa-chevron-down dropdown-icon"></i>
                         </button>
-                        <ul class="dropdown">
+                        <ul class="dropdown tree" aria-expanded="false">
                             <li>
                                 <a href="#"><span>Office of the Vice President for Administration</span></a>
                             </li>
@@ -269,7 +276,24 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                 </ul>
             </li>
         </ul>
-
     </nav>
 </div>
-<script src="<?php echo BASE_URL; ?>src/control/js/sidebar.js"></script>
+
+<!-- Include a small script to toggle aria-expanded on click -->
+<script>
+    // Query all toggles
+    document.querySelectorAll('.dropdown-toggle').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const currentState = btn.getAttribute('aria-expanded') === 'true';
+            // Flip the button's aria-expanded
+            btn.setAttribute('aria-expanded', !currentState);
+
+            // The next sibling should be the corresponding <ul class='dropdown tree'>
+            const dropdownMenu = btn.nextElementSibling;
+            if (dropdownMenu && dropdownMenu.classList.contains('dropdown')) {
+                // Flip the <ul>'s aria-expanded as well
+                dropdownMenu.setAttribute('aria-expanded', !currentState);
+            }
+        });
+    });
+</script>

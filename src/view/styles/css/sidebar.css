@@ -66,8 +66,6 @@
 .dropdown-toggle::after {
     content: none;
 }
-
-/* Links & Dropdown Buttons */
 .sidebar nav ul li a,
 .sidebar nav ul li button.dropdown-toggle {
     display: flex;
@@ -82,7 +80,39 @@
     transition: background 0.3s, transform 0.3s;
     font-size: 16px;
     cursor: pointer;
+
+    /* Add these to allow text wrapping */
+    flex-wrap: wrap;               /* Let flex items wrap onto new lines */
+    word-break: break-word;        /* Break long words that exceed container width */
+    white-space: normal;           /* Allow line breaks as needed */
+    overflow-wrap: break-word;     /* Older name for the same behavior */
 }
+
+/* (Optional) Ensure the icon doesn't push text to a new line */
+.sidebar nav ul li a i,
+.sidebar nav ul li button.dropdown-toggle i {
+    flex: 0 0 auto;   /* Icon won't stretch; keeps its size */
+    margin-right: 10px;
+}
+/* Parent container must be relative, to absolutely position the icon */
+.sidebar nav ul li button.dropdown-toggle {
+    position: relative;
+    padding-right: 1.5rem;  /* Reserve space on the right for the icon */
+}
+
+/* Position the dropdown icon on the right, centered vertically */
+.sidebar nav ul li button.dropdown-toggle .dropdown-icon {
+    position: absolute;
+    right: 10px;            /* Adjust to your preference */
+    top: 50%;
+    transform: translateY(-50%);
+}
+/* If you wrap the link text in a <span>, you can control it separately: */
+.sidebar nav ul li a span,
+.sidebar nav ul li button.dropdown-toggle span {
+    flex: 1 1 auto;   /* Let text span take up remaining space and wrap */
+}
+
 
 /* Hover & Active Effects */
 .sidebar nav ul li a:hover,
@@ -92,11 +122,6 @@
     transform: translateX(5px);
 }
 
-/* Icon Styling */
-.sidebar nav ul li a i,
-.sidebar nav ul li button.dropdown-toggle i {
-    margin-right: 10px;
-}
 
 /* Dropdown Icon */
 .dropdown-icon {
@@ -142,6 +167,96 @@
 
 .sidebar nav ul li .dropdown li a:hover {
     background: rgba(255, 255, 255, 0.15);
+}
+
+/* ================
+   Uniform Tree Lines
+   ================ */
+
+/* The .tree container */
+.sidebar nav ul.tree {
+    list-style: none;
+    margin: 0;
+    padding-left: 0.5rem;
+    position: relative;
+}
+
+/* Hide lines when collapsed */
+.sidebar nav ul.tree[aria-expanded='false'] li::before,
+.sidebar nav ul.tree[aria-expanded='false'] li::after {
+    content: none;
+    display: none;
+}
+
+/* Expanded items: extra left padding */
+.sidebar nav ul.tree[aria-expanded='true'] li {
+    position: relative;
+    padding: 0.20rem 0 0.20rem 0.80rem; /* Adjust for your layout */
+    transition: padding 0.2s ease;
+}
+/* Reduce left padding so items are closer to the sidebar’s edge */
+.sidebar nav ul.tree[aria-expanded='true'] li {
+    padding: 0.75rem 0 0.75rem 1.5rem; /* was 2rem before */
+}
+
+/* Shift the lines half a rem to the left (so they aren’t too far in) */
+.sidebar nav ul.tree[aria-expanded='true'] li::before,
+.sidebar nav ul.tree[aria-expanded='true'] li::after {
+    left: -0.5rem;  /* from 0 to -0.5rem */
+    top: 1rem;      /* stays at 1rem, or tweak if you want it lower/higher */
+}
+
+/* Possibly reduce the last-child stem for a neat bottom */
+.sidebar nav ul.tree[aria-expanded='true'] li:last-child::before {
+    height: 0.5rem; /* or 0.8rem, adjust visually */
+}
+
+/* Vertical line (stem): fully opaque color */
+.sidebar nav ul.tree[aria-expanded='true'] li::before {
+    content: '';
+    position: absolute;
+    top:  0.4rem;      /* Shift down so the curve can attach */
+    left: 0;
+    width: 2px;
+    height: 100%;
+    background: #ffffff;  /* Opaque white (change to any solid color) */
+}
+
+/* Curved corner (horizontal + rounded corner) */
+.sidebar nav ul.tree[aria-expanded='true'] li::after {
+    content: '';
+    position: absolute;
+    top: 0.5rem;       /* Same y-offset as the stem's top */
+
+    left: 0;
+    width: 1.35rem;
+    height: 1.7rem;
+
+    /* 2px line, matching the stem color */
+    border-bottom: 2px solid #ffffff;
+    border-left: 2px solid #ffffff;
+    border-bottom-left-radius: 0.75rem;
+    background: transparent;
+}
+
+/* Last child: shorten the vertical stem so it doesn’t extend below the item */
+.sidebar nav ul.tree[aria-expanded='true'] li:last-child::before {
+    height: 1.25rem;
+}
+
+/* Smooth transitions for nested <ul> expansions */
+.sidebar nav ul.tree ul {
+    transition: all 0.3s ease-in-out;
+}
+
+/* If you don't want any color change on hover, omit these rules.
+   Or give it the SAME color to avoid brightness changes. */
+.sidebar nav ul.tree[aria-expanded='true'] li:hover::before {
+    background: #ffffff;
+}
+.sidebar nav ul.tree[aria-expanded='true'] li:hover::after {
+    border-bottom-color: #ffffff;
+    border-left-color: #ffffff;
 }
 
 /* Responsive Adjustments */
