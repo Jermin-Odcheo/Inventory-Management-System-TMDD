@@ -65,10 +65,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $PersonResponsible = trim($_POST['PersonResponsible'] ?? '');
     $Remarks           = trim($_POST['Remarks'] ?? '');
 
-    // Validate required fields (adjust which fields are required as needed)
+    $response = array('status' => '', 'message' => '');
+
+    // Validate required fields
     if (empty($AssetTag) || empty($BuildingLocation) || empty($FloorNumber) || empty($SpecificArea) || empty($PersonResponsible)) {
-        $_SESSION['errors'] = ["Please fill in all required fields."];
-        header("Location: equipment_location.php");
+        $response['status'] = 'error';
+        $response['message'] = 'Please fill in all required fields.';
+        echo json_encode($response);
         exit;
     }
 
@@ -79,11 +82,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 (AssetTag, BuildingLocation, FloorNumber, SpecificArea, PersonResponsible, Remarks)
                 VALUES (?, ?, ?, ?, ?, ?)");
             $stmt->execute([$AssetTag, $BuildingLocation, $FloorNumber, $SpecificArea, $PersonResponsible, $Remarks]);
+            
+            $response['status'] = 'success';
+            $response['message'] = 'Equipment Location has been added successfully.';
             $_SESSION['success'] = "Equipment Location has been added successfully.";
         } catch (PDOException $e) {
+            $response['status'] = 'error';
+            $response['message'] = 'Error adding Equipment Location: ' . $e->getMessage();
             $_SESSION['errors'] = ["Error adding Equipment Location: " . $e->getMessage()];
         }
-        header("Location: equipment_location.php");
+        echo json_encode($response);
         exit;
     } elseif (isset($_POST['action']) && $_POST['action'] === 'update') {
         $id = $_POST['id'];
@@ -188,95 +196,6 @@ try {
                     </div>
                 <?php endif; ?>
 
-                <!-- Add/Edit Equipment Location Card -->
-                <div class="card mb-4 shadow-sm">
-                    <div class="card-header bg-dark text-white">
-                        <?php if ($editEquipmentLocation): ?>
-                            <i class="bi bi-pencil-square"></i> Edit Equipment Location
-                            <span class="badge bg-warning text-dark ms-2">Editing Mode</span>
-                        <?php else: ?>
-                            <i class="bi bi-plus-circle"></i> Add Equipment Location
-                        <?php endif; ?>
-                    </div>
-                    <div class="card-body">
-                        <form method="post" action="">
-                            <?php if ($editEquipmentLocation): ?>
-                                <input type="hidden" name="action" value="update">
-                                <input type="hidden" name="id" value="<?php echo htmlspecialchars($editEquipmentLocation['EquipmentLocationID']); ?>">
-                            <?php else: ?>
-                                <input type="hidden" name="action" value="add">
-                            <?php endif; ?>
-
-                            <div class="mb-3">
-                                <label for="AssetTag" class="form-label">
-                                    <i class="bi bi-tag"></i> Asset Tag <span class="text-danger">*</span>
-                                </label>
-                                <select name="AssetTag">
-                                    <option disabled hidden>Select an Asset Tag</option>
-                                    <?php
-                                    $stmt = $pdo->prepare("SELECT AssetTag FROM equipmentdetails");
-                                    $stmt->execute();
-                                    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                                        $selected = ($editEquipmentLocation && $editEquipmentLocation['AssetTag'] == $row['AssetTag']) ? 'selected' : '';
-                                        echo '<option value="' . htmlspecialchars($row['AssetTag']) . '" ' . $selected . '>' . htmlspecialchars($row['AssetTag']) . '</option>';
-                                    }
-                                    ?>
-                                </select>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="BuildingLocation" class="form-label">
-                                    <i class="bi bi-building"></i> Building Location <span class="text-danger">*</span>
-                                </label>
-                                <input type="text" class="form-control" id="BuildingLocation" name="BuildingLocation" placeholder="Enter Building Location" required value="<?php echo $editEquipmentLocation ? htmlspecialchars($editEquipmentLocation['BuildingLocation']) : ''; ?>">
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="FloorNumber" class="form-label">
-                                    <i class="bi bi-layers"></i> Floor Number <span class="text-danger">*</span>
-                                </label>
-                                <input type="text" class="form-control" id="FloorNumber" name="FloorNumber" placeholder="Enter Floor Number" required value="<?php echo $editEquipmentLocation ? htmlspecialchars($editEquipmentLocation['FloorNumber']) : ''; ?>">
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="SpecificArea" class="form-label">
-                                    <i class="bi bi-pin-map"></i> Specific Area <span class="text-danger">*</span>
-                                </label>
-                                <input type="text" class="form-control" id="SpecificArea" name="SpecificArea" placeholder="Enter Specific Area" required value="<?php echo $editEquipmentLocation ? htmlspecialchars($editEquipmentLocation['SpecificArea']) : ''; ?>">
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="PersonResponsible" class="form-label">
-                                    <i class="bi bi-person"></i> Person Responsible <span class="text-danger">*</span>
-                                </label>
-                                <input type="text" class="form-control" id="PersonResponsible" name="PersonResponsible" placeholder="Enter Person Responsible" required value="<?php echo $editEquipmentLocation ? htmlspecialchars($editEquipmentLocation['PersonResponsible']) : ''; ?>">
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="Remarks" class="form-label">
-                                    <i class="bi bi-chat-left-text"></i> Remarks
-                                </label>
-                                <textarea class="form-control" id="Remarks" name="Remarks" placeholder="Enter any remarks" rows="3"><?php echo $editEquipmentLocation ? htmlspecialchars($editEquipmentLocation['Remarks']) : ''; ?></textarea>
-                            </div>
-
-                            <div class="d-flex align-items-center">
-                                <button type="submit" class="btn btn-success">
-                                    <?php if ($editEquipmentLocation): ?>
-                                        <i class="bi bi-check-circle"></i> Update Equipment Location
-                                    <?php else: ?>
-                                        <i class="bi bi-check-circle"></i> Add Equipment Location
-                                    <?php endif; ?>
-                                </button>
-                                <?php if ($editEquipmentLocation): ?>
-                                    <a href="equipment_location.php" class="btn btn-secondary ms-2">
-                                        <i class="bi bi-x-circle"></i> Cancel
-                                    </a>
-                                <?php endif; ?>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
                 <!-- List of Equipment Locations Card -->
                 <div class="card shadow-sm">
                     <div class="card-header d-flex justify-content-between align-items-center bg-dark text-white">
@@ -289,6 +208,13 @@ try {
                     <div class="card-body">
                         <?php if (!empty($equipmentLocations)): ?>
                             <div class="table-responsive">
+                                <!-- Add Location Button -->
+                                <div class="d-flex justify-content-start mb-3">
+                                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addLocationModal">
+                                        <i class="bi bi-plus-circle"></i> Add Equipment Location
+                                    </button>
+                                </div>
+                                
                                 <table class="table table-striped table-hover align-middle" id="eqTable">
                                     <thead class="table-dark">
                                     <tr>
@@ -337,6 +263,79 @@ try {
     </div>
 </div>
 
+<!-- Add Location Modal -->
+<div class="modal fade" id="addLocationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Location</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addLocationForm" method="post">
+                    <input type="hidden" name="action" value="add">
+                    
+                    <div class="mb-3">
+                        <label for="AssetTag" class="form-label">
+                            <i class="bi bi-tag"></i> Asset Tag <span class="text-danger">*</span>
+                        </label>
+                        <select name="AssetTag" class="form-control" required>
+                            <option value="" disabled selected hidden>Select an Asset Tag</option>
+                            <?php
+                            $stmt = $pdo->prepare("SELECT AssetTag FROM equipmentdetails");
+                            $stmt->execute();
+                            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                                echo '<option value="' . htmlspecialchars($row['AssetTag']) . '">' . htmlspecialchars($row['AssetTag']) . '</option>';
+                            }
+                            ?>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="BuildingLocation" class="form-label">
+                            <i class="bi bi-building"></i> Building Location <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="BuildingLocation" name="BuildingLocation" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="FloorNumber" class="form-label">
+                            <i class="bi bi-layers"></i> Floor Number <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="FloorNumber" name="FloorNumber" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="SpecificArea" class="form-label">
+                            <i class="bi bi-pin-map"></i> Specific Area <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="SpecificArea" name="SpecificArea" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="PersonResponsible" class="form-label">
+                            <i class="bi bi-person"></i> Person Responsible <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="PersonResponsible" name="PersonResponsible" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="Remarks" class="form-label">
+                            <i class="bi bi-chat-left-text"></i> Remarks
+                        </label>
+                        <textarea class="form-control" id="Remarks" name="Remarks" rows="3"></textarea>
+                    </div>
+
+                    <div class="d-flex justify-content-end">
+                        <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success">Add Location</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- JavaScript for Real-Time Table Filtering -->
 <script>
     document.getElementById('eqSearch').addEventListener('keyup', function() {
@@ -347,6 +346,28 @@ try {
             row.style.display = rowText.indexOf(searchValue) > -1 ? '' : 'none';
         });
     });
+</script>
+
+<!-- Add this JavaScript before the closing body tag -->
+<script>
+$(document).ready(function() {
+    // Add Location Form Submission
+    $('#addLocationForm').on('submit', function(e) {
+        e.preventDefault();
+        $.ajax({
+            url: 'equipment_location.php',
+            method: 'POST',
+            data: $(this).serialize(),
+            success: function(response) {
+                $('#addLocationModal').modal('hide');
+                location.reload();
+            },
+            error: function(xhr, status, error) {
+                alert('Error submitting the form: ' + error);
+            }
+        });
+    });
+});
 </script>
 
 <!-- Bootstrap 5 JS Bundle (includes Popper) -->
