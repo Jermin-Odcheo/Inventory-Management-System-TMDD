@@ -1,7 +1,7 @@
 <?php
-$host = "127.0.0.1";
-$username = "root";
-$password = "";  // Change if you have a MySQL password
+$host = "localhost";
+$username = "root";  // Use your actual MySQL username
+$password = "";  // If you have a MySQL password, add it here
 $database = "ims_tmdd4";
 
 $conn = new mysqli($host, $username, $password, $database);

@@ -1,0 +1,25 @@
+body {
+    font-family: Arial, sans-serif;
+}
+
+.container-fluid {
+    margin-top: 20px;
+}
+
+.sidebar {
+    background-color: #f8f9fa;
+    min-height: 100vh;
+}
+
+.list-group-item.active {
+    background-color: #343a40;
+    border-color: #343a40;
+}
+
+.list-group-item-action {
+    color: #343a40;
+}
+
+.list-group-item-action:hover {
+    background-color: #e9ecef;
+}

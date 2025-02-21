@@ -33,6 +33,24 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $_SESSION["username"] = $user["username"];
             $_SESSION["email"] = $user["email"];
 
+            // ✅ **Fetch User Roles and Store in Session**
+            $role_stmt = $conn->prepare("
+                SELECT GROUP_CONCAT(DISTINCT r.role_name) AS roles 
+                FROM user_roles ur
+                JOIN roles r ON ur.role_id = r.id
+                WHERE ur.user_id = ?
+            ");
+            $role_stmt->bind_param("i", $user["id"]);
+            $role_stmt->execute();
+            $role_result = $role_stmt->get_result();
+            $role_stmt->close();
+
+            if ($role_data = $role_result->fetch_assoc()) {
+                $_SESSION["roles"] = $role_data["roles"]; // Store roles as a comma-separated string
+            } else {
+                $_SESSION["roles"] = ""; // No roles found, set empty string
+            }
+
             // Update user status to "Online"
             $update_status = $conn->prepare("UPDATE users SET status = 'Online' WHERE id = ?");
             $update_status->bind_param("i", $user["id"]);
