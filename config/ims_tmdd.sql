@@ -287,7 +287,8 @@ DROP TRIGGER IF EXISTS `purchaseorder_after_insert`;
 DELIMITER $$
 CREATE TRIGGER `purchaseorder_after_insert` AFTER INSERT ON `purchaseorder` FOR EACH ROW BEGIN
     INSERT INTO audit_log (
-        `User`,
+        `UserID`,
+        `EntityID`,
         `Action`,
         `Details`,
         `OldVal`,
@@ -295,20 +296,21 @@ CREATE TRIGGER `purchaseorder_after_insert` AFTER INSERT ON `purchaseorder` FOR 
         `Module`,
         `Status`
     ) VALUES (
-                 @current_user_id,
-                 'Add',
-                 'New Purchase Order added',
-                 '',
-                 JSON_OBJECT(
-                         'PurchaseOrderID', NEW.PurchaseOrderID,
-                         'PurchaseOrderNumber', NEW.PurchaseOrderNumber,
-                         'NumberOfUnits', NEW.NumberOfUnits,
-                         'DateOfPurchaseOrder', NEW.DateOfPurchaseOrder,
-                         'ItemsSpecification', NEW.ItemsSpecification
-                 ),
-                 IFNULL(@current_module, 'Equipment Management'),
-                 'Successful'
-             );
+        @current_user_id,
+        NEW.PurchaseOrderID,
+        'Add',
+        'New Purchase Order added',
+        '',
+        JSON_OBJECT(
+            'PurchaseOrderID', NEW.PurchaseOrderID,
+            'PurchaseOrderNumber', NEW.PurchaseOrderNumber,
+            'NumberOfUnits', NEW.NumberOfUnits,
+            'DateOfPurchaseOrder', NEW.DateOfPurchaseOrder,
+            'ItemsSpecification', NEW.ItemsSpecification
+        ),
+        IFNULL(@current_module, 'Equipment Management'),
+        'Successful'
+    );
 END
 $$
 DELIMITER ;
