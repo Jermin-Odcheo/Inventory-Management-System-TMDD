@@ -30,9 +30,13 @@ function formatJsonData($jsonStr)
  */
 function formatNewValue($jsonStr)
 {
+    if ($jsonStr === null) {
+        return '<em class="text-muted">N/A</em>';
+    }
+    
     $data = json_decode($jsonStr, true);
     if (!is_array($data)) {
-        return '<span>' . htmlspecialchars($jsonStr) . '</span>';
+        return '<span>' . htmlspecialchars((string)$jsonStr) . '</span>';
     }
 
     $html = '<ul class="list-group">';
@@ -54,11 +58,15 @@ function formatNewValue($jsonStr)
  */
 function formatAuditDiff($oldJson, $newJson)
 {
+    if ($oldJson === null || $newJson === null) {
+        return '<em class="text-muted">No comparison data available</em>';
+    }
+
     $oldData = json_decode($oldJson, true);
     $newData = json_decode($newJson, true);
 
     if (!is_array($oldData) || !is_array($newData)) {
-        return '<span>' . htmlspecialchars($newJson) . '</span>';
+        return '<span>' . htmlspecialchars((string)$newJson) . '</span>';
     }
 
     $keys = array_unique(array_merge(array_keys($oldData), array_keys($newData)));
@@ -148,9 +156,9 @@ function formatDetailsAndChanges($log) {
     // Normalize action to lowercase
     $action = strtolower($log['Action'] ?? '');
 
-    // Parse JSON fields for old/new data
-    $oldData = json_decode($log['OldVal'], true) ?: [];
-    $newData = json_decode($log['NewVal'], true) ?: [];
+    // Parse JSON fields for old/new data with null checks
+    $oldData = !is_null($log['OldVal']) ? json_decode($log['OldVal'], true) : [];
+    $newData = !is_null($log['NewVal']) ? json_decode($log['NewVal'], true) : [];
 
     // Use user_email from the log if available, or fallback to newData email
     $userEmail = $log['user_email'] ?? ($newData['Email'] ?? 'User');
@@ -338,13 +346,15 @@ function getChangedFieldNames(array $oldData, array $newData) {
                                     <td data-label="Action">
                                         <?php
                                         $actionText = !empty($log['Action']) ? $log['Action'] : 'Deleted';
-                                        // Check for restore action based on JSON values.
-                                        $oldData = json_decode($log['OldVal'], true);
-                                        $newData = json_decode($log['NewVal'], true);
-                                        if (is_array($oldData) && is_array($newData)) {
-                                            if (isset($oldData['is_deleted'], $newData['is_deleted']) &&
-                                                (int)$oldData['is_deleted'] === 1 && (int)$newData['is_deleted'] === 0) {
-                                                $actionText = 'Restored';
+                                        // Check for restore action based on JSON values with null checks
+                                        if (!is_null($log['OldVal']) && !is_null($log['NewVal'])) {
+                                            $oldData = json_decode($log['OldVal'], true);
+                                            $newData = json_decode($log['NewVal'], true);
+                                            if (is_array($oldData) && is_array($newData)) {
+                                                if (isset($oldData['is_deleted'], $newData['is_deleted']) &&
+                                                    (int)$oldData['is_deleted'] === 1 && (int)$newData['is_deleted'] === 0) {
+                                                    $actionText = 'Restored';
+                                                }
                                             }
                                         }
                                         echo "<span class='action-badge action-" . strtolower($actionText) . "'>";
