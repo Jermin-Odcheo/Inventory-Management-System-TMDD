@@ -159,7 +159,6 @@ CREATE TABLE IF NOT EXISTS `equipmentstatus` (
   `EquipmentStatusID` int NOT NULL AUTO_INCREMENT,
   `AssetTag` varchar(50) DEFAULT NULL,
   `Status` varchar(100) DEFAULT NULL,
-  `Action` varchar(255) DEFAULT NULL,
   `Remarks` text,
   `CheckDate` datetime DEFAULT CURRENT_TIMESTAMP,
   `AccountableIndividual` varchar(100) DEFAULT NULL,
@@ -171,9 +170,9 @@ CREATE TABLE IF NOT EXISTS `equipmentstatus` (
 -- Dumping data for table `equipmentstatus`
 --
 
-INSERT INTO `equipmentstatus` (`EquipmentStatusID`, `AssetTag`, `Status`, `Action`, `Remarks`, `CheckDate`, `AccountableIndividual`) VALUES
-(1, 'AT001', 'Operational', 'Deployed', 'Working well', '2024-02-01 10:00:00', 'John Doe'),
-(2, 'AT002', 'Operational', 'Deployed', 'No issues reported', '2024-02-02 14:30:00', 'Jane Smith');
+INSERT INTO `equipmentstatus` (`EquipmentStatusID`, `AssetTag`, `Status`, `Remarks`, `CheckDate`, `AccountableIndividual`) VALUES
+(1, 'AT001', 'Operational', 'Working well', '2024-02-01 10:00:00', 'John Doe'),
+(2, 'AT002', 'Operational', 'No issues reported', '2024-02-02 14:30:00', 'Jane Smith');
 
 -- --------------------------------------------------------
 

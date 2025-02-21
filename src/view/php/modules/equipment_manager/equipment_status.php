@@ -32,11 +32,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         switch ($_POST['action']) {
             case 'add':
                 try {
-                    $stmt = $pdo->prepare("INSERT INTO equipmentstatus (AssetTag, Status, Action, Remarks, AccountableIndividual, CheckDate) VALUES (?, ?, ?, ?, ?, NOW())");
+                    $stmt = $pdo->prepare("INSERT INTO equipmentstatus (AssetTag, Status, Remarks, AccountableIndividual, CheckDate) VALUES (?, ?, ?, ?, NOW())");
                     $stmt->execute([
                         $_POST['asset_tag'],
                         $_POST['status'],
-                        $_POST['action_taken'],
                         $_POST['remarks'],
                         $_POST['accountable_individual']
                     ]);
@@ -52,11 +51,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
             case 'update':
                 try {
-                    $stmt = $pdo->prepare("UPDATE equipmentstatus SET AssetTag = ?, Status = ?, Action = ?, Remarks = ?, AccountableIndividual = ?, CheckDate = NOW() WHERE EquipmentStatusID = ?");
+                    $stmt = $pdo->prepare("UPDATE equipmentstatus SET AssetTag = ?, Status = ?, Remarks = ?, AccountableIndividual = ?, CheckDate = NOW() WHERE EquipmentStatusID = ?");
                     $stmt->execute([
                         $_POST['asset_tag'],
                         $_POST['status'],
-                        $_POST['action_taken'],
                         $_POST['remarks'],
                         $_POST['accountable_individual'],
                         $_POST['status_id']
@@ -95,7 +93,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         'EquipmentStatusID' => $statusData['EquipmentStatusID'],
                         'AssetTag' => $statusData['AssetTag'],
                         'Status' => $statusData['Status'],
-                        'Action' => $statusData['Action'],
                         'Remarks' => $statusData['Remarks']
                     ]);
 
@@ -179,7 +176,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                 'EquipmentStatusID' => $statusData['EquipmentStatusID'],
                 'AssetTag' => $statusData['AssetTag'],
                 'Status' => $statusData['Status'],
-                'Action' => $statusData['Action'],
                 'Remarks' => $statusData['Remarks']
             ]);
 
@@ -335,8 +331,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                         <tr>
                                             <th style="width: 7%">Status ID</th>
                                             <th style="width: 13%">Asset Tag</th>
-                                            <th style="width: 12%">Status</th>
-                                            <th style="width: 15%">Action</th>
+                                            <th style="width: 15%">Status</th>
                                             <th style="width: 15%">Accountable Individual</th>
                                             <th style="width: 12%">Check Date</th>
                                             <th style="width: 15%">Remarks</th>
@@ -352,7 +347,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                                 echo "<td>" . htmlspecialchars($row['EquipmentStatusID']) . "</td>";
                                                 echo "<td>" . htmlspecialchars($row['AssetTag']) . "</td>";
                                                 echo "<td>" . htmlspecialchars($row['Status']) . "</td>";
-                                                echo "<td>" . htmlspecialchars($row['Action']) . "</td>";
                                                 echo "<td>" . htmlspecialchars($row['AccountableIndividual']) . "</td>";
                                                 echo "<td>" . date('Y-m-d H:i', strtotime($row['CheckDate'])) . "</td>";
                                                 echo "<td>" . htmlspecialchars($row['Remarks']) . "</td>";
@@ -362,7 +356,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                                                     data-id='" . htmlspecialchars($row['EquipmentStatusID']) . "'
                                                                     data-asset='" . htmlspecialchars($row['AssetTag']) . "'
                                                                     data-status='" . htmlspecialchars($row['Status']) . "'
-                                                                    data-action='" . htmlspecialchars($row['Action']) . "'
                                                                     data-accountable='" . htmlspecialchars($row['AccountableIndividual']) . "'
                                                                     data-remarks='" . htmlspecialchars($row['Remarks']) . "'>
                                                                 <i class='far fa-edit'></i> Edit
@@ -376,7 +369,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                                 echo "</tr>";
                                             }
                                         } catch (PDOException $e) {
-                                            echo "<tr><td colspan='8'>Error loading data: " . htmlspecialchars($e->getMessage()) . "</td></tr>";
+                                            echo "<tr><td colspan='7'>Error loading data: " . htmlspecialchars($e->getMessage()) . "</td></tr>";
                                         }
                                         ?>
                                     </tbody>
@@ -412,10 +405,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                 <option value="Replacement">Replacement</option>
                                 <option value="Maintenance">Maintenance</option>
                             </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="action_taken" class="form-label">Action Taken</label>
-                            <input type="text" class="form-control" name="action_taken" required>
                         </div>
                         <div class="mb-3">
                             <label for="accountable_individual" class="form-label">Accountable Individual</label>
@@ -458,10 +447,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                 <option value="Replacement">Replacement</option>
                                 <option value="Maintenance">Maintenance</option>
                             </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="edit_action_taken" class="form-label">Action Taken</label>
-                            <input type="text" class="form-control" name="action_taken" id="edit_action_taken" required>
                         </div>
                         <div class="mb-3">
                             <label for="edit_accountable_individual" class="form-label">Accountable Individual</label>
@@ -517,14 +502,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                 var id = $(this).data('id');
                 var asset = $(this).data('asset');
                 var status = $(this).data('status');
-                var action = $(this).data('action');
                 var accountable = $(this).data('accountable');
                 var remarks = $(this).data('remarks');
                 
                 $('#edit_status_id').val(id);
                 $('#edit_asset_tag').val(asset);
                 $('#edit_status').val(status);
-                $('#edit_action_taken').val(action);
                 $('#edit_accountable_individual').val(accountable);
                 $('#edit_remarks').val(remarks);
                 
