@@ -132,194 +132,261 @@ try {
 
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Receiving Report Management</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Add jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
             background-color: #f8f9fa;
             min-height: 100vh;
+            overflow-x: hidden;
         }
 
         .main-content {
-            margin-left: 300px;
-            padding: 20px;
-            transition: margin-left 0.3s ease;
+            width: 100%;
+            min-height: 100vh;
+        }
+
+        .card {
+            margin-bottom: 1rem;
+        }
+
+        .form-control {
+            font-size: 0.9rem;
+        }
+
+        .table {
+            font-size: 0.9rem;
         }
 
         @media (max-width: 768px) {
-            .main-content {
-                margin-left: 0;
+            main {
+                margin-left: 0 !important;
+                max-width: 100% !important;
             }
+        }
+
+        .search-container {
+            width: 250px;
+        }
+        .search-container input {
+            padding-right: 30px;
+        }
+        .search-container i {
+            color: #6c757d;
+            pointer-events: none;
         }
     </style>
 </head>
 
 <body>
-<?php include '../../general/sidebar.php'; ?>
+    <?php include '../../general/sidebar.php'; ?>
 
-<div class="main-content">
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Main Content -->
-            <main class="col-md-12 px-md-4 py-4">
-                <h2 class="mb-4">Receiving Report</h2>
+    <div class="container-fluid" style="margin-left: 320px; padding: 20px; width: calc(100vw - 340px);">
+        <!-- Success Message -->
+        <?php if (!empty($success)): ?>
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="bi bi-check-circle"></i> <?php echo $success; ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        <?php endif; ?>
 
-                <!-- Success Message -->
-                <?php if (!empty($success)): ?>
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        <i class="bi bi-check-circle"></i> <?php echo $success; ?>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                <?php endif; ?>
+        <!-- Error Messages -->
+        <?php if (!empty($errors)): ?>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <?php foreach ($errors as $err): ?>
+                    <p><i class="bi bi-exclamation-triangle"></i> <?php echo $err; ?></p>
+                <?php endforeach; ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        <?php endif; ?>
 
-                <!-- Error Messages -->
-                <?php if (!empty($errors)): ?>
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <?php foreach ($errors as $err): ?>
-                            <p><i class="bi bi-exclamation-triangle"></i> <?php echo $err; ?></p>
-                        <?php endforeach; ?>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                <?php endif; ?>
+        <!-- Title moved outside the card -->
+        <h2 class="mb-4">Receiving Report Management</h2>
 
-                <!-- Add/Edit Receiving Report Card -->
-                <div class="card mb-4 shadow-sm">
-                    <div class="card-header bg-dark text-white">
-                        <?php if ($editReceivingReport): ?>
-                            <i class="bi bi-pencil-square"></i> Edit Receiving Report
-                            <span class="badge bg-warning text-dark ms-2">Editing Mode</span>
-                        <?php else: ?>
-                            <i class="bi bi-plus-circle"></i> Add Receiving Report
-                        <?php endif; ?>
-                    </div>
-                    <div class="card-body">
-                        <form method="post" action="">
-                            <?php if ($editReceivingReport): ?>
-                                <input type="hidden" name="action" value="update">
-                                <!-- Pass the record ID as a hidden field -->
-                                <input type="hidden" name="id" value="<?php echo htmlspecialchars($editReceivingReport['ReceivingReportFormID']); ?>">
-                            <?php else: ?>
-                                <input type="hidden" name="action" value="add">
-                            <?php endif; ?>
-
-                            <!-- Removed the ReceivingReportFormID input field since it is auto-incremented -->
-
-                            <div class="mb-3">
-                                <label for="ReceivingReportNumber" class="form-label">
-                                    <i class="bi bi-file-text"></i> Receiving Report Number <span class="text-danger">*</span>
-                                </label>
-                                <input type="text" class="form-control" id="ReceivingReportNumber" name="ReceivingReportNumber" placeholder="Enter Receiving Report Number" required value="<?php echo $editReceivingReport ? htmlspecialchars($editReceivingReport['ReceivingReportNumber']) : ''; ?>">
-                            </div>
-                            <div class="mb-3">
-                                <label for="AccountableIndividual" class="form-label">
-                                    <i class="bi bi-person"></i> Accountable Individual <span class="text-danger">*</span>
-                                </label>
-                                <input type="text" class="form-control" id="AccountableIndividual" name="AccountableIndividual" placeholder="Enter Accountable Individual" required value="<?php echo $editReceivingReport ? htmlspecialchars($editReceivingReport['AccountableIndividual']) : ''; ?>">
-                            </div>
-                            <div class="mb-3">
-                                <label for="PurchaseOrderNumber" class="form-label">
-                                    <i class="bi bi-file-text"></i> Purchase Order Number <span class="text-danger">*</span>
-                                </label>
-                                <input type="text" class="form-control" id="PurchaseOrderNumber" name="PurchaseOrderNumber" placeholder="Enter Purchase Order Number" required value="<?php echo $editReceivingReport ? htmlspecialchars($editReceivingReport['PurchaseOrderNumber']) : ''; ?>">
-                            </div>
-                            <div class="mb-3">
-                                <label for="AccountableIndividualLocation" class="form-label">
-                                    <i class="bi bi-geo-alt"></i> Location <span class="text-danger">*</span>
-                                </label>
-                                <input type="text" class="form-control" id="AccountableIndividualLocation" name="AccountableIndividualLocation" placeholder="Enter Location" required value="<?php echo $editReceivingReport ? htmlspecialchars($editReceivingReport['AccountableIndividualLocation']) : ''; ?>">
-                            </div>
-                            <div class="d-flex align-items-center">
-                                <button type="submit" class="btn btn-success">
-                                    <?php if ($editReceivingReport): ?>
-                                        <i class="bi bi-check-circle"></i> Update Receiving Report
-                                    <?php else: ?>
-                                        <i class="bi bi-check-circle"></i> Add Receiving Report
-                                    <?php endif; ?>
-                                </button>
-                                <?php if ($editReceivingReport): ?>
-                                    <a href="receiving_report.php" class="btn btn-secondary ms-2">
-                                        <i class="bi bi-x-circle"></i> Cancel
-                                    </a>
-                                <?php endif; ?>
-                            </div>
-                        </form>
-                    </div>
+        <div class="card shadow">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-list-ul"></i> List of Receiving Reports</span>
+                <div class="input-group w-auto">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" id="searchReport" class="form-control" placeholder="Search report...">
+                </div>
+            </div>
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addReportModal">
+                        <i class="bi bi-plus-circle"></i> Add Receiving Report
+                    </button>
                 </div>
 
-                <!-- List of Receiving Reports Card -->
-                <div class="card shadow-sm">
-                    <div class="card-header d-flex justify-content-between align-items-center bg-dark text-white">
-                        <span><i class="bi bi-list-ul"></i> List of Receiving Reports</span>
-                        <div class="input-group w-auto">
-                            <span class="input-group-text"><i class="bi bi-search"></i></span>
-                            <input type="text" class="form-control" placeholder="Search..." id="rrSearch">
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <?php if (!empty($receivingReports)): ?>
-                            <div class="table-responsive">
-                                <table class="table table-striped table-hover align-middle" id="rrTable">
-                                    <thead class="table-dark">
-                                    <tr>
-                                        <th>Receiving Report ID</th>
-                                        <th>RR Number</th>
-                                        <th>Accountable Individual</th>
-                                        <th>PO Number</th>
-                                        <th>Location</th>
-                                        <th class="text-center">Actions</th>
-                                    </tr>
-                                    </thead>
-                                    <tbody>
-                                    <?php foreach ($receivingReports as $rr): ?>
-                                        <tr>
-                                            <td><?php echo htmlspecialchars($rr['ReceivingReportFormID']); ?></td>
-                                            <td><?php echo htmlspecialchars($rr['ReceivingReportNumber']); ?></td>
-                                            <td><?php echo htmlspecialchars($rr['AccountableIndividual']); ?></td>
-                                            <td><?php echo htmlspecialchars($rr['PurchaseOrderNumber']); ?></td>
-                                            <td><?php echo htmlspecialchars($rr['AccountableIndividualLocation']); ?></td>
-                                            <td class="text-center">
-                                                <div class="btn-group" role="group">
-                                                    <a class="btn btn-sm btn-outline-primary" href="?action=edit&id=<?php echo htmlspecialchars($rr['ReceivingReportFormID']); ?>">
-                                                        <i class="bi bi-pencil-square"></i> Edit
-                                                    </a>
-                                                    <a class="btn btn-sm btn-outline-danger" href="?action=delete&id=<?php echo htmlspecialchars($rr['ReceivingReportFormID']); ?>" onclick="return confirm('Are you sure you want to delete this Receiving Report?');">
-                                                        <i class="bi bi-trash"></i> Delete
-                                                    </a>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                        <?php else: ?>
-                            <p class="mb-0">No Receiving Reports found.</p>
-                        <?php endif; ?>
-                    </div>
+                <div class="table-responsive">
+                    <table class="table table-striped table-bordered table-sm mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>ID</th>
+                                <th>RR Number</th>
+                                <th>Accountable Individual</th>
+                                <th>PO Number</th>
+                                <th>Location</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($receivingReports as $rr): ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($rr['ReceivingReportFormID']); ?></td>
+                                    <td><?php echo htmlspecialchars($rr['ReceivingReportNumber']); ?></td>
+                                    <td><?php echo htmlspecialchars($rr['AccountableIndividual']); ?></td>
+                                    <td><?php echo htmlspecialchars($rr['PurchaseOrderNumber']); ?></td>
+                                    <td><?php echo htmlspecialchars($rr['AccountableIndividualLocation']); ?></td>
+                                    <td class="text-center">
+                                        <div class="btn-group" role="group">
+                                            <a class="btn btn-sm btn-outline-primary edit-report" 
+                                               data-id="<?php echo htmlspecialchars($rr['ReceivingReportFormID']); ?>"
+                                               data-rr="<?php echo htmlspecialchars($rr['ReceivingReportNumber']); ?>"
+                                               data-individual="<?php echo htmlspecialchars($rr['AccountableIndividual']); ?>"
+                                               data-po="<?php echo htmlspecialchars($rr['PurchaseOrderNumber']); ?>"
+                                               data-location="<?php echo htmlspecialchars($rr['AccountableIndividualLocation']); ?>">
+                                                <i class="bi bi-pencil-square"></i> Edit
+                                            </a>
+                                            <a class="btn btn-sm btn-outline-danger delete-report" 
+                                               data-id="<?php echo htmlspecialchars($rr['ReceivingReportFormID']); ?>"
+                                               href="#">
+                                                <i class="bi bi-trash"></i> Delete
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
                 </div>
-            </main>
+            </div>
         </div>
     </div>
-</div>
 
-<!-- JavaScript for Real-Time Table Filtering -->
-<script>
-    document.getElementById('rrSearch').addEventListener('keyup', function() {
-        const searchValue = this.value.toLowerCase();
-        const rows = document.querySelectorAll('#rrTable tbody tr');
-        rows.forEach(function(row) {
-            const rowText = row.textContent.toLowerCase();
-            row.style.display = rowText.indexOf(searchValue) > -1 ? '' : 'none';
+    <!-- Add Report Modal -->
+    <div class="modal fade" id="addReportModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add New Receiving Report</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addReportForm" method="post">
+                        <input type="hidden" name="action" value="add">
+                        <div class="mb-3">
+                            <label for="ReceivingReportNumber" class="form-label">Receiving Report Number</label>
+                            <input type="text" class="form-control" name="ReceivingReportNumber" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="AccountableIndividual" class="form-label">Accountable Individual</label>
+                            <input type="text" class="form-control" name="AccountableIndividual" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="PurchaseOrderNumber" class="form-label">Purchase Order Number</label>
+                            <input type="text" class="form-control" name="PurchaseOrderNumber" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="AccountableIndividualLocation" class="form-label">Location</label>
+                            <input type="text" class="form-control" name="AccountableIndividualLocation" required>
+                        </div>
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-primary">Add Report</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Report Modal -->
+    <div class="modal fade" id="editReportModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Receiving Report</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editReportForm" method="post">
+                        <input type="hidden" name="action" value="update">
+                        <input type="hidden" name="id" id="edit_report_id">
+                        <div class="mb-3">
+                            <label for="edit_ReceivingReportNumber" class="form-label">Receiving Report Number</label>
+                            <input type="text" class="form-control" name="ReceivingReportNumber" id="edit_ReceivingReportNumber" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_AccountableIndividual" class="form-label">Accountable Individual</label>
+                            <input type="text" class="form-control" name="AccountableIndividual" id="edit_AccountableIndividual" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_PurchaseOrderNumber" class="form-label">Purchase Order Number</label>
+                            <input type="text" class="form-control" name="PurchaseOrderNumber" id="edit_PurchaseOrderNumber" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_AccountableIndividualLocation" class="form-label">Location</label>
+                            <input type="text" class="form-control" name="AccountableIndividualLocation" id="edit_AccountableIndividualLocation" required>
+                        </div>
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript for functionality -->
+    <script>
+        $(document).ready(function() {
+            // Search functionality
+            $('#searchReport').on('input', function() {
+                var searchText = $(this).val().toLowerCase();
+                $(".table tbody tr").each(function() {
+                    var rowText = $(this).text().toLowerCase();
+                    $(this).toggle(rowText.indexOf(searchText) > -1);
+                });
+            });
+
+            // Edit Report
+            $('.edit-report').click(function() {
+                var id = $(this).data('id');
+                var rr = $(this).data('rr');
+                var individual = $(this).data('individual');
+                var po = $(this).data('po');
+                var location = $(this).data('location');
+                
+                $('#edit_report_id').val(id);
+                $('#edit_ReceivingReportNumber').val(rr);
+                $('#edit_AccountableIndividual').val(individual);
+                $('#edit_PurchaseOrderNumber').val(po);
+                $('#edit_AccountableIndividualLocation').val(location);
+                
+                $('#editReportModal').modal('show');
+            });
+
+            // Delete Report
+            $('.delete-report').click(function(e) {
+                e.preventDefault();
+                if (confirm('Are you sure you want to delete this report?')) {
+                    window.location.href = '?action=delete&id=' + $(this).data('id');
+                }
+            });
         });
-    });
-</script>
+    </script>
 
-<!-- Bootstrap 5 JS Bundle (includes Popper) -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 
 </html>

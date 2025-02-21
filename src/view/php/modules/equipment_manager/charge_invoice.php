@@ -132,181 +132,248 @@ try {
 
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Charge Invoice Management</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Add jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
             background-color: #f8f9fa;
             min-height: 100vh;
+            overflow-x: hidden;
         }
+
         .main-content {
-            margin-left: 300px;
-            padding: 20px;
-            transition: margin-left 0.3s ease;
+            width: 100%;
+            min-height: 100vh;
         }
+
+        .card {
+            margin-bottom: 1rem;
+        }
+
+        .form-control {
+            font-size: 0.9rem;
+        }
+
+        .table {
+            font-size: 0.9rem;
+        }
+
         @media (max-width: 768px) {
-            .main-content {
-                margin-left: 0;
+            main {
+                margin-left: 0 !important;
+                max-width: 100% !important;
             }
+        }
+
+        .search-container {
+            width: 250px;
+        }
+        .search-container input {
+            padding-right: 30px;
+        }
+        .search-container i {
+            color: #6c757d;
+            pointer-events: none;
         }
     </style>
 </head>
 
 <body>
-<?php include '../../general/sidebar.php'; ?>
+    <?php include '../../general/sidebar.php'; ?>
 
-<div class="main-content">
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Main Content -->
-            <main class="col-md-12 px-md-4 py-4">
-                <h2 class="mb-4">Charge Invoice</h2>
+    <div class="container-fluid" style="margin-left: 320px; padding: 20px; width: calc(100vw - 340px);">
+        <!-- Success Message -->
+        <?php if (!empty($success)): ?>
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="bi bi-check-circle"></i> <?php echo $success; ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        <?php endif; ?>
 
-                <!-- Success Message -->
-                <?php if (!empty($success)): ?>
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        <i class="bi bi-check-circle"></i> <?php echo $success; ?>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                <?php endif; ?>
+        <!-- Error Messages -->
+        <?php if (!empty($errors)): ?>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <?php foreach ($errors as $err): ?>
+                    <p><i class="bi bi-exclamation-triangle"></i> <?php echo $err; ?></p>
+                <?php endforeach; ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        <?php endif; ?>
 
-                <!-- Error Messages -->
-                <?php if (!empty($errors)): ?>
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <?php foreach ($errors as $err): ?>
-                            <p><i class="bi bi-exclamation-triangle"></i> <?php echo $err; ?></p>
-                        <?php endforeach; ?>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                <?php endif; ?>
+        <!-- Title moved outside the card -->
+        <h2 class="mb-4">Charge Invoice Management</h2>
 
-                <!-- Add/Edit Charge Invoice Card -->
-                <div class="card mb-4 shadow-sm">
-                    <div class="card-header bg-dark text-white">
-                        <?php if ($editChargeInvoice): ?>
-                            <i class="bi bi-pencil-square"></i> Edit Charge Invoice
-                            <span class="badge bg-warning text-dark ms-2">Editing Mode</span>
-                        <?php else: ?>
-                            <i class="bi bi-plus-circle"></i> Add Charge Invoice
-                        <?php endif; ?>
-                    </div>
-                    <div class="card-body">
-                        <form method="post" action="">
-                            <?php if ($editChargeInvoice): ?>
-                                <input type="hidden" name="action" value="update">
-                                <input type="hidden" name="id" value="<?php echo htmlspecialchars($editChargeInvoice['ChargeInvoiceID']); ?>">
-                            <?php else: ?>
-                                <input type="hidden" name="action" value="add">
-                            <?php endif; ?>
-
-                            <div class="mb-3">
-                                <label for="ChargeInvoiceNo" class="form-label">
-                                    <i class="bi bi-file-text"></i> Charge Invoice Number <span class="text-danger">*</span>
-                                </label>
-                                <input type="text" class="form-control" id="ChargeInvoiceNo" name="ChargeInvoiceNo" placeholder="Enter Charge Invoice Number" required value="<?php echo $editChargeInvoice ? htmlspecialchars($editChargeInvoice['ChargeInvoiceNo']) : ''; ?>">
-                            </div>
-                            <div class="mb-3">
-                                <label for="DateOfChargeInvoice" class="form-label">
-                                    <i class="bi bi-calendar-event"></i> Date of Charge Invoice <span class="text-danger">*</span>
-                                </label>
-                                <input type="date" class="form-control" id="DateOfChargeInvoice" name="DateOfChargeInvoice" required value="<?php echo $editChargeInvoice ? htmlspecialchars($editChargeInvoice['DateOfChargeInvoice']) : ''; ?>">
-                            </div>
-                            <div class="mb-3">
-                                <label for="PurchaseOrderNumber" class="form-label">
-                                    <i class="bi bi-hdd-stack"></i> Purchase Order Number <span class="text-danger">*</span>
-                                </label>
-                                <input type="text" class="form-control" id="PurchaseOrderNumber" name="PurchaseOrderNumber" placeholder="Enter Purchase Order Number" required value="<?php echo $editChargeInvoice ? htmlspecialchars($editChargeInvoice['PurchaseOrderNumber']) : ''; ?>">
-                            </div>
-                            <div class="d-flex align-items-center">
-                                <button type="submit" class="btn btn-success">
-                                    <?php if ($editChargeInvoice): ?>
-                                        <i class="bi bi-check-circle"></i> Update Charge Invoice
-                                    <?php else: ?>
-                                        <i class="bi bi-check-circle"></i> Add Charge Invoice
-                                    <?php endif; ?>
-                                </button>
-                                <?php if ($editChargeInvoice): ?>
-                                    <a href="charge_invoice.php" class="btn btn-secondary ms-2">
-                                        <i class="bi bi-x-circle"></i> Cancel
-                                    </a>
-                                <?php endif; ?>
-                            </div>
-                        </form>
-                    </div>
+        <div class="card shadow">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-list-ul"></i> List of Charge Invoices</span>
+                <div class="input-group w-auto">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" id="searchInvoice" class="form-control" placeholder="Search invoice...">
+                </div>
+            </div>
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addInvoiceModal">
+                        <i class="bi bi-plus-circle"></i> Add Charge Invoice
+                    </button>
                 </div>
 
-                <!-- List of Charge Invoices Card -->
-                <div class="card shadow-sm">
-                    <div class="card-header d-flex justify-content-between align-items-center bg-dark text-white">
-                        <span><i class="bi bi-list-ul"></i> List of Charge Invoices</span>
-                        <div class="input-group w-auto">
-                            <span class="input-group-text"><i class="bi bi-search"></i></span>
-                            <input type="text" class="form-control" placeholder="Search..." id="ciSearch">
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <?php if (!empty($chargeInvoices)): ?>
-                            <div class="table-responsive">
-                                <table class="table table-striped table-hover align-middle" id="ciTable">
-                                    <thead class="table-dark">
-                                    <tr>
-                                        <th>Charge Invoice ID</th>
-                                        <th>Invoice Number</th>
-                                        <th>Date of Charge Invoice</th>
-                                        <th>Purchase Order Number</th>
-                                        <th class="text-center">Actions</th>
-                                    </tr>
-                                    </thead>
-                                    <tbody>
-                                    <?php foreach ($chargeInvoices as $invoice): ?>
-                                        <tr>
-                                            <td><?php echo htmlspecialchars($invoice['ChargeInvoiceID']); ?></td>
-                                            <td><?php echo htmlspecialchars($invoice['ChargeInvoiceNo']); ?></td>
-                                            <td><?php echo htmlspecialchars($invoice['DateOfChargeInvoice']); ?></td>
-                                            <td><?php echo htmlspecialchars($invoice['PurchaseOrderNumber']); ?></td>
-                                            <td class="text-center">
-                                                <div class="btn-group" role="group">
-                                                    <a class="btn btn-sm btn-outline-primary" href="?action=edit&id=<?php echo htmlspecialchars($invoice['ChargeInvoiceID']); ?>">
-                                                        <i class="bi bi-pencil-square"></i> Edit
-                                                    </a>
-                                                    <a class="btn btn-sm btn-outline-danger" href="?action=delete&id=<?php echo htmlspecialchars($invoice['ChargeInvoiceID']); ?>" onclick="return confirm('Are you sure you want to delete this Charge Invoice?');">
-                                                        <i class="bi bi-trash"></i> Delete
-                                                    </a>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                        <?php else: ?>
-                            <p class="mb-0">No Charge Invoices found.</p>
-                        <?php endif; ?>
-                    </div>
+                <div class="table-responsive">
+                    <table class="table table-striped table-bordered table-sm mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>ID</th>
+                                <th>Invoice Number</th>
+                                <th>Date of Charge Invoice</th>
+                                <th>Purchase Order Number</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($chargeInvoices as $invoice): ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($invoice['ChargeInvoiceID']); ?></td>
+                                    <td><?php echo htmlspecialchars($invoice['ChargeInvoiceNo']); ?></td>
+                                    <td><?php echo htmlspecialchars($invoice['DateOfChargeInvoice']); ?></td>
+                                    <td><?php echo htmlspecialchars($invoice['PurchaseOrderNumber']); ?></td>
+                                    <td class="text-center">
+                                        <div class="btn-group" role="group">
+                                            <a class="btn btn-sm btn-outline-primary edit-invoice" 
+                                               data-id="<?php echo htmlspecialchars($invoice['ChargeInvoiceID']); ?>"
+                                               data-invoice="<?php echo htmlspecialchars($invoice['ChargeInvoiceNo']); ?>"
+                                               data-date="<?php echo htmlspecialchars($invoice['DateOfChargeInvoice']); ?>"
+                                               data-po="<?php echo htmlspecialchars($invoice['PurchaseOrderNumber']); ?>">
+                                                <i class="bi bi-pencil-square"></i> Edit
+                                            </a>
+                                            <a class="btn btn-sm btn-outline-danger delete-invoice" 
+                                               data-id="<?php echo htmlspecialchars($invoice['ChargeInvoiceID']); ?>"
+                                               href="#">
+                                                <i class="bi bi-trash"></i> Delete
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
                 </div>
-            </main>
+            </div>
         </div>
     </div>
-</div>
 
-<!-- JavaScript for Real-Time Table Filtering -->
-<script>
-    document.getElementById('ciSearch').addEventListener('keyup', function() {
-        const searchValue = this.value.toLowerCase();
-        const rows = document.querySelectorAll('#ciTable tbody tr');
-        rows.forEach(function(row) {
-            const rowText = row.textContent.toLowerCase();
-            row.style.display = rowText.indexOf(searchValue) > -1 ? '' : 'none';
+    <!-- Add Invoice Modal -->
+    <div class="modal fade" id="addInvoiceModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add New Charge Invoice</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addInvoiceForm" method="post">
+                        <input type="hidden" name="action" value="add">
+                        <div class="mb-3">
+                            <label for="ChargeInvoiceNo" class="form-label">Charge Invoice Number</label>
+                            <input type="text" class="form-control" name="ChargeInvoiceNo" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="DateOfChargeInvoice" class="form-label">Date of Charge Invoice</label>
+                            <input type="date" class="form-control" name="DateOfChargeInvoice" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="PurchaseOrderNumber" class="form-label">Purchase Order Number</label>
+                            <input type="text" class="form-control" name="PurchaseOrderNumber" required>
+                        </div>
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-primary">Add Invoice</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Invoice Modal -->
+    <div class="modal fade" id="editInvoiceModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Charge Invoice</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editInvoiceForm" method="post">
+                        <input type="hidden" name="action" value="update">
+                        <input type="hidden" name="id" id="edit_invoice_id">
+                        <div class="mb-3">
+                            <label for="edit_ChargeInvoiceNo" class="form-label">Charge Invoice Number</label>
+                            <input type="text" class="form-control" name="ChargeInvoiceNo" id="edit_ChargeInvoiceNo" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_DateOfChargeInvoice" class="form-label">Date of Charge Invoice</label>
+                            <input type="date" class="form-control" name="DateOfChargeInvoice" id="edit_DateOfChargeInvoice" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_PurchaseOrderNumber" class="form-label">Purchase Order Number</label>
+                            <input type="text" class="form-control" name="PurchaseOrderNumber" id="edit_PurchaseOrderNumber" required>
+                        </div>
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript for functionality -->
+    <script>
+        $(document).ready(function() {
+            // Search functionality
+            $('#searchInvoice').on('input', function() {
+                var searchText = $(this).val().toLowerCase();
+                $(".table tbody tr").each(function() {
+                    var rowText = $(this).text().toLowerCase();
+                    $(this).toggle(rowText.indexOf(searchText) > -1);
+                });
+            });
+
+            // Edit Invoice
+            $('.edit-invoice').click(function() {
+                var id = $(this).data('id');
+                var invoice = $(this).data('invoice');
+                var date = $(this).data('date');
+                var po = $(this).data('po');
+                
+                $('#edit_invoice_id').val(id);
+                $('#edit_ChargeInvoiceNo').val(invoice);
+                $('#edit_DateOfChargeInvoice').val(date);
+                $('#edit_PurchaseOrderNumber').val(po);
+                
+                $('#editInvoiceModal').modal('show');
+            });
+
+            // Delete Invoice
+            $('.delete-invoice').click(function(e) {
+                e.preventDefault();
+                if (confirm('Are you sure you want to delete this invoice?')) {
+                    window.location.href = '?action=delete&id=' + $(this).data('id');
+                }
+            });
         });
-    });
-</script>
+    </script>
 
-<!-- Bootstrap 5 JS Bundle (includes Popper) -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 
 </html>
