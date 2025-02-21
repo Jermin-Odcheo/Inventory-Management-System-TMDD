@@ -99,7 +99,7 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
             <!-- Equipment Transaction Dropdown -->
             <li class="dropdown-item">
                 <button class="dropdown-toggle" aria-expanded="false">
-                    <i class="fa-solid fa-wrench"></i> Equipment Transaction
+                    <i class="bi bi-arrow-left-right"></i>Equipment Transaction
                     <i class="fas fa-chevron-down dropdown-icon"></i>
                 </button>
                 <ul class="dropdown tree" aria-expanded="false">
