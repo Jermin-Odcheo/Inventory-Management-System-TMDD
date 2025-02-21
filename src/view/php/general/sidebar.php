@@ -86,7 +86,7 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                     </li>
                     <li>
                         <a href="../../modules/equipment_manager/equipment_status.php">
-                            Equipment Status
+                            Equipment Status for PMS
                         </a>
                     </li>
                 </ul>
