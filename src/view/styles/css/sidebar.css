@@ -177,7 +177,7 @@
 .sidebar nav ul.tree {
     list-style: none;
     margin: 0;
-    padding-left: 0.5rem;
+    padding-left: 0.2rem;
     position: relative;
 }
 
@@ -191,7 +191,7 @@
 /* Expanded items: extra left padding */
 .sidebar nav ul.tree[aria-expanded='true'] li {
     position: relative;
-    padding: 0.20rem 0 0.20rem 0.80rem; /* Adjust for your layout */
+    padding: 0.10rem 0 0.10rem 0.10rem; /* Adjust for your layout */
     transition: padding 0.2s ease;
 }
 /* Reduce left padding so items are closer to the sidebar’s edge */
@@ -202,7 +202,7 @@
 /* Shift the lines half a rem to the left (so they aren’t too far in) */
 .sidebar nav ul.tree[aria-expanded='true'] li::before,
 .sidebar nav ul.tree[aria-expanded='true'] li::after {
-    left: -0.5rem;  /* from 0 to -0.5rem */
+    left: 0.1rem;  /* from 0 to -0.5rem */
     top: 1rem;      /* stays at 1rem, or tweak if you want it lower/higher */
 }
 
@@ -227,10 +227,9 @@
     content: '';
     position: absolute;
     top: 0.5rem;       /* Same y-offset as the stem's top */
-
     left: 0;
-    width: 1.35rem;
-    height: 1.7rem;
+    width: 0.8rem;
+    height: 1.78rem;
 
     /* 2px line, matching the stem color */
     border-bottom: 2px solid #ffffff;
