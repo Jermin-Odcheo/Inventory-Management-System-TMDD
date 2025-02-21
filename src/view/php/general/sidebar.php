@@ -65,11 +65,6 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                             Manage Roles
                         </a>
                     </li>
-                    <li>
-                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/role_manager/manage_privilege.php">
-                            Manage Privileges
-                        </a>
-                    </li>
                 </ul>
             </li>
             <!-- Equipment Management Dropdown -->
@@ -99,7 +94,7 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
             <!-- Equipment Transaction Dropdown -->
             <li class="dropdown-item">
                 <button class="dropdown-toggle" aria-expanded="false">
-                    <i class="bi bi-arrow-left-right"></i>Equipment Transaction
+                    <i class="fa-solid fa-arrow-right-arrow-left"></i>Equipment Transaction
                     <i class="fas fa-chevron-down dropdown-icon"></i>
                 </button>
                 <ul class="dropdown tree" aria-expanded="false">
