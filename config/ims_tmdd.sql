@@ -161,6 +161,8 @@ CREATE TABLE IF NOT EXISTS `equipmentstatus` (
   `Status` varchar(100) DEFAULT NULL,
   `Action` varchar(255) DEFAULT NULL,
   `Remarks` text,
+  `CheckDate` datetime DEFAULT CURRENT_TIMESTAMP,
+  `AccountableIndividual` varchar(100) DEFAULT NULL,
   PRIMARY KEY (`EquipmentStatusID`),
   KEY `AssetTag` (`AssetTag`)
 ) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -169,9 +171,9 @@ CREATE TABLE IF NOT EXISTS `equipmentstatus` (
 -- Dumping data for table `equipmentstatus`
 --
 
-INSERT INTO `equipmentstatus` (`EquipmentStatusID`, `AssetTag`, `Status`, `Action`, `Remarks`) VALUES
-(1, 'AT001', 'Operational', 'Deployed', 'Working well'),
-(2, 'AT002', 'Operational', 'Deployed', 'No issues reported');
+INSERT INTO `equipmentstatus` (`EquipmentStatusID`, `AssetTag`, `Status`, `Action`, `Remarks`, `CheckDate`, `AccountableIndividual`) VALUES
+(1, 'AT001', 'Operational', 'Deployed', 'Working well', '2024-02-01 10:00:00', 'John Doe'),
+(2, 'AT002', 'Operational', 'Deployed', 'No issues reported', '2024-02-02 14:30:00', 'Jane Smith');
 
 -- --------------------------------------------------------
 
