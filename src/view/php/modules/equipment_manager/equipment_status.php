@@ -32,12 +32,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         switch ($_POST['action']) {
             case 'add':
                 try {
-                    $stmt = $pdo->prepare("INSERT INTO equipmentstatus (AssetTag, Status, Action, Remarks) VALUES (?, ?, ?, ?)");
+                    $stmt = $pdo->prepare("INSERT INTO equipmentstatus (AssetTag, Status, Action, Remarks, AccountableIndividual, CheckDate) VALUES (?, ?, ?, ?, ?, NOW())");
                     $stmt->execute([
                         $_POST['asset_tag'],
                         $_POST['status'],
                         $_POST['action_taken'],
-                        $_POST['remarks']
+                        $_POST['remarks'],
+                        $_POST['accountable_individual']
                     ]);
                     $response['status'] = 'success';
                     $response['message'] = 'Equipment Status has been added successfully.';
@@ -51,12 +52,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
             case 'update':
                 try {
-                    $stmt = $pdo->prepare("UPDATE equipmentstatus SET AssetTag = ?, Status = ?, Action = ?, Remarks = ? WHERE EquipmentStatusID = ?");
+                    $stmt = $pdo->prepare("UPDATE equipmentstatus SET AssetTag = ?, Status = ?, Action = ?, Remarks = ?, AccountableIndividual = ?, CheckDate = NOW() WHERE EquipmentStatusID = ?");
                     $stmt->execute([
                         $_POST['asset_tag'],
                         $_POST['status'],
                         $_POST['action_taken'],
                         $_POST['remarks'],
+                        $_POST['accountable_individual'],
                         $_POST['status_id']
                     ]);
                     $response['status'] = 'success';
@@ -318,16 +320,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                     </button>
                                     <select class="form-select form-select-sm" id="filterStatus" style="width: auto;">
                                         <option value="">Filter By Status</option>
-                                        <?php
-                                        try {
-                                            $statusTypes = $pdo->query("SELECT DISTINCT Status FROM equipmentstatus WHERE Status IS NOT NULL")->fetchAll(PDO::FETCH_COLUMN);
-                                            foreach($statusTypes as $status) {
-                                                echo "<option value='" . htmlspecialchars($status) . "'>" . htmlspecialchars($status) . "</option>";
-                                            }
-                                        } catch (PDOException $e) {
-                                            // Handle error silently
-                                        }
-                                        ?>
+                                        <option value="Working">Working</option>
+                                        <option value="Defective">Defective</option>
+                                        <option value="Replacement">Replacement</option>
+                                        <option value="Maintenance">Maintenance</option>
                                     </select>
                                 </div>
                             </div>
@@ -339,22 +335,26 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                         <tr>
                                             <th style="width: 7%">Status ID</th>
                                             <th style="width: 13%">Asset Tag</th>
-                                            <th style="width: 15%">Status</th>
-                                            <th style="width: 18%">Action</th>
-                                            <th style="width: 22%">Remarks</th>
-                                            <th style="width: 15%">Operations</th>
+                                            <th style="width: 12%">Status</th>
+                                            <th style="width: 15%">Action</th>
+                                            <th style="width: 15%">Accountable Individual</th>
+                                            <th style="width: 12%">Check Date</th>
+                                            <th style="width: 15%">Remarks</th>
+                                            <th style="width: 11%">Operations</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <?php
                                         try {
-                                            $stmt = $pdo->query("SELECT * FROM equipmentstatus");
+                                            $stmt = $pdo->query("SELECT * FROM equipmentstatus ORDER BY CheckDate DESC");
                                             while ($row = $stmt->fetch()) {
                                                 echo "<tr>";
                                                 echo "<td>" . htmlspecialchars($row['EquipmentStatusID']) . "</td>";
                                                 echo "<td>" . htmlspecialchars($row['AssetTag']) . "</td>";
                                                 echo "<td>" . htmlspecialchars($row['Status']) . "</td>";
                                                 echo "<td>" . htmlspecialchars($row['Action']) . "</td>";
+                                                echo "<td>" . htmlspecialchars($row['AccountableIndividual']) . "</td>";
+                                                echo "<td>" . date('Y-m-d H:i', strtotime($row['CheckDate'])) . "</td>";
                                                 echo "<td>" . htmlspecialchars($row['Remarks']) . "</td>";
                                                 echo "<td>
                                                         <div class='d-flex justify-content-center gap-2'>
@@ -363,6 +363,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                                                     data-asset='" . htmlspecialchars($row['AssetTag']) . "'
                                                                     data-status='" . htmlspecialchars($row['Status']) . "'
                                                                     data-action='" . htmlspecialchars($row['Action']) . "'
+                                                                    data-accountable='" . htmlspecialchars($row['AccountableIndividual']) . "'
                                                                     data-remarks='" . htmlspecialchars($row['Remarks']) . "'>
                                                                 <i class='far fa-edit'></i> Edit
                                                             </button>
@@ -375,7 +376,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                                 echo "</tr>";
                                             }
                                         } catch (PDOException $e) {
-                                            echo "<tr><td colspan='6'>Error loading data: " . htmlspecialchars($e->getMessage()) . "</td></tr>";
+                                            echo "<tr><td colspan='8'>Error loading data: " . htmlspecialchars($e->getMessage()) . "</td></tr>";
                                         }
                                         ?>
                                     </tbody>
@@ -415,6 +416,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                         <div class="mb-3">
                             <label for="action_taken" class="form-label">Action Taken</label>
                             <input type="text" class="form-control" name="action_taken" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="accountable_individual" class="form-label">Accountable Individual</label>
+                            <input type="text" class="form-control" name="accountable_individual" required>
                         </div>
                         <div class="mb-3">
                             <label for="remarks" class="form-label">Remarks</label>
@@ -457,6 +462,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                         <div class="mb-3">
                             <label for="edit_action_taken" class="form-label">Action Taken</label>
                             <input type="text" class="form-control" name="action_taken" id="edit_action_taken" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_accountable_individual" class="form-label">Accountable Individual</label>
+                            <input type="text" class="form-control" name="accountable_individual" id="edit_accountable_individual" required>
                         </div>
                         <div class="mb-3">
                             <label for="edit_remarks" class="form-label">Remarks</label>
@@ -509,12 +518,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                 var asset = $(this).data('asset');
                 var status = $(this).data('status');
                 var action = $(this).data('action');
+                var accountable = $(this).data('accountable');
                 var remarks = $(this).data('remarks');
                 
                 $('#edit_status_id').val(id);
                 $('#edit_asset_tag').val(asset);
                 $('#edit_status').val(status);
                 $('#edit_action_taken').val(action);
+                $('#edit_accountable_individual').val(accountable);
                 $('#edit_remarks').val(remarks);
                 
                 $('#editStatusModal').modal('show');
