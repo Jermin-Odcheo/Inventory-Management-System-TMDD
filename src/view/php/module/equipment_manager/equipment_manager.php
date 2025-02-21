@@ -38,11 +38,9 @@ $result = $conn->query($query);
 
     <!-- Navbar -->
     <nav class="navbar navbar-dark bg-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#">User Management</a>
-            <a href="../../../../config/logout.php" class="btn btn-danger">Logout</a>
-        </div>
+        <?php include '../../general/header.php'?>
     </nav>
+
 
     <div class="container-fluid">
         <div class="row">
