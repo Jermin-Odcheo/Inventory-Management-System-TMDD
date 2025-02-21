@@ -1,28 +1,17 @@
 <?php
-// equipment_status.php
 session_start();
-require_once('../../../../../config/ims-tmdd.php'); // Adjust the path as needed
+require_once('../../../../../config/ims-tmdd.php');
 
-// -----------------------------------------------------------------
-// Optionally check for admin privileges (uncomment if needed)
-// if (!isset($_SESSION['user_id'])) {
-//     header("Location: add_user.php");
-//     exit();
-// }
-// -----------------------------------------------------------------
-
-// Set the audit log session variables for MySQL triggers.
-if (isset($_SESSION['user_id'])) {
-    // Use the logged-in user's ID.
-    $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
-} else {
-    $pdo->exec("SET @current_user_id = NULL");
+// Check if user is not logged in
+if (!isset($_SESSION['user_id'])) {
+    header("Location: /index.php");
+    exit();
 }
 
-// Set IP address; adjust as needed if you use a proxy.
-$ipAddress = $_SERVER['REMOTE_ADDR'];
-$pdo->exec("SET @current_ip = '" . $ipAddress . "'");
+// Initialize response array
+$response = array('status' => '', 'message' => '');
 
+// Add this after session_start() and database connection
 // Initialize messages
 $errors = [];
 $success = "";
@@ -36,9 +25,6 @@ if (isset($_SESSION['success'])) {
     $success = $_SESSION['success'];
     unset($_SESSION['success']);
 }
-
-// Initialize response array
-$response = array('status' => '', 'message' => '');
 
 // Handle CRUD operations
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
@@ -54,10 +40,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         $_POST['remarks']
                     ]);
                     $response['status'] = 'success';
-                    $response['message'] = 'Status added successfully';
+                    $response['message'] = 'Equipment Status has been added successfully.';
+                    $_SESSION['success'] = "Equipment Status has been added successfully.";
                 } catch (PDOException $e) {
                     $response['status'] = 'error';
                     $response['message'] = 'Error adding status: ' . $e->getMessage();
+                    $_SESSION['errors'] = ["Error adding status: " . $e->getMessage()];
                 }
                 break;
 
@@ -143,7 +131,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     
                     $response = [
                         'status' => 'success',
-                        'message' => 'Status deleted successfully'
+                        'message' => 'Equipment Status deleted successfully.',
+                        $_SESSION['success'] = "Equipment Status deleted successfully."
                     ];
                 } catch (Exception $e) {
                     // Rollback transaction on error
@@ -152,7 +141,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     }
                     $response = [
                         'status' => 'error',
-                        'message' => 'Error deleting status: ' . $e->getMessage()
+                        'message' => 'Error deleting status: ' . $e->getMessage(),
+                        $_SESSION['errors'] = ["Error deleting status: " . $e->getMessage()]
                     ];
                 }
                 
@@ -290,13 +280,37 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
     <!-- Main Content -->
     <div class="main-content">
         <div class="container-fluid">
+            <!-- Success Message -->
+            <?php if (!empty($success)): ?>
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="bi bi-check-circle"></i> <?php echo $success; ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            <?php endif; ?>
+
+            <!-- Error Messages -->
+            <?php if (!empty($errors)): ?>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <?php foreach ($errors as $err): ?>
+                        <p><i class="bi bi-exclamation-triangle"></i> <?php echo $err; ?></p>
+                    <?php endforeach; ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            <?php endif; ?>
+
             <div class="row">
                 <main class="col-md-12 px-md-4 py-4">
                     <div class="card shadow">
-                        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-2">
-                            <h2 class="card-title mb-0 fs-4">Equipment Status Management</h2>
+                        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-list-ul"></i> List of Equipment Status</span>
+                            <!-- Move search to header -->
+                            <div class="input-group w-auto">
+                                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                <input type="text" id="searchStatus" class="form-control" placeholder="Search status...">
+                            </div>
                         </div>
                         <div class="card-body p-3">
+                            <!-- Add button and filter -->
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <div class="d-flex gap-2">
                                     <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addStatusModal">
@@ -315,10 +329,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                         }
                                         ?>
                                     </select>
-                                </div>
-                                <div class="search-container position-relative">
-                                    <input type="text" id="searchStatus" class="form-control form-control-sm" placeholder="Search status...">
-                                    <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-2"></i>
                                 </div>
                             </div>
 
@@ -477,7 +487,18 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                     method: 'POST',
                     data: $(this).serialize(),
                     success: function(response) {
-                        location.reload();
+                        try {
+                            const result = JSON.parse(response);
+                            if (result.status === 'success') {
+                                $('#addStatusModal').modal('hide');
+                                location.reload();
+                            } else {
+                                alert(result.message);
+                            }
+                        } catch (e) {
+                            console.error('Parse error:', e);
+                            location.reload();
+                        }
                     }
                 });
             });
@@ -559,11 +580,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                     alert(result.message);
                                 }
                             } catch (e) {
+                                console.error('Parse error:', e);
                                 location.reload();
                             }
-                        },
-                        error: function() {
-                            location.reload();
                         }
                     });
                 }

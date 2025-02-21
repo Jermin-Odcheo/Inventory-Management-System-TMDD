@@ -1,27 +1,19 @@
 <?php
-// equipment_details.php
+// purchase_order.php
 session_start();
 require_once('../../../../../config/ims-tmdd.php'); // Adjust the path as needed
 
-// -----------------------------------------------------------------
-// Optionally check for admin privileges (uncomment if needed)
-// if (!isset($_SESSION['user_id'])) {
-//     header("Location: add_user.php");
-//     exit();
-// }
-// -----------------------------------------------------------------
-
-// Set the audit log session variables for MySQL triggers.
-if (isset($_SESSION['user_id'])) {
-    // Use the logged-in user's ID.
-    $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
-} else {
-    $pdo->exec("SET @current_user_id = NULL");
+// Check if user is logged in
+if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
+    // Set cache-control headers
+    header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+    header("Cache-Control: post-check=0, pre-check=0", false);
+    header("Pragma: no-cache");
+    
+    // Redirect to login page
+    header("Location: /public/index.php");
+    exit();
 }
-
-// Set IP address; adjust as needed if you use a proxy.
-$ipAddress = $_SERVER['REMOTE_ADDR'];
-$pdo->exec("SET @current_ip = '" . $ipAddress . "'");
 
 // Initialize messages
 $errors = [];
@@ -36,6 +28,7 @@ if (isset($_SESSION['success'])) {
     $success = $_SESSION['success'];
     unset($_SESSION['success']);
 }
+
 // ------------------------
 // DELETE PURCHASE ORDER
 // ------------------------
@@ -95,13 +88,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     error_log('Insert successful. Last Insert ID: ' . $pdo->lastInsertId());
                     
                     $response['status'] = 'success';
-                    $response['message'] = 'Equipment added successfully';
+                    $response['message'] = 'Equipment Details has been added successfully.';
+                    $_SESSION['success'] = "Equipment Details has been added successfully.";
                 } catch (PDOException $e) {
                     // Debug line
                     error_log('Database error: ' . $e->getMessage());
                     
                     $response['status'] = 'error';
                     $response['message'] = 'Error adding equipment: ' . $e->getMessage();
+                    $_SESSION['errors'] = ["Error adding equipment: " . $e->getMessage()];
                 }
                 echo json_encode($response);
                 exit;
@@ -200,10 +195,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $stmt->execute([$_POST['equipment_id']]);
                     
                     $response['status'] = 'success';
-                    $response['message'] = 'Equipment deleted successfully';
+                    $response['message'] = 'Equipment Details deleted successfully.';
+                    $_SESSION['success'] = "Equipment Details deleted successfully.";
                 } catch (PDOException $e) {
                     $response['status'] = 'error';
                     $response['message'] = 'Error deleting equipment: ' . $e->getMessage();
+                    $_SESSION['errors'] = ["Error deleting equipment: " . $e->getMessage()];
                 }
                 echo json_encode($response);
                 exit;
@@ -290,12 +287,36 @@ try {
     <?php include '../../general/sidebar.php'; ?>
 
     <div class="container-fluid" style="margin-left: 320px; padding: 20px; width: calc(100vw - 340px);">
+        <!-- Success Message -->
+        <?php if (!empty($success)): ?>
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="bi bi-check-circle"></i> <?php echo $success; ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        <?php endif; ?>
+
+        <!-- Error Messages -->
+        <?php if (!empty($errors)): ?>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <?php foreach ($errors as $err): ?>
+                    <p><i class="bi bi-exclamation-triangle"></i> <?php echo $err; ?></p>
+                <?php endforeach; ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        <?php endif; ?>
+
+        <!-- Title moved outside the card -->
+        <h2 class="mb-4">Equipment Details Management</h2>
+
         <div class="card shadow">
-            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-2">
-                <h2 class="card-title mb-0 fs-4">Equipment Details Management</h2>
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-list-ul"></i> List of Equipment Details</span>
+                <div class="input-group w-auto">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" id="searchEquipment" class="form-control" placeholder="Search equipment...">
+                </div>
             </div>
             <div class="card-body p-3">
-                <!-- Add Equipment Details Button -->
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <div class="d-flex gap-2">
                         <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addEquipmentModal">
@@ -304,7 +325,6 @@ try {
                         <select class="form-select form-select-sm" id="filterEquipment" style="width: auto;">
                             <option value="">Filter Equipment Type</option>
                             <?php
-                            // Get unique Description1 values instead of brands
                             $equipmentTypes = array_unique(array_column($equipmentDetails, 'AssetDescription1'));
                             foreach($equipmentTypes as $type) {
                                 if(!empty($type)) {
@@ -314,13 +334,8 @@ try {
                             ?>
                         </select>
                     </div>
-                    <div class="search-container position-relative">
-                        <input type="text" id="searchEquipment" class="form-control form-control-sm" placeholder="Search equipment...">
-                        <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-2"></i>
-                    </div>
                 </div>
 
-                <!-- Equipment Details List Table -->
                 <div class="table-responsive">
                     <table class="table table-striped table-bordered table-sm mb-0">
                         <thead class="table-dark">
@@ -606,7 +621,7 @@ try {
 
         // Delete Equipment
         $('.delete-equipment').off('click').on('click', function(e) {
-            e.preventDefault(); // Prevent any default action
+            e.preventDefault();
             var id = $(this).data('id');
             
             if (confirm('Are you sure you want to delete this equipment?')) {
