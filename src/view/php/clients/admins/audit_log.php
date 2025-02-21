@@ -1,7 +1,15 @@
 <?php
 session_start();
-require_once('../../../../../config/ims-tmdd.php');
+require '../../../../../config/ims-tmdd.php';
 
+// Include Header
+include '../../general/header.php';
+
+//If not logged in redirect to the LOGIN PAGE
+if (!isset($_SESSION['user_id'])) {
+    header("Location: " . BASE_URL . "public/index.php"); // Redirect to login page
+    exit();
+}
 // Fetch all audit logs (including permanent deletes)
 $query = "SELECT audit_log.*, users.email AS user_email 
           FROM audit_log 

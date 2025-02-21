@@ -1,11 +1,40 @@
 <?php
+// equipment_status.php
 session_start();
-require_once('../../../../../config/ims-tmdd.php');
+require_once('../../../../../config/ims-tmdd.php'); // Adjust the path as needed
 
-// Check if user is not logged in
-if (!isset($_SESSION['user_id'])) {
-    header("Location: /index.php");
-    exit();
+// -----------------------------------------------------------------
+// Optionally check for admin privileges (uncomment if needed)
+// if (!isset($_SESSION['user_id'])) {
+//     header("Location: add_user.php");
+//     exit();
+// }
+// -----------------------------------------------------------------
+
+// Set the audit log session variables for MySQL triggers.
+if (isset($_SESSION['user_id'])) {
+    // Use the logged-in user's ID.
+    $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
+} else {
+    $pdo->exec("SET @current_user_id = NULL");
+}
+
+// Set IP address; adjust as needed if you use a proxy.
+$ipAddress = $_SERVER['REMOTE_ADDR'];
+$pdo->exec("SET @current_ip = '" . $ipAddress . "'");
+
+// Initialize messages
+$errors = [];
+$success = "";
+
+// Retrieve any session messages from previous requests
+if (isset($_SESSION['errors'])) {
+    $errors = $_SESSION['errors'];
+    unset($_SESSION['errors']);
+}
+if (isset($_SESSION['success'])) {
+    $success = $_SESSION['success'];
+    unset($_SESSION['success']);
 }
 
 // Initialize response array

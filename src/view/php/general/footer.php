@@ -1,3 +1,4 @@
+
 <footer class="footer">
     <p class="footer-text">&copy; 2025 TMDD Interns</p>
 </footer>

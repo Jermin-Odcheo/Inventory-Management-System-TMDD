@@ -1,15 +1,13 @@
 <?php
 session_start();
-require_once('../../../../../config/ims-tmdd.php');
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+require '../../../../../config/ims-tmdd.php';
 
-if (!isset($pdo)) {
-    die("Database connection is not established.");
-}
+// Include Header
+include '../../general/header.php';
 
+//If not logged in redirect to the LOGIN PAGE
 if (!isset($_SESSION['user_id'])) {
-    header("Location: ../../../../../public/index.php");
+    header("Location: " . BASE_URL . "public/index.php"); // Redirect to login page
     exit();
 }
 

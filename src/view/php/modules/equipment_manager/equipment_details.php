@@ -1,19 +1,27 @@
 <?php
-// purchase_order.php
+// equipment_details.php
 session_start();
 require_once('../../../../../config/ims-tmdd.php'); // Adjust the path as needed
 
-// Check if user is logged in
-if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
-    // Set cache-control headers
-    header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
-    header("Cache-Control: post-check=0, pre-check=0", false);
-    header("Pragma: no-cache");
-    
-    // Redirect to login page
-    header("Location: /public/index.php");
-    exit();
+// -----------------------------------------------------------------
+// Optionally check for admin privileges (uncomment if needed)
+// if (!isset($_SESSION['user_id'])) {
+//     header("Location: add_user.php");
+//     exit();
+// }
+// -----------------------------------------------------------------
+
+// Set the audit log session variables for MySQL triggers.
+if (isset($_SESSION['user_id'])) {
+    // Use the logged-in user's ID.
+    $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
+} else {
+    $pdo->exec("SET @current_user_id = NULL");
 }
+
+// Set IP address; adjust as needed if you use a proxy.
+$ipAddress = $_SERVER['REMOTE_ADDR'];
+$pdo->exec("SET @current_ip = '" . $ipAddress . "'");
 
 // Initialize messages
 $errors = [];
@@ -28,7 +36,6 @@ if (isset($_SESSION['success'])) {
     $success = $_SESSION['success'];
     unset($_SESSION['success']);
 }
-
 // ------------------------
 // DELETE PURCHASE ORDER
 // ------------------------
