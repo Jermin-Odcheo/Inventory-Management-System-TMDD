@@ -208,11 +208,22 @@ try {
                     <div class="card-body">
                         <?php if (!empty($equipmentLocations)): ?>
                             <div class="table-responsive">
-                                <!-- Add Location Button -->
-                                <div class="d-flex justify-content-start mb-3">
+                                <!-- Add Location Button and Filter -->
+                                <div class="d-flex justify-content-start mb-3 gap-2">
                                     <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addLocationModal">
                                         <i class="bi bi-plus-circle"></i> Add Equipment Location
                                     </button>
+                                    <select class="form-select form-select-sm" id="filterBuilding" style="width: auto;">
+                                        <option value="">Filter Building Location</option>
+                                        <?php
+                                        $buildingLocations = array_unique(array_column($equipmentLocations, 'BuildingLocation'));
+                                        foreach($buildingLocations as $building) {
+                                            if(!empty($building)) {
+                                                echo "<option value='" . htmlspecialchars($building) . "'>" . htmlspecialchars($building) . "</option>";
+                                            }
+                                        }
+                                        ?>
+                                    </select>
                                 </div>
                                 
                                 <table class="table table-striped table-hover align-middle" id="eqTable">
@@ -265,158 +276,70 @@ try {
 
 <!-- Add Location Modal -->
 <div class="modal fade" id="addLocationModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">
-                    <i class="bi bi-plus-circle me-2"></i>Add New Equipment Location
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Location</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <form id="addLocationForm" method="post">
                     <input type="hidden" name="action" value="add">
-                    <div class="form-field-group">
-                        <div class="form-field-group-title">
-                            <i class="bi bi-info-circle me-2"></i>Location Information
-                        </div>
-                        <div class="mb-3">
-                            <label for="AssetTag" class="form-label">
-                                <i class="bi bi-tag"></i> Asset Tag <span class="text-danger">*</span>
-                            </label>
-                            <select name="AssetTag" class="form-select shadow-none" required>
-                                <option value="" disabled selected>Select an Asset Tag</option>
-                                <?php
-                                $stmt = $pdo->prepare("SELECT AssetTag FROM equipmentdetails");
-                                $stmt->execute();
-                                while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                                    echo '<option value="' . htmlspecialchars($row['AssetTag']) . '">' . 
-                                         htmlspecialchars($row['AssetTag']) . '</option>';
-                                }
-                                ?>
-                            </select>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="BuildingLocation" class="form-label">
-                                <i class="bi bi-building"></i> Building Location <span class="text-danger">*</span>
-                            </label>
-                            <input type="text" class="form-control shadow-none" name="BuildingLocation" placeholder="Enter building location" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="FloorNumber" class="form-label">
-                                <i class="bi bi-layers"></i> Floor Number <span class="text-danger">*</span>
-                            </label>
-                            <input type="text" class="form-control shadow-none" name="FloorNumber" placeholder="Enter floor number" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="SpecificArea" class="form-label">
-                                <i class="bi bi-pin-map"></i> Specific Area <span class="text-danger">*</span>
-                            </label>
-                            <input type="text" class="form-control shadow-none" name="SpecificArea" placeholder="Enter specific area" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="PersonResponsible" class="form-label">
-                                <i class="bi bi-person"></i> Person Responsible <span class="text-danger">*</span>
-                            </label>
-                            <input type="text" class="form-control shadow-none" name="PersonResponsible" placeholder="Enter person responsible" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="Remarks" class="form-label">
-                                <i class="bi bi-chat-left-text"></i> Remarks
-                            </label>
-                            <textarea class="form-control shadow-none" name="Remarks" rows="3" placeholder="Enter remarks"></textarea>
-                        </div>
+                    
+                    <div class="mb-3">
+                        <label for="AssetTag" class="form-label">
+                            <i class="bi bi-tag"></i> Asset Tag <span class="text-danger">*</span>
+                        </label>
+                        <select name="AssetTag" class="form-control" required>
+                            <option value="" disabled selected hidden>Select an Asset Tag</option>
+                            <?php
+                            $stmt = $pdo->prepare("SELECT AssetTag FROM equipmentdetails");
+                            $stmt->execute();
+                            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                                echo '<option value="' . htmlspecialchars($row['AssetTag']) . '">' . htmlspecialchars($row['AssetTag']) . '</option>';
+                            }
+                            ?>
+                        </select>
                     </div>
-                    <div class="mt-4">
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="bi bi-check-circle me-2"></i>Add Location
-                        </button>
+
+                    <div class="mb-3">
+                        <label for="BuildingLocation" class="form-label">
+                            <i class="bi bi-building"></i> Building Location <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="BuildingLocation" name="BuildingLocation" required>
                     </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
 
-<!-- Edit Location Modal -->
-<div class="modal fade" id="editLocationModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">
-                    <i class="bi bi-pencil-square me-2"></i>Edit Equipment Location
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="editLocationForm" method="post">
-                    <input type="hidden" name="action" value="update">
-                    <input type="hidden" name="id" id="edit_location_id">
-                    <div class="form-field-group">
-                        <div class="form-field-group-title">
-                            <i class="bi bi-info-circle me-2"></i>Location Information
-                        </div>
-                        <div class="mb-3">
-                            <label for="edit_AssetTag" class="form-label">
-                                <i class="bi bi-tag"></i> Asset Tag <span class="text-danger">*</span>
-                            </label>
-                            <select name="AssetTag" id="edit_AssetTag" class="form-select shadow-none" required>
-                                <option value="" disabled>Select an Asset Tag</option>
-                                <?php
-                                $stmt = $pdo->prepare("SELECT AssetTag FROM equipmentdetails");
-                                $stmt->execute();
-                                while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                                    echo '<option value="' . htmlspecialchars($row['AssetTag']) . '">' . 
-                                         htmlspecialchars($row['AssetTag']) . '</option>';
-                                }
-                                ?>
-                            </select>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="edit_BuildingLocation" class="form-label">
-                                <i class="bi bi-building"></i> Building Location <span class="text-danger">*</span>
-                            </label>
-                            <input type="text" class="form-control shadow-none" name="BuildingLocation" id="edit_BuildingLocation" placeholder="Enter building location" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="edit_FloorNumber" class="form-label">
-                                <i class="bi bi-layers"></i> Floor Number <span class="text-danger">*</span>
-                            </label>
-                            <input type="text" class="form-control shadow-none" name="FloorNumber" id="edit_FloorNumber" placeholder="Enter floor number" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="edit_SpecificArea" class="form-label">
-                                <i class="bi bi-pin-map"></i> Specific Area <span class="text-danger">*</span>
-                            </label>
-                            <input type="text" class="form-control shadow-none" name="SpecificArea" id="edit_SpecificArea" placeholder="Enter specific area" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="edit_PersonResponsible" class="form-label">
-                                <i class="bi bi-person"></i> Person Responsible <span class="text-danger">*</span>
-                            </label>
-                            <input type="text" class="form-control shadow-none" name="PersonResponsible" id="edit_PersonResponsible" placeholder="Enter person responsible" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="edit_Remarks" class="form-label">
-                                <i class="bi bi-chat-left-text"></i> Remarks
-                            </label>
-                            <textarea class="form-control shadow-none" name="Remarks" id="edit_Remarks" rows="3" placeholder="Enter remarks"></textarea>
-                        </div>
+                    <div class="mb-3">
+                        <label for="FloorNumber" class="form-label">
+                            <i class="bi bi-layers"></i> Floor Number <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="FloorNumber" name="FloorNumber" required>
                     </div>
-                    <div class="mt-4">
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="bi bi-check-circle me-2"></i>Save Changes
-                        </button>
+
+                    <div class="mb-3">
+                        <label for="SpecificArea" class="form-label">
+                            <i class="bi bi-pin-map"></i> Specific Area <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="SpecificArea" name="SpecificArea" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="PersonResponsible" class="form-label">
+                            <i class="bi bi-person"></i> Person Responsible <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="PersonResponsible" name="PersonResponsible" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="Remarks" class="form-label">
+                            <i class="bi bi-chat-left-text"></i> Remarks
+                        </label>
+                        <textarea class="form-control" id="Remarks" name="Remarks" rows="3"></textarea>
+                    </div>
+
+                    <div class="d-flex justify-content-end">
+                        <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success">Add Location</button>
                     </div>
                 </form>
             </div>
@@ -426,13 +349,32 @@ try {
 
 <!-- JavaScript for Real-Time Table Filtering -->
 <script>
-    document.getElementById('eqSearch').addEventListener('keyup', function() {
-        const searchValue = this.value.toLowerCase();
-        const rows = document.querySelectorAll('#eqTable tbody tr');
-        rows.forEach(function(row) {
-            const rowText = row.textContent.toLowerCase();
-            row.style.display = rowText.indexOf(searchValue) > -1 ? '' : 'none';
+    document.addEventListener('DOMContentLoaded', function() {
+        // Search functionality
+        document.getElementById('eqSearch').addEventListener('keyup', function() {
+            filterTable();
         });
+
+        // Filter functionality
+        document.getElementById('filterBuilding').addEventListener('change', function() {
+            filterTable();
+        });
+
+        function filterTable() {
+            const searchValue = document.getElementById('eqSearch').value.toLowerCase();
+            const filterBuilding = document.getElementById('filterBuilding').value.toLowerCase();
+            const rows = document.querySelectorAll('#eqTable tbody tr');
+
+            rows.forEach(function(row) {
+                const rowText = row.textContent.toLowerCase();
+                const buildingCell = row.querySelector('td:nth-child(3)').textContent.toLowerCase(); // Building Location is in the 3rd column
+
+                const searchMatch = rowText.indexOf(searchValue) > -1;
+                const buildingMatch = !filterBuilding || buildingCell === filterBuilding;
+
+                row.style.display = (searchMatch && buildingMatch) ? '' : 'none';
+            });
+        }
     });
 </script>
 

@@ -140,9 +140,7 @@ try {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Custom CSS -->
-    <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
-    <!-- jQuery -->
+    <!-- Add jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
         body {
@@ -224,9 +222,50 @@ try {
             </div>
             <div class="card-body p-3">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addInvoiceModal">
-                        <i class="bi bi-plus-circle"></i> Add Charge Invoice
-                    </button>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addInvoiceModal">
+                            <i class="bi bi-plus-circle"></i> Add Charge Invoice
+                        </button>
+                        <select class="form-select form-select-sm" id="dateFilter" style="width: auto;">
+                            <option value="">Filter by Date</option>
+                            <option value="desc">Newest to Oldest</option>
+                            <option value="asc">Oldest to Newest</option>
+                            <option value="month">Specific Month</option>
+                            <option value="range">Custom Date Range</option>
+                        </select>
+                        <!-- Date inputs container -->
+                        <div id="dateInputsContainer" style="display: none;">
+                            <!-- Month Picker -->
+                            <div class="d-flex gap-2" id="monthPickerContainer" style="display: none;">
+                                <select class="form-select form-select-sm" id="monthSelect" style="min-width: 130px;">
+                                    <option value="">Select Month</option>
+                                    <?php
+                                    $months = [
+                                        'January', 'February', 'March', 'April', 'May', 'June',
+                                        'July', 'August', 'September', 'October', 'November', 'December'
+                                    ];
+                                    foreach ($months as $index => $month) {
+                                        echo "<option value='" . ($index + 1) . "'>" . $month . "</option>";
+                                    }
+                                    ?>
+                                </select>
+                                <select class="form-select form-select-sm" id="yearSelect" style="min-width: 110px;">
+                                    <option value="">Select Year</option>
+                                    <?php
+                                    $currentYear = date('Y');
+                                    for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
+                                        echo "<option value='" . $year . "'>" . $year . "</option>";
+                                    }
+                                    ?>
+                                </select>
+                            </div>
+                            <!-- Date Range Pickers -->
+                            <div class="d-flex gap-2" id="dateRangePickers" style="display: none;">
+                                <input type="date" class="form-control form-control-sm" id="dateFrom" placeholder="From">
+                                <input type="date" class="form-control form-control-sm" id="dateTo" placeholder="To">
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="table-responsive">
@@ -274,42 +313,29 @@ try {
 
     <!-- Add Invoice Modal -->
     <div class="modal fade" id="addInvoiceModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="bi bi-plus-circle me-2"></i>Add New Charge Invoice
-                    </h5>
+                    <h5 class="modal-title">Add New Charge Invoice</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="addInvoiceForm" method="post">
                         <input type="hidden" name="action" value="add">
-                        <div class="form-field-group">
-                            <div class="form-field-group-title">Invoice Information</div>
-                            <div class="mb-3">
-                                <label for="ChargeInvoiceNo" class="form-label">
-                                    <i class="bi bi-tag"></i> Charge Invoice Number <span class="text-danger">*</span>
-                                </label>
-                                <input type="text" class="form-control" name="ChargeInvoiceNo" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="DateOfChargeInvoice" class="form-label">
-                                    <i class="bi bi-calendar"></i> Date of Charge Invoice <span class="text-danger">*</span>
-                                </label>
-                                <input type="date" class="form-control" name="DateOfChargeInvoice" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="PurchaseOrderNumber" class="form-label">
-                                    <i class="bi bi-file-text"></i> Purchase Order Number <span class="text-danger">*</span>
-                                </label>
-                                <input type="text" class="form-control" name="PurchaseOrderNumber" required>
-                            </div>
+                        <div class="mb-3">
+                            <label for="ChargeInvoiceNo" class="form-label">Charge Invoice Number</label>
+                            <input type="text" class="form-control" name="ChargeInvoiceNo" required>
                         </div>
-                        <div class="mt-4">
-                            <button type="submit" class="btn btn-primary w-100">
-                                <i class="bi bi-check-circle me-2"></i>Add Invoice
-                            </button>
+                        <div class="mb-3">
+                            <label for="DateOfChargeInvoice" class="form-label">Date of Charge Invoice</label>
+                            <input type="date" class="form-control" name="DateOfChargeInvoice" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="PurchaseOrderNumber" class="form-label">Purchase Order Number</label>
+                            <input type="text" class="form-control" name="PurchaseOrderNumber" required>
+                        </div>
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-primary">Add Invoice</button>
                         </div>
                     </form>
                 </div>
@@ -319,43 +345,30 @@ try {
 
     <!-- Edit Invoice Modal -->
     <div class="modal fade" id="editInvoiceModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="bi bi-pencil-square me-2"></i>Edit Charge Invoice
-                    </h5>
+                    <h5 class="modal-title">Edit Charge Invoice</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="editInvoiceForm" method="post">
                         <input type="hidden" name="action" value="update">
                         <input type="hidden" name="id" id="edit_invoice_id">
-                        <div class="form-field-group">
-                            <div class="form-field-group-title">Invoice Information</div>
-                            <div class="mb-3">
-                                <label for="edit_ChargeInvoiceNo" class="form-label">
-                                    <i class="bi bi-tag"></i> Charge Invoice Number <span class="text-danger">*</span>
-                                </label>
-                                <input type="text" class="form-control" name="ChargeInvoiceNo" id="edit_ChargeInvoiceNo" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="edit_DateOfChargeInvoice" class="form-label">
-                                    <i class="bi bi-calendar"></i> Date of Charge Invoice <span class="text-danger">*</span>
-                                </label>
-                                <input type="date" class="form-control" name="DateOfChargeInvoice" id="edit_DateOfChargeInvoice" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="edit_PurchaseOrderNumber" class="form-label">
-                                    <i class="bi bi-file-text"></i> Purchase Order Number <span class="text-danger">*</span>
-                                </label>
-                                <input type="text" class="form-control" name="PurchaseOrderNumber" id="edit_PurchaseOrderNumber" required>
-                            </div>
+                        <div class="mb-3">
+                            <label for="edit_ChargeInvoiceNo" class="form-label">Charge Invoice Number</label>
+                            <input type="text" class="form-control" name="ChargeInvoiceNo" id="edit_ChargeInvoiceNo" required>
                         </div>
-                        <div class="mt-4">
-                            <button type="submit" class="btn btn-primary w-100">
-                                <i class="bi bi-check-circle me-2"></i>Save Changes
-                            </button>
+                        <div class="mb-3">
+                            <label for="edit_DateOfChargeInvoice" class="form-label">Date of Charge Invoice</label>
+                            <input type="date" class="form-control" name="DateOfChargeInvoice" id="edit_DateOfChargeInvoice" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_PurchaseOrderNumber" class="form-label">Purchase Order Number</label>
+                            <input type="text" class="form-control" name="PurchaseOrderNumber" id="edit_PurchaseOrderNumber" required>
+                        </div>
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
                         </div>
                     </form>
                 </div>
@@ -368,11 +381,110 @@ try {
         $(document).ready(function() {
             // Search functionality
             $('#searchInvoice').on('input', function() {
-                var searchText = $(this).val().toLowerCase();
+                filterTable();
+            });
+
+            // Date filter change handler
+            $('#dateFilter').on('change', function() {
+                const value = $(this).val();
+                
+                // Hide all date inputs container first
+                $('#dateInputsContainer').hide();
+                $('#monthPickerContainer, #dateRangePickers').hide();
+                $('#dateFrom, #dateTo').hide();
+                
+                switch(value) {
+                    case 'month':
+                        $('#dateInputsContainer').show();
+                        $('#monthPickerContainer').show();
+                        $('#dateRangePickers').hide();
+                        break;
+                    case 'range':
+                        $('#dateInputsContainer').show();
+                        $('#dateRangePickers').show();
+                        $('#monthPickerContainer').hide();
+                        $('#dateFrom, #dateTo').show();
+                        break;
+                    default:
+                        filterTable();
+                        break;
+                }
+            });
+
+            // Month and Year select change handler
+            $('#monthSelect, #yearSelect').on('change', function() {
+                if ($('#monthSelect').val() && $('#yearSelect').val()) {
+                    filterTable();
+                }
+            });
+
+            // Update the filterTable function
+            function filterTable() {
+                const searchText = $('#searchInvoice').val().toLowerCase();
+                const filterType = $('#dateFilter').val();
+                const selectedMonth = $('#monthSelect').val();
+                const selectedYear = $('#yearSelect').val();
+                const dateFrom = $('#dateFrom').val();
+                const dateTo = $('#dateTo').val();
+
                 $(".table tbody tr").each(function() {
-                    var rowText = $(this).text().toLowerCase();
-                    $(this).toggle(rowText.indexOf(searchText) > -1);
+                    const row = $(this);
+                    const rowText = row.text().toLowerCase();
+                    const dateCell = row.find('td:eq(2)').text(); // Date is in the 3rd column
+                    const date = new Date(dateCell);
+                    
+                    const searchMatch = rowText.indexOf(searchText) > -1;
+                    let dateMatch = true;
+                    
+                    switch(filterType) {
+                        case 'asc':
+                            const tbody = $('.table tbody');
+                            const rows = tbody.find('tr').toArray();
+                            rows.sort((a, b) => {
+                                const dateA = new Date($(a).find('td:eq(2)').text());
+                                const dateB = new Date($(b).find('td:eq(2)').text());
+                                return dateA - dateB;
+                            });
+                            tbody.append(rows);
+                            return;
+                            
+                        case 'desc':
+                            const tbody2 = $('.table tbody');
+                            const rows2 = tbody2.find('tr').toArray();
+                            rows2.sort((a, b) => {
+                                const dateA = new Date($(a).find('td:eq(2)').text());
+                                const dateB = new Date($(b).find('td:eq(2)').text());
+                                return dateB - dateA;
+                            });
+                            tbody2.append(rows2);
+                            return;
+                            
+                        case 'month':
+                            if (selectedMonth && selectedYear) {
+                                dateMatch = date.getMonth() + 1 === parseInt(selectedMonth) && 
+                                           date.getFullYear() === parseInt(selectedYear);
+                            }
+                            break;
+                            
+                        case 'range':
+                            if (dateFrom && dateTo) {
+                                const from = new Date(dateFrom);
+                                const to = new Date(dateTo);
+                                to.setHours(23, 59, 59);
+                                dateMatch = date >= from && date <= to;
+                            }
+                            break;
+                    }
+
+                    row.toggle(searchMatch && dateMatch);
                 });
+            }
+
+            // Add date range picker change handlers
+            $('#dateFrom, #dateTo').on('change', function() {
+                if ($('#dateFrom').val() && $('#dateTo').val()) {
+                    filterTable();
+                }
             });
 
             // Edit Invoice

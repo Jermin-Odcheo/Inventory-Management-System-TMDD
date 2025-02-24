@@ -236,10 +236,51 @@ try {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Custom CSS -->
-    <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
-    <!-- jQuery -->
+    <!-- Add this in the head section after Bootstrap CSS -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #f8f9fa;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .main-content {
+            width: 100%;
+            min-height: 100vh;
+        }
+
+        .card {
+            margin-bottom: 1rem;
+        }
+
+        .form-control {
+            font-size: 0.9rem;
+        }
+
+        .table {
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            main {
+                margin-left: 0 !important;
+                max-width: 100% !important;
+            }
+        }
+
+        .search-container {
+            width: 250px;
+        }
+        .search-container input {
+            padding-right: 30px;
+        }
+        .search-container i {
+            color: #6c757d;
+            pointer-events: none;
+        }
+    </style>
 </head>
 
 <body>
@@ -292,6 +333,48 @@ try {
                             }
                             ?>
                         </select>
+                        <!-- Add date filter controls -->
+                        <div class="d-flex gap-2 align-items-center">
+                            <select class="form-select form-select-sm" id="dateFilter" style="width: auto;">
+                                <option value="">Filter by Date</option>
+                                <option value="desc">Newest to Oldest</option>
+                                <option value="asc">Oldest to Newest</option>
+                                <option value="month">Specific Month</option>
+                                <option value="range">Custom Date Range</option>
+                            </select>
+                            <!-- Date inputs container -->
+                            <div id="dateInputsContainer" style="display: none;">
+                                <!-- Month Picker -->
+                                <div class="d-flex gap-2" id="monthPickerContainer" style="display: none;">
+                                    <select class="form-select form-select-sm" id="monthSelect" style="min-width: 130px;">
+                                        <option value="">Select Month</option>
+                                        <?php
+                                        $months = [
+                                            'January', 'February', 'March', 'April', 'May', 'June',
+                                            'July', 'August', 'September', 'October', 'November', 'December'
+                                        ];
+                                        foreach ($months as $index => $month) {
+                                            echo "<option value='" . ($index + 1) . "'>" . $month . "</option>";
+                                        }
+                                        ?>
+                                    </select>
+                                    <select class="form-select form-select-sm" id="yearSelect" style="min-width: 110px;">
+                                        <option value="">Select Year</option>
+                                        <?php
+                                        $currentYear = date('Y');
+                                        for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
+                                            echo "<option value='" . $year . "'>" . $year . "</option>";
+                                        }
+                                        ?>
+                                    </select>
+                                </div>
+                                <!-- Date Range Pickers -->
+                                <div class="d-flex gap-2" id="dateRangePickers" style="display: none;">
+                                    <input type="date" class="form-control form-control-sm" id="dateFrom" placeholder="From">
+                                    <input type="date" class="form-control form-control-sm" id="dateTo" placeholder="To">
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -359,68 +442,59 @@ try {
 
     <!-- Add Equipment Modal -->
     <div class="modal fade" id="addEquipmentModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="bi bi-plus-circle me-2"></i>Add New Equipment
-                    </h5>
+                    <h5 class="modal-title">Add New Equipment</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="addEquipmentForm">
                         <input type="hidden" name="action" value="add">
-                        <div class="form-field-group">
-                            <div class="form-field-group-title">Basic Information</div>
-                            <div class="mb-3">
-                                <label for="asset_tag" class="form-label">
-                                    <i class="bi bi-tag"></i> Asset Tag
-                                </label>
-                                <input type="text" class="form-control" name="asset_tag" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="asset_description1" class="form-label">Asset Description 1</label>
-                                <input type="text" class="form-control" name="asset_description1" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="asset_description2" class="form-label">Asset Description 2</label>
-                                <input type="text" class="form-control" name="asset_description2" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="specification" class="form-label">Specification</label>
-                                <input type="text" class="form-control" name="specification" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="brand" class="form-label">Brand</label>
-                                <input type="text" class="form-control" name="brand" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="model" class="form-label">Model</label>
-                                <input type="text" class="form-control" name="model" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="serial_number" class="form-label">Serial Number</label>
-                                <input type="text" class="form-control" name="serial_number" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="date_acquired" class="form-label">Date Acquired</label>
-                                <input type="date" class="form-control" name="date_acquired" 
-                                       max="<?php echo date('Y-m-d'); ?>" 
-                                       required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="accountable_individual" class="form-label">Accountable Individual</label>
-                                <input type="text" class="form-control" name="accountable_individual" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="remarks" class="form-label">Remarks</label>
-                                <textarea class="form-control" name="remarks" rows="3"></textarea>
-                            </div>
+                        <div class="mb-3">
+                            <label for="asset_tag" class="form-label">Asset Tag</label>
+                            <input type="text" class="form-control" name="asset_tag" required>
                         </div>
-                        <div class="mt-4">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-circle me-2"></i>Add Equipment
-                            </button>
+                        <div class="mb-3">
+                            <label for="asset_description1" class="form-label">Asset Description 1</label>
+                            <input type="text" class="form-control" name="asset_description1" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="asset_description2" class="form-label">Asset Description 2</label>
+                            <input type="text" class="form-control" name="asset_description2" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="specification" class="form-label">Specification</label>
+                            <input type="text" class="form-control" name="specification" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="brand" class="form-label">Brand</label>
+                            <input type="text" class="form-control" name="brand" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="model" class="form-label">Model</label>
+                            <input type="text" class="form-control" name="model" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="serial_number" class="form-label">Serial Number</label>
+                            <input type="text" class="form-control" name="serial_number" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="date_acquired" class="form-label">Date Acquired</label>
+                            <input type="date" class="form-control" name="date_acquired" 
+                                   max="<?php echo date('Y-m-d'); ?>" 
+                                   required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="accountable_individual" class="form-label">Accountable Individual</label>
+                            <input type="text" class="form-control" name="accountable_individual" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="remarks" class="form-label">Remarks</label>
+                            <textarea class="form-control" name="remarks" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-primary">Add Equipment</button>
                         </div>
                     </form>
                 </div>
@@ -430,69 +504,60 @@ try {
 
     <!-- Edit Equipment Modal -->
     <div class="modal fade" id="editEquipmentModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="bi bi-pencil-square me-2"></i>Edit Equipment
-                    </h5>
+                    <h5 class="modal-title">Edit Equipment</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="editEquipmentForm">
                         <input type="hidden" name="action" value="update">
                         <input type="hidden" name="equipment_id" id="edit_equipment_id">
-                        <div class="form-field-group">
-                            <div class="form-field-group-title">Basic Information</div>
-                            <div class="mb-3">
-                                <label for="edit_asset_tag" class="form-label">
-                                    <i class="bi bi-tag"></i> Asset Tag
-                                </label>
-                                <input type="text" class="form-control" name="asset_tag" id="edit_asset_tag">
-                            </div>
-                            <div class="mb-3">
-                                <label for="edit_asset_description1" class="form-label">Asset Description 1</label>
-                                <input type="text" class="form-control" name="asset_description1" id="edit_asset_description1">
-                            </div>
-                            <div class="mb-3">
-                                <label for="edit_asset_description2" class="form-label">Asset Description 2</label>
-                                <input type="text" class="form-control" name="asset_description2" id="edit_asset_description2">
-                            </div>
-                            <div class="mb-3">
-                                <label for="edit_specification" class="form-label">Specification</label>
-                                <input type="text" class="form-control" name="specification" id="edit_specification">
-                            </div>
-                            <div class="mb-3">
-                                <label for="edit_brand" class="form-label">Brand</label>
-                                <input type="text" class="form-control" name="brand" id="edit_brand">
-                            </div>
-                            <div class="mb-3">
-                                <label for="edit_model" class="form-label">Model</label>
-                                <input type="text" class="form-control" name="model" id="edit_model">
-                            </div>
-                            <div class="mb-3">
-                                <label for="edit_serial_number" class="form-label">Serial Number</label>
-                                <input type="text" class="form-control" name="serial_number" id="edit_serial_number">
-                            </div>
-                            <div class="mb-3">
-                                <label for="edit_date_acquired" class="form-label">Date Acquired</label>
-                                <input type="date" class="form-control" name="date_acquired" 
-                                       id="edit_date_acquired" 
-                                       max="<?php echo date('Y-m-d'); ?>">
-                            </div>
-                            <div class="mb-3">
-                                <label for="edit_accountable_individual" class="form-label">Accountable Individual</label>
-                                <input type="text" class="form-control" name="accountable_individual" id="edit_accountable_individual">
-                            </div>
-                            <div class="mb-3">
-                                <label for="edit_remarks" class="form-label">Remarks</label>
-                                <textarea class="form-control" name="remarks" id="edit_remarks" rows="3"></textarea>
-                            </div>
+                        <div class="mb-3">
+                            <label for="edit_asset_tag" class="form-label">Asset Tag</label>
+                            <input type="text" class="form-control" name="asset_tag" id="edit_asset_tag">
                         </div>
-                        <div class="mt-4">
-                            <button type="submit" class="btn btn-primary w-100">
-                                <i class="bi bi-check-circle me-2"></i>Save Changes
-                            </button>
+                        <div class="mb-3">
+                            <label for="edit_asset_description1" class="form-label">Asset Description 1</label>
+                            <input type="text" class="form-control" name="asset_description1" id="edit_asset_description1">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_asset_description2" class="form-label">Asset Description 2</label>
+                            <input type="text" class="form-control" name="asset_description2" id="edit_asset_description2">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_specification" class="form-label">Specification</label>
+                            <input type="text" class="form-control" name="specification" id="edit_specification">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_brand" class="form-label">Brand</label>
+                            <input type="text" class="form-control" name="brand" id="edit_brand">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_model" class="form-label">Model</label>
+                            <input type="text" class="form-control" name="model" id="edit_model">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_serial_number" class="form-label">Serial Number</label>
+                            <input type="text" class="form-control" name="serial_number" id="edit_serial_number">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_date_acquired" class="form-label">Date Acquired</label>
+                            <input type="date" class="form-control" name="date_acquired" 
+                                   id="edit_date_acquired" 
+                                   max="<?php echo date('Y-m-d'); ?>">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_accountable_individual" class="form-label">Accountable Individual</label>
+                            <input type="text" class="form-control" name="accountable_individual" id="edit_accountable_individual">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_remarks" class="form-label">Remarks</label>
+                            <textarea class="form-control" name="remarks" id="edit_remarks" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
                         </div>
                     </form>
                 </div>
@@ -513,18 +578,101 @@ try {
                 filterTable();
             });
 
+            // Date filter change handler
+            $('#dateFilter').on('change', function() {
+                const value = $(this).val();
+                
+                // Hide all date inputs container first
+                $('#dateInputsContainer').hide();
+                $('#monthPickerContainer, #dateRangePickers').hide();
+                $('#dateFrom, #dateTo').hide();
+                
+                switch(value) {
+                    case 'month':
+                        $('#dateInputsContainer').show();
+                        $('#monthPickerContainer').show();
+                        $('#dateRangePickers').hide();
+                        break;
+                    case 'range':
+                        $('#dateInputsContainer').show();
+                        $('#dateRangePickers').show();
+                        $('#monthPickerContainer').hide();
+                        $('#dateFrom, #dateTo').show();
+                        break;
+                    default:
+                        filterTable();
+                        break;
+                }
+            });
+
+            // Month and Year select change handler
+            $('#monthSelect, #yearSelect').on('change', function() {
+                if ($('#monthSelect').val() && $('#yearSelect').val()) {
+                    filterTable();
+                }
+            });
+
             function filterTable() {
-                var searchText = $('#searchEquipment').val().toLowerCase();
-                var filterType = $('#filterEquipment').val().toLowerCase();
+                const searchText = $('#searchEquipment').val().toLowerCase();
+                const filterType = $('#filterEquipment').val().toLowerCase();
+                const dateFilterType = $('#dateFilter').val();
+                const selectedMonth = $('#monthSelect').val();
+                const selectedYear = $('#yearSelect').val();
+                const dateFrom = $('#dateFrom').val();
+                const dateTo = $('#dateTo').val();
 
                 $(".table tbody tr").each(function() {
-                    var rowText = $(this).text().toLowerCase();
-                    var typeCell = $(this).find('td:eq(2)').text().toLowerCase(); // Index 2 is Description1 column
+                    const row = $(this);
+                    const rowText = row.text().toLowerCase();
+                    const typeCell = row.find('td:eq(2)').text().toLowerCase();
+                    const dateCell = row.find('td:eq(8)').text(); // Adjust index based on date column
+                    const date = new Date(dateCell);
 
-                    var searchMatch = rowText.indexOf(searchText) > -1;
-                    var typeMatch = !filterType || typeCell === filterType;
+                    const searchMatch = rowText.indexOf(searchText) > -1;
+                    const typeMatch = !filterType || typeCell === filterType;
+                    let dateMatch = true;
 
-                    $(this).toggle(searchMatch && typeMatch);
+                    switch(dateFilterType) {
+                        case 'asc':
+                            const tbody = $('.table tbody');
+                            const rows = tbody.find('tr').toArray();
+                            rows.sort((a, b) => {
+                                const dateA = new Date($(a).find('td:eq(8)').text());
+                                const dateB = new Date($(b).find('td:eq(8)').text());
+                                return dateA - dateB;
+                            });
+                            tbody.append(rows);
+                            return;
+                            
+                        case 'desc':
+                            const tbody2 = $('.table tbody');
+                            const rows2 = tbody2.find('tr').toArray();
+                            rows2.sort((a, b) => {
+                                const dateA = new Date($(a).find('td:eq(8)').text());
+                                const dateB = new Date($(b).find('td:eq(8)').text());
+                                return dateB - dateA;
+                            });
+                            tbody2.append(rows2);
+                            return;
+                            
+                        case 'month':
+                            if (selectedMonth && selectedYear) {
+                                dateMatch = date.getMonth() + 1 === parseInt(selectedMonth) && 
+                                           date.getFullYear() === parseInt(selectedYear);
+                            }
+                            break;
+                            
+                        case 'range':
+                            if (dateFrom && dateTo) {
+                                const from = new Date(dateFrom);
+                                const to = new Date(dateTo);
+                                to.setHours(23, 59, 59);
+                                dateMatch = date >= from && date <= to;
+                            }
+                            break;
+                    }
+
+                    row.toggle(searchMatch && typeMatch && dateMatch);
                 });
             }
         });

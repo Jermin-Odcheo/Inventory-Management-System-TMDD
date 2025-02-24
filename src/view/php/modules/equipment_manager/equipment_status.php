@@ -321,6 +321,48 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                         <option value="Replacement">Replacement</option>
                                         <option value="Maintenance">Maintenance</option>
                                     </select>
+                                    <!-- Add date filter controls -->
+                                    <div class="d-flex gap-2 align-items-center">
+                                        <select class="form-select form-select-sm" id="dateFilter" style="width: auto;">
+                                            <option value="">Filter by Date</option>
+                                            <option value="desc">Newest to Oldest</option>
+                                            <option value="asc">Oldest to Newest</option>
+                                            <option value="month">Specific Month</option>
+                                            <option value="range">Custom Date Range</option>
+                                        </select>
+                                        <!-- Date inputs container -->
+                                        <div id="dateInputsContainer" style="display: none;">
+                                            <!-- Month Picker -->
+                                            <div class="d-flex gap-2" id="monthPickerContainer" style="display: none;">
+                                                <select class="form-select form-select-sm" id="monthSelect" style="min-width: 130px;">
+                                                    <option value="">Select Month</option>
+                                                    <?php
+                                                    $months = [
+                                                        'January', 'February', 'March', 'April', 'May', 'June',
+                                                        'July', 'August', 'September', 'October', 'November', 'December'
+                                                    ];
+                                                    foreach ($months as $index => $month) {
+                                                        echo "<option value='" . ($index + 1) . "'>" . $month . "</option>";
+                                                    }
+                                                    ?>
+                                                </select>
+                                                <select class="form-select form-select-sm" id="yearSelect" style="min-width: 110px;">
+                                                    <option value="">Select Year</option>
+                                                    <?php
+                                                    $currentYear = date('Y');
+                                                    for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
+                                                        echo "<option value='" . $year . "'>" . $year . "</option>";
+                                                    }
+                                                    ?>
+                                                </select>
+                                            </div>
+                                            <!-- Date Range Pickers -->
+                                            <div class="d-flex gap-2" id="dateRangePickers" style="display: none;">
+                                                <input type="date" class="form-control form-control-sm" id="dateFrom" placeholder="From">
+                                                <input type="date" class="form-control form-control-sm" id="dateTo" placeholder="To">
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -537,18 +579,102 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                 filterTable();
             });
 
+            // Date filter change handler
+            $('#dateFilter').on('change', function() {
+                const value = $(this).val();
+                
+                // Hide all date inputs container first
+                $('#dateInputsContainer').hide();
+                $('#monthPickerContainer, #dateRangePickers').hide();
+                $('#dateFrom, #dateTo').hide();
+                
+                switch(value) {
+                    case 'month':
+                        $('#dateInputsContainer').show();
+                        $('#monthPickerContainer').show();
+                        $('#dateRangePickers').hide();
+                        break;
+                    case 'range':
+                        $('#dateInputsContainer').show();
+                        $('#dateRangePickers').show();
+                        $('#monthPickerContainer').hide();
+                        $('#dateFrom, #dateTo').show();
+                        break;
+                    default:
+                        filterTable();
+                        break;
+                }
+            });
+
+            // Month and Year select change handler
+            $('#monthSelect, #yearSelect').on('change', function() {
+                if ($('#monthSelect').val() && $('#yearSelect').val()) {
+                    filterTable();
+                }
+            });
+
+            // Update the filterTable function
             function filterTable() {
-                var searchText = $('#searchStatus').val().toLowerCase();
-                var filterStatus = $('#filterStatus').val().toLowerCase();
+                const searchText = $('#searchStatus').val().toLowerCase();
+                const filterStatus = $('#filterStatus').val().toLowerCase();
+                const filterType = $('#dateFilter').val();
+                const selectedMonth = $('#monthSelect').val();
+                const selectedYear = $('#yearSelect').val();
+                const dateFrom = $('#dateFrom').val();
+                const dateTo = $('#dateTo').val();
 
                 $(".table tbody tr").each(function() {
-                    var rowText = $(this).text().toLowerCase();
-                    var statusCell = $(this).find('td:eq(2)').text().toLowerCase(); // Adjust index based on status column
+                    const row = $(this);
+                    const rowText = row.text().toLowerCase();
+                    const statusCell = row.find('td:eq(2)').text().toLowerCase();
+                    const dateCell = row.find('td:eq(4)').text(); // Adjust index based on date column
+                    const date = new Date(dateCell);
 
-                    var searchMatch = rowText.indexOf(searchText) > -1;
-                    var statusMatch = !filterStatus || statusCell === filterStatus;
+                    const searchMatch = rowText.indexOf(searchText) > -1;
+                    const statusMatch = !filterStatus || statusCell === filterStatus;
+                    let dateMatch = true;
 
-                    $(this).toggle(searchMatch && statusMatch);
+                    switch(filterType) {
+                        case 'asc':
+                            const tbody = $('.table tbody');
+                            const rows = tbody.find('tr').toArray();
+                            rows.sort((a, b) => {
+                                const dateA = new Date($(a).find('td:eq(4)').text());
+                                const dateB = new Date($(b).find('td:eq(4)').text());
+                                return dateA - dateB;
+                            });
+                            tbody.append(rows);
+                            return;
+                            
+                        case 'desc':
+                            const tbody2 = $('.table tbody');
+                            const rows2 = tbody2.find('tr').toArray();
+                            rows2.sort((a, b) => {
+                                const dateA = new Date($(a).find('td:eq(4)').text());
+                                const dateB = new Date($(b).find('td:eq(4)').text());
+                                return dateB - dateA;
+                            });
+                            tbody2.append(rows2);
+                            return;
+                            
+                        case 'month':
+                            if (selectedMonth && selectedYear) {
+                                dateMatch = date.getMonth() + 1 === parseInt(selectedMonth) && 
+                                           date.getFullYear() === parseInt(selectedYear);
+                            }
+                            break;
+                            
+                        case 'range':
+                            if (dateFrom && dateTo) {
+                                const from = new Date(dateFrom);
+                                const to = new Date(dateTo);
+                                to.setHours(23, 59, 59);
+                                dateMatch = date >= from && date <= to;
+                            }
+                            break;
+                    }
+
+                    row.toggle(searchMatch && statusMatch && dateMatch);
                 });
             }
 

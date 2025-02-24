@@ -155,8 +155,23 @@ try {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Custom CSS -->
-    <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #f8f9fa;
+            min-height: 100vh;
+        }
+        .main-content {
+            margin-left: 300px;
+            padding: 20px;
+            transition: margin-left 0.3s ease;
+        }
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
 </head>
 
 <body>
@@ -194,9 +209,63 @@ try {
             </div>
             <div class="card-body p-3">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addPOModal">
-                        <i class="bi bi-plus-circle"></i> Add Purchase Order
-                    </button>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addPOModal">
+                            <i class="bi bi-plus-circle"></i> Add Purchase Order
+                        </button>
+                        <select class="form-select form-select-sm" id="filterSpecification" style="width: auto;">
+                            <option value="">Filter Specification</option>
+                            <?php
+                            $specifications = array_unique(array_column($purchaseOrders, 'ItemsSpecification'));
+                            foreach($specifications as $spec) {
+                                if(!empty($spec)) {
+                                    echo "<option value='" . htmlspecialchars($spec) . "'>" . htmlspecialchars($spec) . "</option>";
+                                }
+                            }
+                            ?>
+                        </select>
+                        <div class="d-flex gap-2 align-items-center">
+                            <select class="form-select form-select-sm" id="dateFilter" style="width: auto;">
+                                <option value="">Filter by Date</option>
+                                <option value="desc">Newest to Oldest</option>
+                                <option value="asc">Oldest to Newest</option>
+                                <option value="month">Specific Month</option>
+                                <option value="range">Custom Date Range</option>
+                            </select>
+                            <!-- Date inputs container -->
+                            <div id="dateInputsContainer" style="display: none;">
+                                <!-- Month Picker -->
+                                <div class="d-flex gap-2" id="monthPickerContainer" style="display: none;">
+                                    <select class="form-select form-select-sm" id="monthSelect" style="min-width: 130px;">
+                                        <option value="">Select Month</option>
+                                        <?php
+                                        $months = [
+                                            'January', 'February', 'March', 'April', 'May', 'June',
+                                            'July', 'August', 'September', 'October', 'November', 'December'
+                                        ];
+                                        foreach ($months as $index => $month) {
+                                            echo "<option value='" . ($index + 1) . "'>" . $month . "</option>";
+                                        }
+                                        ?>
+                                    </select>
+                                    <select class="form-select form-select-sm" id="yearSelect" style="min-width: 110px;">
+                                        <option value="">Select Year</option>
+                                        <?php
+                                        $currentYear = date('Y');
+                                        for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
+                                            echo "<option value='" . $year . "'>" . $year . "</option>";
+                                        }
+                                        ?>
+                                    </select>
+                                </div>
+                                <!-- Date Range Pickers -->
+                                <div class="d-flex gap-2" id="dateRangePickers" style="display: none;">
+                                    <input type="date" class="form-control form-control-sm" id="dateFrom" placeholder="From">
+                                    <input type="date" class="form-control form-control-sm" id="dateTo" placeholder="To">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="table-responsive">
@@ -247,48 +316,33 @@ try {
 
     <!-- Add Purchase Order Modal -->
     <div class="modal fade" id="addPOModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="bi bi-plus-circle me-2"></i>Add New Purchase Order
-                    </h5>
+                    <h5 class="modal-title">Add New Purchase Order</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="addPOForm" method="post">
                         <input type="hidden" name="action" value="add">
-                        <div class="form-field-group">
-                            <div class="form-field-group-title">Purchase Order Information</div>
-                            <div class="mb-3">
-                                <label for="purchaseOrderNumber" class="form-label">
-                                    <i class="bi bi-tag"></i> Purchase Order Number <span class="text-danger">*</span>
-                                </label>
-                                <input type="text" class="form-control" id="purchaseOrderNumber" name="purchaseOrderNumber" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="numberOfUnits" class="form-label">
-                                    <i class="bi bi-boxes"></i> Number of Units <span class="text-danger">*</span>
-                                </label>
-                                <input type="number" class="form-control" id="numberOfUnits" name="numberOfUnits" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="dateOfPurchaseOrder" class="form-label">
-                                    <i class="bi bi-calendar"></i> Date of Purchase Order <span class="text-danger">*</span>
-                                </label>
-                                <input type="date" class="form-control" id="dateOfPurchaseOrder" name="dateOfPurchaseOrder" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="itemsSpecification" class="form-label">
-                                    <i class="bi bi-list-check"></i> Items Specification
-                                </label>
-                                <textarea class="form-control" id="itemsSpecification" name="itemsSpecification" rows="3"></textarea>
-                            </div>
+                        <div class="mb-3">
+                            <label for="purchaseOrderNumber" class="form-label">Purchase Order Number <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="purchaseOrderNumber" name="purchaseOrderNumber" required>
                         </div>
-                        <div class="mt-4">
-                            <button type="submit" class="btn btn-primary w-100">
-                                <i class="bi bi-check-circle me-2"></i>Add Purchase Order
-                            </button>
+                        <div class="mb-3">
+                            <label for="numberOfUnits" class="form-label">Number of Units <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="numberOfUnits" name="numberOfUnits" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="dateOfPurchaseOrder" class="form-label">Date of Purchase Order <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="dateOfPurchaseOrder" name="dateOfPurchaseOrder" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="itemsSpecification" class="form-label">Items Specification</label>
+                            <textarea class="form-control" id="itemsSpecification" name="itemsSpecification" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-primary">Add Purchase Order</button>
                         </div>
                     </form>
                 </div>
@@ -298,49 +352,34 @@ try {
 
     <!-- Edit Purchase Order Modal -->
     <div class="modal fade" id="editPOModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="bi bi-pencil-square me-2"></i>Edit Purchase Order
-                    </h5>
+                    <h5 class="modal-title">Edit Purchase Order</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="editPOForm" method="post">
                         <input type="hidden" name="action" value="update">
                         <input type="hidden" name="id" id="edit_po_id">
-                        <div class="form-field-group">
-                            <div class="form-field-group-title">Purchase Order Information</div>
-                            <div class="mb-3">
-                                <label for="edit_purchaseOrderNumber" class="form-label">
-                                    <i class="bi bi-tag"></i> Purchase Order Number <span class="text-danger">*</span>
-                                </label>
-                                <input type="text" class="form-control" id="edit_purchaseOrderNumber" name="purchaseOrderNumber" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="edit_numberOfUnits" class="form-label">
-                                    <i class="bi bi-boxes"></i> Number of Units <span class="text-danger">*</span>
-                                </label>
-                                <input type="number" class="form-control" id="edit_numberOfUnits" name="numberOfUnits" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="edit_dateOfPurchaseOrder" class="form-label">
-                                    <i class="bi bi-calendar"></i> Date of Purchase Order <span class="text-danger">*</span>
-                                </label>
-                                <input type="date" class="form-control" id="edit_dateOfPurchaseOrder" name="dateOfPurchaseOrder" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="edit_itemsSpecification" class="form-label">
-                                    <i class="bi bi-list-check"></i> Items Specification
-                                </label>
-                                <textarea class="form-control" id="edit_itemsSpecification" name="itemsSpecification" rows="3"></textarea>
-                            </div>
+                        <div class="mb-3">
+                            <label for="edit_purchaseOrderNumber" class="form-label">Purchase Order Number <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="edit_purchaseOrderNumber" name="purchaseOrderNumber" required>
                         </div>
-                        <div class="mt-4">
-                            <button type="submit" class="btn btn-primary w-100">
-                                <i class="bi bi-check-circle me-2"></i>Save Changes
-                            </button>
+                        <div class="mb-3">
+                            <label for="edit_numberOfUnits" class="form-label">Number of Units <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="edit_numberOfUnits" name="numberOfUnits" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_dateOfPurchaseOrder" class="form-label">Date of Purchase Order <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="edit_dateOfPurchaseOrder" name="dateOfPurchaseOrder" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_itemsSpecification" class="form-label">Items Specification</label>
+                            <textarea class="form-control" id="edit_itemsSpecification" name="itemsSpecification" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
                         </div>
                     </form>
                 </div>
@@ -355,12 +394,113 @@ try {
         $(document).ready(function() {
             // Search functionality
             $('#searchPO').on('input', function() {
-                var searchText = $(this).val().toLowerCase();
-                $(".table tbody tr").each(function() {
-                    var rowText = $(this).text().toLowerCase();
-                    $(this).toggle(rowText.indexOf(searchText) > -1);
-                });
+                filterTable();
             });
+
+            // Specification filter
+            $('#filterSpecification').on('change', function() {
+                filterTable();
+            });
+
+            // Date filter change handler
+            $('#dateFilter').on('change', function() {
+                const value = $(this).val();
+                
+                // Hide all date inputs container first
+                $('#dateInputsContainer').hide();
+                $('#monthPickerContainer, #dateRangePickers').hide();
+                $('#dateFrom, #dateTo').hide();  // Explicitly hide date inputs
+                
+                switch(value) {
+                    case 'month':
+                        $('#dateInputsContainer').show();
+                        $('#monthPickerContainer').show();
+                        $('#dateRangePickers').hide();  // Ensure date range pickers are hidden
+                        break;
+                    case 'range':
+                        $('#dateInputsContainer').show();
+                        $('#dateRangePickers').show();
+                        $('#monthPickerContainer').hide();  // Ensure month picker is hidden
+                        $('#dateFrom, #dateTo').show();  // Show date inputs
+                        break;
+                    default:
+                        filterTable();
+                        break;
+                }
+            });
+
+            // Month and Year select change handler
+            $('#monthSelect, #yearSelect').on('change', function() {
+                if ($('#monthSelect').val() && $('#yearSelect').val()) {
+                    filterTable();
+                }
+            });
+
+            function filterTable() {
+                const searchText = $('#searchPO').val().toLowerCase();
+                const filterSpec = $('#filterSpecification').val().toLowerCase();
+                const filterType = $('#dateFilter').val();
+                const selectedMonth = $('#monthSelect').val();
+                const selectedYear = $('#yearSelect').val();
+                const dateFrom = $('#dateFrom').val();
+                const dateTo = $('#dateTo').val();
+
+                $(".table tbody tr").each(function() {
+                    const row = $(this);
+                    const rowText = row.text().toLowerCase();
+                    const specCell = row.find('td:nth-child(5)').text().toLowerCase();
+                    const dateCell = row.find('td:nth-child(4)').text();
+                    const date = new Date(dateCell);
+
+                    const searchMatch = rowText.indexOf(searchText) > -1;
+                    const specMatch = !filterSpec || specCell === filterSpec;
+                    let dateMatch = true;
+
+                    switch(filterType) {
+                        case 'asc':
+                            // Sort rows ascending
+                            const tbody = $('.table tbody');
+                            const rows = tbody.find('tr').toArray();
+                            rows.sort((a, b) => {
+                                const dateA = new Date($(a).find('td:nth-child(4)').text());
+                                const dateB = new Date($(b).find('td:nth-child(4)').text());
+                                return dateA - dateB;
+                            });
+                            tbody.append(rows);
+                            return;
+                            
+                        case 'desc':
+                            // Sort rows descending
+                            const tbody2 = $('.table tbody');
+                            const rows2 = tbody2.find('tr').toArray();
+                            rows2.sort((a, b) => {
+                                const dateA = new Date($(a).find('td:nth-child(4)').text());
+                                const dateB = new Date($(b).find('td:nth-child(4)').text());
+                                return dateB - dateA;
+                            });
+                            tbody2.append(rows2);
+                            return;
+                            
+                        case 'month':
+                            if (selectedMonth && selectedYear) {
+                                dateMatch = date.getMonth() + 1 === parseInt(selectedMonth) && 
+                                           date.getFullYear() === parseInt(selectedYear);
+                            }
+                            break;
+                            
+                        case 'range':
+                            if (dateFrom && dateTo) {
+                                const from = new Date(dateFrom);
+                                const to = new Date(dateTo);
+                                to.setHours(23, 59, 59);
+                                dateMatch = date >= from && date <= to;
+                            }
+                            break;
+                    }
+
+                    row.toggle(searchMatch && specMatch && dateMatch);
+                });
+            }
 
             // Edit Purchase Order
             $('.edit-po').click(function() {
