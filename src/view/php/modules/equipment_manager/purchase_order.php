@@ -155,23 +155,8 @@ try {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background-color: #f8f9fa;
-            min-height: 100vh;
-        }
-        .main-content {
-            margin-left: 300px;
-            padding: 20px;
-            transition: margin-left 0.3s ease;
-        }
-        @media (max-width: 768px) {
-            .main-content {
-                margin-left: 0;
-            }
-        }
-    </style>
+    <!-- Custom CSS -->
+    <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
 </head>
 
 <body>
@@ -262,33 +247,48 @@ try {
 
     <!-- Add Purchase Order Modal -->
     <div class="modal fade" id="addPOModal" tabindex="-1">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Add New Purchase Order</h5>
+                    <h5 class="modal-title">
+                        <i class="bi bi-plus-circle me-2"></i>Add New Purchase Order
+                    </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="addPOForm" method="post">
                         <input type="hidden" name="action" value="add">
-                        <div class="mb-3">
-                            <label for="purchaseOrderNumber" class="form-label">Purchase Order Number <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="purchaseOrderNumber" name="purchaseOrderNumber" required>
+                        <div class="form-field-group">
+                            <div class="form-field-group-title">Purchase Order Information</div>
+                            <div class="mb-3">
+                                <label for="purchaseOrderNumber" class="form-label">
+                                    <i class="bi bi-tag"></i> Purchase Order Number <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="purchaseOrderNumber" name="purchaseOrderNumber" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="numberOfUnits" class="form-label">
+                                    <i class="bi bi-boxes"></i> Number of Units <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" class="form-control" id="numberOfUnits" name="numberOfUnits" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="dateOfPurchaseOrder" class="form-label">
+                                    <i class="bi bi-calendar"></i> Date of Purchase Order <span class="text-danger">*</span>
+                                </label>
+                                <input type="date" class="form-control" id="dateOfPurchaseOrder" name="dateOfPurchaseOrder" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="itemsSpecification" class="form-label">
+                                    <i class="bi bi-list-check"></i> Items Specification
+                                </label>
+                                <textarea class="form-control" id="itemsSpecification" name="itemsSpecification" rows="3"></textarea>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="numberOfUnits" class="form-label">Number of Units <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="numberOfUnits" name="numberOfUnits" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="dateOfPurchaseOrder" class="form-label">Date of Purchase Order <span class="text-danger">*</span></label>
-                            <input type="date" class="form-control" id="dateOfPurchaseOrder" name="dateOfPurchaseOrder" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="itemsSpecification" class="form-label">Items Specification</label>
-                            <textarea class="form-control" id="itemsSpecification" name="itemsSpecification" rows="3"></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <button type="submit" class="btn btn-primary">Add Purchase Order</button>
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-check-circle me-2"></i>Add Purchase Order
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -298,34 +298,49 @@ try {
 
     <!-- Edit Purchase Order Modal -->
     <div class="modal fade" id="editPOModal" tabindex="-1">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Edit Purchase Order</h5>
+                    <h5 class="modal-title">
+                        <i class="bi bi-pencil-square me-2"></i>Edit Purchase Order
+                    </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="editPOForm" method="post">
                         <input type="hidden" name="action" value="update">
                         <input type="hidden" name="id" id="edit_po_id">
-                        <div class="mb-3">
-                            <label for="edit_purchaseOrderNumber" class="form-label">Purchase Order Number <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="edit_purchaseOrderNumber" name="purchaseOrderNumber" required>
+                        <div class="form-field-group">
+                            <div class="form-field-group-title">Purchase Order Information</div>
+                            <div class="mb-3">
+                                <label for="edit_purchaseOrderNumber" class="form-label">
+                                    <i class="bi bi-tag"></i> Purchase Order Number <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="edit_purchaseOrderNumber" name="purchaseOrderNumber" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_numberOfUnits" class="form-label">
+                                    <i class="bi bi-boxes"></i> Number of Units <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" class="form-control" id="edit_numberOfUnits" name="numberOfUnits" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_dateOfPurchaseOrder" class="form-label">
+                                    <i class="bi bi-calendar"></i> Date of Purchase Order <span class="text-danger">*</span>
+                                </label>
+                                <input type="date" class="form-control" id="edit_dateOfPurchaseOrder" name="dateOfPurchaseOrder" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_itemsSpecification" class="form-label">
+                                    <i class="bi bi-list-check"></i> Items Specification
+                                </label>
+                                <textarea class="form-control" id="edit_itemsSpecification" name="itemsSpecification" rows="3"></textarea>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="edit_numberOfUnits" class="form-label">Number of Units <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="edit_numberOfUnits" name="numberOfUnits" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="edit_dateOfPurchaseOrder" class="form-label">Date of Purchase Order <span class="text-danger">*</span></label>
-                            <input type="date" class="form-control" id="edit_dateOfPurchaseOrder" name="dateOfPurchaseOrder" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="edit_itemsSpecification" class="form-label">Items Specification</label>
-                            <textarea class="form-control" id="edit_itemsSpecification" name="itemsSpecification" rows="3"></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-check-circle me-2"></i>Save Changes
+                            </button>
                         </div>
                     </form>
                 </div>

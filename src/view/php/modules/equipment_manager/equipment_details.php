@@ -236,51 +236,10 @@ try {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Add this in the head section after Bootstrap CSS -->
+    <!-- Custom CSS -->
+    <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
+    <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <style>
-        body {
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background-color: #f8f9fa;
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-
-        .main-content {
-            width: 100%;
-            min-height: 100vh;
-        }
-
-        .card {
-            margin-bottom: 1rem;
-        }
-
-        .form-control {
-            font-size: 0.9rem;
-        }
-
-        .table {
-            font-size: 0.9rem;
-        }
-
-        @media (max-width: 768px) {
-            main {
-                margin-left: 0 !important;
-                max-width: 100% !important;
-            }
-        }
-
-        .search-container {
-            width: 250px;
-        }
-        .search-container input {
-            padding-right: 30px;
-        }
-        .search-container i {
-            color: #6c757d;
-            pointer-events: none;
-        }
-    </style>
 </head>
 
 <body>
@@ -400,59 +359,68 @@ try {
 
     <!-- Add Equipment Modal -->
     <div class="modal fade" id="addEquipmentModal" tabindex="-1">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Add New Equipment</h5>
+                    <h5 class="modal-title">
+                        <i class="bi bi-plus-circle me-2"></i>Add New Equipment
+                    </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="addEquipmentForm">
                         <input type="hidden" name="action" value="add">
-                        <div class="mb-3">
-                            <label for="asset_tag" class="form-label">Asset Tag</label>
-                            <input type="text" class="form-control" name="asset_tag" required>
+                        <div class="form-field-group">
+                            <div class="form-field-group-title">Basic Information</div>
+                            <div class="mb-3">
+                                <label for="asset_tag" class="form-label">
+                                    <i class="bi bi-tag"></i> Asset Tag
+                                </label>
+                                <input type="text" class="form-control" name="asset_tag" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="asset_description1" class="form-label">Asset Description 1</label>
+                                <input type="text" class="form-control" name="asset_description1" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="asset_description2" class="form-label">Asset Description 2</label>
+                                <input type="text" class="form-control" name="asset_description2" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="specification" class="form-label">Specification</label>
+                                <input type="text" class="form-control" name="specification" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="brand" class="form-label">Brand</label>
+                                <input type="text" class="form-control" name="brand" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="model" class="form-label">Model</label>
+                                <input type="text" class="form-control" name="model" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="serial_number" class="form-label">Serial Number</label>
+                                <input type="text" class="form-control" name="serial_number" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="date_acquired" class="form-label">Date Acquired</label>
+                                <input type="date" class="form-control" name="date_acquired" 
+                                       max="<?php echo date('Y-m-d'); ?>" 
+                                       required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="accountable_individual" class="form-label">Accountable Individual</label>
+                                <input type="text" class="form-control" name="accountable_individual" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="remarks" class="form-label">Remarks</label>
+                                <textarea class="form-control" name="remarks" rows="3"></textarea>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="asset_description1" class="form-label">Asset Description 1</label>
-                            <input type="text" class="form-control" name="asset_description1" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="asset_description2" class="form-label">Asset Description 2</label>
-                            <input type="text" class="form-control" name="asset_description2" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="specification" class="form-label">Specification</label>
-                            <input type="text" class="form-control" name="specification" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="brand" class="form-label">Brand</label>
-                            <input type="text" class="form-control" name="brand" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="model" class="form-label">Model</label>
-                            <input type="text" class="form-control" name="model" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="serial_number" class="form-label">Serial Number</label>
-                            <input type="text" class="form-control" name="serial_number" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="date_acquired" class="form-label">Date Acquired</label>
-                            <input type="date" class="form-control" name="date_acquired" 
-                                   max="<?php echo date('Y-m-d'); ?>" 
-                                   required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="accountable_individual" class="form-label">Accountable Individual</label>
-                            <input type="text" class="form-control" name="accountable_individual" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="remarks" class="form-label">Remarks</label>
-                            <textarea class="form-control" name="remarks" rows="3"></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <button type="submit" class="btn btn-primary">Add Equipment</button>
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-2"></i>Add Equipment
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -462,60 +430,69 @@ try {
 
     <!-- Edit Equipment Modal -->
     <div class="modal fade" id="editEquipmentModal" tabindex="-1">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Edit Equipment</h5>
+                    <h5 class="modal-title">
+                        <i class="bi bi-pencil-square me-2"></i>Edit Equipment
+                    </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="editEquipmentForm">
                         <input type="hidden" name="action" value="update">
                         <input type="hidden" name="equipment_id" id="edit_equipment_id">
-                        <div class="mb-3">
-                            <label for="edit_asset_tag" class="form-label">Asset Tag</label>
-                            <input type="text" class="form-control" name="asset_tag" id="edit_asset_tag">
+                        <div class="form-field-group">
+                            <div class="form-field-group-title">Basic Information</div>
+                            <div class="mb-3">
+                                <label for="edit_asset_tag" class="form-label">
+                                    <i class="bi bi-tag"></i> Asset Tag
+                                </label>
+                                <input type="text" class="form-control" name="asset_tag" id="edit_asset_tag">
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_asset_description1" class="form-label">Asset Description 1</label>
+                                <input type="text" class="form-control" name="asset_description1" id="edit_asset_description1">
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_asset_description2" class="form-label">Asset Description 2</label>
+                                <input type="text" class="form-control" name="asset_description2" id="edit_asset_description2">
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_specification" class="form-label">Specification</label>
+                                <input type="text" class="form-control" name="specification" id="edit_specification">
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_brand" class="form-label">Brand</label>
+                                <input type="text" class="form-control" name="brand" id="edit_brand">
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_model" class="form-label">Model</label>
+                                <input type="text" class="form-control" name="model" id="edit_model">
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_serial_number" class="form-label">Serial Number</label>
+                                <input type="text" class="form-control" name="serial_number" id="edit_serial_number">
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_date_acquired" class="form-label">Date Acquired</label>
+                                <input type="date" class="form-control" name="date_acquired" 
+                                       id="edit_date_acquired" 
+                                       max="<?php echo date('Y-m-d'); ?>">
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_accountable_individual" class="form-label">Accountable Individual</label>
+                                <input type="text" class="form-control" name="accountable_individual" id="edit_accountable_individual">
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_remarks" class="form-label">Remarks</label>
+                                <textarea class="form-control" name="remarks" id="edit_remarks" rows="3"></textarea>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="edit_asset_description1" class="form-label">Asset Description 1</label>
-                            <input type="text" class="form-control" name="asset_description1" id="edit_asset_description1">
-                        </div>
-                        <div class="mb-3">
-                            <label for="edit_asset_description2" class="form-label">Asset Description 2</label>
-                            <input type="text" class="form-control" name="asset_description2" id="edit_asset_description2">
-                        </div>
-                        <div class="mb-3">
-                            <label for="edit_specification" class="form-label">Specification</label>
-                            <input type="text" class="form-control" name="specification" id="edit_specification">
-                        </div>
-                        <div class="mb-3">
-                            <label for="edit_brand" class="form-label">Brand</label>
-                            <input type="text" class="form-control" name="brand" id="edit_brand">
-                        </div>
-                        <div class="mb-3">
-                            <label for="edit_model" class="form-label">Model</label>
-                            <input type="text" class="form-control" name="model" id="edit_model">
-                        </div>
-                        <div class="mb-3">
-                            <label for="edit_serial_number" class="form-label">Serial Number</label>
-                            <input type="text" class="form-control" name="serial_number" id="edit_serial_number">
-                        </div>
-                        <div class="mb-3">
-                            <label for="edit_date_acquired" class="form-label">Date Acquired</label>
-                            <input type="date" class="form-control" name="date_acquired" 
-                                   id="edit_date_acquired" 
-                                   max="<?php echo date('Y-m-d'); ?>">
-                        </div>
-                        <div class="mb-3">
-                            <label for="edit_accountable_individual" class="form-label">Accountable Individual</label>
-                            <input type="text" class="form-control" name="accountable_individual" id="edit_accountable_individual">
-                        </div>
-                        <div class="mb-3">
-                            <label for="edit_remarks" class="form-label">Remarks</label>
-                            <textarea class="form-control" name="remarks" id="edit_remarks" rows="3"></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-check-circle me-2"></i>Save Changes
+                            </button>
                         </div>
                     </form>
                 </div>

@@ -140,7 +140,9 @@ try {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Add jQuery -->
+    <!-- Custom CSS -->
+    <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
+    <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
         body {
@@ -272,29 +274,42 @@ try {
 
     <!-- Add Invoice Modal -->
     <div class="modal fade" id="addInvoiceModal" tabindex="-1">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Add New Charge Invoice</h5>
+                    <h5 class="modal-title">
+                        <i class="bi bi-plus-circle me-2"></i>Add New Charge Invoice
+                    </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="addInvoiceForm" method="post">
                         <input type="hidden" name="action" value="add">
-                        <div class="mb-3">
-                            <label for="ChargeInvoiceNo" class="form-label">Charge Invoice Number</label>
-                            <input type="text" class="form-control" name="ChargeInvoiceNo" required>
+                        <div class="form-field-group">
+                            <div class="form-field-group-title">Invoice Information</div>
+                            <div class="mb-3">
+                                <label for="ChargeInvoiceNo" class="form-label">
+                                    <i class="bi bi-tag"></i> Charge Invoice Number <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" name="ChargeInvoiceNo" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="DateOfChargeInvoice" class="form-label">
+                                    <i class="bi bi-calendar"></i> Date of Charge Invoice <span class="text-danger">*</span>
+                                </label>
+                                <input type="date" class="form-control" name="DateOfChargeInvoice" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="PurchaseOrderNumber" class="form-label">
+                                    <i class="bi bi-file-text"></i> Purchase Order Number <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" name="PurchaseOrderNumber" required>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="DateOfChargeInvoice" class="form-label">Date of Charge Invoice</label>
-                            <input type="date" class="form-control" name="DateOfChargeInvoice" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="PurchaseOrderNumber" class="form-label">Purchase Order Number</label>
-                            <input type="text" class="form-control" name="PurchaseOrderNumber" required>
-                        </div>
-                        <div class="mb-3">
-                            <button type="submit" class="btn btn-primary">Add Invoice</button>
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-check-circle me-2"></i>Add Invoice
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -304,30 +319,43 @@ try {
 
     <!-- Edit Invoice Modal -->
     <div class="modal fade" id="editInvoiceModal" tabindex="-1">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Edit Charge Invoice</h5>
+                    <h5 class="modal-title">
+                        <i class="bi bi-pencil-square me-2"></i>Edit Charge Invoice
+                    </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="editInvoiceForm" method="post">
                         <input type="hidden" name="action" value="update">
                         <input type="hidden" name="id" id="edit_invoice_id">
-                        <div class="mb-3">
-                            <label for="edit_ChargeInvoiceNo" class="form-label">Charge Invoice Number</label>
-                            <input type="text" class="form-control" name="ChargeInvoiceNo" id="edit_ChargeInvoiceNo" required>
+                        <div class="form-field-group">
+                            <div class="form-field-group-title">Invoice Information</div>
+                            <div class="mb-3">
+                                <label for="edit_ChargeInvoiceNo" class="form-label">
+                                    <i class="bi bi-tag"></i> Charge Invoice Number <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" name="ChargeInvoiceNo" id="edit_ChargeInvoiceNo" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_DateOfChargeInvoice" class="form-label">
+                                    <i class="bi bi-calendar"></i> Date of Charge Invoice <span class="text-danger">*</span>
+                                </label>
+                                <input type="date" class="form-control" name="DateOfChargeInvoice" id="edit_DateOfChargeInvoice" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_PurchaseOrderNumber" class="form-label">
+                                    <i class="bi bi-file-text"></i> Purchase Order Number <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" name="PurchaseOrderNumber" id="edit_PurchaseOrderNumber" required>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="edit_DateOfChargeInvoice" class="form-label">Date of Charge Invoice</label>
-                            <input type="date" class="form-control" name="DateOfChargeInvoice" id="edit_DateOfChargeInvoice" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="edit_PurchaseOrderNumber" class="form-label">Purchase Order Number</label>
-                            <input type="text" class="form-control" name="PurchaseOrderNumber" id="edit_PurchaseOrderNumber" required>
-                        </div>
-                        <div class="mb-3">
-                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-check-circle me-2"></i>Save Changes
+                            </button>
                         </div>
                     </form>
                 </div>
