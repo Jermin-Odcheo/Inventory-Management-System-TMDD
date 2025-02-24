@@ -51,7 +51,7 @@ if (!isset($_SESSION['user_id'])) {
                         Settings <span class="submenu-arrow">▸</span>
                     </div>
                     <ul class="subdropdown-menu">
-                        <li><a href="#">Account Details</a></li>
+                        <li><a href="../admins/account_details.php">Account Details</a></li>
                         <li><a href="#">Personalization</a></li>
                     </ul>
                 </div>
