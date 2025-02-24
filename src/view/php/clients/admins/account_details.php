@@ -82,7 +82,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_password'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Account Details</title>
-    <link rel="stylesheet" href="<?php echo BASE_URL; ?>../src/view/styles/css/account_details.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&family=Roboto+Mono:wght@300;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/account_details.css">
 </head>
 <body>
 <?php include '../../general/sidebar.php'; ?>

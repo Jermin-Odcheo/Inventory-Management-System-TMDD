@@ -125,8 +125,6 @@ body {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     overflow: hidden;
     z-index: 1000;
-    /* Remove width: 100% if you prefer an auto width or set a fixed width */
-    /* width: auto; */
 }
 
 
@@ -210,6 +208,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    font-family: 'Arial', sans-serif;
     position: relative;
     color: #ecf0f1;
     transition: background 0.3s;
