@@ -344,9 +344,93 @@ function canDeleteUser($currentUserRoles, $targetUserRoles)
                         <input type="text" class="form-control" id="editLastName" name="last_name">
                     </div>
                     <div class="mb-3">
-                        <label for="editDepartment" class="form-label">Department</label>
-                        <input type="text" class="form-control" id="editDepartment" name="department">
-                    </div>
+    <label for="editStatus" class="form-label">Status</label>
+    <select class="form-select shadow-sm" id="editStatus" name="status" style="height: 38px; padding: 0.375rem 2.25rem 0.375rem 0.75rem; font-size: 1rem; border-radius: 0.25rem; border: 1px solid #ced4da;">
+        <option value="">Select Status</option>
+        <option value="Online">Online</option>
+        <option value="Offline">Offline</option>
+    </select>
+</div>
+
+<div class="mb-3">
+    <label for="editDepartment" class="form-label">Department</label>
+    <select class="form-select shadow-sm" id="editDepartment" name="department" style="height: 38px; padding: 0.375rem 2.25rem 0.375rem 0.75rem; font-size: 1rem; border-radius: 0.25rem; border: 1px solid #ced4da;">
+        <option value="">Select Department</option>
+        <option value="Office of the President">Office of the President</option>
+        <option value="Office of the Executive Assistant to the President">Office of the Executive Assistant to the President</option>
+        <option value="Office of the Internal Auditor">Office of the Internal Auditor</option>
+        
+        <optgroup label="Mission and Identity Cluster" style="font-weight: 600; color: #6c757d;">
+            <option value="Office of the Vice President for Mission and Identity">Office of the Vice President for Mission and Identity</option>
+            <option value="Center for Campus Ministry">Center for Campus Ministry</option>
+            <option value="Community Extension and Outreach Programs Office">Community Extension and Outreach Programs Office</option>
+            <option value="St. Aloysius Gonzaga Parish Office">St. Aloysius Gonzaga Parish Office</option>
+            <option value="Sunflower Child and Youth Wellness Center">Sunflower Child and Youth Wellness Center</option>
+        </optgroup>
+        
+        <optgroup label="Academic Cluster" style="font-weight: 600; color: #6c757d;">
+            <option value="Office of the Vice President for Academic Affairs">Office of the Vice President for Academic Affairs</option>
+            <option value="SAMCIS">School of Accountancy, Management, Computing and Information Studies (SAMCIS)</option>
+            <option value="SAS">School of Advanced Studies (SAS)</option>
+            <option value="SEA">School of Engineering and Architecture (SEA)</option>
+            <option value="SOL">School of Law (SOL)</option>
+            <option value="SOM">School of Medicine (SOM)</option>
+            <option value="SONAHBS">School of Nursing, Allied Health, and Biological Sciences Natural Sciences (SONAHBS)</option>
+            <option value="STELA">School of Teacher Education and Liberal Arts (STELA)</option>
+            <option value="SLU BEdS">Basic Education School (SLU BEdS)</option>
+        </optgroup>
+        
+        <optgroup label="External Relations, Media and Communications and Alumni Affairs" style="font-weight: 600; color: #6c757d;">
+            <option value="Office of Institutional Development and Quality Assurance">Office of Institutional Development and Quality Assurance</option>
+            <option value="University Libraries">University Libraries</option>
+            <option value="University Registrar's Office">University Registrar's Office</option>
+            <option value="University Research and Innovation Center">University Research and Innovation Center</option>
+        </optgroup>
+        
+        <optgroup label="Finance Cluster" style="font-weight: 600; color: #6c757d;">
+            <option value="Office of the Vice President for Finance">Office of the Vice President for Finance</option>
+            <option value="Asset Management and Inventory Control Office">Asset Management and Inventory Control Office</option>
+            <option value="Finance Office">Finance Office</option>
+            <option value="Printing Operations Office">Printing Operations Office</option>
+            <option value="TMDD">Technology Management and Development Department (TMDD)</option>
+        </optgroup>
+        
+        <optgroup label="Administration Cluster" style="font-weight: 600; color: #6c757d;">
+            <option value="Office of the Vice President for Administration">Office of the Vice President for Administration</option>
+            <option value="Athletics and Fitness Center">Athletics and Fitness Center</option>
+            <option value="CPMSD">Campus Planning, Maintenance, and Security Department (CPMSD)</option>
+            <option value="CCA">Center for Culture and the Arts (CCA)</option>
+            <option value="Dental Clinic">Dental Clinic</option>
+            <option value="Guidance Center">Guidance Center</option>
+            <option value="HRD">Human Resource Department (HRD)</option>
+            <option value="Students' Residence Hall">Students' Residence Hall</option>
+            <option value="Medical Clinic">Medical Clinic</option>
+            <option value="OLA">Office for Legal Affairs (OLA)</option>
+            <option value="OSA">Office of Student Affairs (OSA)</option>
+        </optgroup>
+    </select>
+</div>
+
+<style>
+/* Custom styles for the select dropdown */
+.form-select {
+    appearance: none;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-select:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.form-select option {
+    padding: 10px;
+}
+
+.form-select optgroup {
+    margin-top: 10px;
+}
+</style>
                     <div class="mb-3">
                         <label for="editPassword" class="form-label">Change Password (Leave blank to keep
                             current)</label>
