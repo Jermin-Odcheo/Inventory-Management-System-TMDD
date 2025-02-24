@@ -143,49 +143,6 @@ try {
     <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
     <!-- Add jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <style>
-        body {
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background-color: #f8f9fa;
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-
-        .main-content {
-            width: 100%;
-            min-height: 100vh;
-        }
-
-        .card {
-            margin-bottom: 1rem;
-        }
-
-        .form-control {
-            font-size: 0.9rem;
-        }
-
-        .table {
-            font-size: 0.9rem;
-        }
-
-        @media (max-width: 768px) {
-            main {
-                margin-left: 0 !important;
-                max-width: 100% !important;
-            }
-        }
-
-        .search-container {
-            width: 250px;
-        }
-        .search-container input {
-            padding-right: 30px;
-        }
-        .search-container i {
-            color: #6c757d;
-            pointer-events: none;
-        }
-    </style>
 </head>
 
 <body>
