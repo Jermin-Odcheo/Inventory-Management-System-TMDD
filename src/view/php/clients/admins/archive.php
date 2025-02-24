@@ -252,13 +252,45 @@ function getStatusIcon($status)
                         </tbody>
                     </table>
                 </div><!-- /.table-responsive -->
+                <!-- Pagination Controls -->
+                <div class="container-fluid">
+                    <div class="row align-items-center g-3">
+                        <!-- Pagination Info -->
+                        <div class="col-12 col-sm-auto">
+                            <div class="text-muted">
+                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
+                                        id="totalRows">100</span> entries
+                            </div>
+                        </div>
+
+                        <!-- Pagination Controls -->
+                        <div class="col-12 col-sm-auto ms-sm-auto">
+                            <div class="d-flex align-items-center gap-2">
+                                <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                    <i class="bi bi-chevron-left"></i>
+                                    Previous
+                                </button>
+
+                                <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                    <option value="10">10</option>
+                                    <option value="20" selected>20</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                </select>
+
+                                <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                    Next
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div><!-- /.card-body -->
         </div><!-- /.card -->
     </div><!-- /.container-fluid -->
 </div><!-- /.main-content -->
 
-<!-- Bootstrap JS Bundle -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <!-- JavaScript for bulk actions and AJAX calls -->
 <script>
     // Function to update the visibility and state of bulk action buttons
@@ -384,6 +416,76 @@ function getStatusIcon($status)
             xhr.send("user_ids=" + encodeURIComponent(JSON.stringify(ids)) + "&permanent=1");
         }
     });
+
+    // Global Variables
+    let currentPage = 1;
+    let rowsPerPage;
+    let prevButton, nextButton, rowsSelect, currentPageSpan, rowsPerPageSpan, totalRowsSpan;
+
+    // Pagination function (Moved outside to be globally accessible)
+    function updatePagination() {
+        const rows = document.querySelectorAll('#auditTable tbody tr');
+        const totalRows = rows.length;
+        totalRowsSpan.textContent = totalRows;
+
+        const maxPages = Math.ceil(totalRows / rowsPerPage);
+        currentPage = Math.max(1, Math.min(currentPage, maxPages)); // Prevent invalid pages
+
+        const start = (currentPage - 1) * rowsPerPage;
+        const end = start + rowsPerPage;
+
+        rows.forEach((row, index) => {
+            if (index >= start && index < end) {
+                row.style.display = '';
+                setTimeout(() => row.style.opacity = '1', 10);
+            } else {
+                row.style.opacity = '0';
+                setTimeout(() => row.style.display = 'none', 300);
+            }
+        });
+
+        currentPageSpan.textContent = currentPage;
+        rowsPerPageSpan.textContent = rowsPerPage;
+
+        prevButton.disabled = currentPage === 1;
+        nextButton.disabled = currentPage >= maxPages;
+    }
+
+    // Event Listener for DOMContentLoaded
+    document.addEventListener('DOMContentLoaded', function () {
+        prevButton = document.getElementById('prevPage');
+        nextButton = document.getElementById('nextPage');
+        rowsSelect = document.getElementById('rowsPerPageSelect');
+        currentPageSpan = document.getElementById('currentPage');
+        rowsPerPageSpan = document.getElementById('rowsPerPage');
+        totalRowsSpan = document.getElementById('totalRows');
+
+        rowsPerPage = parseInt(rowsSelect.value);
+
+        prevButton.addEventListener('click', function () {
+            if (currentPage > 1) {
+                currentPage--;
+                updatePagination();
+            }
+        });
+    });
+
+    nextButton.addEventListener('click', function () {
+        const maxPages = Math.ceil(totalRowsSpan.textContent / rowsPerPage);
+        if (currentPage < maxPages) {
+            currentPage++;
+            updatePagination();
+        }
+    });
+
+    rowsSelect.addEventListener('change', function () {
+        rowsPerPage = parseInt(this.value);
+        currentPage = 1; // Reset to first page
+        updatePagination();
+    });
+    // Initial setup
+    updatePagination();
+
 </script>
 </body>
 </html>

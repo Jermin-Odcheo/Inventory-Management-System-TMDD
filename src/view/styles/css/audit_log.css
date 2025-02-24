@@ -191,18 +191,34 @@ col.date {
 }
 
 .action-add {
-    background-color: #e7f5e1;
-    color: #2d7a32;
+    background-color: #afcbef;
+    color: #1065b8;
+    padding: 0.5em 0.75em;
+    border-radius: 50px;
+    min-width: 80px;
+    text-align: center;
+    display: block;
 }
 
 .action-modified {
-    background-color: #e1ecf5;
-    color: #2d5a7a;
+    background-color: rgba(154, 228, 138, 0.3);
+    color: #4f774f;
+    padding: 0.5em 0.75em;
+    border-radius: 50px;
+    min-width: 80px;
+    text-align: center;
+    display: block;
+
 }
 
 .action-deleted, .action-permanent\ delete {
-    background-color: #f5e1e1;
-    color: #7a2d2d;
+    background-color: #e45555;
+    color: #ffffff;
+    padding: 0.5em 0.75em;
+    border-radius: 50px;
+    min-width: 80px;
+    text-align: center;
+    display: block;
 }
 
 .action-restored {

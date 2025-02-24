@@ -50,15 +50,15 @@ $query .= " ORDER BY `$sortBy` $sortDir";
 
 try {
     $stmt = $pdo->prepare($query);
-    
+
     if (isset($_GET['department']) && $_GET['department'] !== 'all') {
         $stmt->bindValue(':department', $_GET['department']);
     }
-    
+
     if (isset($_GET['search']) && !empty($_GET['search'])) {
         $stmt->bindValue(':search', '%' . $_GET['search'] . '%');
     }
-    
+
     $stmt->execute();
     $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
     if (!$users) {
@@ -69,10 +69,13 @@ try {
 }
 
 // Helper functions for sorting links/icons
-function toggleDirection($currentSort, $currentDir, $column) {
+function toggleDirection($currentSort, $currentDir, $column)
+{
     return $currentSort === $column ? ($currentDir === 'asc' ? 'desc' : 'asc') : 'asc';
 }
-function sortIcon($currentSort, $column, $sortDir) {
+
+function sortIcon($currentSort, $column, $sortDir)
+{
     if ($currentSort === $column) {
         return $sortDir === 'asc'
             ? ' <i class="bi bi-caret-up-fill"></i>'
@@ -82,7 +85,8 @@ function sortIcon($currentSort, $column, $sortDir) {
 }
 
 // Add this function near the top of the file, after session_start()
-function getCurrentUserRoles($pdo, $userId) {
+function getCurrentUserRoles($pdo, $userId)
+{
     $stmt = $pdo->prepare("
         SELECT r.Role_Name 
         FROM roles r 
@@ -97,7 +101,8 @@ function getCurrentUserRoles($pdo, $userId) {
 $currentUserRoles = getCurrentUserRoles($pdo, $_SESSION['user_id']);
 
 // Add this function to check if current user can delete target user
-function canDeleteUser($currentUserRoles, $targetUserRoles) {
+function canDeleteUser($currentUserRoles, $targetUserRoles)
+{
     if (in_array('Super Admin', $currentUserRoles)) {
         return true;
     }
@@ -106,6 +111,7 @@ function canDeleteUser($currentUserRoles, $targetUserRoles) {
     }
     return false;
 }
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -125,12 +131,15 @@ function canDeleteUser($currentUserRoles, $targetUserRoles) {
             margin-bottom: 20px;
             width: auto;
         }
+
         .search-container {
             width: 250px;
         }
+
         .search-container input {
             padding-right: 30px;
         }
+
         .search-container i {
             color: #6c757d;
             pointer-events: none;
@@ -144,29 +153,29 @@ function canDeleteUser($currentUserRoles, $targetUserRoles) {
 <!-- Main Content Area -->
 <div class="main-content container-fluid">
     <h1>User Management</h1>
-    
+
     <?php if (isset($_GET['success'])): ?>
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        User added successfully!
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            User added successfully!
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
     <?php endif; ?>
 
     <?php if (isset($_SESSION['delete_success'])): ?>
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        <?php 
-        if (isset($_SESSION['deleted_count'])) {
-            echo "{$_SESSION['deleted_count']} user(s) have been successfully deleted.";
-            unset($_SESSION['deleted_count']);
-        } else {
-            echo "User has been successfully deleted.";
-        }
-        ?>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-    <?php 
-    unset($_SESSION['delete_success']);
-    endif; 
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <?php
+            if (isset($_SESSION['deleted_count'])) {
+                echo "{$_SESSION['deleted_count']} user(s) have been successfully deleted.";
+                unset($_SESSION['deleted_count']);
+            } else {
+                echo "User has been successfully deleted.";
+            }
+            ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <?php
+        unset($_SESSION['delete_success']);
+    endif;
     ?>
 
     <!-- Add this new div for delete messages -->
@@ -174,7 +183,7 @@ function canDeleteUser($currentUserRoles, $targetUserRoles) {
         <span id="deleteMessageText"></span>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
-    
+
     <div class="d-flex justify-content-end mb-3">
         <a href="add_user.php" class="btn btn-primary me-2">Add New User</a>
         <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
@@ -196,8 +205,8 @@ function canDeleteUser($currentUserRoles, $targetUserRoles) {
                     <?php endforeach; ?>
                 </select>
                 <div class="search-container position-relative">
-                    <input type="text" name="search" id="searchUsers" class="form-control" 
-                           placeholder="Search users..." 
+                    <input type="text" name="search" id="searchUsers" class="form-control"
+                           placeholder="Search users..."
                            value="<?php echo htmlspecialchars($_GET['search'] ?? ''); ?>"
                            style="width: 250px;">
                     <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-2"></i>
@@ -255,11 +264,11 @@ function canDeleteUser($currentUserRoles, $targetUserRoles) {
                     <td><?php echo htmlspecialchars($user['User_ID']); ?></td>
                     <td><?php echo htmlspecialchars($user['Email']); ?></td>
                     <td><?php echo htmlspecialchars($user['First_Name'] . ' ' . $user['Last_Name']); ?></td>
-                    <td><?php 
-                        echo htmlspecialchars(isset($departments[$user['Department']]) 
-                            ? $departments[$user['Department']] 
-                            : $user['Department']); 
-                    ?></td>
+                    <td><?php
+                        echo htmlspecialchars(isset($departments[$user['Department']])
+                            ? $departments[$user['Department']]
+                            : $user['Department']);
+                        ?></td>
                     <td><?php echo htmlspecialchars($user['Status'] ?? ''); ?></td>
                     <td>
                         <?php
@@ -290,11 +299,11 @@ function canDeleteUser($currentUserRoles, $targetUserRoles) {
                         $targetUserRoles = getCurrentUserRoles($pdo, $user['User_ID']);
                         $canDelete = canDeleteUser($currentUserRoles, $targetUserRoles);
                         if ($canDelete):
-                        ?>
-                        <button type="button" class="btn btn-sm btn-danger"
-                                data-id="<?php echo $user['User_ID']; ?>">
-                            Delete
-                        </button>
+                            ?>
+                            <button type="button" class="btn btn-sm btn-danger"
+                                    data-id="<?php echo $user['User_ID']; ?>">
+                                Delete
+                            </button>
                         <?php endif; ?>
                     </td>
                 </tr>
@@ -339,7 +348,8 @@ function canDeleteUser($currentUserRoles, $targetUserRoles) {
                         <input type="text" class="form-control" id="editDepartment" name="department">
                     </div>
                     <div class="mb-3">
-                        <label for="editPassword" class="form-label">Change Password (Leave blank to keep current)</label>
+                        <label for="editPassword" class="form-label">Change Password (Leave blank to keep
+                            current)</label>
                         <input type="password" class="form-control" id="editPassword" name="password">
                     </div>
                     <div class="mb-3">
@@ -352,7 +362,8 @@ function canDeleteUser($currentUserRoles, $targetUserRoles) {
 </div>
 
 <!-- Delete Account Modal -->
-<div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel" aria-hidden="true">
+<div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel"
+     aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -372,8 +383,8 @@ function canDeleteUser($currentUserRoles, $targetUserRoles) {
 
 <!-- Custom JavaScript for bulk actions and form handling -->
 <script>
-    $(document).ready(function() {
-        // Update bulk delete button for active users
+    $(document).ready(function () {
+        // Update bulk action buttons for active users
         function updateBulkActionButtons() {
             var activeCount = $(".select-row:checked").length;
             if (activeCount >= 2) {
@@ -382,14 +393,15 @@ function canDeleteUser($currentUserRoles, $targetUserRoles) {
                 $("#delete-selected").prop("disabled", true).hide();
             }
         }
+
         $(".select-row").change(updateBulkActionButtons);
-        $("#select-all").change(function() {
+        $("#select-all").change(function () {
             $(".select-row").prop("checked", $(this).prop("checked"));
             updateBulkActionButtons();
         });
 
         // Bulk delete handler
-        $("#delete-selected").click(function() {
+        $("#delete-selected").click(function () {
             let selected = [];
             $(".select-row:checked").each(function () {
                 selected.push($(this).val());
@@ -398,19 +410,19 @@ function canDeleteUser($currentUserRoles, $targetUserRoles) {
                 $.ajax({
                     type: "POST",
                     url: "delete_user.php",
-                    data: { 
-                        user_ids: selected, 
-                        action: "soft_delete" 
+                    data: {
+                        user_ids: selected,
+                        action: "soft_delete"
                     },
                     dataType: 'json',
-                    success: function(response) {
+                    success: function (response) {
                         if (response.success) {
                             window.location.reload();
                         } else {
                             alert(response.message || "Failed to delete selected users. Please try again.");
                         }
                     },
-                    error: function(xhr, status, error) {
+                    error: function (xhr, status, error) {
                         console.error("Error details:", {xhr, status, error});
                         alert("Failed to delete selected users. Error: " + error);
                     }
@@ -419,25 +431,25 @@ function canDeleteUser($currentUserRoles, $targetUserRoles) {
         });
 
         // Individual delete handler
-        $(".btn-danger[data-id]").click(function() {
+        $(".btn-danger[data-id]").click(function () {
             let userId = $(this).data("id");
             if (confirm("Are you sure you want to delete this user? They will be moved to archive.")) {
                 $.ajax({
                     type: "POST",
                     url: "delete_user.php",
-                    data: { 
-                        user_id: userId, 
+                    data: {
+                        user_id: userId,
                         action: "soft_delete"
                     },
                     dataType: 'json',
-                    success: function(response) {
+                    success: function (response) {
                         if (response.success) {
                             window.location.reload();
                         } else {
                             alert(response.message || "Failed to delete user. Please try again.");
                         }
                     },
-                    error: function(xhr, status, error) {
+                    error: function (xhr, status, error) {
                         console.error("Error details:", {xhr, status, error});
                         alert("Failed to delete user. Error: " + error);
                     }
@@ -450,13 +462,13 @@ function canDeleteUser($currentUserRoles, $targetUserRoles) {
             // Button that triggered the modal
             var button = $(event.relatedTarget);
             // Retrieve data attributes from the clicked button
-            var userId     = button.data('id');
-            var email      = button.data('email');
-            var firstName  = button.data('firstName') || button.data('first-name');
-            var lastName   = button.data('lastName')  || button.data('last-name');
+            var userId = button.data('id');
+            var email = button.data('email');
+            var firstName = button.data('firstName') || button.data('first-name');
+            var lastName = button.data('lastName') || button.data('last-name');
             var department = button.data('department');
 
-            console.log("Modal triggered with data:", { userId, email, firstName, lastName, department });
+            console.log("Modal triggered with data:", {userId, email, firstName, lastName, department});
 
             // Populate the modal fields
             var modal = $(this);
@@ -468,52 +480,52 @@ function canDeleteUser($currentUserRoles, $targetUserRoles) {
         });
 
         // Intercept the edit form submission to use AJAX
-        $("#editUserForm").on("submit", function(e) {
+        $("#editUserForm").on("submit", function (e) {
             e.preventDefault(); // Prevent the default form submission
             console.log("Edit form submit triggered:", $(this).serialize());
             $.ajax({
                 type: "POST",
                 url: $(this).attr("action"),
                 data: $(this).serialize(),
-                success: function(response) {
+                success: function (response) {
                     console.log("Response from server:", response);
                     $("#editUserModal").modal("hide");
-                    
+
                     // Get the updated user data from the form
                     var userId = $("#editUserID").val();
                     var email = $("#editEmail").val();
                     var firstName = $("#editFirstName").val();
                     var lastName = $("#editLastName").val();
                     var department = $("#editDepartment").val();
-                    
+
                     // Find and update the corresponding table row
                     var row = $("button.btn-edit[data-id='" + userId + "']").closest('tr');
                     row.find('td:eq(2)').text(email); // Update email cell
                     row.find('td:eq(3)').text(firstName + ' ' + lastName); // Update name cell
                     row.find('td:eq(4)').text(department); // Update department cell
-                    
+
                     // Update the edit button's data attributes
                     var editButton = row.find('.btn-edit');
                     editButton.data('email', email);
                     editButton.data('first-name', firstName);
                     editButton.data('last-name', lastName);
                     editButton.data('department', department);
-                    
+
                     // Show success message
                     $("#alertMessage").html(
                         '<div class="alert alert-success alert-dismissible fade show" role="alert">' +
                         response +
                         '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>'
                     );
-                    
+
                     // Automatically dismiss the alert after 3 seconds
-                    setTimeout(function() {
-                        $('.alert').fadeOut('slow', function() {
+                    setTimeout(function () {
+                        $('.alert').fadeOut('slow', function () {
                             $(this).remove();
                         });
                     }, 3000);
                 },
-                error: function(xhr, status, error) {
+                error: function (xhr, status, error) {
                     console.error("AJAX Error:", error);
                     $("#alertMessage").html(
                         '<div class="alert alert-danger alert-dismissible fade show" role="alert">' +
@@ -525,12 +537,12 @@ function canDeleteUser($currentUserRoles, $targetUserRoles) {
         });
 
         // Handle delete account confirmation
-        $("#confirmDeleteAccount").click(function() {
+        $("#confirmDeleteAccount").click(function () {
             $.ajax({
                 type: "POST",
                 url: "delete_account.php",
-                data: { action: "delete_account" },
-                success: function(response) {
+                data: {action: "delete_account"},
+                success: function (response) {
                     if (response.success) {
                         alert("Account deleted successfully.");
                         window.location.href = "../../../../../public/index.php";
@@ -538,31 +550,32 @@ function canDeleteUser($currentUserRoles, $targetUserRoles) {
                         alert("Error: " + response.message);
                     }
                 },
-                error: function() {
+                error: function () {
                     alert("An error occurred while deleting the account.");
                 }
             });
         });
 
         // Add this to handle the close button click
-        $(document).on('click', '.btn-close', function() {
+        $(document).on('click', '.btn-close', function () {
             $(this).closest('.alert').hide();
         });
 
         // Department filter change handler
-        $('select[name="department"]').on('change', function() {
+        $('select[name="department"]').on('change', function () {
             this.form.submit();
         });
 
         // Search input handler with debounce
         let searchTimeout;
-        $('#searchUsers').on('input', function() {
+        $('#searchUsers').on('input', function () {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
                 this.form.submit();
             }, 500);
         });
     });
+
 </script>
 
 </body>

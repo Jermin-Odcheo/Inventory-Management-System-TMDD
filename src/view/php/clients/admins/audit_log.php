@@ -18,9 +18,6 @@ $query = "SELECT audit_log.*, users.email AS user_email
 $stmt = $pdo->prepare($query);
 $stmt->execute();
 $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
-$stmt = $pdo->prepare($query);
-$stmt->execute();
-$auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 /**
  * Helper function to display JSON data with <br> for new lines.
@@ -41,7 +38,7 @@ function formatNewValue($jsonStr)
     if ($jsonStr === null) {
         return '<em class="text-muted">N/A</em>';
     }
-    
+
     $data = json_decode($jsonStr, true);
     if (!is_array($data)) {
         return '<span>' . htmlspecialchars((string)$jsonStr) . '</span>';
@@ -152,15 +149,13 @@ function getStatusIcon($status)
         ? '<i class="fas fa-check-circle"></i>'
         : '<i class="fas fa-times-circle"></i>';
 }
+
 /**
  * Format the "Details" and "Changes" columns based on the action.
  * Returns an array: [ $detailsHTML, $changesHTML ]
  */
-/**
- * Format the "Details" and "Changes" columns based on the action.
- * Returns an array: [ $detailsHTML, $changesHTML ]
- */
-function formatDetailsAndChanges($log) {
+function formatDetailsAndChanges($log)
+{
     // Normalize action to lowercase
     $action = strtolower($log['Action'] ?? '');
 
@@ -206,7 +201,7 @@ function formatDetailsAndChanges($log) {
 
         case 'soft delete':
             // Use the target's name instead of a generic message
-            $details = htmlspecialchars("$targetName has been soft deleted");
+            $details = htmlspecialchars("$userEmail has been soft deleted");
             $changes = "is_deleted 0 -> 1";
             break;
 
@@ -227,7 +222,8 @@ function formatDetailsAndChanges($log) {
 /**
  * Helper function to find which fields changed (just the field names).
  */
-function getChangedFieldNames(array $oldData, array $newData) {
+function getChangedFieldNames(array $oldData, array $newData)
+{
     $changed = [];
     // We combine the keys
     $allKeys = array_unique(array_merge(array_keys($oldData), array_keys($newData)));
@@ -242,6 +238,7 @@ function getChangedFieldNames(array $oldData, array $newData) {
 }
 
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -251,8 +248,6 @@ function getChangedFieldNames(array $oldData, array $newData) {
           href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-
     <link rel="stylesheet" href="/Inventory-Managment-System-TMDD/src/view/styles/css/audit_log.css">
 </head>
 <body>
@@ -384,7 +379,6 @@ function getChangedFieldNames(array $oldData, array $newData) {
                                         <?php echo nl2br($changesHTML); ?>
                                     </td>
 
-
                                     <!-- STATUS -->
                                     <td data-label="Status">
                                         <span class="badge <?php echo (strtolower($log['Status'] ?? '') === 'successful') ? 'bg-success' : 'bg-danger'; ?>">
@@ -415,112 +409,46 @@ function getChangedFieldNames(array $oldData, array $newData) {
                         </tbody>
                     </table>
                 </div><!-- /.table-responsive -->
+
+                <!-- Pagination Controls -->
+                <div class="container-fluid">
+                    <div class="row align-items-center g-3">
+                        <!-- Pagination Info -->
+                        <div class="col-12 col-sm-auto">
+                            <div class="text-muted">
+                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
+                                        id="totalRows">100</span> entries
+                            </div>
+                        </div>
+
+                        <!-- Pagination Controls -->
+                        <div class="col-12 col-sm-auto ms-sm-auto">
+                            <div class="d-flex align-items-center gap-2">
+                                <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                    <i class="bi bi-chevron-left"></i>
+                                    Previous
+                                </button>
+
+                                <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                    <option value="10">10</option>
+                                    <option value="20" selected>20</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                </select>
+
+                                <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                    Next
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div><!-- /.card-body -->
         </div><!-- /.card -->
     </div><!-- /.container-fluid -->
 </div><!-- /.main-content -->
-
-<!-- Scripts: Bootstrap, Filtering, and Sorting with Smooth Transitions -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-    // Combined filtering function for search, action, and status filters.
-    function filterTable() {
-        const searchFilter = document.getElementById('searchInput').value.toLowerCase();
-        const actionFilter = document.getElementById('filterAction').value.toLowerCase();
-        const statusFilter = document.getElementById('filterStatus').value.toLowerCase();
-        const rows = document.querySelectorAll('#auditTable tr');
-
-        rows.forEach(row => {
-            const actionText = row.querySelector('[data-label="Action"]').textContent.toLowerCase();
-            const statusText = row.querySelector('[data-label="Status"]').textContent.toLowerCase();
-            const rowText = row.textContent.toLowerCase();
-
-            const matchesSearch = rowText.includes(searchFilter);
-            const matchesAction = actionFilter === '' || actionText.includes(actionFilter);
-            const matchesStatus = statusFilter === '' || statusText.includes(statusFilter);
-
-            if (matchesSearch && matchesAction && matchesStatus) {
-                row.style.display = '';
-                row.style.opacity = '1';
-            } else {
-                row.style.opacity = '0';
-                setTimeout(() => {
-                    row.style.display = 'none';
-                }, 300); // Match the CSS transition duration.
-            }
-        });
-    }
-
-    document.getElementById('searchInput').addEventListener('keyup', filterTable);
-    document.getElementById('filterAction').addEventListener('change', filterTable);
-    document.getElementById('filterStatus').addEventListener('change', filterTable);
-
-    // Sorting functionality with smooth fade-out and fade-in transitions.
-    function sortTableByColumn(table, column, asc = true) {
-        const tbody = table.querySelector('tbody');
-        const rows = Array.from(tbody.querySelectorAll('tr'));
-
-        // Fade out rows.
-        rows.forEach(row => {
-            row.style.opacity = '0';
-        });
-
-        // Wait for the fade-out transition.
-        setTimeout(() => {
-            const dirModifier = asc ? 1 : -1;
-            const sortedRows = rows.sort((a, b) => {
-                const aText = a.querySelector(`td:nth-child(${column + 1})`).textContent.trim();
-                const bText = b.querySelector(`td:nth-child(${column + 1})`).textContent.trim();
-
-                // Check if values are numeric.
-                const aNum = parseFloat(aText.replace(/[^0-9.-]+/g, ""));
-                const bNum = parseFloat(bText.replace(/[^0-9.-]+/g, ""));
-                if (!isNaN(aNum) && !isNaN(bNum)) {
-                    return (aNum - bNum) * dirModifier;
-                }
-
-                // Check if values are dates.
-                const aDate = new Date(aText);
-                const bDate = new Date(bText);
-                if (!isNaN(aDate) && !isNaN(bDate)) {
-                    return (aDate - bDate) * dirModifier;
-                }
-
-                // Fallback to text comparison.
-                return aText.localeCompare(bText) * dirModifier;
-            });
-
-            // Remove existing rows and re-add sorted rows.
-            while (tbody.firstChild) {
-                tbody.removeChild(tbody.firstChild);
-            }
-            sortedRows.forEach(row => {
-                row.style.opacity = '0';  // Ensure they start faded out.
-                tbody.appendChild(row);
-            });
-
-            // Fade in sorted rows.
-            setTimeout(() => {
-                sortedRows.forEach(row => {
-                    row.style.opacity = '1';
-                });
-            }, 50);
-
-            // Update header classes for sort indicators.
-            table.querySelectorAll('th').forEach(th => th.classList.remove('th-sort-asc', 'th-sort-desc'));
-            table.querySelector(`thead th:nth-child(${column + 1})`).classList.toggle('th-sort-asc', asc);
-            table.querySelector(`thead th:nth-child(${column + 1})`).classList.toggle('th-sort-desc', !asc);
-        }, 300); // 300ms matches the CSS transition duration.
-    }
-
-    // Attach click event listeners to each table header.
-    document.querySelectorAll('thead th').forEach((header, index) => {
-        header.addEventListener('click', () => {
-            const tableElement = header.closest('table');
-            const currentIsAscending = header.classList.contains('th-sort-asc');
-            sortTableByColumn(tableElement, index, !currentIsAscending);
-        });
-    });
-</script>
+<script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/logs.js" defer></script>
 </body>
 </html>
+
