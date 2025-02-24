@@ -236,51 +236,10 @@ try {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
     <!-- Add this in the head section after Bootstrap CSS -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <style>
-        body {
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background-color: #f8f9fa;
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
 
-        .main-content {
-            width: 100%;
-            min-height: 100vh;
-        }
-
-        .card {
-            margin-bottom: 1rem;
-        }
-
-        .form-control {
-            font-size: 0.9rem;
-        }
-
-        .table {
-            font-size: 0.9rem;
-        }
-
-        @media (max-width: 768px) {
-            main {
-                margin-left: 0 !important;
-                max-width: 100% !important;
-            }
-        }
-
-        .search-container {
-            width: 250px;
-        }
-        .search-container input {
-            padding-right: 30px;
-        }
-        .search-container i {
-            color: #6c757d;
-            pointer-events: none;
-        }
-    </style>
 </head>
 
 <body>

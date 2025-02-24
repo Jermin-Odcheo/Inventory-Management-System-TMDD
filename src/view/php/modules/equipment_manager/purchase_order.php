@@ -155,23 +155,7 @@ try {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background-color: #f8f9fa;
-            min-height: 100vh;
-        }
-        .main-content {
-            margin-left: 300px;
-            padding: 20px;
-            transition: margin-left 0.3s ease;
-        }
-        @media (max-width: 768px) {
-            .main-content {
-                margin-left: 0;
-            }
-        }
-    </style>
+    <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
 </head>
 
 <body>
