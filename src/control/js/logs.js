@@ -42,6 +42,7 @@ function sortTableByColumn(table, column, asc = true) {
         row.style.opacity = '0';
     });
 
+
     // Wait for the fade-out transition.
     setTimeout(() => {
         const dirModifier = asc ? 1 : -1;
@@ -99,73 +100,4 @@ document.querySelectorAll('thead th').forEach((header, index) => {
         const currentIsAscending = header.classList.contains('th-sort-asc');
         sortTableByColumn(tableElement, index, !currentIsAscending);
     });
-});
-// Global Variables
-let currentPage = 1;
-let rowsPerPage;
-let prevButton, nextButton, rowsSelect, currentPageSpan, rowsPerPageSpan, totalRowsSpan;
-
-// Pagination function (Moved outside to be globally accessible)
-function updatePagination() {
-    const rows = document.querySelectorAll('#auditTable tbody tr');
-    const totalRows = rows.length;
-    totalRowsSpan.textContent = totalRows;
-
-    const maxPages = Math.ceil(totalRows / rowsPerPage);
-    currentPage = Math.max(1, Math.min(currentPage, maxPages)); // Prevent invalid pages
-
-    const start = (currentPage - 1) * rowsPerPage;
-    const end = start + rowsPerPage;
-
-    rows.forEach((row, index) => {
-        if (index >= start && index < end) {
-            row.style.display = '';
-            setTimeout(() => row.style.opacity = '1', 10);
-        } else {
-            row.style.opacity = '0';
-            setTimeout(() => row.style.display = 'none', 300);
-        }
-    });
-
-    currentPageSpan.textContent = currentPage;
-    rowsPerPageSpan.textContent = rowsPerPage;
-
-    prevButton.disabled = currentPage === 1;
-    nextButton.disabled = currentPage >= maxPages;
-}
-
-// Event Listener for DOMContentLoaded
-document.addEventListener('DOMContentLoaded', function () {
-    prevButton = document.getElementById('prevPage');
-    nextButton = document.getElementById('nextPage');
-    rowsSelect = document.getElementById('rowsPerPageSelect');
-    currentPageSpan = document.getElementById('currentPage');
-    rowsPerPageSpan = document.getElementById('rowsPerPage');
-    totalRowsSpan = document.getElementById('totalRows');
-
-    rowsPerPage = parseInt(rowsSelect.value);
-
-    prevButton.addEventListener('click', function () {
-        if (currentPage > 1) {
-            currentPage--;
-            updatePagination();
-        }
-    });
-
-    nextButton.addEventListener('click', function () {
-        const maxPages = Math.ceil(totalRowsSpan.textContent / rowsPerPage);
-        if (currentPage < maxPages) {
-            currentPage++;
-            updatePagination();
-        }
-    });
-
-    rowsSelect.addEventListener('change', function () {
-        rowsPerPage = parseInt(this.value);
-        currentPage = 1; // Reset to first page
-        updatePagination();
-    });
-
-    // Initial setup
-    updatePagination();
 });

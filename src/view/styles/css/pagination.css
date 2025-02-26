@@ -1,0 +1,31 @@
+/* Add a loading spinner to the Next button */
+#nextPage.loading::after {
+    content: '';
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid #fff;
+    border-top: 2px solid transparent;
+    border-radius: 50%;
+    animation: spin 0.5s linear infinite;
+    margin-left: 8px;
+}
+
+/* Add this to your existing CSS */
+#table tbody tr {
+    transition: opacity 0.1s ease-in-out, transform 0.1s ease-in-out;
+}
+
+#table tbody tr.hidden-row {
+    display: none; /* Completely removes the hidden rows */
+}
+
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}

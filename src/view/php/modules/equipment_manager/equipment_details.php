@@ -58,6 +58,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     // Debug line
                     error_log('Received POST data: ' . print_r($_POST, true));
                     
+                    // Begin transaction
+                    $pdo->beginTransaction();
+                    
+                    // Set current user for audit logging
+                    $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
+                    
+                    // First insert the equipment
                     $stmt = $pdo->prepare("INSERT INTO equipmentdetails (
                         AssetTag, 
                         AssetDescription1, 
@@ -84,13 +91,62 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         $_POST['remarks']
                     ]);
                     
+                    $newEquipmentId = $pdo->lastInsertId();
+                    
+                    // Prepare the new values for audit log
+                    $newValues = json_encode([
+                        'AssetTag' => $_POST['asset_tag'],
+                        'AssetDescription1' => $_POST['asset_description1'],
+                        'AssetDescription2' => $_POST['asset_description2'],
+                        'Specification' => $_POST['specification'],
+                        'Brand' => $_POST['brand'],
+                        'Model' => $_POST['model'],
+                        'SerialNumber' => $_POST['serial_number'],
+                        'DateAcquired' => $_POST['date_acquired'],
+                        'AccountableIndividual' => $_POST['accountable_individual'],
+                        'Remarks' => $_POST['remarks']
+                    ]);
+
+                    // Insert into audit_log
+                    $auditStmt = $pdo->prepare("
+                        INSERT INTO audit_log (
+                            UserID,
+                            EntityID,
+                            Module,
+                            Action,
+                            Details,
+                            OldVal,
+                            NewVal,
+                            Status
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    ");
+
+                    $auditStmt->execute([
+                        $_SESSION['user_id'],
+                        $newEquipmentId,
+                        'Equipment Details',
+                        'Add',
+                        'New equipment added',
+                        null,
+                        $newValues,
+                        'Successful'
+                    ]);
+                    
+                    // Commit transaction
+                    $pdo->commit();
+                    
                     // Debug line
-                    error_log('Insert successful. Last Insert ID: ' . $pdo->lastInsertId());
+                    error_log('Insert successful. Last Insert ID: ' . $newEquipmentId);
                     
                     $response['status'] = 'success';
                     $response['message'] = 'Equipment Details has been added successfully.';
                     $_SESSION['success'] = "Equipment Details has been added successfully.";
                 } catch (PDOException $e) {
+                    // Rollback transaction on error
+                    if ($pdo->inTransaction()) {
+                        $pdo->rollBack();
+                    }
+                    
                     // Debug line
                     error_log('Database error: ' . $e->getMessage());
                     
@@ -104,6 +160,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
             case 'update':
                 try {
+                    // Begin transaction
+                    $pdo->beginTransaction();
+                    
+                    // Get old equipment details for audit log
+                    $stmt = $pdo->prepare("SELECT * FROM equipmentdetails WHERE EquipmentDetailsID = ?");
+                    $stmt->execute([$_POST['equipment_id']]);
+                    $oldEquipment = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    // Update equipment
                     $stmt = $pdo->prepare("UPDATE equipmentdetails SET 
                         AssetTag = ?,
                         AssetDescription1 = ?,
@@ -130,10 +195,69 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         $_POST['remarks'],
                         $_POST['equipment_id']
                     ]);
+
+                    // Prepare audit log data
+                    $oldValues = json_encode([
+                        'AssetTag' => $oldEquipment['AssetTag'],
+                        'AssetDescription1' => $oldEquipment['AssetDescription1'],
+                        'AssetDescription2' => $oldEquipment['AssetDescription2'],
+                        'Specification' => $oldEquipment['Specification'],
+                        'Brand' => $oldEquipment['Brand'],
+                        'Model' => $oldEquipment['Model'],
+                        'SerialNumber' => $oldEquipment['SerialNumber'],
+                        'DateAcquired' => $oldEquipment['DateAcquired'],
+                        'AccountableIndividual' => $oldEquipment['AccountableIndividual'],
+                        'Remarks' => $oldEquipment['Remarks']
+                    ]);
+
+                    $newValues = json_encode([
+                        'AssetTag' => $_POST['asset_tag'],
+                        'AssetDescription1' => $_POST['asset_description1'],
+                        'AssetDescription2' => $_POST['asset_description2'],
+                        'Specification' => $_POST['specification'],
+                        'Brand' => $_POST['brand'],
+                        'Model' => $_POST['model'],
+                        'SerialNumber' => $_POST['serial_number'],
+                        'DateAcquired' => $_POST['date_acquired'],
+                        'AccountableIndividual' => $_POST['accountable_individual'],
+                        'Remarks' => $_POST['remarks']
+                    ]);
+
+                    // Insert audit log
+                    $auditStmt = $pdo->prepare("
+                        INSERT INTO audit_log (
+                            UserID,
+                            EntityID,
+                            Module,
+                            Action,
+                            Details,
+                            OldVal,
+                            NewVal,
+                            Status
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    ");
+
+                    $auditStmt->execute([
+                        $_SESSION['user_id'],
+                        $_POST['equipment_id'],
+                        'Equipment Details',
+                        'Modified',
+                        'Equipment details modified',
+                        $oldValues,
+                        $newValues,
+                        'Successful'
+                    ]);
+
+                    // Commit transaction
+                    $pdo->commit();
                     
                     $response['status'] = 'success';
                     $response['message'] = 'Equipment updated successfully';
                 } catch (PDOException $e) {
+                    // Rollback on error
+                    if ($pdo->inTransaction()) {
+                        $pdo->rollBack();
+                    }
                     $response['status'] = 'error';
                     $response['message'] = 'Error updating equipment: ' . $e->getMessage();
                 }
@@ -214,9 +338,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 // RETRIEVE ALL EQUIPMENT DETAILS
 // ------------------------
 try {
-    $stmt = $pdo->query("SELECT *
+    $stmt = $pdo->query("SELECT EquipmentDetailsID, AssetTag, AssetDescription1, AssetDescription2, 
+                         Specification, Brand, Model, SerialNumber, DateAcquired, CreatedDate, ModifiedDate,
+                         ReceivingReportFormNumber, AccountableIndividualLocation, 
+                         AccountableIndividual, Remarks 
                          FROM equipmentdetails 
-                         ORDER BY DateAcquired DESC");
+                         ORDER BY EquipmentDetailsID DESC");
     $equipmentDetails = $stmt->fetchAll();
 } catch (PDOException $e) {
     $errors[] = "Error retrieving Equipment Details: " . $e->getMessage();
@@ -338,7 +465,7 @@ try {
                 </div>
 
                 <div class="table-responsive">
-                    <table class="table table-striped table-bordered table-sm mb-0">
+                    <table class="table table-striped table-bordered table-sm mb-0" id="table">
                         <thead class="table-dark">
                             <tr>
                                 <th>ID</th>
@@ -350,7 +477,12 @@ try {
                                 <th>Model</th>
                                 <th>Serial Number</th>
                                 <th>Date Acquired</th>
+                                <th>Created Date</th>
+                                <th>Modified Date</th>
+                                <th>RR Number</th>
+                                <th>Location</th>
                                 <th>Accountable Individual</th>
+                                <th>Remarks</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -366,7 +498,12 @@ try {
                                     <td><?php echo htmlspecialchars($equipment['Model']); ?></td>
                                     <td><?php echo htmlspecialchars($equipment['SerialNumber']); ?></td>
                                     <td><?php echo htmlspecialchars($equipment['DateAcquired']); ?></td>
+                                    <td><?php echo !empty($equipment['CreatedDate']) ? date('Y-m-d H:i', strtotime($equipment['CreatedDate'])) : ''; ?></td>
+                                    <td><?php echo !empty($equipment['ModifiedDate']) ? date('Y-m-d H:i', strtotime($equipment['ModifiedDate'])) : ''; ?></td>
+                                    <td><?php echo htmlspecialchars($equipment['ReceivingReportFormNumber']); ?></td>
+                                    <td><?php echo htmlspecialchars($equipment['AccountableIndividualLocation']); ?></td>
                                     <td><?php echo htmlspecialchars($equipment['AccountableIndividual']); ?></td>
+                                    <td><?php echo htmlspecialchars($equipment['Remarks']); ?></td>
                                     <td class="text-center">
                                         <div class="btn-group" role="group">
                                             <a class="btn btn-sm btn-outline-primary edit-equipment" 
@@ -395,6 +532,40 @@ try {
                         </tbody>
                     </table>
                 </div>
+                <!-- Pagination Controls -->
+                <div class="container-fluid">
+                    <div class="row align-items-center g-3">
+                        <!-- Pagination Info -->
+                        <div class="col-12 col-sm-auto">
+                            <div class="text-muted">
+                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span
+                                        id="totalRows">0</span> entries
+                            </div>
+                        </div>
+
+                        <!-- Pagination Controls -->
+                        <div class="col-12 col-sm-auto ms-sm-auto">
+                            <div class="d-flex align-items-center gap-2">
+                                <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                    <i class="bi bi-chevron-left"></i>
+                                    Previous
+                                </button>
+
+                                <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                    <option value="10">10</option>
+                                    <option value="20" selected>20</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                </select>
+
+                                <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                    Next
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -415,11 +586,11 @@ try {
                             <input type="text" class="form-control" name="asset_tag" required>
                         </div>
                         <div class="mb-3">
-                            <label for="asset_description1" class="form-label">Asset Description 1</label>
+                            <label for="asset_description1" class="form-label"> Description 1</label>
                             <input type="text" class="form-control" name="asset_description1" required>
                         </div>
                         <div class="mb-3">
-                            <label for="asset_description2" class="form-label">Asset Description 2</label>
+                            <label for="asset_description2" class="form-label"> Description 2</label>
                             <input type="text" class="form-control" name="asset_description2" required>
                         </div>
                         <div class="mb-3">
@@ -478,11 +649,11 @@ try {
                             <input type="text" class="form-control" name="asset_tag" id="edit_asset_tag">
                         </div>
                         <div class="mb-3">
-                            <label for="edit_asset_description1" class="form-label">Asset Description 1</label>
+                            <label for="edit_asset_description1" class="form-label"> Description 1</label>
                             <input type="text" class="form-control" name="asset_description1" id="edit_asset_description1">
                         </div>
                         <div class="mb-3">
-                            <label for="edit_asset_description2" class="form-label">Asset Description 2</label>
+                            <label for="edit_asset_description2" class="form-label"> Description 2</label>
                             <input type="text" class="form-control" name="asset_description2" id="edit_asset_description2">
                         </div>
                         <div class="mb-3">
@@ -523,7 +694,7 @@ try {
             </div>
         </div>
     </div>
-
+    <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
     <!-- JavaScript for Real-Time Table Filtering -->
     <script>
         $(document).ready(function() {

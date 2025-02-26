@@ -32,17 +32,54 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         switch ($_POST['action']) {
             case 'add':
                 try {
-                    $stmt = $pdo->prepare("INSERT INTO equipmentstatus (AssetTag, Status, Remarks, AccountableIndividual, CheckDate) VALUES (?, ?, ?, ?, NOW())");
+                    $pdo->beginTransaction();
+
+                    // Insert equipment status
+                    $stmt = $pdo->prepare("INSERT INTO equipmentstatus (AssetTag, Status, Remarks, AccountableIndividual, CreatedDate) VALUES (?, ?, ?, ?, NOW())");
                     $stmt->execute([
                         $_POST['asset_tag'],
                         $_POST['status'],
                         $_POST['remarks'],
                         $_POST['accountable_individual']
                     ]);
+
+                    $newStatusId = $pdo->lastInsertId();
+
+                    // Prepare audit log data
+                    $newValues = json_encode([
+                        'AssetTag' => $_POST['asset_tag'],
+                        'Status' => $_POST['status'],
+                        'Remarks' => $_POST['remarks'],
+                        'AccountableIndividual' => $_POST['accountable_individual']
+                    ]);
+
+                    // Insert audit log
+                    $auditStmt = $pdo->prepare("
+                        INSERT INTO audit_log (
+                            UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    ");
+
+                    $auditStmt->execute([
+                        $_SESSION['user_id'],
+                        $newStatusId,
+                        'Equipment Status',
+                        'Add',
+                        'New equipment status added',
+                        null,
+                        $newValues,
+                        'Successful'
+                    ]);
+
+                    $pdo->commit();
+                    
                     $response['status'] = 'success';
                     $response['message'] = 'Equipment Status has been added successfully.';
                     $_SESSION['success'] = "Equipment Status has been added successfully.";
                 } catch (PDOException $e) {
+                    if ($pdo->inTransaction()) {
+                        $pdo->rollBack();
+                    }
                     $response['status'] = 'error';
                     $response['message'] = 'Error adding status: ' . $e->getMessage();
                     $_SESSION['errors'] = ["Error adding status: " . $e->getMessage()];
@@ -51,7 +88,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
             case 'update':
                 try {
-                    $stmt = $pdo->prepare("UPDATE equipmentstatus SET AssetTag = ?, Status = ?, Remarks = ?, AccountableIndividual = ?, CheckDate = NOW() WHERE EquipmentStatusID = ?");
+                    $pdo->beginTransaction();
+
+                    // Get old status details for audit log
+                    $stmt = $pdo->prepare("SELECT * FROM equipmentstatus WHERE EquipmentStatusID = ?");
+                    $stmt->execute([$_POST['status_id']]);
+                    $oldStatus = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                    // Update equipment status
+                    $stmt = $pdo->prepare("UPDATE equipmentstatus SET 
+                        AssetTag = ?, 
+                        Status = ?, 
+                        Remarks = ?, 
+                        AccountableIndividual = ?
+                        WHERE EquipmentStatusID = ?");
+                    
                     $stmt->execute([
                         $_POST['asset_tag'],
                         $_POST['status'],
@@ -59,12 +110,62 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         $_POST['accountable_individual'],
                         $_POST['status_id']
                     ]);
+
+                    // Prepare audit log data
+                    $oldValues = json_encode([
+                        'AssetTag' => $oldStatus['AssetTag'],
+                        'Status' => $oldStatus['Status'],
+                        'Remarks' => $oldStatus['Remarks'],
+                        'AccountableIndividual' => $oldStatus['AccountableIndividual'],
+                        'CreatedDate' => $oldStatus['CreatedDate'],
+                        'ModifiedDate' => $oldStatus['ModifiedDate']
+                    ]);
+
+                    $newValues = json_encode([
+                        'AssetTag' => $_POST['asset_tag'],
+                        'Status' => $_POST['status'],
+                        'Remarks' => $_POST['remarks'],
+                        'AccountableIndividual' => $_POST['accountable_individual'],
+                        'CreatedDate' => $oldStatus['CreatedDate'],
+                        'ModifiedDate' => date('Y-m-d H:i:s')
+                    ]);
+
+                    // Insert audit log
+                    $auditStmt = $pdo->prepare("
+                        INSERT INTO audit_log (
+                            UserID,
+                            EntityID,
+                            Module,
+                            Action,
+                            Details,
+                            OldVal,
+                            NewVal,
+                            Status
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    ");
+
+                    $auditStmt->execute([
+                        $_SESSION['user_id'],
+                        $_POST['status_id'],
+                        'Equipment Status',
+                        'Modified',
+                        'Equipment status modified',
+                        $oldValues,
+                        $newValues,
+                        'Successful'
+                    ]);
+
+                    $pdo->commit();
                     $response['status'] = 'success';
                     $response['message'] = 'Status updated successfully';
                 } catch (PDOException $e) {
+                    if ($pdo->inTransaction()) {
+                        $pdo->rollBack();
+                    }
                     $response['status'] = 'error';
                     $response['message'] = 'Error updating status: ' . $e->getMessage();
                 }
+                echo json_encode($response);
                 break;
 
             case 'delete':
@@ -233,6 +334,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Add sidebar CSS -->
     <link rel="stylesheet" href="/src/view/styles/css/sidebar.css">
+
     <style>
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -270,11 +372,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             gap: 0.5rem !important;
         }
     </style>
+
 </head>
 <body>
     <!-- Include Sidebar -->
     <?php include('../../general/sidebar.php'); ?>
-
     <!-- Main Content -->
     <div class="main-content">
         <div class="container-fluid">
@@ -368,14 +470,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 
                             <!-- Status List Table -->
                             <div class="table-responsive">
-                                <table class="table table-striped table-bordered table-sm mb-0">
+                                <table class="table table-striped table-bordered table-sm mb-0" id="table">
                                     <thead class="table-dark">
                                         <tr>
                                             <th style="width: 7%">Status ID</th>
                                             <th style="width: 13%">Asset Tag</th>
                                             <th style="width: 15%">Status</th>
                                             <th style="width: 15%">Accountable Individual</th>
-                                            <th style="width: 12%">Check Date</th>
+                                            <th style="width: 12%">Created Date</th>
+                                            <th style="width: 12%">Modified Date</th>
                                             <th style="width: 15%">Remarks</th>
                                             <th style="width: 11%">Operations</th>
                                         </tr>
@@ -383,14 +486,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                     <tbody>
                                         <?php
                                         try {
-                                            $stmt = $pdo->query("SELECT * FROM equipmentstatus ORDER BY CheckDate DESC");
+                                            $stmt = $pdo->query("SELECT * FROM equipmentstatus ORDER BY CreatedDate DESC");
                                             while ($row = $stmt->fetch()) {
                                                 echo "<tr>";
                                                 echo "<td>" . htmlspecialchars($row['EquipmentStatusID']) . "</td>";
                                                 echo "<td>" . htmlspecialchars($row['AssetTag']) . "</td>";
                                                 echo "<td>" . htmlspecialchars($row['Status']) . "</td>";
                                                 echo "<td>" . htmlspecialchars($row['AccountableIndividual']) . "</td>";
-                                                echo "<td>" . date('Y-m-d H:i', strtotime($row['CheckDate'])) . "</td>";
+                                                echo "<td>" . date('Y-m-d H:i', strtotime($row['CreatedDate'])) . "</td>";
+                                                echo "<td>" . date('Y-m-d H:i', strtotime($row['ModifiedDate'])) . "</td>";
                                                 echo "<td>" . htmlspecialchars($row['Remarks']) . "</td>";
                                                 echo "<td>
                                                         <div class='d-flex justify-content-center gap-2'>
@@ -416,6 +520,40 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                         ?>
                                     </tbody>
                                 </table>
+                            </div>
+                            <!-- Pagination Controls -->
+                            <div class="container-fluid">
+                                <div class="row align-items-center g-3">
+                                    <!-- Pagination Info -->
+                                    <div class="col-12 col-sm-auto">
+                                        <div class="text-muted">
+                                            Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span
+                                                    id="totalRows">0</span> entries
+                                        </div>
+                                    </div>
+
+                                    <!-- Pagination Controls -->
+                                    <div class="col-12 col-sm-auto ms-sm-auto">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                                <i class="bi bi-chevron-left"></i>
+                                                Previous
+                                            </button>
+
+                                            <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                                <option value="10">10</option>
+                                                <option value="20" selected>20</option>
+                                                <option value="50">50</option>
+                                                <option value="100">100</option>
+                                            </select>
+
+                                            <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                                Next
+                                                <i class="bi bi-chevron-right"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -506,8 +644,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             </div>
         </div>
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <!-- Add Font Awesome for sidebar icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">

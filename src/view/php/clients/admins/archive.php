@@ -106,6 +106,7 @@ function getStatusIcon($status)
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Custom CSS for audit logs -->
     <link rel="stylesheet" href="/Inventory-Managment-System-TMDD/src/view/styles/css/audit_log.css">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/pagination.css">
 </head>
 <body>
 <?php include '../../general/sidebar.php'; ?>
@@ -141,7 +142,7 @@ function getStatusIcon($status)
 
                 <!-- Table container -->
                 <div class="table-responsive">
-                    <table class="table table-hover">
+                    <table class="table table-hover" id="table">
                         <colgroup>
                             <col class="checkbox">
                             <col class="track">
@@ -272,10 +273,10 @@ function getStatusIcon($status)
                                 </button>
 
                                 <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
-                                    <option value="10">10</option>
-                                    <option value="20" selected>20</option>
+                                    <option value="10" selected>10</option>
+                                    <option value="20">20</option>
+                                    <option value="30">30</option>
                                     <option value="50">50</option>
-                                    <option value="100">100</option>
                                 </select>
 
                                 <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
@@ -285,10 +286,19 @@ function getStatusIcon($status)
                             </div>
                         </div>
                     </div>
-                </div>
-            </div><!-- /.card-body -->
-        </div><!-- /.card -->
-    </div><!-- /.container-fluid -->
+                    <!-- New Pagination Page Numbers -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <ul class="pagination justify-content-center" id="pagination"></ul>
+                        </div>
+                    </div>
+                </div> <!-- /.End of Pagination -->
+
+            </div>
+        </div>
+    </div><!-- /.card-body -->
+</div><!-- /.card -->
+</div><!-- /.container-fluid -->
 </div><!-- /.main-content -->
 
 <!-- JavaScript for bulk actions and AJAX calls -->
@@ -416,76 +426,8 @@ function getStatusIcon($status)
             xhr.send("user_ids=" + encodeURIComponent(JSON.stringify(ids)) + "&permanent=1");
         }
     });
-
-    // Global Variables
-    let currentPage = 1;
-    let rowsPerPage;
-    let prevButton, nextButton, rowsSelect, currentPageSpan, rowsPerPageSpan, totalRowsSpan;
-
-    // Pagination function (Moved outside to be globally accessible)
-    function updatePagination() {
-        const rows = document.querySelectorAll('#auditTable tbody tr');
-        const totalRows = rows.length;
-        totalRowsSpan.textContent = totalRows;
-
-        const maxPages = Math.ceil(totalRows / rowsPerPage);
-        currentPage = Math.max(1, Math.min(currentPage, maxPages)); // Prevent invalid pages
-
-        const start = (currentPage - 1) * rowsPerPage;
-        const end = start + rowsPerPage;
-
-        rows.forEach((row, index) => {
-            if (index >= start && index < end) {
-                row.style.display = '';
-                setTimeout(() => row.style.opacity = '1', 10);
-            } else {
-                row.style.opacity = '0';
-                setTimeout(() => row.style.display = 'none', 300);
-            }
-        });
-
-        currentPageSpan.textContent = currentPage;
-        rowsPerPageSpan.textContent = rowsPerPage;
-
-        prevButton.disabled = currentPage === 1;
-        nextButton.disabled = currentPage >= maxPages;
-    }
-
-    // Event Listener for DOMContentLoaded
-    document.addEventListener('DOMContentLoaded', function () {
-        prevButton = document.getElementById('prevPage');
-        nextButton = document.getElementById('nextPage');
-        rowsSelect = document.getElementById('rowsPerPageSelect');
-        currentPageSpan = document.getElementById('currentPage');
-        rowsPerPageSpan = document.getElementById('rowsPerPage');
-        totalRowsSpan = document.getElementById('totalRows');
-
-        rowsPerPage = parseInt(rowsSelect.value);
-
-        prevButton.addEventListener('click', function () {
-            if (currentPage > 1) {
-                currentPage--;
-                updatePagination();
-            }
-        });
-    });
-
-    nextButton.addEventListener('click', function () {
-        const maxPages = Math.ceil(totalRowsSpan.textContent / rowsPerPage);
-        if (currentPage < maxPages) {
-            currentPage++;
-            updatePagination();
-        }
-    });
-
-    rowsSelect.addEventListener('change', function () {
-        rowsPerPage = parseInt(this.value);
-        currentPage = 1; // Reset to first page
-        updatePagination();
-    });
-    // Initial setup
-    updatePagination();
-
 </script>
+
+<script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 </body>
 </html>

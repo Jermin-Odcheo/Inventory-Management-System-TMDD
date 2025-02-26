@@ -87,15 +87,9 @@
                         <input type="checkbox" id="showPassword" class="form-check-input">
                         <label for="showPassword">Show Password</label>
                     </div>
-                    <a href="../src/view/php/general/login_regis/forgot_password.php" class="forgot-link">Forgot password?</a>
                 </div>
 
                 <button type="submit" name="submit">Log In</button>
-
-                <div class="signup-container">
-                    <span>Don't have an account?</span>
-                    <a href="../src/view/php/general/login_regis/registration.php">Create an Account</a>
-                </div>
             </form>
         </div>
     </div>

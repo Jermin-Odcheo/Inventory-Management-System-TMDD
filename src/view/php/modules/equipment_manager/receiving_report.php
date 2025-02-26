@@ -200,7 +200,7 @@ try {
                 </div>
 
                 <div class="table-responsive">
-                    <table class="table table-striped table-bordered table-sm mb-0">
+                    <table class="table table-striped table-bordered table-sm mb-0" id="table">
                         <thead class="table-dark">
                             <tr>
                                 <th>ID</th>
@@ -208,6 +208,8 @@ try {
                                 <th>Accountable Individual</th>
                                 <th>PO Number</th>
                                 <th>Location</th>
+                                <th>Created Date</th>
+                                <th>Modified Date</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -219,6 +221,8 @@ try {
                                     <td><?php echo htmlspecialchars($rr['AccountableIndividual']); ?></td>
                                     <td><?php echo htmlspecialchars($rr['PurchaseOrderNumber']); ?></td>
                                     <td><?php echo htmlspecialchars($rr['AccountableIndividualLocation']); ?></td>
+                                    <td><?php echo date('Y-m-d H:i', strtotime($rr['CreatedDate'])); ?></td>
+                                    <td><?php echo date('Y-m-d H:i', strtotime($rr['ModifiedDate'])); ?></td>
                                     <td class="text-center">
                                         <div class="btn-group" role="group">
                                             <a class="btn btn-sm btn-outline-primary edit-report" 
@@ -240,6 +244,40 @@ try {
                             <?php endforeach; ?>
                         </tbody>
                     </table>
+                </div>
+                <!-- Pagination Controls -->
+                <div class="container-fluid">
+                    <div class="row align-items-center g-3">
+                        <!-- Pagination Info -->
+                        <div class="col-12 col-sm-auto">
+                            <div class="text-muted">
+                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span
+                                        id="totalRows">0</span> entries
+                            </div>
+                        </div>
+
+                        <!-- Pagination Controls -->
+                        <div class="col-12 col-sm-auto ms-sm-auto">
+                            <div class="d-flex align-items-center gap-2">
+                                <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                    <i class="bi bi-chevron-left"></i>
+                                    Previous
+                                </button>
+
+                                <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                    <option value="10">10</option>
+                                    <option value="20" selected>20</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                </select>
+
+                                <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                    Next
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -373,9 +411,8 @@ try {
             });
         });
     </script>
+    <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 
-    <!-- Bootstrap 5 JS Bundle -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 
 </html>

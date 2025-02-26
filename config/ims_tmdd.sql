@@ -32,14 +32,16 @@ CREATE TABLE IF NOT EXISTS `audit_log` (
   `TrackID` int NOT NULL AUTO_INCREMENT,
   `UserID` int NOT NULL,
   `EntityID` int DEFAULT NULL,
-  `Action` enum('View','Modified','Delete','Add','Undo') NOT NULL,
+  `Action` enum('View','Modified','Delete','Add','Undo','Update') NOT NULL,
   `Details` text,
   `OldVal` text,
   `NewVal` text,
   `Module` varchar(50) NOT NULL,
   `Status` enum('Successful','Failed') NOT NULL,
   `Date_Time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`TrackID`)
+  PRIMARY KEY (`TrackID`),
+  INDEX `idx_module` (`Module`),
+  INDEX `idx_action` (`Action`)
 ) ENGINE=InnoDB AUTO_INCREMENT=78 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
@@ -71,6 +73,8 @@ CREATE TABLE IF NOT EXISTS `chargeinvoice` (
   `ChargeInvoiceID` int NOT NULL AUTO_INCREMENT,
   `ChargeInvoiceNo` varchar(50) NOT NULL,
   `DateOfChargeInvoice` date NOT NULL,
+  `CreatedDate` datetime DEFAULT CURRENT_TIMESTAMP,
+  `ModifiedDate` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `PurchaseOrderNumber` varchar(50) DEFAULT NULL,
   PRIMARY KEY (`ChargeInvoiceID`),
   KEY `PurchaseOrderNumber` (`PurchaseOrderNumber`)
@@ -101,6 +105,8 @@ CREATE TABLE IF NOT EXISTS `equipmentdetails` (
   `Model` varchar(100) DEFAULT NULL,
   `SerialNumber` varchar(100) DEFAULT NULL,
   `DateAcquired` date DEFAULT NULL,
+  `CreatedDate` datetime DEFAULT CURRENT_TIMESTAMP,
+  `ModifiedDate` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `ReceivingReportFormNumber` varchar(50) DEFAULT NULL,
   `AccountableIndividualLocation` varchar(255) DEFAULT NULL,
   `AccountableIndividual` varchar(100) DEFAULT NULL,
@@ -117,9 +123,9 @@ CREATE TABLE IF NOT EXISTS `equipmentdetails` (
 -- Dumping data for table `equipmentdetails`
 --
 
-INSERT INTO `equipmentdetails` (`EquipmentDetailsID`, `AssetTag`, `AssetDescription1`, `AssetDescription2`, `Specification`, `Brand`, `Model`, `SerialNumber`, `DateAcquired`, `ReceivingReportFormNumber`, `AccountableIndividualLocation`, `AccountableIndividual`, `Remarks`) VALUES
-(1, 'AT001', 'Laptop', 'Dell XPS 13', 'Laptops', 'Dell', 'XPS 13', 'SN12345', '2024-02-06', 'RR001', 'IT Department', 'John Doe', 'Assigned to IT Department'),
-(2, 'AT002', 'Printer', 'HP LaserJet', 'Printers', 'HP', 'LaserJet 400', 'SN67890', '2024-02-07', 'RR002', 'Admin Office', 'Jane Smith', 'Assigned to Admin Office');
+INSERT INTO `equipmentdetails` (`EquipmentDetailsID`, `AssetTag`, `AssetDescription1`, `AssetDescription2`, `Specification`, `Brand`, `Model`, `SerialNumber`, `DateAcquired`, `CreatedDate`, `ModifiedDate`, `ReceivingReportFormNumber`, `AccountableIndividualLocation`, `AccountableIndividual`, `Remarks`) VALUES
+(1, 'AT001', 'Laptop', 'Dell XPS 13', 'Laptops', 'Dell', 'XPS 13', 'SN12345', '2024-02-06', '2024-02-06 10:00:00', '2024-02-06 10:00:00', 'RR001', 'IT Department', 'John Doe', 'Assigned to IT Department'),
+(2, 'AT002', 'Printer', 'HP LaserJet', 'Printers', 'HP', 'LaserJet 400', 'SN67890', '2024-02-07', '2024-02-07 14:30:00', '2024-02-07 14:30:00', 'RR002', 'Admin Office', 'Jane Smith', 'Assigned to Admin Office');
 
 -- --------------------------------------------------------
 
@@ -136,6 +142,8 @@ CREATE TABLE IF NOT EXISTS `equipmentlocation` (
   `SpecificArea` varchar(255) DEFAULT NULL,
   `PersonResponsible` varchar(100) DEFAULT NULL,
   `Remarks` text,
+  `CreatedDate` datetime DEFAULT CURRENT_TIMESTAMP,
+  `ModifiedDate` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`EquipmentLocationID`),
   KEY `AssetTag` (`AssetTag`)
 ) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -144,9 +152,9 @@ CREATE TABLE IF NOT EXISTS `equipmentlocation` (
 -- Dumping data for table `equipmentlocation`
 --
 
-INSERT INTO `equipmentlocation` (`EquipmentLocationID`, `AssetTag`, `BuildingLocation`, `FloorNumber`, `SpecificArea`, `PersonResponsible`, `Remarks`) VALUES
-(1, 'AT001', 'Main Building', 3, 'IT Room', 'John Doe', 'Setup Completed'),
-(2, 'AT002', 'Admin Block', 1, 'Office', 'Jane Smith', 'In Use');
+INSERT INTO `equipmentlocation` (`EquipmentLocationID`, `AssetTag`, `BuildingLocation`, `FloorNumber`, `SpecificArea`, `PersonResponsible`, `Remarks`, `CreatedDate`, `ModifiedDate`) VALUES
+(1, 'AT001', 'Main Building', 3, 'IT Room', 'John Doe', 'Setup Completed', '2024-02-01 10:00:00', '2024-02-01 10:00:00'),
+(2, 'AT002', 'Admin Block', 1, 'Office', 'Jane Smith', 'In Use', '2024-02-02 14:30:00', '2024-02-02 14:30:00');
 
 -- --------------------------------------------------------
 
@@ -160,7 +168,8 @@ CREATE TABLE IF NOT EXISTS `equipmentstatus` (
   `AssetTag` varchar(50) DEFAULT NULL,
   `Status` varchar(100) DEFAULT NULL,
   `Remarks` text,
-  `CheckDate` datetime DEFAULT CURRENT_TIMESTAMP,
+  `CreatedDate` datetime DEFAULT CURRENT_TIMESTAMP,
+  `ModifiedDate` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `AccountableIndividual` varchar(100) DEFAULT NULL,
   PRIMARY KEY (`EquipmentStatusID`),
   KEY `AssetTag` (`AssetTag`)
@@ -170,9 +179,9 @@ CREATE TABLE IF NOT EXISTS `equipmentstatus` (
 -- Dumping data for table `equipmentstatus`
 --
 
-INSERT INTO `equipmentstatus` (`EquipmentStatusID`, `AssetTag`, `Status`, `Remarks`, `CheckDate`, `AccountableIndividual`) VALUES
-(1, 'AT001', 'Operational', 'Working well', '2024-02-01 10:00:00', 'John Doe'),
-(2, 'AT002', 'Operational', 'No issues reported', '2024-02-02 14:30:00', 'Jane Smith');
+INSERT INTO `equipmentstatus` (`EquipmentStatusID`, `AssetTag`, `Status`, `Remarks`, `CreatedDate`, `ModifiedDate`, `AccountableIndividual`) VALUES
+(1, 'AT001', 'Operational', 'Working well', '2024-02-01 10:00:00', '2024-02-01 10:00:00', 'John Doe'),
+(2, 'AT002', 'Operational', 'No issues reported', '2024-02-02 14:30:00', '2024-02-02 14:30:00', 'Jane Smith');
 
 -- --------------------------------------------------------
 
@@ -262,10 +271,13 @@ DROP TABLE IF EXISTS `purchaseorder`;
 CREATE TABLE IF NOT EXISTS `purchaseorder` (
   `PurchaseOrderID` int NOT NULL AUTO_INCREMENT,
   `PurchaseOrderNumber` varchar(50) NOT NULL,
-  `NumberOfUnits` int NOT NULL,
+  `NumberOfUnits` int DEFAULT NULL,
   `DateOfPurchaseOrder` date NOT NULL,
+  `CreatedDate` datetime DEFAULT CURRENT_TIMESTAMP,
+  `ModifiedDate` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `ItemsSpecification` text,
-  PRIMARY KEY (`PurchaseOrderID`)
+  PRIMARY KEY (`PurchaseOrderID`),
+  UNIQUE KEY `PurchaseOrderNumber` (`PurchaseOrderNumber`)
 ) ENGINE=MyISAM AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
@@ -324,11 +336,13 @@ DROP TABLE IF EXISTS `receivingreportform`;
 CREATE TABLE IF NOT EXISTS `receivingreportform` (
   `ReceivingReportFormID` int NOT NULL AUTO_INCREMENT,
   `ReceivingReportNumber` varchar(50) NOT NULL,
-  `AccountableIndividual` varchar(100) NOT NULL,
+  `AccountableIndividual` varchar(100) DEFAULT NULL,
   `PurchaseOrderNumber` varchar(50) DEFAULT NULL,
   `AccountableIndividualLocation` varchar(255) DEFAULT NULL,
+  `CreatedDate` datetime DEFAULT CURRENT_TIMESTAMP,
+  `ModifiedDate` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`ReceivingReportFormID`),
-  KEY `PurchaseOrderNumber` (`PurchaseOrderNumber`)
+  UNIQUE KEY `ReceivingReportNumber` (`ReceivingReportNumber`)
 ) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --

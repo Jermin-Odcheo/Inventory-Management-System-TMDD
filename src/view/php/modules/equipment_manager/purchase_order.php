@@ -137,7 +137,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id']) &
 // RETRIEVE ALL PURCHASE ORDERS
 // ------------------------
 try {
-    $stmt = $pdo->query("SELECT PurchaseOrderID, PurchaseOrderNumber, NumberOfUnits, DateOfPurchaseOrder, ItemsSpecification 
+    $stmt = $pdo->query("SELECT PurchaseOrderID, PurchaseOrderNumber, NumberOfUnits, DateOfPurchaseOrder, CreatedDate, ModifiedDate, ItemsSpecification 
                          FROM purchaseorder 
                          ORDER BY DateOfPurchaseOrder DESC");
     $purchaseOrders = $stmt->fetchAll();
@@ -156,6 +156,7 @@ try {
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
     <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
+
 </head>
 
 <body>
@@ -253,14 +254,16 @@ try {
                 </div>
 
                 <div class="table-responsive">
-                    <table class="table table-striped table-bordered table-sm mb-0">
+                    <table class="table table-striped table-bordered table-sm mb-0" id="table">
                         <thead class="table-dark">
                             <tr>
                                 <th>ID</th>
                                 <th>PO Number</th>
-                                <th>Units</th>
+                                <th>Number of Units</th>
                                 <th>Date of PO</th>
-                                <th>Specification</th>
+                                <th>Created Date</th>
+                                <th>Modified Date</th>
+                                <th>Items Specification</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -271,6 +274,8 @@ try {
                                     <td><?php echo htmlspecialchars($po['PurchaseOrderNumber']); ?></td>
                                     <td><?php echo htmlspecialchars($po['NumberOfUnits']); ?></td>
                                     <td><?php echo htmlspecialchars($po['DateOfPurchaseOrder']); ?></td>
+                                    <td><?php echo date('Y-m-d H:i', strtotime($po['CreatedDate'])); ?></td>
+                                    <td><?php echo date('Y-m-d H:i', strtotime($po['ModifiedDate'])); ?></td>
                                     <td><?php echo htmlspecialchars($po['ItemsSpecification']); ?></td>
                                     <td class="text-center">
                                         <div class="btn-group" role="group">
@@ -293,6 +298,39 @@ try {
                             <?php endforeach; ?>
                         </tbody>
                     </table>
+                </div>
+                <div class="container-fluid">
+                    <div class="row align-items-center g-3">
+                        <!-- Pagination Info -->
+                        <div class="col-12 col-sm-auto">
+                            <div class="text-muted">
+                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span
+                                        id="totalRows">0</span> entries
+                            </div>
+                        </div>
+
+                        <!-- Pagination Controls -->
+                        <div class="col-12 col-sm-auto ms-sm-auto">
+                            <div class="d-flex align-items-center gap-2">
+                                <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                    <i class="bi bi-chevron-left"></i>
+                                    Previous
+                                </button>
+
+                                <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                    <option value="10">10</option>
+                                    <option value="20" selected>20</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                </select>
+
+                                <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                    Next
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -370,6 +408,7 @@ try {
             </div>
         </div>
     </div>
+    <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 
     <!-- JavaScript -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>

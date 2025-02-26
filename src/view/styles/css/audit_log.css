@@ -13,7 +13,7 @@ body {
 .main-content {
     margin-left: var(--sidebar-width);
     padding: 2rem;
-    transition: margin-left 0.3s ease;
+
 }
 
 @media (max-width: 768px) {
@@ -137,7 +137,7 @@ col.changes {
 
 /* Add smooth opacity transitions to rows */
 tbody tr {
-    transition: opacity 0.3s ease;
+    transition: opacity 0.1s linear;
 }
 col.checkbox {
     width: 25px;
