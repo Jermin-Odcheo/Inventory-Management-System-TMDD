@@ -314,6 +314,7 @@ try {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+
     <style>
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -442,6 +443,40 @@ try {
                                     <?php endforeach; ?>
                                     </tbody>
                                 </table>
+                                <!-- Pagination Controls -->
+                                <div class="container-fluid">
+                                    <div class="row align-items-center g-3">
+                                        <!-- Pagination Info -->
+                                        <div class="col-12 col-sm-auto">
+                                            <div class="text-muted">
+                                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span
+                                                        id="totalRows">0</span> entries
+                                            </div>
+                                        </div>
+
+                                        <!-- Pagination Controls -->
+                                        <div class="col-12 col-sm-auto ms-sm-auto">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                                    <i class="bi bi-chevron-left"></i>
+                                                    Previous
+                                                </button>
+
+                                                <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                                    <option value="10">10</option>
+                                                    <option value="20" selected>20</option>
+                                                    <option value="50">50</option>
+                                                    <option value="100">100</option>
+                                                </select>
+
+                                                <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                                    Next
+                                                    <i class="bi bi-chevron-right"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         <?php else: ?>
                             <p class="mb-0">No Equipment Locations found.</p>
@@ -581,7 +616,7 @@ try {
         </div>
     </div>
 </div>
-
+<script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 <!-- JavaScript for Real-Time Table Filtering -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -612,10 +647,7 @@ try {
             });
         }
     });
-</script>
 
-<!-- Then at the bottom of the file, replace all script tags with this single script block -->
-<script>
 document.addEventListener('DOMContentLoaded', function() {
     // Form submissions
     $('#addLocationForm').on('submit', function(e) {

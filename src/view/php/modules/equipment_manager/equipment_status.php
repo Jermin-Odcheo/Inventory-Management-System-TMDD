@@ -334,6 +334,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Add sidebar CSS -->
     <link rel="stylesheet" href="/src/view/styles/css/sidebar.css">
+
     <style>
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -371,11 +372,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             gap: 0.5rem !important;
         }
     </style>
+
 </head>
 <body>
     <!-- Include Sidebar -->
     <?php include('../../general/sidebar.php'); ?>
-
     <!-- Main Content -->
     <div class="main-content">
         <div class="container-fluid">
@@ -520,6 +521,40 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                     </tbody>
                                 </table>
                             </div>
+                            <!-- Pagination Controls -->
+                            <div class="container-fluid">
+                                <div class="row align-items-center g-3">
+                                    <!-- Pagination Info -->
+                                    <div class="col-12 col-sm-auto">
+                                        <div class="text-muted">
+                                            Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span
+                                                    id="totalRows">0</span> entries
+                                        </div>
+                                    </div>
+
+                                    <!-- Pagination Controls -->
+                                    <div class="col-12 col-sm-auto ms-sm-auto">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                                <i class="bi bi-chevron-left"></i>
+                                                Previous
+                                            </button>
+
+                                            <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                                <option value="10">10</option>
+                                                <option value="20" selected>20</option>
+                                                <option value="50">50</option>
+                                                <option value="100">100</option>
+                                            </select>
+
+                                            <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                                Next
+                                                <i class="bi bi-chevron-right"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </main>
@@ -609,8 +644,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             </div>
         </div>
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <!-- Add Font Awesome for sidebar icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">

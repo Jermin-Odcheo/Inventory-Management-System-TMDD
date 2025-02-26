@@ -156,6 +156,7 @@ try {
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
     <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
+
 </head>
 
 <body>
@@ -298,6 +299,39 @@ try {
                         </tbody>
                     </table>
                 </div>
+                <div class="container-fluid">
+                    <div class="row align-items-center g-3">
+                        <!-- Pagination Info -->
+                        <div class="col-12 col-sm-auto">
+                            <div class="text-muted">
+                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span
+                                        id="totalRows">0</span> entries
+                            </div>
+                        </div>
+
+                        <!-- Pagination Controls -->
+                        <div class="col-12 col-sm-auto ms-sm-auto">
+                            <div class="d-flex align-items-center gap-2">
+                                <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                    <i class="bi bi-chevron-left"></i>
+                                    Previous
+                                </button>
+
+                                <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                    <option value="10">10</option>
+                                    <option value="20" selected>20</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                </select>
+
+                                <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                    Next
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -374,6 +408,7 @@ try {
             </div>
         </div>
     </div>
+    <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 
     <!-- JavaScript -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
