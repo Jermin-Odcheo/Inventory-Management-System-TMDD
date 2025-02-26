@@ -232,8 +232,10 @@ try {
                             <tr>
                                 <th>ID</th>
                                 <th>Invoice Number</th>
-                                <th>Date of Charge Invoice</th>
-                                <th>Purchase Order Number</th>
+                                <th>Date of Invoice</th>
+                                <th>Created Date</th>
+                                <th>Modified Date</th>
+                                <th>PO Number</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -243,6 +245,8 @@ try {
                                     <td><?php echo htmlspecialchars($invoice['ChargeInvoiceID']); ?></td>
                                     <td><?php echo htmlspecialchars($invoice['ChargeInvoiceNo']); ?></td>
                                     <td><?php echo htmlspecialchars($invoice['DateOfChargeInvoice']); ?></td>
+                                    <td><?php echo date('Y-m-d H:i', strtotime($invoice['CreatedDate'])); ?></td>
+                                    <td><?php echo date('Y-m-d H:i', strtotime($invoice['ModifiedDate'])); ?></td>
                                     <td><?php echo htmlspecialchars($invoice['PurchaseOrderNumber']); ?></td>
                                     <td class="text-center">
                                         <div class="btn-group" role="group">

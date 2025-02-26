@@ -208,6 +208,8 @@ try {
                                 <th>Accountable Individual</th>
                                 <th>PO Number</th>
                                 <th>Location</th>
+                                <th>Created Date</th>
+                                <th>Modified Date</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -219,6 +221,8 @@ try {
                                     <td><?php echo htmlspecialchars($rr['AccountableIndividual']); ?></td>
                                     <td><?php echo htmlspecialchars($rr['PurchaseOrderNumber']); ?></td>
                                     <td><?php echo htmlspecialchars($rr['AccountableIndividualLocation']); ?></td>
+                                    <td><?php echo date('Y-m-d H:i', strtotime($rr['CreatedDate'])); ?></td>
+                                    <td><?php echo date('Y-m-d H:i', strtotime($rr['ModifiedDate'])); ?></td>
                                     <td class="text-center">
                                         <div class="btn-group" role="group">
                                             <a class="btn btn-sm btn-outline-primary edit-report" 

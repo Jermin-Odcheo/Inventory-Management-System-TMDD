@@ -43,10 +43,53 @@ if (isset($_SESSION['success'])) {
 if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
     $id = $_GET['id'];
     try {
-        $stmt = $pdo->prepare("DELETE FROM equipmentlocation WHERE EquipmentLocationID = ?");
+        $pdo->beginTransaction();
+
+        // Get location details before deletion
+        $stmt = $pdo->prepare("SELECT * FROM equipmentlocation WHERE EquipmentLocationID = ?");
         $stmt->execute([$id]);
-        $_SESSION['success'] = "Equipment Location deleted successfully.";
+        $locationData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($locationData) {
+            // Prepare audit log data
+            $oldValues = json_encode([
+                'AssetTag' => $locationData['AssetTag'],
+                'BuildingLocation' => $locationData['BuildingLocation'],
+                'FloorNumber' => $locationData['FloorNumber'],
+                'SpecificArea' => $locationData['SpecificArea'],
+                'PersonResponsible' => $locationData['PersonResponsible'],
+                'Remarks' => $locationData['Remarks']
+            ]);
+
+            // Delete the location
+            $stmt = $pdo->prepare("DELETE FROM equipmentlocation WHERE EquipmentLocationID = ?");
+            $stmt->execute([$id]);
+
+            // Insert audit log
+            $auditStmt = $pdo->prepare("
+                INSERT INTO audit_log (
+                    UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+
+            $auditStmt->execute([
+                $_SESSION['user_id'],
+                $id,
+                'Equipment Location',
+                'Delete',
+                'Equipment location deleted',
+                $oldValues,
+                null,
+                'Successful'
+            ]);
+
+            $pdo->commit();
+            $_SESSION['success'] = "Equipment Location deleted successfully.";
+        }
     } catch (PDOException $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         $_SESSION['errors'] = ["Error deleting Equipment Location: " . $e->getMessage()];
     }
     header("Location: equipment_location.php");
@@ -78,15 +121,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Check if the form is for "Add" or "Update"
     if (isset($_POST['action']) && $_POST['action'] === 'add') {
         try {
-            $stmt = $pdo->prepare("INSERT INTO equipmentlocation 
-                (AssetTag, BuildingLocation, FloorNumber, SpecificArea, PersonResponsible, Remarks)
-                VALUES (?, ?, ?, ?, ?, ?)");
+            $pdo->beginTransaction();
+
+            // Insert equipment location
+            $stmt = $pdo->prepare("INSERT INTO equipmentlocation (
+                AssetTag, 
+                BuildingLocation, 
+                FloorNumber, 
+                SpecificArea, 
+                PersonResponsible, 
+                Remarks,
+                CreatedDate
+            ) VALUES (?, ?, ?, ?, ?, ?, NOW())");
             $stmt->execute([$AssetTag, $BuildingLocation, $FloorNumber, $SpecificArea, $PersonResponsible, $Remarks]);
+            
+            $newLocationId = $pdo->lastInsertId();
+
+            // Prepare audit log data
+            $newValues = json_encode([
+                'AssetTag' => $AssetTag,
+                'BuildingLocation' => $BuildingLocation,
+                'FloorNumber' => $FloorNumber,
+                'SpecificArea' => $SpecificArea,
+                'PersonResponsible' => $PersonResponsible,
+                'Remarks' => $Remarks
+            ]);
+
+            // Insert audit log
+            $auditStmt = $pdo->prepare("
+                INSERT INTO audit_log (
+                    UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+
+            $auditStmt->execute([
+                $_SESSION['user_id'],
+                $newLocationId,
+                'Equipment Location',
+                'Add',
+                'New equipment location added',
+                null,
+                $newValues,
+                'Successful'
+            ]);
+
+            $pdo->commit();
             
             $response['status'] = 'success';
             $response['message'] = 'Equipment Location has been added successfully.';
             $_SESSION['success'] = "Equipment Location has been added successfully.";
         } catch (PDOException $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             $response['status'] = 'error';
             $response['message'] = 'Error adding Equipment Location: ' . $e->getMessage();
             $_SESSION['errors'] = ["Error adding Equipment Location: " . $e->getMessage()];
@@ -96,16 +183,94 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (isset($_POST['action']) && $_POST['action'] === 'update') {
         $id = $_POST['id'];
         try {
-            $stmt = $pdo->prepare("UPDATE equipmentlocation 
-                SET AssetTag = ?, BuildingLocation = ?, FloorNumber = ?, SpecificArea = ?, PersonResponsible = ?, Remarks = ?
+            $pdo->beginTransaction();
+
+            // Get old location details for audit log
+            $stmt = $pdo->prepare("SELECT * FROM equipmentlocation WHERE EquipmentLocationID = ?");
+            $stmt->execute([$id]);
+            $oldLocation = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            // Update equipment location
+            $stmt = $pdo->prepare("UPDATE equipmentlocation SET 
+                AssetTag = ?, 
+                BuildingLocation = ?, 
+                FloorNumber = ?, 
+                SpecificArea = ?, 
+                PersonResponsible = ?, 
+                Remarks = ?
                 WHERE EquipmentLocationID = ?");
-            $stmt->execute([$AssetTag, $BuildingLocation, $FloorNumber, $SpecificArea, $PersonResponsible, $Remarks, $id]);
-            $_SESSION['success'] = "Equipment Location has been updated successfully.";
+            $stmt->execute([
+                $_POST['AssetTag'],
+                $_POST['BuildingLocation'],
+                $_POST['FloorNumber'],
+                $_POST['SpecificArea'],
+                $_POST['PersonResponsible'],
+                $_POST['Remarks'],
+                $id
+            ]);
+
+            // Prepare audit log data
+            $oldValues = json_encode([
+                'AssetTag' => $oldLocation['AssetTag'],
+                'BuildingLocation' => $oldLocation['BuildingLocation'],
+                'FloorNumber' => $oldLocation['FloorNumber'],
+                'SpecificArea' => $oldLocation['SpecificArea'],
+                'PersonResponsible' => $oldLocation['PersonResponsible'],
+                'Remarks' => $oldLocation['Remarks'],
+                'CreatedDate' => $oldLocation['CreatedDate'],
+                'ModifiedDate' => $oldLocation['ModifiedDate']
+            ]);
+
+            $newValues = json_encode([
+                'AssetTag' => $_POST['AssetTag'],
+                'BuildingLocation' => $_POST['BuildingLocation'],
+                'FloorNumber' => $_POST['FloorNumber'],
+                'SpecificArea' => $_POST['SpecificArea'],
+                'PersonResponsible' => $_POST['PersonResponsible'],
+                'Remarks' => $_POST['Remarks'],
+                'CreatedDate' => $oldLocation['CreatedDate'],
+                'ModifiedDate' => date('Y-m-d H:i:s')
+            ]);
+
+            // Insert audit log
+            $auditStmt = $pdo->prepare("
+                INSERT INTO audit_log (
+                    UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+
+            $auditStmt->execute([
+                $_SESSION['user_id'],
+                $id,
+                'Equipment Location',
+                'Modified',
+                'Equipment location modified',
+                $oldValues,
+                $newValues,
+                'Successful'
+            ]);
+
+            $pdo->commit();
+            
+            // Ensure we're sending a proper JSON response
+            header('Content-Type: application/json');
+            echo json_encode([
+                'status' => 'success',
+                'message' => 'Equipment Location has been updated successfully.'
+            ]);
+            exit;
         } catch (PDOException $e) {
-            $_SESSION['errors'] = ["Error updating Equipment Location: " . $e->getMessage()];
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            // Ensure we're sending a proper JSON response for errors too
+            header('Content-Type: application/json');
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Error updating Equipment Location: ' . $e->getMessage()
+            ]);
+            exit;
         }
-        header("Location: equipment_location.php");
-        exit;
     }
 }
 
@@ -133,7 +298,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) 
 // RETRIEVE ALL EQUIPMENT LOCATIONS
 // ------------------------
 try {
-    $stmt = $pdo->query("SELECT * FROM equipmentlocation ORDER BY EquipmentLocationID DESC");
+    $stmt = $pdo->query("SELECT * FROM equipmentlocation ORDER BY CreatedDate DESC");
     $equipmentLocations = $stmt->fetchAll();
 } catch (PDOException $e) {
     $errors[] = "Error retrieving Equipment Locations: " . $e->getMessage();
@@ -166,6 +331,9 @@ try {
             }
         }
     </style>
+    <!-- Add these scripts here -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </head>
 
 <body>
@@ -236,6 +404,8 @@ try {
                                         <th>Specific Area</th>
                                         <th>Person Responsible</th>
                                         <th>Remarks</th>
+                                        <th style="width: 12%">Created Date</th>
+                                        <th style="width: 12%">Modified Date</th>
                                         <th class="text-center">Actions</th>
                                     </tr>
                                     </thead>
@@ -249,9 +419,18 @@ try {
                                             <td><?php echo htmlspecialchars($location['SpecificArea']); ?></td>
                                             <td><?php echo htmlspecialchars($location['PersonResponsible']); ?></td>
                                             <td><?php echo htmlspecialchars($location['Remarks']); ?></td>
+                                            <td><?php echo date('Y-m-d H:i', strtotime($location['CreatedDate'])); ?></td>
+                                            <td><?php echo date('Y-m-d H:i', strtotime($location['ModifiedDate'])); ?></td>
                                             <td class="text-center">
                                                 <div class="btn-group" role="group">
-                                                    <a class="btn btn-sm btn-outline-primary" href="?action=edit&id=<?php echo htmlspecialchars($location['EquipmentLocationID']); ?>">
+                                                    <a class="btn btn-sm btn-outline-primary edit-location" 
+                                                       data-id="<?php echo $location['EquipmentLocationID']; ?>"
+                                                       data-asset="<?php echo htmlspecialchars($location['AssetTag']); ?>"
+                                                       data-building="<?php echo htmlspecialchars($location['BuildingLocation']); ?>"
+                                                       data-floor="<?php echo htmlspecialchars($location['FloorNumber']); ?>"
+                                                       data-area="<?php echo htmlspecialchars($location['SpecificArea']); ?>"
+                                                       data-person="<?php echo htmlspecialchars($location['PersonResponsible']); ?>"
+                                                       data-remarks="<?php echo htmlspecialchars($location['Remarks']); ?>">
                                                         <i class="bi bi-pencil-square"></i> Edit
                                                     </a>
                                                     <a class="btn btn-sm btn-outline-danger" href="?action=delete&id=<?php echo htmlspecialchars($location['EquipmentLocationID']); ?>" onclick="return confirm('Are you sure you want to delete this Equipment Location?');">
@@ -290,16 +469,7 @@ try {
                         <label for="AssetTag" class="form-label">
                             <i class="bi bi-tag"></i> Asset Tag <span class="text-danger">*</span>
                         </label>
-                        <select name="AssetTag" class="form-control" required>
-                            <option value="" disabled selected hidden>Select an Asset Tag</option>
-                            <?php
-                            $stmt = $pdo->prepare("SELECT AssetTag FROM equipmentdetails");
-                            $stmt->execute();
-                            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                                echo '<option value="' . htmlspecialchars($row['AssetTag']) . '">' . htmlspecialchars($row['AssetTag']) . '</option>';
-                            }
-                            ?>
-                        </select>
+                        <input type="text" class="form-control" name="AssetTag" id="AssetTag" required>
                     </div>
 
                     <div class="mb-3">
@@ -313,7 +483,7 @@ try {
                         <label for="FloorNumber" class="form-label">
                             <i class="bi bi-layers"></i> Floor Number <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control" id="FloorNumber" name="FloorNumber" required>
+                        <input type="number" min="1" class="form-control" id="FloorNumber" name="FloorNumber" required>
                     </div>
 
                     <div class="mb-3">
@@ -347,30 +517,96 @@ try {
     </div>
 </div>
 
+<!-- Edit Location Modal -->
+<div class="modal fade" id="editLocationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Location</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editLocationForm" method="post">
+                    <input type="hidden" name="action" value="update">
+                    <input type="hidden" name="id" id="edit_location_id">
+                    
+                    <div class="mb-3">
+                        <label for="edit_asset_tag" class="form-label">
+                            <i class="bi bi-tag"></i> Asset Tag <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" name="AssetTag" id="edit_asset_tag" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="edit_building_location" class="form-label">
+                            <i class="bi bi-building"></i> Building Location <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="edit_building_location" name="BuildingLocation" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="edit_floor_number" class="form-label">
+                            <i class="bi bi-layers"></i> Floor Number <span class="text-danger">*</span>
+                        </label>
+                        <input type="number" min="1" class="form-control" id="edit_floor_number" name="FloorNumber" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="edit_specific_area" class="form-label">
+                            <i class="bi bi-pin-map"></i> Specific Area <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="edit_specific_area" name="SpecificArea" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="edit_person_responsible" class="form-label">
+                            <i class="bi bi-person"></i> Person Responsible <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="edit_person_responsible" name="PersonResponsible" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="edit_remarks" class="form-label">
+                            <i class="bi bi-chat-left-text"></i> Remarks
+                        </label>
+                        <textarea class="form-control" id="edit_remarks" name="Remarks" rows="3"></textarea>
+                    </div>
+
+                    <div class="d-flex justify-content-end">
+                        <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Update Location</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- JavaScript for Real-Time Table Filtering -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Search functionality
-        document.getElementById('eqSearch').addEventListener('keyup', function() {
-            filterTable();
-        });
-
-        // Filter functionality
-        document.getElementById('filterBuilding').addEventListener('change', function() {
-            filterTable();
-        });
+        // Search and filter functionality
+        const searchInput = document.getElementById('eqSearch');
+        const filterBuilding = document.getElementById('filterBuilding');
+        
+        if (searchInput) {
+            searchInput.addEventListener('keyup', filterTable);
+        }
+        if (filterBuilding) {
+            filterBuilding.addEventListener('change', filterTable);
+        }
 
         function filterTable() {
-            const searchValue = document.getElementById('eqSearch').value.toLowerCase();
-            const filterBuilding = document.getElementById('filterBuilding').value.toLowerCase();
+            const searchValue = searchInput.value.toLowerCase();
+            const filterValue = filterBuilding.value.toLowerCase();
             const rows = document.querySelectorAll('#eqTable tbody tr');
 
             rows.forEach(function(row) {
                 const rowText = row.textContent.toLowerCase();
-                const buildingCell = row.querySelector('td:nth-child(3)').textContent.toLowerCase(); // Building Location is in the 3rd column
+                const buildingCell = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
 
                 const searchMatch = rowText.indexOf(searchValue) > -1;
-                const buildingMatch = !filterBuilding || buildingCell === filterBuilding;
+                const buildingMatch = !filterValue || buildingCell === filterValue;
 
                 row.style.display = (searchMatch && buildingMatch) ? '' : 'none';
             });
@@ -378,30 +614,77 @@ try {
     });
 </script>
 
-<!-- Add this JavaScript before the closing body tag -->
+<!-- Then at the bottom of the file, replace all script tags with this single script block -->
 <script>
-$(document).ready(function() {
-    // Add Location Form Submission
+document.addEventListener('DOMContentLoaded', function() {
+    // Form submissions
     $('#addLocationForm').on('submit', function(e) {
         e.preventDefault();
+        
         $.ajax({
             url: 'equipment_location.php',
             method: 'POST',
             data: $(this).serialize(),
-            success: function(response) {
-                $('#addLocationModal').modal('hide');
-                location.reload();
+            dataType: 'json',
+            success: function(result) {
+                if (result.status === 'success') {
+                    // Hide modal and redirect
+                    $('#addLocationModal').modal('hide');
+                    window.location.href = 'equipment_location.php';
+                } else {
+                    alert(result.message || 'An error occurred');
+                }
             },
             error: function(xhr, status, error) {
                 alert('Error submitting the form: ' + error);
             }
         });
     });
+
+    // Edit button click handler
+    $('.edit-location').click(function() {
+        const id = $(this).data('id');
+        const assetTag = $(this).data('asset');
+        const buildingLocation = $(this).data('building');
+        const floorNumber = $(this).data('floor');
+        const specificArea = $(this).data('area');
+        const personResponsible = $(this).data('person');
+        const remarks = $(this).data('remarks');
+        
+        $('#edit_location_id').val(id);
+        $('#edit_asset_tag').val(assetTag);
+        $('#edit_building_location').val(buildingLocation);
+        $('#edit_floor_number').val(floorNumber);
+        $('#edit_specific_area').val(specificArea);
+        $('#edit_person_responsible').val(personResponsible);
+        $('#edit_remarks').val(remarks);
+        
+        $('#editLocationModal').modal('show');
+    });
+
+    // Edit form submission
+    $('#editLocationForm').on('submit', function(e) {
+        e.preventDefault();
+        $.ajax({
+            url: 'equipment_location.php',
+            method: 'POST',
+            data: $(this).serialize(),
+            dataType: 'json',
+            success: function(result) {
+                if (result.status === 'success') {
+                    $('#editLocationModal').modal('hide');
+                    window.location.href = 'equipment_location.php';
+                } else {
+                    alert(result.message || 'An error occurred');
+                }
+            },
+            error: function(xhr, status, error) {
+                alert('Error updating location: ' + error);
+            }
+        });
+    });
 });
 </script>
-
-<!-- Bootstrap 5 JS Bundle (includes Popper) -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 
 </html>

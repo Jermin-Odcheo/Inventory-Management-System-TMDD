@@ -41,6 +41,11 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                         </a>
                     </li>
                     <li>
+                        <a href="<?php echo BASE_URL; ?>src/view/php/clients/admins/em_audit_log.php">
+                            <i class="fas fa-history"></i> Equipment Management Audit Logs
+                        </a>
+                    </li>                    
+                    <li>
                         <a href="<?php echo BASE_URL; ?>src/view/php/clients/admins/archive.php">
                             <i class="fas fa-archive"></i> Archives
                         </a>
