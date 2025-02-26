@@ -470,7 +470,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 
                             <!-- Status List Table -->
                             <div class="table-responsive">
-                                <table class="table table-striped table-bordered table-sm mb-0">
+                                <table class="table table-striped table-bordered table-sm mb-0" id="table">
                                     <thead class="table-dark">
                                         <tr>
                                             <th style="width: 7%">Status ID</th>

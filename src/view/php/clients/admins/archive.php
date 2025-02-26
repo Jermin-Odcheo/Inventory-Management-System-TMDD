@@ -142,7 +142,7 @@ function getStatusIcon($status)
 
                 <!-- Table container -->
                 <div class="table-responsive">
-                    <table class="table table-hover">
+                    <table class="table table-hover" id="table">
                         <colgroup>
                             <col class="checkbox">
                             <col class="track">

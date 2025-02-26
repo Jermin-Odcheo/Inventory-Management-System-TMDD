@@ -295,7 +295,7 @@ function getChangedFieldNames(array $oldData, array $newData)
 
                 <!-- Table container with colgroup for column widths -->
                 <div class="table-responsive">
-                    <table class="table table-hover">
+                    <table class="table table-hover" id="table">
                         <colgroup>
                             <col class="track">
                             <col class="user">
@@ -412,13 +412,14 @@ function getChangedFieldNames(array $oldData, array $newData)
                 </div><!-- /.table-responsive -->
 
                 <!-- Pagination Controls -->
+
                 <div class="container-fluid">
                     <div class="row align-items-center g-3">
                         <!-- Pagination Info -->
                         <div class="col-12 col-sm-auto">
                             <div class="text-muted">
-                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span
-                                        id="totalRows">0</span> entries
+                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
+                                        id="totalRows">100</span> entries
                             </div>
                         </div>
 
@@ -431,10 +432,10 @@ function getChangedFieldNames(array $oldData, array $newData)
                                 </button>
 
                                 <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
-                                    <option value="10">10</option>
-                                    <option value="20" selected>20</option>
+                                    <option value="10" selected>10</option>
+                                    <option value="20">20</option>
+                                    <option value="30">30</option>
                                     <option value="50">50</option>
-                                    <option value="100">100</option>
                                 </select>
 
                                 <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
@@ -444,7 +445,13 @@ function getChangedFieldNames(array $oldData, array $newData)
                             </div>
                         </div>
                     </div>
-                </div>
+                    <!-- New Pagination Page Numbers -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <ul class="pagination justify-content-center" id="pagination"></ul>
+                        </div>
+                    </div>
+                </div> <!-- /.End of Pagination -->
             </div><!-- /.card-body -->
         </div><!-- /.card -->
     </div><!-- /.container-fluid -->

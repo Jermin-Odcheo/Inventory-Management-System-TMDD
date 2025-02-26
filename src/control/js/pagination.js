@@ -3,46 +3,44 @@ let currentPage = 1;
 let rowsPerPage;
 let prevButton, nextButton, rowsSelect, currentPageSpan, rowsPerPageSpan, totalRowsSpan;
 
-// Pagination function
+// Pagination function with simpler, more direct approach
 function updatePagination() {
+    // Get all data rows
+    const allRows = document.querySelectorAll('#table tbody tr');
+    console.log("Total rows in table:", allRows.length);
 
-    const rows = document.querySelectorAll('.table tbody tr');
-    const totalRows = rows.length;
+    // Get the total number of valid rows
+    const totalRows = allRows.length;
     totalRowsSpan.textContent = totalRows;
-    console.log("Total rows found: ", document.querySelectorAll('.table tbody tr').length);
 
-
+    // Calculate page information
     const maxPages = Math.ceil(totalRows / rowsPerPage);
-    currentPage = Math.max(1, Math.min(currentPage, maxPages));
+    currentPage = Math.max(1, Math.min(currentPage, maxPages)); // Make sure current page is valid
 
-    const start = (currentPage - 1) * rowsPerPage;
-    const end = start + rowsPerPage;
+    // Calculate which rows to show
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = Math.min(startIndex + rowsPerPage, totalRows);
 
-    // Step 1: Fade out all rows first
-    rows.forEach((row) => {
-        row.style.opacity = "0"; // Fade out
-        row.style.transform = "translateY(10px)";
+    console.log(`Page ${currentPage}: Showing rows ${startIndex} to ${endIndex-1} of ${totalRows}`);
+
+    // IMPORTANT: First hide ALL rows
+    allRows.forEach(row => {
+        row.style.display = 'none'; // Hide every row first
     });
 
-    // Step 2: Wait for the fade-out animation, then update visibility
-    setTimeout(() => {
-        rows.forEach((row, index) => {
-            if (index >= start && index < end) {
-                row.classList.remove('hidden-row'); // Show row
-                setTimeout(() => {
-                    row.style.opacity = "1"; // Fade in
-                    row.style.transform = "translateY(0)";
-                }, 100);
-            } else {
-                row.classList.add('hidden-row'); // Hide row
-            }
-        });
-    }, 200); // Wait 200ms for fade-out to complete
+    // Then only show the rows for current page
+    for (let i = startIndex; i < endIndex; i++) {
+        if (allRows[i]) {
+            allRows[i].style.display = ''; // Show row (using empty string reverts to default display value)
+        }
+    }
 
-    currentPageSpan.textContent = currentPage;
-    rowsPerPageSpan.textContent = rowsPerPage;
+    // Update pagination info text
+    const displayStart = totalRows === 0 ? 0 : startIndex + 1;
+    currentPageSpan.textContent = displayStart;
+    rowsPerPageSpan.textContent = endIndex;
 
-    // Show or hide the Previous and Next buttons
+    // Show or hide the Previous and Next buttons using the important flag
     if (currentPage === 1) {
         prevButton.style.setProperty('display', 'none', 'important');
     } else {
@@ -55,12 +53,19 @@ function updatePagination() {
         nextButton.style.setProperty('display', 'inline-block', 'important');
     }
 
-    // Render the page numbers
+    // Scroll to top of table
+    const tableElement = document.getElementById('table');
+    if (tableElement) {
+        tableElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // Update pagination numbers
     renderPagination();
 }
 
 // Event Listener for DOMContentLoaded
 document.addEventListener('DOMContentLoaded', function () {
+    // Get DOM elements
     prevButton = document.getElementById('prevPage');
     nextButton = document.getElementById('nextPage');
     rowsSelect = document.getElementById('rowsPerPageSelect');
@@ -68,23 +73,30 @@ document.addEventListener('DOMContentLoaded', function () {
     rowsPerPageSpan = document.getElementById('rowsPerPage');
     totalRowsSpan = document.getElementById('totalRows');
 
+    // Set initial rows per page
     rowsPerPage = parseInt(rowsSelect.value);
 
-    prevButton.addEventListener('click', function () {
+    // Add event listeners
+    prevButton.addEventListener('click', function (e) {
+        e.preventDefault();
         if (currentPage > 1) {
             currentPage--;
             updatePagination();
         }
     });
 
-    nextButton.addEventListener('click', function () {
-        const rowsCount = document.querySelectorAll('#table tbody tr').length;
-        const maxPages = Math.ceil(rowsCount / rowsPerPage);
+    nextButton.addEventListener('click', function (e) {
+        e.preventDefault();
+        const allRows = document.querySelectorAll('#table tbody tr');
+        const maxPages = Math.ceil(allRows.length / rowsPerPage);
+
+        console.log("Next button clicked. Current page:", currentPage, "Max pages:", maxPages);
+
         if (currentPage < maxPages) {
             nextButton.classList.add('loading');
+            currentPage++;
+            updatePagination();
             setTimeout(() => {
-                currentPage++;
-                updatePagination();
                 nextButton.classList.remove('loading');
             }, 300);
         }
@@ -105,12 +117,13 @@ function renderPagination() {
     const paginationContainer = document.getElementById('pagination');
     paginationContainer.innerHTML = '';
 
-    const rows = document.querySelectorAll('#table tbody tr');
-    const totalRows = rows.length;
+    const allRows = document.querySelectorAll('#table tbody tr');
+    const totalRows = allRows.length;
     const maxPages = Math.ceil(totalRows / rowsPerPage);
 
     if (maxPages <= 1) return;
 
+    // Calculate range of pages to show
     let startPage, endPage;
     if (maxPages <= 5) {
         startPage = 1;
@@ -128,6 +141,7 @@ function renderPagination() {
         }
     }
 
+    // Add first page + ellipsis if needed
     if (startPage > 1) {
         let li = document.createElement('li');
         li.className = 'page-item';
@@ -136,7 +150,6 @@ function renderPagination() {
             e.preventDefault();
             currentPage = 1;
             updatePagination();
-            renderPagination();
         });
         paginationContainer.appendChild(li);
 
@@ -148,6 +161,7 @@ function renderPagination() {
         }
     }
 
+    // Add page numbers
     for (let i = startPage; i <= endPage; i++) {
         let li = document.createElement('li');
         li.className = 'page-item' + (i === currentPage ? ' active' : '');
@@ -159,12 +173,12 @@ function renderPagination() {
             e.preventDefault();
             currentPage = i;
             updatePagination();
-            renderPagination();
         });
         li.appendChild(a);
         paginationContainer.appendChild(li);
     }
 
+    // Add last page + ellipsis if needed
     if (endPage < maxPages) {
         if (endPage < maxPages - 1) {
             let ellipsis = document.createElement('li');
@@ -179,7 +193,6 @@ function renderPagination() {
             e.preventDefault();
             currentPage = maxPages;
             updatePagination();
-            renderPagination();
         });
         paginationContainer.appendChild(li);
     }

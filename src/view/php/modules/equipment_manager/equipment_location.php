@@ -395,7 +395,7 @@ try {
                                     </select>
                                 </div>
                                 
-                                <table class="table table-striped table-hover align-middle" id="eqTable">
+                                <table class="table table-striped table-hover align-middle" id="table">
                                     <thead class="table-dark">
                                     <tr>
                                         <th>ID</th>
@@ -634,7 +634,7 @@ try {
         function filterTable() {
             const searchValue = searchInput.value.toLowerCase();
             const filterValue = filterBuilding.value.toLowerCase();
-            const rows = document.querySelectorAll('#eqTable tbody tr');
+            const rows = document.querySelectorAll('#table tbody tr');
 
             rows.forEach(function(row) {
                 const rowText = row.textContent.toLowerCase();
