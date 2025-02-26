@@ -177,9 +177,10 @@ function formatDetailsAndChanges($log)
     // Prepare default strings
     $details = '';
     $changes = '';
-    $targetEmail = $newData['Email'];
+
     switch ($action) {
         case 'create':
+            $targetEmail = $newData['Email'];
             $details = htmlspecialchars("$targetEmail has been created");
             $changes = formatNewValue($log['NewVal']);
             break;
@@ -195,17 +196,20 @@ function formatDetailsAndChanges($log)
             break;
 
         case 'restored':
+            $targetEmail = $newData['Email'];
             $details = htmlspecialchars("$targetEmail has been restored");
             $changes = "is_deleted 1 -> 0";
             break;
 
         case 'remove':
+            $targetEmail = $newData['Email'];
             // Use the target's name instead of a generic message
             $details = htmlspecialchars("$targetEmail has been removed deleted");
             $changes = "is_deleted 0 -> 1";
             break;
 
         case 'delete':
+            $targetEmail = $newData['Email'];
             $details = htmlspecialchars("$targetEmail has been deleted from the database");
             $changes = formatNewValue($log['NewVal']);
             break;
