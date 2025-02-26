@@ -387,12 +387,6 @@ function canDeleteUser($currentUserRoles, $targetUserRoles)
                         <input type="text" class="form-control" id="editLastName" name="last_name">
                     </div>
                     <div class="mb-3">
-                        <label for="editStatus" class="form-label">Status</label>
-                        <select class="form-select shadow-sm" id="editStatus" name="status"
-                                style="height: 38px; padding: 0.375rem 2.25rem 0.375rem 0.75rem; font-size: 1rem; border-radius: 0.25rem; border: 1px solid #ced4da;">
-                            <option value="">Select Status</option>
-                            <option value="Online">Online</option>
-                            <option value="Offline">Offline</option>
                         </select>
                     </div>
 
