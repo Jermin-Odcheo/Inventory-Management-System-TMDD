@@ -9,7 +9,6 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
     header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
     header("Cache-Control: post-check=0, pre-check=0", false);
     header("Pragma: no-cache");
-    
     // Redirect to login page
     header("Location: /public/index.php");
     exit();
@@ -236,9 +235,12 @@ try {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
-    <!-- Add this in the head section after Bootstrap CSS -->
+    <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
 
 </head>
 
@@ -395,6 +397,45 @@ try {
                         </tbody>
                     </table>
                 </div>
+                <div class="container-fluid">
+                    <div class="row align-items-center g-3">
+                        <!-- Pagination Info -->
+                        <div class="col-12 col-sm-auto">
+                            <div class="text-muted">
+                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
+                                        id="totalRows">100</span> entries
+                            </div>
+                        </div>
+
+                        <!-- Pagination Controls -->
+                        <div class="col-12 col-sm-auto ms-sm-auto">
+                            <div class="d-flex align-items-center gap-2">
+                                <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                    <i class="bi bi-chevron-left"></i>
+                                    Previous
+                                </button>
+
+                                <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                    <option value="10" selected>10</option>
+                                    <option value="20">20</option>
+                                    <option value="30">30</option>
+                                    <option value="50">50</option>
+                                </select>
+
+                                <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                    Next
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- New Pagination Page Numbers -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <ul class="pagination justify-content-center" id="pagination"></ul>
+                        </div>
+                    </div>
+                </div> <!-- /.End of Pagination -->
             </div>
         </div>
     </div>
@@ -412,45 +453,65 @@ try {
                         <input type="hidden" name="action" value="add">
                         <div class="mb-3">
                             <label for="asset_tag" class="form-label">Asset Tag</label>
-                            <input type="text" class="form-control" name="asset_tag" required>
+                            <label>
+                                <input type="text" class="form-control" name="asset_tag" required>
+                            </label>
                         </div>
                         <div class="mb-3">
                             <label for="asset_description1" class="form-label">Asset Description 1</label>
-                            <input type="text" class="form-control" name="asset_description1" required>
+                            <label>
+                                <input type="text" class="form-control" name="asset_description1" required>
+                            </label>
                         </div>
                         <div class="mb-3">
                             <label for="asset_description2" class="form-label">Asset Description 2</label>
-                            <input type="text" class="form-control" name="asset_description2" required>
+                            <label>
+                                <input type="text" class="form-control" name="asset_description2" required>
+                            </label>
                         </div>
                         <div class="mb-3">
                             <label for="specification" class="form-label">Specification</label>
-                            <input type="text" class="form-control" name="specification" required>
+                            <label>
+                                <input type="text" class="form-control" name="specification" required>
+                            </label>
                         </div>
                         <div class="mb-3">
                             <label for="brand" class="form-label">Brand</label>
-                            <input type="text" class="form-control" name="brand" required>
+                            <label>
+                                <input type="text" class="form-control" name="brand" required>
+                            </label>
                         </div>
                         <div class="mb-3">
                             <label for="model" class="form-label">Model</label>
-                            <input type="text" class="form-control" name="model" required>
+                            <label>
+                                <input type="text" class="form-control" name="model" required>
+                            </label>
                         </div>
                         <div class="mb-3">
                             <label for="serial_number" class="form-label">Serial Number</label>
-                            <input type="text" class="form-control" name="serial_number" required>
+                            <label>
+                                <input type="text" class="form-control" name="serial_number" required>
+                            </label>
                         </div>
                         <div class="mb-3">
                             <label for="date_acquired" class="form-label">Date Acquired</label>
-                            <input type="date" class="form-control" name="date_acquired" 
-                                   max="<?php echo date('Y-m-d'); ?>" 
-                                   required>
+                            <label>
+                                <input type="date" class="form-control" name="date_acquired"
+                                       max="<?php echo date('Y-m-d'); ?>"
+                                       required>
+                            </label>
                         </div>
                         <div class="mb-3">
                             <label for="accountable_individual" class="form-label">Accountable Individual</label>
-                            <input type="text" class="form-control" name="accountable_individual" required>
+                            <label>
+                                <input type="text" class="form-control" name="accountable_individual" required>
+                            </label>
                         </div>
                         <div class="mb-3">
                             <label for="remarks" class="form-label">Remarks</label>
-                            <textarea class="form-control" name="remarks" rows="3"></textarea>
+                            <label>
+                                <textarea class="form-control" name="remarks" rows="3"></textarea>
+                            </label>
                         </div>
                         <div class="mb-3">
                             <button type="submit" class="btn btn-primary">Add Equipment</button>
@@ -523,228 +584,12 @@ try {
             </div>
         </div>
     </div>
-
-    <!-- JavaScript for Real-Time Table Filtering -->
     <script>
-        $(document).ready(function() {
-            // Search functionality
-            $('#searchEquipment').on('input', function() {
-                filterTable();
-            });
 
-            // Filter functionality
-            $('#filterEquipment').on('change', function() {
-                filterTable();
-            });
-
-            // Date filter change handler
-            $('#dateFilter').on('change', function() {
-                const value = $(this).val();
-                
-                // Hide all date inputs container first
-                $('#dateInputsContainer').hide();
-                $('#monthPickerContainer, #dateRangePickers').hide();
-                $('#dateFrom, #dateTo').hide();
-                
-                switch(value) {
-                    case 'month':
-                        $('#dateInputsContainer').show();
-                        $('#monthPickerContainer').show();
-                        $('#dateRangePickers').hide();
-                        break;
-                    case 'range':
-                        $('#dateInputsContainer').show();
-                        $('#dateRangePickers').show();
-                        $('#monthPickerContainer').hide();
-                        $('#dateFrom, #dateTo').show();
-                        break;
-                    default:
-                        filterTable();
-                        break;
-                }
-            });
-
-            // Month and Year select change handler
-            $('#monthSelect, #yearSelect').on('change', function() {
-                if ($('#monthSelect').val() && $('#yearSelect').val()) {
-                    filterTable();
-                }
-            });
-
-            function filterTable() {
-                const searchText = $('#searchEquipment').val().toLowerCase();
-                const filterType = $('#filterEquipment').val().toLowerCase();
-                const dateFilterType = $('#dateFilter').val();
-                const selectedMonth = $('#monthSelect').val();
-                const selectedYear = $('#yearSelect').val();
-                const dateFrom = $('#dateFrom').val();
-                const dateTo = $('#dateTo').val();
-
-                $(".table tbody tr").each(function() {
-                    const row = $(this);
-                    const rowText = row.text().toLowerCase();
-                    const typeCell = row.find('td:eq(2)').text().toLowerCase();
-                    const dateCell = row.find('td:eq(8)').text(); // Adjust index based on date column
-                    const date = new Date(dateCell);
-
-                    const searchMatch = rowText.indexOf(searchText) > -1;
-                    const typeMatch = !filterType || typeCell === filterType;
-                    let dateMatch = true;
-
-                    switch(dateFilterType) {
-                        case 'asc':
-                            const tbody = $('.table tbody');
-                            const rows = tbody.find('tr').toArray();
-                            rows.sort((a, b) => {
-                                const dateA = new Date($(a).find('td:eq(8)').text());
-                                const dateB = new Date($(b).find('td:eq(8)').text());
-                                return dateA - dateB;
-                            });
-                            tbody.append(rows);
-                            return;
-                            
-                        case 'desc':
-                            const tbody2 = $('.table tbody');
-                            const rows2 = tbody2.find('tr').toArray();
-                            rows2.sort((a, b) => {
-                                const dateA = new Date($(a).find('td:eq(8)').text());
-                                const dateB = new Date($(b).find('td:eq(8)').text());
-                                return dateB - dateA;
-                            });
-                            tbody2.append(rows2);
-                            return;
-                            
-                        case 'month':
-                            if (selectedMonth && selectedYear) {
-                                dateMatch = date.getMonth() + 1 === parseInt(selectedMonth) && 
-                                           date.getFullYear() === parseInt(selectedYear);
-                            }
-                            break;
-                            
-                        case 'range':
-                            if (dateFrom && dateTo) {
-                                const from = new Date(dateFrom);
-                                const to = new Date(dateTo);
-                                to.setHours(23, 59, 59);
-                                dateMatch = date >= from && date <= to;
-                            }
-                            break;
-                    }
-
-                    row.toggle(searchMatch && typeMatch && dateMatch);
-                });
-            }
-        });
     </script>
-
-    <!-- Bootstrap 5 JS Bundle (includes Popper) -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
     <!-- Replace your existing JavaScript section at the bottom with this -->
-    <script>
-    $(document).ready(function() {
-        // Add Equipment
-        $('#addEquipmentForm').on('submit', function(e) {
-            e.preventDefault();
-            console.log('Form submitted', $(this).serialize()); // Debug line
-            
-            $.ajax({
-                url: 'equipment_details.php',
-                method: 'POST',
-                data: $(this).serialize(),
-                success: function(response) {
-                    console.log('Response:', response); // Debug line
-                    try {
-                        const result = JSON.parse(response);
-                        if (result.status === 'success') {
-                            $('#addEquipmentModal').modal('hide');
-                            location.reload();
-                        } else {
-                            alert(result.message);
-                        }
-                    } catch (e) {
-                        console.error('Parse error:', e); // Debug line
-                        alert('Error processing the request');
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('Ajax error:', error); // Debug line
-                    alert('Error submitting the form');
-                }
-            });
-        });
-
-        // Edit Equipment
-        $('.edit-equipment').click(function() {
-            var id = $(this).data('id');
-            var asset = $(this).data('asset');
-            var desc1 = $(this).data('desc1');
-            var desc2 = $(this).data('desc2');
-            var spec = $(this).data('spec');
-            var brand = $(this).data('brand');
-            var model = $(this).data('model');
-            var serial = $(this).data('serial');
-            var date = $(this).data('date');
-            var accountable = $(this).data('accountable');
-            var remarks = $(this).data('remarks');
-            
-            $('#edit_equipment_id').val(id);
-            $('#edit_asset_tag').val(asset);
-            $('#edit_asset_description1').val(desc1);
-            $('#edit_asset_description2').val(desc2);
-            $('#edit_specification').val(spec);
-            $('#edit_brand').val(brand);
-            $('#edit_model').val(model);
-            $('#edit_serial_number').val(serial);
-            $('#edit_date_acquired').val(date);
-            $('#edit_accountable_individual').val(accountable);
-            $('#edit_remarks').val(remarks);
-            
-            $('#editEquipmentModal').modal('show');
-        });
-
-        // Delete Equipment
-        $('.delete-equipment').off('click').on('click', function(e) {
-            e.preventDefault();
-            var id = $(this).data('id');
-            
-            if (confirm('Are you sure you want to delete this equipment?')) {
-                $.ajax({
-                    url: 'equipment_details.php',
-                    method: 'POST',
-                    data: {
-                        action: 'delete',
-                        equipment_id: id
-                    },
-                    success: function(response) {
-                        var result = JSON.parse(response);
-                        if (result.status === 'success') {
-                            location.reload();
-                        } else {
-                            alert('Error: ' + result.message);
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        alert('Error deleting equipment: ' + error);
-                    }
-                });
-            }
-        });
-
-        // Update Equipment
-        $('#editEquipmentForm').on('submit', function(e) {
-            e.preventDefault();
-            $.ajax({
-                url: 'equipment_details.php',
-                method: 'POST',
-                data: $(this).serialize(),
-                success: function(response) {
-                    location.reload();
-                }
-            });
-        });
-    });
-    </script>
+    <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/equipment_details.js" defer></script>
+    <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 </body>
 
 </html>

@@ -131,9 +131,9 @@ function getActionIcon($action)
     $action = strtolower($action);
     if ($action === 'modified') {
         return '<i class="fas fa-user-edit"></i>';
-    } elseif ($action === 'add') {
+    } elseif ($action === 'create') {
         return '<i class="fas fa-user-plus"></i>';
-    } elseif ($action === 'soft delete' || $action === 'permanent delete') {
+    } elseif ($action === 'remove' || $action === 'delete') {
         return '<i class="fas fa-user-slash"></i>';
     } else {
         return '<i class="fas fa-info-circle"></i>';
@@ -166,9 +166,9 @@ function formatDetailsAndChanges($log)
     // Use user_email from the log if available, or fallback to newData email
     $userEmail = $log['user_email'] ?? ($newData['Email'] ?? 'User');
 
-    // For soft delete, try to use the target's name (if available)
+    // For soft delete/remove, try to use the target's name (if available)
     $targetName = $userEmail;
-    if ($action === 'soft delete') {
+    if ($action === 'remove') {
         if (isset($newData['First_Name'], $newData['Last_Name'])) {
             $targetName = $newData['First_Name'] . ' ' . $newData['Last_Name'];
         }
@@ -177,36 +177,36 @@ function formatDetailsAndChanges($log)
     // Prepare default strings
     $details = '';
     $changes = '';
-
+    $targetEmail = $newData['Email'];
     switch ($action) {
-        case 'add':
-            $details = htmlspecialchars("$userEmail has been created");
+        case 'create':
+            $details = htmlspecialchars("$targetEmail has been created");
             $changes = formatNewValue($log['NewVal']);
             break;
 
         case 'modified':
             $changedFields = getChangedFieldNames($oldData, $newData);
             if (!empty($changedFields)) {
-                $details = "Updated Fields: " . htmlspecialchars(implode(', ', $changedFields));
+                $details = "Modified Fields: " . htmlspecialchars(implode(', ', $changedFields));
             } else {
-                $details = "Updated Fields: None";
+                $details = "Modified Fields: None";
             }
             $changes = formatAuditDiff($log['OldVal'], $log['NewVal']);
             break;
 
         case 'restored':
-            $details = htmlspecialchars("$userEmail has been restored");
+            $details = htmlspecialchars("$targetEmail has been restored");
             $changes = "is_deleted 1 -> 0";
             break;
 
-        case 'soft delete':
+        case 'remove':
             // Use the target's name instead of a generic message
-            $details = htmlspecialchars("$userEmail has been soft deleted");
+            $details = htmlspecialchars("$targetEmail has been removed deleted");
             $changes = "is_deleted 0 -> 1";
             break;
 
-        case 'permanent delete':
-            $details = htmlspecialchars("$userEmail has been deleted from the database");
+        case 'delete':
+            $details = htmlspecialchars("$targetEmail has been deleted from the database");
             $changes = formatNewValue($log['NewVal']);
             break;
 
@@ -249,6 +249,8 @@ function getChangedFieldNames(array $oldData, array $newData)
     <link rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/Inventory-Managment-System-TMDD/src/view/styles/css/audit_log.css">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/pagination.css">
+
 </head>
 <body>
 <?php include '../../general/sidebar.php'; ?>
@@ -276,10 +278,10 @@ function getChangedFieldNames(array $oldData, array $newData)
                     <div class="col-md-4 mb-2">
                         <select id="filterAction" class="form-select">
                             <option value="">All Actions</option>
-                            <option value="add">Add</option>
+                            <option value="create">Create</option>
                             <option value="modified">Modified</option>
-                            <option value="soft delete">Soft Delete</option>
-                            <option value="permanent delete">Permanent Delete</option>
+                            <option value="remove">Remove</option>
+                            <option value="delete">Delete</option>
                             <option value="restored">Restored</option>
                         </select>
                     </div>
@@ -317,7 +319,7 @@ function getChangedFieldNames(array $oldData, array $newData)
                             <th>Date & Time</th>
                         </tr>
                         </thead>
-                        <tbody id="auditTable">
+                        <tbody id="table">
                         <?php if (!empty($auditLogs)): ?>
                             <?php foreach ($auditLogs as $log): ?>
                                 <?php
@@ -348,7 +350,9 @@ function getChangedFieldNames(array $oldData, array $newData)
                                     <!-- ACTION -->
                                     <td data-label="Action">
                                         <?php
-                                        $actionText = !empty($log['Action']) ? $log['Action'] : 'Deleted';
+                                        $actionText = !empty($log['Action']) ? $log['Action'] : 'Unknown';
+                                        echo "<!-- Debug: Action Text = $actionText -->";
+
                                         // Check for restore action based on JSON values with null checks
                                         if (!is_null($log['OldVal']) && !is_null($log['NewVal'])) {
                                             $oldData = json_decode($log['OldVal'], true);
@@ -360,7 +364,7 @@ function getChangedFieldNames(array $oldData, array $newData)
                                                 }
                                             }
                                         }
-                                        echo "<span class='action-badge action-" . strtolower($actionText) . "'>";
+                                        echo "<span class='action-bad`ge action-" . strtolower($actionText) . "'>";
                                         echo getActionIcon($actionText) . ' ' . htmlspecialchars($actionText);
                                         echo "</span>";
                                         ?>
@@ -430,10 +434,10 @@ function getChangedFieldNames(array $oldData, array $newData)
                                 </button>
 
                                 <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
-                                    <option value="10">10</option>
-                                    <option value="20" selected>20</option>
+                                    <option value="10" selected>10</option>
+                                    <option value="20">20</option>
+                                    <option value="30">30</option>
                                     <option value="50">50</option>
-                                    <option value="100">100</option>
                                 </select>
 
                                 <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
@@ -443,12 +447,19 @@ function getChangedFieldNames(array $oldData, array $newData)
                             </div>
                         </div>
                     </div>
-                </div>
+                    <!-- New Pagination Page Numbers -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <ul class="pagination justify-content-center" id="pagination"></ul>
+                        </div>
+                    </div>
+                </div> <!-- /.End of Pagination -->
             </div><!-- /.card-body -->
         </div><!-- /.card -->
     </div><!-- /.container-fluid -->
 </div><!-- /.main-content -->
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/logs.js" defer></script>
+<script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 </body>
 </html>
 

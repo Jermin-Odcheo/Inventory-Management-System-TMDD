@@ -149,6 +149,7 @@ function canDeleteUser($currentUserRoles, $targetUserRoles)
 <body>
 <div class="sidebar">
     <?php include '../../general/sidebar.php'; ?>
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/pagination.css">
 </div>
 <!-- Main Content Area -->
 <div class="main-content container-fluid">
@@ -217,7 +218,7 @@ function canDeleteUser($currentUserRoles, $targetUserRoles)
 
     <div id="alertMessage"></div>
     <div class="table-responsive">
-        <table class="table table-striped table-hover">
+        <table class="table table-striped table-hover" id="table">
             <thead class="table-dark">
             <tr>
                 <th><input type="checkbox" id="select-all"></th>
@@ -311,6 +312,48 @@ function canDeleteUser($currentUserRoles, $targetUserRoles)
             </tbody>
         </table>
     </div><!-- /.table-responsive -->
+
+    <!-- Pagination Controls -->
+    <div class="container-fluid">
+        <div class="row align-items-center g-3">
+            <!-- Pagination Info -->
+            <div class="col-12 col-sm-auto">
+                <div class="text-muted">
+                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
+                            id="totalRows">100</span> entries
+                </div>
+            </div>
+
+            <!-- Pagination Controls -->
+            <div class="col-12 col-sm-auto ms-sm-auto">
+                <div class="d-flex align-items-center gap-2">
+                    <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                        <i class="bi bi-chevron-left"></i>
+                        Previous
+                    </button>
+
+                    <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                        <option value="10" selected>10</option>
+                        <option value="20">20</option>
+                        <option value="30">30</option>
+                        <option value="50">50</option>
+                    </select>
+
+                    <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                        Next
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- New Pagination Page Numbers -->
+        <div class="row mt-3">
+            <div class="col-12">
+                <ul class="pagination justify-content-center" id="pagination"></ul>
+            </div>
+        </div>
+    </div> <!-- /.End of Pagination -->
+
     <!-- Bulk action button for active users -->
     <div class="mb-3">
         <button type="button" id="delete-selected" class="btn btn-danger" style="display: none;" disabled>
@@ -661,6 +704,6 @@ function canDeleteUser($currentUserRoles, $targetUserRoles)
     });
 
 </script>
-
+<script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 </body>
 </html>
