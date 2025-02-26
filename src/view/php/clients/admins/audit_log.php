@@ -424,8 +424,8 @@ function getChangedFieldNames(array $oldData, array $newData)
                         <!-- Pagination Info -->
                         <div class="col-12 col-sm-auto">
                             <div class="text-muted">
-                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
-                                        id="totalRows">100</span> entries
+                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span
+                                        id="totalRows">0</span> entries
                             </div>
                         </div>
 

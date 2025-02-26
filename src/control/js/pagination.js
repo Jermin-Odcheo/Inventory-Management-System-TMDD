@@ -5,9 +5,12 @@ let prevButton, nextButton, rowsSelect, currentPageSpan, rowsPerPageSpan, totalR
 
 // Pagination function
 function updatePagination() {
-    const rows = document.querySelectorAll('#table tbody tr');
+
+    const rows = document.querySelectorAll('.table tbody tr');
     const totalRows = rows.length;
     totalRowsSpan.textContent = totalRows;
+    console.log("Total rows found: ", document.querySelectorAll('.table tbody tr').length);
+
 
     const maxPages = Math.ceil(totalRows / rowsPerPage);
     currentPage = Math.max(1, Math.min(currentPage, maxPages));
