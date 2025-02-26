@@ -470,8 +470,8 @@ try {
                             <tr>
                                 <th>ID</th>
                                 <th>Asset Tag</th>
-                                <th>Asset Description 1</th>
-                                <th>Asset Description 2</th>
+                                <th>Description 1</th>
+                                <th>Description 2</th>
                                 <th>Specification</th>
                                 <th>Brand</th>
                                 <th>Model</th>
@@ -586,11 +586,11 @@ try {
                             <input type="text" class="form-control" name="asset_tag" required>
                         </div>
                         <div class="mb-3">
-                            <label for="asset_description1" class="form-label">Asset Description 1</label>
+                            <label for="asset_description1" class="form-label"> Description 1</label>
                             <input type="text" class="form-control" name="asset_description1" required>
                         </div>
                         <div class="mb-3">
-                            <label for="asset_description2" class="form-label">Asset Description 2</label>
+                            <label for="asset_description2" class="form-label"> Description 2</label>
                             <input type="text" class="form-control" name="asset_description2" required>
                         </div>
                         <div class="mb-3">
@@ -649,11 +649,11 @@ try {
                             <input type="text" class="form-control" name="asset_tag" id="edit_asset_tag">
                         </div>
                         <div class="mb-3">
-                            <label for="edit_asset_description1" class="form-label">Asset Description 1</label>
+                            <label for="edit_asset_description1" class="form-label"> Description 1</label>
                             <input type="text" class="form-control" name="asset_description1" id="edit_asset_description1">
                         </div>
                         <div class="mb-3">
-                            <label for="edit_asset_description2" class="form-label">Asset Description 2</label>
+                            <label for="edit_asset_description2" class="form-label"> Description 2</label>
                             <input type="text" class="form-control" name="asset_description2" id="edit_asset_description2">
                         </div>
                         <div class="mb-3">
