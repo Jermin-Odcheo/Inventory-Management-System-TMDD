@@ -1,7 +1,7 @@
 <?php
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
-include '../../general/header.php';
+// include '../../general/header.php';
 // Enable error reporting for debugging
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
@@ -12,10 +12,10 @@ if (!isset($pdo)) {
 }
 
 // Check if the user is logged in
-if (!isset($_SESSION['user_id'])) {
-    header("Location: ../../../../../public/index.php");
-    exit();
-}
+// if (!isset($_SESSION['user_id'])) {
+//     header("Location: ../../../../../public/index.php");
+//     exit();
+// }
 
 // Define allowed sorting columns (for active users)
 $allowedSortColumns = ['User_ID', 'Email', 'First_Name', 'Last_Name', 'Department', 'Status'];
@@ -98,7 +98,8 @@ function getCurrentUserRoles($pdo, $userId)
 }
 
 // Get current user's roles
-$currentUserRoles = getCurrentUserRoles($pdo, $_SESSION['user_id']);
+// $currentUserRoles = getCurrentUserRoles($pdo, $_SESSION['user_id']);
+$currentUserRoles = ["Regular User"];
 
 // Add this function to check if current user can delete target user
 function canDeleteUser($currentUserRoles, $targetUserRoles)
@@ -112,6 +113,67 @@ function canDeleteUser($currentUserRoles, $targetUserRoles)
     return false;
 }
 
+/*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+RBAC : view
+if role doesnt include view for User module then redirect
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*/
+try {
+    $stmt = $pdo->prepare("
+        select privilege_name 
+        from privileges as p 
+        join role_privileges as rp on p.privilege_id = rp.privilege_id 
+        join roles as r on r.role_id = rp.role_id
+        where rp.role_id = (select r.role_id where role_name = 'Regular User') 
+    ");
+    $stmt->execute();
+    $privs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $privNames = array_column($privs, 'privilege_name');
+    if (empty($privNames) || !in_array("View", $privNames)) { //redirect to home if you got no privs for this page 
+        header("Location: ../../../../../public/index.php");
+        exit();
+    }
+} catch (PDOException $e) {
+    die("Database query error: " . $e->getMessage());
+}
+/*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+RBAC : edit
+if role doesnt include edit then remove those edit buttons
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*/
+$showEditButton = false;
+try {
+    $stmt = $pdo->prepare("
+        select privilege_name 
+        from privileges as p 
+        join role_privileges as rp on p.privilege_id = rp.privilege_id 
+        join roles as r on r.role_id = rp.role_id
+        where rp.role_id = (select r.role_id where role_name = 'Regular User') 
+    ");
+    $stmt->execute();
+    $privs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $privNames = array_column($privs, 'privilege_name');
+    if (!empty($privNames) && in_array("Edit", $privNames)) { 
+        //show edit button if privileges are not empty and edit is in them
+        $showEditButton = true;
+    }
+} catch (PDOException $e) {
+    die("Database query error: " . $e->getMessage());
+}
+/*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+if role doesnt include delete then remove the delete option thingy
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*/
+
+/*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+if role doesnt include create then remove the add new user
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*/
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -285,6 +347,7 @@ function canDeleteUser($currentUserRoles, $targetUserRoles)
                         ?>
                     </td>
                     <td>
+                        <?php if ($showEditButton): ?>
                         <button type="button" class="btn btn-sm btn-warning btn-edit"
                                 data-id="<?php echo $user['User_ID']; ?>"
                                 data-email="<?php echo htmlspecialchars($user['Email']); ?>"
@@ -295,6 +358,7 @@ function canDeleteUser($currentUserRoles, $targetUserRoles)
                                 data-bs-toggle="modal" data-bs-target="#editUserModal">
                             Edit
                         </button>
+                        <?php endif; ?>
                         <?php
                         $targetUserRoles = getCurrentUserRoles($pdo, $user['User_ID']);
                         $canDelete = canDeleteUser($currentUserRoles, $targetUserRoles);
