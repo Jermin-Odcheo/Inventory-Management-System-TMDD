@@ -10,11 +10,12 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: " . BASE_URL . "public/index.php"); // Redirect to login page
     exit();
 }
-// Fetch all audit logs (including permanent deletes)
+
+// Fetch only equipment management related audit logs
 $query = "SELECT audit_log.*, users.email AS user_email 
           FROM audit_log 
           LEFT JOIN users ON audit_log.UserID = users.User_ID
-          WHERE audit_log.Module NOT LIKE 'Equipment%'
+          WHERE audit_log.Module LIKE 'Equipment%'
           ORDER BY audit_log.Date_Time DESC";
 $stmt = $pdo->prepare($query);
 $stmt->execute();
@@ -244,7 +245,7 @@ function getChangedFieldNames(array $oldData, array $newData)
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Audit Logs Dashboard</title>
+    <title>Equipment Management Audit Logs</title>
     <link rel="stylesheet"
           href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet"
@@ -260,7 +261,7 @@ function getChangedFieldNames(array $oldData, array $newData)
             <div class="card-header d-flex justify-content-between align-items-center bg-dark">
                 <h3 class="text-white">
                     <i class="fas fa-history me-2"></i>
-                    Audit Logs Dashboard
+                    Equipment Management Audit Logs
                 </h3>
             </div>
 
@@ -279,21 +280,20 @@ function getChangedFieldNames(array $oldData, array $newData)
                             <option value="">All Actions</option>
                             <option value="add">Add</option>
                             <option value="modified">Modified</option>
-                            <option value="soft delete">Soft Delete</option>
-                            <option value="permanent delete">Permanent Delete</option>
-                            <option value="restored">Restored</option>
+                            <option value="delete">Delete</option>
                         </select>
                     </div>
                     <div class="col-md-4 mb-2">
-                        <select id="filterStatus" class="form-select">
-                            <option value="">All Status</option>
-                            <option value="successful">Successful</option>
-                            <option value="failed">Failed</option>
+                        <select id="filterModule" class="form-select">
+                            <option value="">All Modules</option>
+                            <option value="Equipment Details">Equipment Details</option>
+                            <option value="Equipment Location">Equipment Location</option>
+                            <option value="Equipment Status">Equipment Status</option>
                         </select>
                     </div>
                 </div>
 
-                <!-- Table container with colgroup for column widths -->
+                <!-- Table container -->
                 <div class="table-responsive">
                     <table class="table table-hover">
                         <colgroup>
@@ -321,46 +321,25 @@ function getChangedFieldNames(array $oldData, array $newData)
                         <tbody id="auditTable">
                         <?php if (!empty($auditLogs)): ?>
                             <?php foreach ($auditLogs as $log): ?>
-                                <?php
-                                // Normalize action to lower case for comparisons.
-                                $actionLower = strtolower($log['Action'] ?? '');
-                                ?>
                                 <tr>
-                                    <!-- TRACK ID -->
+                                    <!-- Keep the same row structure but data will be equipment-specific -->
                                     <td data-label="Track ID">
                                         <span class="badge bg-secondary">
                                             <?php echo htmlspecialchars($log['TrackID']); ?>
                                         </span>
                                     </td>
-
-                                    <!-- USER WHO PERFORMED -->
                                     <td data-label="User">
                                         <div class="d-flex align-items-center">
                                             <i class="fas fa-user-circle me-2"></i>
                                             <?php echo htmlspecialchars($log['user_email'] ?? 'N/A'); ?>
                                         </div>
                                     </td>
-
-                                    <!-- MODULE -->
                                     <td data-label="Module">
                                         <?php echo !empty($log['Module']) ? htmlspecialchars(trim($log['Module'])) : '<em class="text-muted">N/A</em>'; ?>
                                     </td>
-
-                                    <!-- ACTION -->
                                     <td data-label="Action">
                                         <?php
-                                        $actionText = !empty($log['Action']) ? $log['Action'] : 'Deleted';
-                                        // Check for restore action based on JSON values with null checks
-                                        if (!is_null($log['OldVal']) && !is_null($log['NewVal'])) {
-                                            $oldData = json_decode($log['OldVal'], true);
-                                            $newData = json_decode($log['NewVal'], true);
-                                            if (is_array($oldData) && is_array($newData)) {
-                                                if (isset($oldData['is_deleted'], $newData['is_deleted']) &&
-                                                    (int)$oldData['is_deleted'] === 1 && (int)$newData['is_deleted'] === 0) {
-                                                    $actionText = 'Restored';
-                                                }
-                                            }
-                                        }
+                                        $actionText = !empty($log['Action']) ? $log['Action'] : 'Unknown';
                                         echo "<span class='action-badge action-" . strtolower($actionText) . "'>";
                                         echo getActionIcon($actionText) . ' ' . htmlspecialchars($actionText);
                                         echo "</span>";
@@ -369,25 +348,17 @@ function getChangedFieldNames(array $oldData, array $newData)
                                     <?php
                                     list($detailsHTML, $changesHTML) = formatDetailsAndChanges($log);
                                     ?>
-
-                                    <!-- DETAILS -->
                                     <td data-label="Details" class="data-container">
                                         <?php echo nl2br($detailsHTML); ?>
                                     </td>
-
-                                    <!-- CHANGES -->
                                     <td data-label="Changes" class="data-container">
                                         <?php echo nl2br($changesHTML); ?>
                                     </td>
-
-                                    <!-- STATUS -->
                                     <td data-label="Status">
                                         <span class="badge <?php echo (strtolower($log['Status'] ?? '') === 'successful') ? 'bg-success' : 'bg-danger'; ?>">
                                             <?php echo getStatusIcon($log['Status']) . ' ' . htmlspecialchars($log['Status']); ?>
                                         </span>
                                     </td>
-
-                                    <!-- DATE & TIME -->
                                     <td data-label="Date & Time">
                                         <div class="d-flex align-items-center">
                                             <i class="far fa-clock me-2"></i>
@@ -401,15 +372,15 @@ function getChangedFieldNames(array $oldData, array $newData)
                                 <td colspan="8">
                                     <div class="empty-state text-center py-4">
                                         <i class="fas fa-inbox fa-3x mb-3"></i>
-                                        <h4>No Audit Logs Found</h4>
-                                        <p class="text-muted">There are no audit log entries to display.</p>
+                                        <h4>No Equipment Audit Logs Found</h4>
+                                        <p class="text-muted">There are no equipment management audit log entries to display.</p>
                                     </div>
                                 </td>
                             </tr>
                         <?php endif; ?>
                         </tbody>
                     </table>
-                </div><!-- /.table-responsive -->
+                </div>
 
                 <!-- Pagination Controls -->
                 <div class="container-fluid">
@@ -417,8 +388,8 @@ function getChangedFieldNames(array $oldData, array $newData)
                         <!-- Pagination Info -->
                         <div class="col-12 col-sm-auto">
                             <div class="text-muted">
-                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span
-                                        id="totalRows">0</span> entries
+                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
+                                        id="totalRows">100</span> entries
                             </div>
                         </div>
 
@@ -445,10 +416,10 @@ function getChangedFieldNames(array $oldData, array $newData)
                         </div>
                     </div>
                 </div>
-            </div><!-- /.card-body -->
-        </div><!-- /.card -->
-    </div><!-- /.container-fluid -->
-</div><!-- /.main-content -->
+            </div>
+        </div>
+    </div>
+</div>
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/logs.js" defer></script>
 </body>
 </html>

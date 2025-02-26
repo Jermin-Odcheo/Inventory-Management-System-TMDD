@@ -137,7 +137,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id']) &
 // RETRIEVE ALL PURCHASE ORDERS
 // ------------------------
 try {
-    $stmt = $pdo->query("SELECT PurchaseOrderID, PurchaseOrderNumber, NumberOfUnits, DateOfPurchaseOrder, ItemsSpecification 
+    $stmt = $pdo->query("SELECT PurchaseOrderID, PurchaseOrderNumber, NumberOfUnits, DateOfPurchaseOrder, CreatedDate, ModifiedDate, ItemsSpecification 
                          FROM purchaseorder 
                          ORDER BY DateOfPurchaseOrder DESC");
     $purchaseOrders = $stmt->fetchAll();
@@ -258,9 +258,11 @@ try {
                             <tr>
                                 <th>ID</th>
                                 <th>PO Number</th>
-                                <th>Units</th>
+                                <th>Number of Units</th>
                                 <th>Date of PO</th>
-                                <th>Specification</th>
+                                <th>Created Date</th>
+                                <th>Modified Date</th>
+                                <th>Items Specification</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -271,6 +273,8 @@ try {
                                     <td><?php echo htmlspecialchars($po['PurchaseOrderNumber']); ?></td>
                                     <td><?php echo htmlspecialchars($po['NumberOfUnits']); ?></td>
                                     <td><?php echo htmlspecialchars($po['DateOfPurchaseOrder']); ?></td>
+                                    <td><?php echo date('Y-m-d H:i', strtotime($po['CreatedDate'])); ?></td>
+                                    <td><?php echo date('Y-m-d H:i', strtotime($po['ModifiedDate'])); ?></td>
                                     <td><?php echo htmlspecialchars($po['ItemsSpecification']); ?></td>
                                     <td class="text-center">
                                         <div class="btn-group" role="group">
