@@ -56,6 +56,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $stmtUpdate = $pdo->prepare("UPDATE roles SET Role_Name = ? WHERE Role_ID = ?");
         $stmtUpdate->execute([$roleName, $roleID]);
 
+        // Fetch old privileges.
+        $stmtOldPrivileges = $pdo->prepare("SELECT Privilege_ID FROM role_privileges WHERE Role_ID = ?");
+        $stmtOldPrivileges->execute([$roleID]);
+        $oldPrivileges = $stmtOldPrivileges->fetchAll(PDO::FETCH_COLUMN);
+
         // Remove old privileges.
         $stmtDelete = $pdo->prepare("DELETE FROM role_privileges WHERE Role_ID = ?");
         $stmtDelete->execute([$roleID]);
@@ -65,6 +70,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         foreach ($selectedPrivileges as $privilegeID) {
             $stmtInsert->execute([$roleID, $privilegeID]);
         }
+
+        // Log the action in the role_changes table
+        $stmt = $pdo->prepare("INSERT INTO role_changes (UserID, RoleID, Action, OldRoleName, NewRoleName, OldPrivileges, NewPrivileges) VALUES (?, ?, 'Modified', ?, ?, ?, ?)");
+        $stmt->execute([
+            $_SESSION['user_id'],
+            $roleID,
+            $role['Role_Name'], // Old role name
+            $roleName, // New role name
+            json_encode($oldPrivileges), // Old privileges
+            json_encode($selectedPrivileges) // New privileges
+        ]);
 
         $pdo->commit();
 
