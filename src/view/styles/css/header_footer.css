@@ -12,11 +12,19 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: linear-gradient(145deg, #0F172A, #1E293B);
+    background: #1B1F3B;
     padding: 10px 20px;
     box-shadow: 0 4px 30px rgba(11, 25, 51, 0.15);
-    position: relative;
-    z-index: 1000 !important;
+    position: fixed;
+    top: 0;
+    left: 300px; /* Match the sidebar width */
+    right: 0; /* Extend to the right edge */
+    z-index: 900; /* Lower than sidebar's z-index */
+}
+
+.main-content {
+    margin-left: 300px; /* Match sidebar width */
+    padding-top: 70px; /* Match header height + some padding */
 }
 
 .logo-container {
@@ -33,7 +41,7 @@ body {
     display: grid;
     place-items: center;
     box-shadow: 0 4px 12px rgba(56, 189, 248, 0.25);
-    margin-left: 290px;
+    margin-left: 0; /* Remove the 290px margin */
 }
 
 .logo-icon svg {
@@ -120,14 +128,14 @@ body {
     position: absolute;
     top: 110%; /* positions the dropdown just below the profile area */
     right: 0;
-    background: #1E293B;
+    background: #1B1F3B;
     border-radius: 10px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     overflow: hidden;
     z-index: 1000;
     min-width: 200px;
     width: 100%;
-    background: #1E293B !important;  /* Add !important to override any other styles */
+    background: #1B1F3B !important;  /* Add !important to override any other styles */
     border-radius: 10px;
     overflow: hidden;
     padding: 8px 0;
@@ -238,7 +246,7 @@ body {
     margin: 0;
     padding: 0;
     list-style: none;
-    background: #2d3d59;
+    background: #1B1F3B;
 }
 
 
@@ -297,5 +305,17 @@ body {
     .user-profile {
         width: 100%;
         justify-content: center;
+    }
+}
+
+@media (max-width: 768px) {
+    .header {
+        left: 220px; /* Match the sidebar's responsive width */
+    }
+}
+
+@media (max-width: 768px) {
+    .main-content {
+        margin-left: 220px; /* Match responsive sidebar width */
     }
 }
