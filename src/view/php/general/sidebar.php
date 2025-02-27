@@ -49,23 +49,26 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
             <!-- User Management Dropdown -->
             <li class="dropdown-item">
                 <button class="dropdown-toggle" aria-expanded="false">
-                    <i class="fa-solid fa-user"></i> 
+                    <i class="fa-solid fa-user"></i>
                     <span class="menu-text">User Management</span>
                     <i class="fas fa-chevron-down dropdown-icon"></i>
                 </button>
                 <ul class="dropdown tree" aria-expanded="false">
                     <li class="nav-item">
-                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/user_manager/user_management.php" class="nav-link">
+                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/user_manager/user_management.php"
+                           class="nav-link">
                             <span class="submenu-text">Manage Accounts</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/role_manager/manage_roles.php" class="nav-link">
+                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/role_manager/manage_roles.php"
+                           class="nav-link">
                             <span class="submenu-text">Manage Roles</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/role_manager/user_roles_management.php" class="nav-link">
+                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/role_manager/user_roles_management.php"
+                           class="nav-link">
                             <span class="submenu-text">User Roles Management</span>
                         </a>
                     </li>
@@ -119,6 +122,30 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                         </a>
                     </li>
             </li>
+        </ul>
+        <!--Reports Dropdown-->
+        <li class="dropdown-item">
+            <button class="dropdown-toggle" aria-expanded="false">
+                <i class="fas fa-flag"></i>Reports
+                <i class="fas fa-chevron-down dropdown-icon"></i>
+            </button>
+            <ul class="dropdown tree" aria-expanded="false">
+                <li>
+                    <a href="#">
+                        User Management Reports
+                    </a>
+                </li>
+                <li>
+                    <a href="#">
+                        Equipment Status Reports
+                    </a>
+                </li>
+                <li>
+                    <a href="#">
+                        Equipment Transaction Reports
+                    </a>
+                </li>
+        </li>
         </ul>
     </nav>
 </div>
