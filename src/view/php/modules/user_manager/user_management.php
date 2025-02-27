@@ -287,7 +287,7 @@ if role doesnt include create then remove the add new user
                 <th>
                     <a class="text-white text-decoration-none"
                        href="?sort=User_ID&dir=<?php echo toggleDirection($sortBy, $sortDir, 'User_ID'); ?>">
-                        User ID<?php echo sortIcon($sortBy, 'User_ID', $sortDir); ?>
+                        #<?php echo sortIcon($sortBy, 'User_ID', $sortDir); ?>
                     </a>
                 </th>
                 <th>

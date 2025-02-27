@@ -99,7 +99,7 @@ foreach ($roleData as $row) {
             <table class="table table-striped table-hover">
                 <thead class="table-dark">
                 <tr>
-                    <th>Role ID</th>
+                    <th>#</th>
                     <th>Role Name</th>
                     <th>Modules &amp; Privileges</th>
                     <th>Actions</th>

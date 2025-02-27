@@ -158,7 +158,7 @@ function getStatusIcon($status)
                         <thead class="table-light">
                         <tr>
                             <th><input type="checkbox" id="select-all"></th>
-                            <th>Track ID</th>
+                            <th>#</th>
                             <th>User</th>
                             <th>Module</th>
                             <th>Action</th>

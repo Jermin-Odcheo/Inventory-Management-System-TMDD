@@ -473,7 +473,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                 <table class="table table-striped table-bordered table-sm mb-0" id="table">
                                     <thead class="table-dark">
                                         <tr>
-                                            <th style="width: 7%">Status ID</th>
+                                            <th style="width: 7%">#</th>
                                             <th style="width: 13%">Asset Tag</th>
                                             <th style="width: 15%">Status</th>
                                             <th style="width: 15%">Accountable Individual</th>

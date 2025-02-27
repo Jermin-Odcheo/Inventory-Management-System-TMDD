@@ -468,18 +468,18 @@ try {
                     <table class="table table-striped table-bordered table-sm mb-0" id="table">
                         <thead class="table-dark">
                             <tr>
-                                <th>ID</th>
+                                <th>#</th>
                                 <th>Asset Tag</th>
                                 <th>Description 1</th>
                                 <th>Description 2</th>
                                 <th>Specification</th>
                                 <th>Brand</th>
                                 <th>Model</th>
-                                <th>Serial Number</th>
-                                <th>Date Acquired</th>
+                                <th>Serial #</th>
+                                <th>Acquired Date</th>
                                 <th>Created Date</th>
                                 <th>Modified Date</th>
-                                <th>RR Number</th>
+                                <th>RR #</th>
                                 <th>Location</th>
                                 <th>Accountable Individual</th>
                                 <th>Remarks</th>

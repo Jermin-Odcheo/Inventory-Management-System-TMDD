@@ -398,7 +398,7 @@ try {
                                 <table class="table table-striped table-hover align-middle" id="table">
                                     <thead class="table-dark">
                                     <tr>
-                                        <th>ID</th>
+                                        <th>#</th>
                                         <th>Asset Tag</th>
                                         <th>Building Location</th>
                                         <th>Floor Number</th>
