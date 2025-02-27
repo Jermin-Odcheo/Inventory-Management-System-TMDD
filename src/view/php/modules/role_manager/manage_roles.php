@@ -90,7 +90,10 @@ foreach ($roleData as $row) {
     <div class="main-content container-fluid">
         <h1>Role Management</h1>
         <div class="d-flex justify-content-end mb-3">
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addRoleModal">
+            <!-- Add Undo and Redo buttons here -->
+            <button type="button" class="btn btn-secondary me-2" id="undoButton">Undo</button>
+            <button type="button" class="btn btn-secondary" id="redoButton">Redo</button>
+            <button type="button" class="btn btn-primary ms-2" data-bs-toggle="modal" data-bs-target="#addRoleModal">
                 Create New Role
             </button>
         </div>
@@ -99,7 +102,7 @@ foreach ($roleData as $row) {
             <table class="table table-striped table-hover">
                 <thead class="table-dark">
                 <tr>
-                    <th>#</th>
+                    <th>Role ID</th>
                     <th>Role Name</th>
                     <th>Modules &amp; Privileges</th>
                     <th>Actions</th>
@@ -140,21 +143,16 @@ foreach ($roleData as $row) {
     </div><!-- /.main-content -->
 </div><!-- /.wrapper -->
 
-
-
-
-
+<!-- Edit Role Modal -->
 <div class="modal fade" id="editRoleModal" tabindex="-1" aria-labelledby="editRoleModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <!-- Removed the modal-header block -->
             <div id="editRoleContent">
                 Loading...
             </div>
         </div>
     </div>
 </div>
-
 
 <!-- Confirm Delete Modal -->
 <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
@@ -189,48 +187,88 @@ foreach ($roleData as $row) {
 </div>
 
 <script>
-    $(document).ready(function() {
-        // Load edit role modal content via AJAX.
-        $('.edit-role-btn').on('click', function() {
-            var roleID = $(this).data('role-id');
-            $('#editRoleContent').html("Loading...");
-            $.ajax({
-                url: 'edit_roles.php',
-                type: 'GET',
-                data: { id: roleID },
-                success: function(response) {
-                    $('#editRoleContent').html(response);
-                },
-                error: function() {
-                    $('#editRoleContent').html('<p class="text-danger">Error loading role data.</p>');
-                }
-            });
-        });
-
-        // Handle delete role modal.
-        $('#confirmDeleteModal').on('show.bs.modal', function(event) {
-            var button = $(event.relatedTarget);
-            var roleID = button.data('role-id');
-            var roleName = button.data('role-name');
-            $('#roleNamePlaceholder').text(roleName);
-            $('#confirmDeleteButton').attr('href', 'delete_role.php?id=' + roleID);
-        });
-
-        // Load add role modal content via AJAX.
-        $('#addRoleModal').on('show.bs.modal', function () {
-            $('#addRoleContent').html("Loading...");
-            $.ajax({
-                url: 'add_role.php',
-                type: 'GET',
-                success: function(response) {
-                    $('#addRoleContent').html(response);
-                },
-                error: function() {
-                    $('#addRoleContent').html('<p class="text-danger">Error loading form.</p>');
-                }
-            });
+$(document).ready(function() {
+    // Load edit role modal content via AJAX.
+    $('.edit-role-btn').on('click', function() {
+        var roleID = $(this).data('role-id');
+        $('#editRoleContent').html("Loading...");
+        $.ajax({
+            url: 'edit_roles.php',
+            type: 'GET',
+            data: { id: roleID },
+            success: function(response) {
+                $('#editRoleContent').html(response);
+            },
+            error: function() {
+                $('#editRoleContent').html('<p class="text-danger">Error loading role data.</p>');
+            }
         });
     });
+
+    // Handle delete role modal.
+    $('#confirmDeleteModal').on('show.bs.modal', function(event) {
+        var button = $(event.relatedTarget);
+        var roleID = button.data('role-id');
+        var roleName = button.data('role-name');
+        $('#roleNamePlaceholder').text(roleName);
+        $('#confirmDeleteButton').attr('href', 'delete_role.php?id=' + roleID);
+    });
+
+    // Load add role modal content via AJAX.
+    $('#addRoleModal').on('show.bs.modal', function () {
+        $('#addRoleContent').html("Loading...");
+        $.ajax({
+            url: 'add_role.php',
+            type: 'GET',
+            success: function(response) {
+                $('#addRoleContent').html(response);
+            },
+            error: function() {
+                $('#addRoleContent').html('<p class="text-danger">Error loading form.</p>');
+            }
+        });
+    });
+
+    // Undo button click handler
+    $('#undoButton').on('click', function() {
+        $.ajax({
+            url: 'undo.php',
+            type: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    alert(response.message);
+                    window.location.reload(); // Refresh the page to reflect changes
+                } else {
+                    alert(response.message);
+                }
+            },
+            error: function() {
+                alert('Error processing undo request.');
+            }
+        });
+    });
+
+    // Redo button click handler
+    $('#redoButton').on('click', function() {
+        $.ajax({
+            url: 'redo.php',
+            type: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    alert(response.message);
+                    window.location.reload(); // Refresh the page to reflect changes
+                } else {
+                    alert(response.message);
+                }
+            },
+            error: function() {
+                alert('Error processing redo request.');
+            }
+        });
+    });
+});
 </script>
 </body>
 </html>
