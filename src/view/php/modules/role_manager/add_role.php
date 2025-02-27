@@ -25,6 +25,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $stmt = $pdo->prepare("INSERT INTO roles (Role_Name) VALUES (?)");
                 if ($stmt->execute([$role_name])) {
+                    $roleID = $pdo->lastInsertId();
+
+                    // Log the action in the role_changes table
+                    $stmt = $pdo->prepare("INSERT INTO role_changes (UserID, RoleID, Action, NewRoleName) VALUES (?, ?, 'Add', ?)");
+                    $stmt->execute([
+                        $_SESSION['user_id'],
+                        $roleID,
+                        $role_name
+                    ]);
+
                     echo "<script>window.location.reload();</script>";
                     exit();
                 } else {
@@ -64,5 +74,3 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         });
     });
 </script>
-
-
