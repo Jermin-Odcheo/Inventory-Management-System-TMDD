@@ -12,50 +12,47 @@
             box-sizing: border-box;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-
+        
         body {
             background-color: #f5f7fb;
             padding: 2rem;
         }
-
+        
         .container {
             max-width: 1200px;
             margin: 0 auto;
         }
-
+        
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 2rem;
         }
-
+        
         .search-container {
             display: flex;
             gap: 1rem;
         }
-
+        
         .search-bar {
-            padding: 0.8rem 1rem;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            width: 300px;
-            font-size: 1rem;
+            padding: 0.5rem;
+            border: 1px solid #ccc;
+            border-radius: 5px;
         }
-
+        
         .sort-dropdown {
-            padding: 0.8rem;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            background-color: white;
+            padding: 0.5rem;
+            border: 1px solid #ccc;
+            border-radius: 5px;
         }
-
+        
         .roles-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 1.5rem;
         }
-
+        
         .role-card {
             background: white;
             border-radius: 12px;
@@ -63,77 +60,80 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             border-left: 4px solid;
         }
-
-        .role-card.admin { border-color: #e74c3c; }
-        .role-card.editor { border-color: #3498db; }
-        .role-card.viewer { border-color: #2ecc71; }
-        .role-card.contributor { border-color: #f1c40f; }
-
+        
         .role-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 1.5rem;
         }
-
+        
         .role-title {
             font-size: 1.2rem;
             font-weight: 600;
         }
-
+        
         .user-count {
             background-color: #f0f2f5;
             padding: 0.3rem 0.8rem;
             border-radius: 20px;
             font-size: 0.9rem;
         }
-
+        
         .user-list {
             list-style: none;
             margin-bottom: 1.5rem;
         }
-
+        
         .user-item {
             display: flex;
             align-items: center;
             padding: 0.5rem 0;
             border-bottom: 1px solid #eee;
         }
-
-        .user-item:last-child {
-            border-bottom: none;
-        }
-
+        
         .user-avatar {
             width: 30px;
             height: 30px;
             border-radius: 50%;
             margin-right: 0.8rem;
-        }
-
-        .total-users {
-            color: #666;
+            background-color: #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             font-size: 0.9rem;
-        }
-
-        @media (max-width: 768px) {
-            .header {
-                flex-direction: column;
-                gap: 1rem;
-            }
-            
-            .search-container {
-                width: 100%;
-                flex-direction: column;
-            }
-            
-            .search-bar {
-                width: 100%;
-            }
+            color: #fff;
         }
     </style>
 </head>
 <body>
+    <?php
+    session_start();
+    require_once('../../../../../config/ims-tmdd.php');
+    if (!isset($_SESSION['user_id'])) {
+        header("Location: ../../../../../public/index.php");
+        exit();
+    }
+    include '../../general/header.php';
+    include '../../general/sidebar.php';
+    try {
+        $stmtRoles = $pdo->prepare("SELECT * FROM roles ORDER BY Role_Name ASC");
+        $stmtRoles->execute();
+        $roles = $stmtRoles->fetchAll(PDO::FETCH_ASSOC);
+
+        $stmtUsers = $pdo->prepare("SELECT u.User_ID, u.First_Name, u.Last_Name, r.Role_Name FROM users u JOIN user_roles ur ON u.User_ID = ur.User_ID JOIN roles r ON ur.Role_ID = r.Role_ID WHERE u.is_deleted = 0 ORDER BY r.Role_Name, u.First_Name, u.Last_Name");
+        $stmtUsers->execute();
+        $users = $stmtUsers->fetchAll(PDO::FETCH_ASSOC);
+
+        $roleUsers = [];
+        foreach ($users as $user) {
+            $roleUsers[$user['Role_Name']][] = $user;
+        }
+    } catch (PDOException $e) {
+        die("Database error: " . $e->getMessage());
+    }
+    ?>
+
     <div class="container">
         <div class="header">
             <h1>User Roles Management</h1>
@@ -145,62 +145,45 @@
                 </select>
             </div>
         </div>
-
         <div class="roles-grid">
-            <!-- Admin Role -->
-            <div class="role-card admin">
-                <div class="role-header">
-                    <div class="role-title">
-                        <i class="fas fa-shield-alt"></i> Administrator
+            <?php foreach ($roles as $role): ?>
+                <div class="role-card">
+                    <div class="role-header">
+                        <div class="role-title">
+                            <i class="fas fa-shield-alt"></i> <?php echo htmlspecialchars($role['Role_Name']); ?>
+                        </div>
+                        <span class="user-count">
+                            <?php echo isset($roleUsers[$role['Role_Name']]) ? count($roleUsers[$role['Role_Name']]) : 0; ?> users
+                        </span>
                     </div>
-                    <span class="user-count">5 users</span>
+                    <ul class="user-list">
+                        <?php if (isset($roleUsers[$role['Role_Name']])): ?>
+                            <?php foreach ($roleUsers[$role['Role_Name']] as $user): ?>
+                                <li class="user-item">
+                                    <div class="user-avatar">
+                                        <?php echo strtoupper(substr($user['First_Name'], 0, 1) . substr($user['Last_Name'], 0, 1)); ?>
+                                    </div>
+                                    <?php echo htmlspecialchars($user['First_Name'] . ' ' . $user['Last_Name']); ?>
+                                </li>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <li class="user-item">No users assigned.</li>
+                        <?php endif; ?>
+                    </ul>
                 </div>
-                <ul class="user-list">
-                    <li class="user-item">
-                        <img src="https://i.pravatar.cc/30" alt="avatar" class="user-avatar">
-                        Sarah Johnson
-                    </li>
-                    <!-- Add more users -->
-                </ul>
-                <div class="total-users">Total Administrators: 5</div>
-            </div>
-
-            <!-- Editor Role -->
-            <div class="role-card editor">
-                <div class="role-header">
-                    <div class="role-title">
-                        <i class="fas fa-edit"></i> Editor
-                    </div>
-                    <span class="user-count">12 users</span>
-                </div>
-                <ul class="user-list">
-                    <!-- Users list -->
-                </ul>
-                <div class="total-users">Total Editors: 12</div>
-            </div>
-
-            <!-- Add more role cards -->
+            <?php endforeach; ?>
         </div>
     </div>
-
     <script>
-        // Add JavaScript for search and sorting functionality
-        const searchInput = document.querySelector('.search-bar');
-        const roleCards = document.querySelectorAll('.role-card');
-
-        searchInput.addEventListener('input', (e) => {
+        document.querySelector('.search-bar').addEventListener('input', (e) => {
             const searchTerm = e.target.value.toLowerCase();
-            
-            roleCards.forEach(card => {
+            document.querySelectorAll('.role-card').forEach(card => {
                 const roleName = card.querySelector('.role-title').textContent.toLowerCase();
                 const users = card.querySelectorAll('.user-item');
                 let hasMatch = roleName.includes(searchTerm);
-
                 users.forEach(user => {
-                    const userName = user.textContent.toLowerCase();
-                    if (userName.includes(searchTerm)) hasMatch = true;
+                    if (user.textContent.toLowerCase().includes(searchTerm)) hasMatch = true;
                 });
-
                 card.style.display = hasMatch ? 'block' : 'none';
             });
         });
