@@ -380,6 +380,29 @@ INSERT INTO `roles` (`Role_ID`, `Role_Name`) VALUES
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `role_changes`
+--
+
+DROP TABLE IF EXISTS `role_changes`;
+CREATE TABLE IF NOT EXISTS `role_changes` (
+  `ChangeID` int NOT NULL AUTO_INCREMENT,
+  `UserID` int NOT NULL,
+  `RoleID` int NOT NULL,
+  `Action` enum('Add','Modified','Delete') NOT NULL,
+  `OldRoleName` varchar(191) DEFAULT NULL,
+  `NewRoleName` varchar(191) DEFAULT NULL,
+  `ChangeTimestamp` datetime DEFAULT CURRENT_TIMESTAMP,
+  `OldPrivileges` text,
+  `NewPrivileges` text,
+  `IsUndone` tinyint(1) DEFAULT '0',
+  PRIMARY KEY (`ChangeID`),
+  KEY `UserID` (`UserID`),
+  KEY `RoleID` (`RoleID`)
+) ENGINE=MyISAM AUTO_INCREMENT=31 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `role_privileges`
 --
 
