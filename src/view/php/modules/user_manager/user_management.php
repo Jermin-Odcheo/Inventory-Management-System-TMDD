@@ -130,7 +130,7 @@ try {
     $stmt->execute();
     $privs = $stmt->fetchAll(PDO::FETCH_ASSOC);
     $privNames = array_column($privs, 'privilege_name');
-    if (empty($privNames) || !in_array("View", $privNames)) { //redirect to home if you got no privs for this page 
+    if (empty($privNames) || !in_array("View", $privNames)) { //redirect to home if you got no privs for this page
         header("Location: ../../../../../public/index.php");
         exit();
     }
@@ -156,7 +156,7 @@ try {
     $privs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $privNames = array_column($privs, 'privilege_name');
-    if (!empty($privNames) && in_array("Edit", $privNames)) { 
+    if (!empty($privNames) && in_array("Edit", $privNames)) {
         //show edit button if privileges are not empty and edit is in them
         $showEditButton = true;
     }
@@ -248,17 +248,95 @@ if role doesnt include create then remove the add new user
     </div>
 
     <div class="d-flex justify-content-end mb-3">
-        <a href="add_user.php" class="btn btn-primary me-2">Add New User</a>
+        <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#addUserModal">
+            Add New User
+        </button>
         <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
             Delete My Account
         </button>
+    </div>
+    <!-- Modal for adding a new user -->
+    <div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addUserModalLabel">Add New User</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addUserForm" method="POST" action="add_user.php">
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email:</label>
+                            <input type="email" name="email" id="email" class="form-control" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password:</label>
+                            <input type="password" name="password" id="password" class="form-control" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="first_name" class="form-label">First Name:</label>
+                            <input type="text" name="first_name" id="first_name" class="form-control" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="last_name" class="form-label">Last Name:</label>
+                            <input type="text" name="last_name" id="last_name" class="form-control" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="modal_department" class="form-label">Department:</label>
+                            <select name="department" id="modal_department" class="form-select mb-2" required>
+                                <option value="">Select Department</option>
+                                <?php foreach ($departments as $code => $name): ?>
+                                    <option value="<?php echo htmlspecialchars($code); ?>">
+                                        <?php echo htmlspecialchars($name); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                                <option value="custom">Custom Department</option>
+                            </select>
+                            <input type="text" id="modal_custom_department" name="custom_department"
+                                   class="form-control"
+                                   style="display: none;"
+                                   placeholder="Enter custom department">
+                        </div>
+
+                        <fieldset class="mb-3">
+                            <legend>Assign Roles: <span class="text-danger">*</span></legend>
+                            <div class="text-muted mb-2">At least one role must be selected</div>
+                            <?php
+                            // Fetch roles for the modal
+                            $stmt = $pdo->prepare("SELECT * FROM roles");
+                            $stmt->execute();
+                            $modal_roles = $stmt->fetchAll();
+
+                            foreach ($modal_roles as $role): ?>
+                                <div class="form-check">
+                                    <input type="checkbox" name="roles[]" value="<?php echo $role['Role_ID']; ?>"
+                                           id="modal_role_<?php echo $role['Role_ID']; ?>"
+                                           class="form-check-input modal-role-checkbox">
+                                    <label for="modal_role_<?php echo $role['Role_ID']; ?>" class="form-check-label">
+                                        <?php echo htmlspecialchars($role['Role_Name']); ?>
+                                    </label>
+                                </div>
+                            <?php endforeach; ?>
+                        </fieldset>
+
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-primary">Add User</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Add the filter controls -->
     <div class="row mb-3">
         <div class="col-md-6">
             <form class="d-flex" method="GET">
-                <select name="department" class="form-select me-2" style="width: 400px;">
+                <select name="department" class="form-select me-2 department-filter" style="width: 400px;">
                     <option value="all">All Departments</option>
                     <?php foreach ($departments as $code => $name): ?>
                         <option value="<?php echo htmlspecialchars($code); ?>"
@@ -349,16 +427,16 @@ if role doesnt include create then remove the add new user
                     </td>
                     <td>
                         <?php if ($showEditButton): ?>
-                        <button type="button" class="btn btn-sm btn-warning btn-edit"
-                                data-id="<?php echo $user['User_ID']; ?>"
-                                data-email="<?php echo htmlspecialchars($user['Email']); ?>"
-                                data-first-name="<?php echo htmlspecialchars($user['First_Name']); ?>"
-                                data-last-name="<?php echo htmlspecialchars($user['Last_Name']); ?>"
-                                data-department="<?php echo htmlspecialchars($user['Department']); ?>"
-                                data-status="<?php echo htmlspecialchars($user['Status']); ?>"
-                                data-bs-toggle="modal" data-bs-target="#editUserModal">
-                            Edit
-                        </button>
+                            <button type="button" class="btn btn-sm btn-warning btn-edit"
+                                    data-id="<?php echo $user['User_ID']; ?>"
+                                    data-email="<?php echo htmlspecialchars($user['Email']); ?>"
+                                    data-first-name="<?php echo htmlspecialchars($user['First_Name']); ?>"
+                                    data-last-name="<?php echo htmlspecialchars($user['Last_Name']); ?>"
+                                    data-department="<?php echo htmlspecialchars($user['Department']); ?>"
+                                    data-status="<?php echo htmlspecialchars($user['Status']); ?>"
+                                    data-bs-toggle="modal" data-bs-target="#editUserModal">
+                                Edit
+                            </button>
                         <?php endif; ?>
                         <?php
                         $targetUserRoles = getCurrentUserRoles($pdo, $user['User_ID']);
@@ -597,7 +675,9 @@ if role doesnt include create then remove the add new user
 
 <!-- Custom JavaScript for bulk actions and form handling -->
 <script>
+
     $(document).ready(function () {
+
         // Update bulk action buttons for active users
         function updateBulkActionButtons() {
             var activeCount = $(".select-row:checked").length;
@@ -775,8 +855,7 @@ if role doesnt include create then remove the add new user
             $(this).closest('.alert').hide();
         });
 
-        // Department filter change handler
-        $('select[name="department"]').on('change', function () {
+        $('.department-filter').on('change', function () {
             this.form.submit();
         });
 
