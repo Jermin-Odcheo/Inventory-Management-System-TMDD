@@ -7,12 +7,8 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
 ?>
 <!-- Sidebar -->
 <div class="sidebar">
-    <!-- Font Awesome CSS (Ideally load this in your <head> for performance) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
-
-    <!-- If you haven't already, link your main CSS, or place the .tree CSS below in that file -->
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/sidebar.css">
-
     <h3>Menu</h3>
     <nav>
         <ul>
@@ -21,12 +17,10 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                     <i class="fas fa-tachometer-alt"></i> Dashboard
                 </a>
             </li>
-
             <!-- Example: Only show certain links for specific roles -->
             <?php if ($role === 'Super Admin' || $role === 'Admin'): ?>
                 <!-- Admin-specific links here -->
             <?php endif; ?>
-
             <!-- Logs Dropdown -->
             <li class="dropdown-item">
                 <button class="dropdown-toggle" aria-expanded="false">
@@ -37,22 +31,21 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                 <ul class="dropdown tree" aria-expanded="false">
                     <li>
                         <a href="<?php echo BASE_URL; ?>src/view/php/clients/admins/audit_log.php">
-                            <i class="fas fa-history"></i> Audit Logs
+                            Audit Logs
                         </a>
                     </li>
                     <li>
                         <a href="<?php echo BASE_URL; ?>src/view/php/clients/admins/em_audit_log.php">
-                            <i class="fas fa-history"></i> Equipment Management Audit Logs
+                            Equipment Management Audit Logs
                         </a>
-                    </li>                    
+                    </li>
                     <li>
                         <a href="<?php echo BASE_URL; ?>src/view/php/clients/admins/archive.php">
-                            <i class="fas fa-archive"></i> Archives
+                            Archives
                         </a>
                     </li>
                 </ul>
             </li>
-
             <!-- User Management Dropdown -->
             <li class="dropdown-item">
                 <button class="dropdown-toggle" aria-expanded="false">
@@ -119,10 +112,6 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                         </a>
                     </li>
             </li>
-        </ul>
-        </li>
-
-
         </ul>
     </nav>
 </div>

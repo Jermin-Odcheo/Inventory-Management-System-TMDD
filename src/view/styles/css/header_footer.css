@@ -212,6 +212,7 @@ body {
     position: relative;
     color: #ecf0f1;
     transition: background 0.3s;
+
 }
 
 .settings-item:hover {
@@ -229,8 +230,10 @@ body {
     margin: 0;
     padding: 0;
     list-style: none;
-    background: #1E293B;
+    background: #2d3d59;
 }
+
+
 
 .subdropdown-menu.show {
     display: block;
@@ -253,7 +256,9 @@ body {
 .subdropdown-menu li a:hover {
     background: rgba(255, 255, 255, 0.1);
 }
-
+.dropdownMenu{
+    background: #2d3d59;
+}
 /* Rotate arrow for dropdown */
 .settings-item .submenu-arrow {
     transform: rotate(90deg);

@@ -7,6 +7,8 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: " . BASE_URL . "public/index.php"); // Redirect to login page
     exit();
 }
+$role = $_SESSION['role'];
+$email = $_SESSION['email'];
 ?>
 
 <!DOCTYPE html>
@@ -42,8 +44,9 @@ if (!isset($_SESSION['user_id'])) {
                 <span class="dropdown-indicator"><i class="fas fa-caret-down"></i></span>
             </div>
             <div class="user-info">
-                <div class="user-name">Lebron N. James</div>
-                <div class="user-role">WAREHOUSE MANAGER</div>
+                <!--TO CHANGE FOR USERNAME-->
+                <div class="user-name"><?php echo $email; ?></div>
+                <div class="user-role"><?php echo $role; ?> </div>
             </div>
             <div class="dropdown-menu" id="dropdownMenu">
                 <div class="settings-container">
