@@ -12,10 +12,10 @@ if (!isset($pdo)) {
 }
 
 // Check if the user is logged in
-// if (!isset($_SESSION['user_id'])) {
-//     header("Location: ../../../../../public/index.php");
-//     exit();
-// }
+if (!isset($_SESSION['user_id'])) {
+    header("Location: ../../../../../public/index.php");
+    exit();
+}
 
 // Define allowed sorting columns (for active users)
 $allowedSortColumns = ['User_ID', 'Email', 'First_Name', 'Last_Name', 'Department', 'Status'];
@@ -98,8 +98,8 @@ function getCurrentUserRoles($pdo, $userId)
 }
 
 // Get current user's roles
-// $currentUserRoles = getCurrentUserRoles($pdo, $_SESSION['user_id']);
-$currentUserRoles = ["Regular User"];
+$currentUserRoles = getCurrentUserRoles($pdo, $_SESSION['user_id']);
+// $currentUserRoles = ["Regular User"];
 
 // Add this function to check if current user can delete target user
 function canDeleteUser($currentUserRoles, $targetUserRoles)
@@ -115,8 +115,8 @@ function canDeleteUser($currentUserRoles, $targetUserRoles)
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-RBAC : view
-if role doesnt include view for User module then redirect
+RBAC : sql statement
+thq query that RBAC will work with
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 try {
@@ -125,17 +125,25 @@ try {
         from privileges as p 
         join role_privileges as rp on p.privilege_id = rp.privilege_id 
         join roles as r on r.role_id = rp.role_id
-        where rp.role_id = (select r.role_id where role_name = 'Regular User') 
+        where rp.role_id = ? 
+        and module_id = 1
     ");
-    $stmt->execute();
+    $stmt->execute([$_SESSION['user_id']]);
     $privs = $stmt->fetchAll(PDO::FETCH_ASSOC);
     $privNames = array_column($privs, 'privilege_name');
-    if (empty($privNames) || !in_array("View", $privNames)) { //redirect to home if you got no privs for this page 
-        header("Location: ../../../../../public/index.php");
-        exit();
-    }
 } catch (PDOException $e) {
     die("Database query error: " . $e->getMessage());
+}
+/*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+RBAC : view
+if role doesnt include view for User module then redirect
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*/
+if (empty($privNames) || !in_array("View", $privNames)) { 
+    //redirect to home if you got no privs for this page 
+    header("Location: ../../../../../public/index.php");
+    exit();
 }
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -144,36 +152,32 @@ if role doesnt include edit then remove those edit buttons
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 $showEditButton = false;
-try {
-    $stmt = $pdo->prepare("
-        select privilege_name 
-        from privileges as p 
-        join role_privileges as rp on p.privilege_id = rp.privilege_id 
-        join roles as r on r.role_id = rp.role_id
-        where rp.role_id = (select r.role_id where role_name = 'Regular User') 
-    ");
-    $stmt->execute();
-    $privs = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    $privNames = array_column($privs, 'privilege_name');
-    if (!empty($privNames) && in_array("Edit", $privNames)) { 
-        //show edit button if privileges are not empty and edit is in them
-        $showEditButton = true;
-    }
-} catch (PDOException $e) {
-    die("Database query error: " . $e->getMessage());
+if (!empty($privNames) && in_array("Edit", $privNames)) { 
+    //show edit button if privileges are not empty and edit is in the privs
+    $showEditButton = true;
 }
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+RBAC : delete
 if role doesnt include delete then remove the delete option thingy
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
-
+$showDeleteButton = false;
+if (!empty($privNames) && in_array("Delete", $privNames)) { 
+    //show delete button if privileges are not empty and delete is in the privs
+    $showDeleteButton = true;
+}
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+RBAC : create
 if role doesnt include create then remove the add new user
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
+$showCreateButton = false;
+if (!empty($privNames) && in_array("Add", $privNames)) { 
+    //show delete button if privileges are not empty and delete is in the privs
+    $showCreateButton = true;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -247,8 +251,11 @@ if role doesnt include create then remove the add new user
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 
+
     <div class="d-flex justify-content-end mb-3">
+    <?php if ($showCreateButton): ?>
         <a href="add_user.php" class="btn btn-primary me-2">Add New User</a>
+    <?php endif; ?>    
         <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
             Delete My Account
         </button>
@@ -419,11 +426,13 @@ if role doesnt include create then remove the add new user
     </div> <!-- /.End of Pagination -->
 
     <!-- Bulk action button for active users -->
+    <?php if ($showDeleteButton): ?>
     <div class="mb-3">
         <button type="button" id="delete-selected" class="btn btn-danger" style="display: none;" disabled>
             Delete Selected
         </button>
     </div>
+    <?php endif; ?>
 </div><!-- /.main-content -->
 
 <!-- Modal for editing user -->
