@@ -56,22 +56,29 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
             <!-- User Management Dropdown -->
             <li class="dropdown-item">
                 <button class="dropdown-toggle" aria-expanded="false">
-                    <i class="fa-solid fa-user"></i> User Management
+                    <i class="fa-solid fa-user"></i> 
+                    <span class="menu-text">User Management</span>
                     <i class="fas fa-chevron-down dropdown-icon"></i>
                 </button>
                 <ul class="dropdown tree" aria-expanded="false">
-                    <li>
-                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/user_manager/user_management.php">
-                            Manage Accounts
+                    <li class="nav-item">
+                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/user_manager/user_management.php" class="nav-link">
+                            <span class="submenu-text">Manage Accounts</span>
                         </a>
                     </li>
-                    <li>
-                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/role_manager/manage_roles.php">
-                            Manage Roles
+                    <li class="nav-item">
+                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/role_manager/manage_roles.php" class="nav-link">
+                            <span class="submenu-text">Manage Roles</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/role_manager/user_roles_management.php" class="nav-link">
+                            <span class="submenu-text">User Roles Management</span>
                         </a>
                     </li>
                 </ul>
             </li>
+
             <!-- Equipment Management Dropdown -->
             <li class="dropdown-item">
                 <button class="dropdown-toggle" aria-expanded="false">
