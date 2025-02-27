@@ -1,7 +1,7 @@
 <?php
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
-// include '../../general/header.php';
+include '../../general/header.php';
 // Enable error reporting for debugging
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
@@ -209,6 +209,9 @@ if (!empty($privNames) && in_array("Add", $privNames)) {
         .search-container i {
             color: #6c757d;
             pointer-events: none;
+        }
+        .container-fluid {
+            padding: 100px 15px;
         }
     </style>
 </head>
