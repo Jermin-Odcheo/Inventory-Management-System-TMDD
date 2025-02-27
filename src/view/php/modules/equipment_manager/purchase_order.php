@@ -257,13 +257,13 @@ try {
                     <table class="table table-striped table-bordered table-sm mb-0" id="table">
                         <thead class="table-dark">
                             <tr>
-                                <th>ID</th>
+                                <th>#</th>
                                 <th>PO Number</th>
-                                <th>Number of Units</th>
+                                <th>Units</th>
                                 <th>Date of PO</th>
                                 <th>Created Date</th>
                                 <th>Modified Date</th>
-                                <th>Items Specification</th>
+                                <th>Specification</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
