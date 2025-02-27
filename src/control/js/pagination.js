@@ -13,6 +13,26 @@ function updatePagination() {
     const totalRows = allRows.length;
     totalRowsSpan.textContent = totalRows;
 
+    if (totalRows === 0) {
+        console.log("Table is empty. Setting pagination to 0.");
+
+        // Update pagination info for empty table
+        currentPageSpan.textContent = '0';
+        rowsPerPageSpan.textContent = '0';
+        totalRowsSpan.textContent = '0';
+
+        // Hide navigation buttons
+        prevButton.style.display = 'none';
+        nextButton.style.display = 'none';
+
+        // Clear pagination numbers
+        const paginationContainer = document.getElementById('pagination');
+        paginationContainer.innerHTML = '';
+
+        return; // Exit the function early
+    }
+
+
     // Calculate page information
     const maxPages = Math.ceil(totalRows / rowsPerPage);
     currentPage = Math.max(1, Math.min(currentPage, maxPages)); // Make sure current page is valid
@@ -37,8 +57,19 @@ function updatePagination() {
 
     // Update pagination info text
     const displayStart = totalRows === 0 ? 0 : startIndex + 1;
-    currentPageSpan.textContent = displayStart;
-    rowsPerPageSpan.textContent = endIndex;
+    const displayEnd = totalRows === 0 ? 0 : endIndex;
+
+// Ensure correct text when table is empty
+    if (totalRows === 0) {
+        currentPageSpan.textContent = '0';
+        rowsPerPageSpan.textContent = '0';
+        totalRowsSpan.textContent = '0';
+    } else {
+        currentPageSpan.textContent = displayStart;
+        rowsPerPageSpan.textContent = displayEnd;
+        totalRowsSpan.textContent = totalRows;
+    }
+
 
     // Show or hide the Previous and Next buttons using the important flag
     if (currentPage === 1) {
@@ -62,6 +93,8 @@ function updatePagination() {
     // Update pagination numbers
     renderPagination();
 }
+
+
 
 // Event Listener for DOMContentLoaded
 document.addEventListener('DOMContentLoaded', function () {
@@ -120,7 +153,7 @@ function renderPagination() {
     const allRows = document.querySelectorAll('#table tbody tr');
     const totalRows = allRows.length;
     const maxPages = Math.ceil(totalRows / rowsPerPage);
-
+    if (totalRows === 0) return;
     if (maxPages <= 1) return;
 
     // Calculate range of pages to show

@@ -295,7 +295,7 @@ function getChangedFieldNames(array $oldData, array $newData)
 
                 <!-- Table container -->
                 <div class="table-responsive">
-                    <table class="table table-hover">
+                    <table class="table table-hover" id="table">
                         <colgroup>
                             <col class="track">
                             <col class="user">
@@ -421,6 +421,7 @@ function getChangedFieldNames(array $oldData, array $newData)
     </div>
 </div>
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/logs.js" defer></script>
+<script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 </body>
 </html>
 
