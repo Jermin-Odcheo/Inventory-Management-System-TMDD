@@ -31,10 +31,16 @@ try {
     }
 
     // Delete the role from the roles table.
-    // If you have foreign key constraints with ON DELETE CASCADE (as in your SQL dump), 
-    // the associated records in role_privileges (and possibly other related tables) will be automatically removed.
     $stmt = $pdo->prepare("DELETE FROM roles WHERE Role_ID = ?");
     if ($stmt->execute([$role_id])) {
+        // Log the action in the role_changes table
+        $stmt = $pdo->prepare("INSERT INTO role_changes (UserID, RoleID, Action, OldRoleName) VALUES (?, ?, 'Delete', ?)");
+        $stmt->execute([
+            $_SESSION['user_id'],
+            $role_id,
+            $role['Role_Name'] // Old role name
+        ]);
+
         $_SESSION['success'] = "Role deleted successfully.";
     } else {
         $_SESSION['error'] = "Failed to delete the role. Please try again.";
