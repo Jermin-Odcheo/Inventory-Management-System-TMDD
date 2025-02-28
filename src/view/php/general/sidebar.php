@@ -167,4 +167,19 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
             }
         });
     });
+
+    /* Add some JavaScript to handle click state */
+document.addEventListener('DOMContentLoaded', function() {
+    var dropdownToggles = document.querySelectorAll('.dropdown-toggle');
+    
+    dropdownToggles.forEach(function(toggle) {
+        toggle.addEventListener('click', function() {
+            // Remove any leftover hover styles
+            this.style.background = 'transparent';
+            this.style.transform = 'none';
+            this.style.textShadow = 'none';
+            this.style.boxShadow = 'none';
+        });
+    });
+});
 </script>
