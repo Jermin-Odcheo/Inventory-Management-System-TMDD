@@ -251,14 +251,12 @@ if role doesnt include create then remove the add new user
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 
-    <div class="d-flex justify-content-end mb-3">
-        <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#addUserModal">
-            Add New User
-        </button>
-        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
-            Delete My Account
-        </button>
-    </div>
+
+    <!--        DELETE MY ACCOUNT SHOULD BE MOVED IN THE SETTINGS-->
+    <!--        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">-->
+    <!--            Delete My Account-->
+    <!--        </button>-->
+
     <!-- Modal for adding a new user -->
     <div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
         <div class="modal-dialog">
@@ -335,12 +333,12 @@ if role doesnt include create then remove the add new user
             </div>
         </div>
     </div>
-
-    <!-- Add the filter controls -->
+    <!--FILTER SEARCH AND ADD USER BUTTON-->
     <div class="row mb-3">
-        <div class="col-md-6">
+        <div class="col-md-8">
             <form class="d-flex" method="GET">
-                <select name="department" class="form-select me-2 department-filter" style="width: 400px;">
+                <!--Filter Department/Search-->
+                <select name="department" class="form-select me-2 department-filter">
                     <option value="all">All Departments</option>
                     <?php foreach ($departments as $code => $name): ?>
                         <option value="<?php echo htmlspecialchars($code); ?>"
@@ -352,11 +350,15 @@ if role doesnt include create then remove the add new user
                 <div class="search-container position-relative">
                     <input type="text" name="search" id="searchUsers" class="form-control"
                            placeholder="Search users..."
-                           value="<?php echo htmlspecialchars($_GET['search'] ?? ''); ?>"
-                           style="width: 250px;">
+                           value="<?php echo htmlspecialchars($_GET['search'] ?? ''); ?>">
                     <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-2"></i>
                 </div>
             </form>
+        </div>
+        <div class="col-md-4 d-flex justify-content-end">
+            <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                Add New User
+            </button>
         </div>
     </div>
 
@@ -469,8 +471,6 @@ if role doesnt include create then remove the add new user
                             id="totalRows">100</span> entries
                 </div>
             </div>
-
-            <!-- Pagination Controls -->
             <div class="col-12 col-sm-auto ms-sm-auto">
                 <div class="d-flex align-items-center gap-2">
                     <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
@@ -506,6 +506,7 @@ if role doesnt include create then remove the add new user
             Delete Selected
         </button>
     </div>
+
 </div><!-- /.main-content -->
 
 <!-- Modal for editing user -->
@@ -535,7 +536,6 @@ if role doesnt include create then remove the add new user
                     <div class="mb-3">
                         </select>
                     </div>
-
                     <div class="mb-3">
                         <label for="editDepartment" class="form-label">Department</label>
                         <select class="form-select shadow-sm" id="editDepartment" name="department"
@@ -676,10 +676,11 @@ if role doesnt include create then remove the add new user
         </div>
     </div>
 </div>
+
 <script>
-    $(document).ready(function() {
+    $(document).ready(function () {
         // Toggle the custom department input based on the selection
-        $('#modal_department').on('change', function() {
+        $('#modal_department').on('change', function () {
             if ($(this).val() === 'custom') {
                 $('#modal_custom_department').show().attr('required', true);
             } else {
@@ -688,7 +689,7 @@ if role doesnt include create then remove the add new user
         });
 
         // Handle form submission via AJAX
-        $('#addUserForm').on('submit', function(e) {
+        $('#addUserForm').on('submit', function (e) {
             e.preventDefault(); // Prevent the default form submission
 
             // Get the action URL from the form
@@ -700,7 +701,7 @@ if role doesnt include create then remove the add new user
                 type: 'POST',
                 data: $(this).serialize(), // Serialize the form data
                 dataType: 'json',
-                success: function(response) {
+                success: function (response) {
                     if (response.success) {
                         // Hide the modal and refresh or update UI as needed
                         $('#addUserModal').modal('hide');
@@ -709,7 +710,7 @@ if role doesnt include create then remove the add new user
                         alert("Error: " + response.message);
                     }
                 },
-                error: function(xhr, status, error) {
+                error: function (xhr, status, error) {
                     // Log the raw response for debugging
                     console.log("Response Text:", xhr.responseText);
                     alert('An error occurred: ' + error);

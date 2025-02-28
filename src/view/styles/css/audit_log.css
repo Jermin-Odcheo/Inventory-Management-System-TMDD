@@ -190,9 +190,9 @@ col.date {
     gap: 0.25rem;
 }
 
-.action-add {
-    background-color: #afcbef;
-    color: #1065b8;
+.action-create {
+    background-color: #639ce6;
+    color: #ffffff;
     padding: 0.5em 0.75em;
     border-radius: 50px;
     min-width: 80px;
@@ -211,7 +211,7 @@ col.date {
 
 }
 
-.action-deleted, .action-permanent\ delete {
+.action-remove, .action-delete{
     background-color: #e45555;
     color: #ffffff;
     padding: 0.5em 0.75em;
