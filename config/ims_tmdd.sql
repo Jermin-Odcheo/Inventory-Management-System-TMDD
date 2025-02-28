@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Feb 28, 2025 at 07:35 AM
+-- Generation Time: Feb 28, 2025 at 07:57 AM
 -- Server version: 8.2.0
 -- PHP Version: 8.2.13
 
@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS `audit_log` (
   PRIMARY KEY (`TrackID`),
   KEY `idx_module` (`Module`),
   KEY `idx_action` (`Action`)
-) ENGINE=InnoDB AUTO_INCREMENT=96 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=99 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `audit_log`
@@ -58,7 +58,9 @@ INSERT INTO `audit_log` (`TrackID`, `UserID`, `EntityID`, `Action`, `Details`, `
 (92, 1, 144, 'Remove', 'User soft deleted (is_deleted set to 1)', '{\"Email\": \"superadmin123123@example.com\", \"Status\": \"Offline\", \"User_ID\": 144, \"Last_Name\": \"123\", \"Department\": \"SOL\", \"First_Name\": \"123\", \"is_deleted\": 0, \"Last_Active\": null}', '{\"Email\": \"superadmin123123@example.com\", \"Status\": \"Offline\", \"User_ID\": 144, \"Last_Name\": \"123\", \"Department\": \"SOL\", \"First_Name\": \"123\", \"is_deleted\": 1, \"Last_Active\": null}', 'User Management', 'Successful', '2025-02-28 14:44:59'),
 (93, 1, 145, 'Remove', 'User soft deleted (is_deleted set to 1)', '{\"Email\": \"testtest123@example.com\", \"Status\": \"Offline\", \"User_ID\": 145, \"Last_Name\": \"123\", \"Department\": \"SOM\", \"First_Name\": \"123\", \"is_deleted\": 0, \"Last_Active\": null}', '{\"Email\": \"testtest123@example.com\", \"Status\": \"Offline\", \"User_ID\": 145, \"Last_Name\": \"123\", \"Department\": \"SOM\", \"First_Name\": \"123\", \"is_deleted\": 1, \"Last_Active\": null}', 'User Management', 'Successful', '2025-02-28 14:44:59'),
 (94, 1, 144, 'Delete', 'User has been deleted', '{\"Email\": \"superadmin123123@example.com\", \"Status\": \"Offline\", \"User_ID\": 144, \"Last_Name\": \"123\", \"Department\": \"SOL\", \"First_Name\": \"123\", \"is_deleted\": 1, \"Last_Active\": null}', '', 'User Management', 'Successful', '2025-02-28 15:21:12'),
-(95, 1, 145, 'Restored', 'testtest123@example.com has been restored', '{\"is_deleted\": 1}', '{\"is_deleted\": 0}', 'User Management', 'Successful', '2025-02-28 15:31:54');
+(96, 1, 145, 'Modified', 'Updated fields: First_Name, Last_Name', '{\"Email\": \"testtest123@example.com\", \"Status\": \"Offline\", \"User_ID\": 145, \"Password\": \"$2y$10$2dQ47SHsBGEhLS9x6bIqLeuLCpr3ZwgP3kEZ0XVYMD.2/CIvpVCZK\", \"Last_Name\": \"123\", \"Department\": \"SOM\", \"First_Name\": \"123\", \"Last_Active\": null}', '{\"Email\": \"testtest123@example.com\", \"Status\": \"Offline\", \"User_ID\": 145, \"Password\": \"$2y$10$2dQ47SHsBGEhLS9x6bIqLeuLCpr3ZwgP3kEZ0XVYMD.2/CIvpVCZK\", \"Last_Name\": \"123123\", \"Department\": \"SOM\", \"First_Name\": \"123123\", \"Last_Active\": null}', 'User Management', 'Successful', '2025-02-28 15:52:59'),
+(97, 1, 146, 'Restored', '1233333@example.com has been restored', '{\"is_deleted\": 1}', '{\"is_deleted\": 0}', 'User Management', 'Successful', '2025-02-28 15:53:35'),
+(98, 1, 147, 'Restored', 'User restored (is_deleted set to 0)', '{\"Email\": \"superuse12312312r@example.com\", \"Status\": \"Offline\", \"User_ID\": 147, \"Last_Name\": \"123123\", \"Department\": \"SOL\", \"First_Name\": \"123123\", \"is_deleted\": 1, \"Last_Active\": null}', '{\"Email\": \"superuse12312312r@example.com\", \"Status\": \"Offline\", \"User_ID\": 147, \"Last_Name\": \"123123\", \"Department\": \"SOL\", \"First_Name\": \"123123\", \"is_deleted\": 0, \"Last_Active\": null}', 'User Management', 'Successful', '2025-02-28 15:57:09');
 
 -- --------------------------------------------------------
 
@@ -519,9 +521,9 @@ INSERT INTO `users` (`User_ID`, `Email`, `Password`, `First_Name`, `Last_Name`, 
 (141, 'superuseasdr@example.com', '$2y$10$jvRMVO9L7B2pv0TelQDaZeilhdSdwHLZpnAUIqLT7y0i5vYNxozEW', 'asd', 'asd', 'SOM', 'Offline', NULL, 0, NULL, NULL),
 (142, 'testtest@example.com', '$2y$10$VeW7q1lJ7kzlBuMhxk.48OcfEEbVucx2/j5EDNSlAhGGXUnmBLWcq', 'adf', 'adf', 'SOL', 'Offline', NULL, 0, NULL, NULL),
 (143, 'asdasdasdas123d@example.com', '$2y$10$Dd/KgFonELaE92kMGbU0OuTqwWwYYRaIDshRO/6IR5wCxyNBM9Ecu', 'asd', 'asd', 'SOL', 'Offline', NULL, 0, NULL, NULL),
-(145, 'testtest123@example.com', '$2y$10$2dQ47SHsBGEhLS9x6bIqLeuLCpr3ZwgP3kEZ0XVYMD.2/CIvpVCZK', '123', '123', 'SOM', 'Offline', NULL, 0, NULL, NULL),
-(146, '1233333@example.com', '$2y$10$pfVCnoMV/kZ39xk9Zk34ceZ7hXrCaRllfKaTnfrlNm3h5o0Wu7952', '312', '123', 'SOM', 'Offline', NULL, 1, NULL, NULL),
-(147, 'superuse12312312r@example.com', '$2y$10$TlZ6hEyAl4819wKYjGKftOSpubm9aAPmiqJ5PfrpF4YBuklmqJMzW', '123123', '123123', 'SOL', 'Offline', NULL, 1, NULL, NULL);
+(145, 'testtest123@example.com', '$2y$10$2dQ47SHsBGEhLS9x6bIqLeuLCpr3ZwgP3kEZ0XVYMD.2/CIvpVCZK', '123123', '123123', 'SOM', 'Offline', NULL, 0, NULL, NULL),
+(146, '1233333@example.com', '$2y$10$pfVCnoMV/kZ39xk9Zk34ceZ7hXrCaRllfKaTnfrlNm3h5o0Wu7952', '312', '123', 'SOM', 'Offline', NULL, 0, NULL, NULL),
+(147, 'superuse12312312r@example.com', '$2y$10$TlZ6hEyAl4819wKYjGKftOSpubm9aAPmiqJ5PfrpF4YBuklmqJMzW', '123123', '123123', 'SOL', 'Offline', NULL, 0, NULL, NULL);
 
 --
 -- Triggers `users`
@@ -610,55 +612,33 @@ CREATE TRIGGER `after_user_remove` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
 END
 $$
 DELIMITER ;
-DROP TRIGGER IF EXISTS `user_after_update`;
+DROP TRIGGER IF EXISTS `user_after_modify`;
 DELIMITER $$
-CREATE TRIGGER `user_after_update` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
+CREATE TRIGGER `user_after_modify` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
     DECLARE diffList TEXT DEFAULT '';
-
-    -- Handle Restore: if is_deleted changed from 1 to 0
-    IF OLD.is_deleted = 1 AND NEW.is_deleted = 0 THEN
-        INSERT INTO audit_log (
-            UserID,
-            EntityID,
-            Action,
-            Details,
-            OldVal,
-            NewVal,
-            Module,
-            Status
-        )
-        VALUES (
-            @current_user_id,
-            NEW.User_ID,
-            'Restored',
-            CONCAT(NEW.Email, ' has been restored'),
-            JSON_OBJECT('is_deleted', OLD.is_deleted),
-            JSON_OBJECT('is_deleted', NEW.is_deleted),
-            IFNULL(@current_module, 'User Management'),
-            'Successful'
-        );
-    ELSE
-        -- Build the diff list from fields other than is_deleted.
+    
+    -- Only log modifications if is_deleted did not change.
+    IF OLD.is_deleted = NEW.is_deleted THEN
         IF OLD.Email <> NEW.Email THEN 
-            SET diffList = CONCAT(diffList, 'Email, '); 
+            SET diffList = CONCAT(diffList, 'Email, ');
         END IF;
         IF OLD.First_Name <> NEW.First_Name THEN 
-            SET diffList = CONCAT(diffList, 'First_Name, '); 
+            SET diffList = CONCAT(diffList, 'First_Name, ');
         END IF;
         IF OLD.Last_Name <> NEW.Last_Name THEN 
-            SET diffList = CONCAT(diffList, 'Last_Name, '); 
+            SET diffList = CONCAT(diffList, 'Last_Name, ');
         END IF;
         IF OLD.Department <> NEW.Department THEN 
-            SET diffList = CONCAT(diffList, 'Department, '); 
+            SET diffList = CONCAT(diffList, 'Department, ');
         END IF;
         IF OLD.Status <> NEW.Status THEN 
-            SET diffList = CONCAT(diffList, 'Status, '); 
+            SET diffList = CONCAT(diffList, 'Status, ');
         END IF;
         IF OLD.last_active <> NEW.last_active THEN 
-            SET diffList = CONCAT(diffList, 'Last_Active, '); 
+            SET diffList = CONCAT(diffList, 'Last_Active, ');
         END IF;
         IF OLD.Password <> NEW.Password THEN 
-            SET diffList = CONCAT(diffList, 'Password, '); 
+            SET diffList = CONCAT(diffList, 'Password, ');
         END IF;
 
         -- Only insert a log if at least one field (other than is_deleted) changed.
@@ -671,7 +651,8 @@ CREATE TRIGGER `user_after_update` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
                 OldVal,
                 NewVal,
                 Module,
-                Status
+                Status,
+                Date_Time
             )
             VALUES (
                 @current_user_id,
@@ -699,9 +680,58 @@ CREATE TRIGGER `user_after_update` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
                     'Last_Active', NEW.last_active
                 ),
                 IFNULL(@current_module, 'User Management'),
-                'Successful'
+                'Successful',
+                NOW()
             );
         END IF;
+    END IF;
+END
+$$
+DELIMITER ;
+DROP TRIGGER IF EXISTS `user_after_restore`;
+DELIMITER $$
+CREATE TRIGGER `user_after_restore` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
+    -- Check if the update is a restore (is_deleted changed from 1 to 0)
+    IF OLD.is_deleted = 1 AND NEW.is_deleted = 0 THEN
+        INSERT INTO audit_log (
+            `UserID`,              -- The user who performed the action
+            `EntityID`,            -- The ID of the restored user
+            `Action`,              -- Action type
+            `Details`,             -- Description of the action
+            `OldVal`,              -- Old values before the restore
+            `NewVal`,              -- New values after the restore
+            `Module`,              -- Module where the action occurred
+            `Status`,              -- Status of the action
+            `Date_Time`            -- Timestamp of the action
+        ) VALUES (
+            @current_user_id,      -- The user performing the action
+            NEW.User_ID,           -- The ID of the restored user
+            'Restored',            -- Action type
+            'User restored (is_deleted set to 0)',  -- Details
+            JSON_OBJECT(           -- Old values in JSON format
+                'User_ID', OLD.User_ID,
+                'Email', OLD.Email,
+                'First_Name', OLD.First_Name,
+                'Last_Name', OLD.Last_Name,
+                'Department', OLD.Department,
+                'Status', OLD.Status,
+                'Last_Active', OLD.last_active,
+                'is_deleted', OLD.is_deleted
+            ),
+            JSON_OBJECT(           -- New values in JSON format
+                'User_ID', NEW.User_ID,
+                'Email', NEW.Email,
+                'First_Name', NEW.First_Name,
+                'Last_Name', NEW.Last_Name,
+                'Department', NEW.Department,
+                'Status', NEW.Status,
+                'Last_Active', NEW.last_active,
+                'is_deleted', NEW.is_deleted
+            ),
+            IFNULL(@current_module, 'User Management'),
+            'Successful',
+            NOW()                  -- Current timestamp
+        );
     END IF;
 END
 $$
