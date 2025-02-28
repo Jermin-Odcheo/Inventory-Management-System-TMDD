@@ -61,15 +61,32 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/role_manager/manage_roles.php"
-                           class="nav-link">
-                            <span class="submenu-text">Manage Roles</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
                         <a href="<?php echo BASE_URL; ?>src/view/php/modules/role_manager/user_roles_management.php"
                            class="nav-link">
                             <span class="submenu-text">User Roles Management</span>
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+             <!-- Roles and Privileges -->
+            <li class="dropdown-item">
+                <button class="dropdown-toggle" aria-expanded="false">
+                    <i class="fa-solid fa-user"></i>
+                    <span class="menu-text">Roles and Privileges</span>
+                    <i class="fas fa-chevron-down dropdown-icon"></i>
+                </button>
+                <ul class="dropdown tree" aria-expanded="false">
+                    <li class="nav-item">
+                        <a href="<?php echo BASE_URL; ?>../src/view/php/modules/role_manager/manage_roles.php"
+                           class="nav-link">
+                            <span class="submenu-text">Role Management</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="<?php echo BASE_URL; ?>../src/view/php/modules/privilege_manager/manage_privileges.php"
+                           class="nav-link">
+                            <span class="submenu-text">Privilege Management</span>
                         </a>
                     </li>
                 </ul>
