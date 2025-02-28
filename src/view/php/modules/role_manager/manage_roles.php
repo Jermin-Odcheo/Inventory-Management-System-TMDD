@@ -74,7 +74,7 @@ foreach ($roleData as $row) {
         }
         /* (Optional) Override container-fluid padding if needed */
         .container-fluid {
-            padding: 0 15px;
+            padding: 100px 15px;
         }
     </style>
 </head>

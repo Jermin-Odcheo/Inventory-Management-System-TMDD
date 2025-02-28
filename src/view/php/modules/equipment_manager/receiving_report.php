@@ -2,6 +2,10 @@
 // receiving_report.php
 session_start();
 require_once('../../../../../config/ims-tmdd.php'); // Adjust the path as needed
+
+// Include the header
+include('../../general/header.php');
+
 //
 //// Check for admin privileges (you should implement your privilege check).
 //if (!isset($_SESSION['user_id'])) {
@@ -70,16 +74,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Check if the form is for "Add" or "Update"
     if (isset($_POST['action']) && $_POST['action'] === 'add') {
+        $response = array('status' => '', 'message' => '');
         try {
-            // Do not include ReceivingReportFormID in the INSERT query so that it auto-increments.
-            $stmt = $pdo->prepare("INSERT INTO receivingreportform (ReceivingReportNumber, AccountableIndividual, PurchaseOrderNumber, AccountableIndividualLocation)
-                                   VALUES (?, ?, ?, ?)");
-            $stmt->execute([$ReceivingReportNumber, $AccountableIndividual, $PurchaseOrderNumber, $AccountableIndividualLocation]);
-            $_SESSION['success'] = "Receiving Report has been added successfully.";
+            $stmt = $pdo->prepare("INSERT INTO receivingreportform (
+                ReceivingReportNumber, 
+                AccountableIndividual, 
+                PurchaseOrderNumber, 
+                AccountableIndividualLocation
+            ) VALUES (?, ?, ?, ?)");
+            
+            $stmt->execute([
+                $_POST['ReceivingReportNumber'],
+                $_POST['AccountableIndividual'],
+                $_POST['PurchaseOrderNumber'],
+                $_POST['AccountableIndividualLocation']
+            ]);
+            
+            $response['status'] = 'success';
+            $response['message'] = 'Receiving Report has been added successfully.';
         } catch (PDOException $e) {
-            $_SESSION['errors'] = ["Error adding Receiving Report: " . $e->getMessage()];
+            $response['status'] = 'error';
+            $response['message'] = 'Error adding Receiving Report: ' . $e->getMessage();
         }
-        header("Location: receiving_report.php");
+        echo json_encode($response);
         exit;
     } elseif (isset($_POST['action']) && $_POST['action'] === 'update') {
         $id = $_POST['id'];
@@ -143,7 +160,27 @@ try {
     <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
     <!-- Add jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #f8f9fa;
+            min-height: 100vh;
+            padding-top: 80px;
+        }
+        h2.mb-4 {
+            margin-top: 20px;
+        }
+        .main-content {
+            margin-left: 300px;
+            padding: 20px;
+            transition: margin-left 0.3s ease;
+        }
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
 </head>
 
 <body>
@@ -295,23 +332,23 @@ try {
                     <form id="addReportForm" method="post">
                         <input type="hidden" name="action" value="add">
                         <div class="mb-3">
-                            <label for="ReceivingReportNumber" class="form-label">Receiving Report Number</label>
+                            <label for="ReceivingReportNumber" class="form-label">Receiving Report Number <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="ReceivingReportNumber" required>
                         </div>
                         <div class="mb-3">
-                            <label for="AccountableIndividual" class="form-label">Accountable Individual</label>
+                            <label for="AccountableIndividual" class="form-label">Accountable Individual <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="AccountableIndividual" required>
                         </div>
                         <div class="mb-3">
-                            <label for="PurchaseOrderNumber" class="form-label">Purchase Order Number</label>
+                            <label for="PurchaseOrderNumber" class="form-label">Purchase Order Number <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="PurchaseOrderNumber" required>
                         </div>
                         <div class="mb-3">
-                            <label for="AccountableIndividualLocation" class="form-label">Location</label>
+                            <label for="AccountableIndividualLocation" class="form-label">Location <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="AccountableIndividualLocation" required>
                         </div>
                         <div class="mb-3">
-                            <button type="submit" class="btn btn-primary">Add Report</button>
+                            <button type="submit" class="btn btn-primary">Add Receiving Report</button>
                         </div>
                     </form>
                 </div>
@@ -409,6 +446,70 @@ try {
                     window.location.href = '?action=delete&id=' + $(this).data('id');
                 }
             });
+
+            // Add Report form submission
+            $('#addReportForm').on('submit', function(e) {
+                e.preventDefault();
+                $.ajax({
+                    url: 'receiving_report.php',
+                    method: 'POST',
+                    data: $(this).serialize(),
+                    success: function(response) {
+                        try {
+                            const result = JSON.parse(response);
+                            if (result.status === 'success') {
+                                $('#addReportModal').modal('hide');
+                                location.reload();
+                            } else {
+                                alert(result.message || 'An error occurred');
+                            }
+                        } catch (e) {
+                            console.error('Parse error:', e);
+                            location.reload();
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        alert('Error submitting form: ' + error);
+                    }
+                });
+            });
+        });
+    </script>
+    <!-- Add jQuery first -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Then Bootstrap -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Then your custom scripts -->
+    <script>
+        $(document).ready(function() {
+            // Add Report form submission
+            $('#addReportForm').on('submit', function(e) {
+                e.preventDefault();
+                $.ajax({
+                    url: 'receiving_report.php',
+                    method: 'POST',
+                    data: $(this).serialize(),
+                    success: function(response) {
+                        try {
+                            const result = JSON.parse(response);
+                            if (result.status === 'success') {
+                                $('#addReportModal').modal('hide');
+                                location.reload();
+                            } else {
+                                alert(result.message || 'An error occurred');
+                            }
+                        } catch (e) {
+                            console.error('Parse error:', e);
+                            location.reload();
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        alert('Error submitting form: ' + error);
+                    }
+                });
+            });
+
+            // Rest of your existing JavaScript...
         });
     </script>
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>

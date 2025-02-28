@@ -3,6 +3,9 @@
 session_start();
 require_once('../../../../../config/ims-tmdd.php'); // Adjust the path as needed
 
+// Include the header
+include('../../general/header.php');
+
 // -----------------------------------------------------------------
 // Optionally check for admin privileges (uncomment if needed)
 // if (!isset($_SESSION['user_id'])) {
@@ -314,21 +317,31 @@ try {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
 
     <style>
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
             background-color: #f8f9fa;
             min-height: 100vh;
+            padding-top: 70px;
         }
-        .main-content {
+        .container-fluid {
             margin-left: 300px;
             padding: 20px;
-            transition: margin-left 0.3s ease;
+            width: calc(100% - 300px);
+        }
+        h2.mb-4 {
+            margin-top: 5px;
+            margin-bottom: 15px !important;
+        }
+        .card.shadow-sm {
+            margin-top: 10px;
         }
         @media (max-width: 768px) {
-            .main-content {
+            .container-fluid {
                 margin-left: 0;
+                width: 100%;
             }
         }
     </style>
@@ -340,150 +353,143 @@ try {
 <body>
 <?php include '../../general/sidebar.php'; ?>
 
-<div class="main-content">
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Main Content -->
-            <main class="col-md-12 px-md-4 py-4">
-                <h2 class="mb-4">Equipment Location</h2>
+<div class="container-fluid">
+    <h2 class="mb-4">Equipment Location</h2>
 
-                <!-- Success Message -->
-                <?php if (!empty($success)): ?>
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        <i class="bi bi-check-circle"></i> <?php echo $success; ?>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <!-- Success Message -->
+    <?php if (!empty($success)): ?>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle"></i> <?php echo $success; ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <?php endif; ?>
+
+    <!-- Error Messages -->
+    <?php if (!empty($errors)): ?>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <?php foreach ($errors as $err): ?>
+                <p><i class="bi bi-exclamation-triangle"></i> <?php echo $err; ?></p>
+            <?php endforeach; ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <?php endif; ?>
+
+    <!-- List of Equipment Locations Card -->
+    <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center bg-dark text-white">
+            <span><i class="bi bi-list-ul"></i> List of Equipment Locations</span>
+            <div class="input-group w-auto">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control" placeholder="Search..." id="eqSearch">
+            </div>
+        </div>
+        <div class="card-body">
+            <?php if (!empty($equipmentLocations)): ?>
+                <div class="table-responsive">
+                    <!-- Add Location Button and Filter -->
+                    <div class="d-flex justify-content-start mb-3 gap-2">
+                        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addLocationModal">
+                            <i class="bi bi-plus-circle"></i> Add Equipment Location
+                        </button>
+                        <select class="form-select form-select-sm" id="filterBuilding" style="width: auto;">
+                            <option value="">Filter Building Location</option>
+                            <?php
+                            $buildingLocations = array_unique(array_column($equipmentLocations, 'BuildingLocation'));
+                            foreach($buildingLocations as $building) {
+                                if(!empty($building)) {
+                                    echo "<option value='" . htmlspecialchars($building) . "'>" . htmlspecialchars($building) . "</option>";
+                                }
+                            }
+                            ?>
+                        </select>
                     </div>
-                <?php endif; ?>
-
-                <!-- Error Messages -->
-                <?php if (!empty($errors)): ?>
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <?php foreach ($errors as $err): ?>
-                            <p><i class="bi bi-exclamation-triangle"></i> <?php echo $err; ?></p>
-                        <?php endforeach; ?>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                <?php endif; ?>
-
-                <!-- List of Equipment Locations Card -->
-                <div class="card shadow-sm">
-                    <div class="card-header d-flex justify-content-between align-items-center bg-dark text-white">
-                        <span><i class="bi bi-list-ul"></i> List of Equipment Locations</span>
-                        <div class="input-group w-auto">
-                            <span class="input-group-text"><i class="bi bi-search"></i></span>
-                            <input type="text" class="form-control" placeholder="Search..." id="eqSearch">
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <?php if (!empty($equipmentLocations)): ?>
-                            <div class="table-responsive">
-                                <!-- Add Location Button and Filter -->
-                                <div class="d-flex justify-content-start mb-3 gap-2">
-                                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addLocationModal">
-                                        <i class="bi bi-plus-circle"></i> Add Equipment Location
-                                    </button>
-                                    <select class="form-select form-select-sm" id="filterBuilding" style="width: auto;">
-                                        <option value="">Filter Building Location</option>
-                                        <?php
-                                        $buildingLocations = array_unique(array_column($equipmentLocations, 'BuildingLocation'));
-                                        foreach($buildingLocations as $building) {
-                                            if(!empty($building)) {
-                                                echo "<option value='" . htmlspecialchars($building) . "'>" . htmlspecialchars($building) . "</option>";
-                                            }
-                                        }
-                                        ?>
-                                    </select>
-                                </div>
-                                
-                                <table class="table table-striped table-hover align-middle" id="table">
-                                    <thead class="table-dark">
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Asset Tag</th>
-                                        <th>Building Location</th>
-                                        <th>Floor Number</th>
-                                        <th>Specific Area</th>
-                                        <th>Person Responsible</th>
-                                        <th>Remarks</th>
-                                        <th style="width: 12%">Created Date</th>
-                                        <th style="width: 12%">Modified Date</th>
-                                        <th class="text-center">Actions</th>
-                                    </tr>
-                                    </thead>
-                                    <tbody>
-                                    <?php foreach ($equipmentLocations as $location): ?>
-                                        <tr>
-                                            <td><?php echo htmlspecialchars($location['EquipmentLocationID']); ?></td>
-                                            <td><?php echo htmlspecialchars($location['AssetTag']); ?></td>
-                                            <td><?php echo htmlspecialchars($location['BuildingLocation']); ?></td>
-                                            <td><?php echo htmlspecialchars($location['FloorNumber']); ?></td>
-                                            <td><?php echo htmlspecialchars($location['SpecificArea']); ?></td>
-                                            <td><?php echo htmlspecialchars($location['PersonResponsible']); ?></td>
-                                            <td><?php echo htmlspecialchars($location['Remarks']); ?></td>
-                                            <td><?php echo date('Y-m-d H:i', strtotime($location['CreatedDate'])); ?></td>
-                                            <td><?php echo date('Y-m-d H:i', strtotime($location['ModifiedDate'])); ?></td>
-                                            <td class="text-center">
-                                                <div class="btn-group" role="group">
-                                                    <a class="btn btn-sm btn-outline-primary edit-location" 
-                                                       data-id="<?php echo $location['EquipmentLocationID']; ?>"
-                                                       data-asset="<?php echo htmlspecialchars($location['AssetTag']); ?>"
-                                                       data-building="<?php echo htmlspecialchars($location['BuildingLocation']); ?>"
-                                                       data-floor="<?php echo htmlspecialchars($location['FloorNumber']); ?>"
-                                                       data-area="<?php echo htmlspecialchars($location['SpecificArea']); ?>"
-                                                       data-person="<?php echo htmlspecialchars($location['PersonResponsible']); ?>"
-                                                       data-remarks="<?php echo htmlspecialchars($location['Remarks']); ?>">
-                                                        <i class="bi bi-pencil-square"></i> Edit
-                                                    </a>
-                                                    <a class="btn btn-sm btn-outline-danger" href="?action=delete&id=<?php echo htmlspecialchars($location['EquipmentLocationID']); ?>" onclick="return confirm('Are you sure you want to delete this Equipment Location?');">
-                                                        <i class="bi bi-trash"></i> Delete
-                                                    </a>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                                <!-- Pagination Controls -->
-                                <div class="container-fluid">
-                                    <div class="row align-items-center g-3">
-                                        <!-- Pagination Info -->
-                                        <div class="col-12 col-sm-auto">
-                                            <div class="text-muted">
-                                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span
-                                                        id="totalRows">0</span> entries
-                                            </div>
-                                        </div>
-
-                                        <!-- Pagination Controls -->
-                                        <div class="col-12 col-sm-auto ms-sm-auto">
-                                            <div class="d-flex align-items-center gap-2">
-                                                <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                                    <i class="bi bi-chevron-left"></i>
-                                                    Previous
-                                                </button>
-
-                                                <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
-                                                    <option value="10">10</option>
-                                                    <option value="20" selected>20</option>
-                                                    <option value="50">50</option>
-                                                    <option value="100">100</option>
-                                                </select>
-
-                                                <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                                    Next
-                                                    <i class="bi bi-chevron-right"></i>
-                                                </button>
-                                            </div>
-                                        </div>
+                    
+                    <table class="table table-striped table-hover align-middle" id="table">
+                        <thead class="table-dark">
+                        <tr>
+                            <th>#</th>
+                            <th>Asset Tag</th>
+                            <th>Building Location</th>
+                            <th>Floor Number</th>
+                            <th>Specific Area</th>
+                            <th>Person Responsible</th>
+                            <th>Remarks</th>
+                            <th style="width: 12%">Created Date</th>
+                            <th style="width: 12%">Modified Date</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <?php foreach ($equipmentLocations as $location): ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($location['EquipmentLocationID']); ?></td>
+                                <td><?php echo htmlspecialchars($location['AssetTag']); ?></td>
+                                <td><?php echo htmlspecialchars($location['BuildingLocation']); ?></td>
+                                <td><?php echo htmlspecialchars($location['FloorNumber']); ?></td>
+                                <td><?php echo htmlspecialchars($location['SpecificArea']); ?></td>
+                                <td><?php echo htmlspecialchars($location['PersonResponsible']); ?></td>
+                                <td><?php echo htmlspecialchars($location['Remarks']); ?></td>
+                                <td><?php echo date('Y-m-d H:i', strtotime($location['CreatedDate'])); ?></td>
+                                <td><?php echo date('Y-m-d H:i', strtotime($location['ModifiedDate'])); ?></td>
+                                <td class="text-center">
+                                    <div class="btn-group" role="group">
+                                        <a class="btn btn-sm btn-outline-primary edit-location" 
+                                           data-id="<?php echo $location['EquipmentLocationID']; ?>"
+                                           data-asset="<?php echo htmlspecialchars($location['AssetTag']); ?>"
+                                           data-building="<?php echo htmlspecialchars($location['BuildingLocation']); ?>"
+                                           data-floor="<?php echo htmlspecialchars($location['FloorNumber']); ?>"
+                                           data-area="<?php echo htmlspecialchars($location['SpecificArea']); ?>"
+                                           data-person="<?php echo htmlspecialchars($location['PersonResponsible']); ?>"
+                                           data-remarks="<?php echo htmlspecialchars($location['Remarks']); ?>">
+                                            <i class="bi bi-pencil-square"></i> Edit
+                                        </a>
+                                        <a class="btn btn-sm btn-outline-danger" href="?action=delete&id=<?php echo htmlspecialchars($location['EquipmentLocationID']); ?>" onclick="return confirm('Are you sure you want to delete this Equipment Location?');">
+                                            <i class="bi bi-trash"></i> Delete
+                                        </a>
                                     </div>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                    <!-- Pagination Controls -->
+                    <div class="container-fluid">
+                        <div class="row align-items-center g-3">
+                            <!-- Pagination Info -->
+                            <div class="col-12 col-sm-auto">
+                                <div class="text-muted">
+                                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span
+                                            id="totalRows">0</span> entries
                                 </div>
                             </div>
-                        <?php else: ?>
-                            <p class="mb-0">No Equipment Locations found.</p>
-                        <?php endif; ?>
+
+                            <!-- Pagination Controls -->
+                            <div class="col-12 col-sm-auto ms-sm-auto">
+                                <div class="d-flex align-items-center gap-2">
+                                    <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                        <i class="bi bi-chevron-left"></i>
+                                        Previous
+                                    </button>
+
+                                    <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                        <option value="10">10</option>
+                                        <option value="20" selected>20</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                    </select>
+
+                                    <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                        Next
+                                        <i class="bi bi-chevron-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </main>
+            <?php else: ?>
+                <p class="mb-0">No Equipment Locations found.</p>
+            <?php endif; ?>
         </div>
     </div>
 </div>
@@ -493,58 +499,44 @@ try {
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Add New Location</h5>
+                <h5 class="modal-title">Add New Equipment Location</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="addLocationForm" method="post">
+                <form id="addLocationForm">
                     <input type="hidden" name="action" value="add">
-                    
                     <div class="mb-3">
-                        <label for="AssetTag" class="form-label">
-                            <i class="bi bi-tag"></i> Asset Tag <span class="text-danger">*</span>
-                        </label>
-                        <input type="text" class="form-control" name="AssetTag" id="AssetTag" required>
+                        <label for="AssetTag" class="form-label">Asset Tag <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="AssetTag" required>
                     </div>
 
                     <div class="mb-3">
-                        <label for="BuildingLocation" class="form-label">
-                            <i class="bi bi-building"></i> Building Location <span class="text-danger">*</span>
-                        </label>
-                        <input type="text" class="form-control" id="BuildingLocation" name="BuildingLocation" required>
+                        <label for="BuildingLocation" class="form-label">Building Location <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="BuildingLocation" required>
                     </div>
 
                     <div class="mb-3">
-                        <label for="FloorNumber" class="form-label">
-                            <i class="bi bi-layers"></i> Floor Number <span class="text-danger">*</span>
-                        </label>
-                        <input type="number" min="1" class="form-control" id="FloorNumber" name="FloorNumber" required>
+                        <label for="FloorNumber" class="form-label">Floor Number <span class="text-danger">*</span></label>
+                        <input type="number" min="1" class="form-control" name="FloorNumber" required>
                     </div>
 
                     <div class="mb-3">
-                        <label for="SpecificArea" class="form-label">
-                            <i class="bi bi-pin-map"></i> Specific Area <span class="text-danger">*</span>
-                        </label>
-                        <input type="text" class="form-control" id="SpecificArea" name="SpecificArea" required>
+                        <label for="SpecificArea" class="form-label">Specific Area <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="SpecificArea" required>
                     </div>
 
                     <div class="mb-3">
-                        <label for="PersonResponsible" class="form-label">
-                            <i class="bi bi-person"></i> Person Responsible <span class="text-danger">*</span>
-                        </label>
-                        <input type="text" class="form-control" id="PersonResponsible" name="PersonResponsible" required>
+                        <label for="PersonResponsible" class="form-label">Person Responsible <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="PersonResponsible" required>
                     </div>
 
                     <div class="mb-3">
-                        <label for="Remarks" class="form-label">
-                            <i class="bi bi-chat-left-text"></i> Remarks
-                        </label>
-                        <textarea class="form-control" id="Remarks" name="Remarks" rows="3"></textarea>
+                        <label for="Remarks" class="form-label">Remarks</label>
+                        <textarea class="form-control" name="Remarks" rows="3"></textarea>
                     </div>
 
-                    <div class="d-flex justify-content-end">
-                        <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-success">Add Location</button>
+                    <div class="modal-footer border-0">
+                        <button type="submit" class="btn btn-primary">Add Equipment Location</button>
                     </div>
                 </form>
             </div>

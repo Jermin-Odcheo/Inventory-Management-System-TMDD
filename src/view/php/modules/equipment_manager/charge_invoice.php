@@ -3,6 +3,9 @@
 session_start();
 require_once('../../../../../config/ims-tmdd.php'); // Adjust the path as needed
 
+// Include the header
+include('../../general/header.php');
+
 // -----------------------------------------------------------------
 // Optionally check for admin privileges (uncomment if needed)
 // if (!isset($_SESSION['user_id'])) {
@@ -144,6 +147,27 @@ try {
     <!-- Add jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #f8f9fa;
+            min-height: 100vh;
+            padding-top: 80px;
+        }
+        h2.mb-4 {
+            margin-top: 20px;
+        }
+        .main-content {
+            margin-left: 300px;
+            padding: 20px;
+            transition: margin-left 0.3s ease;
+        }
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
 </head>
 
 <body>
@@ -320,19 +344,19 @@ try {
                     <form id="addInvoiceForm" method="post">
                         <input type="hidden" name="action" value="add">
                         <div class="mb-3">
-                            <label for="ChargeInvoiceNo" class="form-label">Charge Invoice Number</label>
+                            <label for="ChargeInvoiceNo" class="form-label">Charge Invoice Number <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="ChargeInvoiceNo" required>
                         </div>
                         <div class="mb-3">
-                            <label for="DateOfChargeInvoice" class="form-label">Date of Charge Invoice</label>
+                            <label for="DateOfChargeInvoice" class="form-label">Date of Charge Invoice <span class="text-danger">*</span></label>
                             <input type="date" class="form-control" name="DateOfChargeInvoice" required>
                         </div>
                         <div class="mb-3">
-                            <label for="PurchaseOrderNumber" class="form-label">Purchase Order Number</label>
+                            <label for="PurchaseOrderNumber" class="form-label">Purchase Order Number <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="PurchaseOrderNumber" required>
                         </div>
                         <div class="mb-3">
-                            <button type="submit" class="btn btn-primary">Add Invoice</button>
+                            <button type="submit" class="btn btn-primary">Add Charge Invoice</button>
                         </div>
                     </form>
                 </div>
@@ -506,9 +530,37 @@ try {
                     window.location.href = '?action=delete&id=' + $(this).data('id');
                 }
             });
+
+            // Add Invoice form submission
+            $('#addInvoiceForm').on('submit', function(e) {
+                e.preventDefault();
+                $.ajax({
+                    url: 'charge_invoice.php',
+                    method: 'POST',
+                    data: $(this).serialize(),
+                    success: function(response) {
+                        try {
+                            const result = JSON.parse(response);
+                            if (result.status === 'success') {
+                                $('#addInvoiceModal').modal('hide');
+                                location.reload();
+                            } else {
+                                alert(result.message || 'An error occurred');
+                            }
+                        } catch (e) {
+                            console.error('Parse error:', e);
+                            location.reload();
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        alert('Error submitting form: ' + error);
+                    }
+                });
+            });
         });
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
- </body>
+</body>
 
 </html>

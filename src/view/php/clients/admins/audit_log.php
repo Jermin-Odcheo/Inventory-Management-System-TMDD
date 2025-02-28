@@ -14,7 +14,6 @@ if (!isset($_SESSION['user_id'])) {
 $query = "SELECT audit_log.*, users.email AS user_email 
           FROM audit_log 
           LEFT JOIN users ON audit_log.UserID = users.User_ID
-          WHERE audit_log.Module NOT LIKE 'Equipment%'
           ORDER BY audit_log.Date_Time DESC";
 $stmt = $pdo->prepare($query);
 $stmt->execute();
@@ -132,9 +131,9 @@ function getActionIcon($action)
     $action = strtolower($action);
     if ($action === 'modified') {
         return '<i class="fas fa-user-edit"></i>';
-    } elseif ($action === 'add') {
+    } elseif ($action === 'create') {
         return '<i class="fas fa-user-plus"></i>';
-    } elseif ($action === 'soft delete' || $action === 'permanent delete') {
+    } elseif ($action === 'remove' || $action === 'delete') {
         return '<i class="fas fa-user-slash"></i>';
     } else {
         return '<i class="fas fa-info-circle"></i>';
@@ -167,9 +166,9 @@ function formatDetailsAndChanges($log)
     // Use user_email from the log if available, or fallback to newData email
     $userEmail = $log['user_email'] ?? ($newData['Email'] ?? 'User');
 
-    // For soft delete, try to use the target's name (if available)
+    // For soft delete/remove, try to use the target's name (if available)
     $targetName = $userEmail;
-    if ($action === 'soft delete') {
+    if ($action === 'remove') {
         if (isset($newData['First_Name'], $newData['Last_Name'])) {
             $targetName = $newData['First_Name'] . ' ' . $newData['Last_Name'];
         }
@@ -178,37 +177,38 @@ function formatDetailsAndChanges($log)
     // Prepare default strings
     $details = '';
     $changes = '';
-
+    $targetEntityName = $newData['Email'] ?? $oldData['Email'] ?? 'Unknown';
     switch ($action) {
-        case 'add':
-            $details = htmlspecialchars("$userEmail has been created");
+
+        case 'create':
+            $details = htmlspecialchars("$targetEntityName has been created");
             $changes = formatNewValue($log['NewVal']);
             break;
 
         case 'modified':
             $changedFields = getChangedFieldNames($oldData, $newData);
             if (!empty($changedFields)) {
-                $details = "Updated Fields: " . htmlspecialchars(implode(', ', $changedFields));
+                $details = "Modified Fields: " . htmlspecialchars(implode(', ', $changedFields));
             } else {
-                $details = "Updated Fields: None";
+                $details = "Modified Fields: None";
             }
             $changes = formatAuditDiff($log['OldVal'], $log['NewVal']);
             break;
 
         case 'restored':
-            $details = htmlspecialchars("$userEmail has been restored");
+            $details = htmlspecialchars("$targetEntityName has been restored");
             $changes = "is_deleted 1 -> 0";
             break;
 
-        case 'soft delete':
+        case 'remove':
             // Use the target's name instead of a generic message
-            $details = htmlspecialchars("$userEmail has been soft deleted");
+            $details = htmlspecialchars("$targetEntityName has been removed");
             $changes = "is_deleted 0 -> 1";
             break;
 
-        case 'permanent delete':
-            $details = htmlspecialchars("$userEmail has been deleted from the database");
-            $changes = formatNewValue($log['NewVal']);
+        case 'delete':
+            $details = htmlspecialchars("$targetEntityName has been deleted from the database");
+            $changes = formatNewValue($log['OldVal']);
             break;
 
         default:
@@ -277,10 +277,10 @@ function getChangedFieldNames(array $oldData, array $newData)
                     <div class="col-md-4 mb-2">
                         <select id="filterAction" class="form-select">
                             <option value="">All Actions</option>
-                            <option value="add">Add</option>
+                            <option value="create">Create</option>
                             <option value="modified">Modified</option>
-                            <option value="soft delete">Soft Delete</option>
-                            <option value="permanent delete">Permanent Delete</option>
+                            <option value="remove">Remove</option>
+                            <option value="delete">Delete</option>
                             <option value="restored">Restored</option>
                         </select>
                     </div>
@@ -294,8 +294,8 @@ function getChangedFieldNames(array $oldData, array $newData)
                 </div>
 
                 <!-- Table container with colgroup for column widths -->
-                <div class="table-responsive">
-                    <table class="table table-hover" id="table">
+                <div class="table-responsive" id="table">
+                    <table class="table table-hover">
                         <colgroup>
                             <col class="track">
                             <col class="user">
@@ -308,7 +308,7 @@ function getChangedFieldNames(array $oldData, array $newData)
                         </colgroup>
                         <thead class="table-light">
                         <tr>
-                            <th>#</th>
+                            <th>Track ID</th>
                             <th>User</th>
                             <th>Module</th>
                             <th>Action</th>
@@ -349,7 +349,9 @@ function getChangedFieldNames(array $oldData, array $newData)
                                     <!-- ACTION -->
                                     <td data-label="Action">
                                         <?php
-                                        $actionText = !empty($log['Action']) ? $log['Action'] : 'Deleted';
+                                        $actionText = !empty($log['Action']) ? $log['Action'] : 'Unknown';
+                                        echo "<!-- Debug: Action Text = $actionText -->";
+
                                         // Check for restore action based on JSON values with null checks
                                         if (!is_null($log['OldVal']) && !is_null($log['NewVal'])) {
                                             $oldData = json_decode($log['OldVal'], true);
@@ -361,7 +363,7 @@ function getChangedFieldNames(array $oldData, array $newData)
                                                 }
                                             }
                                         }
-                                        echo "<span class='action-badge action-" . strtolower($actionText) . "'>";
+                                        echo "<span class='action-bad`ge action-" . strtolower($actionText) . "'>";
                                         echo getActionIcon($actionText) . ' ' . htmlspecialchars($actionText);
                                         echo "</span>";
                                         ?>
@@ -409,55 +411,54 @@ function getChangedFieldNames(array $oldData, array $newData)
                         <?php endif; ?>
                         </tbody>
                     </table>
+                    <!-- Pagination Controls -->
+                    <div class="container-fluid">
+                        <div class="row align-items-center g-3">
+                            <!-- Pagination Info -->
+                            <div class="col-12 col-sm-auto">
+                                <div class="text-muted">
+                                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
+                                            id="totalRows">100</span> entries
+                                </div>
+                            </div>
+
+                            <!-- Pagination Controls -->
+                            <div class="col-12 col-sm-auto ms-sm-auto">
+                                <div class="d-flex align-items-center gap-2">
+                                    <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                        <i class="bi bi-chevron-left"></i>
+                                        Previous
+                                    </button>
+
+                                    <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                        <option value="10" selected>10</option>
+                                        <option value="20">20</option>
+                                        <option value="30">30</option>
+                                        <option value="50">50</option>
+                                    </select>
+
+                                    <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                        Next
+                                        <i class="bi bi-chevron-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- New Pagination Page Numbers -->
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <ul class="pagination justify-content-center" id="pagination"></ul>
+                            </div>
+                        </div>
+                    </div> <!-- /.End of Pagination -->
                 </div><!-- /.table-responsive -->
-
-                <!-- Pagination Controls -->
-
-                <div class="container-fluid">
-                    <div class="row align-items-center g-3">
-                        <!-- Pagination Info -->
-                        <div class="col-12 col-sm-auto">
-                            <div class="text-muted">
-                                Showing <span id="currentPage">0</span> to <span id="rowsPerPage">0</span> of <span
-                                        id="totalRows">0</span> entries
-                            </div>
-                        </div>
-
-                        <!-- Pagination Controls -->
-                        <div class="col-12 col-sm-auto ms-sm-auto">
-                            <div class="d-flex align-items-center gap-2">
-                                <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                    <i class="bi bi-chevron-left"></i>
-                                    Previous
-                                </button>
-
-                                <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
-                                    <option value="10" selected>10</option>
-                                    <option value="20">20</option>
-                                    <option value="30">30</option>
-                                    <option value="50">50</option>
-                                </select>
-
-                                <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                    Next
-                                    <i class="bi bi-chevron-right"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- New Pagination Page Numbers -->
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <ul class="pagination justify-content-center" id="pagination"></ul>
-                        </div>
-                    </div>
-                </div> <!-- /.End of Pagination -->
             </div><!-- /.card-body -->
         </div><!-- /.card -->
     </div><!-- /.container-fluid -->
 </div><!-- /.main-content -->
-<script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/logs.js" defer></script>
+<script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
+
 </body>
 </html>
 

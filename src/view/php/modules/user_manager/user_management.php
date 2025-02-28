@@ -1,7 +1,7 @@
 <?php
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
-// include '../../general/header.php';
+include '../../general/header.php';
 // Enable error reporting for debugging
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
@@ -12,10 +12,10 @@ if (!isset($pdo)) {
 }
 
 // Check if the user is logged in
-if (!isset($_SESSION['user_id'])) {
-    header("Location: ../../../../../public/index.php");
-    exit();
-}
+// if (!isset($_SESSION['user_id'])) {
+//     header("Location: ../../../../../public/index.php");
+//     exit();
+// }
 
 // Define allowed sorting columns (for active users)
 $allowedSortColumns = ['User_ID', 'Email', 'First_Name', 'Last_Name', 'Department', 'Status'];
@@ -98,8 +98,8 @@ function getCurrentUserRoles($pdo, $userId)
 }
 
 // Get current user's roles
-$currentUserRoles = getCurrentUserRoles($pdo, $_SESSION['user_id']);
-// $currentUserRoles = ["Regular User"];
+// $currentUserRoles = getCurrentUserRoles($pdo, $_SESSION['user_id']);
+$currentUserRoles = ["Regular User"];
 
 // Add this function to check if current user can delete target user
 function canDeleteUser($currentUserRoles, $targetUserRoles)
@@ -115,8 +115,8 @@ function canDeleteUser($currentUserRoles, $targetUserRoles)
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-RBAC : sql statement
-thq query that RBAC will work with
+RBAC : view
+if role doesnt include view for User module then redirect
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 try {
@@ -125,25 +125,17 @@ try {
         from privileges as p 
         join role_privileges as rp on p.privilege_id = rp.privilege_id 
         join roles as r on r.role_id = rp.role_id
-        where rp.role_id = ? 
-        and module_id = 1
+        where rp.role_id = (select r.role_id where role_name = 'Regular User') 
     ");
-    $stmt->execute([$_SESSION['user_id']]);
+    $stmt->execute();
     $privs = $stmt->fetchAll(PDO::FETCH_ASSOC);
     $privNames = array_column($privs, 'privilege_name');
+    if (empty($privNames) || !in_array("View", $privNames)) { //redirect to home if you got no privs for this page 
+        header("Location: ../../../../../public/index.php");
+        exit();
+    }
 } catch (PDOException $e) {
     die("Database query error: " . $e->getMessage());
-}
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-RBAC : view
-if role doesnt include view for User module then redirect
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
-if (empty($privNames) || !in_array("View", $privNames)) { 
-    //redirect to home if you got no privs for this page 
-    header("Location: ../../../../../public/index.php");
-    exit();
 }
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -152,32 +144,36 @@ if role doesnt include edit then remove those edit buttons
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 $showEditButton = false;
-if (!empty($privNames) && in_array("Edit", $privNames)) { 
-    //show edit button if privileges are not empty and edit is in the privs
-    $showEditButton = true;
+try {
+    $stmt = $pdo->prepare("
+        select privilege_name 
+        from privileges as p 
+        join role_privileges as rp on p.privilege_id = rp.privilege_id 
+        join roles as r on r.role_id = rp.role_id
+        where rp.role_id = (select r.role_id where role_name = 'Regular User') 
+    ");
+    $stmt->execute();
+    $privs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $privNames = array_column($privs, 'privilege_name');
+    if (!empty($privNames) && in_array("Edit", $privNames)) {
+        //show edit button if privileges are not empty and edit is in them
+        $showEditButton = true;
+    }
+} catch (PDOException $e) {
+    die("Database query error: " . $e->getMessage());
 }
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-RBAC : delete
 if role doesnt include delete then remove the delete option thingy
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
-$showDeleteButton = false;
-if (!empty($privNames) && in_array("Delete", $privNames)) { 
-    //show delete button if privileges are not empty and delete is in the privs
-    $showDeleteButton = true;
-}
+
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-RBAC : create
 if role doesnt include create then remove the add new user
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
-$showCreateButton = false;
-if (!empty($privNames) && in_array("Add", $privNames)) { 
-    //show delete button if privileges are not empty and delete is in the privs
-    $showCreateButton = true;
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -209,6 +205,10 @@ if (!empty($privNames) && in_array("Add", $privNames)) {
         .search-container i {
             color: #6c757d;
             pointer-events: none;
+        }
+
+        .container-fluid {
+            padding: 100px 15px;
         }
     </style>
 </head>
@@ -252,20 +252,93 @@ if (!empty($privNames) && in_array("Add", $privNames)) {
     </div>
 
 
-    <div class="d-flex justify-content-end mb-3">
-    <?php if ($showCreateButton): ?>
-        <a href="add_user.php" class="btn btn-primary me-2">Add New User</a>
-    <?php endif; ?>    
-        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
-            Delete My Account
-        </button>
-    </div>
+    <!--        DELETE MY ACCOUNT SHOULD BE MOVED IN THE SETTINGS-->
+    <!--        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">-->
+    <!--            Delete My Account-->
+    <!--        </button>-->
 
-    <!-- Add the filter controls -->
+    <!-- Modal for adding a new user -->
+    <div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addUserModalLabel">Add New User</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addUserForm" method="POST" action="add_user.php">
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email:</label>
+                            <input type="email" name="email" id="email" class="form-control" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password:</label>
+                            <input type="password" name="password" id="password" class="form-control" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="first_name" class="form-label">First Name:</label>
+                            <input type="text" name="first_name" id="first_name" class="form-control" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="last_name" class="form-label">Last Name:</label>
+                            <input type="text" name="last_name" id="last_name" class="form-control" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="modal_department" class="form-label">Department:</label>
+                            <select name="department" id="modal_department" class="form-select mb-2" required>
+                                <option value="">Select Department</option>
+                                <?php foreach ($departments as $code => $name): ?>
+                                    <option value="<?php echo htmlspecialchars($code); ?>">
+                                        <?php echo htmlspecialchars($name); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                                <option value="custom">Custom Department</option>
+                            </select>
+                            <input type="text" id="modal_custom_department" name="custom_department"
+                                   class="form-control"
+                                   style="display: none;"
+                                   placeholder="Enter custom department">
+                        </div>
+
+                        <fieldset class="mb-3">
+                            <legend>Assign Roles: <span class="text-danger">*</span></legend>
+                            <div class="text-muted mb-2">At least one role must be selected</div>
+                            <?php
+                            // Fetch roles for the modal
+                            $stmt = $pdo->prepare("SELECT * FROM roles");
+                            $stmt->execute();
+                            $modal_roles = $stmt->fetchAll();
+
+                            foreach ($modal_roles as $role): ?>
+                                <div class="form-check">
+                                    <input type="checkbox" name="roles[]" value="<?php echo $role['Role_ID']; ?>"
+                                           id="modal_role_<?php echo $role['Role_ID']; ?>"
+                                           class="form-check-input modal-role-checkbox">
+                                    <label for="modal_role_<?php echo $role['Role_ID']; ?>" class="form-check-label">
+                                        <?php echo htmlspecialchars($role['Role_Name']); ?>
+                                    </label>
+                                </div>
+                            <?php endforeach; ?>
+                        </fieldset>
+
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-primary">Add User</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--FILTER SEARCH AND ADD USER BUTTON-->
     <div class="row mb-3">
-        <div class="col-md-6">
+        <div class="col-md-8">
             <form class="d-flex" method="GET">
-                <select name="department" class="form-select me-2" style="width: 400px;">
+                <!--Filter Department/Search-->
+                <select name="department" class="form-select me-2 department-filter">
                     <option value="all">All Departments</option>
                     <?php foreach ($departments as $code => $name): ?>
                         <option value="<?php echo htmlspecialchars($code); ?>"
@@ -277,11 +350,15 @@ if (!empty($privNames) && in_array("Add", $privNames)) {
                 <div class="search-container position-relative">
                     <input type="text" name="search" id="searchUsers" class="form-control"
                            placeholder="Search users..."
-                           value="<?php echo htmlspecialchars($_GET['search'] ?? ''); ?>"
-                           style="width: 250px;">
+                           value="<?php echo htmlspecialchars($_GET['search'] ?? ''); ?>">
                     <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-2"></i>
                 </div>
             </form>
+        </div>
+        <div class="col-md-4 d-flex justify-content-end">
+            <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                Add New User
+            </button>
         </div>
     </div>
 
@@ -356,16 +433,16 @@ if (!empty($privNames) && in_array("Add", $privNames)) {
                     </td>
                     <td>
                         <?php if ($showEditButton): ?>
-                        <button type="button" class="btn btn-sm btn-warning btn-edit"
-                                data-id="<?php echo $user['User_ID']; ?>"
-                                data-email="<?php echo htmlspecialchars($user['Email']); ?>"
-                                data-first-name="<?php echo htmlspecialchars($user['First_Name']); ?>"
-                                data-last-name="<?php echo htmlspecialchars($user['Last_Name']); ?>"
-                                data-department="<?php echo htmlspecialchars($user['Department']); ?>"
-                                data-status="<?php echo htmlspecialchars($user['Status']); ?>"
-                                data-bs-toggle="modal" data-bs-target="#editUserModal">
-                            Edit
-                        </button>
+                            <button type="button" class="btn btn-sm btn-warning btn-edit"
+                                    data-id="<?php echo $user['User_ID']; ?>"
+                                    data-email="<?php echo htmlspecialchars($user['Email']); ?>"
+                                    data-first-name="<?php echo htmlspecialchars($user['First_Name']); ?>"
+                                    data-last-name="<?php echo htmlspecialchars($user['Last_Name']); ?>"
+                                    data-department="<?php echo htmlspecialchars($user['Department']); ?>"
+                                    data-status="<?php echo htmlspecialchars($user['Status']); ?>"
+                                    data-bs-toggle="modal" data-bs-target="#editUserModal">
+                                Edit
+                            </button>
                         <?php endif; ?>
                         <?php
                         $targetUserRoles = getCurrentUserRoles($pdo, $user['User_ID']);
@@ -394,8 +471,6 @@ if (!empty($privNames) && in_array("Add", $privNames)) {
                             id="totalRows">100</span> entries
                 </div>
             </div>
-
-            <!-- Pagination Controls -->
             <div class="col-12 col-sm-auto ms-sm-auto">
                 <div class="d-flex align-items-center gap-2">
                     <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
@@ -426,13 +501,12 @@ if (!empty($privNames) && in_array("Add", $privNames)) {
     </div> <!-- /.End of Pagination -->
 
     <!-- Bulk action button for active users -->
-    <?php if ($showDeleteButton): ?>
     <div class="mb-3">
         <button type="button" id="delete-selected" class="btn btn-danger" style="display: none;" disabled>
             Delete Selected
         </button>
     </div>
-    <?php endif; ?>
+
 </div><!-- /.main-content -->
 
 <!-- Modal for editing user -->
@@ -462,7 +536,6 @@ if (!empty($privNames) && in_array("Add", $privNames)) {
                     <div class="mb-3">
                         </select>
                     </div>
-
                     <div class="mb-3">
                         <label for="editDepartment" class="form-label">Department</label>
                         <select class="form-select shadow-sm" id="editDepartment" name="department"
@@ -604,9 +677,55 @@ if (!empty($privNames) && in_array("Add", $privNames)) {
     </div>
 </div>
 
-<!-- Custom JavaScript for bulk actions and form handling -->
 <script>
     $(document).ready(function () {
+        // Toggle the custom department input based on the selection
+        $('#modal_department').on('change', function () {
+            if ($(this).val() === 'custom') {
+                $('#modal_custom_department').show().attr('required', true);
+            } else {
+                $('#modal_custom_department').hide().attr('required', false);
+            }
+        });
+
+        // Handle form submission via AJAX
+        $('#addUserForm').on('submit', function (e) {
+            e.preventDefault(); // Prevent the default form submission
+
+            // Get the action URL from the form
+            var actionUrl = $(this).attr('action');
+            console.log("Submitting to URL:", actionUrl);
+
+            $.ajax({
+                url: actionUrl, // The URL from the form's action attribute
+                type: 'POST',
+                data: $(this).serialize(), // Serialize the form data
+                dataType: 'json',
+                success: function (response) {
+                    if (response.success) {
+                        // Hide the modal and refresh or update UI as needed
+                        $('#addUserModal').modal('hide');
+                        location.reload();
+                    } else {
+                        alert("Error: " + response.message);
+                    }
+                },
+                error: function (xhr, status, error) {
+                    // Log the raw response for debugging
+                    console.log("Response Text:", xhr.responseText);
+                    alert('An error occurred: ' + error);
+                }
+            });
+        });
+    });
+</script>
+
+
+<!-- Custom JavaScript for bulk actions and form handling -->
+<script>
+
+    $(document).ready(function () {
+
         // Update bulk action buttons for active users
         function updateBulkActionButtons() {
             var activeCount = $(".select-row:checked").length;
@@ -784,8 +903,7 @@ if (!empty($privNames) && in_array("Add", $privNames)) {
             $(this).closest('.alert').hide();
         });
 
-        // Department filter change handler
-        $('select[name="department"]').on('change', function () {
+        $('.department-filter').on('change', function () {
             this.form.submit();
         });
 
@@ -800,6 +918,7 @@ if (!empty($privNames) && in_array("Add", $privNames)) {
     });
 
 </script>
+
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 </body>
 </html>

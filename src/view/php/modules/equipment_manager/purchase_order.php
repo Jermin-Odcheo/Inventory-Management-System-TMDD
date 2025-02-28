@@ -2,11 +2,16 @@
 // purchase_order.php
 session_start();
 require_once('../../../../../config/ims-tmdd.php'); // Adjust the path as needed
+
 // Check for admin privileges (you should implement your privilege check).
 if (!isset($_SESSION['user_id'])) {
     header("Location: add_user.php");
     exit();
 }
+
+// Include the header
+include('../../general/header.php');
+
 // Set the audit log session variables for MySQL triggers.
 if (isset($_SESSION['user_id'])) {
     // Use the logged-in user's ID.
@@ -156,6 +161,28 @@ try {
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
     <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #f8f9fa;
+            min-height: 100vh;
+            padding-top: 80px;
+        }
+        h2.mb-4 {
+            margin-top: 20px;
+        }
+        .main-content {
+            margin-left: 300px;
+            padding: 20px;
+            transition: margin-left 0.3s ease;
+        }
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
 
 </head>
 

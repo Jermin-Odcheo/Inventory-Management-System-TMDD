@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Feb 18, 2025 at 08:54 AM
+-- Generation Time: Feb 28, 2025 at 07:57 AM
 -- Server version: 8.2.0
 -- PHP Version: 8.2.13
 
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS `audit_log` (
   `TrackID` int NOT NULL AUTO_INCREMENT,
   `UserID` int NOT NULL,
   `EntityID` int DEFAULT NULL,
-  `Action` enum('View','Modified','Delete','Add','Undo','Update') NOT NULL,
+  `Action` enum('View','Modified','Delete','Add','Undo','Update','Create','Remove','Restored') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `Details` text,
   `OldVal` text,
   `NewVal` text,
@@ -40,27 +40,27 @@ CREATE TABLE IF NOT EXISTS `audit_log` (
   `Status` enum('Successful','Failed') NOT NULL,
   `Date_Time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`TrackID`),
-  INDEX `idx_module` (`Module`),
-  INDEX `idx_action` (`Action`)
-) ENGINE=InnoDB AUTO_INCREMENT=78 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  KEY `idx_module` (`Module`),
+  KEY `idx_action` (`Action`)
+) ENGINE=InnoDB AUTO_INCREMENT=99 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `audit_log`
 --
 
 INSERT INTO `audit_log` (`TrackID`, `UserID`, `EntityID`, `Action`, `Details`, `OldVal`, `NewVal`, `Module`, `Status`, `Date_Time`) VALUES
-(66, 1, 55, 'Add', 'New user added', '', NULL, 'User Management', 'Successful', '2025-02-18 14:33:08'),
-(67, 1, 55, 'Modified', 'Updated fields: Email, First_Name, Last_Name, Department', '{\"Email\": \"testcase@example.com\", \"Status\": \"Online\", \"User_ID\": 55, \"Password\": \"$2y$10$f.7XHTT/1Hw5qm06D0jsRuUb78tcyTezGKpIU95rfL9D62Bt8poiW\", \"Last_Name\": \"case\", \"Department\": \"testcase\", \"First_Name\": \"test\", \"Last_Active\": null}', '{\"Email\": \"testcase1@example.com\", \"Status\": \"Online\", \"User_ID\": 55, \"Password\": \"$2y$10$f.7XHTT/1Hw5qm06D0jsRuUb78tcyTezGKpIU95rfL9D62Bt8poiW\", \"Last_Name\": \"case1\", \"Department\": \"testcase1\", \"First_Name\": \"test1\", \"Last_Active\": null}', 'User Management', 'Successful', '2025-02-18 14:33:17'),
-(68, 1, 55, '', 'User soft deleted (is_deleted set to 1)', '{\"Email\": \"testcase1@example.com\", \"Status\": \"Online\", \"User_ID\": 55, \"Last_Name\": \"case1\", \"Department\": \"testcase1\", \"First_Name\": \"test1\", \"is_deleted\": 0, \"Last_Active\": null}', '{\"Email\": \"testcase1@example.com\", \"Status\": \"Online\", \"User_ID\": 55, \"Last_Name\": \"case1\", \"Department\": \"testcase1\", \"First_Name\": \"test1\", \"is_deleted\": 1, \"Last_Active\": null}', 'User Management', 'Successful', '2025-02-18 14:33:18'),
-(69, 1, 55, '', 'testcase1@example.com has been restored', '{\"is_deleted\": 1}', '{\"is_deleted\": 0}', 'User Management', 'Successful', '2025-02-18 14:33:20'),
-(70, 1, 55, '', 'User soft deleted (is_deleted set to 1)', '{\"Email\": \"testcase1@example.com\", \"Status\": \"Online\", \"User_ID\": 55, \"Last_Name\": \"case1\", \"Department\": \"testcase1\", \"First_Name\": \"test1\", \"is_deleted\": 0, \"Last_Active\": null}', '{\"Email\": \"testcase1@example.com\", \"Status\": \"Online\", \"User_ID\": 55, \"Last_Name\": \"case1\", \"Department\": \"testcase1\", \"First_Name\": \"test1\", \"is_deleted\": 1, \"Last_Active\": null}', 'User Management', 'Successful', '2025-02-18 14:33:34'),
-(71, 1, 55, '', 'User permanently deleted from the database', '{\"Email\": \"testcase1@example.com\", \"Status\": \"Online\", \"User_ID\": 55, \"Last_Name\": \"case1\", \"Department\": \"testcase1\", \"First_Name\": \"test1\", \"is_deleted\": 1, \"Last_Active\": null}', '', 'User Management', 'Successful', '2025-02-18 14:33:36'),
-(72, 1, 2, '', 'User soft deleted (is_deleted set to 1)', '{\"Email\": \"administrator@example.com\", \"Status\": \"\", \"User_ID\": 2, \"Last_Name\": \"Inistrator\", \"Department\": \"Department\", \"First_Name\": \"Admin\", \"is_deleted\": 0, \"Last_Active\": null}', '{\"Email\": \"administrator@example.com\", \"Status\": \"\", \"User_ID\": 2, \"Last_Name\": \"Inistrator\", \"Department\": \"Department\", \"First_Name\": \"Admin\", \"is_deleted\": 1, \"Last_Active\": null}', 'User Management', 'Successful', '2025-02-18 14:57:35'),
-(73, 1, 2, '', 'administrator@example.com has been restored', '{\"is_deleted\": 1}', '{\"is_deleted\": 0}', 'User Management', 'Successful', '2025-02-18 14:57:38'),
-(74, 1, 2, '', 'User soft deleted (is_deleted set to 1)', '{\"Email\": \"administrator@example.com\", \"Status\": \"\", \"User_ID\": 2, \"Last_Name\": \"Inistrator\", \"Department\": \"Department\", \"First_Name\": \"Admin\", \"is_deleted\": 0, \"Last_Active\": null}', '{\"Email\": \"administrator@example.com\", \"Status\": \"\", \"User_ID\": 2, \"Last_Name\": \"Inistrator\", \"Department\": \"Department\", \"First_Name\": \"Admin\", \"is_deleted\": 1, \"Last_Active\": null}', 'User Management', 'Successful', '2025-02-18 16:27:42'),
-(75, 1, 2, '', 'administrator@example.com has been restored', '{\"is_deleted\": 1}', '{\"is_deleted\": 0}', 'User Management', 'Successful', '2025-02-18 16:27:44'),
-(76, 1, 2, '', 'User soft deleted (is_deleted set to 1)', '{\"Email\": \"administrator@example.com\", \"Status\": \"\", \"User_ID\": 2, \"Last_Name\": \"Inistrator\", \"Department\": \"Department\", \"First_Name\": \"Admin\", \"is_deleted\": 0, \"Last_Active\": null}', '{\"Email\": \"administrator@example.com\", \"Status\": \"\", \"User_ID\": 2, \"Last_Name\": \"Inistrator\", \"Department\": \"Department\", \"First_Name\": \"Admin\", \"is_deleted\": 1, \"Last_Active\": null}', 'User Management', 'Successful', '2025-02-18 16:28:13'),
-(77, 1, 2, '', 'administrator@example.com has been restored', '{\"is_deleted\": 1}', '{\"is_deleted\": 0}', 'User Management', 'Successful', '2025-02-18 16:28:17');
+(78, 1, 1, 'Modified', 'Updated fields: First_Name, Last_Name, Department', '{\"Email\": \"superadmin@example.com\", \"Status\": \"\", \"User_ID\": 1, \"Password\": \"$2y$10$i4ei.yjO/RWfQmsCjZrbUO8PdC8YKip8/JRf8yXYC17AU7RbHt8vq\", \"Last_Name\": \"Admin1\", \"Department\": \"TMDD1\", \"First_Name\": \"Super1\", \"Last_Active\": \"2025-02-05 11:08:09.000000\"}', '{\"Email\": \"superadmin@example.com\", \"Status\": \"\", \"User_ID\": 1, \"Password\": \"$2y$10$i4ei.yjO/RWfQmsCjZrbUO8PdC8YKip8/JRf8yXYC17AU7RbHt8vq\", \"Last_Name\": \"Admin1adf\", \"Department\": \"Office of the President\", \"First_Name\": \"Super1asdf\", \"Last_Active\": \"2025-02-05 11:08:09.000000\"}', 'User Management', 'Successful', '2025-02-28 09:18:53'),
+(79, 1, 1, 'Modified', 'Updated fields: First_Name, Last_Name', '{\"Email\": \"superadmin@example.com\", \"Status\": \"\", \"User_ID\": 1, \"Password\": \"$2y$10$i4ei.yjO/RWfQmsCjZrbUO8PdC8YKip8/JRf8yXYC17AU7RbHt8vq\", \"Last_Name\": \"Admin1adf\", \"Department\": \"Office of the President\", \"First_Name\": \"Super1asdf\", \"Last_Active\": \"2025-02-05 11:08:09.000000\"}', '{\"Email\": \"superadmin@example.com\", \"Status\": \"\", \"User_ID\": 1, \"Password\": \"$2y$10$i4ei.yjO/RWfQmsCjZrbUO8PdC8YKip8/JRf8yXYC17AU7RbHt8vq\", \"Last_Name\": \"Admin\", \"Department\": \"Office of the President\", \"First_Name\": \"Super\", \"Last_Active\": \"2025-02-05 11:08:09.000000\"}', 'User Management', 'Successful', '2025-02-28 09:19:07'),
+(80, 1, 1, 'Modified', 'Updated fields: First_Name, Last_Name', '{\"Email\": \"superadmin@example.com\", \"Status\": \"\", \"User_ID\": 1, \"Password\": \"$2y$10$i4ei.yjO/RWfQmsCjZrbUO8PdC8YKip8/JRf8yXYC17AU7RbHt8vq\", \"Last_Name\": \"Admin\", \"Department\": \"Office of the President\", \"First_Name\": \"Super\", \"Last_Active\": \"2025-02-05 11:08:09.000000\"}', '{\"Email\": \"superadmin@example.com\", \"Status\": \"\", \"User_ID\": 1, \"Password\": \"$2y$10$i4ei.yjO/RWfQmsCjZrbUO8PdC8YKip8/JRf8yXYC17AU7RbHt8vq\", \"Last_Name\": \"Admin1\", \"Department\": \"Office of the President\", \"First_Name\": \"Super1\", \"Last_Active\": \"2025-02-05 11:08:09.000000\"}', 'User Management', 'Successful', '2025-02-28 09:21:13'),
+(89, 1, 147, 'Create', 'New user added: superuse12312312r@example.com', NULL, '{\"Email\": \"superuse12312312r@example.com\", \"User_ID\": 147, \"Last_Name\": \"123123\", \"Department\": \"SOL\", \"First_Name\": \"123123\"}', 'User Management', 'Successful', '2025-02-28 13:44:37'),
+(90, 1, 146, 'Remove', 'User soft deleted (is_deleted set to 1)', '{\"Email\": \"1233333@example.com\", \"Status\": \"Offline\", \"User_ID\": 146, \"Last_Name\": \"123\", \"Department\": \"SOM\", \"First_Name\": \"312\", \"is_deleted\": 0, \"Last_Active\": null}', '{\"Email\": \"1233333@example.com\", \"Status\": \"Offline\", \"User_ID\": 146, \"Last_Name\": \"123\", \"Department\": \"SOM\", \"First_Name\": \"312\", \"is_deleted\": 1, \"Last_Active\": null}', 'User Management', 'Successful', '2025-02-28 14:12:15'),
+(91, 1, 147, 'Remove', 'User soft deleted (is_deleted set to 1)', '{\"Email\": \"superuse12312312r@example.com\", \"Status\": \"Offline\", \"User_ID\": 147, \"Last_Name\": \"123123\", \"Department\": \"SOL\", \"First_Name\": \"123123\", \"is_deleted\": 0, \"Last_Active\": null}', '{\"Email\": \"superuse12312312r@example.com\", \"Status\": \"Offline\", \"User_ID\": 147, \"Last_Name\": \"123123\", \"Department\": \"SOL\", \"First_Name\": \"123123\", \"is_deleted\": 1, \"Last_Active\": null}', 'User Management', 'Successful', '2025-02-28 14:12:15'),
+(92, 1, 144, 'Remove', 'User soft deleted (is_deleted set to 1)', '{\"Email\": \"superadmin123123@example.com\", \"Status\": \"Offline\", \"User_ID\": 144, \"Last_Name\": \"123\", \"Department\": \"SOL\", \"First_Name\": \"123\", \"is_deleted\": 0, \"Last_Active\": null}', '{\"Email\": \"superadmin123123@example.com\", \"Status\": \"Offline\", \"User_ID\": 144, \"Last_Name\": \"123\", \"Department\": \"SOL\", \"First_Name\": \"123\", \"is_deleted\": 1, \"Last_Active\": null}', 'User Management', 'Successful', '2025-02-28 14:44:59'),
+(93, 1, 145, 'Remove', 'User soft deleted (is_deleted set to 1)', '{\"Email\": \"testtest123@example.com\", \"Status\": \"Offline\", \"User_ID\": 145, \"Last_Name\": \"123\", \"Department\": \"SOM\", \"First_Name\": \"123\", \"is_deleted\": 0, \"Last_Active\": null}', '{\"Email\": \"testtest123@example.com\", \"Status\": \"Offline\", \"User_ID\": 145, \"Last_Name\": \"123\", \"Department\": \"SOM\", \"First_Name\": \"123\", \"is_deleted\": 1, \"Last_Active\": null}', 'User Management', 'Successful', '2025-02-28 14:44:59'),
+(94, 1, 144, 'Delete', 'User has been deleted', '{\"Email\": \"superadmin123123@example.com\", \"Status\": \"Offline\", \"User_ID\": 144, \"Last_Name\": \"123\", \"Department\": \"SOL\", \"First_Name\": \"123\", \"is_deleted\": 1, \"Last_Active\": null}', '', 'User Management', 'Successful', '2025-02-28 15:21:12'),
+(96, 1, 145, 'Modified', 'Updated fields: First_Name, Last_Name', '{\"Email\": \"testtest123@example.com\", \"Status\": \"Offline\", \"User_ID\": 145, \"Password\": \"$2y$10$2dQ47SHsBGEhLS9x6bIqLeuLCpr3ZwgP3kEZ0XVYMD.2/CIvpVCZK\", \"Last_Name\": \"123\", \"Department\": \"SOM\", \"First_Name\": \"123\", \"Last_Active\": null}', '{\"Email\": \"testtest123@example.com\", \"Status\": \"Offline\", \"User_ID\": 145, \"Password\": \"$2y$10$2dQ47SHsBGEhLS9x6bIqLeuLCpr3ZwgP3kEZ0XVYMD.2/CIvpVCZK\", \"Last_Name\": \"123123\", \"Department\": \"SOM\", \"First_Name\": \"123123\", \"Last_Active\": null}', 'User Management', 'Successful', '2025-02-28 15:52:59'),
+(97, 1, 146, 'Restored', '1233333@example.com has been restored', '{\"is_deleted\": 1}', '{\"is_deleted\": 0}', 'User Management', 'Successful', '2025-02-28 15:53:35'),
+(98, 1, 147, 'Restored', 'User restored (is_deleted set to 0)', '{\"Email\": \"superuse12312312r@example.com\", \"Status\": \"Offline\", \"User_ID\": 147, \"Last_Name\": \"123123\", \"Department\": \"SOL\", \"First_Name\": \"123123\", \"is_deleted\": 1, \"Last_Active\": null}', '{\"Email\": \"superuse12312312r@example.com\", \"Status\": \"Offline\", \"User_ID\": 147, \"Last_Name\": \"123123\", \"Department\": \"SOL\", \"First_Name\": \"123123\", \"is_deleted\": 0, \"Last_Active\": null}', 'User Management', 'Successful', '2025-02-28 15:57:09');
 
 -- --------------------------------------------------------
 
@@ -84,9 +84,9 @@ CREATE TABLE IF NOT EXISTS `chargeinvoice` (
 -- Dumping data for table `chargeinvoice`
 --
 
-INSERT INTO `chargeinvoice` (`ChargeInvoiceID`, `ChargeInvoiceNo`, `DateOfChargeInvoice`, `PurchaseOrderNumber`) VALUES
-(1, 'CI6789', '2024-02-05', 'PO12345'),
-(2, 'CI6790', '2024-02-06', 'PO12346');
+INSERT INTO `chargeinvoice` (`ChargeInvoiceID`, `ChargeInvoiceNo`, `DateOfChargeInvoice`, `CreatedDate`, `ModifiedDate`, `PurchaseOrderNumber`) VALUES
+(1, 'CI6789', '2024-02-05', '2025-02-27 08:02:06', '2025-02-27 08:02:06', 'PO12345'),
+(2, 'CI6790', '2024-02-06', '2025-02-27 08:02:06', '2025-02-27 08:02:06', 'PO12346');
 
 -- --------------------------------------------------------
 
@@ -284,12 +284,12 @@ CREATE TABLE IF NOT EXISTS `purchaseorder` (
 -- Dumping data for table `purchaseorder`
 --
 
-INSERT INTO `purchaseorder` (`PurchaseOrderID`, `PurchaseOrderNumber`, `NumberOfUnits`, `DateOfPurchaseOrder`, `ItemsSpecification`) VALUES
-(1, 'PO12345', 10, '2024-02-01', 'Laptops'),
-(2, 'PO12346', 5, '2024-02-02', 'Printers'),
-(3, '1234567890', 12, '2025-02-13', 'AMD'),
-(4, '1111', 11, '2025-02-14', '123'),
-(5, '123', 11, '2025-02-03', '123');
+INSERT INTO `purchaseorder` (`PurchaseOrderID`, `PurchaseOrderNumber`, `NumberOfUnits`, `DateOfPurchaseOrder`, `CreatedDate`, `ModifiedDate`, `ItemsSpecification`) VALUES
+(1, 'PO12345', 10, '2024-02-01', '2025-02-27 08:02:06', '2025-02-27 08:02:06', 'Laptops'),
+(2, 'PO12346', 5, '2024-02-02', '2025-02-27 08:02:06', '2025-02-27 08:02:06', 'Printers'),
+(3, '1234567890', 12, '2025-02-13', '2025-02-27 08:02:06', '2025-02-27 08:02:06', 'AMD'),
+(4, '1111', 11, '2025-02-14', '2025-02-27 08:02:06', '2025-02-27 08:02:06', '123'),
+(5, '123', 11, '2025-02-03', '2025-02-27 08:02:06', '2025-02-27 08:02:06', '123');
 
 --
 -- Triggers `purchaseorder`
@@ -349,9 +349,9 @@ CREATE TABLE IF NOT EXISTS `receivingreportform` (
 -- Dumping data for table `receivingreportform`
 --
 
-INSERT INTO `receivingreportform` (`ReceivingReportFormID`, `ReceivingReportNumber`, `AccountableIndividual`, `PurchaseOrderNumber`, `AccountableIndividualLocation`) VALUES
-(1, 'RR001', 'John Doe', 'PO12345', 'IT Department'),
-(2, 'RR002', 'Jane Smith', 'PO12346', 'Admin Office');
+INSERT INTO `receivingreportform` (`ReceivingReportFormID`, `ReceivingReportNumber`, `AccountableIndividual`, `PurchaseOrderNumber`, `AccountableIndividualLocation`, `CreatedDate`, `ModifiedDate`) VALUES
+(1, 'RR001', 'John Doe', 'PO12345', 'IT Department', '2025-02-27 08:02:06', '2025-02-27 08:02:06'),
+(2, 'RR002', 'Jane Smith', 'PO12346', 'Admin Office', '2025-02-27 08:02:06', '2025-02-27 08:02:06');
 
 -- --------------------------------------------------------
 
@@ -508,22 +508,29 @@ CREATE TABLE IF NOT EXISTS `users` (
   `reset_token_expires` datetime DEFAULT NULL,
   PRIMARY KEY (`User_ID`),
   UNIQUE KEY `Email` (`Email`)
-) ENGINE=InnoDB AUTO_INCREMENT=56 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=148 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `users`
 --
 
 INSERT INTO `users` (`User_ID`, `Email`, `Password`, `First_Name`, `Last_Name`, `Department`, `Status`, `last_active`, `is_deleted`, `reset_token`, `reset_token_expires`) VALUES
-(1, 'superadmin@example.com', '$2y$10$i4ei.yjO/RWfQmsCjZrbUO8PdC8YKip8/JRf8yXYC17AU7RbHt8vq', 'Super1', 'Admin1', 'TMDD1', '', '2025-02-05 11:08:09', 0, NULL, NULL),
-(2, 'administrator@example.com', '$2y$10$Pf0uRneLsEex.szkU8vJS.P27ttwz9EtZkND8w4ttadglX6AVQFpe', 'Admin', 'Inistrator', 'Department', '', NULL, 0, NULL, NULL);
+(1, 'superadmin@example.com', '$2y$10$i4ei.yjO/RWfQmsCjZrbUO8PdC8YKip8/JRf8yXYC17AU7RbHt8vq', 'Super1', 'Admin1', 'Office of the President', '', '2025-02-05 11:08:09', 0, NULL, NULL),
+(2, 'administrator@example.com', '$2y$10$Pf0uRneLsEex.szkU8vJS.P27ttwz9EtZkND8w4ttadglX6AVQFpe', 'Admin', 'Inistrator', 'Department', '', NULL, 0, NULL, NULL),
+(139, 'asd@gmail.com', '$2y$10$XZI2H62333wGltLe2lnD3umbO8v5h6m0mX4dF3FDwt1rBOCQgO3/u', 'asd', 'asd', 'SOL', 'Offline', NULL, 0, NULL, NULL),
+(141, 'superuseasdr@example.com', '$2y$10$jvRMVO9L7B2pv0TelQDaZeilhdSdwHLZpnAUIqLT7y0i5vYNxozEW', 'asd', 'asd', 'SOM', 'Offline', NULL, 0, NULL, NULL),
+(142, 'testtest@example.com', '$2y$10$VeW7q1lJ7kzlBuMhxk.48OcfEEbVucx2/j5EDNSlAhGGXUnmBLWcq', 'adf', 'adf', 'SOL', 'Offline', NULL, 0, NULL, NULL),
+(143, 'asdasdasdas123d@example.com', '$2y$10$Dd/KgFonELaE92kMGbU0OuTqwWwYYRaIDshRO/6IR5wCxyNBM9Ecu', 'asd', 'asd', 'SOL', 'Offline', NULL, 0, NULL, NULL),
+(145, 'testtest123@example.com', '$2y$10$2dQ47SHsBGEhLS9x6bIqLeuLCpr3ZwgP3kEZ0XVYMD.2/CIvpVCZK', '123123', '123123', 'SOM', 'Offline', NULL, 0, NULL, NULL),
+(146, '1233333@example.com', '$2y$10$pfVCnoMV/kZ39xk9Zk34ceZ7hXrCaRllfKaTnfrlNm3h5o0Wu7952', '312', '123', 'SOM', 'Offline', NULL, 0, NULL, NULL),
+(147, 'superuse12312312r@example.com', '$2y$10$TlZ6hEyAl4819wKYjGKftOSpubm9aAPmiqJ5PfrpF4YBuklmqJMzW', '123123', '123123', 'SOL', 'Offline', NULL, 0, NULL, NULL);
 
 --
 -- Triggers `users`
 --
-DROP TRIGGER IF EXISTS `after_user_permanent_delete`;
+DROP TRIGGER IF EXISTS `after_user_delete`;
 DELIMITER $$
-CREATE TRIGGER `after_user_permanent_delete` AFTER DELETE ON `users` FOR EACH ROW BEGIN
+CREATE TRIGGER `after_user_delete` AFTER DELETE ON `users` FOR EACH ROW BEGIN
     INSERT INTO audit_log (
         `UserID`,              -- The user who performed the action
         `EntityID`,            -- The ID of the permanently deleted user
@@ -537,8 +544,8 @@ CREATE TRIGGER `after_user_permanent_delete` AFTER DELETE ON `users` FOR EACH RO
     ) VALUES (
                  @current_user_id,      -- Replace with the actual user ID performing the action
                  OLD.User_ID,           -- The ID of the permanently deleted user
-                 'Permanent Delete',    -- Action type
-                 'User permanently deleted from the database', -- Details
+                 'Delete',    -- Action type
+                 'User has been deleted', -- Details
                  JSON_OBJECT(           -- Old values in JSON format
                          'User_ID', OLD.User_ID,
                          'Email', OLD.Email,
@@ -557,9 +564,9 @@ CREATE TRIGGER `after_user_permanent_delete` AFTER DELETE ON `users` FOR EACH RO
 END
 $$
 DELIMITER ;
-DROP TRIGGER IF EXISTS `after_user_soft_delete`;
+DROP TRIGGER IF EXISTS `after_user_remove`;
 DELIMITER $$
-CREATE TRIGGER `after_user_soft_delete` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
+CREATE TRIGGER `after_user_remove` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
     -- Check if the update is a soft delete (is_deleted changed from 0 to 1)
     IF OLD.is_deleted = 0 AND NEW.is_deleted = 1 THEN
         INSERT INTO audit_log (
@@ -575,7 +582,7 @@ CREATE TRIGGER `after_user_soft_delete` AFTER UPDATE ON `users` FOR EACH ROW BEG
         ) VALUES (
                      @current_user_id,      -- Replace with the actual user ID performing the action
                      OLD.User_ID,           -- The ID of the soft-deleted user
-                     'Soft Delete',         -- Action type
+                     'Remove',         -- Action type
                      'User soft deleted (is_deleted set to 1)', -- Details
                      JSON_OBJECT(           -- Old values in JSON format
                              'User_ID', OLD.User_ID,
@@ -605,55 +612,33 @@ CREATE TRIGGER `after_user_soft_delete` AFTER UPDATE ON `users` FOR EACH ROW BEG
 END
 $$
 DELIMITER ;
-DROP TRIGGER IF EXISTS `user_after_update`;
+DROP TRIGGER IF EXISTS `user_after_modify`;
 DELIMITER $$
-CREATE TRIGGER `user_after_update` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
+CREATE TRIGGER `user_after_modify` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
     DECLARE diffList TEXT DEFAULT '';
-
-    -- Handle Restore: if is_deleted changed from 1 to 0
-    IF OLD.is_deleted = 1 AND NEW.is_deleted = 0 THEN
-        INSERT INTO audit_log (
-            UserID,
-            EntityID,
-            Action,
-            Details,
-            OldVal,
-            NewVal,
-            Module,
-            Status
-        )
-        VALUES (
-            @current_user_id,
-            NEW.User_ID,
-            'Restored',
-            CONCAT(NEW.Email, ' has been restored'),
-            JSON_OBJECT('is_deleted', OLD.is_deleted),
-            JSON_OBJECT('is_deleted', NEW.is_deleted),
-            IFNULL(@current_module, 'User Management'),
-            'Successful'
-        );
-    ELSE
-        -- Build the diff list from fields other than is_deleted.
+    
+    -- Only log modifications if is_deleted did not change.
+    IF OLD.is_deleted = NEW.is_deleted THEN
         IF OLD.Email <> NEW.Email THEN 
-            SET diffList = CONCAT(diffList, 'Email, '); 
+            SET diffList = CONCAT(diffList, 'Email, ');
         END IF;
         IF OLD.First_Name <> NEW.First_Name THEN 
-            SET diffList = CONCAT(diffList, 'First_Name, '); 
+            SET diffList = CONCAT(diffList, 'First_Name, ');
         END IF;
         IF OLD.Last_Name <> NEW.Last_Name THEN 
-            SET diffList = CONCAT(diffList, 'Last_Name, '); 
+            SET diffList = CONCAT(diffList, 'Last_Name, ');
         END IF;
         IF OLD.Department <> NEW.Department THEN 
-            SET diffList = CONCAT(diffList, 'Department, '); 
+            SET diffList = CONCAT(diffList, 'Department, ');
         END IF;
         IF OLD.Status <> NEW.Status THEN 
-            SET diffList = CONCAT(diffList, 'Status, '); 
+            SET diffList = CONCAT(diffList, 'Status, ');
         END IF;
         IF OLD.last_active <> NEW.last_active THEN 
-            SET diffList = CONCAT(diffList, 'Last_Active, '); 
+            SET diffList = CONCAT(diffList, 'Last_Active, ');
         END IF;
         IF OLD.Password <> NEW.Password THEN 
-            SET diffList = CONCAT(diffList, 'Password, '); 
+            SET diffList = CONCAT(diffList, 'Password, ');
         END IF;
 
         -- Only insert a log if at least one field (other than is_deleted) changed.
@@ -666,7 +651,8 @@ CREATE TRIGGER `user_after_update` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
                 OldVal,
                 NewVal,
                 Module,
-                Status
+                Status,
+                Date_Time
             )
             VALUES (
                 @current_user_id,
@@ -694,47 +680,91 @@ CREATE TRIGGER `user_after_update` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
                     'Last_Active', NEW.last_active
                 ),
                 IFNULL(@current_module, 'User Management'),
-                'Successful'
+                'Successful',
+                NOW()
             );
         END IF;
     END IF;
 END
 $$
 DELIMITER ;
-DROP TRIGGER IF EXISTS `users_after_insert`;
+DROP TRIGGER IF EXISTS `user_after_restore`;
 DELIMITER $$
-CREATE TRIGGER `users_after_insert` AFTER INSERT ON `users` FOR EACH ROW BEGIN
-    INSERT INTO audit_log (
-        `UserID`,              -- The user who performed the action
-        `EntityID`,            -- The ID of the new user record
-        `Action`,              -- The action performed (e.g., 'Add')
-        `Details`,             -- Description of the action
-        `OldVal`,              -- Previous values (empty for 'Add')
-        `NewVal`,              -- New values (details of the added user)
-        `Module`,              -- Module where the action occurred
-        `Status`,              -- Status of the action (e.g., 'Successful')
-        `Date_Time`            -- Timestamp of the action
-    ) VALUES (
-                 @current_user_id,      -- Replace with the actual user ID performing the action
-                 NEW.User_ID,           -- The ID of the newly added user
-                 'Add',                 -- Action type
-                 'New user added',      -- Details of the action
-                 '',                    -- No old values for 'Add'
-                 CONCAT(                -- New values as a concatenated string
-                         'User_ID: ', NEW.User_ID,
-                         ', Email: ', NEW.Email,
-                         ', First_Name: ', NEW.First_Name,
-                         ', Last_Name: ', NEW.Last_Name,
-                         ', Department: ', NEW.Department,
-                         ', Status: ', NEW.Status,
-                         ', Last_Active: ', NEW.last_active,
-                         ', is_deleted: ', NEW.is_deleted
-                 ),
-                 IFNULL(@current_module, 'User Management'), -- Default to 'User Management' if @current_module is not set
-                 'Successful',          -- Status of the action
-                 NOW()                  -- Current timestamp
-             );
+CREATE TRIGGER `user_after_restore` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
+    -- Check if the update is a restore (is_deleted changed from 1 to 0)
+    IF OLD.is_deleted = 1 AND NEW.is_deleted = 0 THEN
+        INSERT INTO audit_log (
+            `UserID`,              -- The user who performed the action
+            `EntityID`,            -- The ID of the restored user
+            `Action`,              -- Action type
+            `Details`,             -- Description of the action
+            `OldVal`,              -- Old values before the restore
+            `NewVal`,              -- New values after the restore
+            `Module`,              -- Module where the action occurred
+            `Status`,              -- Status of the action
+            `Date_Time`            -- Timestamp of the action
+        ) VALUES (
+            @current_user_id,      -- The user performing the action
+            NEW.User_ID,           -- The ID of the restored user
+            'Restored',            -- Action type
+            'User restored (is_deleted set to 0)',  -- Details
+            JSON_OBJECT(           -- Old values in JSON format
+                'User_ID', OLD.User_ID,
+                'Email', OLD.Email,
+                'First_Name', OLD.First_Name,
+                'Last_Name', OLD.Last_Name,
+                'Department', OLD.Department,
+                'Status', OLD.Status,
+                'Last_Active', OLD.last_active,
+                'is_deleted', OLD.is_deleted
+            ),
+            JSON_OBJECT(           -- New values in JSON format
+                'User_ID', NEW.User_ID,
+                'Email', NEW.Email,
+                'First_Name', NEW.First_Name,
+                'Last_Name', NEW.Last_Name,
+                'Department', NEW.Department,
+                'Status', NEW.Status,
+                'Last_Active', NEW.last_active,
+                'is_deleted', NEW.is_deleted
+            ),
+            IFNULL(@current_module, 'User Management'),
+            'Successful',
+            NOW()                  -- Current timestamp
+        );
+    END IF;
 END
+$$
+DELIMITER ;
+DROP TRIGGER IF EXISTS `users_after_create`;
+DELIMITER $$
+CREATE TRIGGER `users_after_create` AFTER INSERT ON `users` FOR EACH ROW INSERT INTO audit_log (
+    UserID,
+    EntityID,
+    Action,
+    Details,
+    OldVal,
+    NewVal,
+    Module,
+    Status,
+    Date_Time
+) VALUES (
+    @current_user_id,
+    NEW.User_ID,
+    'Create',  -- Ensure this is correctly set
+    CONCAT('New user added: ', NEW.Email),
+    NULL,
+    JSON_OBJECT(
+        'User_ID', NEW.User_ID,
+        'Email', NEW.Email,
+        'First_Name', NEW.First_Name,
+        'Last_Name', NEW.Last_Name,
+        'Department', NEW.Department
+    ),
+    IFNULL(@current_module, 'User Management'),
+    'Successful',
+    NOW()
+)
 $$
 DELIMITER ;
 
@@ -752,7 +782,7 @@ CREATE TABLE IF NOT EXISTS `user_roles` (
   PRIMARY KEY (`User_Role_ID`),
   KEY `User_ID` (`User_ID`),
   KEY `Role_ID` (`Role_ID`)
-) ENGINE=InnoDB AUTO_INCREMENT=49 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=57 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `user_roles`
@@ -760,7 +790,14 @@ CREATE TABLE IF NOT EXISTS `user_roles` (
 
 INSERT INTO `user_roles` (`User_Role_ID`, `User_ID`, `Role_ID`) VALUES
 (1, 1, 1),
-(2, 2, 2);
+(2, 2, 2),
+(49, 139, 4),
+(50, 141, 4),
+(51, 142, 3),
+(52, 143, 4),
+(54, 145, 4),
+(55, 146, 4),
+(56, 147, 4);
 
 --
 -- Constraints for dumped tables
