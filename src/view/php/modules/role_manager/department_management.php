@@ -5,10 +5,10 @@ require_once('../../../../../config/ims-tmdd.php'); // Adjust the path as needed
 
 // -----------------------------------------------------------------
 // Optionally check for admin privileges (uncomment if needed)
-// if (!isset($_SESSION['user_id'])) {
-//     header("Location: login.php");
-//     exit();
-// }
+if (!isset($_SESSION['user_id'])) {
+    header("Location: ../../../../../public/index.php");
+    exit();
+}
 // -----------------------------------------------------------------
 
 // Set the audit log session variables for MySQL triggers.
@@ -101,17 +101,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 // ------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Retrieve and sanitize form input
-    $AssetTag          = trim($_POST['AssetTag'] ?? '');
-    $BuildingLocation  = trim($_POST['BuildingLocation'] ?? '');
-    $FloorNumber       = trim($_POST['FloorNumber'] ?? '');
-    $SpecificArea      = trim($_POST['SpecificArea'] ?? '');
-    $PersonResponsible = trim($_POST['PersonResponsible'] ?? '');
-    $Remarks           = trim($_POST['Remarks'] ?? '');
+    $DepartmentID          = trim($_POST['DepartmentID'] ?? '');
+    $DepartmentAcronym  = trim($_POST['DepartmentAcronym'] ?? '');
+    $DepartmentName       = trim($_POST['DepartmentName'] ?? '');
 
     $response = array('status' => '', 'message' => '');
 
     // Validate required fields
-    if (empty($AssetTag) || empty($BuildingLocation) || empty($FloorNumber) || empty($SpecificArea) || empty($PersonResponsible)) {
+    if (empty($DepartmentID) || empty($DepartmentAcronym) || empty($DepartmentName)) {
         $response['status'] = 'error';
         $response['message'] = 'Please fill in all required fields.';
         echo json_encode($response);
@@ -124,29 +121,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->beginTransaction();
 
             // Insert equipment location
-            $stmt = $pdo->prepare("INSERT INTO equipmentlocation (
-                AssetTag, 
-                BuildingLocation, 
-                FloorNumber, 
-                SpecificArea, 
-                PersonResponsible, 
-                Remarks,
-                CreatedDate
-            ) VALUES (?, ?, ?, ?, ?, ?, NOW())");
-            $stmt->execute([$AssetTag, $BuildingLocation, $FloorNumber, $SpecificArea, $PersonResponsible, $Remarks]);
+            $stmt = $pdo->prepare("INSERT INTO departments (
+                Department_ID, 
+                Department_Acronym, 
+                Department_Name 
+            ) VALUES (?, ?, ?)");
+            $stmt->execute([$DepartmentID, $DepartmentAcronym, $DepartmentName]);
             
-            $newLocationId = $pdo->lastInsertId();
+            $newDepartmentId = $pdo->lastInsertId();
 
             // Prepare audit log data
             $newValues = json_encode([
-                'AssetTag' => $AssetTag,
-                'BuildingLocation' => $BuildingLocation,
-                'FloorNumber' => $FloorNumber,
-                'SpecificArea' => $SpecificArea,
-                'PersonResponsible' => $PersonResponsible,
-                'Remarks' => $Remarks
+                'Department_ID' => $DepartmentID,
+                'Department_Acronym' => $DepartmentAcronym,
+                'Department_Name' => $DepartmentName
             ]);
-
             // Insert audit log
             $auditStmt = $pdo->prepare("
                 INSERT INTO audit_log (
@@ -156,10 +145,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $auditStmt->execute([
                 $_SESSION['user_id'],
-                $newLocationId,
-                'Equipment Location',
+                $newDepartmentId,
+                'Department Management',
                 'Add',
-                'New equipment location added',
+                'New department added',
                 null,
                 $newValues,
                 'Successful'
@@ -168,15 +157,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->commit();
             
             $response['status'] = 'success';
-            $response['message'] = 'Equipment Location has been added successfully.';
-            $_SESSION['success'] = "Equipment Location has been added successfully.";
+            $response['message'] = 'Department has been added successfully.';
+            $_SESSION['success'] = "Department has been added successfully.";
         } catch (PDOException $e) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
             }
             $response['status'] = 'error';
-            $response['message'] = 'Error adding Equipment Location: ' . $e->getMessage();
-            $_SESSION['errors'] = ["Error adding Equipment Location: " . $e->getMessage()];
+            $response['message'] = 'Error adding Department: ' . $e->getMessage();
+            $_SESSION['errors'] = ["Error adding Department: " . $e->getMessage()];
         }
         echo json_encode($response);
         exit;
@@ -184,94 +173,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = $_POST['id'];
         try {
             $pdo->beginTransaction();
-
-            // Get old location details for audit log
-            $stmt = $pdo->prepare("SELECT * FROM equipmentlocation WHERE EquipmentLocationID = ?");
+    
+            // Get old department details for audit log
+            $stmt = $pdo->prepare("SELECT * FROM departments WHERE Department_ID = ?");
             $stmt->execute([$id]);
-            $oldLocation = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            // Update equipment location
-            $stmt = $pdo->prepare("UPDATE equipmentlocation SET 
-                AssetTag = ?, 
-                BuildingLocation = ?, 
-                FloorNumber = ?, 
-                SpecificArea = ?, 
-                PersonResponsible = ?, 
-                Remarks = ?
-                WHERE EquipmentLocationID = ?");
+            $oldDepartment = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+            // Update department details
+            $stmt = $pdo->prepare("UPDATE departments SET 
+                Department_Acronym = ?, 
+                Department_Name = ?
+                WHERE Department_ID = ?");
             $stmt->execute([
-                $_POST['AssetTag'],
-                $_POST['BuildingLocation'],
-                $_POST['FloorNumber'],
-                $_POST['SpecificArea'],
-                $_POST['PersonResponsible'],
-                $_POST['Remarks'],
+                $_POST['DepartmentAcronym'],
+                $_POST['DepartmentName'],
                 $id
             ]);
-
+    
             // Prepare audit log data
             $oldValues = json_encode([
-                'AssetTag' => $oldLocation['AssetTag'],
-                'BuildingLocation' => $oldLocation['BuildingLocation'],
-                'FloorNumber' => $oldLocation['FloorNumber'],
-                'SpecificArea' => $oldLocation['SpecificArea'],
-                'PersonResponsible' => $oldLocation['PersonResponsible'],
-                'Remarks' => $oldLocation['Remarks'],
-                'CreatedDate' => $oldLocation['CreatedDate'],
-                'ModifiedDate' => $oldLocation['ModifiedDate']
+                'Department_Acronym' => $oldDepartment['Department_Acronym'],
+                'Department_Name' => $oldDepartment['Department_Name']
             ]);
-
+    
             $newValues = json_encode([
-                'AssetTag' => $_POST['AssetTag'],
-                'BuildingLocation' => $_POST['BuildingLocation'],
-                'FloorNumber' => $_POST['FloorNumber'],
-                'SpecificArea' => $_POST['SpecificArea'],
-                'PersonResponsible' => $_POST['PersonResponsible'],
-                'Remarks' => $_POST['Remarks'],
-                'CreatedDate' => $oldLocation['CreatedDate'],
-                'ModifiedDate' => date('Y-m-d H:i:s')
+                'Department_Acronym' => $_POST['DepartmentAcronym'],
+                'Department_Name' => $_POST['DepartmentName']
             ]);
-
+    
             // Insert audit log
-            $auditStmt = $pdo->prepare("
-                INSERT INTO audit_log (
-                    UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ");
-
+            $auditStmt = $pdo->prepare("INSERT INTO audit_log (
+                UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+    
             $auditStmt->execute([
                 $_SESSION['user_id'],
                 $id,
-                'Equipment Location',
+                'Departments',
                 'Modified',
-                'Equipment location modified',
+                'Department details modified',
                 $oldValues,
                 $newValues,
                 'Successful'
             ]);
-
+    
             $pdo->commit();
             
-            // Ensure we're sending a proper JSON response
+            // JSON response
             header('Content-Type: application/json');
             echo json_encode([
                 'status' => 'success',
-                'message' => 'Equipment Location has been updated successfully.'
+                'message' => 'Department has been updated successfully.'
             ]);
             exit;
         } catch (PDOException $e) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
             }
-            // Ensure we're sending a proper JSON response for errors too
+            
+            // JSON error response
             header('Content-Type: application/json');
             echo json_encode([
                 'status' => 'error',
-                'message' => 'Error updating Equipment Location: ' . $e->getMessage()
+                'message' => 'Error updating Department: ' . $e->getMessage()
             ]);
             exit;
         }
     }
+    
 }
 
 // ------------------------
@@ -295,11 +264,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) 
 }
 
 // ------------------------
-// RETRIEVE ALL EQUIPMENT LOCATIONS
+// RETRIEVE ALL DEPARTMENTS
 // ------------------------
 try {
     $stmt = $pdo->query("SELECT * FROM departments ORDER BY Department_ID");
-    $equipmentLocations = $stmt->fetchAll();
+    $departments = $stmt->fetchAll();
 } catch (PDOException $e) {
     $errors[] = "Error retrieving Equipment Locations: " . $e->getMessage();
 }
@@ -375,11 +344,11 @@ try {
                         </div>
                     </div>
                       <div class="card-body">
-                        <?php if (!empty($equipmentLocations)): ?>
+                        <?php if (!empty($departments)): ?>
                             <div class="table-responsive">
-                                <!-- Add Location Button and Filter -->
+                                <!-- Add Department Button and Filter -->
                                 <div class="d-flex justify-content-start mb-3 gap-2">
-                                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addLocationModal">
+                                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addDepartmentModal">
                                         <i class="bi bi-plus-circle"></i> Add Department
                                     </button>
                                 </div>
@@ -394,18 +363,21 @@ try {
                                     </tr>
                                     </thead>
                                     <tbody>
-                                    <?php foreach ($equipmentLocations as $location): ?>
+                                    <?php foreach ($departments as $department): ?>
                                         <tr>
-                                            <td><?php echo htmlspecialchars($location['Department_ID']); ?></td>
-                                            <td><?php echo htmlspecialchars($location['Department_Acronym']); ?></td>
-                                            <td><?php echo htmlspecialchars($location['Department_Name']); ?></td>
+                                            <td><?php echo htmlspecialchars($department['Department_ID']); ?></td>
+                                            <td><?php echo htmlspecialchars($department['Department_Acronym']); ?></td>
+                                            <td><?php echo htmlspecialchars($department['Department_Name']); ?></td>
                                             <td class="text-center">
                                                 <div class="btn-group" role="group">
-                                                    <a class="btn btn-sm btn-outline-primary edit-location" 
-                                                       data-asset="<?php echo htmlspecialchars($location['Department_ID']); ?>">
+                                                    <a class="btn btn-sm btn-outline-primary edit-department" 
+                                                    data-id="<?php echo htmlspecialchars($department['Department_ID']); ?>"
+                                                    data-department-id="<?php echo htmlspecialchars($department['Department_ID']); ?>"
+                                                    data-department-acronym="<?php echo htmlspecialchars($department['Department_Acronym']); ?>"
+                                                    data-department-name="<?php echo htmlspecialchars($department['Department_Name']); ?>">
                                                         <i class="bi bi-pencil-square"></i> Edit
                                                     </a>
-                                                    <a class="btn btn-sm btn-outline-danger" href="?action=delete&id=<?php echo htmlspecialchars($location['Department_ID']); ?>" onclick="return confirm('Are you sure you want to delete this department?');">
+                                                    <a class="btn btn-sm btn-outline-danger" href="?action=delete&id=<?php echo htmlspecialchars($department['Department_ID']); ?>" onclick="return confirm('Are you sure you want to delete this department?');">
                                                         <i class="bi bi-trash"></i> Delete
                                                     </a>
                                                 </div>
@@ -459,63 +431,42 @@ try {
     </div>
 </div>
 
-<!-- Add Location Modal -->
-<div class="modal fade" id="addLocationModal" tabindex="-1">
+<!-- Add Department Modal -->
+<div class="modal fade" id="addDepartmentModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Add New Location</h5>
+                <h5 class="modal-title">Add New Department</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="addLocationForm" method="post">
+                <form id="addDepartmentForm" method="post">
                     <input type="hidden" name="action" value="add">
                     
                     <div class="mb-3">
-                        <label for="AssetTag" class="form-label">
-                            <i class="bi bi-tag"></i> Asset Tag <span class="text-danger">*</span>
+                        <label for="DepartmentID" class="form-label">
+                            <i class="bi bi-tag"></i> Department ID <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control" name="AssetTag" id="AssetTag" required>
+                        <input type="number" min="1" class="form-control" name="DepartmentID" id="DepartmentID" required>
                     </div>
 
                     <div class="mb-3">
                         <label for="BuildingLocation" class="form-label">
-                            <i class="bi bi-building"></i> Building Location <span class="text-danger">*</span>
+                            <i class="bi bi-building"></i> Department Acronym <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control" id="BuildingLocation" name="BuildingLocation" required>
+                        <input type="text" class="form-control" id="DepartmentAcronym" name="DepartmentAcronym" required>
                     </div>
 
                     <div class="mb-3">
-                        <label for="FloorNumber" class="form-label">
-                            <i class="bi bi-layers"></i> Floor Number <span class="text-danger">*</span>
+                        <label for="DepartmentName" class="form-label">
+                            <i class="bi bi-layers"></i> Department Name <span class="text-danger">*</span>
                         </label>
-                        <input type="number" min="1" class="form-control" id="FloorNumber" name="FloorNumber" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="SpecificArea" class="form-label">
-                            <i class="bi bi-pin-map"></i> Specific Area <span class="text-danger">*</span>
-                        </label>
-                        <input type="text" class="form-control" id="SpecificArea" name="SpecificArea" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="PersonResponsible" class="form-label">
-                            <i class="bi bi-person"></i> Person Responsible <span class="text-danger">*</span>
-                        </label>
-                        <input type="text" class="form-control" id="PersonResponsible" name="PersonResponsible" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="Remarks" class="form-label">
-                            <i class="bi bi-chat-left-text"></i> Remarks
-                        </label>
-                        <textarea class="form-control" id="Remarks" name="Remarks" rows="3"></textarea>
+                        <input type="text" class="form-control" id="DepartmentName" name="DepartmentName" required>
                     </div>
 
                     <div class="d-flex justify-content-end">
                         <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-success">Add Location</button>
+                        <button type="submit" class="btn btn-success">Add Department</button>
                     </div>
                 </form>
             </div>
@@ -524,7 +475,7 @@ try {
 </div>
 
 <!-- Edit Department Modal -->
-<div class="modal fade" id="editLocationModal" tabindex="-1">
+<div class="modal fade" id="editDepartmentModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -532,55 +483,34 @@ try {
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="editLocationForm" method="post">
+                <form id="editDepartmentForm" method="post">
                     <input type="hidden" name="action" value="update">
-                    <input type="hidden" name="id" id="edit_location_id">
+                    <input type="hidden" name="id" id="edit_department_hidden_id">
                     
                     <div class="mb-3">
-                        <label for="edit_asset_tag" class="form-label">
-                            <i class="bi bi-tag"></i> Asset Tag <span class="text-danger">*</span>
+                        <label for="edit_department_id" class="form-label">
+                            <i class="bi bi-tag"></i> Department ID <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control" name="AssetTag" id="edit_asset_tag" required>
+                        <input type="number" min="1" class="form-control" id="edit_department_id" name="DepartmentID" required>
                     </div>
 
                     <div class="mb-3">
-                        <label for="edit_building_location" class="form-label">
-                            <i class="bi bi-building"></i> Building Location <span class="text-danger">*</span>
+                        <label for="edit_department_acronym" class="form-label">
+                            <i class="bi bi-building"></i> Department Acronym <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control" id="edit_building_location" name="BuildingLocation" required>
+                        <input type="text" class="form-control" id="edit_department_acronym" name="DepartmentAcronym" required>
                     </div>
 
                     <div class="mb-3">
-                        <label for="edit_floor_number" class="form-label">
-                            <i class="bi bi-layers"></i> Floor Number <span class="text-danger">*</span>
+                        <label for="edit_department_name" class="form-label">
+                            <i class="bi bi-layers"></i> Department Name <span class="text-danger">*</span>
                         </label>
-                        <input type="number" min="1" class="form-control" id="edit_floor_number" name="FloorNumber" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="edit_specific_area" class="form-label">
-                            <i class="bi bi-pin-map"></i> Specific Area <span class="text-danger">*</span>
-                        </label>
-                        <input type="text" class="form-control" id="edit_specific_area" name="SpecificArea" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="edit_person_responsible" class="form-label">
-                            <i class="bi bi-person"></i> Person Responsible <span class="text-danger">*</span>
-                        </label>
-                        <input type="text" class="form-control" id="edit_person_responsible" name="PersonResponsible" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="edit_remarks" class="form-label">
-                            <i class="bi bi-chat-left-text"></i> Remarks
-                        </label>
-                        <textarea class="form-control" id="edit_remarks" name="Remarks" rows="3"></textarea>
+                        <input type="text" class="form-control" id="edit_department_name" name="DepartmentName" required>
                     </div>
 
                     <div class="d-flex justify-content-end">
                         <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Update Location</button>
+                        <button type="submit" class="btn btn-primary">Update Department</button>
                     </div>
                 </form>
             </div>
@@ -621,62 +551,59 @@ try {
 
 document.addEventListener('DOMContentLoaded', function() {
     // Form submissions
-    $('#addLocationForm').on('submit', function(e) {
+    $('#addDepartmentForm').on('submit', function(e) {
         e.preventDefault();
         
         $.ajax({
-            url: 'equipment_location.php',
+            url: 'department_management.php',
             method: 'POST',
             data: $(this).serialize(),
             dataType: 'json',
             success: function(result) {
                 if (result.status === 'success') {
                     // Hide modal and redirect
-                    $('#addLocationModal').modal('hide');
-                    window.location.href = 'equipment_location.php';
+                    $('#addDepartmentModal').modal('hide');
+                    window.location.href = 'department_management.php';
                 } else {
                     alert(result.message || 'An error occurred');
                 }
             },
             error: function(xhr, status, error) {
+                console.log(xhr.responseText);
                 alert('Error submitting the form: ' + error);
             }
         });
     });
 
-    // Edit button click handler
-    $('.edit-location').click(function() {
+    // Edit button click handler for departments
+    $('.edit-department').click(function() {
         const id = $(this).data('id');
-        const assetTag = $(this).data('asset');
-        const buildingLocation = $(this).data('building');
-        const floorNumber = $(this).data('floor');
-        const specificArea = $(this).data('area');
-        const personResponsible = $(this).data('person');
-        const remarks = $(this).data('remarks');
-        
-        $('#edit_location_id').val(id);
-        $('#edit_asset_tag').val(assetTag);
-        $('#edit_building_location').val(buildingLocation);
-        $('#edit_floor_number').val(floorNumber);
-        $('#edit_specific_area').val(specificArea);
-        $('#edit_person_responsible').val(personResponsible);
-        $('#edit_remarks').val(remarks);
-        
-        $('#editLocationModal').modal('show');
+        const departmentId = $(this).data('department-id');
+        const departmentAcronym = $(this).data('department-acronym');
+        const departmentName = $(this).data('department-name');
+
+        // Populate modal fields
+        $('#edit_department_hidden_id').val(id); // Hidden field for ID
+        $('#edit_department_id').val(departmentId);
+        $('#edit_department_acronym').val(departmentAcronym);
+        $('#edit_department_name').val(departmentName);
+
+        // Show the modal
+        $('#editDepartmentModal').modal('show');
     });
 
     // Edit form submission
-    $('#editLocationForm').on('submit', function(e) {
+    $('#editDepartmentForm').on('submit', function(e) {
         e.preventDefault();
         $.ajax({
-            url: 'equipment_location.php',
+            url: 'department_management.php',
             method: 'POST',
             data: $(this).serialize(),
             dataType: 'json',
             success: function(result) {
                 if (result.status === 'success') {
-                    $('#editLocationModal').modal('hide');
-                    window.location.href = 'equipment_location.php';
+                    $('#editDepartmentModal').modal('hide');
+                    window.location.href = 'department_management.php';
                 } else {
                     alert(result.message || 'An error occurred');
                 }
