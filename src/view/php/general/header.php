@@ -7,7 +7,7 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: " . BASE_URL . "public/index.php"); // Redirect to login page
     exit();
 }
-$role = $_SESSION['role'];
+$role = isset($_SESSION["role"]) ? $_SESSION["role"] : "";
 $email = $_SESSION['email'];
 ?>
 

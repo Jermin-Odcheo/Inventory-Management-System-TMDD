@@ -12,38 +12,59 @@ if (!isset($pdo)) {
 }
 
 // Check if the user is logged in
-// if (!isset($_SESSION['user_id'])) {
-//     header("Location: ../../../../../public/index.php");
-//     exit();
-// }
+ if (!isset($_SESSION['user_id'])) {
+     header("Location: ../../../../../public/index.php");
+     exit();
+ }
 
 // Define allowed sorting columns (for active users)
-$allowedSortColumns = ['User_ID', 'Email', 'First_Name', 'Last_Name', 'Department', 'Status'];
-$sortBy = isset($_GET['sort']) && in_array($_GET['sort'], $allowedSortColumns) ? $_GET['sort'] : 'User_ID';
+$allowedSortColumns = ['id', 'Email', 'First_Name', 'Last_Name', 'Department', 'Status'];
+$sortBy = isset($_GET['sort']) && in_array($_GET['sort'], $allowedSortColumns) ? $_GET['sort'] : 'id';
 $sortDir = isset($_GET['dir']) && $_GET['dir'] == 'desc' ? 'desc' : 'asc';
 
-// Define departments array with both short codes and full names
-$departments = [
-    'SAS' => 'School of Advanced Studies',
-    'SOM' => 'School of Medicine',
-    'SOL' => 'School of Law',
-    'STELA' => 'School of Teacher Education and Liberal Arts',
-    'SONAHBS' => 'School of Nursing, Allied Health, and Biological Sciences',
-    'SEA' => 'School of Engineering and Architecture',
-    'SAMCIS' => 'School of Accountancy, Management, Computing, and Information Studies'
-];
+// Fetch departments from database
+$departments = [];
+try {
+    $deptStmt = $pdo->query("SELECT id, department_name, abbreviation FROM departments WHERE is_disabled = 0 ORDER BY department_name");
+    while ($dept = $deptStmt->fetch(PDO::FETCH_ASSOC)) {
+        $departments[$dept['id']] = [
+            'name' => $dept['department_name'],
+            'abbreviation' => $dept['abbreviation']
+        ];
+    }
+} catch (PDOException $e) {
+    // Handle error silently
+    error_log("Error fetching departments: " . $e->getMessage());
+}
+
+// Function to get user departments
+function getUserDepartments($pdo, $userId) {
+    $deptIds = [];
+    try {
+        $stmt = $pdo->prepare("SELECT department_id FROM user_departments WHERE user_id = ?");
+        $stmt->execute([$userId]);
+        $deptIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    } catch (PDOException $e) {
+        error_log("Error fetching user departments: " . $e->getMessage());
+    }
+    return $deptIds;
+}
 
 // Modify the query to include department and search filters
-$query = "SELECT * FROM users WHERE is_deleted = 0";
+$query = "SELECT u.id, u.email, u.first_name, u.last_name, u.status as Status FROM users u";
 
 // Add department filter if selected
 if (isset($_GET['department']) && $_GET['department'] !== 'all') {
-    $query .= " AND Department = :department";
+    $query .= " JOIN user_departments ud ON u.id = ud.user_id WHERE ud.department_id = :department";
+    $whereUsed = true;
+} else {
+    $query .= " WHERE 1=1";
+    $whereUsed = true;
 }
 
 // Add search filter if provided
 if (isset($_GET['search']) && !empty($_GET['search'])) {
-    $query .= " AND (Email LIKE :search OR First_Name LIKE :search OR Last_Name LIKE :search)";
+    $query .= " AND (u.email LIKE :search OR u.first_name LIKE :search OR u.last_name LIKE :search)";
 }
 
 $query .= " ORDER BY `$sortBy` $sortDir";
@@ -90,8 +111,8 @@ function getCurrentUserRoles($pdo, $userId)
     $stmt = $pdo->prepare("
         SELECT r.Role_Name 
         FROM roles r 
-        JOIN user_roles ur ON r.Role_ID = ur.Role_ID 
-        WHERE ur.User_ID = ?
+        JOIN user_roles ur ON r.id = ur.Role_ID 
+        WHERE ur.user_id = ?
     ");
     $stmt->execute([$userId]);
     return $stmt->fetchAll(PDO::FETCH_COLUMN);
@@ -120,23 +141,37 @@ if role doesnt include view for User module then redirect
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 try {
+    // For debugging - comment out the redirect temporarily
+    // and add this to see what's happening:
+    echo "<pre>Checking permissions...</pre>";
+
     $stmt = $pdo->prepare("
-        select privilege_name 
-        from privileges as p 
-        join role_privileges as rp on p.privilege_id = rp.privilege_id 
-        join roles as r on r.role_id = rp.role_id
-        where rp.role_id = (select r.role_id where role_name = 'Regular User') 
+        SELECT p.priv_name 
+        FROM privileges AS p 
+        JOIN role_module_privileges AS rmp ON p.id = rmp.privilege_id 
+        JOIN roles AS r ON r.id = rmp.role_id
+        JOIN modules AS m ON m.id = rmp.module_id
+        WHERE r.role_name = 'Regular User'
+        AND m.module_name = 'User Management'
     ");
     $stmt->execute();
     $privs = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    $privNames = array_column($privs, 'privilege_name');
-    if (empty($privNames) || !in_array("View", $privNames)) { //redirect to home if you got no privs for this page 
-        header("Location: ../../../../../public/index.php");
-        exit();
+
+    // Debug what permissions are found
+    echo "<pre>Permissions found: " . print_r($privs, true) . "</pre>";
+
+    $privNames = array_column($privs, 'priv_name');
+    if (empty($privNames) || !in_array("View", $privNames)) {
+        // Comment this out temporarily for debugging
+        // header("Location: ../../../../../public/index.php");
+        // exit();
+        echo "<pre>No 'View' permission found for 'User Management' module</pre>";
     }
 } catch (PDOException $e) {
     die("Database query error: " . $e->getMessage());
 }
+
+
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 RBAC : edit
@@ -146,16 +181,18 @@ if role doesnt include edit then remove those edit buttons
 $showEditButton = false;
 try {
     $stmt = $pdo->prepare("
-        select privilege_name 
-        from privileges as p 
-        join role_privileges as rp on p.privilege_id = rp.privilege_id 
-        join roles as r on r.role_id = rp.role_id
-        where rp.role_id = (select r.role_id where role_name = 'Regular User') 
+        SELECT p.priv_name 
+        FROM privileges AS p 
+        JOIN role_module_privileges AS rmp ON p.id = rmp.privilege_id 
+        JOIN roles AS r ON r.id = rmp.role_id
+        JOIN modules AS m ON m.id = rmp.module_id
+        WHERE r.role_name = 'Regular User'
+        AND m.module_name = 'User Management'
     ");
     $stmt->execute();
     $privs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    $privNames = array_column($privs, 'privilege_name');
+    $privNames = array_column($privs, 'priv_name');
     if (!empty($privNames) && in_array("Edit", $privNames)) {
         //show edit button if privileges are not empty and edit is in them
         $showEditButton = true;
@@ -293,7 +330,7 @@ if role doesnt include create then remove the add new user
                                 <option value="">Select Department</option>
                                 <?php foreach ($departments as $code => $name): ?>
                                     <option value="<?php echo htmlspecialchars($code); ?>">
-                                        <?php echo htmlspecialchars($name); ?>
+                                        <?php echo htmlspecialchars($name['name']); ?>
                                     </option>
                                 <?php endforeach; ?>
                                 <option value="custom">Custom Department</option>
@@ -343,7 +380,7 @@ if role doesnt include create then remove the add new user
                     <?php foreach ($departments as $code => $name): ?>
                         <option value="<?php echo htmlspecialchars($code); ?>"
                             <?php echo (isset($_GET['department']) && $_GET['department'] === $code) ? 'selected' : ''; ?>>
-                            <?php echo htmlspecialchars($name); ?>
+                            <?php echo htmlspecialchars($name['name']); ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
@@ -406,15 +443,25 @@ if role doesnt include create then remove the add new user
             <?php foreach ($users as $user): ?>
                 <tr>
                     <td>
-                        <input type="checkbox" class="select-row" value="<?php echo $user['User_ID']; ?>">
+                        <input type="checkbox" class="select-row" value="<?php echo $user['id']; ?>">
                     </td>
-                    <td><?php echo htmlspecialchars($user['User_ID']); ?></td>
-                    <td><?php echo htmlspecialchars($user['Email']); ?></td>
-                    <td><?php echo htmlspecialchars($user['First_Name'] . ' ' . $user['Last_Name']); ?></td>
+                    <td><?php echo htmlspecialchars($user['id']); ?></td>
+                    <td><?php echo htmlspecialchars($user['email']); ?></td>
+                    <td><?php echo htmlspecialchars($user['first_name'] . ' ' . $user['last_name']); ?></td>
                     <td><?php
-                        echo htmlspecialchars(isset($departments[$user['Department']])
-                            ? $departments[$user['Department']]
-                            : $user['Department']);
+                        // Get user departments from junction table
+                        $userDeptIds = getUserDepartments($pdo, $user['id']);
+                        if (!empty($userDeptIds)) {
+                            $deptNames = [];
+                            foreach ($userDeptIds as $deptId) {
+                                if (isset($departments[$deptId])) {
+                                    $deptNames[] = $departments[$deptId]['abbreviation'];
+                                }
+                            }
+                            echo htmlspecialchars(implode(', ', $deptNames));
+                        } else {
+                            echo "Not assigned";
+                        }
                         ?></td>
                     <td><?php echo htmlspecialchars($user['Status'] ?? ''); ?></td>
                     <td>
@@ -423,10 +470,10 @@ if role doesnt include create then remove the add new user
                         $stmtRole = $pdo->prepare("
                             SELECT r.Role_Name
                             FROM roles r 
-                            JOIN user_roles ur ON r.Role_ID = ur.Role_ID 
+                            JOIN user_roles ur ON r.id = ur.Role_ID 
                             WHERE ur.User_ID = ?
                         ");
-                        $stmtRole->execute([$user['User_ID']]);
+                        $stmtRole->execute([$user['id']]);
                         $roles = $stmtRole->fetchAll(PDO::FETCH_COLUMN);
                         echo implode(', ', $roles);
                         ?>
@@ -445,12 +492,12 @@ if role doesnt include create then remove the add new user
                             </button>
                         <?php endif; ?>
                         <?php
-                        $targetUserRoles = getCurrentUserRoles($pdo, $user['User_ID']);
+                        $targetUserRoles = getCurrentUserRoles($pdo, $user['id']);
                         $canDelete = canDeleteUser($currentUserRoles, $targetUserRoles);
                         if ($canDelete):
                             ?>
                             <button type="button" class="btn btn-sm btn-danger"
-                                    data-id="<?php echo $user['User_ID']; ?>">
+                                    data-id="<?php echo $user['id']; ?>">
                                 Delete
                             </button>
                         <?php endif; ?>

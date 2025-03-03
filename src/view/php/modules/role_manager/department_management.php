@@ -3,13 +3,8 @@
 session_start();
 require_once('../../../../../config/ims-tmdd.php'); // Adjust the path as needed
 
-// -----------------------------------------------------------------
-// Optionally check for admin privileges (uncomment if needed)
-// if (!isset($_SESSION['user_id'])) {
-//     header("Location: login.php");
-//     exit();
-// }
-// -----------------------------------------------------------------
+// Include the header
+include('../../general/header.php');
 
 // Set the audit log session variables for MySQL triggers.
 if (isset($_SESSION['user_id'])) {
@@ -38,31 +33,33 @@ if (isset($_SESSION['success'])) {
 }
 
 // ------------------------
-// DELETE EQUIPMENT LOCATION
+// SOFT DELETE EQUIPMENT LOCATION (set is_disabled to 1)
 // ------------------------
 if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
     $id = $_GET['id'];
     try {
         $pdo->beginTransaction();
 
-        // Get location details before deletion
-        $stmt = $pdo->prepare("SELECT * FROM equipmentlocation WHERE EquipmentLocationID = ?");
+        // Get location details before soft deletion
+        $stmt = $pdo->prepare("SELECT * FROM equipment_location WHERE equipment_location_id = ?");
         $stmt->execute([$id]);
         $locationData = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($locationData) {
             // Prepare audit log data
             $oldValues = json_encode([
-                'AssetTag' => $locationData['AssetTag'],
-                'BuildingLocation' => $locationData['BuildingLocation'],
-                'FloorNumber' => $locationData['FloorNumber'],
-                'SpecificArea' => $locationData['SpecificArea'],
-                'PersonResponsible' => $locationData['PersonResponsible'],
-                'Remarks' => $locationData['Remarks']
+                'asset_tag' => $locationData['asset_tag'],
+                'building_loc' => $locationData['building_loc'],
+                'floor_no' => $locationData['floor_no'],
+                'specific_area' => $locationData['specific_area'],
+                'person_responsible' => $locationData['person_responsible'],
+                'department_id' => $locationData['department_id'],
+                'remarks' => $locationData['remarks'],
+                'is_disabled' => $locationData['is_disabled']
             ]);
 
-            // Delete the location
-            $stmt = $pdo->prepare("DELETE FROM equipmentlocation WHERE EquipmentLocationID = ?");
+            // Soft delete the location by setting is_disabled to 1
+            $stmt = $pdo->prepare("UPDATE equipment_location SET is_disabled = 1 WHERE equipment_location_id = ?");
             $stmt->execute([$id]);
 
             // Insert audit log
@@ -72,14 +69,25 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ");
 
+            $newValues = json_encode([
+                'asset_tag' => $locationData['asset_tag'],
+                'building_loc' => $locationData['building_loc'],
+                'floor_no' => $locationData['floor_no'],
+                'specific_area' => $locationData['specific_area'],
+                'person_responsible' => $locationData['person_responsible'],
+                'department_id' => $locationData['department_id'],
+                'remarks' => $locationData['remarks'],
+                'is_disabled' => 1
+            ]);
+
             $auditStmt->execute([
                 $_SESSION['user_id'],
                 $id,
                 'Equipment Location',
                 'Delete',
-                'Equipment location deleted',
+                'Equipment location soft deleted',
                 $oldValues,
-                null,
+                $newValues,
                 'Successful'
             ]);
 
@@ -101,17 +109,18 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 // ------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Retrieve and sanitize form input
-    $AssetTag          = trim($_POST['AssetTag'] ?? '');
-    $BuildingLocation  = trim($_POST['BuildingLocation'] ?? '');
-    $FloorNumber       = trim($_POST['FloorNumber'] ?? '');
-    $SpecificArea      = trim($_POST['SpecificArea'] ?? '');
-    $PersonResponsible = trim($_POST['PersonResponsible'] ?? '');
-    $Remarks           = trim($_POST['Remarks'] ?? '');
+    $asset_tag          = trim($_POST['asset_tag'] ?? '');
+    $building_loc       = trim($_POST['building_loc'] ?? '');
+    $floor_no           = trim($_POST['floor_no'] ?? '');
+    $specific_area      = trim($_POST['specific_area'] ?? '');
+    $person_responsible = trim($_POST['person_responsible'] ?? '');
+    $department_id      = trim($_POST['department_id'] ?? '');
+    $remarks            = trim($_POST['remarks'] ?? '');
 
     $response = array('status' => '', 'message' => '');
 
     // Validate required fields
-    if (empty($AssetTag) || empty($BuildingLocation) || empty($FloorNumber) || empty($SpecificArea) || empty($PersonResponsible)) {
+    if (empty($asset_tag) || empty($building_loc) || empty($floor_no) || empty($specific_area) || empty($person_responsible)) {
         $response['status'] = 'error';
         $response['message'] = 'Please fill in all required fields.';
         echo json_encode($response);
@@ -123,28 +132,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $pdo->beginTransaction();
 
-            // Insert equipment location
-            $stmt = $pdo->prepare("INSERT INTO equipmentlocation (
-                AssetTag, 
-                BuildingLocation, 
-                FloorNumber, 
-                SpecificArea, 
-                PersonResponsible, 
-                Remarks,
-                CreatedDate
-            ) VALUES (?, ?, ?, ?, ?, ?, NOW())");
-            $stmt->execute([$AssetTag, $BuildingLocation, $FloorNumber, $SpecificArea, $PersonResponsible, $Remarks]);
-            
+            // Insert equipment location with is_disabled = 0
+            $stmt = $pdo->prepare("INSERT INTO equipment_location (
+                asset_tag, 
+                building_loc, 
+                floor_no, 
+                specific_area, 
+                person_responsible,
+                department_id,
+                remarks,
+                date_created,
+                is_disabled
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), 0)");
+            $stmt->execute([$asset_tag, $building_loc, $floor_no, $specific_area, $person_responsible, $department_id, $remarks]);
+
             $newLocationId = $pdo->lastInsertId();
 
             // Prepare audit log data
             $newValues = json_encode([
-                'AssetTag' => $AssetTag,
-                'BuildingLocation' => $BuildingLocation,
-                'FloorNumber' => $FloorNumber,
-                'SpecificArea' => $SpecificArea,
-                'PersonResponsible' => $PersonResponsible,
-                'Remarks' => $Remarks
+                'asset_tag' => $asset_tag,
+                'building_loc' => $building_loc,
+                'floor_no' => $floor_no,
+                'specific_area' => $specific_area,
+                'person_responsible' => $person_responsible,
+                'department_id' => $department_id,
+                'remarks' => $remarks,
+                'is_disabled' => 0
             ]);
 
             // Insert audit log
@@ -166,7 +179,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
 
             $pdo->commit();
-            
+
             $response['status'] = 'success';
             $response['message'] = 'Equipment Location has been added successfully.';
             $_SESSION['success'] = "Equipment Location has been added successfully.";
@@ -186,50 +199,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->beginTransaction();
 
             // Get old location details for audit log
-            $stmt = $pdo->prepare("SELECT * FROM equipmentlocation WHERE EquipmentLocationID = ?");
+            $stmt = $pdo->prepare("SELECT * FROM equipment_location WHERE equipment_location_id = ?");
             $stmt->execute([$id]);
             $oldLocation = $stmt->fetch(PDO::FETCH_ASSOC);
 
             // Update equipment location
-            $stmt = $pdo->prepare("UPDATE equipmentlocation SET 
-                AssetTag = ?, 
-                BuildingLocation = ?, 
-                FloorNumber = ?, 
-                SpecificArea = ?, 
-                PersonResponsible = ?, 
-                Remarks = ?
-                WHERE EquipmentLocationID = ?");
+            $stmt = $pdo->prepare("UPDATE equipment_location SET 
+                asset_tag = ?, 
+                building_loc = ?, 
+                floor_no = ?, 
+                specific_area = ?, 
+                person_responsible = ?,
+                department_id = ?,
+                remarks = ?
+                WHERE equipment_location_id = ?");
             $stmt->execute([
-                $_POST['AssetTag'],
-                $_POST['BuildingLocation'],
-                $_POST['FloorNumber'],
-                $_POST['SpecificArea'],
-                $_POST['PersonResponsible'],
-                $_POST['Remarks'],
+                $_POST['asset_tag'],
+                $_POST['building_loc'],
+                $_POST['floor_no'],
+                $_POST['specific_area'],
+                $_POST['person_responsible'],
+                $_POST['department_id'],
+                $_POST['remarks'],
                 $id
             ]);
 
             // Prepare audit log data
             $oldValues = json_encode([
-                'AssetTag' => $oldLocation['AssetTag'],
-                'BuildingLocation' => $oldLocation['BuildingLocation'],
-                'FloorNumber' => $oldLocation['FloorNumber'],
-                'SpecificArea' => $oldLocation['SpecificArea'],
-                'PersonResponsible' => $oldLocation['PersonResponsible'],
-                'Remarks' => $oldLocation['Remarks'],
-                'CreatedDate' => $oldLocation['CreatedDate'],
-                'ModifiedDate' => $oldLocation['ModifiedDate']
+                'asset_tag' => $oldLocation['asset_tag'],
+                'building_loc' => $oldLocation['building_loc'],
+                'floor_no' => $oldLocation['floor_no'],
+                'specific_area' => $oldLocation['specific_area'],
+                'person_responsible' => $oldLocation['person_responsible'],
+                'department_id' => $oldLocation['department_id'],
+                'remarks' => $oldLocation['remarks'],
+                'date_created' => $oldLocation['date_created'],
+                'is_disabled' => $oldLocation['is_disabled']
             ]);
 
             $newValues = json_encode([
-                'AssetTag' => $_POST['AssetTag'],
-                'BuildingLocation' => $_POST['BuildingLocation'],
-                'FloorNumber' => $_POST['FloorNumber'],
-                'SpecificArea' => $_POST['SpecificArea'],
-                'PersonResponsible' => $_POST['PersonResponsible'],
-                'Remarks' => $_POST['Remarks'],
-                'CreatedDate' => $oldLocation['CreatedDate'],
-                'ModifiedDate' => date('Y-m-d H:i:s')
+                'asset_tag' => $_POST['asset_tag'],
+                'building_loc' => $_POST['building_loc'],
+                'floor_no' => $_POST['floor_no'],
+                'specific_area' => $_POST['specific_area'],
+                'person_responsible' => $_POST['person_responsible'],
+                'department_id' => $_POST['department_id'],
+                'remarks' => $_POST['remarks'],
+                'date_created' => $oldLocation['date_created'],
+                'is_disabled' => $oldLocation['is_disabled']
             ]);
 
             // Insert audit log
@@ -251,7 +268,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
 
             $pdo->commit();
-            
+
             // Ensure we're sending a proper JSON response
             header('Content-Type: application/json');
             echo json_encode([
@@ -281,7 +298,7 @@ $editEquipmentLocation = null;
 if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) {
     $id = $_GET['id'];
     try {
-        $stmt = $pdo->prepare("SELECT * FROM equipmentlocation WHERE EquipmentLocationID = ?");
+        $stmt = $pdo->prepare("SELECT * FROM equipment_location WHERE equipment_location_id = ? AND is_disabled = 0");
         $stmt->execute([$id]);
         $editEquipmentLocation = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$editEquipmentLocation) {
@@ -295,10 +312,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) 
 }
 
 // ------------------------
-// RETRIEVE ALL EQUIPMENT LOCATIONS
+// RETRIEVE ALL ACTIVE EQUIPMENT LOCATIONS (is_disabled = 0)
 // ------------------------
 try {
-    $stmt = $pdo->query("SELECT * FROM departments ORDER BY Department_ID");
+    $stmt = $pdo->query("SELECT * FROM equipment_location WHERE is_disabled = 0 ORDER BY date_created DESC");
     $equipmentLocations = $stmt->fetchAll();
 } catch (PDOException $e) {
     $errors[] = "Error retrieving Equipment Locations: " . $e->getMessage();
@@ -314,21 +331,31 @@ try {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
 
     <style>
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
             background-color: #f8f9fa;
             min-height: 100vh;
+            padding-top: 70px;
         }
-        .main-content {
+        .container-fluid {
             margin-left: 300px;
             padding: 20px;
-            transition: margin-left 0.3s ease;
+            width: calc(100% - 300px);
+        }
+        h2.mb-4 {
+            margin-top: 5px;
+            margin-bottom: 15px !important;
+        }
+        .card.shadow-sm {
+            margin-top: 10px;
         }
         @media (max-width: 768px) {
-            .main-content {
+            .container-fluid {
                 margin-left: 0;
+                width: 100%;
             }
         }
     </style>
@@ -340,121 +367,161 @@ try {
 <body>
 <?php include '../../general/sidebar.php'; ?>
 
-<div class="main-content">
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Main Content -->
-            <main class="col-md-12 px-md-4 py-4">
-                <h2 class="mb-4">Department Management</h2>
+<div class="container-fluid">
+    <h2 class="mb-4">Equipment Location</h2>
 
-                <!-- Success Message -->
-                <?php if (!empty($success)): ?>
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        <i class="bi bi-check-circle"></i> <?php echo $success; ?>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <!-- Success Message -->
+    <?php if (!empty($success)): ?>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle"></i> <?php echo $success; ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <?php endif; ?>
+
+    <!-- Error Messages -->
+    <?php if (!empty($errors)): ?>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <?php foreach ($errors as $err): ?>
+                <p><i class="bi bi-exclamation-triangle"></i> <?php echo $err; ?></p>
+            <?php endforeach; ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <?php endif; ?>
+
+    <!-- List of Equipment Locations Card -->
+    <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center bg-dark text-white">
+            <span><i class="bi bi-list-ul"></i> List of Equipment Locations</span>
+            <div class="input-group w-auto">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control" placeholder="Search..." id="eqSearch">
+            </div>
+        </div>
+        <div class="card-body">
+            <?php if (!empty($equipmentLocations)): ?>
+                <div class="table-responsive">
+                    <!-- Add Location Button and Filter -->
+                    <div class="d-flex justify-content-start mb-3 gap-2">
+                        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addLocationModal">
+                            <i class="bi bi-plus-circle"></i> Add Equipment Location
+                        </button>
+                        <select class="form-select form-select-sm" id="filterBuilding" style="width: auto;">
+                            <option value="">Filter Building Location</option>
+                            <?php
+                            $buildingLocations = array_unique(array_column($equipmentLocations, 'building_loc'));
+                            foreach($buildingLocations as $building) {
+                                if(!empty($building)) {
+                                    echo "<option value='" . htmlspecialchars($building) . "'>" . htmlspecialchars($building) . "</option>";
+                                }
+                            }
+                            ?>
+                        </select>
                     </div>
-                <?php endif; ?>
 
-                <!-- Error Messages -->
-                <?php if (!empty($errors)): ?>
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <?php foreach ($errors as $err): ?>
-                            <p><i class="bi bi-exclamation-triangle"></i> <?php echo $err; ?></p>
-                        <?php endforeach; ?>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                <?php endif; ?>
-
-                <!-- List of Departments Card -->
-                <div class="card shadow-sm">
-                    <div class="card-header d-flex justify-content-between align-items-center bg-dark text-white">
-                        <span><i class="bi bi-list-ul"></i> List of Departments</span>
-                        <div class="input-group w-auto">
-                            <span class="input-group-text"><i class="bi bi-search"></i></span>
-                            <input type="text" class="form-control" placeholder="Search..." id="eqSearch">
-                        </div>
-                    </div>
-                      <div class="card-body">
-                        <?php if (!empty($equipmentLocations)): ?>
-                            <div class="table-responsive">
-                                <!-- Add Location Button and Filter -->
-                                <div class="d-flex justify-content-start mb-3 gap-2">
-                                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addLocationModal">
-                                        <i class="bi bi-plus-circle"></i> Add Department
-                                    </button>
-                                </div>
-                                
-                                <table class="table table-striped table-hover align-middle" id="table">
-                                    <thead class="table-dark">
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Department Acronym</th>
-                                        <th>Department Name</th>
-                                        <th class="text-center">Actions</th>
-                                    </tr>
-                                    </thead>
-                                    <tbody>
-                                    <?php foreach ($equipmentLocations as $location): ?>
-                                        <tr>
-                                            <td><?php echo htmlspecialchars($location['Department_ID']); ?></td>
-                                            <td><?php echo htmlspecialchars($location['Department_Acronym']); ?></td>
-                                            <td><?php echo htmlspecialchars($location['Department_Name']); ?></td>
-                                            <td class="text-center">
-                                                <div class="btn-group" role="group">
-                                                    <a class="btn btn-sm btn-outline-primary edit-location" 
-                                                       data-asset="<?php echo htmlspecialchars($location['Department_ID']); ?>">
-                                                        <i class="bi bi-pencil-square"></i> Edit
-                                                    </a>
-                                                    <a class="btn btn-sm btn-outline-danger" href="?action=delete&id=<?php echo htmlspecialchars($location['Department_ID']); ?>" onclick="return confirm('Are you sure you want to delete this department?');">
-                                                        <i class="bi bi-trash"></i> Delete
-                                                    </a>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                                <!-- Pagination Controls -->
-                                <div class="container-fluid">
-                                    <div class="row align-items-center g-3">
-                                        <!-- Pagination Info -->
-                                        <div class="col-12 col-sm-auto">
-                                            <div class="text-muted">
-                                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span
-                                                        id="totalRows">0</span> entries
-                                            </div>
-                                        </div>
-
-                                        <!-- Pagination Controls -->
-                                        <div class="col-12 col-sm-auto ms-sm-auto">
-                                            <div class="d-flex align-items-center gap-2">
-                                                <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                                    <i class="bi bi-chevron-left"></i>
-                                                    Previous
-                                                </button>
-
-                                                <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
-                                                    <option value="10">10</option>
-                                                    <option value="20" selected>20</option>
-                                                    <option value="50">50</option>
-                                                    <option value="100">100</option>
-                                                </select>
-
-                                                <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                                    Next
-                                                    <i class="bi bi-chevron-right"></i>
-                                                </button>
-                                            </div>
-                                        </div>
+                    <table class="table table-striped table-hover align-middle" id="table">
+                        <thead class="table-dark">
+                        <tr>
+                            <th>#</th>
+                            <th>Asset Tag</th>
+                            <th>Building Location</th>
+                            <th>Floor Number</th>
+                            <th>Specific Area</th>
+                            <th>Person Responsible</th>
+                            <th>Department</th>
+                            <th>Remarks</th>
+                            <th style="width: 12%">Date Created</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <?php foreach ($equipmentLocations as $location): ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($location['equipment_location_id']); ?></td>
+                                <td><?php echo htmlspecialchars($location['asset_tag']); ?></td>
+                                <td><?php echo htmlspecialchars($location['building_loc']); ?></td>
+                                <td><?php echo htmlspecialchars($location['floor_no']); ?></td>
+                                <td><?php echo htmlspecialchars($location['specific_area']); ?></td>
+                                <td><?php echo htmlspecialchars($location['person_responsible']); ?></td>
+                                <td>
+                                    <?php
+                                    $deptName = 'N/A';
+                                    if(!empty($location['department_id'])) {
+                                        try {
+                                            $deptStmt = $pdo->prepare("SELECT dept_name FROM departments WHERE id = ?");
+                                            $deptStmt->execute([$location['department_id']]);
+                                            $dept = $deptStmt->fetch(PDO::FETCH_ASSOC);
+                                            if($dept) {
+                                                $deptName = $dept['dept_name'];
+                                            }
+                                        } catch (PDOException $e) {
+                                            // Handle error
+                                        }
+                                    }
+                                    echo htmlspecialchars($deptName);
+                                    ?>
+                                </td>
+                                <td><?php echo htmlspecialchars($location['remarks']); ?></td>
+                                <td><?php echo !empty($location['date_created']) ? date('Y-m-d H:i', strtotime($location['date_created'])) : ''; ?></td>
+                                <td class="text-center">
+                                    <div class="btn-group" role="group">
+                                        <a class="btn btn-sm btn-outline-primary edit-location"
+                                           data-id="<?php echo $location['equipment_location_id']; ?>"
+                                           data-asset="<?php echo htmlspecialchars($location['asset_tag']); ?>"
+                                           data-building="<?php echo htmlspecialchars($location['building_loc']); ?>"
+                                           data-floor="<?php echo htmlspecialchars($location['floor_no']); ?>"
+                                           data-area="<?php echo htmlspecialchars($location['specific_area']); ?>"
+                                           data-person="<?php echo htmlspecialchars($location['person_responsible']); ?>"
+                                           data-department="<?php echo htmlspecialchars($location['department_id']); ?>"
+                                           data-remarks="<?php echo htmlspecialchars($location['remarks']); ?>">
+                                            <i class="bi bi-pencil-square"></i> Edit
+                                        </a>
+                                        <a class="btn btn-sm btn-outline-danger" href="?action=delete&id=<?php echo htmlspecialchars($location['equipment_location_id']); ?>" onclick="return confirm('Are you sure you want to delete this Equipment Location?');">
+                                            <i class="bi bi-trash"></i> Delete
+                                        </a>
                                     </div>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                    <!-- Pagination Controls -->
+                    <div class="container-fluid">
+                        <div class="row align-items-center g-3">
+                            <!-- Pagination Info -->
+                            <div class="col-12 col-sm-auto">
+                                <div class="text-muted">
+                                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span
+                                            id="totalRows">0</span> entries
                                 </div>
                             </div>
-                        <?php else: ?>
-                            <p class="mb-0">No Equipment Locations found.</p>
-                        <?php endif; ?>
+
+                            <!-- Pagination Controls -->
+                            <div class="col-12 col-sm-auto ms-sm-auto">
+                                <div class="d-flex align-items-center gap-2">
+                                    <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                        <i class="bi bi-chevron-left"></i>
+                                        Previous
+                                    </button>
+
+                                    <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                        <option value="10">10</option>
+                                        <option value="20" selected>20</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                    </select>
+
+                                    <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                        Next
+                                        <i class="bi bi-chevron-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </main>
+            <?php else: ?>
+                <p class="mb-0">No Equipment Locations found.</p>
+            <?php endif; ?>
         </div>
     </div>
 </div>
@@ -464,58 +531,62 @@ try {
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Add New Location</h5>
+                <h5 class="modal-title">Add New Equipment Location</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="addLocationForm" method="post">
+                <form id="addLocationForm">
                     <input type="hidden" name="action" value="add">
-                    
                     <div class="mb-3">
-                        <label for="AssetTag" class="form-label">
-                            <i class="bi bi-tag"></i> Asset Tag <span class="text-danger">*</span>
-                        </label>
-                        <input type="text" class="form-control" name="AssetTag" id="AssetTag" required>
+                        <label for="asset_tag" class="form-label">Asset Tag <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="asset_tag" required>
                     </div>
 
                     <div class="mb-3">
-                        <label for="BuildingLocation" class="form-label">
-                            <i class="bi bi-building"></i> Building Location <span class="text-danger">*</span>
-                        </label>
-                        <input type="text" class="form-control" id="BuildingLocation" name="BuildingLocation" required>
+                        <label for="building_loc" class="form-label">Building Location <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="building_loc" required>
                     </div>
 
                     <div class="mb-3">
-                        <label for="FloorNumber" class="form-label">
-                            <i class="bi bi-layers"></i> Floor Number <span class="text-danger">*</span>
-                        </label>
-                        <input type="number" min="1" class="form-control" id="FloorNumber" name="FloorNumber" required>
+                        <label for="floor_no" class="form-label">Floor Number <span class="text-danger">*</span></label>
+                        <input type="number" min="1" class="form-control" name="floor_no" required>
                     </div>
 
                     <div class="mb-3">
-                        <label for="SpecificArea" class="form-label">
-                            <i class="bi bi-pin-map"></i> Specific Area <span class="text-danger">*</span>
-                        </label>
-                        <input type="text" class="form-control" id="SpecificArea" name="SpecificArea" required>
+                        <label for="specific_area" class="form-label">Specific Area <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="specific_area" required>
                     </div>
 
                     <div class="mb-3">
-                        <label for="PersonResponsible" class="form-label">
-                            <i class="bi bi-person"></i> Person Responsible <span class="text-danger">*</span>
-                        </label>
-                        <input type="text" class="form-control" id="PersonResponsible" name="PersonResponsible" required>
+                        <label for="person_responsible" class="form-label">Person Responsible <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="person_responsible" required>
                     </div>
 
                     <div class="mb-3">
-                        <label for="Remarks" class="form-label">
-                            <i class="bi bi-chat-left-text"></i> Remarks
-                        </label>
-                        <textarea class="form-control" id="Remarks" name="Remarks" rows="3"></textarea>
+                        <label for="department_id" class="form-label">Department <span class="text-danger">*</span></label>
+                        <select class="form-control" name="department_id" required>
+                            <option value="">Select Department</option>
+                            <?php
+                            try {
+                                $deptStmt = $pdo->query("SELECT id, dept_name FROM departments WHERE is_disabled = 0 ORDER BY dept_name");
+                                $departments = $deptStmt->fetchAll();
+                                foreach($departments as $department) {
+                                    echo "<option value='" . htmlspecialchars($department['id']) . "'>" . htmlspecialchars($department['dept_name']) . "</option>";
+                                }
+                            } catch (PDOException $e) {
+                                // Handle error
+                            }
+                            ?>
+                        </select>
                     </div>
 
-                    <div class="d-flex justify-content-end">
-                        <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-success">Add Location</button>
+                    <div class="mb-3">
+                        <label for="remarks" class="form-label">Remarks</label>
+                        <textarea class="form-control" name="remarks" rows="3"></textarea>
+                    </div>
+
+                    <div class="modal-footer border-0">
+                        <button type="submit" class="btn btn-primary">Add Equipment Location</button>
                     </div>
                 </form>
             </div>
@@ -523,59 +594,79 @@ try {
     </div>
 </div>
 
-<!-- Edit Department Modal -->
+<!-- Edit Location Modal -->
 <div class="modal fade" id="editLocationModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Edit Department</h5>
+                <h5 class="modal-title">Edit Location</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <form id="editLocationForm" method="post">
                     <input type="hidden" name="action" value="update">
                     <input type="hidden" name="id" id="edit_location_id">
-                    
+
                     <div class="mb-3">
                         <label for="edit_asset_tag" class="form-label">
                             <i class="bi bi-tag"></i> Asset Tag <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control" name="AssetTag" id="edit_asset_tag" required>
+                        <input type="text" class="form-control" name="asset_tag" id="edit_asset_tag" required>
                     </div>
 
                     <div class="mb-3">
-                        <label for="edit_building_location" class="form-label">
+                        <label for="edit_building_loc" class="form-label">
                             <i class="bi bi-building"></i> Building Location <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control" id="edit_building_location" name="BuildingLocation" required>
+                        <input type="text" class="form-control" id="edit_building_loc" name="building_loc" required>
                     </div>
 
                     <div class="mb-3">
-                        <label for="edit_floor_number" class="form-label">
+                        <label for="edit_floor_no" class="form-label">
                             <i class="bi bi-layers"></i> Floor Number <span class="text-danger">*</span>
                         </label>
-                        <input type="number" min="1" class="form-control" id="edit_floor_number" name="FloorNumber" required>
+                        <input type="number" min="1" class="form-control" id="edit_floor_no" name="floor_no" required>
                     </div>
 
                     <div class="mb-3">
                         <label for="edit_specific_area" class="form-label">
                             <i class="bi bi-pin-map"></i> Specific Area <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control" id="edit_specific_area" name="SpecificArea" required>
+                        <input type="text" class="form-control" id="edit_specific_area" name="specific_area" required>
                     </div>
 
                     <div class="mb-3">
                         <label for="edit_person_responsible" class="form-label">
                             <i class="bi bi-person"></i> Person Responsible <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control" id="edit_person_responsible" name="PersonResponsible" required>
+                        <input type="text" class="form-control" id="edit_person_responsible" name="person_responsible" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="edit_department_id" class="form-label">
+                            <i class="bi bi-building"></i> Department <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-control" id="edit_department_id" name="department_id" required>
+                            <option value="">Select Department</option>
+                            <?php
+                            try {
+                                $deptStmt = $pdo->query("SELECT id, dept_name FROM departments WHERE is_disabled = 0 ORDER BY dept_name");
+                                $departments = $deptStmt->fetchAll();
+                                foreach($departments as $department) {
+                                    echo "<option value='" . htmlspecialchars($department['id']) . "'>" . htmlspecialchars($department['dept_name']) . "</option>";
+                                }
+                            } catch (PDOException $e) {
+                                // Handle error
+                            }
+                            ?>
+                        </select>
                     </div>
 
                     <div class="mb-3">
                         <label for="edit_remarks" class="form-label">
                             <i class="bi bi-chat-left-text"></i> Remarks
                         </label>
-                        <textarea class="form-control" id="edit_remarks" name="Remarks" rows="3"></textarea>
+                        <textarea class="form-control" id="edit_remarks" name="remarks" rows="3"></textarea>
                     </div>
 
                     <div class="d-flex justify-content-end">
@@ -594,7 +685,7 @@ try {
         // Search and filter functionality
         const searchInput = document.getElementById('eqSearch');
         const filterBuilding = document.getElementById('filterBuilding');
-        
+
         if (searchInput) {
             searchInput.addEventListener('keyup', filterTable);
         }
@@ -623,7 +714,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Form submissions
     $('#addLocationForm').on('submit', function(e) {
         e.preventDefault();
-        
+
         $.ajax({
             url: 'equipment_location.php',
             method: 'POST',
@@ -653,7 +744,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const specificArea = $(this).data('area');
         const personResponsible = $(this).data('person');
         const remarks = $(this).data('remarks');
-        
+
         $('#edit_location_id').val(id);
         $('#edit_asset_tag').val(assetTag);
         $('#edit_building_location').val(buildingLocation);
@@ -661,7 +752,7 @@ document.addEventListener('DOMContentLoaded', function() {
         $('#edit_specific_area').val(specificArea);
         $('#edit_person_responsible').val(personResponsible);
         $('#edit_remarks').val(remarks);
-        
+
         $('#editLocationModal').modal('show');
     });
 

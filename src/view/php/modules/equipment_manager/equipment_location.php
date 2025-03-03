@@ -49,23 +49,24 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
         $pdo->beginTransaction();
 
         // Get location details before deletion
-        $stmt = $pdo->prepare("SELECT * FROM equipmentlocation WHERE EquipmentLocationID = ?");
+        $stmt = $pdo->prepare("SELECT * FROM equipment_location WHERE equipment_location_id = ?");
         $stmt->execute([$id]);
         $locationData = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($locationData) {
             // Prepare audit log data
             $oldValues = json_encode([
-                'AssetTag' => $locationData['AssetTag'],
-                'BuildingLocation' => $locationData['BuildingLocation'],
-                'FloorNumber' => $locationData['FloorNumber'],
-                'SpecificArea' => $locationData['SpecificArea'],
-                'PersonResponsible' => $locationData['PersonResponsible'],
-                'Remarks' => $locationData['Remarks']
+                'asset_tag' => $locationData['asset_tag'],
+                'building_loc' => $locationData['building_loc'],
+                'floor_no' => $locationData['floor_no'],
+                'specific_area' => $locationData['specific_area'],
+                'person_responsible' => $locationData['person_responsible'],
+                'department_id' => $locationData['department_id'],
+                'remarks' => $locationData['remarks']
             ]);
 
             // Delete the location
-            $stmt = $pdo->prepare("DELETE FROM equipmentlocation WHERE EquipmentLocationID = ?");
+            $stmt = $pdo->prepare("DELETE FROM equipment_location WHERE equipment_location_id = ?");
             $stmt->execute([$id]);
 
             // Insert audit log
@@ -104,17 +105,18 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 // ------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Retrieve and sanitize form input
-    $AssetTag          = trim($_POST['AssetTag'] ?? '');
-    $BuildingLocation  = trim($_POST['BuildingLocation'] ?? '');
-    $FloorNumber       = trim($_POST['FloorNumber'] ?? '');
-    $SpecificArea      = trim($_POST['SpecificArea'] ?? '');
-    $PersonResponsible = trim($_POST['PersonResponsible'] ?? '');
-    $Remarks           = trim($_POST['Remarks'] ?? '');
+    $asset_tag          = trim($_POST['asset_tag'] ?? '');
+    $building_loc       = trim($_POST['building_loc'] ?? '');
+    $floor_no           = trim($_POST['floor_no'] ?? '');
+    $specific_area      = trim($_POST['specific_area'] ?? '');
+    $person_responsible = trim($_POST['person_responsible'] ?? '');
+    $department_id      = trim($_POST['department_id'] ?? '');
+    $remarks            = trim($_POST['remarks'] ?? '');
 
     $response = array('status' => '', 'message' => '');
 
     // Validate required fields
-    if (empty($AssetTag) || empty($BuildingLocation) || empty($FloorNumber) || empty($SpecificArea) || empty($PersonResponsible)) {
+    if (empty($asset_tag) || empty($building_loc) || empty($floor_no) || empty($specific_area) || empty($person_responsible)) {
         $response['status'] = 'error';
         $response['message'] = 'Please fill in all required fields.';
         echo json_encode($response);
@@ -127,27 +129,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->beginTransaction();
 
             // Insert equipment location
-            $stmt = $pdo->prepare("INSERT INTO equipmentlocation (
-                AssetTag, 
-                BuildingLocation, 
-                FloorNumber, 
-                SpecificArea, 
-                PersonResponsible, 
-                Remarks,
-                CreatedDate
-            ) VALUES (?, ?, ?, ?, ?, ?, NOW())");
-            $stmt->execute([$AssetTag, $BuildingLocation, $FloorNumber, $SpecificArea, $PersonResponsible, $Remarks]);
+            $stmt = $pdo->prepare("INSERT INTO equipment_location (
+                asset_tag, 
+                building_loc, 
+                floor_no, 
+                specific_area, 
+                person_responsible,
+                department_id,
+                remarks,
+                date_created
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())");
+            $stmt->execute([$asset_tag, $building_loc, $floor_no, $specific_area, $person_responsible, $department_id, $remarks]);
             
             $newLocationId = $pdo->lastInsertId();
 
             // Prepare audit log data
             $newValues = json_encode([
-                'AssetTag' => $AssetTag,
-                'BuildingLocation' => $BuildingLocation,
-                'FloorNumber' => $FloorNumber,
-                'SpecificArea' => $SpecificArea,
-                'PersonResponsible' => $PersonResponsible,
-                'Remarks' => $Remarks
+                'asset_tag' => $asset_tag,
+                'building_loc' => $building_loc,
+                'floor_no' => $floor_no,
+                'specific_area' => $specific_area,
+                'person_responsible' => $person_responsible,
+                'department_id' => $department_id,
+                'remarks' => $remarks
             ]);
 
             // Insert audit log
@@ -189,50 +193,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->beginTransaction();
 
             // Get old location details for audit log
-            $stmt = $pdo->prepare("SELECT * FROM equipmentlocation WHERE EquipmentLocationID = ?");
+            $stmt = $pdo->prepare("SELECT * FROM equipment_location WHERE equipment_location_id = ?");
             $stmt->execute([$id]);
             $oldLocation = $stmt->fetch(PDO::FETCH_ASSOC);
 
             // Update equipment location
-            $stmt = $pdo->prepare("UPDATE equipmentlocation SET 
-                AssetTag = ?, 
-                BuildingLocation = ?, 
-                FloorNumber = ?, 
-                SpecificArea = ?, 
-                PersonResponsible = ?, 
-                Remarks = ?
-                WHERE EquipmentLocationID = ?");
+            $stmt = $pdo->prepare("UPDATE equipment_location SET 
+                asset_tag = ?, 
+                building_loc = ?, 
+                floor_no = ?, 
+                specific_area = ?, 
+                person_responsible = ?,
+                department_id = ?,
+                remarks = ?
+                WHERE equipment_location_id = ?");
             $stmt->execute([
-                $_POST['AssetTag'],
-                $_POST['BuildingLocation'],
-                $_POST['FloorNumber'],
-                $_POST['SpecificArea'],
-                $_POST['PersonResponsible'],
-                $_POST['Remarks'],
+                $_POST['asset_tag'],
+                $_POST['building_loc'],
+                $_POST['floor_no'],
+                $_POST['specific_area'],
+                $_POST['person_responsible'],
+                $_POST['department_id'],
+                $_POST['remarks'],
                 $id
             ]);
 
             // Prepare audit log data
             $oldValues = json_encode([
-                'AssetTag' => $oldLocation['AssetTag'],
-                'BuildingLocation' => $oldLocation['BuildingLocation'],
-                'FloorNumber' => $oldLocation['FloorNumber'],
-                'SpecificArea' => $oldLocation['SpecificArea'],
-                'PersonResponsible' => $oldLocation['PersonResponsible'],
-                'Remarks' => $oldLocation['Remarks'],
-                'CreatedDate' => $oldLocation['CreatedDate'],
-                'ModifiedDate' => $oldLocation['ModifiedDate']
+                'asset_tag' => $oldLocation['asset_tag'],
+                'building_loc' => $oldLocation['building_loc'],
+                'floor_no' => $oldLocation['floor_no'],
+                'specific_area' => $oldLocation['specific_area'],
+                'person_responsible' => $oldLocation['person_responsible'],
+                'department_id' => $oldLocation['department_id'],
+                'remarks' => $oldLocation['remarks'],
+                'date_created' => $oldLocation['date_created']
             ]);
 
             $newValues = json_encode([
-                'AssetTag' => $_POST['AssetTag'],
-                'BuildingLocation' => $_POST['BuildingLocation'],
-                'FloorNumber' => $_POST['FloorNumber'],
-                'SpecificArea' => $_POST['SpecificArea'],
-                'PersonResponsible' => $_POST['PersonResponsible'],
-                'Remarks' => $_POST['Remarks'],
-                'CreatedDate' => $oldLocation['CreatedDate'],
-                'ModifiedDate' => date('Y-m-d H:i:s')
+                'asset_tag' => $_POST['asset_tag'],
+                'building_loc' => $_POST['building_loc'],
+                'floor_no' => $_POST['floor_no'],
+                'specific_area' => $_POST['specific_area'],
+                'person_responsible' => $_POST['person_responsible'],
+                'department_id' => $_POST['department_id'],
+                'remarks' => $_POST['remarks'],
+                'date_created' => $oldLocation['date_created']
             ]);
 
             // Insert audit log
@@ -284,7 +290,7 @@ $editEquipmentLocation = null;
 if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) {
     $id = $_GET['id'];
     try {
-        $stmt = $pdo->prepare("SELECT * FROM equipmentlocation WHERE EquipmentLocationID = ?");
+        $stmt = $pdo->prepare("SELECT * FROM equipment_location WHERE equipment_location_id = ?");
         $stmt->execute([$id]);
         $editEquipmentLocation = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$editEquipmentLocation) {
@@ -301,7 +307,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) 
 // RETRIEVE ALL EQUIPMENT LOCATIONS
 // ------------------------
 try {
-    $stmt = $pdo->query("SELECT * FROM equipmentlocation ORDER BY CreatedDate DESC");
+    $stmt = $pdo->query("SELECT * FROM equipment_location ORDER BY date_created DESC");
     $equipmentLocations = $stmt->fetchAll();
 } catch (PDOException $e) {
     $errors[] = "Error retrieving Equipment Locations: " . $e->getMessage();
@@ -394,7 +400,7 @@ try {
                         <select class="form-select form-select-sm" id="filterBuilding" style="width: auto;">
                             <option value="">Filter Building Location</option>
                             <?php
-                            $buildingLocations = array_unique(array_column($equipmentLocations, 'BuildingLocation'));
+                            $buildingLocations = array_unique(array_column($equipmentLocations, 'building_loc'));
                             foreach($buildingLocations as $building) {
                                 if(!empty($building)) {
                                     echo "<option value='" . htmlspecialchars($building) . "'>" . htmlspecialchars($building) . "</option>";
@@ -413,37 +419,55 @@ try {
                             <th>Floor Number</th>
                             <th>Specific Area</th>
                             <th>Person Responsible</th>
+                            <th>Department</th>
                             <th>Remarks</th>
-                            <th style="width: 12%">Created Date</th>
-                            <th style="width: 12%">Modified Date</th>
+                            <th style="width: 12%">Date Created</th>
                             <th class="text-center">Actions</th>
                         </tr>
                         </thead>
                         <tbody>
                         <?php foreach ($equipmentLocations as $location): ?>
                             <tr>
-                                <td><?php echo htmlspecialchars($location['EquipmentLocationID']); ?></td>
-                                <td><?php echo htmlspecialchars($location['AssetTag']); ?></td>
-                                <td><?php echo htmlspecialchars($location['BuildingLocation']); ?></td>
-                                <td><?php echo htmlspecialchars($location['FloorNumber']); ?></td>
-                                <td><?php echo htmlspecialchars($location['SpecificArea']); ?></td>
-                                <td><?php echo htmlspecialchars($location['PersonResponsible']); ?></td>
-                                <td><?php echo htmlspecialchars($location['Remarks']); ?></td>
-                                <td><?php echo date('Y-m-d H:i', strtotime($location['CreatedDate'])); ?></td>
-                                <td><?php echo date('Y-m-d H:i', strtotime($location['ModifiedDate'])); ?></td>
+                                <td><?php echo htmlspecialchars($location['equipment_location_id']); ?></td>
+                                <td><?php echo htmlspecialchars($location['asset_tag']); ?></td>
+                                <td><?php echo htmlspecialchars($location['building_loc']); ?></td>
+                                <td><?php echo htmlspecialchars($location['floor_no']); ?></td>
+                                <td><?php echo htmlspecialchars($location['specific_area']); ?></td>
+                                <td><?php echo htmlspecialchars($location['person_responsible']); ?></td>
+                                <td>
+                                    <?php 
+                                    $deptName = 'N/A';
+                                    if(!empty($location['department_id'])) {
+                                        try {
+                                            $deptStmt = $pdo->prepare("SELECT dept_name FROM departments WHERE id = ?");
+                                            $deptStmt->execute([$location['department_id']]);
+                                            $dept = $deptStmt->fetch(PDO::FETCH_ASSOC);
+                                            if($dept) {
+                                                $deptName = $dept['dept_name'];
+                                            }
+                                        } catch (PDOException $e) {
+                                            // Handle error
+                                        }
+                                    }
+                                    echo htmlspecialchars($deptName);
+                                    ?>
+                                </td>
+                                <td><?php echo htmlspecialchars($location['remarks']); ?></td>
+                                <td><?php echo !empty($location['date_created']) ? date('Y-m-d H:i', strtotime($location['date_created'])) : ''; ?></td>
                                 <td class="text-center">
                                     <div class="btn-group" role="group">
                                         <a class="btn btn-sm btn-outline-primary edit-location" 
-                                           data-id="<?php echo $location['EquipmentLocationID']; ?>"
-                                           data-asset="<?php echo htmlspecialchars($location['AssetTag']); ?>"
-                                           data-building="<?php echo htmlspecialchars($location['BuildingLocation']); ?>"
-                                           data-floor="<?php echo htmlspecialchars($location['FloorNumber']); ?>"
-                                           data-area="<?php echo htmlspecialchars($location['SpecificArea']); ?>"
-                                           data-person="<?php echo htmlspecialchars($location['PersonResponsible']); ?>"
-                                           data-remarks="<?php echo htmlspecialchars($location['Remarks']); ?>">
+                                           data-id="<?php echo $location['equipment_location_id']; ?>"
+                                           data-asset="<?php echo htmlspecialchars($location['asset_tag']); ?>"
+                                           data-building="<?php echo htmlspecialchars($location['building_loc']); ?>"
+                                           data-floor="<?php echo htmlspecialchars($location['floor_no']); ?>"
+                                           data-area="<?php echo htmlspecialchars($location['specific_area']); ?>"
+                                           data-person="<?php echo htmlspecialchars($location['person_responsible']); ?>"
+                                           data-department="<?php echo htmlspecialchars($location['department_id']); ?>"
+                                           data-remarks="<?php echo htmlspecialchars($location['remarks']); ?>">
                                             <i class="bi bi-pencil-square"></i> Edit
                                         </a>
-                                        <a class="btn btn-sm btn-outline-danger" href="?action=delete&id=<?php echo htmlspecialchars($location['EquipmentLocationID']); ?>" onclick="return confirm('Are you sure you want to delete this Equipment Location?');">
+                                        <a class="btn btn-sm btn-outline-danger" href="?action=delete&id=<?php echo htmlspecialchars($location['equipment_location_id']); ?>" onclick="return confirm('Are you sure you want to delete this Equipment Location?');">
                                             <i class="bi bi-trash"></i> Delete
                                         </a>
                                     </div>
@@ -506,33 +530,51 @@ try {
                 <form id="addLocationForm">
                     <input type="hidden" name="action" value="add">
                     <div class="mb-3">
-                        <label for="AssetTag" class="form-label">Asset Tag <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="AssetTag" required>
+                        <label for="asset_tag" class="form-label">Asset Tag <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="asset_tag" required>
                     </div>
 
                     <div class="mb-3">
-                        <label for="BuildingLocation" class="form-label">Building Location <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="BuildingLocation" required>
+                        <label for="building_loc" class="form-label">Building Location <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="building_loc" required>
                     </div>
 
                     <div class="mb-3">
-                        <label for="FloorNumber" class="form-label">Floor Number <span class="text-danger">*</span></label>
-                        <input type="number" min="1" class="form-control" name="FloorNumber" required>
+                        <label for="floor_no" class="form-label">Floor Number <span class="text-danger">*</span></label>
+                        <input type="number" min="1" class="form-control" name="floor_no" required>
                     </div>
 
                     <div class="mb-3">
-                        <label for="SpecificArea" class="form-label">Specific Area <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="SpecificArea" required>
+                        <label for="specific_area" class="form-label">Specific Area <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="specific_area" required>
                     </div>
 
                     <div class="mb-3">
-                        <label for="PersonResponsible" class="form-label">Person Responsible <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="PersonResponsible" required>
+                        <label for="person_responsible" class="form-label">Person Responsible <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="person_responsible" required>
                     </div>
 
                     <div class="mb-3">
-                        <label for="Remarks" class="form-label">Remarks</label>
-                        <textarea class="form-control" name="Remarks" rows="3"></textarea>
+                        <label for="department_id" class="form-label">Department <span class="text-danger">*</span></label>
+                        <select class="form-control" name="department_id" required>
+                            <option value="">Select Department</option>
+                            <?php
+                            try {
+                                $deptStmt = $pdo->query("SELECT id, dept_name FROM departments WHERE is_disabled = 0 ORDER BY dept_name");
+                                $departments = $deptStmt->fetchAll();
+                                foreach($departments as $department) {
+                                    echo "<option value='" . htmlspecialchars($department['id']) . "'>" . htmlspecialchars($department['dept_name']) . "</option>";
+                                }
+                            } catch (PDOException $e) {
+                                // Handle error
+                            }
+                            ?>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="remarks" class="form-label">Remarks</label>
+                        <textarea class="form-control" name="remarks" rows="3"></textarea>
                     </div>
 
                     <div class="modal-footer border-0">
@@ -561,42 +603,62 @@ try {
                         <label for="edit_asset_tag" class="form-label">
                             <i class="bi bi-tag"></i> Asset Tag <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control" name="AssetTag" id="edit_asset_tag" required>
+                        <input type="text" class="form-control" name="asset_tag" id="edit_asset_tag" required>
                     </div>
 
                     <div class="mb-3">
-                        <label for="edit_building_location" class="form-label">
+                        <label for="edit_building_loc" class="form-label">
                             <i class="bi bi-building"></i> Building Location <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control" id="edit_building_location" name="BuildingLocation" required>
+                        <input type="text" class="form-control" id="edit_building_loc" name="building_loc" required>
                     </div>
 
                     <div class="mb-3">
-                        <label for="edit_floor_number" class="form-label">
+                        <label for="edit_floor_no" class="form-label">
                             <i class="bi bi-layers"></i> Floor Number <span class="text-danger">*</span>
                         </label>
-                        <input type="number" min="1" class="form-control" id="edit_floor_number" name="FloorNumber" required>
+                        <input type="number" min="1" class="form-control" id="edit_floor_no" name="floor_no" required>
                     </div>
 
                     <div class="mb-3">
                         <label for="edit_specific_area" class="form-label">
                             <i class="bi bi-pin-map"></i> Specific Area <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control" id="edit_specific_area" name="SpecificArea" required>
+                        <input type="text" class="form-control" id="edit_specific_area" name="specific_area" required>
                     </div>
 
                     <div class="mb-3">
                         <label for="edit_person_responsible" class="form-label">
                             <i class="bi bi-person"></i> Person Responsible <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control" id="edit_person_responsible" name="PersonResponsible" required>
+                        <input type="text" class="form-control" id="edit_person_responsible" name="person_responsible" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="edit_department_id" class="form-label">
+                            <i class="bi bi-building"></i> Department <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-control" id="edit_department_id" name="department_id" required>
+                            <option value="">Select Department</option>
+                            <?php
+                            try {
+                                $deptStmt = $pdo->query("SELECT id, dept_name FROM departments WHERE is_disabled = 0 ORDER BY dept_name");
+                                $departments = $deptStmt->fetchAll();
+                                foreach($departments as $department) {
+                                    echo "<option value='" . htmlspecialchars($department['id']) . "'>" . htmlspecialchars($department['dept_name']) . "</option>";
+                                }
+                            } catch (PDOException $e) {
+                                // Handle error
+                            }
+                            ?>
+                        </select>
                     </div>
 
                     <div class="mb-3">
                         <label for="edit_remarks" class="form-label">
                             <i class="bi bi-chat-left-text"></i> Remarks
                         </label>
-                        <textarea class="form-control" id="edit_remarks" name="Remarks" rows="3"></textarea>
+                        <textarea class="form-control" id="edit_remarks" name="remarks" rows="3"></textarea>
                     </div>
 
                     <div class="d-flex justify-content-end">
@@ -666,21 +728,23 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Edit button click handler
-    $('.edit-location').click(function() {
-        const id = $(this).data('id');
-        const assetTag = $(this).data('asset');
-        const buildingLocation = $(this).data('building');
-        const floorNumber = $(this).data('floor');
-        const specificArea = $(this).data('area');
-        const personResponsible = $(this).data('person');
-        const remarks = $(this).data('remarks');
+    $('.edit-location').on('click', function() {
+        var id = $(this).data('id');
+        var assetTag = $(this).data('asset');
+        var buildingLocation = $(this).data('building');
+        var floorNumber = $(this).data('floor');
+        var specificArea = $(this).data('area');
+        var personResponsible = $(this).data('person');
+        var departmentId = $(this).data('department');
+        var remarks = $(this).data('remarks');
         
         $('#edit_location_id').val(id);
         $('#edit_asset_tag').val(assetTag);
-        $('#edit_building_location').val(buildingLocation);
-        $('#edit_floor_number').val(floorNumber);
+        $('#edit_building_loc').val(buildingLocation);
+        $('#edit_floor_no').val(floorNumber);
         $('#edit_specific_area').val(specificArea);
         $('#edit_person_responsible').val(personResponsible);
+        $('#edit_department_id').val(departmentId);
         $('#edit_remarks').val(remarks);
         
         $('#editLocationModal').modal('show');

@@ -14,7 +14,7 @@ if (!isset($_SESSION['user_id'])) {
 // Fetch only equipment management related audit logs
 $query = "SELECT audit_log.*, users.email AS user_email 
           FROM audit_log 
-          LEFT JOIN users ON audit_log.UserID = users.User_ID
+          LEFT JOIN users ON audit_log.UserID = users.id
           WHERE audit_log.Module LIKE 'Equipment%'
           ORDER BY audit_log.Date_Time DESC";
 $stmt = $pdo->prepare($query);

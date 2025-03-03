@@ -1,6 +1,6 @@
 <?php
 $host = 'localhost';
-$db   = 'ims_tmdd';
+$db   = 'ims_tmddrbac';
 $user = 'root'; // default username for localhost
 $pass = ''; // default password for localhost
 $charset = 'utf8mb4';

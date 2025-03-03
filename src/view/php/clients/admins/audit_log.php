@@ -11,9 +11,9 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 // Fetch all audit logs (including permanent deletes)
-$query = "SELECT audit_log.*, users.email AS user_email 
+$query = "SELECT audit_log.*, users.email AS email 
           FROM audit_log 
-          LEFT JOIN users ON audit_log.UserID = users.User_ID
+          LEFT JOIN users ON audit_log.UserID = users.id
           ORDER BY audit_log.Date_Time DESC";
 $stmt = $pdo->prepare($query);
 $stmt->execute();

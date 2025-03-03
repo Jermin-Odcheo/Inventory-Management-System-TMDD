@@ -5,15 +5,15 @@ include '../../general/header.php';
 
 $sql = "
     SELECT 
-        r.Role_ID,
-        r.Role_Name,
-        COALESCE(m.Module_Name, 'General') AS Module_Name,
-        p.Privilege_Name
+        r.id AS Role_ID,
+        r.role_name AS Role_Name,
+        COALESCE(m.module_name, 'General') AS Module_Name,
+        p.priv_name AS Privilege_Name
     FROM roles r
-    LEFT JOIN role_privileges rp ON r.Role_ID = rp.Role_ID
-    LEFT JOIN privileges p ON rp.Privilege_ID = p.Privilege_ID
-    LEFT JOIN modules m ON p.Module_ID = m.Module_ID
-    ORDER BY r.Role_ID ASC, m.Module_Name, p.Privilege_Name
+    LEFT JOIN role_module_privileges rmp ON r.id = rmp.role_id
+    LEFT JOIN privileges p ON rmp.privilege_id = p.id
+    LEFT JOIN modules m ON rmp.module_id = m.id
+    ORDER BY r.id ASC, m.module_name, p.priv_name
 ";
 
 $stmt = $pdo->prepare($sql);
@@ -187,88 +187,88 @@ foreach ($roleData as $row) {
 </div>
 
 <script>
-$(document).ready(function() {
-    // Load edit role modal content via AJAX.
-    $('.edit-role-btn').on('click', function() {
-        var roleID = $(this).data('role-id');
-        $('#editRoleContent').html("Loading...");
-        $.ajax({
-            url: 'edit_roles.php',
-            type: 'GET',
-            data: { id: roleID },
-            success: function(response) {
-                $('#editRoleContent').html(response);
-            },
-            error: function() {
-                $('#editRoleContent').html('<p class="text-danger">Error loading role data.</p>');
-            }
-        });
-    });
-
-    // Handle delete role modal.
-    $('#confirmDeleteModal').on('show.bs.modal', function(event) {
-        var button = $(event.relatedTarget);
-        var roleID = button.data('role-id');
-        var roleName = button.data('role-name');
-        $('#roleNamePlaceholder').text(roleName);
-        $('#confirmDeleteButton').attr('href', 'delete_role.php?id=' + roleID);
-    });
-
-    // Load add role modal content via AJAX.
-    $('#addRoleModal').on('show.bs.modal', function () {
-        $('#addRoleContent').html("Loading...");
-        $.ajax({
-            url: 'add_role.php',
-            type: 'GET',
-            success: function(response) {
-                $('#addRoleContent').html(response);
-            },
-            error: function() {
-                $('#addRoleContent').html('<p class="text-danger">Error loading form.</p>');
-            }
-        });
-    });
-
-    // Undo button click handler
-    $('#undoButton').on('click', function() {
-        $.ajax({
-            url: 'undo.php',
-            type: 'GET',
-            dataType: 'json',
-            success: function(response) {
-                if (response.success) {
-                    alert(response.message);
-                    window.location.reload(); // Refresh the page to reflect changes
-                } else {
-                    alert(response.message);
+    $(document).ready(function() {
+        // Load edit role modal content via AJAX.
+        $('.edit-role-btn').on('click', function() {
+            var roleID = $(this).data('role-id');
+            $('#editRoleContent').html("Loading...");
+            $.ajax({
+                url: 'edit_roles.php',
+                type: 'GET',
+                data: { id: roleID },
+                success: function(response) {
+                    $('#editRoleContent').html(response);
+                },
+                error: function() {
+                    $('#editRoleContent').html('<p class="text-danger">Error loading role data.</p>');
                 }
-            },
-            error: function() {
-                alert('Error processing undo request.');
-            }
+            });
         });
-    });
 
-    // Redo button click handler
-    $('#redoButton').on('click', function() {
-        $.ajax({
-            url: 'redo.php',
-            type: 'GET',
-            dataType: 'json',
-            success: function(response) {
-                if (response.success) {
-                    alert(response.message);
-                    window.location.reload(); // Refresh the page to reflect changes
-                } else {
-                    alert(response.message);
+        // Handle delete role modal.
+        $('#confirmDeleteModal').on('show.bs.modal', function(event) {
+            var button = $(event.relatedTarget);
+            var roleID = button.data('role-id');
+            var roleName = button.data('role-name');
+            $('#roleNamePlaceholder').text(roleName);
+            $('#confirmDeleteButton').attr('href', 'delete_role.php?id=' + roleID);
+        });
+
+        // Load add role modal content via AJAX.
+        $('#addRoleModal').on('show.bs.modal', function () {
+            $('#addRoleContent').html("Loading...");
+            $.ajax({
+                url: 'add_role.php',
+                type: 'GET',
+                success: function(response) {
+                    $('#addRoleContent').html(response);
+                },
+                error: function() {
+                    $('#addRoleContent').html('<p class="text-danger">Error loading form.</p>');
                 }
-            },
-            error: function() {
-                alert('Error processing redo request.');
-            }
+            });
+        });
+
+        // Undo button click handler
+        $('#undoButton').on('click', function() {
+            $.ajax({
+                url: 'undo.php',
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        alert(response.message);
+                        window.location.reload(); // Refresh the page to reflect changes
+                    } else {
+                        alert(response.message);
+                    }
+                },
+                error: function() {
+                    alert('Error processing undo request.');
+                }
+            });
+        });
+
+        // Redo button click handler
+        $('#redoButton').on('click', function() {
+            $.ajax({
+                url: 'redo.php',
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        alert(response.message);
+                        window.location.reload(); // Refresh the page to reflect changes
+                    } else {
+                        alert(response.message);
+                    }
+                },
+                error: function() {
+                    alert('Error processing redo request.');
+                }
+            });
         });
     });
-});
 </script>
 </body>
 </html>
