@@ -16,10 +16,11 @@ include('../../general/header.php');
 
 // Set the audit log session variables for MySQL triggers.
 if (isset($_SESSION['user_id'])) {
-    // Use the logged-in user's ID.
     $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
+    $pdo->exec("SET @current_module = 'Charge Invoice'");
 } else {
     $pdo->exec("SET @current_user_id = NULL");
+    $pdo->exec("SET @current_module = NULL");
 }
 
 // Set IP address; adjust as needed if you use a proxy.
