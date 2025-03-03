@@ -81,12 +81,105 @@ CREATE TABLE IF NOT EXISTS `chargeinvoice` (
 ) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
--- Dumping data for table `chargeinvoice`
+-- Triggers for Charge Invoice
 --
+DROP TRIGGER IF EXISTS `chargeinvoice_after_insert`;
+DELIMITER $$
+CREATE TRIGGER `chargeinvoice_after_insert` AFTER INSERT ON `chargeinvoice` FOR EACH ROW BEGIN
+    INSERT INTO audit_log (
+        `UserID`,
+        `EntityID`,
+        `Action`,
+        `Details`,
+        `OldVal`,
+        `NewVal`,
+        `Module`,
+        `Status`
+    ) VALUES (
+        @current_user_id,
+        NEW.ChargeInvoiceID,
+        'Add',
+        'New Charge Invoice added',
+        '',
+        JSON_OBJECT(
+            'ChargeInvoiceID', NEW.ChargeInvoiceID,
+            'ChargeInvoiceNo', NEW.ChargeInvoiceNo,
+            'DateOfChargeInvoice', NEW.DateOfChargeInvoice,
+            'PurchaseOrderNumber', NEW.PurchaseOrderNumber
+        ),
+        'Charge Invoice',
+        'Successful'
+    );
+END
+$$
+DELIMITER ;
 
-INSERT INTO `chargeinvoice` (`ChargeInvoiceID`, `ChargeInvoiceNo`, `DateOfChargeInvoice`, `CreatedDate`, `ModifiedDate`, `PurchaseOrderNumber`) VALUES
-(1, 'CI6789', '2024-02-05', '2025-02-27 08:02:06', '2025-02-27 08:02:06', 'PO12345'),
-(2, 'CI6790', '2024-02-06', '2025-02-27 08:02:06', '2025-02-27 08:02:06', 'PO12346');
+DROP TRIGGER IF EXISTS `chargeinvoice_after_update`;
+DELIMITER $$
+CREATE TRIGGER `chargeinvoice_after_update` AFTER UPDATE ON `chargeinvoice` FOR EACH ROW BEGIN
+    INSERT INTO audit_log (
+        `UserID`,
+        `EntityID`,
+        `Action`,
+        `Details`,
+        `OldVal`,
+        `NewVal`,
+        `Module`,
+        `Status`
+    ) VALUES (
+        @current_user_id,
+        NEW.ChargeInvoiceID,
+        'Modified',
+        'Charge Invoice updated',
+        JSON_OBJECT(
+            'ChargeInvoiceID', OLD.ChargeInvoiceID,
+            'ChargeInvoiceNo', OLD.ChargeInvoiceNo,
+            'DateOfChargeInvoice', OLD.DateOfChargeInvoice,
+            'PurchaseOrderNumber', OLD.PurchaseOrderNumber
+        ),
+        JSON_OBJECT(
+            'ChargeInvoiceID', NEW.ChargeInvoiceID,
+            'ChargeInvoiceNo', NEW.ChargeInvoiceNo,
+            'DateOfChargeInvoice', NEW.DateOfChargeInvoice,
+            'PurchaseOrderNumber', NEW.PurchaseOrderNumber
+        ),
+        'Charge Invoice',
+        'Successful'
+    );
+END
+$$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS `chargeinvoice_after_delete`;
+DELIMITER $$
+CREATE TRIGGER `chargeinvoice_after_delete` AFTER DELETE ON `chargeinvoice` FOR EACH ROW BEGIN
+    INSERT INTO audit_log (
+        `UserID`,
+        `EntityID`,
+        `Action`,
+        `Details`,
+        `OldVal`,
+        `NewVal`,
+        `Module`,
+        `Status`
+    ) VALUES (
+        @current_user_id,
+        OLD.ChargeInvoiceID,
+        'Delete',
+        'Charge Invoice deleted',
+        JSON_OBJECT(
+            'ChargeInvoiceID', OLD.ChargeInvoiceID,
+            'ChargeInvoiceNo', OLD.ChargeInvoiceNo,
+            'DateOfChargeInvoice', OLD.DateOfChargeInvoice,
+            'PurchaseOrderNumber', OLD.PurchaseOrderNumber
+        ),
+        '',
+        'Charge Invoice',
+        'Successful'
+    );
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -319,7 +412,77 @@ CREATE TRIGGER `purchaseorder_after_insert` AFTER INSERT ON `purchaseorder` FOR 
             'DateOfPurchaseOrder', NEW.DateOfPurchaseOrder,
             'ItemsSpecification', NEW.ItemsSpecification
         ),
-        IFNULL(@current_module, 'Equipment Management'),
+        'Purchase Order',
+        'Successful'
+    );
+END
+$$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS `purchaseorder_after_update`;
+DELIMITER $$
+CREATE TRIGGER `purchaseorder_after_update` AFTER UPDATE ON `purchaseorder` FOR EACH ROW BEGIN
+    INSERT INTO audit_log (
+        `UserID`,
+        `EntityID`,
+        `Action`,
+        `Details`,
+        `OldVal`,
+        `NewVal`,
+        `Module`,
+        `Status`
+    ) VALUES (
+        @current_user_id,
+        NEW.PurchaseOrderID,
+        'Modified',
+        'Purchase Order updated',
+        JSON_OBJECT(
+            'PurchaseOrderID', OLD.PurchaseOrderID,
+            'PurchaseOrderNumber', OLD.PurchaseOrderNumber,
+            'NumberOfUnits', OLD.NumberOfUnits,
+            'DateOfPurchaseOrder', OLD.DateOfPurchaseOrder,
+            'ItemsSpecification', OLD.ItemsSpecification
+        ),
+        JSON_OBJECT(
+            'PurchaseOrderID', NEW.PurchaseOrderID,
+            'PurchaseOrderNumber', NEW.PurchaseOrderNumber,
+            'NumberOfUnits', NEW.NumberOfUnits,
+            'DateOfPurchaseOrder', NEW.DateOfPurchaseOrder,
+            'ItemsSpecification', NEW.ItemsSpecification
+        ),
+        'Purchase Order',
+        'Successful'
+    );
+END
+$$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS `purchaseorder_after_delete`;
+DELIMITER $$
+CREATE TRIGGER `purchaseorder_after_delete` AFTER DELETE ON `purchaseorder` FOR EACH ROW BEGIN
+    INSERT INTO audit_log (
+        `UserID`,
+        `EntityID`,
+        `Action`,
+        `Details`,
+        `OldVal`,
+        `NewVal`,
+        `Module`,
+        `Status`
+    ) VALUES (
+        @current_user_id,
+        OLD.PurchaseOrderID,
+        'Delete',
+        'Purchase Order deleted',
+        JSON_OBJECT(
+            'PurchaseOrderID', OLD.PurchaseOrderID,
+            'PurchaseOrderNumber', OLD.PurchaseOrderNumber,
+            'NumberOfUnits', OLD.NumberOfUnits,
+            'DateOfPurchaseOrder', OLD.DateOfPurchaseOrder,
+            'ItemsSpecification', OLD.ItemsSpecification
+        ),
+        '',
+        'Purchase Order',
         'Successful'
     );
 END
@@ -352,6 +515,111 @@ CREATE TABLE IF NOT EXISTS `receivingreportform` (
 INSERT INTO `receivingreportform` (`ReceivingReportFormID`, `ReceivingReportNumber`, `AccountableIndividual`, `PurchaseOrderNumber`, `AccountableIndividualLocation`, `CreatedDate`, `ModifiedDate`) VALUES
 (1, 'RR001', 'John Doe', 'PO12345', 'IT Department', '2025-02-27 08:02:06', '2025-02-27 08:02:06'),
 (2, 'RR002', 'Jane Smith', 'PO12346', 'Admin Office', '2025-02-27 08:02:06', '2025-02-27 08:02:06');
+
+--
+-- Triggers `receivingreportform`
+--
+DROP TRIGGER IF EXISTS `receivingreportform_after_insert`;
+DELIMITER $$
+CREATE TRIGGER `receivingreportform_after_insert` AFTER INSERT ON `receivingreportform` FOR EACH ROW BEGIN
+    INSERT INTO audit_log (
+        `UserID`,
+        `EntityID`,
+        `Action`,
+        `Details`,
+        `OldVal`,
+        `NewVal`,
+        `Module`,
+        `Status`
+    ) VALUES (
+        @current_user_id,
+        NEW.ReceivingReportFormID,
+        'Add',
+        'New Receiving Report added',
+        '',
+        JSON_OBJECT(
+            'ReceivingReportFormID', NEW.ReceivingReportFormID,
+            'ReceivingReportNumber', NEW.ReceivingReportNumber,
+            'AccountableIndividual', NEW.AccountableIndividual,
+            'PurchaseOrderNumber', NEW.PurchaseOrderNumber,
+            'AccountableIndividualLocation', NEW.AccountableIndividualLocation
+        ),
+        'Receiving Report',
+        'Successful'
+    );
+END
+$$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS `receivingreportform_after_update`;
+DELIMITER $$
+CREATE TRIGGER `receivingreportform_after_update` AFTER UPDATE ON `receivingreportform` FOR EACH ROW BEGIN
+    INSERT INTO audit_log (
+        `UserID`,
+        `EntityID`,
+        `Action`,
+        `Details`,
+        `OldVal`,
+        `NewVal`,
+        `Module`,
+        `Status`
+    ) VALUES (
+        @current_user_id,
+        NEW.ReceivingReportFormID,
+        'Modified',
+        'Receiving Report updated',
+        JSON_OBJECT(
+            'ReceivingReportFormID', OLD.ReceivingReportFormID,
+            'ReceivingReportNumber', OLD.ReceivingReportNumber,
+            'AccountableIndividual', OLD.AccountableIndividual,
+            'PurchaseOrderNumber', OLD.PurchaseOrderNumber,
+            'AccountableIndividualLocation', OLD.AccountableIndividualLocation
+        ),
+        JSON_OBJECT(
+            'ReceivingReportFormID', NEW.ReceivingReportFormID,
+            'ReceivingReportNumber', NEW.ReceivingReportNumber,
+            'AccountableIndividual', NEW.AccountableIndividual,
+            'PurchaseOrderNumber', NEW.PurchaseOrderNumber,
+            'AccountableIndividualLocation', NEW.AccountableIndividualLocation
+        ),
+        'Receiving Report',
+        'Successful'
+    );
+END
+$$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS `receivingreportform_after_delete`;
+DELIMITER $$
+CREATE TRIGGER `receivingreportform_after_delete` AFTER DELETE ON `receivingreportform` FOR EACH ROW BEGIN
+    INSERT INTO audit_log (
+        `UserID`,
+        `EntityID`,
+        `Action`,
+        `Details`,
+        `OldVal`,
+        `NewVal`,
+        `Module`,
+        `Status`
+    ) VALUES (
+        @current_user_id,
+        OLD.ReceivingReportFormID,
+        'Delete',
+        'Receiving Report deleted',
+        JSON_OBJECT(
+            'ReceivingReportFormID', OLD.ReceivingReportFormID,
+            'ReceivingReportNumber', OLD.ReceivingReportNumber,
+            'AccountableIndividual', OLD.AccountableIndividual,
+            'PurchaseOrderNumber', OLD.PurchaseOrderNumber,
+            'AccountableIndividualLocation', OLD.AccountableIndividualLocation
+        ),
+        '',
+        'Receiving Report',
+        'Successful'
+    );
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 

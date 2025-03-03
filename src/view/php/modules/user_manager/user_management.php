@@ -12,10 +12,10 @@ if (!isset($pdo)) {
 }
 
 // Check if the user is logged in
- if (!isset($_SESSION['user_id'])) {
-     header("Location: ../../../../../public/index.php");
-     exit();
- }
+if (!isset($_SESSION['user_id'])) {
+    header("Location: ../../../../../public/index.php");
+    exit();
+}
 
 // Define allowed sorting columns (for active users)
 $allowedSortColumns = ['id', 'Email', 'First_Name', 'Last_Name', 'Department', 'Status'];

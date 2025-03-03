@@ -346,8 +346,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Equipment Status Management</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Add Bootstrap Icons CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <!-- Add sidebar CSS -->
     <link rel="stylesheet" href="/src/view/styles/css/sidebar.css">
+    <!-- Add equipment manager CSS -->
+    <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
 
     <style>
         body {
@@ -434,11 +438,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                 </div>
             </div>
             <div class="card-body p-3">
-                <!-- Add button and filter -->
-                <div class="d-flex justify-content-between align-items-center mb-3">
+                <!-- Add Location Button and Filter -->
+                <div class="d-flex justify-content-between mb-3">
                     <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addStatusModal">
-                            <i class="bi bi-plus-circle"></i> Add New Status
+                        <button type="button" class="btn btn-success btn-sm d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#addStatusModal">
+                            <i class="bi bi-plus-circle"></i>
+                            <span>Add New Status</span>
                         </button>
                         <select class="form-select form-select-sm" id="filterStatus" style="width: auto;">
                             <option value="">Filter By Status</option>
@@ -593,37 +598,43 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <form action="javascript:void(0);" method="post" id="add_status_form">
+                    <form id="addStatusForm">
                         <input type="hidden" name="action" value="add">
-                        <div class="mb-3">
-                            <label for="asset_tag" class="form-label">Asset Tag</label>
-                            <input type="text" class="form-control" id="asset_tag" name="asset_tag" required>
+                        <div class="form-field-group">
+                            <div class="form-field-group-title">Status Information</div>
+                            <div class="mb-3">
+                                <label for="asset_tag" class="form-label">Asset Tag</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" name="asset_tag" required>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="status" class="form-label">Status</label>
+                                <div class="input-group">
+                                    <select class="form-control" name="status" required>
+                                        <option value="">Select Status</option>
+                                        <option value="Working">Working</option>
+                                        <option value="For Repair">For Repair</option>
+                                        <option value="For Disposal">For Disposal</option>
+                                        <option value="Disposed">Disposed</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="accountable_individual" class="form-label">Accountable Individual</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" name="accountable_individual" required>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="remarks" class="form-label">Remarks</label>
+                                <div class="input-group">
+                                    <textarea class="form-control" name="remarks" rows="3"></textarea>
+                                </div>
+                            </div>
                         </div>
                         <div class="mb-3">
-                            <label for="status" class="form-label">Status</label>
-                            <select class="form-select" id="status" name="status" required>
-                                <option value="">Select Status</option>
-                                <option value="Working">Working</option>
-                                <option value="Needs Repair">Needs Repair</option>
-                                <option value="Out of Service">Out of Service</option>
-                                <option value="In Maintenance">In Maintenance</option>
-                                <option value="Decommissioned">Decommissioned</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="action" class="form-label">Action</label>
-                            <input type="text" class="form-control" id="action" name="action" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="remarks" class="form-label">Remarks</label>
-                            <textarea class="form-control" id="remarks" name="remarks" rows="3"></textarea>
-                        </div>
-                        <div class="mb-3 form-check">
-                            <input type="checkbox" class="form-check-input" id="is_disabled" name="is_disabled">
-                            <label class="form-check-label" for="is_disabled">Disabled</label>
-                        </div>
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary">Add Status</button>
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Add Equipment Status</button>
                         </div>
                     </form>
                 </div>
@@ -718,14 +729,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                 var action = $(this).data('action');
                 var remarks = $(this).data('remarks');
                 var disabled = $(this).data('disabled');
-                
+
                 $('#edit_status_id').val(id);
                 $('#edit_asset_tag').val(asset);
                 $('#edit_status').val(status);
                 $('#edit_action').val(action);
                 $('#edit_remarks').val(remarks);
                 $('#edit_is_disabled').prop('checked', disabled == 1);
-                
+
                 $('#editStatusModal').modal('show');
             });
 

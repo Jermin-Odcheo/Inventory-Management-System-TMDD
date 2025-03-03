@@ -11,11 +11,11 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Fetch only equipment management related audit logs
+// Fetch only equipment transaction related audit logs
 $query = "SELECT audit_log.*, users.email AS user_email 
           FROM audit_log 
-          LEFT JOIN users ON audit_log.UserID = users.id
-          WHERE audit_log.Module IN ('Equipment Details', 'Equipment Location', 'Equipment Status')
+          LEFT JOIN users ON audit_log.UserID = users.User_ID
+          WHERE audit_log.Module IN ('Purchase Order', 'Charge Invoice', 'Receiving Report')
           ORDER BY audit_log.Date_Time DESC";
 $stmt = $pdo->prepare($query);
 $stmt->execute();
@@ -286,9 +286,9 @@ function getChangedFieldNames(array $oldData, array $newData)
                     <div class="col-md-4 mb-2">
                         <select id="filterModule" class="form-select">
                             <option value="">All Modules</option>
-                            <option value="Equipment Details">Equipment Details</option>
-                            <option value="Equipment Location">Equipment Location</option>
-                            <option value="Equipment Status">Equipment Status</option>
+                            <option value="Purchase Order">Purchase Order</option>
+                            <option value="Charge Invoice">Charge Invoice</option>
+                            <option value="Receiving Report">Receiving Report</option>
                         </select>
                     </div>
                 </div>

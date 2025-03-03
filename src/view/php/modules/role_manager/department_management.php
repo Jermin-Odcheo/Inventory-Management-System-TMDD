@@ -3,8 +3,13 @@
 session_start();
 require_once('../../../../../config/ims-tmdd.php'); // Adjust the path as needed
 
-// Include the header
-include('../../general/header.php');
+// -----------------------------------------------------------------
+// Optionally check for admin privileges (uncomment if needed)
+if (!isset($_SESSION['user_id'])) {
+    header("Location: ../../../../../public/index.php");
+    exit();
+}
+// -----------------------------------------------------------------
 
 // Set the audit log session variables for MySQL triggers.
 if (isset($_SESSION['user_id'])) {
@@ -108,18 +113,22 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 // PROCESS FORM SUBMISSIONS (Add / Update)
 // ------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Retrieve and sanitize form input
-    $asset_tag          = trim($_POST['asset_tag'] ?? '');
-    $building_loc       = trim($_POST['building_loc'] ?? '');
-    $floor_no           = trim($_POST['floor_no'] ?? '');
-    $specific_area      = trim($_POST['specific_area'] ?? '');
-    $person_responsible = trim($_POST['person_responsible'] ?? '');
-    $department_id      = trim($_POST['department_id'] ?? '');
-    $remarks            = trim($_POST['remarks'] ?? '');
+// Retrieve and sanitize form input
+$asset_tag = trim($_POST['asset_tag'] ?? '');
+$building_loc = trim($_POST['building_loc'] ?? '');
+$floor_no = trim($_POST['floor_no'] ?? '');
+$specific_area = trim($_POST['specific_area'] ?? '');
+$person_responsible = trim($_POST['person_responsible'] ?? '');
+$department_id = trim($_POST['department_id'] ?? '');
+$remarks = trim($_POST['remarks'] ?? '');
+$DepartmentID = trim($_POST['DepartmentID'] ?? '');
+$DepartmentAcronym = trim($_POST['DepartmentAcronym'] ?? '');
+$DepartmentName = trim($_POST['DepartmentName'] ?? '');
 
-    $response = array('status' => '', 'message' => '');
+$response = array('status' => '', 'message' => '');
 
-    // Validate required fields
+// Validate required fields
+if (empty($DepartmentID) || empty($DepartmentAcronym) || empty($DepartmentName)) {
     if (empty($asset_tag) || empty($building_loc) || empty($floor_no) || empty($specific_area) || empty($person_responsible)) {
         $response['status'] = 'error';
         $response['message'] = 'Please fill in all required fields.';
@@ -315,12 +324,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) 
 // RETRIEVE ALL ACTIVE EQUIPMENT LOCATIONS (is_disabled = 0)
 // ------------------------
 try {
-    $stmt = $pdo->query("SELECT * FROM equipment_location WHERE is_disabled = 0 ORDER BY date_created DESC");
-    $equipmentLocations = $stmt->fetchAll();
+    $stmt = $pdo->query("SELECT * FROM departments ORDER BY id");
+    $departments = $stmt->fetchAll();
 } catch (PDOException $e) {
     $errors[] = "Error retrieving Equipment Locations: " . $e->getMessage();
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -340,18 +350,22 @@ try {
             min-height: 100vh;
             padding-top: 70px;
         }
+
         .container-fluid {
             margin-left: 300px;
             padding: 20px;
             width: calc(100% - 300px);
         }
+
         h2.mb-4 {
             margin-top: 5px;
             margin-bottom: 15px !important;
         }
+
         .card.shadow-sm {
             margin-top: 10px;
         }
+
         @media (max-width: 768px) {
             .container-fluid {
                 margin-left: 0;
@@ -399,386 +413,412 @@ try {
         </div>
         <div class="card-body">
             <?php if (!empty($equipmentLocations)): ?>
-                <div class="table-responsive">
-                    <!-- Add Location Button and Filter -->
-                    <div class="d-flex justify-content-start mb-3 gap-2">
-                        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addLocationModal">
-                            <i class="bi bi-plus-circle"></i> Add Equipment Location
-                        </button>
-                        <select class="form-select form-select-sm" id="filterBuilding" style="width: auto;">
-                            <option value="">Filter Building Location</option>
-                            <?php
-                            $buildingLocations = array_unique(array_column($equipmentLocations, 'building_loc'));
-                            foreach($buildingLocations as $building) {
-                                if(!empty($building)) {
-                                    echo "<option value='" . htmlspecialchars($building) . "'>" . htmlspecialchars($building) . "</option>";
-                                }
+            <div class="table-responsive">
+                <!-- Add Location Button and Filter -->
+                <div class="d-flex justify-content-start mb-3 gap-2">
+                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal"
+                            data-bs-target="#addLocationModal">
+                        <i class="bi bi-plus-circle"></i> Add Equipment Location
+                    </button>
+                    <select class="form-select form-select-sm" id="filterBuilding" style="width: auto;">
+                        <option value="">Filter Building Location</option>
+                        <?php
+                        $buildingLocations = array_unique(array_column($equipmentLocations, 'building_loc'));
+                        foreach ($buildingLocations as $building) {
+                            if (!empty($building)) {
+                                echo "<option value='" . htmlspecialchars($building) . "'>" . htmlspecialchars($building) . "</option>";
                             }
-                            ?>
-                        </select>
-                    </div>
+                        }
+                        ?>
+                    </select>
+                </div>
 
-                    <table class="table table-striped table-hover align-middle" id="table">
-                        <thead class="table-dark">
+                <table class="table table-striped table-hover align-middle" id="table">
+                    <thead class="table-dark">
+                    <tr>
+                        <th>#</th>
+                        <th>Asset Tag</th>
+                        <th>Building Location</th>
+                        <th>Floor Number</th>
+                        <th>Specific Area</th>
+                        <th>Person Responsible</th>
+                        <th>Department</th>
+                        <th>Remarks</th>
+                        <th style="width: 12%">Date Created</th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ($equipmentLocations as $location): ?>
                         <tr>
-                            <th>#</th>
-                            <th>Asset Tag</th>
-                            <th>Building Location</th>
-                            <th>Floor Number</th>
-                            <th>Specific Area</th>
-                            <th>Person Responsible</th>
-                            <th>Department</th>
-                            <th>Remarks</th>
-                            <th style="width: 12%">Date Created</th>
-                            <th class="text-center">Actions</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <?php foreach ($equipmentLocations as $location): ?>
-                            <tr>
-                                <td><?php echo htmlspecialchars($location['equipment_location_id']); ?></td>
-                                <td><?php echo htmlspecialchars($location['asset_tag']); ?></td>
-                                <td><?php echo htmlspecialchars($location['building_loc']); ?></td>
-                                <td><?php echo htmlspecialchars($location['floor_no']); ?></td>
-                                <td><?php echo htmlspecialchars($location['specific_area']); ?></td>
-                                <td><?php echo htmlspecialchars($location['person_responsible']); ?></td>
-                                <td>
-                                    <?php
-                                    $deptName = 'N/A';
-                                    if(!empty($location['department_id'])) {
-                                        try {
-                                            $deptStmt = $pdo->prepare("SELECT dept_name FROM departments WHERE id = ?");
-                                            $deptStmt->execute([$location['department_id']]);
-                                            $dept = $deptStmt->fetch(PDO::FETCH_ASSOC);
-                                            if($dept) {
-                                                $deptName = $dept['dept_name'];
-                                            }
-                                        } catch (PDOException $e) {
-                                            // Handle error
+                            <td><?php echo htmlspecialchars($location['equipment_location_id']); ?></td>
+                            <td><?php echo htmlspecialchars($location['asset_tag']); ?></td>
+                            <td><?php echo htmlspecialchars($location['building_loc']); ?></td>
+                            <td><?php echo htmlspecialchars($location['floor_no']); ?></td>
+                            <td><?php echo htmlspecialchars($location['specific_area']); ?></td>
+                            <td><?php echo htmlspecialchars($location['person_responsible']); ?></td>
+                            <td>
+                                <?php
+                                $deptName = 'N/A';
+                                if (!empty($location['department_id'])) {
+                                    try {
+                                        $deptStmt = $pdo->prepare("SELECT department_name FROM departments WHERE id = ?");
+                                        $deptStmt->execute([$location['department_id']]);
+                                        $dept = $deptStmt->fetch(PDO::FETCH_ASSOC);
+                                        if ($dept) {
+                                            $deptName = $dept['dept_name'];
                                         }
+                                    } catch (PDOException $e) {
+                                        // Handle error
                                     }
-                                    echo htmlspecialchars($deptName);
-                                    ?>
-                                </td>
-                                <td><?php echo htmlspecialchars($location['remarks']); ?></td>
-                                <td><?php echo !empty($location['date_created']) ? date('Y-m-d H:i', strtotime($location['date_created'])) : ''; ?></td>
-                                <td class="text-center">
-                                    <div class="btn-group" role="group">
-                                        <a class="btn btn-sm btn-outline-primary edit-location"
-                                           data-id="<?php echo $location['equipment_location_id']; ?>"
-                                           data-asset="<?php echo htmlspecialchars($location['asset_tag']); ?>"
-                                           data-building="<?php echo htmlspecialchars($location['building_loc']); ?>"
-                                           data-floor="<?php echo htmlspecialchars($location['floor_no']); ?>"
-                                           data-area="<?php echo htmlspecialchars($location['specific_area']); ?>"
-                                           data-person="<?php echo htmlspecialchars($location['person_responsible']); ?>"
-                                           data-department="<?php echo htmlspecialchars($location['department_id']); ?>"
-                                           data-remarks="<?php echo htmlspecialchars($location['remarks']); ?>">
-                                            <i class="bi bi-pencil-square"></i> Edit
-                                        </a>
-                                        <a class="btn btn-sm btn-outline-danger" href="?action=delete&id=<?php echo htmlspecialchars($location['equipment_location_id']); ?>" onclick="return confirm('Are you sure you want to delete this Equipment Location?');">
-                                            <i class="bi bi-trash"></i> Delete
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                    <!-- Pagination Controls -->
-                    <div class="container-fluid">
-                        <div class="row align-items-center g-3">
-                            <!-- Pagination Info -->
-                            <div class="col-12 col-sm-auto">
-                                <div class="text-muted">
-                                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span
-                                            id="totalRows">0</span> entries
+                                }
+                                echo htmlspecialchars($deptName);
+                                ?>
+                            </td>
+                            <td><?php echo htmlspecialchars($location['remarks']); ?></td>
+                            <td><?php echo !empty($location['date_created']) ? date('Y-m-d H:i', strtotime($location['date_created'])) : ''; ?></td>
+                            <td class="text-center">
+                                <div class="btn-group" role="group">
+                                    <a class="btn btn-sm btn-outline-primary edit-location"
+                                       data-id="<?php echo $location['equipment_location_id']; ?>"
+                                       data-asset="<?php echo htmlspecialchars($location['asset_tag']); ?>"
+                                       data-building="<?php echo htmlspecialchars($location['building_loc']); ?>"
+                                       data-floor="<?php echo htmlspecialchars($location['floor_no']); ?>"
+                                       data-area="<?php echo htmlspecialchars($location['specific_area']); ?>"
+                                       data-person="<?php echo htmlspecialchars($location['person_responsible']); ?>"
+                                       data-department="<?php echo htmlspecialchars($location['department_id']); ?>"
+                                       data-remarks="<?php echo htmlspecialchars($location['remarks']); ?>">
+                                        <i class="bi bi-pencil-square"></i> Edit
+                                    </a>
+                                    <a class="btn btn-sm btn-outline-danger"
+                                       href="?action=delete&id=<?php echo htmlspecialchars($location['equipment_location_id']); ?>"
+                                       onclick="return confirm('Are you sure you want to delete this Equipment Location?');">
+                                        <i class="bi bi-trash"></i> Delete
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+                <!-- Pagination Controls -->
+                <div class="container-fluid">
+                    <div class="row align-items-center g-3">
+                        <!-- Pagination Info -->
+                        <div class="col-12 col-sm-auto">
+                            <div class="text-muted">
+                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span
+                                        id="totalRows">0</span> entries
+                            </div>
+                        </div>
+                        <!-- List of Departments Card -->
+                        <div class="card shadow-sm">
+                            <div class="card-header d-flex justify-content-between align-items-center bg-dark text-white">
+                                <span><i class="bi bi-list-ul"></i> List of Departments</span>
+                                <div class="input-group w-auto">
+                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                    <input type="text" class="form-control" placeholder="Search..." id="eqSearch">
                                 </div>
                             </div>
+                            <div class="card-body">
+                                <?php if (!empty($departments)): ?>
+                                    <div class="table-responsive">
+                                        <!-- Add Department Button and Filter -->
+                                        <div class="d-flex justify-content-start mb-3 gap-2">
+                                            <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal"
+                                                    data-bs-target="#addDepartmentModal">
+                                                <i class="bi bi-plus-circle"></i> Add Department
+                                            </button>
+                                        </div>
 
-                            <!-- Pagination Controls -->
-                            <div class="col-12 col-sm-auto ms-sm-auto">
-                                <div class="d-flex align-items-center gap-2">
-                                    <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                        <i class="bi bi-chevron-left"></i>
-                                        Previous
-                                    </button>
+                                        <table class="table table-striped table-hover align-middle" id="table">
+                                            <thead class="table-dark">
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Department Acronym</th>
+                                                <th>Department Name</th>
+                                                <th class="text-center">Actions</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            <?php foreach ($departments as $department): ?>
+                                                <tr>
+                                                    <td><?php echo htmlspecialchars($department['Department_ID']); ?></td>
+                                                    <td><?php echo htmlspecialchars($department['Department_Acronym']); ?></td>
+                                                    <td><?php echo htmlspecialchars($department['Department_Name']); ?></td>
+                                                    <td class="text-center">
+                                                        <div class="btn-group" role="group">
+                                                            <a class="btn btn-sm btn-outline-primary edit-department"
+                                                               data-id="<?php echo htmlspecialchars($department['Department_ID']); ?>"
+                                                               data-department-id="<?php echo htmlspecialchars($department['Department_ID']); ?>"
+                                                               data-department-acronym="<?php echo htmlspecialchars($department['Department_Acronym']); ?>"
+                                                               data-department-name="<?php echo htmlspecialchars($department['Department_Name']); ?>">
+                                                                <i class="bi bi-pencil-square"></i> Edit
+                                                            </a>
+                                                            <a class="btn btn-sm btn-outline-danger"
+                                                               href="?action=delete&id=<?php echo htmlspecialchars($department['Department_ID']); ?>"
+                                                               onclick="return confirm('Are you sure you want to delete this department?');">
+                                                                <i class="bi bi-trash"></i> Delete
+                                                            </a>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                        <!-- Pagination Controls -->
+                                        <div class="container-fluid">
+                                            <div class="row align-items-center g-3">
+                                                <!-- Pagination Info -->
+                                                <div class="col-12 col-sm-auto">
+                                                    <div class="text-muted">
+                                                        Showing <span id="currentPage">1</span> to <span
+                                                                id="rowsPerPage">10</span> of <span
+                                                                id="totalRows">0</span> entries
+                                                    </div>
+                                                </div>
 
-                                    <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
-                                        <option value="10">10</option>
-                                        <option value="20" selected>20</option>
-                                        <option value="50">50</option>
-                                        <option value="100">100</option>
-                                    </select>
+                                                <!-- Pagination Controls -->
+                                                <div class="col-12 col-sm-auto ms-sm-auto">
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <button id="prevPage"
+                                                                class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                                            <i class="bi bi-chevron-left"></i>
+                                                            Previous
+                                                        </button>
 
-                                    <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                        Next
-                                        <i class="bi bi-chevron-right"></i>
-                                    </button>
+                                                        <select id="rowsPerPageSelect" class="form-select"
+                                                                style="width: auto;">
+                                                            <option value="10">10</option>
+                                                            <option value="20" selected>20</option>
+                                                            <option value="50">50</option>
+                                                            <option value="100">100</option>
+                                                        </select>
+
+                                                        <button id="nextPage"
+                                                                class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                                            Next
+                                                            <i class="bi bi-chevron-right"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php else: ?>
+                                    <p class="mb-0">No Equipment Locations found.</p>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Add Department Modal -->
+                    <div class="modal fade" id="addDepartmentModal" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Add New Department</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                            aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <form id="addDepartmentForm" method="post">
+                                        <input type="hidden" name="action" value="add">
+
+                                        <div class="mb-3">
+                                            <label for="DepartmentID" class="form-label">
+                                                <i class="bi bi-tag"></i> Department ID <span
+                                                        class="text-danger">*</span>
+                                            </label>
+                                            <input type="number" min="1" class="form-control" name="DepartmentID"
+                                                   id="DepartmentID" required>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="BuildingLocation" class="form-label">
+                                                <i class="bi bi-building"></i> Department Acronym <span
+                                                        class="text-danger">*</span>
+                                            </label>
+                                            <input type="text" class="form-control" id="DepartmentAcronym"
+                                                   name="DepartmentAcronym" required>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="DepartmentName" class="form-label">
+                                                <i class="bi bi-layers"></i> Department Name <span
+                                                        class="text-danger">*</span>
+                                            </label>
+                                            <input type="text" class="form-control" id="DepartmentName"
+                                                   name="DepartmentName" required>
+                                        </div>
+
+                                        <div class="d-flex justify-content-end">
+                                            <button type="button" class="btn btn-secondary me-2"
+                                                    data-bs-dismiss="modal">Cancel
+                                            </button>
+                                            <button type="submit" class="btn btn-success">Add Department</button>
+                                        </div>
+                                    </form>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            <?php else: ?>
-                <p class="mb-0">No Equipment Locations found.</p>
-            <?php endif; ?>
-        </div>
-    </div>
-</div>
 
-<!-- Add Location Modal -->
-<div class="modal fade" id="addLocationModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Add New Equipment Location</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="addLocationForm">
-                    <input type="hidden" name="action" value="add">
-                    <div class="mb-3">
-                        <label for="asset_tag" class="form-label">Asset Tag <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="asset_tag" required>
+                    <!-- Edit Department Modal -->
+                    <div class="modal fade" id="editDepartmentModal" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Edit Department</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                            aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <form id="editDepartmentForm" method="post">
+                                        <input type="hidden" name="action" value="update">
+                                        <input type="hidden" name="id" id="edit_department_hidden_id">
+
+                                        <div class="mb-3">
+                                            <label for="edit_department_id" class="form-label">
+                                                <i class="bi bi-tag"></i> Department ID <span
+                                                        class="text-danger">*</span>
+                                            </label>
+                                            <input type="number" min="1" class="form-control" id="edit_department_id"
+                                                   name="DepartmentID" required>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="edit_department_acronym" class="form-label">
+                                                <i class="bi bi-building"></i> Department Acronym <span
+                                                        class="text-danger">*</span>
+                                            </label>
+                                            <input type="text" class="form-control" id="edit_department_acronym"
+                                                   name="DepartmentAcronym" required>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="edit_department_name" class="form-label">
+                                                <i class="bi bi-layers"></i> Department Name <span
+                                                        class="text-danger">*</span>
+                                            </label>
+                                            <input type="text" class="form-control" id="edit_department_name"
+                                                   name="DepartmentName" required>
+                                        </div>
+
+                                        <div class="d-flex justify-content-end">
+                                            <button type="button" class="btn btn-secondary me-2"
+                                                    data-bs-dismiss="modal">Cancel
+                                            </button>
+                                            <button type="submit" class="btn btn-primary">Update Department</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
                     </div>
+                    <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js"
+                            defer></script>
+                    <!-- JavaScript for Real-Time Table Filtering -->
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function () {
+                            // Search and filter functionality
+                            const searchInput = document.getElementById('eqSearch');
+                            const filterBuilding = document.getElementById('filterBuilding');
 
-                    <div class="mb-3">
-                        <label for="building_loc" class="form-label">Building Location <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="building_loc" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="floor_no" class="form-label">Floor Number <span class="text-danger">*</span></label>
-                        <input type="number" min="1" class="form-control" name="floor_no" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="specific_area" class="form-label">Specific Area <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="specific_area" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="person_responsible" class="form-label">Person Responsible <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="person_responsible" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="department_id" class="form-label">Department <span class="text-danger">*</span></label>
-                        <select class="form-control" name="department_id" required>
-                            <option value="">Select Department</option>
-                            <?php
-                            try {
-                                $deptStmt = $pdo->query("SELECT id, dept_name FROM departments WHERE is_disabled = 0 ORDER BY dept_name");
-                                $departments = $deptStmt->fetchAll();
-                                foreach($departments as $department) {
-                                    echo "<option value='" . htmlspecialchars($department['id']) . "'>" . htmlspecialchars($department['dept_name']) . "</option>";
-                                }
-                            } catch (PDOException $e) {
-                                // Handle error
+                            if (searchInput) {
+                                searchInput.addEventListener('keyup', filterTable);
                             }
-                            ?>
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="remarks" class="form-label">Remarks</label>
-                        <textarea class="form-control" name="remarks" rows="3"></textarea>
-                    </div>
-
-                    <div class="modal-footer border-0">
-                        <button type="submit" class="btn btn-primary">Add Equipment Location</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Edit Location Modal -->
-<div class="modal fade" id="editLocationModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Edit Location</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="editLocationForm" method="post">
-                    <input type="hidden" name="action" value="update">
-                    <input type="hidden" name="id" id="edit_location_id">
-
-                    <div class="mb-3">
-                        <label for="edit_asset_tag" class="form-label">
-                            <i class="bi bi-tag"></i> Asset Tag <span class="text-danger">*</span>
-                        </label>
-                        <input type="text" class="form-control" name="asset_tag" id="edit_asset_tag" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="edit_building_loc" class="form-label">
-                            <i class="bi bi-building"></i> Building Location <span class="text-danger">*</span>
-                        </label>
-                        <input type="text" class="form-control" id="edit_building_loc" name="building_loc" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="edit_floor_no" class="form-label">
-                            <i class="bi bi-layers"></i> Floor Number <span class="text-danger">*</span>
-                        </label>
-                        <input type="number" min="1" class="form-control" id="edit_floor_no" name="floor_no" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="edit_specific_area" class="form-label">
-                            <i class="bi bi-pin-map"></i> Specific Area <span class="text-danger">*</span>
-                        </label>
-                        <input type="text" class="form-control" id="edit_specific_area" name="specific_area" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="edit_person_responsible" class="form-label">
-                            <i class="bi bi-person"></i> Person Responsible <span class="text-danger">*</span>
-                        </label>
-                        <input type="text" class="form-control" id="edit_person_responsible" name="person_responsible" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="edit_department_id" class="form-label">
-                            <i class="bi bi-building"></i> Department <span class="text-danger">*</span>
-                        </label>
-                        <select class="form-control" id="edit_department_id" name="department_id" required>
-                            <option value="">Select Department</option>
-                            <?php
-                            try {
-                                $deptStmt = $pdo->query("SELECT id, dept_name FROM departments WHERE is_disabled = 0 ORDER BY dept_name");
-                                $departments = $deptStmt->fetchAll();
-                                foreach($departments as $department) {
-                                    echo "<option value='" . htmlspecialchars($department['id']) . "'>" . htmlspecialchars($department['dept_name']) . "</option>";
-                                }
-                            } catch (PDOException $e) {
-                                // Handle error
+                            if (filterBuilding) {
+                                filterBuilding.addEventListener('change', filterTable);
                             }
-                            ?>
-                        </select>
-                    </div>
 
-                    <div class="mb-3">
-                        <label for="edit_remarks" class="form-label">
-                            <i class="bi bi-chat-left-text"></i> Remarks
-                        </label>
-                        <textarea class="form-control" id="edit_remarks" name="remarks" rows="3"></textarea>
-                    </div>
+                            function filterTable() {
+                                const searchValue = searchInput.value.toLowerCase();
+                                const filterValue = filterBuilding.value.toLowerCase();
+                                const rows = document.querySelectorAll('#table tbody tr');
 
-                    <div class="d-flex justify-content-end">
-                        <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Update Location</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-<script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
-<!-- JavaScript for Real-Time Table Filtering -->
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Search and filter functionality
-        const searchInput = document.getElementById('eqSearch');
-        const filterBuilding = document.getElementById('filterBuilding');
+                                rows.forEach(function (row) {
+                                    const rowText = row.textContent.toLowerCase();
+                                    const buildingCell = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
 
-        if (searchInput) {
-            searchInput.addEventListener('keyup', filterTable);
-        }
-        if (filterBuilding) {
-            filterBuilding.addEventListener('change', filterTable);
-        }
+                                    const searchMatch = rowText.indexOf(searchValue) > -1;
+                                    const buildingMatch = !filterValue || buildingCell === filterValue;
 
-        function filterTable() {
-            const searchValue = searchInput.value.toLowerCase();
-            const filterValue = filterBuilding.value.toLowerCase();
-            const rows = document.querySelectorAll('#table tbody tr');
+                                    row.style.display = (searchMatch && buildingMatch) ? '' : 'none';
+                                });
+                            }
+                        });
 
-            rows.forEach(function(row) {
-                const rowText = row.textContent.toLowerCase();
-                const buildingCell = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
+                        document.addEventListener('DOMContentLoaded', function () {
+                            // Form submissions
+                            $('#addDepartmentForm').on('submit', function (e) {
+                                e.preventDefault();
 
-                const searchMatch = rowText.indexOf(searchValue) > -1;
-                const buildingMatch = !filterValue || buildingCell === filterValue;
+                                $.ajax({
+                                    url: 'department_management.php',
+                                    method: 'POST',
+                                    data: $(this).serialize(),
+                                    dataType: 'json',
+                                    success: function (result) {
+                                        if (result.status === 'success') {
+                                            // Hide modal and redirect
+                                            $('#addDepartmentModal').modal('hide');
+                                            window.location.href = 'department_management.php';
+                                        } else {
+                                            alert(result.message || 'An error occurred');
+                                        }
+                                    },
+                                    error: function (xhr, status, error) {
+                                        console.log(xhr.responseText);
+                                        alert('Error submitting the form: ' + error);
+                                    }
+                                });
+                            });
 
-                row.style.display = (searchMatch && buildingMatch) ? '' : 'none';
-            });
-        }
-    });
+                            // Edit button click handler for departments
+                            $('.edit-department').click(function () {
+                                const id = $(this).data('id');
+                                const assetTag = $(this).data('asset');
+                                const buildingLocation = $(this).data('building');
+                                const floorNumber = $(this).data('floor');
+                                const specificArea = $(this).data('area');
+                                const personResponsible = $(this).data('person');
+                                const remarks = $(this).data('remarks');
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Form submissions
-    $('#addLocationForm').on('submit', function(e) {
-        e.preventDefault();
+                                $('#edit_location_id').val(id);
+                                $('#edit_asset_tag').val(assetTag);
+                                $('#edit_building_location').val(buildingLocation);
+                                $('#edit_floor_number').val(floorNumber);
+                                $('#edit_specific_area').val(specificArea);
+                                $('#edit_person_responsible').val(personResponsible);
+                                $('#edit_remarks').val(remarks);
 
-        $.ajax({
-            url: 'equipment_location.php',
-            method: 'POST',
-            data: $(this).serialize(),
-            dataType: 'json',
-            success: function(result) {
-                if (result.status === 'success') {
-                    // Hide modal and redirect
-                    $('#addLocationModal').modal('hide');
-                    window.location.href = 'equipment_location.php';
-                } else {
-                    alert(result.message || 'An error occurred');
-                }
-            },
-            error: function(xhr, status, error) {
-                alert('Error submitting the form: ' + error);
-            }
-        });
-    });
+                                $('#editLocationModal').modal('show');
+                            });
 
-    // Edit button click handler
-    $('.edit-location').click(function() {
-        const id = $(this).data('id');
-        const assetTag = $(this).data('asset');
-        const buildingLocation = $(this).data('building');
-        const floorNumber = $(this).data('floor');
-        const specificArea = $(this).data('area');
-        const personResponsible = $(this).data('person');
-        const remarks = $(this).data('remarks');
+                            // Edit form submission
+                            $('#editDepartmentForm').on('submit', function (e) {
+                                e.preventDefault();
+                                $.ajax({
+                                    url: 'department_management.php',
+                                    method: 'POST',
+                                    data: $(this).serialize(),
+                                    dataType: 'json',
+                                    success: function (result) {
+                                        if (result.status === 'success') {
+                                            $('#editDepartmentModal').modal('hide');
+                                            window.location.href = 'department_management.php';
+                                        } else {
+                                            alert(result.message || 'An error occurred');
+                                        }
+                                    },
+                                    error: function (xhr, status, error) {
+                                        alert('Error updating location: ' + error);
+                                    }
+                                });
+                            });
+                        });
+                    </script>
+            </body>
 
-        $('#edit_location_id').val(id);
-        $('#edit_asset_tag').val(assetTag);
-        $('#edit_building_location').val(buildingLocation);
-        $('#edit_floor_number').val(floorNumber);
-        $('#edit_specific_area').val(specificArea);
-        $('#edit_person_responsible').val(personResponsible);
-        $('#edit_remarks').val(remarks);
-
-        $('#editLocationModal').modal('show');
-    });
-
-    // Edit form submission
-    $('#editLocationForm').on('submit', function(e) {
-        e.preventDefault();
-        $.ajax({
-            url: 'equipment_location.php',
-            method: 'POST',
-            data: $(this).serialize(),
-            dataType: 'json',
-            success: function(result) {
-                if (result.status === 'success') {
-                    $('#editLocationModal').modal('hide');
-                    window.location.href = 'equipment_location.php';
-                } else {
-                    alert(result.message || 'An error occurred');
-                }
-            },
-            error: function(xhr, status, error) {
-                alert('Error updating location: ' + error);
-            }
-        });
-    });
-});
-</script>
-</body>
-
-</html>
+    </html>

@@ -368,6 +368,7 @@ try {
             background-color: #f8f9fa;
             min-height: 100vh;
             padding-top: 80px;
+            overflow-x: hidden; /* Prevent horizontal scrollbar */
         }
         h2.mb-4 {
             margin-top: 20px;
@@ -376,6 +377,52 @@ try {
             margin-left: 300px;
             padding: 20px;
             transition: margin-left 0.3s ease;
+        }
+        .table-responsive {
+            overflow-x: auto; /* Change to auto to allow horizontal scrolling */
+            max-width: 100%;
+        }
+        table {
+            width: 100%;
+            table-layout: auto; /* Change to auto for dynamic column widths */
+        }
+        th, td {
+            white-space: normal; /* Allow text wrapping */
+            text-overflow: clip; /* Remove ellipsis */
+            min-width: 100px; /* Set minimum width for columns */
+            max-width: 200px; /* Set maximum width for columns */
+            padding: 8px; /* Add some padding */
+            vertical-align: middle; /* Center content vertically */
+        }
+        /* Specific column widths */
+        table th:nth-child(1), /* ID column */
+        table td:nth-child(1) {
+            min-width: 50px;
+            max-width: 70px;
+        }
+        table th:nth-child(2), /* Asset Tag */
+        table td:nth-child(2) {
+            min-width: 100px;
+            max-width: 150px;
+        }
+        table th:last-child, /* Actions column */
+        table td:last-child {
+            min-width: 160px; /* Ensure enough space for both buttons */
+            white-space: nowrap; /* Keep buttons on same line */
+        }
+        /* Add horizontal scrollbar only when needed */
+        .card-body {
+            overflow-x: auto;
+        }
+        /* Style for action buttons to ensure they stay on one line */
+        .btn-group {
+            display: flex;
+            gap: 5px;
+            flex-wrap: nowrap;
+        }
+        .btn-group .btn {
+            padding: 0.25rem 0.5rem;
+            white-space: nowrap;
         }
         @media (max-width: 768px) {
             .main-content {
@@ -387,6 +434,8 @@ try {
 
 <body>
     <?php include '../../general/sidebar.php'; ?>
+
+    <h2 class="mb-4" style="margin-left: 320px;">Equipment Details Management</h2>
 
     <div class="container-fluid" style="margin-left: 320px; padding: 20px; width: calc(100vw - 340px);">
         <!-- Success Message -->
@@ -407,10 +456,8 @@ try {
             </div>
         <?php endif; ?>
 
-        <!-- Title moved outside the card -->
-        <h2 class="mb-4">Equipment Details Management</h2>
-
-        <div class="card shadow">
+        <!-- Card for List of Equipment Details with consistent alignment -->
+        <div class="card shadow" style="margin-top: -10px;">
             <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-list-ul"></i> List of Equipment Details</span>
                 <div class="input-group w-auto">
@@ -479,27 +526,27 @@ try {
                         </div>
                     </div>
                 </div>
-
+                <!-- Table for displaying equipment details -->
                 <div class="table-responsive">
                     <table class="table table-striped table-bordered table-sm mb-0" id="table">
                         <thead class="table-dark">
                             <tr>
-                                <th>#</th>
-                                <th>Asset Tag</th>
-                                <th>Description 1</th>
-                                <th>Description 2</th>
-                                <th>Specification</th>
-                                <th>Brand</th>
-                                <th>Model</th>
-                                <th>Serial #</th>
-                                <th>Acquired Date</th>
-                                <th>Created Date</th>
-                                <th>Modified Date</th>
-                                <th>RR #</th>
-                                <th>Location</th>
-                                <th>Accountable Individual</th>
-                                <th>Remarks</th>
-                                <th>Actions</th>
+                                <th style="width: 50px">#</th>
+                                <th style="width: 100px">Asset Tag</th>
+                                <th style="width: 150px">Description 1</th>
+                                <th style="width: 150px">Description 2</th>
+                                <th style="width: 150px">Specification</th>
+                                <th style="width: 100px">Brand</th>
+                                <th style="width: 100px">Model</th>
+                                <th style="width: 120px">Serial #</th>
+                                <th style="width: 120px">Acquired Date</th>
+                                <th style="width: 120px">Created Date</th>
+                                <th style="width: 120px">Modified Date</th>
+                                <th style="width: 100px">RR #</th>
+                                <th style="width: 150px">Location</th>
+                                <th style="width: 150px">Accountable Individual</th>
+                                <th style="width: 150px">Remarks</th>
+                                <th style="width: 160px">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
