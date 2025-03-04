@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Mar 03, 2025 at 03:54 AM
+-- Generation Time: Mar 04, 2025 at 03:42 AM
 -- Server version: 8.2.0
 -- PHP Version: 8.2.13
 
@@ -74,11 +74,113 @@ CREATE TABLE IF NOT EXISTS `charge_invoice` (
   `invoice_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
   `date_of_purchase` date NOT NULL,
   `po_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `date_created` datetime DEFAULT CURRENT_TIMESTAMP,
   `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `invoice_no` (`invoice_no`),
   KEY `po_no` (`po_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Triggers for Charge Invoice
+--
+DROP TRIGGER IF EXISTS `chargeinvoice_after_insert`;
+DELIMITER $$
+CREATE TRIGGER `chargeinvoice_after_insert` AFTER INSERT ON `charge_invoice` FOR EACH ROW BEGIN
+    INSERT INTO audit_log (
+        `UserID`,
+        `EntityID`,
+        `Action`,
+        `Details`,
+        `OldVal`,
+        `NewVal`,
+        `Module`,
+        `Status`
+    ) VALUES (
+                 @current_user_id,
+                 NEW.id,
+                 'Add',
+                 'New Charge Invoice added',
+                 '',
+                 JSON_OBJECT(
+                         'ChargeInvoiceID', NEW.id,
+                         'ChargeInvoiceNo', NEW.invoice_no,
+                         'DateOfChargeInvoice', NEW.date_of_purchase,
+                         'PurchaseOrderNumber', NEW.po_no
+                 ),
+                 'Charge Invoice',
+                 'Successful'
+             );
+END
+$$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS `chargeinvoice_after_update`;
+DELIMITER $$
+CREATE TRIGGER `chargeinvoice_after_update` AFTER UPDATE ON `charge_invoice` FOR EACH ROW BEGIN
+    INSERT INTO audit_log (
+        `UserID`,
+        `EntityID`,
+        `Action`,
+        `Details`,
+        `OldVal`,
+        `NewVal`,
+        `Module`,
+        `Status`
+    ) VALUES (
+                 @current_user_id,
+                 NEW.id,
+                 'Modified',
+                 'Charge Invoice updated',
+                 JSON_OBJECT(
+                         'ChargeInvoiceID', OLD.id,
+                         'ChargeInvoiceNo', OLD.invoice_no,
+                         'DateOfChargeInvoice', OLD.date_of_purchase,
+                         'PurchaseOrderNumber', OLD.po_no
+                 ),
+                 JSON_OBJECT(
+                         'ChargeInvoiceID', NEW.id,
+                         'ChargeInvoiceNo', NEW.invoice_no,
+                         'DateOfChargeInvoice', NEW.date_of_purchase,
+                         'PurchaseOrderNumber', NEW.po_no
+                 ),
+                 'Charge Invoice',
+                 'Successful'
+             );
+END
+$$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS `chargeinvoice_after_delete`;
+DELIMITER $$
+CREATE TRIGGER `chargeinvoice_after_delete` AFTER DELETE ON `charge_invoice` FOR EACH ROW BEGIN
+    INSERT INTO audit_log (
+        `UserID`,
+        `EntityID`,
+        `Action`,
+        `Details`,
+        `OldVal`,
+        `NewVal`,
+        `Module`,
+        `Status`
+    ) VALUES (
+                 @current_user_id,
+                 OLD.id,
+                 'Delete',
+                 'Charge Invoice deleted',
+                 JSON_OBJECT(
+                         'ChargeInvoiceID', OLD.id,
+                         'ChargeInvoiceNo', OLD.invoice_no,
+                         'DateOfChargeInvoice', OLD.date_of_purchase,
+                         'PurchaseOrderNumber', OLD.po_no
+                 ),
+                 '',
+                 'Charge Invoice',
+                 'Successful'
+             );
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -102,11 +204,11 @@ CREATE TABLE IF NOT EXISTS `departments` (
 --
 
 INSERT INTO `departments` (`id`, `department_name`, `abbreviation`, `is_disabled`) VALUES
-(1, 'Office of the President', 'OP', 1),
-(2, 'Office of the Executive Assistant to the President', 'OEAP', 1),
-(3, 'Office of the Internal Auditor', 'OIA', 1),
-(4, 'Office of the Vice President for Mission and Identity', 'OVPMI', 1),
-(5, 'Center for Campus Ministry', 'CCM', 1),
+(1, 'Office of the President', 'OP', 0),
+(2, 'Office of the Executive Assistant to the President', 'OEAP', 0),
+(3, 'Office of the Internal Auditor', 'OIA', 0),
+(4, 'Office of the Vice President for Mission and Identity', 'OVPMI', 0),
+(5, 'Center for Campus Ministry', 'CCM', 0),
 (6, 'Community Extension and Outreach Programs Office', 'CEOP', 1),
 (7, 'St. Aloysius Gonzaga Parish Office', 'SAGPO', 1),
 (8, 'Sunflower Child and Youth Wellness Center', 'SCYWC', 1),
@@ -121,7 +223,7 @@ INSERT INTO `departments` (`id`, `department_name`, `abbreviation`, `is_disabled
 (17, 'Basic Education School', 'SLU BEdS', 1),
 (18, 'Office of Institutional Development and Quality Assurance', 'OIDQA', 1),
 (19, 'University Libraries', 'UL', 1),
-(20, 'University Registrar's Office', 'URO', 1),
+(20, 'University Registrar’s Office', 'URO', 1),
 (21, 'University Research and Innovation Center', 'URIC', 1),
 (22, 'Office of the Vice President for Finance', 'OVPF', 1),
 (23, 'Asset Management and Inventory Control Office', 'AMICO', 1),
@@ -135,7 +237,7 @@ INSERT INTO `departments` (`id`, `department_name`, `abbreviation`, `is_disabled
 (31, 'Dental Clinic', 'DC', 1),
 (32, 'Guidance Center', 'GC', 1),
 (33, 'Human Resource Department', 'HRD', 1),
-(34, 'Students' Residence Hall', 'SRH', 1),
+(34, 'Students’ Residence Hall', 'SRH', 1),
 (35, 'Medical Clinic', 'MC', 1),
 (36, 'Office for Legal Affairs', 'OLA', 1),
 (37, 'Office of Student Affairs', 'OSA', 1),
@@ -149,28 +251,27 @@ INSERT INTO `departments` (`id`, `department_name`, `abbreviation`, `is_disabled
 
 DROP TABLE IF EXISTS `equipment_details`;
 CREATE TABLE IF NOT EXISTS `equipment_details` (
-  `EquipmentDetailsID` int NOT NULL AUTO_INCREMENT,
-  `AssetTag` varchar(50) NOT NULL,
-  `AssetDescription1` text NOT NULL,
-  `AssetDescription2` text NOT NULL,
-  `Specification` text NOT NULL,
-  `Brand` varchar(100) DEFAULT NULL,
-  `Model` varchar(100) DEFAULT NULL,
-  `SerialNumber` varchar(100) DEFAULT NULL,
-  `InvoiceNo` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
-  `RRNo` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
-  `EquipmentLocationID` int DEFAULT NULL,
-  `EquipmentStatusID` int DEFAULT NULL,
-  `Remarks` text,
-  `DateAcquired` datetime DEFAULT NULL,
+  `id` int NOT NULL AUTO_INCREMENT,
+  `asset_tag` varchar(50) NOT NULL,
+  `asset_description_1` text NOT NULL,
+  `asset_description_2` text NOT NULL,
+  `specifications` text NOT NULL,
+  `brand` varchar(100) DEFAULT NULL,
+  `model` varchar(100) DEFAULT NULL,
+  `serial_number` varchar(100) DEFAULT NULL,
+  `invoice_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `rr_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `equipment_location_id` int DEFAULT NULL,
+  `equipment_status_id` int DEFAULT NULL,
+  `remarks` text,
   `date_created` datetime DEFAULT CURRENT_TIMESTAMP,
   `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
-  PRIMARY KEY (`EquipmentDetailsID`),
-  UNIQUE KEY `AssetTag` (`AssetTag`),
-  KEY `EquipmentLocationID` (`EquipmentLocationID`),
-  KEY `EquipmentStatusID` (`EquipmentStatusID`),
-  KEY `InvoiceNo` (`InvoiceNo`),
-  KEY `RRNo` (`RRNo`)
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `asset_tag` (`asset_tag`),
+  UNIQUE KEY `equipment_location_id` (`equipment_location_id`) USING BTREE,
+  UNIQUE KEY `equipment_status_id` (`equipment_status_id`) USING BTREE,
+  KEY `invoice_no` (`invoice_no`),
+  KEY `rr_no` (`rr_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
@@ -189,6 +290,7 @@ CREATE TABLE IF NOT EXISTS `equipment_location` (
   `person_responsible` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
   `department_id` int DEFAULT NULL,
   `remarks` text,
+  `date_created` datetime DEFAULT CURRENT_TIMESTAMP,
   `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`equipment_location_id`) USING BTREE,
   UNIQUE KEY `asset_tag` (`asset_tag`) USING BTREE,
@@ -208,6 +310,7 @@ CREATE TABLE IF NOT EXISTS `equipment_status` (
   `status` enum('Operational','Under Maintenance','Decommissioned','Disposed') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
   `action` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci,
   `remarks` text,
+  `date_created` datetime DEFAULT CURRENT_TIMESTAMP,
   `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`equipment_status_id`) USING BTREE,
   UNIQUE KEY `asset_tag` (`asset_tag`) USING BTREE
@@ -282,10 +385,254 @@ CREATE TABLE IF NOT EXISTS `purchase_order` (
   `date_of_order` date NOT NULL,
   `no_of_units` int NOT NULL,
   `item_specifications` text NOT NULL,
+  `date_created` datetime DEFAULT CURRENT_TIMESTAMP,
   `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `po_no` (`po_no`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `purchase_order`
+--
+
+INSERT INTO `purchase_order` (`id`, `po_no`, `date_of_order`, `no_of_units`, `item_specifications`, `date_created`, `is_disabled`) VALUES
+(1, '3246789', '2025-03-05', 3, 'qwe', '2025-03-04 09:50:19', 0);
+
+
+
+DROP TRIGGER IF EXISTS `purchaseorder_after_insert`;
+DELIMITER $$
+CREATE TRIGGER `purchaseorder_after_insert` AFTER INSERT ON `purchase_order` FOR EACH ROW BEGIN
+    INSERT INTO audit_log (
+        `UserID`,
+        `EntityID`,
+        `Action`,
+        `Details`,
+        `OldVal`,
+        `NewVal`,
+        `Module`,
+        `Status`
+    ) VALUES (
+                 @current_user_id,
+                 NEW.id,
+                 'Add',
+                 'New Purchase Order added',
+                 '',
+                 JSON_OBJECT(
+                         'PurchaseOrderID', NEW.id,
+                         'PurchaseOrderNumber', NEW.po_no,
+                         'NumberOfUnits', NEW.no_of_units,
+                         'DateOfPurchaseOrder', NEW.date_of_order,
+                         'ItemsSpecification', NEW.item_specifications
+                 ),
+                 'Purchase Order',
+                 'Successful'
+             );
+END
+$$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS `purchaseorder_after_update`;
+DELIMITER $$
+CREATE TRIGGER `purchaseorder_after_update` AFTER UPDATE ON `purchase_order` FOR EACH ROW BEGIN
+    INSERT INTO audit_log (
+        `UserID`,
+        `EntityID`,
+        `Action`,
+        `Details`,
+        `OldVal`,
+        `NewVal`,
+        `Module`,
+        `Status`
+    ) VALUES (
+                 @current_user_id,
+                 NEW.id,
+                 'Modified',
+                 'Purchase Order updated',
+                 JSON_OBJECT(
+                         'PurchaseOrderID', OLD.id,
+                         'PurchaseOrderNumber', OLD.po_no,
+                         'NumberOfUnits', OLD.no_of_units,
+                         'DateOfPurchaseOrder', OLD.date_of_order,
+                         'ItemsSpecification', OLD.item_specifications
+                 ),
+                 JSON_OBJECT(
+                         'PurchaseOrderID', NEW.id
+                         'PurchaseOrderNumber', NEW.po_no,
+                         'NumberOfUnits', NEW.no_of_units,
+                         'DateOfPurchaseOrder', NEW.po_no,
+                         'ItemsSpecification', NEW.item_specifications
+                 ),
+                 'Purchase Order',
+                 'Successful'
+             );
+END
+$$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS `purchaseorder_after_delete`;
+DELIMITER $$
+CREATE TRIGGER `purchaseorder_after_delete` AFTER DELETE ON `purchase_order` FOR EACH ROW BEGIN
+    INSERT INTO audit_log (
+        `UserID`,
+        `EntityID`,
+        `Action`,
+        `Details`,
+        `OldVal`,
+        `NewVal`,
+        `Module`,
+        `Status`
+    ) VALUES (
+                 @current_user_id,
+                 OLD.po_no,
+                 'Delete',
+                 'Purchase Order deleted',
+                 JSON_OBJECT(
+                         'PurchaseOrderID', OLD.id,
+                         'PurchaseOrderNumber', OLD.po_no,
+                         'NumberOfUnits', OLD.no_of_units,
+                         'DateOfPurchaseOrder', OLD.date_of_order,
+                         'ItemsSpecification', OLD.item_specifications
+                 ),
+                 '',
+                 'Purchase Order',
+                 'Successful'
+             );
+END
+$$
+DELIMITER ;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `receivingreportform`
+--
+
+DROP TABLE IF EXISTS `receivingreportform`;
+CREATE TABLE IF NOT EXISTS `receivingreportform` (
+                                                     `ReceivingReportFormID` int NOT NULL AUTO_INCREMENT,
+                                                     `ReceivingReportNumber` varchar(50) NOT NULL,
+                                                     `AccountableIndividual` varchar(100) DEFAULT NULL,
+                                                     `PurchaseOrderNumber` varchar(50) DEFAULT NULL,
+                                                     `AccountableIndividualLocation` varchar(255) DEFAULT NULL,
+                                                     `CreatedDate` datetime DEFAULT CURRENT_TIMESTAMP,
+                                                     `ModifiedDate` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                                     PRIMARY KEY (`ReceivingReportFormID`),
+                                                     UNIQUE KEY `ReceivingReportNumber` (`ReceivingReportNumber`)
+) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `receivingreportform`
+--
+
+INSERT INTO `receivingreportform` (`ReceivingReportFormID`, `ReceivingReportNumber`, `AccountableIndividual`, `PurchaseOrderNumber`, `AccountableIndividualLocation`, `CreatedDate`, `ModifiedDate`) VALUES
+                                                                                                                                                                                                         (1, 'RR001', 'John Doe', 'PO12345', 'IT Department', '2025-02-27 08:02:06', '2025-02-27 08:02:06'),
+                                                                                                                                                                                                         (2, 'RR002', 'Jane Smith', 'PO12346', 'Admin Office', '2025-02-27 08:02:06', '2025-02-27 08:02:06');
+
+--
+-- Triggers `receivingreportform`
+--
+DROP TRIGGER IF EXISTS `receivingreportform_after_insert`;
+DELIMITER $$
+CREATE TRIGGER `receivingreportform_after_insert` AFTER INSERT ON `receivingreportform` FOR EACH ROW BEGIN
+    INSERT INTO audit_log (
+        `UserID`,
+        `EntityID`,
+        `Action`,
+        `Details`,
+        `OldVal`,
+        `NewVal`,
+        `Module`,
+        `Status`
+    ) VALUES (
+                 @current_user_id,
+                 NEW.ReceivingReportFormID,
+                 'Add',
+                 'New Receiving Report added',
+                 '',
+                 JSON_OBJECT(
+                         'ReceivingReportFormID', NEW.ReceivingReportFormID,
+                         'ReceivingReportNumber', NEW.ReceivingReportNumber,
+                         'AccountableIndividual', NEW.AccountableIndividual,
+                         'PurchaseOrderNumber', NEW.PurchaseOrderNumber,
+                         'AccountableIndividualLocation', NEW.AccountableIndividualLocation
+                 ),
+                 'Receiving Report',
+                 'Successful'
+             );
+END
+$$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS `receivingreportform_after_update`;
+DELIMITER $$
+CREATE TRIGGER `receivingreportform_after_update` AFTER UPDATE ON `receivingreportform` FOR EACH ROW BEGIN
+    INSERT INTO audit_log (
+        `UserID`,
+        `EntityID`,
+        `Action`,
+        `Details`,
+        `OldVal`,
+        `NewVal`,
+        `Module`,
+        `Status`
+    ) VALUES (
+                 @current_user_id,
+                 NEW.ReceivingReportFormID,
+                 'Modified',
+                 'Receiving Report updated',
+                 JSON_OBJECT(
+                         'ReceivingReportFormID', OLD.ReceivingReportFormID,
+                         'ReceivingReportNumber', OLD.ReceivingReportNumber,
+                         'AccountableIndividual', OLD.AccountableIndividual,
+                         'PurchaseOrderNumber', OLD.PurchaseOrderNumber,
+                         'AccountableIndividualLocation', OLD.AccountableIndividualLocation
+                 ),
+                 JSON_OBJECT(
+                         'ReceivingReportFormID', NEW.ReceivingReportFormID,
+                         'ReceivingReportNumber', NEW.ReceivingReportNumber,
+                         'AccountableIndividual', NEW.AccountableIndividual,
+                         'PurchaseOrderNumber', NEW.PurchaseOrderNumber,
+                         'AccountableIndividualLocation', NEW.AccountableIndividualLocation
+                 ),
+                 'Receiving Report',
+                 'Successful'
+             );
+END
+$$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS `receivingreportform_after_delete`;
+DELIMITER $$
+CREATE TRIGGER `receivingreportform_after_delete` AFTER DELETE ON `receivingreportform` FOR EACH ROW BEGIN
+    INSERT INTO audit_log (
+        `UserID`,
+        `EntityID`,
+        `Action`,
+        `Details`,
+        `OldVal`,
+        `NewVal`,
+        `Module`,
+        `Status`
+    ) VALUES (
+                 @current_user_id,
+                 OLD.ReceivingReportFormID,
+                 'Delete',
+                 'Receiving Report deleted',
+                 JSON_OBJECT(
+                         'ReceivingReportFormID', OLD.ReceivingReportFormID,
+                         'ReceivingReportNumber', OLD.ReceivingReportNumber,
+                         'AccountableIndividual', OLD.AccountableIndividual,
+                         'PurchaseOrderNumber', OLD.PurchaseOrderNumber,
+                         'AccountableIndividualLocation', OLD.AccountableIndividualLocation
+                 ),
+                 '',
+                 'Receiving Report',
+                 'Successful'
+             );
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -300,6 +647,7 @@ CREATE TABLE IF NOT EXISTS `receive_report` (
   `accountable_individual` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
   `ai_loc` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci,
   `po_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `date_created` datetime DEFAULT CURRENT_TIMESTAMP,
   `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `rr_no` (`rr_no`),
@@ -332,6 +680,29 @@ INSERT INTO `roles` (`id`, `role_name`, `is_disabled`) VALUES
 (4, 'User Manager', 0),
 (5, 'RP Manager', 0),
 (6, 'Auditor', 0);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `role_changes`
+--
+
+DROP TABLE IF EXISTS `role_changes`;
+CREATE TABLE IF NOT EXISTS `role_changes` (
+  `ChangeID` int NOT NULL AUTO_INCREMENT,
+  `UserID` int NOT NULL,
+  `RoleID` int NOT NULL,
+  `Action` enum('Add','Modified','Delete') NOT NULL,
+  `OldRoleName` varchar(191) DEFAULT NULL,
+  `NewRoleName` varchar(191) DEFAULT NULL,
+  `ChangeTimestamp` datetime DEFAULT CURRENT_TIMESTAMP,
+  `OldPrivileges` text,
+  `NewPrivileges` text,
+  `IsUndone` tinyint(1) DEFAULT '0',
+  PRIMARY KEY (`ChangeID`),
+  KEY `UserID` (`UserID`),
+  KEY `RoleID` (`RoleID`)
+) ENGINE=MyISAM AUTO_INCREMENT=31 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
 
@@ -435,3 +806,434 @@ INSERT INTO `role_module_privileges` (`id`, `role_id`, `module_id`, `privilege_i
 
 --
 -- Table structure for table `users`
+--
+
+DROP TABLE IF EXISTS `users`;
+CREATE TABLE IF NOT EXISTS `users` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `username` varchar(50) NOT NULL,
+  `email` varchar(100) NOT NULL,
+  `password` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `first_name` varchar(100) DEFAULT NULL,
+  `last_name` varchar(100) DEFAULT NULL,
+  `date_created` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `status` enum('Offline','Online') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `username` (`username`),
+  UNIQUE KEY `email` (`email`)
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `users`
+--
+
+INSERT INTO `users` (`id`, `username`, `email`, `password`, `first_name`, `last_name`, `date_created`, `status`, `is_disabled`) VALUES
+(1, 'navithebear', 'navi@example.com', '$2y$12$2esj1uaDmbD3K6Fi.C0CiuOye96x8OjARwTc82ViEAPvmx4b1cL0S', 'navi', 'slu', '2025-02-19 01:19:52', 'Online', 0),
+(2, 'userman', 'um@example.com', '$2y$12$wE3B0Dq4z0Bd1AHXf4gumexeObTqWXm7aASm7PnkCrtiL.iIfObS.', 'user', 'manager', '2025-02-19 05:40:35', 'Offline', 1),
+(3, 'equipman', 'em@example.com', '$2y$12$J0iy9bwoalbG2/NkqDZchuLU4sWramGpsw1EsSZ6se0CefM/sqpZq', 'equipment', 'manager', '2025-02-19 05:40:35', 'Offline', 1),
+(4, 'rpman', 'rp@example.com', '$2y$12$dWnJinU4uO7ETYIKi9cL0uN4wJgjACaF.q0Pbkr5yNUK2q1HUQk8G', 'ropriv', 'manager', '2025-02-19 05:41:59', 'Offline', 1),
+(5, 'auds', 'auds@example.com', '$2y$12$VRIJ5Okf3p9fE3Xtq.qyze/t./h30ZsV7y7pg4UFksFiJ8JdMSh/q', 'audi', 'broom broom', '2025-02-19 05:41:59', 'Offline', 1),
+(6, '1123123', '123123r@example.com', '$2y$10$3g.nIRPWdTl969U8rekkhebc8yTz5waWWzv52FEyAKpElJ8ZOTSn2', '123123', '123123', '2025-03-04 00:19:11', 'Offline', 0),
+(7, 'tcase', 'testcase@example.com', '$2y$10$BIvx8ENRmcwGXfbmuKqnae9o3nyNOh7FjYk0tqrpoNMYdoDAEiBCS', 'test', 'case', '2025-03-04 00:21:34', 'Offline', 0);
+
+--
+-- Triggers `users`
+--
+--
+-- Triggers for `users` table
+--
+DROP TRIGGER IF EXISTS `after_user_delete`;
+DELIMITER $$
+CREATE TRIGGER `after_user_delete` AFTER DELETE ON `users` FOR EACH ROW BEGIN
+    INSERT INTO audit_log (
+        `UserID`,              -- The user who performed the action
+        `EntityID`,            -- The ID of the deleted user
+        `Action`,              -- Action type
+        `Details`,             -- Description of the action
+        `OldVal`,              -- Old values before the delete
+        `NewVal`,              -- New values (empty for delete)
+        `Module`,              -- Module where the action occurred
+        `Status`,              -- Status of the action
+        `Date_Time`            -- Timestamp of the action
+    ) VALUES (
+                 @current_user_id,      -- Replace with the actual user ID performing the action
+                 OLD.id,                -- The ID of the deleted user
+                 'Delete',              -- Action type
+                 'User has been deleted',  -- Details
+                 JSON_OBJECT(           -- Old values in JSON format
+                         'id', OLD.id,
+                         'username', OLD.username,
+                         'email', OLD.email,
+                         'first_name', OLD.first_name,
+                         'last_name', OLD.last_name,
+                         'status', OLD.status,
+                         'date_created', OLD.date_created,
+                         'is_disabled', OLD.is_disabled
+                 ),
+                 '',                    -- New values are empty for delete
+                 IFNULL(@current_module, 'User Management'), -- Default to 'User Management'
+                 'Successful',           -- Status of the action
+                 NOW()                  -- Current timestamp
+             );
+END
+$$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS `after_user_disable`;
+DELIMITER $$
+CREATE TRIGGER `after_user_disable` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
+    -- Check if the update is a soft delete (is_disabled changed from 0 to 1)
+    IF OLD.is_disabled = 0 AND NEW.is_disabled = 1 THEN
+        INSERT INTO audit_log (
+            `UserID`,              -- The user who performed the action
+            `EntityID`,            -- The ID of the disabled user
+            `Action`,              -- Action type
+            `Details`,             -- Description of the action
+            `OldVal`,              -- Old values before the disable
+            `NewVal`,              -- New values after the disable
+            `Module`,              -- Module where the action occurred
+            `Status`,              -- Status of the action
+            `Date_Time`            -- Timestamp of the action
+        ) VALUES (
+                     @current_user_id,      -- Replace with the actual user ID performing the action
+                     OLD.id,                -- The ID of the disabled user
+                     'Remove',              -- Action type
+                     'User disabled (is_disabled set to 1)', -- Details
+                     JSON_OBJECT(           -- Old values in JSON format
+                             'id', OLD.id,
+                             'username', OLD.username,
+                             'email', OLD.email,
+                             'first_name', OLD.first_name,
+                             'last_name', OLD.last_name,
+                             'status', OLD.status,
+                             'date_created', OLD.date_created,
+                             'is_disabled', OLD.is_disabled
+                     ),
+                     JSON_OBJECT(           -- New values in JSON format
+                             'id', NEW.id,
+                             'username', NEW.username,
+                             'email', NEW.email,
+                             'first_name', NEW.first_name,
+                             'last_name', NEW.last_name,
+                             'status', NEW.status,
+                             'date_created', NEW.date_created,
+                             'is_disabled', NEW.is_disabled
+                     ),
+                     IFNULL(@current_module, 'User Management'), -- Default to 'User Management'
+                     'Successful',          -- Status of the action
+                     NOW()                  -- Current timestamp
+                 );
+    END IF;
+END
+$$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS `user_after_modify`;
+DELIMITER $$
+CREATE TRIGGER `user_after_modify` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
+    DECLARE diffList TEXT DEFAULT '';
+
+    -- Get department name for the user
+    DECLARE dept_name VARCHAR(191);
+    SELECT d.department_name INTO dept_name
+    FROM departments d
+             JOIN user_departments ud ON d.id = ud.department_id
+    WHERE ud.user_id = NEW.id
+    LIMIT 1;
+
+    -- Only log modifications if is_disabled did not change.
+    IF OLD.is_disabled = NEW.is_disabled THEN
+        IF OLD.username <> NEW.username THEN
+            SET diffList = CONCAT(diffList, 'username, ');
+        END IF;
+        IF OLD.email <> NEW.email THEN
+            SET diffList = CONCAT(diffList, 'email, ');
+        END IF;
+        IF OLD.first_name <> NEW.first_name THEN
+            SET diffList = CONCAT(diffList, 'first_name, ');
+        END IF;
+        IF OLD.last_name <> NEW.last_name THEN
+            SET diffList = CONCAT(diffList, 'last_name, ');
+        END IF;
+        IF OLD.status <> NEW.status THEN
+            SET diffList = CONCAT(diffList, 'status, ');
+        END IF;
+        IF OLD.password <> NEW.password THEN
+            SET diffList = CONCAT(diffList, 'password, ');
+        END IF;
+
+        -- Only insert a log if at least one field (other than is_disabled) changed.
+        IF TRIM(TRAILING ', ' FROM diffList) <> '' THEN
+            INSERT INTO audit_log (
+                UserID,
+                EntityID,
+                Action,
+                Details,
+                OldVal,
+                NewVal,
+                Module,
+                Status,
+                Date_Time
+            )
+            VALUES (
+                       @current_user_id,
+                       NEW.id,
+                       'Modified',
+                       CONCAT('Updated fields: ', TRIM(TRAILING ', ' FROM diffList)),
+                       JSON_OBJECT(
+                               'id', OLD.id,
+                               'username', OLD.username,
+                               'email', OLD.email,
+                               'first_name', OLD.first_name,
+                               'last_name', OLD.last_name,
+                               'password', OLD.password,
+                               'status', OLD.status,
+                               'department', dept_name,
+                               'date_created', OLD.date_created
+                       ),
+                       JSON_OBJECT(
+                               'id', NEW.id,
+                               'username', NEW.username,
+                               'email', NEW.email,
+                               'first_name', NEW.first_name,
+                               'last_name', NEW.last_name,
+                               'password', NEW.password,
+                               'status', NEW.status,
+                               'department', dept_name,
+                               'date_created', NEW.date_created
+                       ),
+                       IFNULL(@current_module, 'User Management'),
+                       'Successful',
+                       NOW()
+                   );
+        END IF;
+    END IF;
+END
+$$
+DELIMITER ;
+DROP TRIGGER IF EXISTS `user_after_restore`;
+DELIMITER $$
+CREATE TRIGGER `user_after_restore` AFTER UPDATE ON `users` FOR EACH ROW
+BEGIN
+    -- Declare variables first, at the beginning of the block
+    DECLARE dept_name VARCHAR(191);
+
+    -- Then proceed with the logic
+    IF OLD.is_disabled = 1 AND NEW.is_disabled = 0 THEN
+        -- Get department name for the user
+        SELECT d.department_name INTO dept_name
+        FROM departments d
+                 JOIN user_departments ud ON d.id = ud.department_id
+        WHERE ud.user_id = NEW.id
+        LIMIT 1;
+
+        INSERT INTO audit_log (
+            `UserID`,
+            `EntityID`,
+            `Action`,
+            `Details`,
+            `OldVal`,
+            `NewVal`,
+            `Module`,
+            `Status`,
+            `Date_Time`
+        ) VALUES (
+                     @current_user_id,
+                     NEW.id,
+                     'Restored',
+                     'User restored (is_disabled set to 0)',
+                     JSON_OBJECT(
+                             'id', OLD.id,
+                             'username', OLD.username,
+                             'email', OLD.email,
+                             'first_name', OLD.first_name,
+                             'last_name', OLD.last_name,
+                             'status', OLD.status,
+                             'department', dept_name,
+                             'date_created', OLD.date_created,
+                             'is_disabled', OLD.is_disabled
+                     ),
+                     JSON_OBJECT(
+                             'id', NEW.id,
+                             'username', NEW.username,
+                             'email', NEW.email,
+                             'first_name', NEW.first_name,
+                             'last_name', NEW.last_name,
+                             'status', NEW.status,
+                             'department', dept_name,
+                             'date_created', NEW.date_created,
+                             'is_disabled', NEW.is_disabled
+                     ),
+                     IFNULL(@current_module, 'User Management'),
+                     'Successful',
+                     NOW()
+                 );
+    END IF;
+END
+$$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS `users_after_create`;
+DELIMITER $$
+CREATE TRIGGER `users_after_create` AFTER INSERT ON `users` FOR EACH ROW
+BEGIN
+    -- Declare variable to hold department name
+    DECLARE dept_name VARCHAR(191);
+
+    -- Set default value in case the query doesn't return results
+    SET dept_name = 'Unknown';
+
+    -- Attempt to get department name for the user
+    -- This might not work if the department assignment happens after user creation
+    SELECT d.department_name INTO dept_name
+    FROM departments d
+             JOIN user_departments ud ON d.id = ud.department_id
+    WHERE ud.user_id = NEW.id
+    LIMIT 1;
+
+    INSERT INTO audit_log (
+        UserID,
+        EntityID,
+        Action,
+        Details,
+        OldVal,
+        NewVal,
+        Module,
+        Status,
+        Date_Time
+    ) VALUES (
+                 @current_user_id,
+                 NEW.id,
+                 'Create',
+                 CONCAT('New user added: ', NEW.username),
+                 NULL,
+                 JSON_OBJECT(
+                         'id', NEW.id,
+                         'username', NEW.username,
+                         'email', NEW.email,
+                         'first_name', NEW.first_name,
+                         'last_name', NEW.last_name,
+                         'department', dept_name,
+                         'date_created', NEW.date_created
+                 ),
+                 IFNULL(@current_module, 'User Management'),
+                 'Successful',
+                 NOW()
+             );
+END
+$$
+DELIMITER ;
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `user_departments`
+--
+
+DROP TABLE IF EXISTS `user_departments`;
+CREATE TABLE IF NOT EXISTS `user_departments` (
+  `user_id` int NOT NULL,
+  `department_id` int NOT NULL,
+  PRIMARY KEY (`user_id`,`department_id`),
+  KEY `department_id` (`department_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `user_departments`
+--
+
+INSERT INTO `user_departments` (`user_id`, `department_id`) VALUES
+(7, 1),
+(6, 5),
+(1, 40);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `user_roles`
+--
+
+DROP TABLE IF EXISTS `user_roles`;
+CREATE TABLE IF NOT EXISTS `user_roles` (
+  `user_id` int NOT NULL,
+  `role_id` int NOT NULL,
+  PRIMARY KEY (`user_id`,`role_id`),
+  KEY `role_id` (`role_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `user_roles`
+--
+
+INSERT INTO `user_roles` (`user_id`, `role_id`) VALUES
+(1, 1),
+(7, 2),
+(3, 3),
+(2, 4),
+(6, 4),
+(4, 5),
+(5, 6);
+
+--
+-- Constraints for dumped tables
+--
+
+--
+-- Constraints for table `charge_invoice`
+--
+ALTER TABLE `charge_invoice`
+  ADD CONSTRAINT `charge_invoice_ibfk_1` FOREIGN KEY (`po_no`) REFERENCES `purchase_order` (`po_no`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+--
+-- Constraints for table `equipment_details`
+--
+ALTER TABLE `equipment_details`
+  ADD CONSTRAINT `equipment_details_ibfk_1` FOREIGN KEY (`invoice_no`) REFERENCES `charge_invoice` (`invoice_no`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `equipment_details_ibfk_2` FOREIGN KEY (`rr_no`) REFERENCES `receive_report` (`rr_no`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `equipment_details_ibfk_3` FOREIGN KEY (`equipment_location_id`) REFERENCES `equipment_location` (`equipment_location_id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `equipment_details_ibfk_4` FOREIGN KEY (`equipment_status_id`) REFERENCES `equipment_status` (`equipment_status_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+--
+-- Constraints for table `equipment_location`
+--
+ALTER TABLE `equipment_location`
+  ADD CONSTRAINT `equipment_location_ibfk_1` FOREIGN KEY (`asset_tag`) REFERENCES `equipment_details` (`asset_tag`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `equipment_status`
+--
+ALTER TABLE `equipment_status`
+  ADD CONSTRAINT `equipment_status_ibfk_1` FOREIGN KEY (`asset_tag`) REFERENCES `equipment_details` (`asset_tag`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `receive_report`
+--
+ALTER TABLE `receive_report`
+  ADD CONSTRAINT `receive_report_ibfk_1` FOREIGN KEY (`po_no`) REFERENCES `purchase_order` (`po_no`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+--
+-- Constraints for table `role_module_privileges`
+--
+ALTER TABLE `role_module_privileges`
+  ADD CONSTRAINT `fk_rmp_module` FOREIGN KEY (`module_id`) REFERENCES `modules` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_rmp_privilege` FOREIGN KEY (`privilege_id`) REFERENCES `privileges` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_rmp_role` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `user_departments`
+--
+ALTER TABLE `user_departments`
+  ADD CONSTRAINT `user_departments_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `user_departments_ibfk_2` FOREIGN KEY (`department_id`) REFERENCES `departments` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `user_roles`
+--
+ALTER TABLE `user_roles`
+  ADD CONSTRAINT `user_roles_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `user_roles_ibfk_2` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

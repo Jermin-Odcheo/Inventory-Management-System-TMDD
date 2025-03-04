@@ -1,13 +1,11 @@
 <?php
 session_start();
 require '../../../../../config/ims-tmdd.php';
-
-// Include Header
 include '../../general/header.php';
 
-//If not logged in redirect to the LOGIN PAGE
+// If not logged in, redirect to the LOGIN PAGE
 if (!isset($_SESSION['user_id'])) {
-    header("Location: " . BASE_URL . "public/index.php"); // Redirect to login page
+    header("Location: " . BASE_URL . "public/index.php");
     exit();
 }
 
