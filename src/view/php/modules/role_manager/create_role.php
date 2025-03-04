@@ -6,17 +6,17 @@ require_once('..\..\..\..\..\config\ims-tmdd.php'); // Database connection
 try {
     $stmt = $pdo->prepare("
     SELECT 
-        r.Role_ID, 
+        r.id, 
         r.Role_Name, 
-        m.Module_ID, 
+        m.id, 
         m.Module_Name,
-        GROUP_CONCAT(p.Privilege_Name ORDER BY p.Privilege_ID SEPARATOR ', ') AS Privileges
+        GROUP_CONCAT(p.priv_name ORDER BY p.id SEPARATOR ', ') AS Privileges
         FROM roles AS r
-        INNER JOIN role_privileges AS rp ON r.Role_ID = rp.Role_ID
-        INNER JOIN privileges AS p ON rp.Privilege_ID = p.Privilege_ID
-        INNER JOIN modules AS m ON p.Module_ID = m.Module_ID
-        GROUP BY r.Role_ID, r.Role_Name, m.Module_ID, m.Module_Name
-        ORDER BY r.Role_Name, m.Module_ID
+        INNER JOIN role_module_privileges AS rp ON r.id = rp.id
+        INNER JOIN privileges AS p ON rp.Privilege_ID = p.id
+        INNER JOIN modules AS m ON p.id = m.id
+        GROUP BY r.id, r.Role_Name, m.id, m.Module_Name
+        ORDER BY r.Role_Name, m.id
         ");
 
 $stmt->execute();
@@ -25,9 +25,9 @@ $getData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 // Organize data by Role_ID
 $roles = [];
 foreach ($getData as $row) {
-    $roles[$row['Role_ID']]['Role_Name'] = $row['Role_Name'];
-    $roles[$row['Role_ID']]['Modules'][] = [
-        'Module_ID' => $row['Module_ID'],
+    $roles[$row['id']]['Role_Name'] = $row['Role_Name'];
+    $roles[$row['id']]['Modules'][] = [
+        'Module_ID' => $row['id'],
         'Module_Name' => $row['Module_Name'],
         'Privileges' => explode(', ', $row['Privileges'])
     ];
@@ -40,9 +40,9 @@ foreach ($getData as $row) {
     // Organize data by Module_ID
     $modules = [];
     foreach ($getData as $row) {
-        $modules[$row['Module_ID']]['Module_Name'] = $row['Module_Name'];
-        $modules[$row['Module_ID']]['Roles'][] = [
-            'Role_ID' => $row['Role_ID'],
+        $modules[$row['id']]['Module_Name'] = $row['Module_Name'];
+        $modules[$row['id']]['Roles'][] = [
+            'Role_ID' => $row['id'],
             'Role_Name' => $row['Role_Name'],
             'Privileges' => explode(', ', $row['Privileges'])
         ];
@@ -60,7 +60,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update'])) {
             foreach ($modulesData as $moduleID => $privileges) {
                 // Delete old privileges for this role & module
                 $deleteStmt = $pdo->prepare("
-                    DELETE FROM role_privileges 
+                    DELETE FROM role_module_privileges 
                     WHERE Role_ID = ? 
                     AND Privilege_ID IN (SELECT Privilege_ID FROM privileges WHERE Module_ID = ?)
                 ");
@@ -69,7 +69,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update'])) {
                 // Insert new privileges
                 foreach ($privileges as $privilegeName) {
                     $privilegeStmt = $pdo->prepare("
-                        SELECT Privilege_ID FROM privileges WHERE Privilege_Name = ? AND Module_ID = ?
+                        SELECT id FROM privileges WHERE priv_name = ? AND id = ?
                     ");
                     $privilegeStmt->execute([$privilegeName, $moduleID]);
                     $privilege = $privilegeStmt->fetch(PDO::FETCH_ASSOC);
@@ -77,7 +77,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update'])) {
 
                     // Insert new privilege
                     $insertStmt = $pdo->prepare("
-                        INSERT INTO role_privileges (Role_ID, Privilege_ID) 
+                        INSERT INTO role_module_privileges (Role_ID, Privilege_ID) 
                         VALUES (?, ?)
                     ");
                     $insertStmt->execute([$roleID, $privilege['Privilege_ID']]);

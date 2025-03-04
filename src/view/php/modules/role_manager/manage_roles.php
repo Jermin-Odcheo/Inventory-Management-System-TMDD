@@ -10,7 +10,7 @@ $sql = "
         COALESCE(m.module_name, 'General') AS Module_Name,
         p.priv_name AS Privilege_Name
     FROM roles r
-    LEFT JOIN role_module_privileges rmp ON r.id = rmp.role_id
+    LEFT JOIN role_module_privileges rmp ON r.id = rmp.id
     LEFT JOIN privileges p ON rmp.privilege_id = p.id
     LEFT JOIN modules m ON rmp.module_id = m.id
     ORDER BY r.id ASC, m.module_name, p.priv_name
