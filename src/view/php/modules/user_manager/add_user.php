@@ -1,128 +1,135 @@
 <?php
 // add_user.php
 session_start();
-require_once('../../../../../config/ims-tmdd.php'); // Adjust the path as needed
+require_once('../../../../../config/ims-tmdd.php');
 
-// Set the audit log session variables for MySQL triggers.
+// Set audit log variables
 if (isset($_SESSION['user_id'])) {
     $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
+    // Determine if we're in edit mode
+    $isEditing = isset($_GET['id']);  // Checks if an ID parameter exists in the URL
 } else {
     $pdo->exec("SET @current_user_id = NULL");
 }
 
-// Set IP address; adjust as needed if you use a proxy.
 $ipAddress = $_SERVER['REMOTE_ADDR'];
 $pdo->exec("SET @current_ip = '" . $ipAddress . "'");
 
-// If editing, load user data.
-$isEditing = isset($_GET['id']);
-$userData = [];
-if ($isEditing) {
-    $stmt = $pdo->prepare("SELECT * FROM users WHERE User_ID = ?");
-    $stmt->execute([$_GET['id']]);
-    $userData = $stmt->fetch();
+// Fetch available departments from database
+$departments = [];
+$deptStmt = $pdo->query("SELECT id, department_name FROM departments WHERE is_disabled = 0");
+while ($dept = $deptStmt->fetch(PDO::FETCH_ASSOC)) {
+    $departments[$dept['id']] = $dept['department_name'];
 }
-
-// Fetch available roles.
-$stmt = $pdo->prepare("SELECT * FROM roles");
-$stmt->execute();
-$roles = $stmt->fetchAll();
-
-// Departments array
-$departments = [
-    'SAS'      => 'School of Advanced Studies',
-    'SOM'      => 'School of Medicine',
-    'SOL'      => 'School of Law',
-    'STELA'    => 'School of Teacher Education and Liberal Arts',
-    'SONAHBS'  => 'School of Nursing, Allied Health, and Biological Sciences',
-    'SEA'      => 'School of Engineering and Architecture',
-    'SAMCIS'   => 'School of Accountancy, Management, Computing, and Information Studies'
-];
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     try {
-        // Retrieve and trim form values
-        $email      = trim($_POST['email']);
-        $firstName  = trim($_POST['first_name']);
-        $lastName   = trim($_POST['last_name']);
-        // Use custom department if provided, otherwise the selected one
-        $department = isset($_POST['custom_department']) && !empty($_POST['custom_department'])
-            ? trim($_POST['custom_department'])
-            : trim($_POST['department']);
-        $roleIDs    = isset($_POST['roles']) ? $_POST['roles'] : [];
-        $password   = $_POST['password'];
+        // Retrieve form values
+        $email = trim($_POST['email']);
+        $firstName = trim($_POST['first_name']);
+        $lastName = trim($_POST['last_name']);
+        $password = $_POST['password'];
+        $roleIDs = $_POST['roles'] ?? [];
+        $departmentID = $_POST['department'];
+        $customDept = trim($_POST['custom_department'] ?? '');
 
         // Validate required fields
-        if (empty($email) || empty($firstName) || empty($lastName) || empty($department) || (!$isEditing && empty($password))) {
-            throw new Exception("Please fill in all required fields.");
-        }
+        $errors = [];
+        if (empty($email)) $errors[] = "Email is required";
+        if (empty($firstName)) $errors[] = "First name is required";
+        if (empty($lastName)) $errors[] = "Last name is required";
+        if (empty($roleIDs)) $errors[] = "At least one role must be selected";
+        if (!$isEditing && empty($password)) $errors[] = "Password is required";
 
-        if (empty($roleIDs)) {
-            throw new Exception("Please assign at least one role to the user.");
-        }
+        // Handle department selection
+        $selectedDeptId = null;
+        if ($departmentID === 'custom' && !empty($customDept)) {
+            // Check if custom department exists
+            $stmt = $pdo->prepare("SELECT id FROM departments WHERE department_name = ?");
+            $stmt->execute([$customDept]);
+            $existingDept = $stmt->fetch();
 
-        // Check for duplicate email
-        if ($isEditing) {
-            $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE Email = ? AND User_ID != ?");
-            $stmt->execute([$email, $userData['User_ID']]);
+            if ($existingDept) {
+                $selectedDeptId = $existingDept['id'];
+            } else {
+                // Insert new department
+                $stmt = $pdo->prepare("INSERT INTO departments (department_name) VALUES (?)");
+                $stmt->execute([$customDept]);
+                $selectedDeptId = $pdo->lastInsertId();
+            }
         } else {
-            $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE Email = ?");
-            $stmt->execute([$email]);
-        }
-        $emailCount = $stmt->fetchColumn();
-
-        if ($emailCount > 0) {
-            throw new Exception("The email address is already taken. Please choose a different email.");
+            $selectedDeptId = $departmentID;
         }
 
-        // Begin transaction
+        if (!empty($errors)) {
+            throw new Exception(implode("<br>", $errors));
+        }
+
+        // Check email uniqueness
+        $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+        $stmt->execute([$email]);
+        if ($stmt->rowCount() > 0) {
+            throw new Exception("Email address already exists");
+        }
+
         $pdo->beginTransaction();
 
-        if (!$isEditing) {
-            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = $pdo->prepare("INSERT INTO users (Email, Password, First_Name, Last_Name, Department) VALUES (?, ?, ?, ?, ?)");
-            if (!$stmt->execute([$email, $hashedPassword, $firstName, $lastName, $department])) {
-                throw new Exception("Failed to insert user data.");
-            }
-            $userID = $pdo->lastInsertId();
-        } else {
-            $stmt = $pdo->prepare("UPDATE users SET Email = ?, First_Name = ?, Last_Name = ?, Department = ? WHERE User_ID = ?");
-            $stmt->execute([$email, $firstName, $lastName, $department, $userData['User_ID']]);
-            $userID = $userData['User_ID'];
-        }
+        // Create user
+        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+        $stmt = $pdo->prepare("INSERT INTO users 
+            (username, email, password, first_name, last_name, date_created) 
+            VALUES (?, ?, ?, ?, ?, NOW())");
 
-        // Update user roles: first delete existing roles, then insert new ones.
-        $stmt = $pdo->prepare("DELETE FROM user_roles WHERE User_ID = ?");
-        $stmt->execute([$userID]);
-        $stmt = $pdo->prepare("INSERT INTO user_roles (User_ID, Role_ID) VALUES (?, ?)");
+        $username = strtolower($firstName[0] . $lastName);
+        $stmt->execute([
+            $username,
+            $email,
+            $hashedPassword,
+            $firstName,
+            $lastName
+        ]);
+        $userID = $pdo->lastInsertId();
+
+        // Add department association
+        $stmt = $pdo->prepare("INSERT INTO user_departments (user_id, department_id) VALUES (?, ?)");
+        $stmt->execute([$userID, $selectedDeptId]);
+
+        // Add roles
+        $stmt = $pdo->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)");
         foreach ($roleIDs as $roleID) {
             $stmt->execute([$userID, $roleID]);
         }
 
         $pdo->commit();
-        $successMessage = $isEditing ? "User updated successfully!" : "User added successfully!";
 
-        // If AJAX request, return JSON; otherwise, redirect.
-        if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&
-            strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
-            header('Content-Type: application/json');
-            echo json_encode(['success' => true, 'message' => $successMessage]);
-        } else {
-            header("Location: user_management.php?success=1");
-        }
-        exit();
+        // Success response
+        echo json_encode([
+            'success' => true,
+            'message' => 'User created successfully',
+            'user_id' => $userID
+        ]);
+
     } catch (Exception $e) {
         $pdo->rollBack();
-        $errorMessage = $e->getMessage();
-        if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&
-            strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
-            header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => $errorMessage]);
-        } else {
-            $_SESSION['errors'] = [$errorMessage];
-            header("Location: user_management.php");
-        }
-        exit();
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Error: ' . $e->getMessage()
+        ]);
     }
+    exit();
 }
+
+// Fetch roles for form
+$roles = [];
+$roleStmt = $pdo->query("SELECT id, role_name FROM roles");
+while ($role = $roleStmt->fetch(PDO::FETCH_ASSOC)) {
+    $roles[] = $role;
+}
+
+// Return data for form initialization
+echo json_encode([
+    'departments' => $departments,
+    'roles' => $roles
+]);
 ?>

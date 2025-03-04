@@ -352,11 +352,11 @@ if role doesnt include create then remove the add new user
 
                             foreach ($modal_roles as $role): ?>
                                 <div class="form-check">
-                                    <input type="checkbox" name="roles[]" value="<?php echo $role['Role_ID']; ?>"
-                                           id="modal_role_<?php echo $role['Role_ID']; ?>"
+                                    <input type="checkbox" name="roles[]" value="<?php echo $role['id']; ?>"
+                                           id="modal_role_<?php echo $role['id']; ?>"
                                            class="form-check-input modal-role-checkbox">
-                                    <label for="modal_role_<?php echo $role['Role_ID']; ?>" class="form-check-label">
-                                        <?php echo htmlspecialchars($role['Role_Name']); ?>
+                                    <label for="modal_role_<?php echo $role['id']; ?>" class="form-check-label">
+                                        <?php echo htmlspecialchars($role['role_name']); ?>
                                     </label>
                                 </div>
                             <?php endforeach; ?>
