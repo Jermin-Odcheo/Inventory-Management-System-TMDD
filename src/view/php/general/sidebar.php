@@ -83,7 +83,7 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                 </button>
                 <ul class="dropdown tree" aria-expanded="false">
                     <li class="nav-item">
-                        <a href="<?php echo BASE_URL; ?>../src/view/php/modules/role_manager/manage_roles.php"
+                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/role_manager/manage_roles.php"
                            class="nav-link">
                             <span class="submenu-text">Role Management</span>
                         </a>

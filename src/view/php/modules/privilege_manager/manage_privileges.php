@@ -12,13 +12,13 @@ if (!isset($_SESSION['user_id'])) {
 try {
     $stmt = $pdo->prepare("
         SELECT 
-            m.Module_ID, 
+            m.id, 
             m.Module_Name, 
-            GROUP_CONCAT(p.Privilege_Name ORDER BY p.Privilege_ID SEPARATOR ', ') AS Privileges
+            GROUP_CONCAT(p.priv_name ORDER BY p.id SEPARATOR ', ') AS Privileges
         FROM modules AS m
-        LEFT JOIN privileges AS p ON m.Module_ID = p.Module_ID
-        GROUP BY m.Module_ID, m.Module_Name
-        ORDER BY m.Module_ID
+        LEFT JOIN privileges AS p ON m.id = p.id
+        GROUP BY m.id, m.Module_Name
+        ORDER BY m.id
     ");
     $stmt->execute();
     $modules = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -79,12 +79,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     <tbody>
                         <?php foreach ($modules as $module): ?>
                             <tr>
-                                <td><?= htmlspecialchars($module['Module_ID']) ?></td>
+                                <td><?= htmlspecialchars($module['id']) ?></td>
                                 <td><?= htmlspecialchars($module['Module_Name']) ?></td>
                                 <td><?= htmlspecialchars($module['Privileges'] ?? 'None') ?></td>
                                 <td>
-                                    <button type="button" class="btn btn-sm btn-warning edit-privileges-btn" data-module-id="<?= $module['Module_ID'] ?>" data-bs-toggle="modal" data-bs-target="#editPrivilegesModal">Edit Privileges</button>
-                                    <button type="button" class="btn btn-sm btn-danger delete-module-btn" data-module-id="<?= $module['Module_ID'] ?>" data-module-name="<?= htmlspecialchars($module['Module_Name']) ?>" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">Delete</button>
+                                    <button type="button" class="btn btn-sm btn-warning edit-privileges-btn" data-module-id="<?= $module['id'] ?>" data-bs-toggle="modal" data-bs-target="#editPrivilegesModal">Edit Privileges</button>
+                                    <button type="button" class="btn btn-sm btn-danger delete-module-btn" data-module-id="<?= $module['id'] ?>" data-module-name="<?= htmlspecialchars($module['Module_Name']) ?>" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">Delete</button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
