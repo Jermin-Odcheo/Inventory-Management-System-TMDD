@@ -38,7 +38,7 @@ if (isset($_SESSION['success'])) {
 if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
     $id = $_GET['id'];
     try {
-        $stmt = $pdo->prepare("DELETE FROM purchase_order WHERE i = ?");
+        $stmt = $pdo->prepare("DELETE FROM purchase_order WHERE id = ?");
         $stmt->execute([$id]);
         $_SESSION['success'] = "Purchase Order deleted successfully.";
     } catch (PDOException $e) {

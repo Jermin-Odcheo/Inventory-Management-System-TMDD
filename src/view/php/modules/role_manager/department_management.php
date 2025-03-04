@@ -101,9 +101,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 // ------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Retrieve and sanitize form input
-    $DepartmentID          = trim($_POST['DepartmentID'] ?? '');
-    $DepartmentAcronym  = trim($_POST['DepartmentAcronym'] ?? '');
-    $DepartmentName       = trim($_POST['DepartmentName'] ?? '');
+    $DepartmentID = trim($_POST['DepartmentID'] ?? '');
+    $DepartmentAcronym = trim($_POST['DepartmentAcronym'] ?? '');
+    $DepartmentName = trim($_POST['DepartmentName'] ?? '');
 
     $response = array('status' => '', 'message' => '');
 
@@ -290,11 +290,13 @@ try {
             background-color: #f8f9fa;
             min-height: 100vh;
         }
+
         .main-content {
             margin-left: 300px;
             padding: 20px;
             transition: margin-left 0.3s ease;
         }
+
         @media (max-width: 768px) {
             .main-content {
                 margin-left: 0;
@@ -348,7 +350,8 @@ try {
                             <div class="table-responsive">
                                 <!-- Add Department Button and Filter -->
                                 <div class="d-flex justify-content-start mb-3 gap-2">
-                                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addDepartmentModal">
+                                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal"
+                                            data-bs-target="#addDepartmentModal">
                                         <i class="bi bi-plus-circle"></i> Add Department
                                     </button>
                                 </div>
@@ -377,7 +380,9 @@ try {
                                                        data-department-name="<?php echo htmlspecialchars($department['department_name']); ?>">
                                                         <i class="bi bi-pencil-square"></i> Edit
                                                     </a>
-                                                    <a class="btn btn-sm btn-outline-danger" href="?action=delete&id=<?php echo htmlspecialchars($department['id']); ?>" onclick="return confirm('Are you sure you want to delete this department?');">
+                                                    <a class="btn btn-sm btn-outline-danger"
+                                                       href="?action=delete&id=<?php echo htmlspecialchars($department['id']); ?>"
+                                                       onclick="return confirm('Are you sure you want to delete this department?');">
                                                         <i class="bi bi-trash"></i> Delete
                                                     </a>
                                                 </div>
@@ -392,7 +397,8 @@ try {
                                         <!-- Pagination Info -->
                                         <div class="col-12 col-sm-auto">
                                             <div class="text-muted">
-                                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span
+                                                Showing <span id="currentPage">1</span> to <span
+                                                        id="rowsPerPage">10</span> of <span
                                                         id="totalRows">0</span> entries
                                             </div>
                                         </div>
@@ -400,7 +406,8 @@ try {
                                         <!-- Pagination Controls -->
                                         <div class="col-12 col-sm-auto ms-sm-auto">
                                             <div class="d-flex align-items-center gap-2">
-                                                <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                                <button id="prevPage"
+                                                        class="btn btn-outline-primary d-flex align-items-center gap-1">
                                                     <i class="bi bi-chevron-left"></i>
                                                     Previous
                                                 </button>
@@ -412,7 +419,8 @@ try {
                                                     <option value="100">100</option>
                                                 </select>
 
-                                                <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                                <button id="nextPage"
+                                                        class="btn btn-outline-primary d-flex align-items-center gap-1">
                                                     Next
                                                     <i class="bi bi-chevron-right"></i>
                                                 </button>
@@ -447,14 +455,16 @@ try {
                         <label for="DepartmentID" class="form-label">
                             <i class="bi bi-tag"></i> Department ID <span class="text-danger">*</span>
                         </label>
-                        <input type="number" min="1" class="form-control" name="DepartmentID" id="DepartmentID" required>
+                        <input type="number" min="1" class="form-control" name="DepartmentID" id="DepartmentID"
+                               required>
                     </div>
 
                     <div class="mb-3">
                         <label for="BuildingLocation" class="form-label">
                             <i class="bi bi-building"></i> Department Acronym <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control" id="DepartmentAcronym" name="DepartmentAcronym" required>
+                        <input type="text" class="form-control" id="DepartmentAcronym" name="DepartmentAcronym"
+                               required>
                     </div>
 
                     <div class="mb-3">
@@ -491,21 +501,24 @@ try {
                         <label for="edit_department_id" class="form-label">
                             <i class="bi bi-tag"></i> Department ID <span class="text-danger">*</span>
                         </label>
-                        <input type="number" min="1" class="form-control" id="edit_department_id" name="DepartmentID" required>
+                        <input type="number" min="1" class="form-control" id="edit_department_id" name="DepartmentID"
+                               required>
                     </div>
 
                     <div class="mb-3">
                         <label for="edit_department_acronym" class="form-label">
                             <i class="bi bi-building"></i> Department Acronym <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control" id="edit_department_acronym" name="DepartmentAcronym" required>
+                        <input type="text" class="form-control" id="edit_department_acronym" name="DepartmentAcronym"
+                               required>
                     </div>
 
                     <div class="mb-3">
                         <label for="edit_department_name" class="form-label">
                             <i class="bi bi-layers"></i> Department Name <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control" id="edit_department_name" name="DepartmentName" required>
+                        <input type="text" class="form-control" id="edit_department_name" name="DepartmentName"
+                               required>
                     </div>
 
                     <div class="d-flex justify-content-end">
@@ -520,7 +533,7 @@ try {
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 <!-- JavaScript for Real-Time Table Filtering -->
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         // Search and filter functionality
         const searchInput = document.getElementById('eqSearch');
         const filterBuilding = document.getElementById('filterBuilding');
@@ -537,7 +550,7 @@ try {
             const filterValue = filterBuilding.value.toLowerCase();
             const rows = document.querySelectorAll('#table tbody tr');
 
-            rows.forEach(function(row) {
+            rows.forEach(function (row) {
                 const rowText = row.textContent.toLowerCase();
                 const buildingCell = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
 
@@ -549,9 +562,9 @@ try {
         }
     });
 
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         // Form submissions
-        $('#addDepartmentForm').on('submit', function(e) {
+        $('#addDepartmentForm').on('submit', function (e) {
             e.preventDefault();
 
             $.ajax({
@@ -559,7 +572,7 @@ try {
                 method: 'POST',
                 data: $(this).serialize(),
                 dataType: 'json',
-                success: function(result) {
+                success: function (result) {
                     if (result.status === 'success') {
                         // Hide modal and redirect
                         $('#addDepartmentModal').modal('hide');
@@ -568,7 +581,7 @@ try {
                         alert(result.message || 'An error occurred');
                     }
                 },
-                error: function(xhr, status, error) {
+                error: function (xhr, status, error) {
                     console.log(xhr.responseText);
                     alert('Error submitting the form: ' + error);
                 }
@@ -576,7 +589,7 @@ try {
         });
 
         // Edit button click handler for departments
-        $('.edit-department').click(function() {
+        $('.edit-department').click(function () {
             const id = $(this).data('id');
             const departmentId = $(this).data('department-id');
             const departmentAcronym = $(this).data('department-acronym');
@@ -593,14 +606,14 @@ try {
         });
 
         // Edit form submission
-        $('#editDepartmentForm').on('submit', function(e) {
+        $('#editDepartmentForm').on('submit', function (e) {
             e.preventDefault();
             $.ajax({
                 url: 'department_management.php',
                 method: 'POST',
                 data: $(this).serialize(),
                 dataType: 'json',
-                success: function(result) {
+                success: function (result) {
                     if (result.status === 'success') {
                         $('#editDepartmentModal').modal('hide');
                         window.location.href = 'department_management.php';
@@ -608,7 +621,7 @@ try {
                         alert(result.message || 'An error occurred');
                     }
                 },
-                error: function(xhr, status, error) {
+                error: function (xhr, status, error) {
                     alert('Error updating location: ' + error);
                 }
             });
