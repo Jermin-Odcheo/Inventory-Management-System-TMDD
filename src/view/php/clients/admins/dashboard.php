@@ -38,6 +38,31 @@ switch (strtolower(trim($role))) { // Normalize role to avoid case issues
 
 // No need to retrieve all users here if you're going to do it via fetch_user_status.php
 // But if you want a fallback server-side render, you can keep it.
+
+
+try {
+    // ------------------------
+    // RETRIEVE ALL DEPARTMENT IDs FOR THE USER
+    // ------------------------
+    $stmt = $pdo->prepare("SELECT Department_ID FROM user_departments WHERE User_ID = ?");
+    $stmt->execute([$_SESSION['user_id']]);
+    $departmentIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+    if (!empty($departmentIds)) {
+        // ------------------------
+        // RETRIEVE FULL DEPARTMENT INFO
+        // ------------------------
+        $placeholders = implode(',', array_fill(0, count($departmentIds), '?'));
+        $stmt = $pdo->prepare("SELECT Department_ID, Department_Name FROM departments WHERE Department_ID IN ($placeholders)");
+        $stmt->execute($departmentIds);
+        $departments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } else {
+        $departments = []; // No departments found
+    }
+} catch (PDOException $e) {
+    die("Error retrieving departments: " . $e->getMessage());
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -83,7 +108,22 @@ switch (strtolower(trim($role))) { // Normalize role to avoid case issues
                     <p>You have limited access to the system.</p>
                 </section>
             <?php endif; ?>
-            <p>You have limited access to the system.</p>
+
+            <!-- Dropdown List, show depts the user is part of (user_departments table) -->
+            <div class="mb-3">
+                <select class="form-control" name="DepartmentID" id="departmentSelect" required>
+                    <option value="" disabled selected>Select a department</option>
+                    <!-- Populate the dropdown list -->
+                    <?php foreach ($departments as $dept): ?>
+                        <option value="<?= htmlspecialchars($dept['Department_ID']) ?>">
+                            <?= htmlspecialchars($dept['Department_Name']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div>
+                Department information lalala
+            </div>
             <hr>
 
         </div>
