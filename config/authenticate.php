@@ -31,20 +31,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $_SESSION["email"] = $user["email"];
 
             // Fetch User Roles and Store in Session
+// In authenticate.php
             $role_stmt = $pdo->prepare("
-                SELECT GROUP_CONCAT(DISTINCT r.role_name) AS roles 
-                FROM user_roles ur
-                JOIN roles r ON ur.role_id = r.id
-                WHERE ur.user_id = ?
-            ");
-            $role_stmt->execute([$user["id"]]);
-            $role_data = $role_stmt->fetch();
+            SELECT GROUP_CONCAT(r.role_name SEPARATOR ', ') as roles
+            FROM user_roles ur
+            JOIN roles r ON ur.role_id = r.id
+            WHERE ur.user_id = ?
+        ");
+                    $role_stmt->execute([$user["id"]]);
+                    $role_data = $role_stmt->fetch();
 
-            $_SESSION["roles"] = $role_data ? $role_data["roles"] : "";
+                    $_SESSION["role"] = $role_data ? $role_data["roles"] : "";
 
             // Update user status to "Online"
             $update_status = $pdo->prepare("UPDATE users SET status = 'Online' WHERE id = ?");
-            $update_status->execute([$user["id"]]);
+            $update_status->execute([$user["user_id"]]);
 
             header("Location: ../src/view/php/clients/admins/dashboard.php");
             exit();
