@@ -38,7 +38,7 @@ if (isset($_SESSION['success'])) {
 }
 
 // ------------------------
-// DELETE EQUIPMENT LOCATION
+// DELETE DEPARTMENt
 // ------------------------
 if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
     $id = $_GET['id'];
@@ -46,23 +46,20 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
         $pdo->beginTransaction();
 
         // Get location details before deletion
-        $stmt = $pdo->prepare("SELECT * FROM equipment_location WHERE equipment_location_id = ?");
+        $stmt = $pdo->prepare("SELECT * FROM departments WHERE Department_ID = ?");
         $stmt->execute([$id]);
-        $locationData = $stmt->fetch(PDO::FETCH_ASSOC);
+        $departmentData = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if ($locationData) {
+        if ($departmentData) {
             // Prepare audit log data
             $oldValues = json_encode([
-                'AssetTag' => $locationData['AssetTag'],
-                'BuildingLocation' => $locationData['BuildingLocation'],
-                'FloorNumber' => $locationData['FloorNumber'],
-                'SpecificArea' => $locationData['SpecificArea'],
-                'PersonResponsible' => $locationData['PersonResponsible'],
-                'Remarks' => $locationData['Remarks']
+                'Department_ID' => $departmentData['Department_ID'],
+                'Department_Acronym' => $departmentData['Department_Acronym'],
+                'Department_Name' => $departmentData['Department_Name']
             ]);
 
             // Delete the location
-            $stmt = $pdo->prepare("DELETE FROM equipment_location WHERE equipment_location_id = ?");
+            $stmt = $pdo->prepare("DELETE FROM departments WHERE Department_ID = ?");
             $stmt->execute([$id]);
 
             // Insert audit log
@@ -75,24 +72,24 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             $auditStmt->execute([
                 $_SESSION['user_id'],
                 $id,
-                'Equipment Location',
+                'Departments',
                 'Delete',
-                'Equipment location deleted',
+                'Department deleted',
                 $oldValues,
                 null,
                 'Successful'
             ]);
 
             $pdo->commit();
-            $_SESSION['success'] = "Equipment Location deleted successfully.";
+            $_SESSION['success'] = "Department deleted successfully.";
         }
     } catch (PDOException $e) {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
-        $_SESSION['errors'] = ["Error deleting Equipment Location: " . $e->getMessage()];
+        $_SESSION['errors'] = ["Error deleting Department: " . $e->getMessage()];
     }
-    header("Location: equipment_location.php");
+    header("Location: department_management.php");
     exit;
 }
 
@@ -244,33 +241,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // ------------------------
-// LOAD EQUIPMENT LOCATION DATA FOR EDITING (if applicable)
-// ------------------------
-$editEquipmentLocation = null;
-if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) {
-    $id = $_GET['id'];
-    try {
-        $stmt = $pdo->prepare("SELECT * FROM equipment_location WHERE equipment_location_id = ?");
-        $stmt->execute([$id]);
-        $editEquipmentLocation = $stmt->fetch(PDO::FETCH_ASSOC);
-        if (!$editEquipmentLocation) {
-            $_SESSION['errors'] = ["Equipment Location not found for editing."];
-            header("Location: equipment_location.php");
-            exit;
-        }
-    } catch (PDOException $e) {
-        $errors[] = "Error loading Equipment Location for editing: " . $e->getMessage();
-    }
-}
-
-// ------------------------
 // RETRIEVE ALL DEPARTMENTS
 // ------------------------
 try {
     $stmt = $pdo->query("SELECT * FROM departments ORDER BY id");
     $departments = $stmt->fetchAll();
 } catch (PDOException $e) {
-    $errors[] = "Error retrieving Equipment Locations: " . $e->getMessage();
+    $errors[] = "Error retrieving departments: " . $e->getMessage();
 }
 ?>
 <!DOCTYPE html>
@@ -455,8 +432,7 @@ try {
                         <label for="DepartmentID" class="form-label">
                             <i class="bi bi-tag"></i> Department ID <span class="text-danger">*</span>
                         </label>
-                        <input type="number" min="1" class="form-control" name="DepartmentID" id="DepartmentID"
-                               required>
+                        <input type="number" min="1" class="form-control" name="DynamicDepartmentID" id="DynamicDepartmentID" readonly>
                     </div>
 
                     <div class="mb-3">
@@ -501,8 +477,7 @@ try {
                         <label for="edit_department_id" class="form-label">
                             <i class="bi bi-tag"></i> Department ID <span class="text-danger">*</span>
                         </label>
-                        <input type="number" min="1" class="form-control" id="edit_department_id" name="DepartmentID"
-                               required>
+                        <input type="number" min="1" class="form-control" id="edit_department_id" name="DepartmentID" readonly>
                     </div>
 
                     <div class="mb-3">
@@ -627,6 +602,57 @@ try {
             });
         });
     });
+
+    // Edit button click handler for departments
+    $('.edit-department').click(function() {
+        const id = $(this).data('id');
+        const departmentId = $(this).data('department-id');
+        const departmentAcronym = $(this).data('department-acronym');
+        const departmentName = $(this).data('department-name');
+
+        // Populate modal fields
+        $('#edit_department_hidden_id').val(id); // Hidden field for ID
+        $('#edit_department_id').val(departmentId);
+        $('#edit_department_acronym').val(departmentAcronym);
+        $('#edit_department_name').val(departmentName);
+
+        // Show the modal
+        $('#editDepartmentModal').modal('show');
+    });
+
+    // Edit form submission
+    $('#editDepartmentForm').on('submit', function(e) {
+        e.preventDefault();
+        $.ajax({
+            url: 'department_management.php',
+            method: 'POST',
+            data: $(this).serialize(),
+            dataType: 'json',
+            success: function(result) {
+                if (result.status === 'success') {
+                    $('#editDepartmentModal').modal('hide');
+                    window.location.href = 'department_management.php';
+                } else {
+                    alert(result.message || 'An error occurred');
+                }
+            },
+            error: function(xhr, status, error) {
+                alert('Error updating location: ' + error);
+            }
+        });
+    });
+});
+
+function fetchLatestDepartmentID() {
+        fetch('get_latest_department.php')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById("DynamicDepartmentID").value = data; // Update field with latest ID
+            })
+            .catch(error => console.error("Error fetching latest department ID:", error));
+    }
+
+    document.addEventListener("DOMContentLoaded", fetchLatestDepartmentID);
 </script>
 </body>
 
