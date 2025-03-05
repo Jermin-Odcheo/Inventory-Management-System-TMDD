@@ -38,7 +38,7 @@ if (isset($_SESSION['success'])) {
 if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
     $id = $_GET['id'];
     try {
-        $stmt = $pdo->prepare("DELETE FROM purchaseorder WHERE PurchaseOrderID = ?");
+        $stmt = $pdo->prepare("DELETE FROM purchase_order WHERE id = ?");
         $stmt->execute([$id]);
         $_SESSION['success'] = "Purchase Order deleted successfully.";
     } catch (PDOException $e) {
@@ -68,29 +68,27 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
                     
                     // First insert the equipment
-                    $stmt = $pdo->prepare("INSERT INTO equipmentdetails (
-                        AssetTag, 
-                        AssetDescription1, 
-                        AssetDescription2, 
-                        Specification, 
-                        Brand, 
-                        Model, 
-                        SerialNumber, 
-                        DateAcquired, 
-                        AccountableIndividual,
-                        Remarks
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                    $stmt = $pdo->prepare("INSERT INTO equipment_details (
+                        asset_tag, 
+                        asset_description_1, 
+                        asset_description_2, 
+                        specifications, 
+                        brand, 
+                        model, 
+                        serial_number, 
+                        date_created, 
+                        remarks
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
                     
                     $stmt->execute([
                         $_POST['asset_tag'],
-                        $_POST['asset_description1'],
-                        $_POST['asset_description2'],
-                        $_POST['specification'],
+                        $_POST['asset_description_1'],
+                        $_POST['asset_description_2'],
+                        $_POST['specifications'],
                         $_POST['brand'],
                         $_POST['model'],
                         $_POST['serial_number'],
-                        $_POST['date_acquired'],
-                        $_POST['accountable_individual'],
+                        $_POST['date_created'],
                         $_POST['remarks']
                     ]);
                     
@@ -98,16 +96,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     
                     // Prepare the new values for audit log
                     $newValues = json_encode([
-                        'AssetTag' => $_POST['asset_tag'],
-                        'AssetDescription1' => $_POST['asset_description1'],
-                        'AssetDescription2' => $_POST['asset_description2'],
-                        'Specification' => $_POST['specification'],
-                        'Brand' => $_POST['brand'],
-                        'Model' => $_POST['model'],
-                        'SerialNumber' => $_POST['serial_number'],
-                        'DateAcquired' => $_POST['date_acquired'],
-                        'AccountableIndividual' => $_POST['accountable_individual'],
-                        'Remarks' => $_POST['remarks']
+                        'asset_tag' => $_POST['asset_tag'],
+                        'asset_description_1' => $_POST['asset_description_1'],
+                        'asset_description_2' => $_POST['asset_description_2'],
+                        'specifications' => $_POST['specifications'],
+                        'brand' => $_POST['brand'],
+                        'model' => $_POST['model'],
+                        'serial_number' => $_POST['serial_number'],
+                        'date_created' => $_POST['date_created'],
+                        'remarks' => $_POST['remarks']
                     ]);
 
                     // Insert into audit_log
@@ -167,63 +164,60 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $pdo->beginTransaction();
                     
                     // Get old equipment details for audit log
-                    $stmt = $pdo->prepare("SELECT * FROM equipmentdetails WHERE EquipmentDetailsID = ?");
+                    $stmt = $pdo->prepare("SELECT * FROM equipment_details WHERE id = ?");
                     $stmt->execute([$_POST['equipment_id']]);
                     $oldEquipment = $stmt->fetch(PDO::FETCH_ASSOC);
                     
                     // Update equipment
-                    $stmt = $pdo->prepare("UPDATE equipmentdetails SET 
-                        AssetTag = ?,
-                        AssetDescription1 = ?,
-                        AssetDescription2 = ?,
-                        Specification = ?,
-                        Brand = ?,
-                        Model = ?,
-                        SerialNumber = ?,
-                        DateAcquired = ?,
-                        AccountableIndividual = ?,
-                        Remarks = ?
-                        WHERE EquipmentDetailsID = ?");
+                    $stmt = $pdo->prepare("UPDATE equipment_details SET 
+                        asset_tag = ?,
+                        asset_description_1 = ?,
+                        asset_description_2 = ?,
+                        specifications = ?,
+                        brand = ?,
+                        model = ?,
+                        serial_number = ?,
+                        date_created = ?,
+                        remarks = ?
+                        WHERE id = ?");
                     
                     $stmt->execute([
                         $_POST['asset_tag'],
-                        $_POST['asset_description1'],
-                        $_POST['asset_description2'],
-                        $_POST['specification'],
+                        $_POST['asset_description_1'],
+                        $_POST['asset_description_2'],
+                        $_POST['specifications'],
                         $_POST['brand'],
                         $_POST['model'],
                         $_POST['serial_number'],
-                        $_POST['date_acquired'],
-                        $_POST['accountable_individual'],
+                        $_POST['date_created'],
                         $_POST['remarks'],
                         $_POST['equipment_id']
                     ]);
 
-                    // Prepare audit log data
-                    $oldValues = json_encode([
-                        'AssetTag' => $oldEquipment['AssetTag'],
-                        'AssetDescription1' => $oldEquipment['AssetDescription1'],
-                        'AssetDescription2' => $oldEquipment['AssetDescription2'],
-                        'Specification' => $oldEquipment['Specification'],
-                        'Brand' => $oldEquipment['Brand'],
-                        'Model' => $oldEquipment['Model'],
-                        'SerialNumber' => $oldEquipment['SerialNumber'],
-                        'DateAcquired' => $oldEquipment['DateAcquired'],
-                        'AccountableIndividual' => $oldEquipment['AccountableIndividual'],
-                        'Remarks' => $oldEquipment['Remarks']
+                    // Prepare old values for audit log
+                    $oldValue = json_encode([
+                        'id' => $oldEquipment['id'],
+                        'asset_tag' => $oldEquipment['asset_tag'],
+                        'asset_description_1' => $oldEquipment['asset_description_1'],
+                        'asset_description_2' => $oldEquipment['asset_description_2'],
+                        'specifications' => $oldEquipment['specifications'],
+                        'brand' => $oldEquipment['brand'],
+                        'model' => $oldEquipment['model'],
+                        'serial_number' => $oldEquipment['serial_number'],
+                        'date_created' => $oldEquipment['date_created'],
+                        'remarks' => $oldEquipment['remarks']
                     ]);
 
                     $newValues = json_encode([
-                        'AssetTag' => $_POST['asset_tag'],
-                        'AssetDescription1' => $_POST['asset_description1'],
-                        'AssetDescription2' => $_POST['asset_description2'],
-                        'Specification' => $_POST['specification'],
-                        'Brand' => $_POST['brand'],
-                        'Model' => $_POST['model'],
-                        'SerialNumber' => $_POST['serial_number'],
-                        'DateAcquired' => $_POST['date_acquired'],
-                        'AccountableIndividual' => $_POST['accountable_individual'],
-                        'Remarks' => $_POST['remarks']
+                        'asset_tag' => $_POST['asset_tag'],
+                        'asset_description_1' => $_POST['asset_description_1'],
+                        'asset_description_2' => $_POST['asset_description_2'],
+                        'specifications' => $_POST['specifications'],
+                        'brand' => $_POST['brand'],
+                        'model' => $_POST['model'],
+                        'serial_number' => $_POST['serial_number'],
+                        'date_created' => $_POST['date_created'],
+                        'remarks' => $_POST['remarks']
                     ]);
 
                     // Insert audit log
@@ -246,7 +240,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         'Equipment Details',
                         'Modified',
                         'Equipment details modified',
-                        $oldValues,
+                        $oldValue,
                         $newValues,
                         'Successful'
                     ]);
@@ -271,7 +265,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             case 'delete':
                 try {
                     // Get equipment details before deletion for audit log
-                    $stmt = $pdo->prepare("SELECT * FROM equipmentdetails WHERE EquipmentDetailsID = ?");
+                    $stmt = $pdo->prepare("SELECT * FROM equipment_details WHERE id = ?");
                     $stmt->execute([$_POST['equipment_id']]);
                     $equipmentData = $stmt->fetch(PDO::FETCH_ASSOC);
                     
@@ -280,16 +274,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     
                     // Prepare audit log data
                     $oldValue = json_encode([
-                        'EquipmentDetailsID' => $equipmentData['EquipmentDetailsID'],
-                        'AssetTag' => $equipmentData['AssetTag'],
-                        'AssetDescription1' => $equipmentData['AssetDescription1'],
-                        'AssetDescription2' => $equipmentData['AssetDescription2'],
-                        'Specification' => $equipmentData['Specification'],
-                        'Brand' => $equipmentData['Brand'],
-                        'Model' => $equipmentData['Model'],
-                        'SerialNumber' => $equipmentData['SerialNumber'],
-                        'DateAcquired' => $equipmentData['DateAcquired'],
-                        'AccountableIndividual' => $equipmentData['AccountableIndividual']
+                        'id' => $equipmentData['id'],
+                        'asset_tag' => $equipmentData['asset_tag'],
+                        'asset_description_1' => $equipmentData['asset_description_1'],
+                        'asset_description_2' => $equipmentData['asset_description_2'],
+                        'specifications' => $equipmentData['specifications'],
+                        'brand' => $equipmentData['brand'],
+                        'model' => $equipmentData['model'],
+                        'serial_number' => $equipmentData['serial_number'],
+                        'date_created' => $equipmentData['date_created'],
                     ]);
 
                     // Insert into audit_log
@@ -308,7 +301,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
                     $auditStmt->execute([
                         $_SESSION['user_id'],
-                        $equipmentData['EquipmentDetailsID'],
+                        $equipmentData['id'],
                         'Equipment Management',
                         'Delete',
                         'Equipment has been deleted',
@@ -318,7 +311,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     ]);
 
                     // Now perform the delete
-                    $stmt = $pdo->prepare("DELETE FROM equipmentdetails WHERE EquipmentDetailsID = ?");
+                    $stmt = $pdo->prepare("DELETE FROM equipment_details WHERE id = ?");
                     $stmt->execute([$_POST['equipment_id']]);
                     
                     $response['status'] = 'success';
@@ -341,12 +334,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 // RETRIEVE ALL EQUIPMENT DETAILS
 // ------------------------
 try {
-    $stmt = $pdo->query("SELECT EquipmentDetailsID, AssetTag, AssetDescription1, AssetDescription2, 
-                         Specification, Brand, Model, SerialNumber, DateAcquired, CreatedDate, ModifiedDate,
-                         ReceivingReportFormNumber, AccountableIndividualLocation, 
-                         AccountableIndividual, Remarks 
-                         FROM equipmentdetails 
-                         ORDER BY EquipmentDetailsID DESC");
+    $stmt = $pdo->query("SELECT id, asset_tag, asset_description_1, asset_description_2,
+                         specifications, brand, model, serial_number, 
+                         invoice_no, rr_no, equipment_location_id, equipment_status_id, 
+                         remarks, date_created 
+                         FROM equipment_details 
+                         ORDER BY id DESC");
     $equipmentDetails = $stmt->fetchAll();
 } catch (PDOException $e) {
     $errors[] = "Error retrieving Equipment Details: " . $e->getMessage();
@@ -481,7 +474,7 @@ try {
                         <select class="form-select form-select-sm" id="filterEquipment" style="width: auto;">
                             <option value="">Filter Equipment Type</option>
                             <?php
-                            $equipmentTypes = array_unique(array_column($equipmentDetails, 'AssetDescription1'));
+                            $equipmentTypes = array_unique(array_column($equipmentDetails, 'asset_description_1'));
                             foreach($equipmentTypes as $type) {
                                 if(!empty($type)) {
                                     echo "<option value='" . htmlspecialchars($type) . "'>" . htmlspecialchars($type) . "</option>";
@@ -559,39 +552,38 @@ try {
                         <tbody>
                             <?php foreach ($equipmentDetails as $equipment): ?>
                                 <tr>
-                                    <td><?php echo htmlspecialchars($equipment['EquipmentDetailsID']); ?></td>
-                                    <td><?php echo htmlspecialchars($equipment['AssetTag']); ?></td>
-                                    <td><?php echo htmlspecialchars($equipment['AssetDescription1']); ?></td>
-                                    <td><?php echo htmlspecialchars($equipment['AssetDescription2']); ?></td>
-                                    <td><?php echo htmlspecialchars($equipment['Specification']); ?></td>
-                                    <td><?php echo htmlspecialchars($equipment['Brand']); ?></td>
-                                    <td><?php echo htmlspecialchars($equipment['Model']); ?></td>
-                                    <td><?php echo htmlspecialchars($equipment['SerialNumber']); ?></td>
-                                    <td><?php echo htmlspecialchars($equipment['DateAcquired']); ?></td>
-                                    <td><?php echo !empty($equipment['CreatedDate']) ? date('Y-m-d H:i', strtotime($equipment['CreatedDate'])) : ''; ?></td>
-                                    <td><?php echo !empty($equipment['ModifiedDate']) ? date('Y-m-d H:i', strtotime($equipment['ModifiedDate'])) : ''; ?></td>
-                                    <td><?php echo htmlspecialchars($equipment['ReceivingReportFormNumber']); ?></td>
-                                    <td><?php echo htmlspecialchars($equipment['AccountableIndividualLocation']); ?></td>
-                                    <td><?php echo htmlspecialchars($equipment['AccountableIndividual']); ?></td>
-                                    <td><?php echo htmlspecialchars($equipment['Remarks']); ?></td>
+                                    <td><?php echo htmlspecialchars($equipment['id']); ?></td>
+                                    <td><?php echo htmlspecialchars($equipment['asset_tag']); ?></td>
+                                    <td><?php echo htmlspecialchars($equipment['asset_description_1']); ?></td>
+                                    <td><?php echo htmlspecialchars($equipment['asset_description_2']); ?></td>
+                                    <td><?php echo htmlspecialchars($equipment['specifications']); ?></td>
+                                    <td><?php echo htmlspecialchars($equipment['brand']); ?></td>
+                                    <td><?php echo htmlspecialchars($equipment['model']); ?></td>
+                                    <td><?php echo htmlspecialchars($equipment['serial_number']); ?></td>
+                                    <td><?php echo htmlspecialchars($equipment['date_created']); ?></td>
+                                    <td><?php echo !empty($equipment['date_created']) ? date('Y-m-d H:i', strtotime($equipment['date_created'])) : ''; ?></td>
+                                    <td><?php echo !empty($equipment['date_created']) ? date('Y-m-d H:i', strtotime($equipment['date_created'])) : ''; ?></td>
+                                    <td><?php echo htmlspecialchars($equipment['rr_no']); ?></td>
+                                    <td><?php echo htmlspecialchars($equipment['equipment_location_id']); ?></td>
+                                    <td><?php echo htmlspecialchars($equipment['equipment_status_id']); ?></td>
+                                    <td><?php echo htmlspecialchars($equipment['remarks']); ?></td>
                                     <td class="text-center">
                                         <div class="btn-group" role="group">
                                             <a class="btn btn-sm btn-outline-primary edit-equipment" 
-                                               data-id="<?php echo htmlspecialchars($equipment['EquipmentDetailsID']); ?>"
-                                               data-asset="<?php echo htmlspecialchars($equipment['AssetTag']); ?>"
-                                               data-desc1="<?php echo htmlspecialchars($equipment['AssetDescription1']); ?>"
-                                               data-desc2="<?php echo htmlspecialchars($equipment['AssetDescription2']); ?>"
-                                               data-spec="<?php echo htmlspecialchars($equipment['Specification']); ?>"
-                                               data-brand="<?php echo htmlspecialchars($equipment['Brand']); ?>"
-                                               data-model="<?php echo htmlspecialchars($equipment['Model']); ?>"
-                                               data-serial="<?php echo htmlspecialchars($equipment['SerialNumber']); ?>"
-                                               data-date="<?php echo htmlspecialchars($equipment['DateAcquired']); ?>"
-                                               data-accountable="<?php echo htmlspecialchars($equipment['AccountableIndividual']); ?>"
-                                               data-remarks="<?php echo htmlspecialchars($equipment['Remarks']); ?>">
+                                               data-id="<?php echo htmlspecialchars($equipment['id']); ?>"
+                                               data-asset="<?php echo htmlspecialchars($equipment['asset_tag']); ?>"
+                                               data-desc1="<?php echo htmlspecialchars($equipment['asset_description_1']); ?>"
+                                               data-desc2="<?php echo htmlspecialchars($equipment['asset_description_2']); ?>"
+                                               data-spec="<?php echo htmlspecialchars($equipment['specifications']); ?>"
+                                               data-brand="<?php echo htmlspecialchars($equipment['brand']); ?>"
+                                               data-model="<?php echo htmlspecialchars($equipment['model']); ?>"
+                                               data-serial="<?php echo htmlspecialchars($equipment['serial_number']); ?>"
+                                               data-date="<?php echo htmlspecialchars($equipment['date_created']); ?>"
+                                               data-remarks="<?php echo htmlspecialchars($equipment['remarks']); ?>">
                                                 <i class="bi bi-pencil-square"></i> Edit
                                             </a>
                                             <a class="btn btn-sm btn-outline-danger delete-equipment" 
-                                               data-id="<?php echo htmlspecialchars($equipment['EquipmentDetailsID']); ?>"
+                                               data-id="<?php echo htmlspecialchars($equipment['id']); ?>"
                                                href="#">
                                                 <i class="bi bi-trash"></i> Delete
                                             </a>
@@ -656,16 +648,16 @@ try {
                             <input type="text" class="form-control" name="asset_tag" required>
                         </div>
                         <div class="mb-3">
-                            <label for="asset_description1" class="form-label"> Description 1</label>
-                            <input type="text" class="form-control" name="asset_description1" required>
+                            <label for="asset_description_1" class="form-label">Description 1</label>
+                            <input type="text" class="form-control" name="asset_description_1" required>
                         </div>
                         <div class="mb-3">
-                            <label for="asset_description2" class="form-label"> Description 2</label>
-                            <input type="text" class="form-control" name="asset_description2" required>
+                            <label for="asset_description_2" class="form-label">Description 2</label>
+                            <input type="text" class="form-control" name="asset_description_2" required>
                         </div>
                         <div class="mb-3">
-                            <label for="specification" class="form-label">Specification</label>
-                            <input type="text" class="form-control" name="specification" required>
+                            <label for="specifications" class="form-label">Specification</label>
+                            <textarea class="form-control" name="specifications" rows="3" required></textarea>
                         </div>
                         <div class="mb-3">
                             <label for="brand" class="form-label">Brand</label>
@@ -680,14 +672,8 @@ try {
                             <input type="text" class="form-control" name="serial_number" required>
                         </div>
                         <div class="mb-3">
-                            <label for="date_acquired" class="form-label">Date Acquired</label>
-                            <input type="date" class="form-control" name="date_acquired" 
-                                   max="<?php echo date('Y-m-d'); ?>" 
-                                   required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="accountable_individual" class="form-label">Accountable Individual</label>
-                            <input type="text" class="form-control" name="accountable_individual" required>
+                            <label for="date_created" class="form-label">Date Created</label>
+                            <input type="datetime-local" class="form-control" name="date_created" required>
                         </div>
                         <div class="mb-3">
                             <label for="remarks" class="form-label">Remarks</label>
@@ -719,16 +705,16 @@ try {
                             <input type="text" class="form-control" name="asset_tag" id="edit_asset_tag">
                         </div>
                         <div class="mb-3">
-                            <label for="edit_asset_description1" class="form-label"> Description 1</label>
-                            <input type="text" class="form-control" name="asset_description1" id="edit_asset_description1">
+                            <label for="edit_asset_description_1" class="form-label">Description 1</label>
+                            <input type="text" class="form-control" name="asset_description_1" id="edit_asset_description_1">
                         </div>
                         <div class="mb-3">
-                            <label for="edit_asset_description2" class="form-label"> Description 2</label>
-                            <input type="text" class="form-control" name="asset_description2" id="edit_asset_description2">
+                            <label for="edit_asset_description_2" class="form-label">Description 2</label>
+                            <input type="text" class="form-control" name="asset_description_2" id="edit_asset_description_2">
                         </div>
                         <div class="mb-3">
-                            <label for="edit_specification" class="form-label">Specification</label>
-                            <input type="text" class="form-control" name="specification" id="edit_specification">
+                            <label for="edit_specifications" class="form-label">Specification</label>
+                            <textarea class="form-control" name="specifications" id="edit_specifications" rows="3"></textarea>
                         </div>
                         <div class="mb-3">
                             <label for="edit_brand" class="form-label">Brand</label>
@@ -743,14 +729,8 @@ try {
                             <input type="text" class="form-control" name="serial_number" id="edit_serial_number">
                         </div>
                         <div class="mb-3">
-                            <label for="edit_date_acquired" class="form-label">Date Acquired</label>
-                            <input type="date" class="form-control" name="date_acquired" 
-                                   id="edit_date_acquired" 
-                                   max="<?php echo date('Y-m-d'); ?>">
-                        </div>
-                        <div class="mb-3">
-                            <label for="edit_accountable_individual" class="form-label">Accountable Individual</label>
-                            <input type="text" class="form-control" name="accountable_individual" id="edit_accountable_individual">
+                            <label for="edit_date_created" class="form-label">Date Acquired</label>
+                            <input type="datetime-local" class="form-control" name="date_created" id="edit_date_created">
                         </div>
                         <div class="mb-3">
                             <label for="edit_remarks" class="form-label">Remarks</label>
@@ -916,7 +896,7 @@ try {
         });
 
         // Edit Equipment
-        $('.edit-equipment').click(function() {
+        $('.edit-equipment').on('click', function() {
             var id = $(this).data('id');
             var asset = $(this).data('asset');
             var desc1 = $(this).data('desc1');
@@ -926,19 +906,17 @@ try {
             var model = $(this).data('model');
             var serial = $(this).data('serial');
             var date = $(this).data('date');
-            var accountable = $(this).data('accountable');
             var remarks = $(this).data('remarks');
             
             $('#edit_equipment_id').val(id);
             $('#edit_asset_tag').val(asset);
-            $('#edit_asset_description1').val(desc1);
-            $('#edit_asset_description2').val(desc2);
-            $('#edit_specification').val(spec);
+            $('#edit_asset_description_1').val(desc1);
+            $('#edit_asset_description_2').val(desc2);
+            $('#edit_specifications').val(spec);
             $('#edit_brand').val(brand);
             $('#edit_model').val(model);
             $('#edit_serial_number').val(serial);
-            $('#edit_date_acquired').val(date);
-            $('#edit_accountable_individual').val(accountable);
+            $('#edit_date_created').val(date);
             $('#edit_remarks').val(remarks);
             
             $('#editEquipmentModal').modal('show');

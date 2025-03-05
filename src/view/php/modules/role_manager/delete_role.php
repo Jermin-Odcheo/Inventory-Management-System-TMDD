@@ -20,7 +20,7 @@ $role_id = intval($_GET['id']); // Convert to integer to sanitize input
 
 try {
     // First, verify that the role exists
-    $stmt = $pdo->prepare("SELECT * FROM roles WHERE Role_ID = ?");
+    $stmt = $pdo->prepare("SELECT * FROM roles WHERE id = ?");
     $stmt->execute([$role_id]);
     $role = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -31,7 +31,7 @@ try {
     }
 
     // Delete the role from the roles table.
-    $stmt = $pdo->prepare("DELETE FROM roles WHERE Role_ID = ?");
+    $stmt = $pdo->prepare("DELETE FROM roles WHERE id = ?");
     if ($stmt->execute([$role_id])) {
         // Log the action in the role_changes table
         $stmt = $pdo->prepare("INSERT INTO role_changes (UserID, RoleID, Action, OldRoleName) VALUES (?, ?, 'Delete', ?)");

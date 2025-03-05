@@ -38,22 +38,31 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $pdo->beginTransaction();
 
                     // Insert equipment status
-                    $stmt = $pdo->prepare("INSERT INTO equipmentstatus (AssetTag, Status, Remarks, AccountableIndividual, CreatedDate) VALUES (?, ?, ?, ?, NOW())");
+                    $stmt = $pdo->prepare("INSERT INTO equipment_status (
+                        asset_tag, 
+                        status, 
+                        action,
+                        remarks, 
+                        date_created,
+                        is_disabled
+                    ) VALUES (?, ?, ?, ?, NOW(), ?)");
                     $stmt->execute([
                         $_POST['asset_tag'],
                         $_POST['status'],
+                        $_POST['action'],
                         $_POST['remarks'],
-                        $_POST['accountable_individual']
+                        isset($_POST['is_disabled']) ? 1 : 0
                     ]);
 
                     $newStatusId = $pdo->lastInsertId();
 
                     // Prepare audit log data
                     $newValues = json_encode([
-                        'AssetTag' => $_POST['asset_tag'],
-                        'Status' => $_POST['status'],
-                        'Remarks' => $_POST['remarks'],
-                        'AccountableIndividual' => $_POST['accountable_individual']
+                        'asset_tag' => $_POST['asset_tag'],
+                        'status' => $_POST['status'],
+                        'action' => $_POST['action'],
+                        'remarks' => $_POST['remarks'],
+                        'is_disabled' => isset($_POST['is_disabled']) ? 1 : 0
                     ]);
 
                     // Insert audit log
@@ -94,43 +103,45 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $pdo->beginTransaction();
 
                     // Get old status details for audit log
-                    $stmt = $pdo->prepare("SELECT * FROM equipmentstatus WHERE EquipmentStatusID = ?");
+                    $stmt = $pdo->prepare("SELECT * FROM equipment_status WHERE equipment_status_id = ?");
                     $stmt->execute([$_POST['status_id']]);
                     $oldStatus = $stmt->fetch(PDO::FETCH_ASSOC);
 
                     // Update equipment status
-                    $stmt = $pdo->prepare("UPDATE equipmentstatus SET 
-                        AssetTag = ?, 
-                        Status = ?, 
-                        Remarks = ?, 
-                        AccountableIndividual = ?
-                        WHERE EquipmentStatusID = ?");
+                    $stmt = $pdo->prepare("UPDATE equipment_status SET 
+                        asset_tag = ?, 
+                        status = ?, 
+                        action = ?,
+                        remarks = ?,
+                        is_disabled = ?
+                        WHERE equipment_status_id = ?");
                     
                     $stmt->execute([
                         $_POST['asset_tag'],
                         $_POST['status'],
+                        $_POST['action'],
                         $_POST['remarks'],
-                        $_POST['accountable_individual'],
+                        isset($_POST['is_disabled']) ? 1 : 0,
                         $_POST['status_id']
                     ]);
 
                     // Prepare audit log data
                     $oldValues = json_encode([
-                        'AssetTag' => $oldStatus['AssetTag'],
-                        'Status' => $oldStatus['Status'],
-                        'Remarks' => $oldStatus['Remarks'],
-                        'AccountableIndividual' => $oldStatus['AccountableIndividual'],
-                        'CreatedDate' => $oldStatus['CreatedDate'],
-                        'ModifiedDate' => $oldStatus['ModifiedDate']
+                        'asset_tag' => $oldStatus['asset_tag'],
+                        'status' => $oldStatus['status'],
+                        'action' => $oldStatus['action'],
+                        'remarks' => $oldStatus['remarks'],
+                        'date_created' => $oldStatus['date_created'],
+                        'is_disabled' => $oldStatus['is_disabled']
                     ]);
 
                     $newValues = json_encode([
-                        'AssetTag' => $_POST['asset_tag'],
-                        'Status' => $_POST['status'],
-                        'Remarks' => $_POST['remarks'],
-                        'AccountableIndividual' => $_POST['accountable_individual'],
-                        'CreatedDate' => $oldStatus['CreatedDate'],
-                        'ModifiedDate' => date('Y-m-d H:i:s')
+                        'asset_tag' => $_POST['asset_tag'],
+                        'status' => $_POST['status'],
+                        'action' => $_POST['action'],
+                        'remarks' => $_POST['remarks'],
+                        'date_created' => $oldStatus['date_created'],
+                        'is_disabled' => isset($_POST['is_disabled']) ? 1 : 0
                     ]);
 
                     // Insert audit log
@@ -178,7 +189,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     }
 
                     // Get status details before deletion for audit log
-                    $stmt = $pdo->prepare("SELECT * FROM equipmentstatus WHERE EquipmentStatusID = ?");
+                    $stmt = $pdo->prepare("SELECT * FROM equipment_status WHERE equipment_status_id = ?");
                     $stmt->execute([$_POST['status_id']]);
                     $statusData = $stmt->fetch(PDO::FETCH_ASSOC);
                     
@@ -194,10 +205,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     
                     // Prepare audit log data
                     $oldValue = json_encode([
-                        'EquipmentStatusID' => $statusData['EquipmentStatusID'],
-                        'AssetTag' => $statusData['AssetTag'],
-                        'Status' => $statusData['Status'],
-                        'Remarks' => $statusData['Remarks']
+                        'equipment_status_id' => $statusData['equipment_status_id'],
+                        'asset_tag' => $statusData['asset_tag'],
+                        'status' => $statusData['status'],
+                        'remarks' => $statusData['remarks']
                     ]);
 
                     // Insert into audit_log
@@ -216,7 +227,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
                     $auditStmt->execute([
                         $_SESSION['user_id'],
-                        $statusData['EquipmentStatusID'],
+                        $statusData['equipment_status_id'],
                         'Equipment Management',
                         'Delete',
                         'Equipment status has been deleted',
@@ -226,7 +237,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     ]);
 
                     // Now perform the delete
-                    $stmt = $pdo->prepare("DELETE FROM equipmentstatus WHERE EquipmentStatusID = ?");
+                    $stmt = $pdo->prepare("DELETE FROM equipment_status WHERE equipment_status_id = ?");
                     $stmt->execute([$_POST['status_id']]);
                     
                     // Commit transaction
@@ -264,7 +275,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
     $id = $_GET['id'];
     try {
         // Get status details before deletion for audit log
-        $stmt = $pdo->prepare("SELECT * FROM equipmentstatus WHERE EquipmentStatusID = ?");
+        $stmt = $pdo->prepare("SELECT * FROM equipment_status WHERE equipment_status_id = ?");
         $stmt->execute([$id]);
         $statusData = $stmt->fetch(PDO::FETCH_ASSOC);
         
@@ -277,10 +288,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             
             // Prepare audit log data
             $oldValue = json_encode([
-                'EquipmentStatusID' => $statusData['EquipmentStatusID'],
-                'AssetTag' => $statusData['AssetTag'],
-                'Status' => $statusData['Status'],
-                'Remarks' => $statusData['Remarks']
+                'equipment_status_id' => $statusData['equipment_status_id'],
+                'asset_tag' => $statusData['asset_tag'],
+                'status' => $statusData['status'],
+                'remarks' => $statusData['remarks']
             ]);
 
             // Insert into audit_log
@@ -299,7 +310,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 
             $auditStmt->execute([
                 $_SESSION['user_id'],
-                $statusData['EquipmentStatusID'],
+                $statusData['equipment_status_id'],
                 'Equipment Management',
                 'Delete',
                 'Equipment status has been deleted',
@@ -309,7 +320,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             ]);
 
             // Now perform the delete
-            $stmt = $pdo->prepare("DELETE FROM equipmentstatus WHERE EquipmentStatusID = ?");
+            $stmt = $pdo->prepare("DELETE FROM equipment_status WHERE equipment_status_id = ?");
             $stmt->execute([$id]);
             
             // Commit transaction
@@ -494,38 +505,39 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                 <th style="width: 7%">#</th>
                                 <th style="width: 13%">Asset Tag</th>
                                 <th style="width: 15%">Status</th>
-                                <th style="width: 15%">Accountable Individual</th>
-                                <th style="width: 12%">Created Date</th>
-                                <th style="width: 12%">Modified Date</th>
-                                <th style="width: 15%">Remarks</th>
-                                <th style="width: 11%">Operations</th>
+                                <th style="width: 15%">Action</th>
+                                <th style="width: 10%">Created Date</th>
+                                <th style="width: 20%">Remarks</th>
+                                <th style="width: 5%">Status</th>
+                                <th style="width: 15%">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php
                             try {
-                                $stmt = $pdo->query("SELECT * FROM equipmentstatus ORDER BY CreatedDate DESC");
+                                $stmt = $pdo->query("SELECT * FROM equipment_status ORDER BY date_created DESC");
                                 while ($row = $stmt->fetch()) {
                                     echo "<tr>";
-                                    echo "<td>" . htmlspecialchars($row['EquipmentStatusID']) . "</td>";
-                                    echo "<td>" . htmlspecialchars($row['AssetTag']) . "</td>";
-                                    echo "<td>" . htmlspecialchars($row['Status']) . "</td>";
-                                    echo "<td>" . htmlspecialchars($row['AccountableIndividual']) . "</td>";
-                                    echo "<td>" . date('Y-m-d H:i', strtotime($row['CreatedDate'])) . "</td>";
-                                    echo "<td>" . date('Y-m-d H:i', strtotime($row['ModifiedDate'])) . "</td>";
-                                    echo "<td>" . htmlspecialchars($row['Remarks']) . "</td>";
+                                    echo "<td>" . htmlspecialchars($row['equipment_status_id']) . "</td>";
+                                    echo "<td>" . htmlspecialchars($row['asset_tag']) . "</td>";
+                                    echo "<td>" . htmlspecialchars($row['status']) . "</td>";
+                                    echo "<td>" . htmlspecialchars($row['action']) . "</td>";
+                                    echo "<td>" . date('Y-m-d H:i', strtotime($row['date_created'])) . "</td>";
+                                    echo "<td>" . htmlspecialchars($row['remarks']) . "</td>";
+                                    echo "<td>" . ($row['is_disabled'] ? '<span class="badge bg-danger">Disabled</span>' : '<span class="badge bg-success">Active</span>') . "</td>";
                                     echo "<td>
                                             <div class='d-flex justify-content-center gap-2'>
                                                 <button class='btn btn-sm btn-outline-primary edit-status' 
-                                                        data-id='" . htmlspecialchars($row['EquipmentStatusID']) . "'
-                                                        data-asset='" . htmlspecialchars($row['AssetTag']) . "'
-                                                        data-status='" . htmlspecialchars($row['Status']) . "'
-                                                        data-accountable='" . htmlspecialchars($row['AccountableIndividual']) . "'
-                                                        data-remarks='" . htmlspecialchars($row['Remarks']) . "'>
+                                                        data-id='" . htmlspecialchars($row['equipment_status_id']) . "'
+                                                        data-asset='" . htmlspecialchars($row['asset_tag']) . "'
+                                                        data-status='" . htmlspecialchars($row['status']) . "'
+                                                        data-action='" . htmlspecialchars($row['action']) . "'
+                                                        data-remarks='" . htmlspecialchars($row['remarks']) . "'
+                                                        data-disabled='" . htmlspecialchars($row['is_disabled']) . "'>
                                                     <i class='far fa-edit'></i> Edit
                                                 </button>
                                                 <button class='btn btn-sm btn-outline-danger delete-status' 
-                                                        data-id='" . htmlspecialchars($row['EquipmentStatusID']) . "'>
+                                                        data-id='" . htmlspecialchars($row['equipment_status_id']) . "'>
                                                     <i class='far fa-trash-alt'></i> Delete
                                                 </button>
                                             </div>
@@ -533,7 +545,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                     echo "</tr>";
                                 }
                             } catch (PDOException $e) {
-                                echo "<tr><td colspan='7'>Error loading data: " . htmlspecialchars($e->getMessage()) . "</td></tr>";
+                                echo "<tr><td colspan='8' class='text-danger text-center'>Error loading equipment status: " . $e->getMessage() . "</td></tr>";
                             }
                             ?>
                         </tbody>
@@ -639,32 +651,38 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="editStatusForm">
+                    <form action="javascript:void(0);" id="edit_status_form">
                         <input type="hidden" name="action" value="update">
                         <input type="hidden" name="status_id" id="edit_status_id">
                         <div class="mb-3">
                             <label for="edit_asset_tag" class="form-label">Asset Tag</label>
-                            <input type="text" class="form-control" name="asset_tag" id="edit_asset_tag" required>
+                            <input type="text" class="form-control" id="edit_asset_tag" name="asset_tag" required>
                         </div>
                         <div class="mb-3">
                             <label for="edit_status" class="form-label">Status</label>
-                            <select class="form-select" name="status" id="edit_status" required>
+                            <select class="form-select" id="edit_status" name="status" required>
+                                <option value="">Select Status</option>
                                 <option value="Working">Working</option>
-                                <option value="Defective">Defective</option>
-                                <option value="Replacement">Replacement</option>
-                                <option value="Maintenance">Maintenance</option>
+                                <option value="Needs Repair">Needs Repair</option>
+                                <option value="Out of Service">Out of Service</option>
+                                <option value="In Maintenance">In Maintenance</option>
+                                <option value="Decommissioned">Decommissioned</option>
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label for="edit_accountable_individual" class="form-label">Accountable Individual</label>
-                            <input type="text" class="form-control" name="accountable_individual" id="edit_accountable_individual" required>
+                            <label for="edit_action" class="form-label">Action</label>
+                            <input type="text" class="form-control" name="action" id="edit_action" required>
                         </div>
                         <div class="mb-3">
                             <label for="edit_remarks" class="form-label">Remarks</label>
-                            <textarea class="form-control" name="remarks" id="edit_remarks" rows="3"></textarea>
+                            <textarea class="form-control" id="edit_remarks" name="remarks" rows="3"></textarea>
                         </div>
-                        <div class="mb-3">
-                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="edit_is_disabled" name="is_disabled">
+                            <label class="form-check-label" for="edit_is_disabled">Disabled</label>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Update Status</button>
                         </div>
                     </form>
                 </div>
@@ -680,7 +698,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
     <script>
         $(document).ready(function() {
             // Add Status
-            $('#addStatusForm').on('submit', function(e) {
+            $('#add_status_form').on('submit', function(e) {
                 e.preventDefault();
                 $.ajax({
                     url: 'equipment_status.php',
@@ -708,20 +726,22 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                 var id = $(this).data('id');
                 var asset = $(this).data('asset');
                 var status = $(this).data('status');
-                var accountable = $(this).data('accountable');
+                var action = $(this).data('action');
                 var remarks = $(this).data('remarks');
-                
+                var disabled = $(this).data('disabled');
+
                 $('#edit_status_id').val(id);
                 $('#edit_asset_tag').val(asset);
                 $('#edit_status').val(status);
-                $('#edit_accountable_individual').val(accountable);
+                $('#edit_action').val(action);
                 $('#edit_remarks').val(remarks);
-                
+                $('#edit_is_disabled').prop('checked', disabled == 1);
+
                 $('#editStatusModal').modal('show');
             });
 
             // Update Status
-            $('#editStatusForm').on('submit', function(e) {
+            $('#edit_status_form').on('submit', function(e) {
                 e.preventDefault();
                 $.ajax({
                     url: 'equipment_status.php',

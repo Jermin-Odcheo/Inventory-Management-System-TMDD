@@ -12,7 +12,7 @@ if (!isset($_GET['id'])) {
 $roleID = $_GET['id'];
 
 // 2) Fetch role details.
-$stmt = $pdo->prepare("SELECT * FROM roles WHERE Role_ID = ?");
+$stmt = $pdo->prepare("SELECT * FROM roles WHERE id = ?");
 $stmt->execute([$roleID]);
 $role = $stmt->fetch();
 if (!$role) {
@@ -20,16 +20,16 @@ if (!$role) {
 }
 
 // 3) Fetch current privileges.
-$stmtCurrent = $pdo->prepare("SELECT Privilege_ID FROM role_privileges WHERE Role_ID = ?");
+$stmtCurrent = $pdo->prepare("SELECT Privilege_ID FROM role_module_privileges WHERE Role_ID = ?");
 $stmtCurrent->execute([$roleID]);
 $currentPrivileges = $stmtCurrent->fetchAll(PDO::FETCH_COLUMN);
 
 // 4) Fetch all privileges and group them by module.
 $sql = "
-    SELECT p.Privilege_ID, p.Privilege_Name, COALESCE(m.Module_Name, 'General') AS Module_Name
+    SELECT p.id, p.priv_name, COALESCE(m.Module_Name, 'General') AS Module_Name
     FROM privileges p
-    LEFT JOIN modules m ON p.Module_ID = m.Module_ID
-    ORDER BY Module_Name, p.Privilege_Name
+    LEFT JOIN modules m ON p.id = m.id
+    ORDER BY Module_Name, p.priv_name
 ";
 $stmtPrivileges = $pdo->query($sql);
 $allPrivileges = $stmtPrivileges->fetchAll(PDO::FETCH_ASSOC);
@@ -53,20 +53,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $pdo->beginTransaction();
 
         // Update role name.
-        $stmtUpdate = $pdo->prepare("UPDATE roles SET Role_Name = ? WHERE Role_ID = ?");
+        $stmtUpdate = $pdo->prepare("UPDATE roles SET Role_Name = ? WHERE id = ?");
         $stmtUpdate->execute([$roleName, $roleID]);
 
         // Fetch old privileges.
-        $stmtOldPrivileges = $pdo->prepare("SELECT Privilege_ID FROM role_privileges WHERE Role_ID = ?");
+        $stmtOldPrivileges = $pdo->prepare("SELECT Privilege_ID FROM role_module_privileges WHERE Role_ID = ?");
         $stmtOldPrivileges->execute([$roleID]);
         $oldPrivileges = $stmtOldPrivileges->fetchAll(PDO::FETCH_COLUMN);
 
         // Remove old privileges.
-        $stmtDelete = $pdo->prepare("DELETE FROM role_privileges WHERE Role_ID = ?");
+        $stmtDelete = $pdo->prepare("DELETE FROM role_module_privileges WHERE Role_ID = ?");
         $stmtDelete->execute([$roleID]);
 
         // Insert new privileges.
-        $stmtInsert = $pdo->prepare("INSERT INTO role_privileges (Role_ID, Privilege_ID) VALUES (?, ?)");
+        $stmtInsert = $pdo->prepare("INSERT INTO role_module_privileges (Role_ID, Privilege_ID) VALUES (?, ?)");
         foreach ($selectedPrivileges as $privilegeID) {
             $stmtInsert->execute([$roleID, $privilegeID]);
         }
@@ -86,10 +86,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         // Fetch updated privileges to return in JSON.
         $stmtUpdatedPrivileges = $pdo->prepare("
-            SELECT p.Privilege_Name, COALESCE(m.Module_Name, 'General') AS Module_Name
-            FROM role_privileges rp
-            JOIN privileges p ON rp.Privilege_ID = p.Privilege_ID
-            LEFT JOIN modules m ON p.Module_ID = m.Module_ID
+            SELECT p.priv_name, COALESCE(m.Module_Name, 'General') AS Module_Name
+            FROM role_module_privileges rp
+            JOIN privileges p ON rp.Privilege_ID = p.id
+            LEFT JOIN modules m ON p.id = m.id
             WHERE rp.Role_ID = ?
         ");
         $stmtUpdatedPrivileges->execute([$roleID]);
@@ -126,7 +126,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         <div class="mb-3">
             <label for="role_name" class="form-label">Role Name</label>
             <input type="text" class="form-control" id="role_name" name="role_name"
-                   value="<?php echo htmlspecialchars($role['Role_Name']); ?>" required>
+                   value="<?php echo htmlspecialchars($role['role_name']); ?>" required>
         </div>
 
         <!-- Grouped Privileges -->
@@ -138,11 +138,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         <div class="form-check form-check-inline me-2">
                             <input class="form-check-input" type="checkbox"
                                    name="privileges[]"
-                                   value="<?php echo $priv['Privilege_ID']; ?>"
-                                   id="priv_<?php echo $priv['Privilege_ID']; ?>"
-                                <?php echo in_array($priv['Privilege_ID'], $currentPrivileges) ? 'checked' : ''; ?>>
-                            <label class="form-check-label small" for="priv_<?php echo $priv['Privilege_ID']; ?>">
-                                <?php echo htmlspecialchars($priv['Privilege_Name']); ?>
+                                   value="<?php echo $priv['id']; ?>"
+                                   id="priv_<?php echo $priv['id']; ?>"
+                                <?php echo in_array($priv['id'], $currentPrivileges) ? 'checked' : ''; ?>>
+                            <label class="form-check-label small" for="priv_<?php echo $priv['id']; ?>">
+                                <?php echo htmlspecialchars($priv['priv_name']); ?>
                             </label>
                         </div>
                     <?php endforeach; ?>

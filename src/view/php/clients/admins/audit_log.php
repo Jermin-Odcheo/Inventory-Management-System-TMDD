@@ -11,11 +11,12 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 // Fetch all audit logs (including permanent deletes)
-$query = "SELECT audit_log.*, users.email AS user_email 
+$query = "SELECT audit_log.*, users.email AS email 
           FROM audit_log 
-          LEFT JOIN users ON audit_log.UserID = users.User_ID
+          LEFT JOIN users ON audit_log.UserID = users.id
           WHERE audit_log.Module NOT IN ('Purchase Order', 'Charge Invoice', 'Receiving Report')
           ORDER BY audit_log.Date_Time DESC";
+
 $stmt = $pdo->prepare($query);
 $stmt->execute();
 $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -165,20 +166,20 @@ function formatDetailsAndChanges($log)
     $newData = !is_null($log['NewVal']) ? json_decode($log['NewVal'], true) : [];
 
     // Use user_email from the log if available, or fallback to newData email
-    $userEmail = $log['user_email'] ?? ($newData['Email'] ?? 'User');
+    $userEmail = $log['user_email'] ?? ($newData['email'] ?? 'User');
 
     // For soft delete/remove, try to use the target's name (if available)
     $targetName = $userEmail;
     if ($action === 'remove') {
-        if (isset($newData['First_Name'], $newData['Last_Name'])) {
-            $targetName = $newData['First_Name'] . ' ' . $newData['Last_Name'];
+        if (isset($newData['First_Name'], $newData['last_name'])) {
+            $targetName = $newData['first_name'] . ' ' . $newData['last_name'];
         }
     }
 
     // Prepare default strings
     $details = '';
     $changes = '';
-    $targetEntityName = $newData['Email'] ?? $oldData['Email'] ?? 'Unknown';
+    $targetEntityName = $newData['email'] ?? $oldData['email'] ?? 'Unknown';
     switch ($action) {
 
         case 'create':
@@ -338,7 +339,7 @@ function getChangedFieldNames(array $oldData, array $newData)
                                     <td data-label="User">
                                         <div class="d-flex align-items-center">
                                             <i class="fas fa-user-circle me-2"></i>
-                                            <?php echo htmlspecialchars($log['user_email'] ?? 'N/A'); ?>
+                                            <?php echo htmlspecialchars($log['email'] ?? 'N/A'); ?>
                                         </div>
                                     </td>
 

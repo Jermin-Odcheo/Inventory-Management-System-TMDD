@@ -98,9 +98,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 // ------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Retrieve and sanitize form input
-    $DepartmentID          = trim($_POST['DepartmentID'] ?? '');
-    $DepartmentAcronym  = trim($_POST['DepartmentAcronym'] ?? '');
-    $DepartmentName       = trim($_POST['DepartmentName'] ?? '');
+    $DepartmentID = trim($_POST['DepartmentID'] ?? '');
+    $DepartmentAcronym = trim($_POST['DepartmentAcronym'] ?? '');
+    $DepartmentName = trim($_POST['DepartmentName'] ?? '');
 
     $response = array('status' => '', 'message' => '');
 
@@ -119,12 +119,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Insert equipment location
             $stmt = $pdo->prepare("INSERT INTO departments (
-                Department_ID, 
-                Department_Acronym, 
+                id, 
+                abbreviation, 
                 Department_Name 
             ) VALUES (?, ?, ?)");
             $stmt->execute([$DepartmentID, $DepartmentAcronym, $DepartmentName]);
-            
+
             $newDepartmentId = $pdo->lastInsertId();
 
             // Prepare audit log data
@@ -152,7 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
 
             $pdo->commit();
-            
+
             $response['status'] = 'success';
             $response['message'] = 'Department has been added successfully.';
             $_SESSION['success'] = "Department has been added successfully.";
@@ -170,39 +170,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = $_POST['id'];
         try {
             $pdo->beginTransaction();
-    
+
             // Get old department details for audit log
-            $stmt = $pdo->prepare("SELECT * FROM departments WHERE Department_ID = ?");
+            $stmt = $pdo->prepare("SELECT * FROM departments WHERE id = ?");
             $stmt->execute([$id]);
             $oldDepartment = $stmt->fetch(PDO::FETCH_ASSOC);
-    
+
             // Update department details
             $stmt = $pdo->prepare("UPDATE departments SET 
-                Department_Acronym = ?, 
+                abbreviation = ?, 
                 Department_Name = ?
-                WHERE Department_ID = ?");
+                WHERE id = ?");
             $stmt->execute([
                 $_POST['DepartmentAcronym'],
                 $_POST['DepartmentName'],
                 $id
             ]);
-    
+
             // Prepare audit log data
             $oldValues = json_encode([
                 'Department_Acronym' => $oldDepartment['Department_Acronym'],
                 'Department_Name' => $oldDepartment['Department_Name']
             ]);
-    
+
             $newValues = json_encode([
                 'Department_Acronym' => $_POST['DepartmentAcronym'],
                 'Department_Name' => $_POST['DepartmentName']
             ]);
-    
+
             // Insert audit log
             $auditStmt = $pdo->prepare("INSERT INTO audit_log (
                 UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-    
+
             $auditStmt->execute([
                 $_SESSION['user_id'],
                 $id,
@@ -213,9 +213,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $newValues,
                 'Successful'
             ]);
-    
+
             $pdo->commit();
-            
+
             // JSON response
             header('Content-Type: application/json');
             echo json_encode([
@@ -227,7 +227,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
             }
-            
+
             // JSON error response
             header('Content-Type: application/json');
             echo json_encode([
@@ -237,14 +237,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
     }
-    
+
 }
 
 // ------------------------
 // RETRIEVE ALL DEPARTMENTS
 // ------------------------
 try {
-    $stmt = $pdo->query("SELECT * FROM departments ORDER BY Department_ID");
+    $stmt = $pdo->query("SELECT * FROM departments ORDER BY id");
     $departments = $stmt->fetchAll();
 } catch (PDOException $e) {
     $errors[] = "Error retrieving departments: " . $e->getMessage();
@@ -267,11 +267,13 @@ try {
             background-color: #f8f9fa;
             min-height: 100vh;
         }
+
         .main-content {
             margin-left: 300px;
             padding: 20px;
             transition: margin-left 0.3s ease;
         }
+
         @media (max-width: 768px) {
             .main-content {
                 margin-left: 0;
@@ -320,16 +322,17 @@ try {
                             <input type="text" class="form-control" placeholder="Search..." id="eqSearch">
                         </div>
                     </div>
-                      <div class="card-body">
+                    <div class="card-body">
                         <?php if (!empty($departments)): ?>
                             <div class="table-responsive">
                                 <!-- Add Department Button and Filter -->
                                 <div class="d-flex justify-content-start mb-3 gap-2">
-                                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addDepartmentModal">
+                                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal"
+                                            data-bs-target="#addDepartmentModal">
                                         <i class="bi bi-plus-circle"></i> Add Department
                                     </button>
                                 </div>
-                                
+
                                 <table class="table table-striped table-hover align-middle" id="table">
                                     <thead class="table-dark">
                                     <tr>
@@ -342,19 +345,21 @@ try {
                                     <tbody>
                                     <?php foreach ($departments as $department): ?>
                                         <tr>
-                                            <td><?php echo htmlspecialchars($department['Department_ID']); ?></td>
-                                            <td><?php echo htmlspecialchars($department['Department_Acronym']); ?></td>
-                                            <td><?php echo htmlspecialchars($department['Department_Name']); ?></td>
+                                            <td><?php echo htmlspecialchars($department['id']); ?></td>
+                                            <td><?php echo htmlspecialchars($department['abbreviation']); ?></td>
+                                            <td><?php echo htmlspecialchars($department['department_name']); ?></td>
                                             <td class="text-center">
                                                 <div class="btn-group" role="group">
-                                                    <a class="btn btn-sm btn-outline-primary edit-department" 
-                                                    data-id="<?php echo htmlspecialchars($department['Department_ID']); ?>"
-                                                    data-department-id="<?php echo htmlspecialchars($department['Department_ID']); ?>"
-                                                    data-department-acronym="<?php echo htmlspecialchars($department['Department_Acronym']); ?>"
-                                                    data-department-name="<?php echo htmlspecialchars($department['Department_Name']); ?>">
+                                                    <a class="btn btn-sm btn-outline-primary edit-department"
+                                                       data-id="<?php echo htmlspecialchars($department['id']); ?>"
+                                                       data-department-id="<?php echo htmlspecialchars($department['id']); ?>"
+                                                       data-department-acronym="<?php echo htmlspecialchars($department['abbreviation']); ?>"
+                                                       data-department-name="<?php echo htmlspecialchars($department['department_name']); ?>">
                                                         <i class="bi bi-pencil-square"></i> Edit
                                                     </a>
-                                                    <a class="btn btn-sm btn-outline-danger" href="?action=delete&id=<?php echo htmlspecialchars($department['Department_ID']); ?>" onclick="return confirm('Are you sure you want to delete this department?');">
+                                                    <a class="btn btn-sm btn-outline-danger"
+                                                       href="?action=delete&id=<?php echo htmlspecialchars($department['id']); ?>"
+                                                       onclick="return confirm('Are you sure you want to delete this department?');">
                                                         <i class="bi bi-trash"></i> Delete
                                                     </a>
                                                 </div>
@@ -369,7 +374,8 @@ try {
                                         <!-- Pagination Info -->
                                         <div class="col-12 col-sm-auto">
                                             <div class="text-muted">
-                                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span
+                                                Showing <span id="currentPage">1</span> to <span
+                                                        id="rowsPerPage">10</span> of <span
                                                         id="totalRows">0</span> entries
                                             </div>
                                         </div>
@@ -377,7 +383,8 @@ try {
                                         <!-- Pagination Controls -->
                                         <div class="col-12 col-sm-auto ms-sm-auto">
                                             <div class="d-flex align-items-center gap-2">
-                                                <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                                <button id="prevPage"
+                                                        class="btn btn-outline-primary d-flex align-items-center gap-1">
                                                     <i class="bi bi-chevron-left"></i>
                                                     Previous
                                                 </button>
@@ -389,7 +396,8 @@ try {
                                                     <option value="100">100</option>
                                                 </select>
 
-                                                <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                                <button id="nextPage"
+                                                        class="btn btn-outline-primary d-flex align-items-center gap-1">
                                                     Next
                                                     <i class="bi bi-chevron-right"></i>
                                                 </button>
@@ -419,7 +427,7 @@ try {
             <div class="modal-body">
                 <form id="addDepartmentForm" method="post">
                     <input type="hidden" name="action" value="add">
-                    
+
                     <div class="mb-3">
                         <label for="DepartmentID" class="form-label">
                             <i class="bi bi-tag"></i> Department ID <span class="text-danger">*</span>
@@ -431,7 +439,8 @@ try {
                         <label for="BuildingLocation" class="form-label">
                             <i class="bi bi-building"></i> Department Acronym <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control" id="DepartmentAcronym" name="DepartmentAcronym" required>
+                        <input type="text" class="form-control" id="DepartmentAcronym" name="DepartmentAcronym"
+                               required>
                     </div>
 
                     <div class="mb-3">
@@ -463,7 +472,7 @@ try {
                 <form id="editDepartmentForm" method="post">
                     <input type="hidden" name="action" value="update">
                     <input type="hidden" name="id" id="edit_department_hidden_id">
-                    
+
                     <div class="mb-3">
                         <label for="edit_department_id" class="form-label">
                             <i class="bi bi-tag"></i> Department ID <span class="text-danger">*</span>
@@ -475,14 +484,16 @@ try {
                         <label for="edit_department_acronym" class="form-label">
                             <i class="bi bi-building"></i> Department Acronym <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control" id="edit_department_acronym" name="DepartmentAcronym" required>
+                        <input type="text" class="form-control" id="edit_department_acronym" name="DepartmentAcronym"
+                               required>
                     </div>
 
                     <div class="mb-3">
                         <label for="edit_department_name" class="form-label">
                             <i class="bi bi-layers"></i> Department Name <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control" id="edit_department_name" name="DepartmentName" required>
+                        <input type="text" class="form-control" id="edit_department_name" name="DepartmentName"
+                               required>
                     </div>
 
                     <div class="d-flex justify-content-end">
@@ -497,11 +508,11 @@ try {
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 <!-- JavaScript for Real-Time Table Filtering -->
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         // Search and filter functionality
         const searchInput = document.getElementById('eqSearch');
         const filterBuilding = document.getElementById('filterBuilding');
-        
+
         if (searchInput) {
             searchInput.addEventListener('keyup', filterTable);
         }
@@ -514,7 +525,7 @@ try {
             const filterValue = filterBuilding.value.toLowerCase();
             const rows = document.querySelectorAll('#table tbody tr');
 
-            rows.forEach(function(row) {
+            rows.forEach(function (row) {
                 const rowText = row.textContent.toLowerCase();
                 const buildingCell = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
 
@@ -526,29 +537,69 @@ try {
         }
     });
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Form submissions
-    $('#addDepartmentForm').on('submit', function(e) {
-        e.preventDefault();
-        
-        $.ajax({
-            url: 'department_management.php',
-            method: 'POST',
-            data: $(this).serialize(),
-            dataType: 'json',
-            success: function(result) {
-                if (result.status === 'success') {
-                    // Hide modal and redirect
-                    $('#addDepartmentModal').modal('hide');
-                    window.location.href = 'department_management.php';
-                } else {
-                    alert(result.message || 'An error occurred');
+    document.addEventListener('DOMContentLoaded', function () {
+        // Form submissions
+        $('#addDepartmentForm').on('submit', function (e) {
+            e.preventDefault();
+
+            $.ajax({
+                url: 'department_management.php',
+                method: 'POST',
+                data: $(this).serialize(),
+                dataType: 'json',
+                success: function (result) {
+                    if (result.status === 'success') {
+                        // Hide modal and redirect
+                        $('#addDepartmentModal').modal('hide');
+                        window.location.href = 'department_management.php';
+                    } else {
+                        alert(result.message || 'An error occurred');
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.log(xhr.responseText);
+                    alert('Error submitting the form: ' + error);
                 }
-            },
-            error: function(xhr, status, error) {
-                console.log(xhr.responseText);
-                alert('Error submitting the form: ' + error);
-            }
+            });
+        });
+
+        // Edit button click handler for departments
+        $('.edit-department').click(function () {
+            const id = $(this).data('id');
+            const departmentId = $(this).data('department-id');
+            const departmentAcronym = $(this).data('department-acronym');
+            const departmentName = $(this).data('department-name');
+
+            // Populate modal fields
+            $('#edit_department_hidden_id').val(id); // Hidden field for ID
+            $('#edit_department_id').val(departmentId);
+            $('#edit_department_acronym').val(departmentAcronym);
+            $('#edit_department_name').val(departmentName);
+
+            // Show the modal
+            $('#editDepartmentModal').modal('show');
+        });
+
+        // Edit form submission
+        $('#editDepartmentForm').on('submit', function (e) {
+            e.preventDefault();
+            $.ajax({
+                url: 'department_management.php',
+                method: 'POST',
+                data: $(this).serialize(),
+                dataType: 'json',
+                success: function (result) {
+                    if (result.status === 'success') {
+                        $('#editDepartmentModal').modal('hide');
+                        window.location.href = 'department_management.php';
+                    } else {
+                        alert(result.message || 'An error occurred');
+                    }
+                },
+                error: function (xhr, status, error) {
+                    alert('Error updating location: ' + error);
+                }
+            });
         });
     });
 

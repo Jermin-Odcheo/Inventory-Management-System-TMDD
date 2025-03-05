@@ -7,14 +7,14 @@ require_once('..\..\..\..\..\config\ims-tmdd.php'); // Database connection
 try {
     $stmt = $pdo->prepare("
         SELECT 
-            r.Role_ID, 
+            r.id, 
             r.Role_Name, 
             GROUP_CONCAT(DISTINCT m.Module_Name ORDER BY m.Module_Name SEPARATOR ', ') AS Modules
         FROM roles AS r
-        LEFT JOIN role_privileges AS rp ON r.Role_ID = rp.Role_ID
-        LEFT JOIN privileges AS p ON rp.Privilege_ID = p.Privilege_ID
-        LEFT JOIN modules AS m ON p.Module_ID = m.Module_ID
-        GROUP BY r.Role_ID, r.Role_Name
+        LEFT JOIN role_module_privileges AS rp ON r.id = rp.Role_ID
+        LEFT JOIN privileges AS p ON rp.Privilege_ID = p.id
+        LEFT JOIN modules AS m ON p.id = m.id
+        GROUP BY r.id, r.Role_Name
         ORDER BY r.Role_Name
     ");
     $stmt->execute();
@@ -27,13 +27,13 @@ try {
 try {
     $moduleStmt = $pdo->prepare("
         SELECT 
-            m.Module_ID, 
+            m.id, 
             m.Module_Name, 
-            GROUP_CONCAT(p.Privilege_Name ORDER BY p.Privilege_ID SEPARATOR ', ') AS Privileges
+            GROUP_CONCAT(p.priv_name ORDER BY p.priv_name SEPARATOR ', ') AS Privileges
         FROM modules AS m
-        LEFT JOIN privileges AS p ON m.Module_ID = p.Module_ID
-        GROUP BY m.Module_ID, m.Module_Name
-        ORDER BY m.Module_ID
+        LEFT JOIN privileges AS p ON m.id = p.id
+        GROUP BY m.id, m.Module_Name
+        ORDER BY m.id
     ");
     $moduleStmt->execute();
     $modules = $moduleStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -56,7 +56,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['assign_module'])) {
 
     try {
         $checkStmt = $pdo->prepare("
-            SELECT * FROM role_privileges 
+            SELECT * FROM role_module_privileges 
             WHERE Role_ID = ? 
             AND Privilege_ID IN (SELECT Privilege_ID FROM privileges WHERE Module_ID = ?)
         ");
@@ -64,8 +64,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['assign_module'])) {
 
         if ($checkStmt->rowCount() == 0) {
             $insertStmt = $pdo->prepare("
-                INSERT INTO role_privileges (Role_ID, Privilege_ID) 
-                SELECT ?, Privilege_ID FROM privileges WHERE Module_ID = ?
+                INSERT INTO role_module_privileges (Role_ID, Privilege_ID) 
+                SELECT ?, id FROM privileges WHERE id = ?
             ");
             $insertStmt->execute([$roleId, $moduleId]);
             echo("Module successfully assigned!");
@@ -82,7 +82,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['remove_module'])) {
 
     try {
         $deleteStmt = $pdo->prepare("
-            DELETE FROM role_privileges 
+            DELETE FROM role_module_privileges 
             WHERE Role_ID = ? 
             AND Privilege_ID IN (SELECT Privilege_ID FROM privileges WHERE Module_ID = ?)
         ");
@@ -126,7 +126,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['remove_module'])) {
                 <td>
                     <form method="POST">
                         <input type="hidden" name="selected_role_name" value="<?= $role['Role_Name'] ?>">
-                        <input type="hidden" name="selected_role_id" value="<?= $role['Role_ID'] ?>">
+                        <input type="hidden" name="selected_role_id" value="<?= $role['id'] ?>">
                         <button type="submit" name="open_modal" class="btn btn-info btn-lg">Edit Modules</button>
                     </form>
                 </td>
@@ -159,13 +159,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['remove_module'])) {
                             <tbody>
                                 <?php foreach ($modules as $module): ?>
                                     <tr>
-                                        <td><?= $module['Module_ID'] ?></td>
+                                        <td><?= $module['id'] ?></td>
                                         <td><?= $module['Module_Name'] ?></td>
                                         <td><?= htmlspecialchars($module['Privileges'] ?? 'None') ?></td>
                                         <td>
                                             <form method="POST">
                                                 <input type="hidden" name="role_id" value="<?= $selectedRoleId ?>">
-                                                <input type="hidden" name="module_id" value="<?= $module['Module_ID'] ?>">
+                                                <input type="hidden" name="module_id" value="<?= $module['id'] ?>">
                                                 <button type="submit" name="assign_module" class="btn btn-success">Assign</button>
                                                 <button type="submit" name="remove_module">Remove</button>
                                             </form>

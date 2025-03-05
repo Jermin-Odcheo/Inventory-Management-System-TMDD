@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $userId = $_SESSION['user_id'];
 
         // Get user details before deletion for audit log
-        $stmt = $pdo->prepare("SELECT * FROM users WHERE User_ID = ?");
+        $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
         $stmt->execute([$userId]);
         $userData = $stmt->fetch(PDO::FETCH_ASSOC);
         
@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $stmt = $pdo->prepare("
             SELECT r.Role_Name 
             FROM roles r 
-            JOIN user_roles ur ON r.Role_ID = ur.Role_ID 
+            JOIN user_roles ur ON r.id = ur.Role_ID 
             WHERE ur.User_ID = ?
         ");
         $stmt->execute([$userId]);
@@ -80,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $stmt->execute([$userId]);
         
         // Soft delete the user (set is_deleted to 1)
-        $stmt = $pdo->prepare("UPDATE users SET is_deleted = 1 WHERE User_ID = ?");
+        $stmt = $pdo->prepare("UPDATE users SET is_disabled = 1 WHERE id = ?");
         $stmt->execute([$userId]);
         
         // Commit transaction

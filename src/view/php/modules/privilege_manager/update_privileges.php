@@ -17,11 +17,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['module_id']) && isset(
         $pdo->beginTransaction();
 
         // Delete existing privileges for the module
-        $stmt = $pdo->prepare("DELETE FROM privileges WHERE Module_ID = ?");
+        $stmt = $pdo->prepare("DELETE FROM privileges WHERE id = ?");
         $stmt->execute([$moduleId]);
 
         // Insert new privileges
-        $stmt = $pdo->prepare("INSERT INTO privileges (Module_ID, Privilege_Name) VALUES (?, ?)");
+        $stmt = $pdo->prepare("INSERT INTO privileges (id, priv_name) VALUES (?, ?)");
         foreach ($privileges as $privilege) {
             $privilege = trim($privilege);
             if (!empty($privilege)) {

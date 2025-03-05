@@ -4,7 +4,7 @@ require_once('..\..\..\..\..\config\ims-tmdd.php'); // Database connection
 
 // Fetch all roles
 try {
-    $stmt = $pdo->prepare("SELECT Role_ID, Role_Name FROM roles ORDER BY Role_Name");
+    $stmt = $pdo->prepare("SELECT id, Role_Name FROM roles ORDER BY Role_Name");
     $stmt->execute();
     $roles = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
@@ -20,7 +20,7 @@ if (isset($_POST['remove_module']) && isset($_POST['module_id'])) {
 
         // Delete module privileges for the role
         $deleteStmt = $pdo->prepare("
-            DELETE FROM role_privileges 
+            DELETE FROM role_module_privileges 
             WHERE Role_ID = ? 
             AND Privilege_ID IN (SELECT Privilege_ID FROM privileges WHERE Module_ID = ?)
         ");
@@ -38,10 +38,10 @@ if ($selectedRoleId) {
     try {
         // Fetch modules and privileges for the selected role
         $moduleStmt = $pdo->prepare("
-            SELECT DISTINCT m.Module_ID, m.Module_Name 
+            SELECT DISTINCT m.id, m.Module_Name 
             FROM modules AS m
-            INNER JOIN privileges AS p ON m.Module_ID = p.Module_ID
-            INNER JOIN role_privileges AS rp ON p.Privilege_ID = rp.Privilege_ID
+            INNER JOIN privileges AS p ON m.id = p.id
+            INNER JOIN role_module_privileges AS rp ON p.id = rp.Privilege_ID
             WHERE rp.Role_ID = ?
             ORDER BY m.Module_Name
         ");
@@ -50,9 +50,9 @@ if ($selectedRoleId) {
 
         // Fetch existing privileges for the role
         $privilegeStmt = $pdo->prepare("
-            SELECT p.Module_ID, p.Privilege_Name 
+            SELECT p.id, p.priv_name 
             FROM privileges AS p
-            INNER JOIN role_privileges AS rp ON p.Privilege_ID = rp.Privilege_ID
+            INNER JOIN role_module_privileges AS rp ON p.id = rp.Privilege_ID
             WHERE rp.Role_ID = ?
         ");
         $privilegeStmt->execute([$selectedRoleId]);
@@ -66,12 +66,12 @@ if ($selectedRoleId) {
 
         // Fetch available modules (not already assigned)
         $availableModulesStmt = $pdo->prepare("
-            SELECT m.Module_ID, m.Module_Name 
+            SELECT m.id, m.Module_Name 
             FROM modules AS m
-            WHERE m.Module_ID NOT IN (
-                SELECT DISTINCT p.Module_ID 
+            WHERE m.id NOT IN (
+                SELECT DISTINCT p.id 
                 FROM privileges AS p
-                INNER JOIN role_privileges AS rp ON p.Privilege_ID = rp.Privilege_ID
+                INNER JOIN role_module_privileges AS rp ON p.id = rp.Privilege_ID
                 WHERE rp.Role_ID = ?
             )
             ORDER BY m.Module_Name
@@ -90,7 +90,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_privileges'])) 
         foreach ($_POST['privileges'] as $moduleID => $privileges) {
             // Remove existing privileges for this role & module
             $deleteStmt = $pdo->prepare("
-                DELETE FROM role_privileges 
+                DELETE FROM role_module_privileges 
                 WHERE Role_ID = ? 
                 AND Privilege_ID IN (SELECT Privilege_ID FROM privileges WHERE Module_ID = ?)
             ");
@@ -99,7 +99,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_privileges'])) 
             // Insert selected privileges
             foreach ($privileges as $privilegeName) {
                 $privilegeStmt = $pdo->prepare("
-                    SELECT Privilege_ID FROM privileges WHERE Privilege_Name = ? AND Module_ID = ?
+                    SELECT id FROM privileges WHERE priv_name = ? AND id = ?
                 ");
                 $privilegeStmt->execute([$privilegeName, $moduleID]);
                 $privilege = $privilegeStmt->fetch(PDO::FETCH_ASSOC);
@@ -107,7 +107,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_privileges'])) 
 
                 // Insert new privilege
                 $insertStmt = $pdo->prepare("
-                    INSERT INTO role_privileges (Role_ID, Privilege_ID) 
+                    INSERT INTO role_module_privileges (Role_ID, Privilege_ID) 
                     VALUES (?, ?)
                 ");
                 $insertStmt->execute([$selectedRoleId, $privilege['Privilege_ID']]);
@@ -126,7 +126,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['assign_module'])) {
     echo($roleId . " trying to add module " . $moduleId);
     try {
         $checkStmt = $pdo->prepare("
-            SELECT * FROM role_privileges 
+            SELECT * FROM role_module_privileges 
             WHERE Role_ID = ? 
             AND Privilege_ID IN (SELECT Privilege_ID FROM privileges WHERE Module_ID = ?)
         ");
@@ -134,8 +134,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['assign_module'])) {
 
         if ($checkStmt->rowCount() == 0) {
             $insertStmt = $pdo->prepare("
-                INSERT INTO role_privileges (Role_ID, Privilege_ID) 
-                SELECT ?, Privilege_ID FROM privileges WHERE Module_ID = ?
+                INSERT INTO role_module_privileges (Role_ID, Privilege_ID) 
+                SELECT ?, id FROM privileges WHERE id = ?
             ");
             $insertStmt->execute([$roleId, $moduleId]);
             echo("Module successfully assigned!");
@@ -195,7 +195,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['assign_module'])) {
     <select name="role_id" id="role" onchange="this.form.submit()">
         <option value="">-- Select Role --</option>
         <?php foreach ($roles as $role): ?>
-            <option value="<?= $role['Role_ID'] ?>" <?= ($selectedRoleId == $role['Role_ID']) ? 'selected' : '' ?>>
+            <option value="<?= $role['id'] ?>" <?= ($selectedRoleId == $role['id']) ? 'selected' : '' ?>>
                 <?= htmlspecialchars($role['Role_Name']) ?>
             </option>
         <?php endforeach; ?>
@@ -221,8 +221,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['assign_module'])) {
                             <?php
                             $allPrivileges = ["View", "Add", "Edit", "Delete"];
                             foreach ($allPrivileges as $privilege) {
-                                $checked = isset($privilegesByModule[$module['Module_ID']]) && in_array($privilege, $privilegesByModule[$module['Module_ID']]) ? "checked" : "";
-                                echo "<label><input type='checkbox' name='privileges[{$module['Module_ID']}][]' value='{$privilege}' {$checked}> {$privilege}</label>";
+                                $checked = isset($privilegesByModule[$module['id']]) && in_array($privilege, $privilegesByModule[$module['id']]) ? "checked" : "";
+                                echo "<label><input type='checkbox' name='privileges[{$module['id']}][]' value='{$privilege}' {$checked}> {$privilege}</label>";
                             }
                             ?>
                         </div>
@@ -230,8 +230,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['assign_module'])) {
                     <td>
                     <form method="POST">
                         <input type="hidden" name="role_id" value="<?= $selectedRoleId ?>">
-                        <a>Module ID: <?= $module['Module_ID'] ?></a>
-                        <input type="hidden" name="module_id" value="<?= $module['Module_ID'] ?>">
+                        <a>Module ID: <?= $module['id'] ?></a>
+                        <input type="hidden" name="module_id" value="<?= $module['id'] ?>">
                         <button type="submit" name="remove_module">Remove</button>
                     </form>
                     </td>
@@ -253,13 +253,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['assign_module'])) {
                 <select name="new_module" id="new_module" onchange="fetchPrivileges()" required>
                     <option value="">-- Select Module --</option>
                     <?php foreach ($availableModules as $module): ?>
-                        <option value="<?= $module['Module_ID'] ?>"><?= htmlspecialchars($module['Module_Name']) ?></option>
+                        <option value="<?= $module['id'] ?>"><?= htmlspecialchars($module['Module_Name']) ?></option>
                     <?php endforeach; ?>
                 </select>
                 <br><br>
                 <div id="privilegeCheckboxes"></div>
                 <br>
-                <input type="hidden" name="module_id" value="<?= $module['Module_ID'] ?>">
+                <input type="hidden" name="module_id" value="<?= $module['id'] ?>">
                 <input type="hidden" name="role_id" value="<?= $selectedRoleId ?>">
                 <button type="submit" name="assign_module">Assign</button>
             </form>

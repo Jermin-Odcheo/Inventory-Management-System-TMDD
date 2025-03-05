@@ -20,7 +20,7 @@ function getUserRoles($pdo, $userId) {
         $stmt = $pdo->prepare("
             SELECT r.Role_Name 
             FROM roles r 
-            JOIN user_roles ur ON r.Role_ID = ur.Role_ID 
+            JOIN user_roles ur ON r.id = ur.Role_ID 
             WHERE ur.User_ID = ?
         ");
         $stmt->execute([$userId]);
@@ -71,10 +71,10 @@ try {
         
         if ($isPermanentDelete) {
             // For permanent delete
-            $stmt = $pdo->prepare("DELETE FROM users WHERE User_ID = ? AND is_deleted = 1");
+            $stmt = $pdo->prepare("DELETE FROM users WHERE id = ? AND is_disabled = 1");
         } else {
             // For soft delete
-            $stmt = $pdo->prepare("UPDATE users SET is_deleted = 1 WHERE User_ID = ?");
+            $stmt = $pdo->prepare("UPDATE users SET is_disabled = 1 WHERE id = ?");
         }
         
         if (!$stmt->execute([$targetUserId])) {

@@ -2,7 +2,6 @@
 session_start();
 require '../../../../../config/ims-tmdd.php'; // This defines $pdo (PDO connection)
 
-
 include '../../general/header.php';
 
 // If not logged in, redirect to login page
@@ -16,21 +15,27 @@ if (!isset($_SESSION['user_id'])) {
 }
 $user_id = $_SESSION['user_id'];
 
-// Fetch user details
-$sql = "SELECT email, username, first_name, last_name, role FROM users WHERE User_ID = ?";
+// Fetch user details and role
+$sql = "
+    SELECT u.email, u.username, u.first_name, u.last_name, r.role_name 
+    FROM users u 
+    LEFT JOIN user_roles ur ON u.id = ur.user_id 
+    LEFT JOIN roles r ON ur.role_id = r.id 
+    WHERE u.id = ?
+";
 $stmt = $pdo->prepare($sql);
 $stmt->execute([$user_id]);
 $user = $stmt->fetch();
 $email = $user['email'] ?? '';
 $username = $user['username'] ?? '';
 $full_name = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
-$role = $user['role'] ?? 'User';
+$role = $user['role_name'] ?? 'User'; // Default to 'User' if no role is found
 
 // Handle email update
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_email'])) {
     $new_email = trim($_POST['email']);
     if (filter_var($new_email, FILTER_VALIDATE_EMAIL)) {
-        $update_sql = "UPDATE users SET email = ? WHERE User_ID = ?";
+        $update_sql = "UPDATE users SET email = ? WHERE id = ?";
         $update_stmt = $pdo->prepare($update_sql);
         if ($update_stmt->execute([$new_email, $user_id])) {
             $email = $new_email;
@@ -50,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_password'])) {
     $confirm_password = $_POST['confirm_password'];
 
     // Verify current password
-    $sql = "SELECT password FROM users WHERE User_ID = ?";
+    $sql = "SELECT password FROM users WHERE id = ?";
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$user_id]);
     $user = $stmt->fetch();
@@ -59,11 +64,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_password'])) {
         if ($new_password === $confirm_password) {
             $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
 
-            // Set the @current_user_id variable to the current user's ID
+            // Set the @current_user_id variable (e.g., for auditing in a trigger)
             $pdo->exec("SET @current_user_id = $user_id;");
 
             // Update the password
-            $update_sql = "UPDATE users SET password = ? WHERE User_ID = ?";
+            $update_sql = "UPDATE users SET password = ? WHERE id = ?";
             $update_stmt = $pdo->prepare($update_sql);
             if ($update_stmt->execute([$hashed_password, $user_id])) {
                 $success_message = "Password updated successfully.";
@@ -109,7 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_password'])) {
             <div class="info-grid">
                 <div class="info-item">
                     <span class="info-label">Full Name</span>
-                    <span class="info-value"><?php echo htmlspecialchars($first_name) . ' ' . htmlspecialchars($last_name); ?></span>
+                    <span class="info-value"><?php echo htmlspecialchars($user['first_name']) . ' ' . htmlspecialchars($user['last_name']); ?></span>
                 </div>
                 <div class="info-item">
                     <span class="info-label">Username</span>
@@ -186,10 +191,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_password'])) {
                     <button type="submit" name="update_password" class="btn-primary">Update Password</button>
                 </div>
             </form>
+
+        </div>
+        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+            Delete My Account
+        </button>
+    </div>
+
+</div>
+<!-- Delete Account Modal -->
+<div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel"
+     aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteAccountModalLabel">Delete Account</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete your account? This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteAccount">Delete</button>
+            </div>
         </div>
     </div>
 </div>
-
 <script>
     function togglePassword(inputId) {
         const input = document.getElementById(inputId);

@@ -19,7 +19,7 @@ $pdo->exec("SET @current_ip = '" . $ipAddress . "'");
 if (isset($_POST['id'])) {
     $userId = $_POST['id'];
     try {
-        $stmt = $pdo->prepare("UPDATE users SET is_deleted = 0 WHERE User_ID = ?");
+        $stmt = $pdo->prepare("UPDATE users SET is_disabled = 0 WHERE id = ?");
         $stmt->execute([$userId]);
         echo "User restored.";
     } catch (PDOException $e) {

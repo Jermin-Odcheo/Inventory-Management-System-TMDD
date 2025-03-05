@@ -39,7 +39,7 @@ if (isset($_SESSION['success'])) {
 if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
     $id = $_GET['id'];
     try {
-        $stmt = $pdo->prepare("DELETE FROM receivingreportform WHERE ReceivingReportFormID = ?");
+        $stmt = $pdo->prepare("DELETE FROM receive_report WHERE id = ?");
         $stmt->execute([$id]);
         $_SESSION['success'] = "Receiving Report deleted successfully.";
     } catch (PDOException $e) {
@@ -53,14 +53,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 // PROCESS FORM SUBMISSIONS (Add / Update)
 // ------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Retrieve and sanitize form input (without the ReceivingReportFormID)
-    $ReceivingReportNumber         = trim($_POST['ReceivingReportNumber'] ?? '');
-    $AccountableIndividual         = trim($_POST['AccountableIndividual'] ?? '');
-    $PurchaseOrderNumber           = trim($_POST['PurchaseOrderNumber'] ?? '');
-    $AccountableIndividualLocation = trim($_POST['AccountableIndividualLocation'] ?? '');
+    // Retrieve and sanitize form input
+    $rr_no = trim($_POST['rr_no'] ?? '');
+    $accountable_individual = trim($_POST['accountable_individual'] ?? '');
+    $po_no = trim($_POST['po_no'] ?? '');
+    $ai_loc = trim($_POST['ai_loc'] ?? '');
 
     // Validate required fields
-    if (empty($ReceivingReportNumber) || empty($AccountableIndividual) || empty($PurchaseOrderNumber) || empty($AccountableIndividualLocation)) {
+    if (empty($rr_no) || empty($accountable_individual) || empty($po_no) || empty($ai_loc)) {
         $_SESSION['errors'] = ["Please fill in all required fields."];
         header("Location: receiving_report.php");
         exit;
@@ -70,18 +70,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action']) && $_POST['action'] === 'add') {
         $response = array('status' => '', 'message' => '');
         try {
-            $stmt = $pdo->prepare("INSERT INTO receivingreportform (
-                ReceivingReportNumber, 
-                AccountableIndividual, 
-                PurchaseOrderNumber, 
-                AccountableIndividualLocation
-            ) VALUES (?, ?, ?, ?)");
+            $stmt = $pdo->prepare("INSERT INTO receive_report (
+                rr_no, 
+                accountable_individual, 
+                po_no, 
+                ai_loc,
+                is_disabled
+            ) VALUES (?, ?, ?, ?, ?)");
             
             $stmt->execute([
-                $_POST['ReceivingReportNumber'],
-                $_POST['AccountableIndividual'],
-                $_POST['PurchaseOrderNumber'],
-                $_POST['AccountableIndividualLocation']
+                $_POST['rr_no'],
+                $_POST['accountable_individual'],
+                $_POST['po_no'],
+                $_POST['ai_loc'],
+                0 // Default to not disabled
             ]);
             
             $response['status'] = 'success';
@@ -95,10 +97,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (isset($_POST['action']) && $_POST['action'] === 'update') {
         $id = $_POST['id'];
         try {
-            $stmt = $pdo->prepare("UPDATE receivingreportform 
-                                   SET ReceivingReportNumber = ?, AccountableIndividual = ?, PurchaseOrderNumber = ?, AccountableIndividualLocation = ?
-                                   WHERE ReceivingReportFormID = ?");
-            $stmt->execute([$ReceivingReportNumber, $AccountableIndividual, $PurchaseOrderNumber, $AccountableIndividualLocation, $id]);
+            $stmt = $pdo->prepare("UPDATE receive_report 
+                                   SET rr_no = ?, accountable_individual = ?, po_no = ?, ai_loc = ?, is_disabled = ?
+                                   WHERE id = ?");
+            $stmt->execute([$rr_no, $accountable_individual, $po_no, $ai_loc, isset($_POST['is_disabled']) ? 1 : 0, $id]);
             $_SESSION['success'] = "Receiving Report has been updated successfully.";
         } catch (PDOException $e) {
             $_SESSION['errors'] = ["Error updating Receiving Report: " . $e->getMessage()];
@@ -115,7 +117,7 @@ $editReceivingReport = null;
 if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) {
     $id = $_GET['id'];
     try {
-        $stmt = $pdo->prepare("SELECT * FROM receivingreportform WHERE ReceivingReportFormID = ?");
+        $stmt = $pdo->prepare("SELECT * FROM receive_report WHERE id = ?");
         $stmt->execute([$id]);
         $editReceivingReport = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$editReceivingReport) {
@@ -132,7 +134,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) 
 // RETRIEVE ALL RECEIVING REPORTS
 // ------------------------
 try {
-    $stmt = $pdo->query("SELECT * FROM receivingreportform ORDER BY ReceivingReportFormID DESC");
+    $stmt = $pdo->query("SELECT * FROM receive_report ORDER BY id DESC");
     $receivingReports = $stmt->fetchAll();
 } catch (PDOException $e) {
     $errors[] = "Error retrieving Receiving Reports: " . $e->getMessage();
@@ -219,7 +221,7 @@ try {
                         <select class="form-select form-select-sm" id="filterLocation" style="width: auto;">
                             <option value="">Filter Location</option>
                             <?php
-                            $locations = array_unique(array_column($receivingReports, 'AccountableIndividualLocation'));
+                            $locations = array_unique(array_column($receivingReports, 'ai_loc'));
                             foreach($locations as $location) {
                                 if(!empty($location)) {
                                     echo "<option value='" . htmlspecialchars($location) . "'>" . htmlspecialchars($location) . "</option>";
@@ -240,32 +242,33 @@ try {
                                 <th>PO Number</th>
                                 <th>Location</th>
                                 <th>Created Date</th>
-                                <th>Modified Date</th>
+                                <th>Status</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($receivingReports as $rr): ?>
                                 <tr>
-                                    <td><?php echo htmlspecialchars($rr['ReceivingReportFormID']); ?></td>
-                                    <td><?php echo htmlspecialchars($rr['ReceivingReportNumber']); ?></td>
-                                    <td><?php echo htmlspecialchars($rr['AccountableIndividual']); ?></td>
-                                    <td><?php echo htmlspecialchars($rr['PurchaseOrderNumber']); ?></td>
-                                    <td><?php echo htmlspecialchars($rr['AccountableIndividualLocation']); ?></td>
-                                    <td><?php echo date('Y-m-d H:i', strtotime($rr['CreatedDate'])); ?></td>
-                                    <td><?php echo date('Y-m-d H:i', strtotime($rr['ModifiedDate'])); ?></td>
+                                    <td><?php echo htmlspecialchars($rr['id']); ?></td>
+                                    <td><?php echo htmlspecialchars($rr['rr_no']); ?></td>
+                                    <td><?php echo htmlspecialchars($rr['accountable_individual']); ?></td>
+                                    <td><?php echo htmlspecialchars($rr['po_no']); ?></td>
+                                    <td><?php echo htmlspecialchars($rr['ai_loc']); ?></td>
+                                    <td><?php echo date('Y-m-d H:i', strtotime($rr['date_created'])); ?></td>
+                                    <td><?php echo $rr['is_disabled'] == 1 ? '<span class="badge bg-danger">Disabled</span>' : '<span class="badge bg-success">Active</span>'; ?></td>
                                     <td class="text-center">
                                         <div class="btn-group" role="group">
                                             <a class="btn btn-sm btn-outline-primary edit-report" 
-                                               data-id="<?php echo htmlspecialchars($rr['ReceivingReportFormID']); ?>"
-                                               data-rr="<?php echo htmlspecialchars($rr['ReceivingReportNumber']); ?>"
-                                               data-individual="<?php echo htmlspecialchars($rr['AccountableIndividual']); ?>"
-                                               data-po="<?php echo htmlspecialchars($rr['PurchaseOrderNumber']); ?>"
-                                               data-location="<?php echo htmlspecialchars($rr['AccountableIndividualLocation']); ?>">
+                                               data-id="<?php echo htmlspecialchars($rr['id']); ?>"
+                                               data-rr="<?php echo htmlspecialchars($rr['rr_no']); ?>"
+                                               data-individual="<?php echo htmlspecialchars($rr['accountable_individual']); ?>"
+                                               data-po="<?php echo htmlspecialchars($rr['po_no']); ?>"
+                                               data-location="<?php echo htmlspecialchars($rr['ai_loc']); ?>"
+                                               data-disabled="<?php echo htmlspecialchars($rr['is_disabled']); ?>">
                                                 <i class="bi bi-pencil-square"></i> Edit
                                             </a>
                                             <a class="btn btn-sm btn-outline-danger delete-report" 
-                                               data-id="<?php echo htmlspecialchars($rr['ReceivingReportFormID']); ?>"
+                                               data-id="<?php echo htmlspecialchars($rr['id']); ?>"
                                                href="#">
                                                 <i class="bi bi-trash"></i> Delete
                                             </a>
@@ -326,20 +329,24 @@ try {
                     <form id="addReportForm" method="post">
                         <input type="hidden" name="action" value="add">
                         <div class="mb-3">
-                            <label for="ReceivingReportNumber" class="form-label">Receiving Report Number <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" name="ReceivingReportNumber" required>
+                            <label for="rr_no" class="form-label">Receiving Report Number <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="rr_no" required>
                         </div>
                         <div class="mb-3">
-                            <label for="AccountableIndividual" class="form-label">Accountable Individual <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" name="AccountableIndividual" required>
+                            <label for="accountable_individual" class="form-label">Accountable Individual <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="accountable_individual" required>
                         </div>
                         <div class="mb-3">
-                            <label for="PurchaseOrderNumber" class="form-label">Purchase Order Number <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" name="PurchaseOrderNumber" required>
+                            <label for="po_no" class="form-label">Purchase Order Number <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="po_no" required>
                         </div>
                         <div class="mb-3">
-                            <label for="AccountableIndividualLocation" class="form-label">Location <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" name="AccountableIndividualLocation" required>
+                            <label for="ai_loc" class="form-label">Location <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="ai_loc" required>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" name="is_disabled" id="is_disabled">
+                            <label class="form-check-label" for="is_disabled">Disabled</label>
                         </div>
                         <div class="mb-3">
                             <button type="submit" class="btn btn-primary">Add Receiving Report</button>
@@ -363,20 +370,24 @@ try {
                         <input type="hidden" name="action" value="update">
                         <input type="hidden" name="id" id="edit_report_id">
                         <div class="mb-3">
-                            <label for="edit_ReceivingReportNumber" class="form-label">Receiving Report Number</label>
-                            <input type="text" class="form-control" name="ReceivingReportNumber" id="edit_ReceivingReportNumber" required>
+                            <label for="edit_rr_no" class="form-label">Receiving Report Number</label>
+                            <input type="text" class="form-control" name="rr_no" id="edit_rr_no" required>
                         </div>
                         <div class="mb-3">
-                            <label for="edit_AccountableIndividual" class="form-label">Accountable Individual</label>
-                            <input type="text" class="form-control" name="AccountableIndividual" id="edit_AccountableIndividual" required>
+                            <label for="edit_accountable_individual" class="form-label">Accountable Individual</label>
+                            <input type="text" class="form-control" name="accountable_individual" id="edit_accountable_individual" required>
                         </div>
                         <div class="mb-3">
-                            <label for="edit_PurchaseOrderNumber" class="form-label">Purchase Order Number</label>
-                            <input type="text" class="form-control" name="PurchaseOrderNumber" id="edit_PurchaseOrderNumber" required>
+                            <label for="edit_po_no" class="form-label">Purchase Order Number</label>
+                            <input type="text" class="form-control" name="po_no" id="edit_po_no" required>
                         </div>
                         <div class="mb-3">
-                            <label for="edit_AccountableIndividualLocation" class="form-label">Location</label>
-                            <input type="text" class="form-control" name="AccountableIndividualLocation" id="edit_AccountableIndividualLocation" required>
+                            <label for="edit_ai_loc" class="form-label">Location</label>
+                            <input type="text" class="form-control" name="ai_loc" id="edit_ai_loc" required>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" name="is_disabled" id="edit_is_disabled">
+                            <label class="form-check-label" for="edit_is_disabled">Disabled</label>
                         </div>
                         <div class="mb-3">
                             <button type="submit" class="btn btn-primary">Save Changes</button>
@@ -423,12 +434,14 @@ try {
                 var individual = $(this).data('individual');
                 var po = $(this).data('po');
                 var location = $(this).data('location');
+                var isDisabled = $(this).data('disabled');
                 
                 $('#edit_report_id').val(id);
-                $('#edit_ReceivingReportNumber').val(rr);
-                $('#edit_AccountableIndividual').val(individual);
-                $('#edit_PurchaseOrderNumber').val(po);
-                $('#edit_AccountableIndividualLocation').val(location);
+                $('#edit_rr_no').val(rr);
+                $('#edit_accountable_individual').val(individual);
+                $('#edit_po_no').val(po);
+                $('#edit_ai_loc').val(location);
+                $('#edit_is_disabled').prop('checked', isDisabled == 1);
                 
                 $('#editReportModal').modal('show');
             });

@@ -1,42 +1,62 @@
 <?php
 session_start();
-require 'ims-tmdd.php';
+require 'ims-tmdd.php'; // Ensure this connects to your MySQL database
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $email = $_POST['email'];
-    $password = $_POST['password'];
+    $email = trim($_POST["email"]);
+    $password = trim($_POST["password"]);
 
-    $stmt = $pdo->prepare("SELECT * FROM users WHERE Email = ?");
+    if (empty($email) || empty($password)) {
+        $_SESSION['error'] = "Email and password are required.";
+        header("Location: ../public/index.php");
+        exit();
+    }
+
+    // Use PDO to prepare and execute the query
+    $stmt = $pdo->prepare("SELECT id, username, email, password, is_disabled FROM users WHERE email = ? LIMIT 1");
     $stmt->execute([$email]);
     $user = $stmt->fetch();
 
-    if ($user && password_verify($password, $user['Password'])) {
-        $_SESSION['user_id'] = $user['User_ID'];
-        $_SESSION['email'] = $user['Email'];
-        header("Location: dashboard.php");
-        exit();
+    if ($user) {
+        if ($user['is_disabled'] === 1) {
+            $_SESSION['error'] = "Your account has been disabled.";
+            header("Location: ../public/index.php");
+            exit();
+        }
+
+        if (password_verify($password, $user["password"])) {
+            // Set session variables
+            $_SESSION["user_id"] = $user["id"];
+            $_SESSION["username"] = $user["username"];
+            $_SESSION["email"] = $user["email"];
+
+            // Fetch User Roles and Store in Session
+            $role_stmt = $pdo->prepare("
+                SELECT GROUP_CONCAT(DISTINCT r.role_name) AS roles 
+                FROM user_roles ur
+                JOIN roles r ON ur.role_id = r.id
+                WHERE ur.user_id = ?
+            ");
+            $role_stmt->execute([$user["id"]]);
+            $role_data = $role_stmt->fetch();
+
+            $_SESSION["roles"] = $role_data ? $role_data["roles"] : "";
+
+            // Update user status to "Online"
+            $update_status = $pdo->prepare("UPDATE users SET status = 'Online' WHERE id = ?");
+            $update_status->execute([$user["id"]]);
+
+            header("Location: ../src/view/php/clients/admins/dashboard.php");
+            exit();
+        } else {
+            $_SESSION['error'] = "Invalid email or password.";
+            header("Location: ../public/index.php");
+            exit();
+        }
     } else {
-        echo "Invalid email or password.";
+        $_SESSION['error'] = "Invalid email or password.";
+        header("Location: ../public/index.php");
+        exit();
     }
 }
 ?>
-<!DOCTYPE html>
-<html>
-
-<head>
-    <title>Login</title>
-    <link rel="stylesheet" type="text/css" href="style.css">
-</head>
-
-<body>
-    <div class="login-container">
-        <h2>Login</h2>
-        <form method="post">
-            <input type="email" name="email" placeholder="Email" required>
-            <input type="password" name="password" placeholder="Password" required>
-            <button type="submit">Login</button>
-        </form>
-    </div>
-</body>
-
-</html>

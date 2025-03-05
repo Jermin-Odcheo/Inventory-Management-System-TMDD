@@ -6,14 +6,6 @@ require_once('../../../../../config/ims-tmdd.php'); // Adjust the path as needed
 // Include the header
 include('../../general/header.php');
 
-// -----------------------------------------------------------------
-// Optionally check for admin privileges (uncomment if needed)
-// if (!isset($_SESSION['user_id'])) {
-//     header("Location: add_user.php");
-//     exit();
-// }    
-// -----------------------------------------------------------------
-
 // Set the audit log session variables for MySQL triggers.
 if (isset($_SESSION['user_id'])) {
     $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
@@ -47,7 +39,8 @@ if (isset($_SESSION['success'])) {
 if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
     $id = $_GET['id'];
     try {
-        $stmt = $pdo->prepare("DELETE FROM chargeinvoice WHERE ChargeInvoiceID = ?");
+        // Use soft delete by setting is_disabled to 1 instead of actual deletion
+        $stmt = $pdo->prepare("UPDATE charge_invoice SET is_disabled = 1 WHERE id = ?");
         $stmt->execute([$id]);
         $_SESSION['success'] = "Charge Invoice deleted successfully.";
     } catch (PDOException $e) {
@@ -62,12 +55,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 // ------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Retrieve and sanitize form input
-    $ChargeInvoiceNo    = trim($_POST['ChargeInvoiceNo'] ?? '');
-    $DateOfChargeInvoice = trim($_POST['DateOfChargeInvoice'] ?? '');
-    $PurchaseOrderNumber = trim($_POST['PurchaseOrderNumber'] ?? '');
+    $invoice_no = trim($_POST['invoice_no'] ?? '');
+    $date_of_purchase = trim($_POST['date_of_purchase'] ?? '');
+    $po_no = trim($_POST['po_no'] ?? '');
 
     // Validate required fields
-    if (empty($ChargeInvoiceNo) || empty($DateOfChargeInvoice) || empty($PurchaseOrderNumber)) {
+    if (empty($invoice_no) || empty($date_of_purchase) || empty($po_no)) {
         $_SESSION['errors'] = ["Please fill in all required fields."];
         header("Location: charge_invoice.php");
         exit;
@@ -76,9 +69,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Check if the form is for "Add" or "Update"
     if (isset($_POST['action']) && $_POST['action'] === 'add') {
         try {
-            $stmt = $pdo->prepare("INSERT INTO chargeinvoice (ChargeInvoiceNo, DateOfChargeInvoice, PurchaseOrderNumber)
-                                   VALUES (?, ?, ?)");
-            $stmt->execute([$ChargeInvoiceNo, $DateOfChargeInvoice, $PurchaseOrderNumber]);
+            $stmt = $pdo->prepare("INSERT INTO charge_invoice (invoice_no, date_of_purchase, po_no, date_created, is_disabled)
+                                   VALUES (?, ?, ?, NOW(), 0)");
+            $stmt->execute([$invoice_no, $date_of_purchase, $po_no]);
             $_SESSION['success'] = "Charge Invoice has been added successfully.";
         } catch (PDOException $e) {
             $_SESSION['errors'] = ["Error adding Charge Invoice: " . $e->getMessage()];
@@ -88,15 +81,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (isset($_POST['action']) && $_POST['action'] === 'update') {
         $id = $_POST['id'];
         try {
-            $stmt = $pdo->prepare("UPDATE chargeinvoice 
-                                   SET ChargeInvoiceNo = ?, DateOfChargeInvoice = ?, PurchaseOrderNumber = ?
-                                   WHERE ChargeInvoiceID = ?");
-            $stmt->execute([$ChargeInvoiceNo, $DateOfChargeInvoice, $PurchaseOrderNumber, $id]);
+            $stmt = $pdo->prepare("UPDATE charge_invoice 
+                                   SET invoice_no = ?, date_of_purchase = ?, po_no = ?
+                                   WHERE id = ?");
+            $stmt->execute([$invoice_no, $date_of_purchase, $po_no, $id]);
             $_SESSION['success'] = "Charge Invoice has been updated successfully.";
         } catch (PDOException $e) {
             $_SESSION['errors'] = ["Error updating Charge Invoice: " . $e->getMessage()];
         }
         header("Location: charge_invoice.php");
+        exit;
+    }
+
+    // Handle AJAX responses for form submissions
+    if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+        $response = ['status' => 'success', 'message' => $_SESSION['success'] ?? 'Operation completed successfully'];
+        if (!empty($_SESSION['errors'])) {
+            $response = ['status' => 'error', 'message' => $_SESSION['errors'][0]];
+        }
+        echo json_encode($response);
         exit;
     }
 }
@@ -108,7 +111,7 @@ $editChargeInvoice = null;
 if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) {
     $id = $_GET['id'];
     try {
-        $stmt = $pdo->prepare("SELECT * FROM chargeinvoice WHERE ChargeInvoiceID = ?");
+        $stmt = $pdo->prepare("SELECT * FROM charge_invoice WHERE id = ? AND is_disabled = 0");
         $stmt->execute([$id]);
         $editChargeInvoice = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$editChargeInvoice) {
@@ -122,10 +125,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) 
 }
 
 // ------------------------
-// RETRIEVE ALL CHARGE INVOICES
+// RETRIEVE ALL CHARGE INVOICES (non-disabled only)
 // ------------------------
 try {
-    $stmt = $pdo->query("SELECT * FROM chargeinvoice ORDER BY ChargeInvoiceID DESC");
+    $stmt = $pdo->query("SELECT * FROM charge_invoice WHERE is_disabled = 0 ORDER BY id DESC");
     $chargeInvoices = $stmt->fetchAll();
 } catch (PDOException $e) {
     $errors[] = "Error retrieving Charge Invoices: " . $e->getMessage();
@@ -155,14 +158,17 @@ try {
             min-height: 100vh;
             padding-top: 80px;
         }
+
         h2.mb-4 {
             margin-top: 20px;
         }
+
         .main-content {
             margin-left: 300px;
             padding: 20px;
             transition: margin-left 0.3s ease;
         }
+
         @media (max-width: 768px) {
             .main-content {
                 margin-left: 0;
@@ -225,8 +231,18 @@ try {
                                     <option value="">Select Month</option>
                                     <?php
                                     $months = [
-                                        'January', 'February', 'March', 'April', 'May', 'June',
-                                        'July', 'August', 'September', 'October', 'November', 'December'
+                                        'January',
+                                        'February',
+                                        'March',
+                                        'April',
+                                        'May',
+                                        'June',
+                                        'July',
+                                        'August',
+                                        'September',
+                                        'October',
+                                        'November',
+                                        'December'
                                     ];
                                     foreach ($months as $index => $month) {
                                         echo "<option value='" . ($index + 1) . "'>" . $month . "</option>";
@@ -258,34 +274,32 @@ try {
                             <tr>
                                 <th>#</th>
                                 <th>Invoice Number</th>
-                                <th>Invoice Date</th>
-                                <th>Created Date</th>
-                                <th>Modified Date</th>
+                                <th>Purchase Date</th>
                                 <th>PO Number</th>
+                                <th>Created Date</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($chargeInvoices as $invoice): ?>
                                 <tr>
-                                    <td><?php echo htmlspecialchars($invoice['ChargeInvoiceID']); ?></td>
-                                    <td><?php echo htmlspecialchars($invoice['ChargeInvoiceNo']); ?></td>
-                                    <td><?php echo htmlspecialchars($invoice['DateOfChargeInvoice']); ?></td>
-                                    <td><?php echo date('Y-m-d H:i', strtotime($invoice['CreatedDate'])); ?></td>
-                                    <td><?php echo date('Y-m-d H:i', strtotime($invoice['ModifiedDate'])); ?></td>
-                                    <td><?php echo htmlspecialchars($invoice['PurchaseOrderNumber']); ?></td>
+                                    <td><?php echo htmlspecialchars($invoice['id']); ?></td>
+                                    <td><?php echo htmlspecialchars($invoice['invoice_no']); ?></td>
+                                    <td><?php echo htmlspecialchars($invoice['date_of_purchase']); ?></td>
+                                    <td><?php echo htmlspecialchars($invoice['po_no']); ?></td>
+                                    <td><?php echo date('Y-m-d H:i', strtotime($invoice['date_created'])); ?></td>
                                     <td class="text-center">
                                         <div class="btn-group" role="group">
-                                            <a class="btn btn-sm btn-outline-primary edit-invoice" 
-                                               data-id="<?php echo htmlspecialchars($invoice['ChargeInvoiceID']); ?>"
-                                               data-invoice="<?php echo htmlspecialchars($invoice['ChargeInvoiceNo']); ?>"
-                                               data-date="<?php echo htmlspecialchars($invoice['DateOfChargeInvoice']); ?>"
-                                               data-po="<?php echo htmlspecialchars($invoice['PurchaseOrderNumber']); ?>">
+                                            <a class="btn btn-sm btn-outline-primary edit-invoice"
+                                                data-id="<?php echo htmlspecialchars($invoice['id']); ?>"
+                                                data-invoice="<?php echo htmlspecialchars($invoice['invoice_no']); ?>"
+                                                data-date="<?php echo htmlspecialchars($invoice['date_of_purchase']); ?>"
+                                                data-po="<?php echo htmlspecialchars($invoice['po_no']); ?>">
                                                 <i class="bi bi-pencil-square"></i> Edit
                                             </a>
-                                            <a class="btn btn-sm btn-outline-danger delete-invoice" 
-                                               data-id="<?php echo htmlspecialchars($invoice['ChargeInvoiceID']); ?>"
-                                               href="#">
+                                            <a class="btn btn-sm btn-outline-danger delete-invoice"
+                                                data-id="<?php echo htmlspecialchars($invoice['id']); ?>"
+                                                href="#">
                                                 <i class="bi bi-trash"></i> Delete
                                             </a>
                                         </div>
@@ -302,7 +316,7 @@ try {
                         <div class="col-12 col-sm-auto">
                             <div class="text-muted">
                                 Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span
-                                        id="totalRows">0</span> entries
+                                    id="totalRows">0</span> entries
                             </div>
                         </div>
 
@@ -345,16 +359,16 @@ try {
                     <form id="addInvoiceForm" method="post">
                         <input type="hidden" name="action" value="add">
                         <div class="mb-3">
-                            <label for="ChargeInvoiceNo" class="form-label">Charge Invoice Number <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" name="ChargeInvoiceNo" required>
+                            <label for="invoice_no" class="form-label">Invoice Number <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="invoice_no" required>
                         </div>
                         <div class="mb-3">
-                            <label for="DateOfChargeInvoice" class="form-label">Date of Charge Invoice <span class="text-danger">*</span></label>
-                            <input type="date" class="form-control" name="DateOfChargeInvoice" required>
+                            <label for="date_of_purchase" class="form-label">Date of Purchase <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" name="date_of_purchase" required>
                         </div>
                         <div class="mb-3">
-                            <label for="PurchaseOrderNumber" class="form-label">Purchase Order Number <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" name="PurchaseOrderNumber" required>
+                            <label for="po_no" class="form-label">Purchase Order Number <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="po_no" required>
                         </div>
                         <div class="mb-3">
                             <button type="submit" class="btn btn-primary">Add Charge Invoice</button>
@@ -378,16 +392,16 @@ try {
                         <input type="hidden" name="action" value="update">
                         <input type="hidden" name="id" id="edit_invoice_id">
                         <div class="mb-3">
-                            <label for="edit_ChargeInvoiceNo" class="form-label">Charge Invoice Number</label>
-                            <input type="text" class="form-control" name="ChargeInvoiceNo" id="edit_ChargeInvoiceNo" required>
+                            <label for="edit_invoice_no" class="form-label">Invoice Number</label>
+                            <input type="text" class="form-control" name="invoice_no" id="edit_invoice_no" required>
                         </div>
                         <div class="mb-3">
-                            <label for="edit_DateOfChargeInvoice" class="form-label">Date of Charge Invoice</label>
-                            <input type="date" class="form-control" name="DateOfChargeInvoice" id="edit_DateOfChargeInvoice" required>
+                            <label for="edit_date_of_purchase" class="form-label">Date of Purchase</label>
+                            <input type="date" class="form-control" name="date_of_purchase" id="edit_date_of_purchase" required>
                         </div>
                         <div class="mb-3">
-                            <label for="edit_PurchaseOrderNumber" class="form-label">Purchase Order Number</label>
-                            <input type="text" class="form-control" name="PurchaseOrderNumber" id="edit_PurchaseOrderNumber" required>
+                            <label for="edit_po_no" class="form-label">Purchase Order Number</label>
+                            <input type="text" class="form-control" name="po_no" id="edit_po_no" required>
                         </div>
                         <div class="mb-3">
                             <button type="submit" class="btn btn-primary">Save Changes</button>
@@ -409,13 +423,13 @@ try {
             // Date filter change handler
             $('#dateFilter').on('change', function() {
                 const value = $(this).val();
-                
+
                 // Hide all date inputs container first
                 $('#dateInputsContainer').hide();
                 $('#monthPickerContainer, #dateRangePickers').hide();
                 $('#dateFrom, #dateTo').hide();
-                
-                switch(value) {
+
+                switch (value) {
                     case 'month':
                         $('#dateInputsContainer').show();
                         $('#monthPickerContainer').show();
@@ -452,13 +466,13 @@ try {
                 $(".table tbody tr").each(function() {
                     const row = $(this);
                     const rowText = row.text().toLowerCase();
-                    const dateCell = row.find('td:eq(2)').text(); // Date is in the 3rd column
+                    const dateCell = row.find('td:eq(2)').text(); // Purchase date is in the 3rd column
                     const date = new Date(dateCell);
-                    
+
                     const searchMatch = rowText.indexOf(searchText) > -1;
                     let dateMatch = true;
-                    
-                    switch(filterType) {
+
+                    switch (filterType) {
                         case 'asc':
                             const tbody = $('.table tbody');
                             const rows = tbody.find('tr').toArray();
@@ -469,7 +483,7 @@ try {
                             });
                             tbody.append(rows);
                             return;
-                            
+
                         case 'desc':
                             const tbody2 = $('.table tbody');
                             const rows2 = tbody2.find('tr').toArray();
@@ -480,14 +494,14 @@ try {
                             });
                             tbody2.append(rows2);
                             return;
-                            
+
                         case 'month':
                             if (selectedMonth && selectedYear) {
-                                dateMatch = date.getMonth() + 1 === parseInt(selectedMonth) && 
-                                           date.getFullYear() === parseInt(selectedYear);
+                                dateMatch = date.getMonth() + 1 === parseInt(selectedMonth) &&
+                                    date.getFullYear() === parseInt(selectedYear);
                             }
                             break;
-                            
+
                         case 'range':
                             if (dateFrom && dateTo) {
                                 const from = new Date(dateFrom);
@@ -515,12 +529,12 @@ try {
                 var invoice = $(this).data('invoice');
                 var date = $(this).data('date');
                 var po = $(this).data('po');
-                
+
                 $('#edit_invoice_id').val(id);
-                $('#edit_ChargeInvoiceNo').val(invoice);
-                $('#edit_DateOfChargeInvoice').val(date);
-                $('#edit_PurchaseOrderNumber').val(po);
-                
+                $('#edit_invoice_no').val(invoice);
+                $('#edit_date_of_purchase').val(date);
+                $('#edit_po_no').val(po);
+
                 $('#editInvoiceModal').modal('show');
             });
 

@@ -127,17 +127,17 @@
     include '../../general/header.php';
     include '../../general/sidebar.php';
     try {
-        $stmtRoles = $pdo->prepare("SELECT * FROM roles ORDER BY Role_Name ASC");
+        $stmtRoles = $pdo->prepare("SELECT * FROM roles ORDER BY role_name ASC");
         $stmtRoles->execute();
         $roles = $stmtRoles->fetchAll(PDO::FETCH_ASSOC);
 
-        $stmtUsers = $pdo->prepare("SELECT u.User_ID, u.First_Name, u.Last_Name, r.Role_Name FROM users u JOIN user_roles ur ON u.User_ID = ur.User_ID JOIN roles r ON ur.Role_ID = r.Role_ID WHERE u.is_deleted = 0 ORDER BY r.Role_Name, u.First_Name, u.Last_Name");
+        $stmtUsers = $pdo->prepare("SELECT u.id, u.First_Name, u.Last_Name, r.role_name FROM users u JOIN user_roles ur ON u.id = ur.User_ID JOIN roles r ON ur.Role_ID = r.id WHERE u.is_disabled = 0 ORDER BY r.role_name, u.First_Name, u.Last_Name");
         $stmtUsers->execute();
         $users = $stmtUsers->fetchAll(PDO::FETCH_ASSOC);
 
         $roleUsers = [];
         foreach ($users as $user) {
-            $roleUsers[$user['Role_Name']][] = $user;
+            $roleUsers[$user['role_name']][] = $user;
         }
     } catch (PDOException $e) {
         die("Database error: " . $e->getMessage());
@@ -160,15 +160,15 @@
                 <div class="role-card">
                     <div class="role-header">
                         <div class="role-title">
-                            <i class="fas fa-shield-alt"></i> <?php echo htmlspecialchars($role['Role_Name']); ?>
+                            <i class="fas fa-shield-alt"></i> <?php echo htmlspecialchars($role['role_name']); ?>
                         </div>
                         <span class="user-count">
-                            <?php echo isset($roleUsers[$role['Role_Name']]) ? count($roleUsers[$role['Role_Name']]) : 0; ?> users
+                            <?php echo isset($roleUsers[$role['role_name']]) ? count($roleUsers[$role['role_name']]) : 0; ?> users
                         </span>
                     </div>
                     <ul class="user-list">
-                        <?php if (isset($roleUsers[$role['Role_Name']])): ?>
-                            <?php foreach ($roleUsers[$role['Role_Name']] as $user): ?>
+                        <?php if (isset($roleUsers[$role['role_name']])): ?>
+                            <?php foreach ($roleUsers[$role['role_name']] as $user): ?>
                                 <li class="user-item">
                                     <div class="user-avatar">
                                         <?php echo strtoupper(substr($user['First_Name'], 0, 1) . substr($user['Last_Name'], 0, 1)); ?>

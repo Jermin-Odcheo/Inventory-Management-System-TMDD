@@ -5,13 +5,13 @@ require_once('..\..\..\..\..\config\ims-tmdd.php'); // Database connection
 try {
     $stmt = $pdo->prepare("
         SELECT 
-            m.Module_ID, 
+            m.id, 
             m.Module_Name, 
-            GROUP_CONCAT(p.Privilege_Name ORDER BY p.Privilege_ID SEPARATOR ', ') AS Privileges
+            GROUP_CONCAT(p.priv_name ORDER BY p.id SEPARATOR ', ') AS Privileges
         FROM modules AS m
-        LEFT JOIN privileges AS p ON m.Module_ID = p.Module_ID
-        GROUP BY m.Module_ID, m.Module_Name
-        ORDER BY m.Module_ID
+        LEFT JOIN privileges AS p ON m.id = p.id
+        GROUP BY m.id, m.Module_Name
+        ORDER BY m.id
     ");
     $stmt->execute();
     $modules = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -32,7 +32,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $stmt->execute([$moduleName]);
 
             // Retrieve the Module_ID using the module name
-            $query = $pdo->prepare("SELECT Module_ID FROM modules WHERE Module_Name = ? LIMIT 1");
+            $query = $pdo->prepare("SELECT id FROM modules WHERE Module_Name = ? LIMIT 1");
             $query->execute([$moduleName]);
             $module = $query->fetch(PDO::FETCH_ASSOC);
 
@@ -41,7 +41,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
                 // Insert default privileges for the new module
                 $privileges = ['View', 'Add', 'Edit', 'Delete'];
-                $privilegeStmt = $pdo->prepare("INSERT INTO privileges (Module_ID, Privilege_Name) VALUES (?, ?)");
+                $privilegeStmt = $pdo->prepare("INSERT INTO privileges (id, priv_name) VALUES (?, ?)");
 
                 foreach ($privileges as $privilege) {
                     $privilegeStmt->execute([$moduleId, $privilege]);
@@ -68,11 +68,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['remove_module'])) {
         $pdo->beginTransaction(); 
 
         //delete from privileges where `Module_ID` matches
-        $deletePrivilegesStmt = $pdo->prepare("DELETE FROM privileges WHERE Module_ID = ?");
+        $deletePrivilegesStmt = $pdo->prepare("DELETE FROM privileges WHERE id = ?");
         $deletePrivilegesStmt->execute([$moduleId]);
 
         //elete from modules
-        $deleteModulesStmt = $pdo->prepare("DELETE FROM modules WHERE Module_ID = ?");
+        $deleteModulesStmt = $pdo->prepare("DELETE FROM modules WHERE id = ?");
         $deleteModulesStmt->execute([$moduleId]);
 
         $pdo->commit(); 
@@ -130,12 +130,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['remove_module'])) {
                 <?php foreach ($modules as $module): ?>
                     <tr>
                         
-                        <td><?= htmlspecialchars($module['Module_ID']) ?></td>
+                        <td><?= htmlspecialchars($module['id']) ?></td>
                         <td><?= htmlspecialchars($module['Module_Name']) ?></td>
                         <td><?= htmlspecialchars($module['Privileges'] ?? 'None') ?></td>
                         <td>
                         <form method="POST">
-                            <button type="submit" name="remove_module"  value="<?=$module['Module_ID']?>">Remove</button>
+                            <button type="submit" name="remove_module"  value="<?=$module['id']?>">Remove</button>
                         </form>
                         </td>
                     </tr>

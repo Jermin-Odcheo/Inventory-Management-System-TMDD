@@ -22,11 +22,11 @@ $query = "
         a.NewVal AS new_val,
         a.Status AS status,
         a.Date_Time AS date_time,
-        u.User_ID AS deleted_user_id
+        u.id AS deleted_user_id
     FROM audit_log a
-    JOIN users u ON a.EntityID = u.User_ID
-    JOIN users op ON a.UserID = op.User_ID
-    WHERE u.is_deleted = 1
+    JOIN users u ON a.EntityID = u.id
+    JOIN users op ON a.UserID = op.id
+    WHERE u.is_disabled = 1
       AND a.TrackID = (
             SELECT MAX(a2.TrackID)
             FROM audit_log a2
