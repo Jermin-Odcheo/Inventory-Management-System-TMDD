@@ -79,7 +79,7 @@ try {
     // ------------------------
     // RETRIEVE ALL DEPARTMENT IDs FOR THE USER
     // ------------------------
-    $stmt = $pdo->prepare("SELECT Department_ID FROM user_departments WHERE User_ID = ?");
+    $stmt = $pdo->prepare("SELECT department_id FROM user_departments WHERE user_id = ?");
     $stmt->execute([$_SESSION['user_id']]);
     $departmentIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
@@ -88,7 +88,7 @@ try {
         // RETRIEVE FULL DEPARTMENT INFO
         // ------------------------
         $placeholders = implode(',', array_fill(0, count($departmentIds), '?'));
-        $stmt = $pdo->prepare("SELECT Department_ID, Department_Name FROM departments WHERE Department_ID IN ($placeholders)");
+        $stmt = $pdo->prepare("SELECT id, department_name FROM departments WHERE departments.id IN ($placeholders)");
         $stmt->execute($departmentIds);
         $departments = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } else {
@@ -183,8 +183,8 @@ try {
                     <option value="" disabled selected>Select a department</option>
                     <!-- Populate the dropdown list -->
                     <?php foreach ($departments as $dept): ?>
-                        <option value="<?= htmlspecialchars($dept['Department_ID']) ?>">
-                            <?= htmlspecialchars($dept['Department_Name']) ?>
+                        <option value="<?= htmlspecialchars($dept['id']) ?>">
+                            <?= htmlspecialchars($dept['department_name']) ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
