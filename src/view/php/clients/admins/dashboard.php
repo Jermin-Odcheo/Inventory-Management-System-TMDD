@@ -1,16 +1,21 @@
 <?php
 session_start();
 require '../../../../../config/ims-tmdd.php';
-include '../../general/header.php';
+// include '../../general/header.php';
 
 // If not logged in, redirect to the LOGIN PAGE
-if (!isset($_SESSION['user_id'])) {
-    header("Location: " . BASE_URL . "public/index.php");
-    exit();
-}
-$role = $_SESSION['role'];
-$email = $_SESSION['email']; // Assuming you stored email in session
+// if (!isset($_SESSION['user_id'])) {
+//     header("Location: " . BASE_URL . "public/index.php");
+//     exit();
+// }
 
+// Debug: Log the current role (remove in production)
+// error_log("Current Session Role: " . $_SESSION['role']);
+
+// $role = $_SESSION['role'];
+// $email = $_SESSION['email']; // Assuming you stored email in session
+$role = 'regular user';
+$email = 'regularuser@gmail.com';
 // Define page title dynamically based on role
 $dashboardTitle = "Dashboard"; // Default title
 switch (strtolower(trim($role))) { // Normalize role to avoid case issues
@@ -23,7 +28,7 @@ switch (strtolower(trim($role))) { // Normalize role to avoid case issues
     case 'super user':
         $dashboardTitle = "Super User Dashboard";
         break;
-    case 'regular':
+    case 'regular user':
         $dashboardTitle = "Regular User Dashboard";
         break;
     default:
@@ -74,13 +79,16 @@ switch (strtolower(trim($role))) { // Normalize role to avoid case issues
 // No need to retrieve all users here if you're going to do it via fetch_user_status.php
 // But if you want a fallback server-side render, you can keep it.
 
+$selectedDeptId = isset($_POST['DepartmentID']) ? $_POST['DepartmentID'] : '';
+
 
 try {
     // ------------------------
     // RETRIEVE ALL DEPARTMENT IDs FOR THE USER
     // ------------------------
-    $stmt = $pdo->prepare("SELECT department_id FROM user_departments WHERE user_id = ?");
-    $stmt->execute([$_SESSION['user_id']]);
+    $stmt = $pdo->prepare("SELECT Department_ID FROM user_departments WHERE User_ID = ?");
+    // $stmt->execute([$_SESSION['user_id']]);
+    $stmt->execute([2]);
     $departmentIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
     if (!empty($departmentIds)) {
@@ -88,7 +96,7 @@ try {
         // RETRIEVE FULL DEPARTMENT INFO
         // ------------------------
         $placeholders = implode(',', array_fill(0, count($departmentIds), '?'));
-        $stmt = $pdo->prepare("SELECT id, department_name FROM departments WHERE departments.id IN ($placeholders)");
+        $stmt = $pdo->prepare("SELECT Department_ID, Department_Name, Department_Acronym FROM departments WHERE Department_ID IN ($placeholders)");
         $stmt->execute($departmentIds);
         $departments = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } else {
@@ -106,7 +114,10 @@ try {
     <meta charset="UTF-8">
     <title><?php echo $dashboardTitle; ?></title>
     <link rel="stylesheet" href="../../../styles/css/dashboard.css">
-
+<style>
+         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid black; padding: 10px; text-align: left; }
+</style>
 <body>
     <!-- Include Sidebar -->
     <?php include '../../general/sidebar.php'; ?>
@@ -115,7 +126,7 @@ try {
         <div class="dashboard-container">
             <h2>Welcome to the <?php echo $dashboardTitle; ?></h2>
             <p>Hello, <?php echo htmlspecialchars($email); ?>!</p>
-
+            
             <!-- Role-Based Dashboard Content -->
             <?php if (strtolower(trim($role)) === 'super admin'): ?>
                 <section>
@@ -178,20 +189,41 @@ try {
             <?php endif; ?>
 
             <!-- Dropdown List, show depts the user is part of (user_departments table) -->
-            <div class="mb-3">
-                <select class="form-control" name="DepartmentID" id="departmentSelect" required>
-                    <option value="" disabled selected>Select a department</option>
-                    <!-- Populate the dropdown list -->
+            <form method="POST">
+                <div class="mb-3">
+                    <select class="form-control" name="DepartmentID" id="departmentSelect" onchange="this.form.submit()">
+                        <option value="" disabled selected>Select a department</option>
+                        <?php foreach ($departments as $dept): ?>
+                            <option value="<?= $dept['Department_ID'] ?>" <?= ($selectedDeptId == $dept['Department_ID']) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($dept['Department_Acronym'] . ' - ' . $dept['Department_Name']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </form>
+
+
+            <?php if ($selectedDeptId): ?>
+                <h2>Details for Selected Department</h2>
+                <table>
+                    <tr>
+                        <th>Department ID</th>
+                        <th>Department Acronym</th>
+                        <th>Department Name</th>
+                    </tr>
                     <?php foreach ($departments as $dept): ?>
-                        <option value="<?= htmlspecialchars($dept['id']) ?>">
-                            <?= htmlspecialchars($dept['department_name']) ?>
-                        </option>
+                        <?php if ($dept['Department_ID'] == $selectedDeptId): ?>
+                            <tr>
+                                <td><?= htmlspecialchars($dept['Department_ID']) ?></td>
+                                <td><?= htmlspecialchars($dept['Department_Acronym']) ?></td>
+                                <td><?= htmlspecialchars($dept['Department_Name']) ?></td>
+                            </tr>
+                        <?php endif; ?>
                     <?php endforeach; ?>
-                </select>
-            </div>
-            <div>
-                Department information lalala
-            </div>
+                </table>
+            <?php endif; ?>
+
+
             <hr>
 
         </div>
