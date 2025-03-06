@@ -9,10 +9,10 @@ if (!isset($_SESSION['user_id'])) {
 }
 $role = isset($_SESSION["role"]) ? $_SESSION["role"] : "";
 $email = $_SESSION['email'];
-// Add this temporarily near the top of your header file
-echo "<pre>";
-print_r($_SESSION);
-echo "</pre>";
+//// Add this temporarily near the top of your header file
+//echo "<pre>";
+//print_r($_SESSION);
+//echo "</pre>";
 ?>
 
 <!DOCTYPE html>
