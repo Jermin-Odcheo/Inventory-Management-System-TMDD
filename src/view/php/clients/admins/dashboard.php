@@ -4,15 +4,14 @@ require '../../../../../config/ims-tmdd.php';
  include '../../general/header.php';
 
 // If not logged in, redirect to the LOGIN PAGE
-// if (!isset($_SESSION['user_id'])) {
-//     header("Location: " . BASE_URL . "public/index.php");
-//     exit();
-// }
+if (!isset($_SESSION['user_id'])) {
+    header("Location: " . BASE_URL . "public/index.php");
+    exit();
+}
 
- $role = $_SESSION['role'];
- $email = $_SESSION['email']; // Assuming you stored email in session
-//$role = 'regular user';
-//$email = 'regularuser@gmail.com';
+$role = $_SESSION['role'];
+$email = $_SESSION['email']; // Assuming you stored email in session
+
 // Define page title dynamically based on role
 $dashboardTitle = "Dashboard"; // Default title
 switch (strtolower(trim($role))) { // Normalize role to avoid case issues
@@ -73,19 +72,15 @@ switch (strtolower(trim($role))) { // Normalize role to avoid case issues
     ];
 }
 
-// No need to retrieve all users here if you're going to do it via fetch_user_status.php
-// But if you want a fallback server-side render, you can keep it.
 
 $selectedDeptId = isset($_POST['DepartmentID']) ? $_POST['DepartmentID'] : '';
-
 
 try {
     // ------------------------
     // RETRIEVE ALL DEPARTMENT IDs FOR THE USER
     // ------------------------
-    $stmt = $pdo->prepare("SELECT Department_ID FROM user_departments WHERE User_ID = ?");
-    // $stmt->execute([$_SESSION['user_id']]);
-    $stmt->execute([2]);
+    $stmt = $pdo->prepare("SELECT department_id FROM user_departments WHERE User_ID = ?");
+    $stmt->execute([$_SESSION['user_id']]);
     $departmentIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
     if (!empty($departmentIds)) {
@@ -93,9 +88,10 @@ try {
         // RETRIEVE FULL DEPARTMENT INFO
         // ------------------------
         $placeholders = implode(',', array_fill(0, count($departmentIds), '?'));
-        $stmt = $pdo->prepare("SELECT Department_ID, Department_Name, Department_Acronym FROM departments WHERE Department_ID IN ($placeholders)");
+        $stmt = $pdo->prepare("SELECT * FROM departments WHERE id IN ($placeholders)");
         $stmt->execute($departmentIds);
         $departments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
     } else {
         $departments = []; // No departments found
     }
@@ -191,8 +187,8 @@ try {
                     <select class="form-control" name="DepartmentID" id="departmentSelect" onchange="this.form.submit()">
                         <option value="" disabled selected>Select a department</option>
                         <?php foreach ($departments as $dept): ?>
-                            <option value="<?= $dept['Department_ID'] ?>" <?= ($selectedDeptId == $dept['Department_ID']) ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($dept['Department_Acronym'] . ' - ' . $dept['Department_Name']) ?>
+                            <option value="<?= $dept['id'] ?>" <?= ($selectedDeptId == $dept['id']) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($dept['abbreviation'] . ' - ' . $dept['department_name']) ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -209,11 +205,11 @@ try {
                         <th>Department Name</th>
                     </tr>
                     <?php foreach ($departments as $dept): ?>
-                        <?php if ($dept['Department_ID'] == $selectedDeptId): ?>
+                        <?php if ($dept['id'] == $selectedDeptId): ?>
                             <tr>
-                                <td><?= htmlspecialchars($dept['Department_ID']) ?></td>
-                                <td><?= htmlspecialchars($dept['Department_Acronym']) ?></td>
-                                <td><?= htmlspecialchars($dept['Department_Name']) ?></td>
+                                <td><?= htmlspecialchars($dept['id']) ?></td>
+                                <td><?= htmlspecialchars($dept['abbreviation']) ?></td>
+                                <td><?= htmlspecialchars($dept['department_name']) ?></td>
                             </tr>
                         <?php endif; ?>
                     <?php endforeach; ?>
