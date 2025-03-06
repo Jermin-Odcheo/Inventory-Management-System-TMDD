@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Mar 04, 2025 at 03:42 AM
+-- Generation Time: Mar 06, 2025 at 12:28 AM
 -- Server version: 8.2.0
 -- PHP Version: 8.2.13
 
@@ -42,25 +42,7 @@ CREATE TABLE IF NOT EXISTS `audit_log` (
   PRIMARY KEY (`TrackID`),
   KEY `idx_module` (`Module`),
   KEY `idx_action` (`Action`)
-) ENGINE=InnoDB AUTO_INCREMENT=99 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
---
--- Dumping data for table `audit_log`
---
-
-INSERT INTO `audit_log` (`TrackID`, `UserID`, `EntityID`, `Action`, `Details`, `OldVal`, `NewVal`, `Module`, `Status`, `Date_Time`) VALUES
-(78, 1, 1, 'Modified', 'Updated fields: First_Name, Last_Name, Department', '{\"Email\": \"superadmin@example.com\", \"Status\": \"\", \"User_ID\": 1, \"Password\": \"$2y$10$i4ei.yjO/RWfQmsCjZrbUO8PdC8YKip8/JRf8yXYC17AU7RbHt8vq\", \"Last_Name\": \"Admin1\", \"Department\": \"TMDD1\", \"First_Name\": \"Super1\", \"Last_Active\": \"2025-02-05 11:08:09.000000\"}', '{\"Email\": \"superadmin@example.com\", \"Status\": \"\", \"User_ID\": 1, \"Password\": \"$2y$10$i4ei.yjO/RWfQmsCjZrbUO8PdC8YKip8/JRf8yXYC17AU7RbHt8vq\", \"Last_Name\": \"Admin1adf\", \"Department\": \"Office of the President\", \"First_Name\": \"Super1asdf\", \"Last_Active\": \"2025-02-05 11:08:09.000000\"}', 'User Management', 'Successful', '2025-02-28 09:18:53'),
-(79, 1, 1, 'Modified', 'Updated fields: First_Name, Last_Name', '{\"Email\": \"superadmin@example.com\", \"Status\": \"\", \"User_ID\": 1, \"Password\": \"$2y$10$i4ei.yjO/RWfQmsCjZrbUO8PdC8YKip8/JRf8yXYC17AU7RbHt8vq\", \"Last_Name\": \"Admin1adf\", \"Department\": \"Office of the President\", \"First_Name\": \"Super1asdf\", \"Last_Active\": \"2025-02-05 11:08:09.000000\"}', '{\"Email\": \"superadmin@example.com\", \"Status\": \"\", \"User_ID\": 1, \"Password\": \"$2y$10$i4ei.yjO/RWfQmsCjZrbUO8PdC8YKip8/JRf8yXYC17AU7RbHt8vq\", \"Last_Name\": \"Admin\", \"Department\": \"Office of the President\", \"First_Name\": \"Super\", \"Last_Active\": \"2025-02-05 11:08:09.000000\"}', 'User Management', 'Successful', '2025-02-28 09:19:07'),
-(80, 1, 1, 'Modified', 'Updated fields: First_Name, Last_Name', '{\"Email\": \"superadmin@example.com\", \"Status\": \"\", \"User_ID\": 1, \"Password\": \"$2y$10$i4ei.yjO/RWfQmsCjZrbUO8PdC8YKip8/JRf8yXYC17AU7RbHt8vq\", \"Last_Name\": \"Admin\", \"Department\": \"Office of the President\", \"First_Name\": \"Super\", \"Last_Active\": \"2025-02-05 11:08:09.000000\"}', '{\"Email\": \"superadmin@example.com\", \"Status\": \"\", \"User_ID\": 1, \"Password\": \"$2y$10$i4ei.yjO/RWfQmsCjZrbUO8PdC8YKip8/JRf8yXYC17AU7RbHt8vq\", \"Last_Name\": \"Admin1\", \"Department\": \"Office of the President\", \"First_Name\": \"Super1\", \"Last_Active\": \"2025-02-05 11:08:09.000000\"}', 'User Management', 'Successful', '2025-02-28 09:21:13'),
-(89, 1, 147, 'Create', 'New user added: superuse12312312r@example.com', NULL, '{\"Email\": \"superuse12312312r@example.com\", \"User_ID\": 147, \"Last_Name\": \"123123\", \"Department\": \"SOL\", \"First_Name\": \"123123\"}', 'User Management', 'Successful', '2025-02-28 13:44:37'),
-(90, 1, 146, 'Remove', 'User soft deleted (is_deleted set to 1)', '{\"Email\": \"1233333@example.com\", \"Status\": \"Offline\", \"User_ID\": 146, \"Last_Name\": \"123\", \"Department\": \"SOM\", \"First_Name\": \"312\", \"is_deleted\": 0, \"Last_Active\": null}', '{\"Email\": \"1233333@example.com\", \"Status\": \"Offline\", \"User_ID\": 146, \"Last_Name\": \"123\", \"Department\": \"SOM\", \"First_Name\": \"312\", \"is_deleted\": 1, \"Last_Active\": null}', 'User Management', 'Successful', '2025-02-28 14:12:15'),
-(91, 1, 147, 'Remove', 'User soft deleted (is_deleted set to 1)', '{\"Email\": \"superuse12312312r@example.com\", \"Status\": \"Offline\", \"User_ID\": 147, \"Last_Name\": \"123123\", \"Department\": \"SOL\", \"First_Name\": \"123123\", \"is_deleted\": 0, \"Last_Active\": null}', '{\"Email\": \"superuse12312312r@example.com\", \"Status\": \"Offline\", \"User_ID\": 147, \"Last_Name\": \"123123\", \"Department\": \"SOL\", \"First_Name\": \"123123\", \"is_deleted\": 1, \"Last_Active\": null}', 'User Management', 'Successful', '2025-02-28 14:12:15'),
-(92, 1, 144, 'Remove', 'User soft deleted (is_deleted set to 1)', '{\"Email\": \"superadmin123123@example.com\", \"Status\": \"Offline\", \"User_ID\": 144, \"Last_Name\": \"123\", \"Department\": \"SOL\", \"First_Name\": \"123\", \"is_deleted\": 0, \"Last_Active\": null}', '{\"Email\": \"superadmin123123@example.com\", \"Status\": \"Offline\", \"User_ID\": 144, \"Last_Name\": \"123\", \"Department\": \"SOL\", \"First_Name\": \"123\", \"is_deleted\": 1, \"Last_Active\": null}', 'User Management', 'Successful', '2025-02-28 14:44:59'),
-(93, 1, 145, 'Remove', 'User soft deleted (is_deleted set to 1)', '{\"Email\": \"testtest123@example.com\", \"Status\": \"Offline\", \"User_ID\": 145, \"Last_Name\": \"123\", \"Department\": \"SOM\", \"First_Name\": \"123\", \"is_deleted\": 0, \"Last_Active\": null}', '{\"Email\": \"testtest123@example.com\", \"Status\": \"Offline\", \"User_ID\": 145, \"Last_Name\": \"123\", \"Department\": \"SOM\", \"First_Name\": \"123\", \"is_deleted\": 1, \"Last_Active\": null}', 'User Management', 'Successful', '2025-02-28 14:44:59'),
-(94, 1, 144, 'Delete', 'User has been deleted', '{\"Email\": \"superadmin123123@example.com\", \"Status\": \"Offline\", \"User_ID\": 144, \"Last_Name\": \"123\", \"Department\": \"SOL\", \"First_Name\": \"123\", \"is_deleted\": 1, \"Last_Active\": null}', '', 'User Management', 'Successful', '2025-02-28 15:21:12'),
-(96, 1, 145, 'Modified', 'Updated fields: First_Name, Last_Name', '{\"Email\": \"testtest123@example.com\", \"Status\": \"Offline\", \"User_ID\": 145, \"Password\": \"$2y$10$2dQ47SHsBGEhLS9x6bIqLeuLCpr3ZwgP3kEZ0XVYMD.2/CIvpVCZK\", \"Last_Name\": \"123\", \"Department\": \"SOM\", \"First_Name\": \"123\", \"Last_Active\": null}', '{\"Email\": \"testtest123@example.com\", \"Status\": \"Offline\", \"User_ID\": 145, \"Password\": \"$2y$10$2dQ47SHsBGEhLS9x6bIqLeuLCpr3ZwgP3kEZ0XVYMD.2/CIvpVCZK\", \"Last_Name\": \"123123\", \"Department\": \"SOM\", \"First_Name\": \"123123\", \"Last_Active\": null}', 'User Management', 'Successful', '2025-02-28 15:52:59'),
-(97, 1, 146, 'Restored', '1233333@example.com has been restored', '{\"is_deleted\": 1}', '{\"is_deleted\": 0}', 'User Management', 'Successful', '2025-02-28 15:53:35'),
-(98, 1, 147, 'Restored', 'User restored (is_deleted set to 0)', '{\"Email\": \"superuse12312312r@example.com\", \"Status\": \"Offline\", \"User_ID\": 147, \"Last_Name\": \"123123\", \"Department\": \"SOL\", \"First_Name\": \"123123\", \"is_deleted\": 1, \"Last_Active\": null}', '{\"Email\": \"superuse12312312r@example.com\", \"Status\": \"Offline\", \"User_ID\": 147, \"Last_Name\": \"123123\", \"Department\": \"SOL\", \"First_Name\": \"123123\", \"is_deleted\": 0, \"Last_Active\": null}', 'User Management', 'Successful', '2025-02-28 15:57:09');
+) ENGINE=InnoDB AUTO_INCREMENT=109 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
 
@@ -80,107 +62,6 @@ CREATE TABLE IF NOT EXISTS `charge_invoice` (
   UNIQUE KEY `invoice_no` (`invoice_no`),
   KEY `po_no` (`po_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
---
--- Triggers for Charge Invoice
---
-DROP TRIGGER IF EXISTS `chargeinvoice_after_insert`;
-DELIMITER $$
-CREATE TRIGGER `chargeinvoice_after_insert` AFTER INSERT ON `charge_invoice` FOR EACH ROW BEGIN
-    INSERT INTO audit_log (
-        `UserID`,
-        `EntityID`,
-        `Action`,
-        `Details`,
-        `OldVal`,
-        `NewVal`,
-        `Module`,
-        `Status`
-    ) VALUES (
-                 @current_user_id,
-                 NEW.id,
-                 'Add',
-                 'New Charge Invoice added',
-                 '',
-                 JSON_OBJECT(
-                         'ChargeInvoiceID', NEW.id,
-                         'ChargeInvoiceNo', NEW.invoice_no,
-                         'DateOfChargeInvoice', NEW.date_of_purchase,
-                         'PurchaseOrderNumber', NEW.po_no
-                 ),
-                 'Charge Invoice',
-                 'Successful'
-             );
-END
-$$
-DELIMITER ;
-
-DROP TRIGGER IF EXISTS `chargeinvoice_after_update`;
-DELIMITER $$
-CREATE TRIGGER `chargeinvoice_after_update` AFTER UPDATE ON `charge_invoice` FOR EACH ROW BEGIN
-    INSERT INTO audit_log (
-        `UserID`,
-        `EntityID`,
-        `Action`,
-        `Details`,
-        `OldVal`,
-        `NewVal`,
-        `Module`,
-        `Status`
-    ) VALUES (
-                 @current_user_id,
-                 NEW.id,
-                 'Modified',
-                 'Charge Invoice updated',
-                 JSON_OBJECT(
-                         'ChargeInvoiceID', OLD.id,
-                         'ChargeInvoiceNo', OLD.invoice_no,
-                         'DateOfChargeInvoice', OLD.date_of_purchase,
-                         'PurchaseOrderNumber', OLD.po_no
-                 ),
-                 JSON_OBJECT(
-                         'ChargeInvoiceID', NEW.id,
-                         'ChargeInvoiceNo', NEW.invoice_no,
-                         'DateOfChargeInvoice', NEW.date_of_purchase,
-                         'PurchaseOrderNumber', NEW.po_no
-                 ),
-                 'Charge Invoice',
-                 'Successful'
-             );
-END
-$$
-DELIMITER ;
-
-DROP TRIGGER IF EXISTS `chargeinvoice_after_delete`;
-DELIMITER $$
-CREATE TRIGGER `chargeinvoice_after_delete` AFTER DELETE ON `charge_invoice` FOR EACH ROW BEGIN
-    INSERT INTO audit_log (
-        `UserID`,
-        `EntityID`,
-        `Action`,
-        `Details`,
-        `OldVal`,
-        `NewVal`,
-        `Module`,
-        `Status`
-    ) VALUES (
-                 @current_user_id,
-                 OLD.id,
-                 'Delete',
-                 'Charge Invoice deleted',
-                 JSON_OBJECT(
-                         'ChargeInvoiceID', OLD.id,
-                         'ChargeInvoiceNo', OLD.invoice_no,
-                         'DateOfChargeInvoice', OLD.date_of_purchase,
-                         'PurchaseOrderNumber', OLD.po_no
-                 ),
-                 '',
-                 'Charge Invoice',
-                 'Successful'
-             );
-END
-$$
-DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -398,242 +279,6 @@ CREATE TABLE IF NOT EXISTS `purchase_order` (
 INSERT INTO `purchase_order` (`id`, `po_no`, `date_of_order`, `no_of_units`, `item_specifications`, `date_created`, `is_disabled`) VALUES
 (1, '3246789', '2025-03-05', 3, 'qwe', '2025-03-04 09:50:19', 0);
 
-
-
-DROP TRIGGER IF EXISTS `purchaseorder_after_insert`;
-DELIMITER $$
-CREATE TRIGGER `purchaseorder_after_insert` AFTER INSERT ON `purchase_order` FOR EACH ROW BEGIN
-    INSERT INTO audit_log (
-        `UserID`,
-        `EntityID`,
-        `Action`,
-        `Details`,
-        `OldVal`,
-        `NewVal`,
-        `Module`,
-        `Status`
-    ) VALUES (
-                 @current_user_id,
-                 NEW.id,
-                 'Add',
-                 'New Purchase Order added',
-                 '',
-                 JSON_OBJECT(
-                         'PurchaseOrderID', NEW.id,
-                         'PurchaseOrderNumber', NEW.po_no,
-                         'NumberOfUnits', NEW.no_of_units,
-                         'DateOfPurchaseOrder', NEW.date_of_order,
-                         'ItemsSpecification', NEW.item_specifications
-                 ),
-                 'Purchase Order',
-                 'Successful'
-             );
-END
-$$
-DELIMITER ;
-
-DROP TRIGGER IF EXISTS `purchaseorder_after_update`;
-DELIMITER $$
-CREATE TRIGGER `purchaseorder_after_update` AFTER UPDATE ON `purchase_order` FOR EACH ROW BEGIN
-    INSERT INTO audit_log (
-        `UserID`,
-        `EntityID`,
-        `Action`,
-        `Details`,
-        `OldVal`,
-        `NewVal`,
-        `Module`,
-        `Status`
-    ) VALUES (
-                 @current_user_id,
-                 NEW.id,
-                 'Modified',
-                 'Purchase Order updated',
-                 JSON_OBJECT(
-                         'PurchaseOrderID', OLD.id,
-                         'PurchaseOrderNumber', OLD.po_no,
-                         'NumberOfUnits', OLD.no_of_units,
-                         'DateOfPurchaseOrder', OLD.date_of_order,
-                         'ItemsSpecification', OLD.item_specifications
-                 ),
-                 JSON_OBJECT(
-                         'PurchaseOrderID', NEW.id
-                         'PurchaseOrderNumber', NEW.po_no,
-                         'NumberOfUnits', NEW.no_of_units,
-                         'DateOfPurchaseOrder', NEW.po_no,
-                         'ItemsSpecification', NEW.item_specifications
-                 ),
-                 'Purchase Order',
-                 'Successful'
-             );
-END
-$$
-DELIMITER ;
-
-DROP TRIGGER IF EXISTS `purchaseorder_after_delete`;
-DELIMITER $$
-CREATE TRIGGER `purchaseorder_after_delete` AFTER DELETE ON `purchase_order` FOR EACH ROW BEGIN
-    INSERT INTO audit_log (
-        `UserID`,
-        `EntityID`,
-        `Action`,
-        `Details`,
-        `OldVal`,
-        `NewVal`,
-        `Module`,
-        `Status`
-    ) VALUES (
-                 @current_user_id,
-                 OLD.po_no,
-                 'Delete',
-                 'Purchase Order deleted',
-                 JSON_OBJECT(
-                         'PurchaseOrderID', OLD.id,
-                         'PurchaseOrderNumber', OLD.po_no,
-                         'NumberOfUnits', OLD.no_of_units,
-                         'DateOfPurchaseOrder', OLD.date_of_order,
-                         'ItemsSpecification', OLD.item_specifications
-                 ),
-                 '',
-                 'Purchase Order',
-                 'Successful'
-             );
-END
-$$
-DELIMITER ;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `receivingreportform`
---
-
-DROP TABLE IF EXISTS `receivingreportform`;
-CREATE TABLE IF NOT EXISTS `receivingreportform` (
-                                                     `ReceivingReportFormID` int NOT NULL AUTO_INCREMENT,
-                                                     `ReceivingReportNumber` varchar(50) NOT NULL,
-                                                     `AccountableIndividual` varchar(100) DEFAULT NULL,
-                                                     `PurchaseOrderNumber` varchar(50) DEFAULT NULL,
-                                                     `AccountableIndividualLocation` varchar(255) DEFAULT NULL,
-                                                     `CreatedDate` datetime DEFAULT CURRENT_TIMESTAMP,
-                                                     `ModifiedDate` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                                                     PRIMARY KEY (`ReceivingReportFormID`),
-                                                     UNIQUE KEY `ReceivingReportNumber` (`ReceivingReportNumber`)
-) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
---
--- Dumping data for table `receivingreportform`
---
-
-INSERT INTO `receivingreportform` (`ReceivingReportFormID`, `ReceivingReportNumber`, `AccountableIndividual`, `PurchaseOrderNumber`, `AccountableIndividualLocation`, `CreatedDate`, `ModifiedDate`) VALUES
-                                                                                                                                                                                                         (1, 'RR001', 'John Doe', 'PO12345', 'IT Department', '2025-02-27 08:02:06', '2025-02-27 08:02:06'),
-                                                                                                                                                                                                         (2, 'RR002', 'Jane Smith', 'PO12346', 'Admin Office', '2025-02-27 08:02:06', '2025-02-27 08:02:06');
-
---
--- Triggers `receivingreportform`
---
-DROP TRIGGER IF EXISTS `receivingreportform_after_insert`;
-DELIMITER $$
-CREATE TRIGGER `receivingreportform_after_insert` AFTER INSERT ON `receivingreportform` FOR EACH ROW BEGIN
-    INSERT INTO audit_log (
-        `UserID`,
-        `EntityID`,
-        `Action`,
-        `Details`,
-        `OldVal`,
-        `NewVal`,
-        `Module`,
-        `Status`
-    ) VALUES (
-                 @current_user_id,
-                 NEW.ReceivingReportFormID,
-                 'Add',
-                 'New Receiving Report added',
-                 '',
-                 JSON_OBJECT(
-                         'ReceivingReportFormID', NEW.ReceivingReportFormID,
-                         'ReceivingReportNumber', NEW.ReceivingReportNumber,
-                         'AccountableIndividual', NEW.AccountableIndividual,
-                         'PurchaseOrderNumber', NEW.PurchaseOrderNumber,
-                         'AccountableIndividualLocation', NEW.AccountableIndividualLocation
-                 ),
-                 'Receiving Report',
-                 'Successful'
-             );
-END
-$$
-DELIMITER ;
-
-DROP TRIGGER IF EXISTS `receivingreportform_after_update`;
-DELIMITER $$
-CREATE TRIGGER `receivingreportform_after_update` AFTER UPDATE ON `receivingreportform` FOR EACH ROW BEGIN
-    INSERT INTO audit_log (
-        `UserID`,
-        `EntityID`,
-        `Action`,
-        `Details`,
-        `OldVal`,
-        `NewVal`,
-        `Module`,
-        `Status`
-    ) VALUES (
-                 @current_user_id,
-                 NEW.ReceivingReportFormID,
-                 'Modified',
-                 'Receiving Report updated',
-                 JSON_OBJECT(
-                         'ReceivingReportFormID', OLD.ReceivingReportFormID,
-                         'ReceivingReportNumber', OLD.ReceivingReportNumber,
-                         'AccountableIndividual', OLD.AccountableIndividual,
-                         'PurchaseOrderNumber', OLD.PurchaseOrderNumber,
-                         'AccountableIndividualLocation', OLD.AccountableIndividualLocation
-                 ),
-                 JSON_OBJECT(
-                         'ReceivingReportFormID', NEW.ReceivingReportFormID,
-                         'ReceivingReportNumber', NEW.ReceivingReportNumber,
-                         'AccountableIndividual', NEW.AccountableIndividual,
-                         'PurchaseOrderNumber', NEW.PurchaseOrderNumber,
-                         'AccountableIndividualLocation', NEW.AccountableIndividualLocation
-                 ),
-                 'Receiving Report',
-                 'Successful'
-             );
-END
-$$
-DELIMITER ;
-
-DROP TRIGGER IF EXISTS `receivingreportform_after_delete`;
-DELIMITER $$
-CREATE TRIGGER `receivingreportform_after_delete` AFTER DELETE ON `receivingreportform` FOR EACH ROW BEGIN
-    INSERT INTO audit_log (
-        `UserID`,
-        `EntityID`,
-        `Action`,
-        `Details`,
-        `OldVal`,
-        `NewVal`,
-        `Module`,
-        `Status`
-    ) VALUES (
-                 @current_user_id,
-                 OLD.ReceivingReportFormID,
-                 'Delete',
-                 'Receiving Report deleted',
-                 JSON_OBJECT(
-                         'ReceivingReportFormID', OLD.ReceivingReportFormID,
-                         'ReceivingReportNumber', OLD.ReceivingReportNumber,
-                         'AccountableIndividual', OLD.AccountableIndividual,
-                         'PurchaseOrderNumber', OLD.PurchaseOrderNumber,
-                         'AccountableIndividualLocation', OLD.AccountableIndividualLocation
-                 ),
-                 '',
-                 'Receiving Report',
-                 'Successful'
-             );
-END
-$$
-DELIMITER ;
-
 -- --------------------------------------------------------
 
 --
@@ -667,7 +312,7 @@ CREATE TABLE IF NOT EXISTS `roles` (
   `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `role_name` (`role_name`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `roles`
@@ -702,7 +347,16 @@ CREATE TABLE IF NOT EXISTS `role_changes` (
   PRIMARY KEY (`ChangeID`),
   KEY `UserID` (`UserID`),
   KEY `RoleID` (`RoleID`)
-) ENGINE=MyISAM AUTO_INCREMENT=31 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=34 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `role_changes`
+--
+
+INSERT INTO `role_changes` (`ChangeID`, `UserID`, `RoleID`, `Action`, `OldRoleName`, `NewRoleName`, `ChangeTimestamp`, `OldPrivileges`, `NewPrivileges`, `IsUndone`) VALUES
+(31, 10, 4, 'Modified', NULL, 'User Manager', '2025-03-05 10:24:57', '[1,2,3,4,5,6,7,8,9,10,11,12]', '[\"1\",\"4\",\"11\",\"10\",\"5\",\"6\",\"12\",\"8\",\"9\",\"7\",\"2\",\"3\"]', 0),
+(32, 10, 8, 'Add', NULL, 'User Management', '2025-03-05 10:25:25', NULL, NULL, 0),
+(33, 10, 8, 'Delete', NULL, NULL, '2025-03-05 10:25:30', NULL, NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -720,7 +374,7 @@ CREATE TABLE IF NOT EXISTS `role_module_privileges` (
   KEY `role_id` (`role_id`),
   KEY `module_id` (`module_id`),
   KEY `fk_rmp_privilege` (`privilege_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=76 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=88 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `role_module_privileges`
@@ -777,18 +431,6 @@ INSERT INTO `role_module_privileges` (`id`, `role_id`, `module_id`, `privilege_i
 (49, 3, 4, 10),
 (50, 3, 4, 11),
 (51, 3, 4, 12),
-(52, 4, 3, 1),
-(53, 4, 3, 2),
-(54, 4, 3, 3),
-(55, 4, 3, 4),
-(56, 4, 3, 5),
-(57, 4, 3, 6),
-(58, 4, 3, 7),
-(59, 4, 3, 8),
-(60, 4, 3, 9),
-(61, 4, 3, 10),
-(62, 4, 3, 11),
-(63, 4, 3, 12),
 (64, 5, 2, 1),
 (65, 5, 2, 2),
 (66, 5, 2, 3),
@@ -800,7 +442,19 @@ INSERT INTO `role_module_privileges` (`id`, `role_id`, `module_id`, `privilege_i
 (72, 5, 2, 9),
 (73, 5, 2, 10),
 (74, 5, 2, 11),
-(75, 5, 2, 12);
+(75, 5, 2, 12),
+(76, 4, NULL, 1),
+(77, 4, NULL, 4),
+(78, 4, NULL, 11),
+(79, 4, NULL, 10),
+(80, 4, NULL, 5),
+(81, 4, NULL, 6),
+(82, 4, NULL, 12),
+(83, 4, NULL, 8),
+(84, 4, NULL, 9),
+(85, 4, NULL, 7),
+(86, 4, NULL, 2),
+(87, 4, NULL, 3);
 
 -- --------------------------------------------------------
 
@@ -822,7 +476,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `username` (`username`),
   UNIQUE KEY `email` (`email`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `users`
@@ -830,22 +484,53 @@ CREATE TABLE IF NOT EXISTS `users` (
 
 INSERT INTO `users` (`id`, `username`, `email`, `password`, `first_name`, `last_name`, `date_created`, `status`, `is_disabled`) VALUES
 (1, 'navithebear', 'navi@example.com', '$2y$12$2esj1uaDmbD3K6Fi.C0CiuOye96x8OjARwTc82ViEAPvmx4b1cL0S', 'navi', 'slu', '2025-02-19 01:19:52', 'Online', 0),
-(2, 'userman', 'um@example.com', '$2y$12$wE3B0Dq4z0Bd1AHXf4gumexeObTqWXm7aASm7PnkCrtiL.iIfObS.', 'user', 'manager', '2025-02-19 05:40:35', 'Offline', 1),
-(3, 'equipman', 'em@example.com', '$2y$12$J0iy9bwoalbG2/NkqDZchuLU4sWramGpsw1EsSZ6se0CefM/sqpZq', 'equipment', 'manager', '2025-02-19 05:40:35', 'Offline', 1),
-(4, 'rpman', 'rp@example.com', '$2y$12$dWnJinU4uO7ETYIKi9cL0uN4wJgjACaF.q0Pbkr5yNUK2q1HUQk8G', 'ropriv', 'manager', '2025-02-19 05:41:59', 'Offline', 1),
-(5, 'auds', 'auds@example.com', '$2y$12$VRIJ5Okf3p9fE3Xtq.qyze/t./h30ZsV7y7pg4UFksFiJ8JdMSh/q', 'audi', 'broom broom', '2025-02-19 05:41:59', 'Offline', 1),
-(6, '1123123', '123123r@example.com', '$2y$10$3g.nIRPWdTl969U8rekkhebc8yTz5waWWzv52FEyAKpElJ8ZOTSn2', '123123', '123123', '2025-03-04 00:19:11', 'Offline', 0),
-(7, 'tcase', 'testcase@example.com', '$2y$10$BIvx8ENRmcwGXfbmuKqnae9o3nyNOh7FjYk0tqrpoNMYdoDAEiBCS', 'test', 'case', '2025-03-04 00:21:34', 'Offline', 0);
+(2, 'userman', 'um@example.com', '$2y$12$wE3B0Dq4z0Bd1AHXf4gumexeObTqWXm7aASm7PnkCrtiL.iIfObS.', 'user', 'manager', '2025-02-19 05:40:35', 'Offline', 0),
+(3, 'equipman', 'em@example.com', '$2y$12$J0iy9bwoalbG2/NkqDZchuLU4sWramGpsw1EsSZ6se0CefM/sqpZq', 'equipment', 'manager', '2025-02-19 05:40:35', 'Offline', 0),
+(4, 'rpman', 'rp@example.com', '$2y$12$dWnJinU4uO7ETYIKi9cL0uN4wJgjACaF.q0Pbkr5yNUK2q1HUQk8G', 'ropriv', 'manager', '2025-02-19 05:41:59', 'Offline', 0),
+(5, 'auds', 'auds@example.com', '$2y$12$VRIJ5Okf3p9fE3Xtq.qyze/t./h30ZsV7y7pg4UFksFiJ8JdMSh/q', 'audi', 'broom broom', '2025-02-19 05:41:59', 'Offline', 0);
 
 --
 -- Triggers `users`
 --
---
--- Triggers for `users` table
---
 DROP TRIGGER IF EXISTS `after_user_delete`;
 DELIMITER $$
 CREATE TRIGGER `after_user_delete` AFTER DELETE ON `users` FOR EACH ROW BEGIN
+    INSERT INTO audit_log (
+        `UserID`,              -- The user who performed the action
+        `EntityID`,            -- The ID of the deleted user
+        `Action`,              -- Action type
+        `Details`,             -- Description of the action
+        `OldVal`,              -- Old values before deletion
+        `NewVal`,              -- New values after deletion (NULL for DELETE)
+        `Module`,              -- Module where the action occurred
+        `Status`,              -- Status of the action
+        `Date_Time`            -- Timestamp of the action
+    ) VALUES (
+        @current_user_id,      -- Replace with the actual user ID performing the action
+        OLD.id,                -- The ID of the deleted user
+        'Remove',              -- Action type
+        'User deleted',        -- Details
+        JSON_OBJECT(           -- Old values in JSON format
+            'id', OLD.id,
+            'username', OLD.username,
+            'email', OLD.email,
+            'first_name', OLD.first_name,
+            'last_name', OLD.last_name,
+            'status', OLD.status,
+            'date_created', OLD.date_created,
+            'is_disabled', OLD.is_disabled
+        ),
+        NULL,                  -- No new values for DELETE operation
+        IFNULL(@current_module, 'User Management'), -- Default to 'User Management'
+        'Successful',          -- Status of the action
+        NOW()                  -- Current timestamp
+    );
+END
+$$
+DELIMITER ;
+DROP TRIGGER IF EXISTS `after_user_disable`;
+DELIMITER $$
+CREATE TRIGGER `after_user_disable` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
     INSERT INTO audit_log (
         `UserID`,              -- The user who performed the action
         `EntityID`,            -- The ID of the deleted user
@@ -879,70 +564,20 @@ CREATE TRIGGER `after_user_delete` AFTER DELETE ON `users` FOR EACH ROW BEGIN
 END
 $$
 DELIMITER ;
-
-DROP TRIGGER IF EXISTS `after_user_disable`;
-DELIMITER $$
-CREATE TRIGGER `after_user_disable` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
-    -- Check if the update is a soft delete (is_disabled changed from 0 to 1)
-    IF OLD.is_disabled = 0 AND NEW.is_disabled = 1 THEN
-        INSERT INTO audit_log (
-            `UserID`,              -- The user who performed the action
-            `EntityID`,            -- The ID of the disabled user
-            `Action`,              -- Action type
-            `Details`,             -- Description of the action
-            `OldVal`,              -- Old values before the disable
-            `NewVal`,              -- New values after the disable
-            `Module`,              -- Module where the action occurred
-            `Status`,              -- Status of the action
-            `Date_Time`            -- Timestamp of the action
-        ) VALUES (
-                     @current_user_id,      -- Replace with the actual user ID performing the action
-                     OLD.id,                -- The ID of the disabled user
-                     'Remove',              -- Action type
-                     'User disabled (is_disabled set to 1)', -- Details
-                     JSON_OBJECT(           -- Old values in JSON format
-                             'id', OLD.id,
-                             'username', OLD.username,
-                             'email', OLD.email,
-                             'first_name', OLD.first_name,
-                             'last_name', OLD.last_name,
-                             'status', OLD.status,
-                             'date_created', OLD.date_created,
-                             'is_disabled', OLD.is_disabled
-                     ),
-                     JSON_OBJECT(           -- New values in JSON format
-                             'id', NEW.id,
-                             'username', NEW.username,
-                             'email', NEW.email,
-                             'first_name', NEW.first_name,
-                             'last_name', NEW.last_name,
-                             'status', NEW.status,
-                             'date_created', NEW.date_created,
-                             'is_disabled', NEW.is_disabled
-                     ),
-                     IFNULL(@current_module, 'User Management'), -- Default to 'User Management'
-                     'Successful',          -- Status of the action
-                     NOW()                  -- Current timestamp
-                 );
-    END IF;
-END
-$$
-DELIMITER ;
-
 DROP TRIGGER IF EXISTS `user_after_modify`;
 DELIMITER $$
 CREATE TRIGGER `user_after_modify` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
     DECLARE diffList TEXT DEFAULT '';
+    DECLARE dept_name VARCHAR(191);
 
     -- Get department name for the user
-    DECLARE dept_name VARCHAR(191);
     SELECT d.department_name INTO dept_name
     FROM departments d
              JOIN user_departments ud ON d.id = ud.department_id
     WHERE ud.user_id = NEW.id
     LIMIT 1;
 
-    -- Only log modifications if is_disabled did not change.
+    -- Only log modifications if is_disabled did not change
     IF OLD.is_disabled = NEW.is_disabled THEN
         IF OLD.username <> NEW.username THEN
             SET diffList = CONCAT(diffList, 'username, ');
@@ -963,59 +598,63 @@ CREATE TRIGGER `user_after_modify` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
             SET diffList = CONCAT(diffList, 'password, ');
         END IF;
 
-        -- Only insert a log if at least one field (other than is_disabled) changed.
-        IF TRIM(TRAILING ', ' FROM diffList) <> '' THEN
-            INSERT INTO audit_log (
-                UserID,
-                EntityID,
-                Action,
-                Details,
-                OldVal,
-                NewVal,
-                Module,
-                Status,
-                Date_Time
-            )
-            VALUES (
-                       @current_user_id,
-                       NEW.id,
-                       'Modified',
-                       CONCAT('Updated fields: ', TRIM(TRAILING ', ' FROM diffList)),
-                       JSON_OBJECT(
-                               'id', OLD.id,
-                               'username', OLD.username,
-                               'email', OLD.email,
-                               'first_name', OLD.first_name,
-                               'last_name', OLD.last_name,
-                               'password', OLD.password,
-                               'status', OLD.status,
-                               'department', dept_name,
-                               'date_created', OLD.date_created
-                       ),
-                       JSON_OBJECT(
-                               'id', NEW.id,
-                               'username', NEW.username,
-                               'email', NEW.email,
-                               'first_name', NEW.first_name,
-                               'last_name', NEW.last_name,
-                               'password', NEW.password,
-                               'status', NEW.status,
-                               'department', dept_name,
-                               'date_created', NEW.date_created
-                       ),
-                       IFNULL(@current_module, 'User Management'),
-                       'Successful',
-                       NOW()
-                   );
-        END IF;
+        -- Insert log entry
+        INSERT INTO audit_log (
+            UserID,
+            EntityID,
+            Action,
+            Details,
+            OldVal,
+            NewVal,
+            Module,
+            Status,
+            Date_Time
+        )
+        VALUES (
+            @current_user_id,
+            NEW.id,
+            'Modified',
+            CASE 
+                WHEN TRIM(TRAILING ', ' FROM diffList) <> '' 
+                THEN CONCAT('Updated fields: ', TRIM(TRAILING ', ' FROM diffList))
+                ELSE 'No changes made'
+            END,
+            JSON_OBJECT(
+                'id', OLD.id,
+                'username', OLD.username,
+                'email', OLD.email,
+                'first_name', OLD.first_name,
+                'last_name', OLD.last_name,
+                'password', OLD.password,
+                'status', OLD.status,
+                'department', dept_name,
+                'date_created', OLD.date_created
+            ),
+            JSON_OBJECT(
+                'id', NEW.id,
+                'username', NEW.username,
+                'email', NEW.email,
+                'first_name', NEW.first_name,
+                'last_name', NEW.last_name,
+                'password', NEW.password,
+                'status', NEW.status,
+                'department', dept_name,
+                'date_created', NEW.date_created
+            ),
+            IFNULL(@current_module, 'User Management'),
+            CASE 
+                WHEN TRIM(TRAILING ', ' FROM diffList) <> '' THEN 'Successful'
+                ELSE 'Failed'
+            END,
+            NOW()
+        );
     END IF;
 END
 $$
 DELIMITER ;
 DROP TRIGGER IF EXISTS `user_after_restore`;
 DELIMITER $$
-CREATE TRIGGER `user_after_restore` AFTER UPDATE ON `users` FOR EACH ROW
-BEGIN
+CREATE TRIGGER `user_after_restore` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
     -- Declare variables first, at the beginning of the block
     DECLARE dept_name VARCHAR(191);
 
@@ -1073,11 +712,9 @@ BEGIN
 END
 $$
 DELIMITER ;
-
 DROP TRIGGER IF EXISTS `users_after_create`;
 DELIMITER $$
-CREATE TRIGGER `users_after_create` AFTER INSERT ON `users` FOR EACH ROW
-BEGIN
+CREATE TRIGGER `users_after_create` AFTER INSERT ON `users` FOR EACH ROW BEGIN
     -- Declare variable to hold department name
     DECLARE dept_name VARCHAR(191);
 
@@ -1115,6 +752,7 @@ BEGIN
                          'first_name', NEW.first_name,
                          'last_name', NEW.last_name,
                          'department', dept_name,
+                         'status', NEW.status,
                          'date_created', NEW.date_created
                  ),
                  IFNULL(@current_module, 'User Management'),
@@ -1124,6 +762,7 @@ BEGIN
 END
 $$
 DELIMITER ;
+
 -- --------------------------------------------------------
 
 --
@@ -1143,8 +782,6 @@ CREATE TABLE IF NOT EXISTS `user_departments` (
 --
 
 INSERT INTO `user_departments` (`user_id`, `department_id`) VALUES
-(7, 1),
-(6, 5),
 (1, 40);
 
 -- --------------------------------------------------------
@@ -1167,10 +804,8 @@ CREATE TABLE IF NOT EXISTS `user_roles` (
 
 INSERT INTO `user_roles` (`user_id`, `role_id`) VALUES
 (1, 1),
-(7, 2),
 (3, 3),
 (2, 4),
-(6, 4),
 (4, 5),
 (5, 6);
 
