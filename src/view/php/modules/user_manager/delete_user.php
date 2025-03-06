@@ -1,125 +1,129 @@
 <?php
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
-include '../../general/header.php';
+require_once('../../clients/admins/RBACService.php');
 
+// Ensure clean output buffer
+ob_start();
+
+// Set JSON headers
 header('Content-Type: application/json');
-
-// Add error reporting for debugging
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+header('X-Content-Type-Options: nosniff');
 
 if (!isset($_SESSION['user_id'])) {
+    ob_clean();
     echo json_encode(['success' => false, 'message' => 'Not logged in']);
     exit();
 }
 
-// Function to get user's roles
-function getUserRoles($pdo, $userId) {
-    try {
-        $stmt = $pdo->prepare("
-            SELECT r.Role_Name 
-            FROM roles r 
-            JOIN user_roles ur ON r.id = ur.Role_ID 
-            WHERE ur.User_ID = ?
-        ");
-        $stmt->execute([$userId]);
-        $roles = $stmt->fetchAll(PDO::FETCH_COLUMN);
-        return $roles;
-    } catch (Exception $e) {
-        error_log("Error getting user roles: " . $e->getMessage());
-        return [];
-    }
-}
-
-// Function to check if user can delete target
-function canDelete($currentUserRoles, $targetUserRoles) {
-    error_log("Current user roles: " . print_r($currentUserRoles, true));
-    error_log("Target user roles: " . print_r($targetUserRoles, true));
-    
-    if (in_array('Super Admin', $currentUserRoles)) {
-        return true;
-    }
-    
-    if (in_array('Super User', $currentUserRoles)) {
-        return count($targetUserRoles) === 1 && in_array('Regular User', $targetUserRoles);
-    }
-    
-    return false;
-}
+// Initialize RBAC Service
+$rbac = new RBACService($pdo, $_SESSION['user_id']);
 
 try {
+    // Check if user has delete permission
+    if (!$rbac->hasPrivilege('User Management', 'Delete')) {
+        throw new Exception("You don't have permission to delete users.");
+    }
+
     $pdo->beginTransaction();
-    
-    // Set current user for audit logging
-    $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
-    
-    // Check if this is a permanent delete
-    $isPermanentDelete = isset($_POST['permanent']) && $_POST['permanent'] === '1';
-    
+
+    // Set the current user ID for the trigger
+    $pdo->exec("SET @current_user_id = " . $_SESSION['user_id']);
+    $pdo->exec("SET @current_module = 'User Management'");
+
     // Handle single user deletion
     if (isset($_POST['user_id'])) {
-        $targetUserId = $_POST['user_id'];
-        
-        // Get roles of both users
-        $currentUserRoles = getUserRoles($pdo, $_SESSION['user_id']);
-        $targetUserRoles = getUserRoles($pdo, $targetUserId);
-        
-        if (!canDelete($currentUserRoles, $targetUserRoles)) {
-            throw new Exception("You don't have permission to delete this user.");
+        $targetUserId = filter_var($_POST['user_id'], FILTER_VALIDATE_INT);
+
+        if ($targetUserId === false) {
+            throw new Exception("Invalid user ID");
         }
-        
-        if ($isPermanentDelete) {
-            // For permanent delete
-            $stmt = $pdo->prepare("DELETE FROM users WHERE id = ? AND is_disabled = 1");
-        } else {
-            // For soft delete
-            $stmt = $pdo->prepare("UPDATE users SET is_disabled = 1 WHERE id = ?");
+
+        // Prevent self-deletion
+        if ($targetUserId === $_SESSION['user_id']) {
+            throw new Exception("Cannot delete your own account");
         }
-        
+
+        // Check if user exists
+        $checkStmt = $pdo->prepare("SELECT id FROM users WHERE id = ? AND is_disabled = 0");
+        $checkStmt->execute([$targetUserId]);
+        if (!$checkStmt->fetch()) {
+            throw new Exception("User not found or already archived");
+        }
+
+        // For soft delete
+        $stmt = $pdo->prepare("
+            UPDATE users 
+            SET is_disabled = 1,
+                status = 'Inactive'
+            WHERE id = ? 
+            AND is_disabled = 0
+        ");
+
         if (!$stmt->execute([$targetUserId])) {
-            throw new Exception("Failed to " . ($isPermanentDelete ? "permanently delete" : "soft delete") . " user.");
+            $errorInfo = $stmt->errorInfo();
+            throw new Exception("Failed to archive user: " . $errorInfo[2]);
         }
-        
-        $_SESSION['delete_success'] = true;
-        
-    } 
+
+        $rowCount = $stmt->rowCount();
+        if ($rowCount === 0) {
+            throw new Exception("User not found or already archived");
+        }
+
+    }
     // Handle bulk deletion
     else if (isset($_POST['user_ids']) && is_array($_POST['user_ids'])) {
-        $targetUserIds = $_POST['user_ids'];
-        $currentUserRoles = getUserRoles($pdo, $_SESSION['user_id']);
-        
-        foreach ($targetUserIds as $targetUserId) {
-            $targetUserRoles = getUserRoles($pdo, $targetUserId);
-            if (!canDelete($currentUserRoles, $targetUserRoles)) {
-                throw new Exception("You don't have permission to delete one or more selected users.");
-            }
+        $targetUserIds = array_filter(array_map('intval', $_POST['user_ids']));
+
+        if (empty($targetUserIds)) {
+            throw new Exception("No valid user IDs provided");
         }
-        
+
+        // Prevent self-deletion in bulk
+        if (in_array($_SESSION['user_id'], $targetUserIds)) {
+            throw new Exception("Cannot delete your own account");
+        }
+
         $placeholders = str_repeat('?,', count($targetUserIds) - 1) . '?';
-        
-        if ($isPermanentDelete) {
-            // For permanent delete
-            $stmt = $pdo->prepare("DELETE FROM users WHERE User_ID IN ($placeholders) AND is_deleted = 1");
-        } else {
-            // For soft delete
-            $stmt = $pdo->prepare("UPDATE users SET is_deleted = 1 WHERE User_ID IN ($placeholders)");
-        }
-        
+
+        // For soft delete
+        $stmt = $pdo->prepare("
+            UPDATE users 
+            SET is_disabled = 1,
+                status = 'Inactive'
+            WHERE id IN ($placeholders)
+            AND is_disabled = 0
+        ");
+
         if (!$stmt->execute($targetUserIds)) {
-            throw new Exception("Failed to " . ($isPermanentDelete ? "permanently delete" : "soft delete") . " users.");
+            $errorInfo = $stmt->errorInfo();
+            throw new Exception("Failed to archive users: " . $errorInfo[2]);
         }
-        
-        $_SESSION['delete_success'] = true;
-        $_SESSION['deleted_count'] = count($targetUserIds);
+
+        $rowCount = $stmt->rowCount();
+        if ($rowCount === 0) {
+            throw new Exception("No users found or all users already archived");
+        }
+    } else {
+        throw new Exception("No user IDs provided");
     }
-    
+
     $pdo->commit();
-    echo json_encode(['success' => true]);
-    
+    echo json_encode([
+        'success' => true,
+        'message' => isset($_POST['user_ids']) ?
+            "$rowCount users have been archived successfully" :
+            "User has been archived successfully"
+    ]);
+
 } catch (Exception $e) {
-    $pdo->rollBack();
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
     error_log("Delete user error: " . $e->getMessage());
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    echo json_encode([
+        'success' => false,
+        'message' => $e->getMessage()
+    ]);
 }
 ?>

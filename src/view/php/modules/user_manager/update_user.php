@@ -1,113 +1,142 @@
 <?php
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
-include '../../general/header.php';
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+require_once('../../clients/admins/RBACService.php');
+
+// Ensure clean output
+ob_start();
+
+// Set JSON headers
+header('Content-Type: application/json');
+header('X-Content-Type-Options: nosniff');
 
 if (!isset($_SESSION['user_id'])) {
-    http_response_code(403);
-    echo "Access denied.";
-    exit();
-}
-
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    echo "Method not allowed.";
-    exit();
-}
-
-// Retrieve and sanitize input data
-$user_id    = $_POST['user_id'] ?? '';
-$email      = trim($_POST['email'] ?? '');
-$first_name = trim($_POST['first_name'] ?? '');
-$last_name  = trim($_POST['last_name'] ?? '');
-$department = trim($_POST['department'] ?? ''); // Assumed to be department_id
-$password   = $_POST['password'] ?? '';
-
-if (empty($user_id) || empty($email) || empty($first_name) || empty($last_name)) {
-    http_response_code(400);
-    echo "Missing required fields.";
-    exit();
-}
-
-if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    http_response_code(400);
-    echo "Invalid email format.";
+    echo json_encode(['success' => false, 'message' => 'Not logged in']);
     exit();
 }
 
 try {
-    // Set user-defined variables for auditing triggers
-    $pdo->query("SET @current_user_id = " . (int)$_SESSION['user_id']);
-    $pdo->query("SET @current_module = 'User Management'");
-
-    // Update the users table
-    if (!empty($password)) {
-        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-        $sql = "UPDATE users 
-                SET email = :email,
-                    first_name = :first_name,
-                    last_name = :last_name,
-                    password = :password
-                WHERE id = :user_id";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([
-            ':email'      => $email,
-            ':first_name' => $first_name,
-            ':last_name'  => $last_name,
-            ':password'   => $hashedPassword,
-            ':user_id'    => $user_id,
-        ]);
-    } else {
-        $sql = "UPDATE users 
-                SET email = :email,
-                    first_name = :first_name,
-                    last_name = :last_name
-                WHERE id = :user_id";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([
-            ':email'      => $email,
-            ':first_name' => $first_name,
-            ':last_name'  => $last_name,
-            ':user_id'    => $user_id,
-        ]);
+    // Validate input
+    if (!isset($_POST['user_id']) || !isset($_POST['email']) ||
+        !isset($_POST['first_name']) || !isset($_POST['last_name'])) {
+        throw new Exception('Missing required fields');
     }
 
-    // Handle department update if provided
-    if (!empty($department)) {
-        // Check if the user already has a department assigned
-        $checkSql = "SELECT COUNT(*) FROM user_departments WHERE user_id = :user_id";
-        $checkStmt = $pdo->prepare($checkSql);
-        $checkStmt->execute([':user_id' => $user_id]);
-        $count = $checkStmt->fetchColumn();
+    $userId = filter_var($_POST['user_id'], FILTER_VALIDATE_INT);
+    $email = filter_var($_POST['email'], FILTER_VALIDATE_EMAIL);
+    $firstName = trim($_POST['first_name']);
+    $lastName = trim($_POST['last_name']);
+    $department = trim($_POST['department'] ?? '');
 
-        if ($count > 0) {
-            // Update existing department assignment
-            $updateDeptSql = "UPDATE user_departments 
-                              SET department_id = :department_id 
-                              WHERE user_id = :user_id";
-            $updateDeptStmt = $pdo->prepare($updateDeptSql);
-            $updateDeptStmt->execute([
-                ':department_id' => $department,
-                ':user_id'       => $user_id,
-            ]);
-        } else {
-            // Insert new department assignment
-            $insertDeptSql = "INSERT INTO user_departments (user_id, department_id) 
-                              VALUES (:user_id, :department_id)";
-            $insertDeptStmt = $pdo->prepare($insertDeptSql);
-            $insertDeptStmt->execute([
-                ':user_id'       => $user_id,
-                ':department_id' => $department,
-            ]);
+    if (!$userId || !$email) {
+        throw new Exception('Invalid input data');
+    }
+
+    // Start transaction
+    $pdo->beginTransaction();
+
+    // First, check if there are any actual changes
+    $stmt = $pdo->prepare("
+        SELECT * FROM users WHERE id = ?
+    ");
+    $stmt->execute([$userId]);
+    $currentUser = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    // Check if there are any changes
+    $hasChanges = false;
+    $changes = [];
+
+    if ($currentUser['email'] !== $email) {
+        $changes['email'] = true;
+        $hasChanges = true;
+    }
+    if ($currentUser['first_name'] !== $firstName) {
+        $changes['first_name'] = true;
+        $hasChanges = true;
+    }
+    if ($currentUser['last_name'] !== $lastName) {
+        $changes['last_name'] = true;
+        $hasChanges = true;
+    }
+    if (!empty($_POST['password'])) {
+        $changes['password'] = true;
+        $hasChanges = true;
+    }
+    if (!empty($department) && $department !== $currentUser['department']) {
+        $changes['department'] = true;
+        $hasChanges = true;
+    }
+
+    // Set current user for audit log
+    $pdo->exec("SET @current_user_id = " . $_SESSION['user_id']);
+    $pdo->exec("SET @current_module = 'User Management'");
+
+    // Set a flag for the trigger to know if there were actual changes
+    $pdo->exec("SET @has_changes = " . ($hasChanges ? "1" : "0"));
+
+    if ($hasChanges) {
+        // Update user
+        $stmt = $pdo->prepare("
+            UPDATE users 
+            SET email = ?,
+                first_name = ?,
+                last_name = ?
+            WHERE id = ?
+        ");
+
+        if (!$stmt->execute([$email, $firstName, $lastName, $userId])) {
+            throw new Exception('Failed to update user');
         }
+
+        // Update password if provided
+        if (!empty($_POST['password'])) {
+            $hashedPassword = password_hash($_POST['password'], PASSWORD_DEFAULT);
+            $stmt = $pdo->prepare("UPDATE users SET password = ? WHERE id = ?");
+            $stmt->execute([$hashedPassword, $userId]);
+        }
+
+        // Update department if provided and changed
+        if (!empty($department) && isset($changes['department'])) {
+            $stmt = $pdo->prepare("
+                UPDATE user_departments 
+                SET department_id = ?
+                WHERE user_id = ?
+            ");
+            $stmt->execute([$department, $userId]);
+        }
+
+        $message = 'User updated successfully';
+        $success = true;
+    } else {
+        // No changes were made
+        $message = 'No changes were made to the user';
+        $success = false;
     }
 
-    echo "User updated successfully.";
-} catch (PDOException $e) {
-    http_response_code(500);
-    echo "Error updating user: " . $e->getMessage();
-    exit();
+    $pdo->commit();
+
+    echo json_encode([
+        'success' => $success,
+        'message' => $message,
+        'data' => [
+            'id' => $userId,
+            'email' => $email,
+            'first_name' => $firstName,
+            'last_name' => $lastName,
+            'department' => $department,
+            'hasChanges' => $hasChanges,
+            'changes' => $changes
+        ]
+    ]);
+
+} catch (Exception $e) {
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+    error_log("Update user error: " . $e->getMessage());
+    echo json_encode([
+        'success' => false,
+        'message' => $e->getMessage()
+    ]);
 }
 ?>

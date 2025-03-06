@@ -1,7 +1,7 @@
 <?php
 session_start();
 require '../../../../../config/ims-tmdd.php';
-// include '../../general/header.php';
+ include '../../general/header.php';
 
 // If not logged in, redirect to the LOGIN PAGE
 // if (!isset($_SESSION['user_id'])) {
@@ -9,13 +9,10 @@ require '../../../../../config/ims-tmdd.php';
 //     exit();
 // }
 
-// Debug: Log the current role (remove in production)
-// error_log("Current Session Role: " . $_SESSION['role']);
-
-// $role = $_SESSION['role'];
-// $email = $_SESSION['email']; // Assuming you stored email in session
-$role = 'regular user';
-$email = 'regularuser@gmail.com';
+ $role = $_SESSION['role'];
+ $email = $_SESSION['email']; // Assuming you stored email in session
+//$role = 'regular user';
+//$email = 'regularuser@gmail.com';
 // Define page title dynamically based on role
 $dashboardTitle = "Dashboard"; // Default title
 switch (strtolower(trim($role))) { // Normalize role to avoid case issues

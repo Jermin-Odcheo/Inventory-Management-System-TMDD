@@ -1,21 +1,44 @@
 <?php
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
-include '../../general/header.php';
-// Enable error reporting for debugging
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
-// Check if database connection is established
-if (!isset($pdo)) {
-    die("Database connection is not established.");
-}
+require_once('../../clients/admins/RBACService.php');
 
 // Check if the user is logged in
 if (!isset($_SESSION['user_id'])) {
     header("Location: ../../../../../public/index.php");
     exit();
 }
+
+// Initialize RBAC
+$rbac = new RBACService($pdo, $_SESSION['user_id']);
+
+// Check view permission
+if (!$rbac->hasPrivilege('User Management', 'View')) {
+    header("Location: " . BASE_URL . "src/view/php/general/access_denied.php");
+    exit();
+}
+
+// Define available actions based on privileges
+$canCreate = $rbac->hasPrivilege('User Management', 'Create');
+$canModify = $rbac->hasPrivilege('User Management', 'Modify');
+$canDelete = $rbac->hasPrivilege('User Management', 'Remove');
+$canTrack = $rbac->hasPrivilege('User Management', 'Track');
+
+include '../../general/header.php';
+
+// Get current user's roles and initialize RBAC
+$currentUserRoles = getCurrentUserRoles($pdo, $_SESSION['user_id']);
+$rbac = new RBACManager($pdo, $currentUserRoles);
+
+// Check view permission immediately
+if (!$rbac->hasPrivilege('User Management', 'View')) {
+    header("Location: ../../../../../public/index.php");
+    exit();
+}
+
+// Get permissions for use in template
+$canEdit = $rbac->hasPrivilege('User Management', 'Edit');
+$canDelete = $rbac->hasPrivilege('User Management', 'Delete');
 
 // Define allowed sorting columns (for active users)
 $allowedSortColumns = ['id', 'Email', 'First_Name', 'Last_Name', 'Department', 'Status'];
@@ -38,7 +61,8 @@ try {
 }
 
 // Function to get user departments
-function getUserDepartments($pdo, $userId) {
+function getUserDepartments($pdo, $userId)
+{
     $deptIds = [];
     try {
         $stmt = $pdo->prepare("SELECT department_id FROM user_departments WHERE user_id = ?");
@@ -118,99 +142,152 @@ function getCurrentUserRoles($pdo, $userId)
     return $stmt->fetchAll(PDO::FETCH_COLUMN);
 }
 
-// Get current user's roles
-// $currentUserRoles = getCurrentUserRoles($pdo, $_SESSION['user_id']);
-$currentUserRoles = ["Regular User"];
-
-// Add this function to check if current user can delete target user
-function canDeleteUser($currentUserRoles, $targetUserRoles)
+class RBACManager
 {
-    if (in_array('Super Admin', $currentUserRoles)) {
-        return true;
+    private $pdo;
+    private $userRoles;
+
+    public function __construct(PDO $pdo, array $userRoles)
+    {
+        $this->pdo = $pdo;
+        $this->userRoles = $userRoles;
     }
-    if (in_array('Super User', $currentUserRoles)) {
-        return count($targetUserRoles) === 1 && in_array('Regular User', $targetUserRoles);
+
+    /**
+     * Check if user has specific privilege for a module
+     */
+    public function hasPrivilege(string $moduleName, string $privilegeName): bool
+    {
+        try {
+            $stmt = $this->pdo->prepare("
+                SELECT COUNT(*) as count
+                FROM privileges p 
+                JOIN role_module_privileges rmp ON p.id = rmp.privilege_id 
+                JOIN roles r ON r.id = rmp.role_id
+                JOIN modules m ON m.id = rmp.module_id
+                WHERE r.role_name IN (" . str_repeat('?,', count($this->userRoles) - 1) . "?)
+                AND m.module_name = ?
+                AND p.priv_name = ?
+                AND p.is_disabled = 0
+                AND r.is_disabled = 0
+            ");
+
+            $params = array_merge($this->userRoles, [$moduleName, $privilegeName]);
+            $stmt->execute($params);
+
+            return (int)$stmt->fetchColumn() > 0;
+        } catch (PDOException $e) {
+            $this->logError("Permission check failed", $e);
+            return false;
+        }
     }
-    return false;
+
+    /**
+     * Check if user can delete target user
+     */
+    public function canDeleteUser(int $targetUserId): bool
+    {
+        try {
+            // First check if user has delete privilege
+            if (!$this->hasPrivilege('User Management', 'Delete')) {
+                return false;
+            }
+
+            // Get target user's roles
+            $targetRoles = $this->getUserRoles($targetUserId);
+            $currentUserRoles = $this->userRoles;
+
+            // Get role hierarchies from database
+            $roleHierarchy = $this->getRoleHierarchy();
+
+            // Check if current user's role level is higher than target user's
+            $currentUserMaxLevel = $this->getMaxRoleLevel($currentUserRoles, $roleHierarchy);
+            $targetUserMaxLevel = $this->getMaxRoleLevel($targetRoles, $roleHierarchy);
+
+            return $currentUserMaxLevel > $targetUserMaxLevel;
+
+        } catch (Exception $e) {
+            $this->logError("Delete permission check failed", $e);
+            return false;
+        }
+    }
+
+    private function getMaxRoleLevel(array $userRoles, array $hierarchy): int
+    {
+        $maxLevel = 0;
+        foreach ($userRoles as $role) {
+            $maxLevel = max($maxLevel, $hierarchy[$role] ?? 0);
+        }
+        return $maxLevel;
+    }
+
+    /**
+     * Get user's roles
+     */
+    private function getUserRoles(int $userId): array
+    {
+        $stmt = $this->pdo->prepare("
+            SELECT r.role_name 
+            FROM roles r 
+            JOIN user_roles ur ON r.id = ur.role_id 
+            WHERE ur.user_id = ?
+            AND r.is_disabled = 0
+        ");
+        $stmt->execute([$userId]);
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
+
+    /**
+     * Check if user can perform bulk delete
+     */
+    public function canBulkDelete(array $targetUserIds): array
+    {
+        $results = [
+            'can_delete' => true,
+            'unauthorized_users' => []
+        ];
+
+        foreach ($targetUserIds as $targetId) {
+            if (!$this->canDeleteUser($targetId)) {
+                $results['can_delete'] = false;
+                $results['unauthorized_users'][] = $targetId;
+            }
+        }
+
+        return $results;
+    }
+
+    private function logError($message, Exception $e)
+    {
+        error_log(sprintf("[RBAC Error] %s: %s", $message, $e->getMessage()));
+    }
 }
 
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-RBAC : view
-if role doesnt include view for User module then redirect
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
-try {
-    // For debugging - comment out the redirect temporarily
-    // and add this to see what's happening:
-    echo "<pre>Checking permissions...</pre>";
+// Initialize RBAC
+$rbac = new RBACManager($pdo, $currentUserRoles);
 
-    $stmt = $pdo->prepare("
-        SELECT p.priv_name 
-        FROM privileges AS p 
-        JOIN role_module_privileges AS rmp ON p.id = rmp.privilege_id 
-        JOIN roles AS r ON r.id = rmp.role_id
-        JOIN modules AS m ON m.id = rmp.module_id
-        WHERE r.role_name = 'Regular User'
-        AND m.module_name = 'User Management'
-    ");
-    $stmt->execute();
-    $privs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// Check view permission
+if (!$rbac->hasPrivilege('User Management', 'View')) {
+    header("Location: ../../../../../public/index.php");
+    exit();
+}
 
-    // Debug what permissions are found
-    echo "<pre>Permissions found: " . print_r($privs, true) . "</pre>";
+// Check edit permission
+$canEdit = $rbac->hasPrivilege('User Management', 'Edit');
 
-    $privNames = array_column($privs, 'priv_name');
-    if (empty($privNames) || !in_array("View", $privNames)) {
-        // Comment this out temporarily for debugging
-        // header("Location: ../../../../../public/index.php");
-        // exit();
-        echo "<pre>No 'View' permission found for 'User Management' module</pre>";
-    }
-} catch (PDOException $e) {
-    die("Database query error: " . $e->getMessage());
+// Check delete permission
+$canDelete = $rbac->hasPrivilege('User Management', 'Delete');
+
+// In your HTML/PHP view:
+if ($canEdit) {
+    echo '<button class="edit-btn">Edit</button>';
+}
+
+if ($canDelete) {
+    echo '<button class="delete-btn">Delete</button>';
 }
 
 
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-RBAC : edit
-if role doesnt include edit then remove those edit buttons
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
-$showEditButton = false;
-try {
-    $stmt = $pdo->prepare("
-        SELECT p.priv_name 
-        FROM privileges AS p 
-        JOIN role_module_privileges AS rmp ON p.id = rmp.privilege_id 
-        JOIN roles AS r ON r.id = rmp.role_id
-        JOIN modules AS m ON m.id = rmp.module_id
-        WHERE r.role_name = 'Regular User'
-        AND m.module_name = 'User Management'
-    ");
-    $stmt->execute();
-    $privs = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    $privNames = array_column($privs, 'priv_name');
-    if (!empty($privNames) && in_array("Edit", $privNames)) {
-        //show edit button if privileges are not empty and edit is in them
-        $showEditButton = true;
-    }
-} catch (PDOException $e) {
-    die("Database query error: " . $e->getMessage());
-}
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-if role doesnt include delete then remove the delete option thingy
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
-
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-if role doesnt include create then remove the add new user
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -292,10 +369,16 @@ if role doesnt include create then remove the add new user
     <div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="addUserModalLabel">Add New User</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+
+                <div class="col-md-4 d-flex justify-content-end">
+                    <?php if ($canCreate): ?>
+                        <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal"
+                                data-bs-target="#addUserModal">
+                            Add New User
+                        </button>
+                    <?php endif; ?>
                 </div>
+
                 <div class="modal-body">
                     <form id="addUserForm" method="POST" action="add_user.php">
                         <div class="mb-3">
@@ -473,25 +556,22 @@ if role doesnt include create then remove the add new user
                         ?>
                     </td>
                     <td>
-                        <?php if ($showEditButton): ?>
-                            <button type="button" class="btn btn-sm btn-warning btn-edit"
-                                    data-id="<?php echo $user['User_ID']; ?>"
-                                    data-email="<?php echo htmlspecialchars($user['Email']); ?>"
-                                    data-first-name="<?php echo htmlspecialchars($user['First_Name']); ?>"
-                                    data-last-name="<?php echo htmlspecialchars($user['Last_Name']); ?>"
-                                    data-department="<?php echo htmlspecialchars($user['Department']); ?>"
-                                    data-status="<?php echo htmlspecialchars($user['Status']); ?>"
-                                    data-bs-toggle="modal" data-bs-target="#editUserModal">
+                        <?php if ($canModify): ?>
+                            <button type="button"
+                                    class="btn btn-sm btn-warning btn-edit"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#editUserModal"
+                                    data-id="<?php echo htmlspecialchars($user['id']); ?>"
+                                    data-email="<?php echo htmlspecialchars($user['email']); ?>"
+                                    data-first-name="<?php echo htmlspecialchars($user['first_name']); ?>"
+                                    data-last-name="<?php echo htmlspecialchars($user['last_name']); ?>"
+                                    data-department="<?php echo htmlspecialchars($userDeptIds[0] ?? ''); ?>">
                                 Edit
                             </button>
                         <?php endif; ?>
-                        <?php
-                        $targetUserRoles = getCurrentUserRoles($pdo, $user['id']);
-                        $canDelete = canDeleteUser($currentUserRoles, $targetUserRoles);
-                        if ($canDelete):
-                            ?>
-                            <button type="button" class="btn btn-sm btn-danger"
-                                    data-id="<?php echo $user['id']; ?>">
+                        <?php if ($canDelete): ?>
+                            <button type="button" class="btn btn-sm btn-danger delete-user"
+                                    data-id="<?php echo htmlspecialchars($user['id']); ?>">
                                 Delete
                             </button>
                         <?php endif; ?>
@@ -699,8 +779,23 @@ if role doesnt include create then remove the add new user
 </div>
 
 
-
 <script>
+    // Add this at the beginning of your $(document).ready function
+    function showAlert(type, message) {
+        const alertHtml = `
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    `;
+        $("#alertMessage").html(alertHtml).fadeIn();
+
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => {
+            $("#alertMessage .alert").fadeOut(() => $(this).remove());
+        }, 5000);
+    }
+
     $(document).ready(function () {
         // Toggle the custom department input based on the selection
         $('#modal_department').on('change', function () {
@@ -713,8 +808,11 @@ if role doesnt include create then remove the add new user
 
         // Handle form submission via AJAX
         $('#addUserForm').on('submit', function (e) {
-            e.preventDefault(); // Prevent the default form submission
-
+            e.preventDefault();
+            <?php if (!$canCreate): ?>
+            showAlert('danger', 'You do not have permission to create users');
+            return false;
+            <?php endif; ?>
             // Get the action URL from the form
             var actionUrl = $(this).attr('action');
             console.log("Submitting to URL:", actionUrl);
@@ -740,165 +838,72 @@ if role doesnt include create then remove the add new user
                 }
             });
         });
-    });
-</script>
 
+        $('.delete-user').on('click', function () {
+            const userId = $(this).data("id");
+            const row = $(this).closest('tr');
 
-<!-- Custom JavaScript for bulk actions and form handling -->
-<script>
-
-    $(document).ready(function () {
-
-        // Update bulk action buttons for active users
-        function updateBulkActionButtons() {
-            var activeCount = $(".select-row:checked").length;
-            if (activeCount >= 2) {
-                $("#delete-selected").prop("disabled", false).show();
-            } else {
-                $("#delete-selected").prop("disabled", true).hide();
+            if (confirm("Are you sure you want to archive this user?")) {
+                $.ajax({
+                    type: "POST",
+                    url: "delete_user.php",
+                    data: {user_id: userId},
+                    dataType: 'json',
+                    success: function (response) {
+                        if (response.success) {
+                            row.fadeOut(400, function () {
+                                $(this).remove();
+                            });
+                            showAlert('success', response.message);
+                        } else {
+                            showAlert('danger', response.message || "Failed to archive user");
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        console.error("Error details:", xhr.responseText);
+                        showAlert('danger', "An error occurred while processing your request");
+                    }
+                });
             }
-        }
-
-        $(".select-row").change(updateBulkActionButtons);
-        $("#select-all").change(function () {
-            $(".select-row").prop("checked", $(this).prop("checked"));
-            updateBulkActionButtons();
         });
 
         // Bulk delete handler
         $("#delete-selected").click(function () {
-            let selected = [];
-            $(".select-row:checked").each(function () {
-                selected.push($(this).val());
-            });
-            if (selected.length > 0 && confirm("Are you sure you want to delete the selected users? They will be moved to archive.")) {
+            const selected = $(".select-row:checked").map(function () {
+                return $(this).val();
+            }).get();
+
+            if (selected.length === 0) {
+                showAlert('warning', 'Please select users to archive.');
+                return;
+            }
+
+            if (confirm(`Are you sure you want to archive ${selected.length} selected user(s)?`)) {
                 $.ajax({
                     type: "POST",
                     url: "delete_user.php",
-                    data: {
-                        user_ids: selected,
-                        action: "soft_delete"
-                    },
+                    data: {user_ids: selected},
                     dataType: 'json',
                     success: function (response) {
                         if (response.success) {
-                            window.location.reload();
+                            selected.forEach(id => {
+                                $(`tr[data-user-id="${id}"]`).fadeOut(400, function () {
+                                    $(this).remove();
+                                });
+                            });
+                            $("#select-all").prop('checked', false);
+                            $("#delete-selected").prop('disabled', true).hide();
+                            showAlert('success', response.message);
                         } else {
-                            alert(response.message || "Failed to delete selected users. Please try again.");
+                            showAlert('danger', response.message || "Failed to archive users");
                         }
                     },
                     error: function (xhr, status, error) {
                         console.error("Error details:", {xhr, status, error});
-                        alert("Failed to delete selected users. Error: " + error);
+                        showAlert('danger', "An error occurred while processing your request");
                     }
                 });
             }
-        });
-
-        // Individual delete handler
-        $(".btn-danger[data-id]").click(function () {
-            let userId = $(this).data("id");
-            if (confirm("Are you sure you want to delete this user? They will be moved to archive.")) {
-                $.ajax({
-                    type: "POST",
-                    url: "delete_user.php",
-                    data: {
-                        user_id: userId,
-                        action: "soft_delete"
-                    },
-                    dataType: 'json',
-                    success: function (response) {
-                        if (response.success) {
-                            window.location.reload();
-                        } else {
-                            alert(response.message || "Failed to delete user. Please try again.");
-                        }
-                    },
-                    error: function (xhr, status, error) {
-                        console.error("Error details:", {xhr, status, error});
-                        alert("Failed to delete user. Error: " + error);
-                    }
-                });
-            }
-        });
-
-        // Populate the edit modal when it's about to be shown
-        $('#editUserModal').on('show.bs.modal', function (event) {
-            // Button that triggered the modal
-            var button = $(event.relatedTarget);
-            // Retrieve data attributes from the clicked button
-            var userId = button.data('id');
-            var email = button.data('email');
-            var firstName = button.data('firstName') || button.data('first-name');
-            var lastName = button.data('lastName') || button.data('last-name');
-            var department = button.data('department');
-
-            console.log("Modal triggered with data:", {userId, email, firstName, lastName, department});
-
-            // Populate the modal fields
-            var modal = $(this);
-            modal.find('#editUserID').val(userId);
-            modal.find('#editEmail').val(email);
-            modal.find('#editFirstName').val(firstName);
-            modal.find('#editLastName').val(lastName);
-            modal.find('#editDepartment').val(department);
-        });
-
-        // Intercept the edit form submission to use AJAX
-        $("#editUserForm").on("submit", function (e) {
-            e.preventDefault(); // Prevent the default form submission
-            console.log("Edit form submit triggered:", $(this).serialize());
-            $.ajax({
-                type: "POST",
-                url: $(this).attr("action"),
-                data: $(this).serialize(),
-                success: function (response) {
-                    console.log("Response from server:", response);
-                    $("#editUserModal").modal("hide");
-
-                    // Get the updated user data from the form
-                    var userId = $("#editUserID").val();
-                    var email = $("#editEmail").val();
-                    var firstName = $("#editFirstName").val();
-                    var lastName = $("#editLastName").val();
-                    var department = $("#editDepartment").val();
-
-                    // Find and update the corresponding table row
-                    var row = $("button.btn-edit[data-id='" + userId + "']").closest('tr');
-                    row.find('td:eq(2)').text(email); // Update email cell
-                    row.find('td:eq(3)').text(firstName + ' ' + lastName); // Update name cell
-                    row.find('td:eq(4)').text(department); // Update department cell
-
-                    // Update the edit button's data attributes
-                    var editButton = row.find('.btn-edit');
-                    editButton.data('email', email);
-                    editButton.data('first-name', firstName);
-                    editButton.data('last-name', lastName);
-                    editButton.data('department', department);
-
-                    // Show success message
-                    $("#alertMessage").html(
-                        '<div class="alert alert-success alert-dismissible fade show" role="alert">' +
-                        response +
-                        '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>'
-                    );
-
-                    // Automatically dismiss the alert after 3 seconds
-                    setTimeout(function () {
-                        $('.alert').fadeOut('slow', function () {
-                            $(this).remove();
-                        });
-                    }, 3000);
-                },
-                error: function (xhr, status, error) {
-                    console.error("AJAX Error:", error);
-                    $("#alertMessage").html(
-                        '<div class="alert alert-danger alert-dismissible fade show" role="alert">' +
-                        'Error updating user: ' + error +
-                        '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>'
-                    );
-                }
-            });
         });
 
         // Handle delete account confirmation
@@ -937,6 +942,77 @@ if role doesnt include create then remove the add new user
             searchTimeout = setTimeout(() => {
                 this.form.submit();
             }, 500);
+        });
+
+        // Update the edit modal handler
+        $('#editUserModal').on('show.bs.modal', function(event) {
+            var button = $(event.relatedTarget);
+
+            // Extract data
+            var userId = button.data('id');
+            var email = button.data('email');
+            var firstName = button.data('first-name');
+            var lastName = button.data('last-name');
+            var department = button.data('department');
+
+            // Log for debugging
+            console.log("Loading user data:", {userId, email, firstName, lastName, department});
+
+            // Populate fields
+            var modal = $(this);
+            modal.find('#editUserID').val(userId);
+            modal.find('#editEmail').val(email);
+            modal.find('#editFirstName').val(firstName);
+            modal.find('#editLastName').val(lastName);
+            modal.find('#editDepartment').val(department);
+        });
+
+// Update form submission handler
+        $("#editUserForm").on("submit", function(e) {
+            e.preventDefault();
+
+            var submitButton = $(this).find('button[type="submit"]');
+            submitButton.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...');
+
+            $.ajax({
+                type: "POST",
+                url: "update_user.php",
+                data: $(this).serialize(),
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        // Update table row only if there were changes
+                        if (response.data.hasChanges) {
+                            var userId = $("#editUserID").val();
+                            var row = $("button.btn-edit[data-id='" + userId + "']").closest('tr');
+
+                            row.find('td:eq(2)').text(response.data.email);
+                            row.find('td:eq(3)').text(response.data.first_name + ' ' + response.data.last_name);
+                            if (response.data.department) {
+                                row.find('td:eq(4)').text(response.data.department);
+                            }
+
+                            var editButton = row.find('.btn-edit');
+                            editButton.data('email', response.data.email);
+                            editButton.data('first-name', response.data.first_name);
+                            editButton.data('last-name', response.data.last_name);
+                            editButton.data('department', response.data.department);
+                        }
+
+                        $("#editUserModal").modal('hide');
+                        showAlert('success', response.message);
+                    } else {
+                        showAlert('warning', response.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("AJAX Error:", xhr.responseText);
+                    showAlert('danger', 'Error updating user: ' + error);
+                },
+                complete: function() {
+                    submitButton.prop('disabled', false).text('Save Changes');
+                }
+            });
         });
     });
 
