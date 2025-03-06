@@ -1,6 +1,4 @@
 <?php
-// src/classes/RBACService.php
-
 class RBACService {
     private $pdo;
     private $userId;

@@ -89,7 +89,7 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="<?php echo BASE_URL; ?>../src/view/php/modules/privilege_manager/manage_privileges.php"
+                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/privilege_manager/manage_privileges.php"
                            class="nav-link">
                             <span class="submenu-text">Privilege Management</span>
                         </a>
@@ -110,17 +110,17 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                 </button>
                 <ul class="dropdown tree" aria-expanded="false">
                     <li>
-                        <a href="../../modules/equipment_manager/equipment_details.php">
+                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_manager/equipment_details.php">
                             Equipment Details
                         </a>
                     </li>
                     <li>
-                        <a href="../../modules/equipment_manager/equipment_location.php">
+                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_manager/equipment_location.php">
                             Equipment Location
                         </a>
                     </li>
                     <li>
-                        <a href="../../modules/equipment_manager/equipment_status.php">
+                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_manager/equipment_status.php">
                             Equipment Status for PMS
                         </a>
                     </li>

@@ -12,12 +12,6 @@ if (!isset($_SESSION['user_id'])) {
 // Initialize RBAC
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
 
-// Check view permission
-if (!$rbac->hasPrivilege('User Management', 'View')) {
-    header("Location: " . BASE_URL . "src/view/php/general/access_denied.php");
-    exit();
-}
-
 // Define available actions based on privileges
 $canCreate = $rbac->hasPrivilege('User Management', 'Create');
 $canModify = $rbac->hasPrivilege('User Management', 'Modify');
@@ -266,11 +260,6 @@ class RBACManager
 // Initialize RBAC
 $rbac = new RBACManager($pdo, $currentUserRoles);
 
-// Check view permission
-if (!$rbac->hasPrivilege('User Management', 'View')) {
-    header("Location: ../../../../../public/index.php");
-    exit();
-}
 
 // Check edit permission
 $canEdit = $rbac->hasPrivilege('User Management', 'Edit');

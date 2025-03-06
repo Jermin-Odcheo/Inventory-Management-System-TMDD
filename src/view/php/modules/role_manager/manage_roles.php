@@ -3,14 +3,15 @@ session_start();
 require_once('../../../../../config/ims-tmdd.php');
 include '../../general/header.php';
 
+// Updated SQL join conditions using the correct key for modules.
 $sql = "
-    SELECT 
+    SELECT
         r.id AS Role_ID,
         r.role_name AS Role_Name,
         COALESCE(m.module_name, 'General') AS Module_Name,
         p.priv_name AS Privilege_Name
     FROM roles r
-    LEFT JOIN role_module_privileges rmp ON r.id = rmp.id
+    LEFT JOIN role_module_privileges rmp ON r.id = rmp.role_id
     LEFT JOIN privileges p ON rmp.privilege_id = p.id
     LEFT JOIN modules m ON rmp.module_id = m.id
     ORDER BY r.id ASC, m.module_name, p.priv_name
@@ -30,14 +31,24 @@ foreach ($roleData as $row) {
             'Modules'   => []
         ];
     }
-    $moduleName = $row['Module_Name'];
+    // Use COALESCE result; if empty, default to "General"
+    $moduleName = !empty($row['Module_Name']) ? $row['Module_Name'] : 'General';
     if (!isset($roles[$roleID]['Modules'][$moduleName])) {
         $roles[$roleID]['Modules'][$moduleName] = [];
     }
-    if ($row['Privilege_Name'] !== null) {
+    // Only add privilege if it's not null or empty.
+    if (!empty($row['Privilege_Name'])) {
         $roles[$roleID]['Modules'][$moduleName][] = $row['Privilege_Name'];
     }
 }
+
+// Remove duplicate privileges if any.
+foreach ($roles as $roleID => &$role) {
+    foreach ($role['Modules'] as $moduleName => &$privileges) {
+        $privileges = array_unique($privileges);
+    }
+}
+unset($role); // break the reference
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -89,6 +100,10 @@ foreach ($roleData as $row) {
     <!-- Main Content Area -->
     <div class="main-content container-fluid">
         <h1>Role Management</h1>
+
+        <!-- Alert container -->
+        <div id="alertMessage" style="position: fixed; top: 20px; right: 20px; z-index: 1050;"></div>
+
         <div class="d-flex justify-content-end mb-3">
             <!-- Add Undo and Redo buttons here -->
             <button type="button" class="btn btn-secondary me-2" id="undoButton">Undo</button>
@@ -118,7 +133,9 @@ foreach ($roleData as $row) {
                                 <?php foreach ($role['Modules'] as $moduleName => $privileges): ?>
                                     <div>
                                         <strong><?php echo htmlspecialchars($moduleName); ?></strong>:
-                                        <?php echo !empty($privileges) ? implode(', ', array_map('htmlspecialchars', $privileges)) : '<em>No privileges</em>'; ?>
+                                        <?php echo !empty($privileges)
+                                            ? implode(', ', array_map('htmlspecialchars', $privileges))
+                                            : '<em>No privileges</em>'; ?>
                                     </div>
                                 <?php endforeach; ?>
                             </td>
@@ -187,6 +204,21 @@ foreach ($roleData as $row) {
 </div>
 
 <script>
+    function showAlert(type, message) {
+        const alertHtml = `
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        `;
+        $("#alertMessage").html(alertHtml).fadeIn();
+
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => {
+            $("#alertMessage .alert").fadeOut(() => $(this).remove());
+        }, 5000);
+    }
+
     $(document).ready(function() {
         // Load edit role modal content via AJAX.
         $('.edit-role-btn').on('click', function() {
@@ -196,11 +228,16 @@ foreach ($roleData as $row) {
                 url: 'edit_roles.php',
                 type: 'GET',
                 data: { id: roleID },
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
                 success: function(response) {
                     $('#editRoleContent').html(response);
                 },
-                error: function() {
-                    $('#editRoleContent').html('<p class="text-danger">Error loading role data.</p>');
+                error: function(xhr, status, error) {
+                    console.error('AJAX Error:', status, error);
+                    console.error('Response:', xhr.responseText);
+                    $('#editRoleContent').html('<p class="text-danger">Error loading role data. Please try again.</p>');
                 }
             });
         });
@@ -229,7 +266,7 @@ foreach ($roleData as $row) {
             });
         });
 
-        // Undo button click handler
+        // Undo button click handler.
         $('#undoButton').on('click', function() {
             $.ajax({
                 url: 'undo.php',
@@ -238,7 +275,7 @@ foreach ($roleData as $row) {
                 success: function(response) {
                     if (response.success) {
                         alert(response.message);
-                        window.location.reload(); // Refresh the page to reflect changes
+                        window.location.reload();
                     } else {
                         alert(response.message);
                     }
@@ -249,7 +286,7 @@ foreach ($roleData as $row) {
             });
         });
 
-        // Redo button click handler
+        // Redo button click handler.
         $('#redoButton').on('click', function() {
             $.ajax({
                 url: 'redo.php',
@@ -258,7 +295,7 @@ foreach ($roleData as $row) {
                 success: function(response) {
                     if (response.success) {
                         alert(response.message);
-                        window.location.reload(); // Refresh the page to reflect changes
+                        window.location.reload();
                     } else {
                         alert(response.message);
                     }

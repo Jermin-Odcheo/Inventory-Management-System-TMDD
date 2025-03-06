@@ -1,44 +1,42 @@
 <?php
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
+header('Content-Type: application/json');
 
-// Check if the user is logged in
 if (!isset($_SESSION['user_id'])) {
-    echo json_encode(['success' => false, 'message' => 'Unauthorized access.']);
-    exit();
+    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+    exit;
 }
 
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['module_id']) && isset($_POST['privileges'])) {
-    $moduleId = intval($_POST['module_id']);
-    $privileges = explode(',', trim($_POST['privileges']));
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $moduleId = isset($_POST['module_id']) ? (int)$_POST['module_id'] : 0;
+    if ($moduleId <= 0) {
+        echo json_encode(['success' => false, 'message' => 'Invalid module ID']);
+        exit;
+    }
+
+    // Retrieve the selected privileges (an array of privilege IDs)
+    $selectedPrivileges = $_POST['privileges'] ?? [];
 
     try {
-        // Start a transaction
-        $pdo->beginTransaction();
+        // Remove all existing privilege links for this module.
+        $stmt = $pdo->prepare("DELETE FROM role_module_privileges WHERE module_id = :module_id");
+        $stmt->execute(['module_id' => $moduleId]);
 
-        // Delete existing privileges for the module
-        $stmt = $pdo->prepare("DELETE FROM privileges WHERE id = ?");
-        $stmt->execute([$moduleId]);
-
-        // Insert new privileges
-        $stmt = $pdo->prepare("INSERT INTO privileges (id, priv_name) VALUES (?, ?)");
-        foreach ($privileges as $privilege) {
-            $privilege = trim($privilege);
-            if (!empty($privilege)) {
-                $stmt->execute([$moduleId, $privilege]);
-            }
+        // Insert each selected privilege.
+        $stmtInsertLink = $pdo->prepare("INSERT INTO role_module_privileges (module_id, privilege_id) VALUES (:module_id, :privilege_id)");
+        foreach ($selectedPrivileges as $privId) {
+            $stmtInsertLink->execute([
+                'module_id'    => $moduleId,
+                'privilege_id' => $privId
+            ]);
         }
 
-        // Commit the transaction
-        $pdo->commit();
-
-        echo json_encode(['success' => true]);
+        echo json_encode(['success' => true, 'message' => 'Privileges updated successfully.']);
     } catch (PDOException $e) {
-        // Rollback the transaction in case of error
-        $pdo->rollBack();
-        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     }
-} else {
-    echo json_encode(['success' => false, 'message' => 'Invalid request.']);
+    exit;
 }
-?>
+
+echo json_encode(['success' => false, 'message' => 'Invalid request']);

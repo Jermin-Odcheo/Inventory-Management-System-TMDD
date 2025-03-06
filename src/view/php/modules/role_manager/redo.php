@@ -22,21 +22,21 @@ try {
     switch ($lastUndoAction['Action']) {
         case 'Add':
             // If the original action was an addition, reinsert the role
-            $stmt = $pdo->prepare("INSERT INTO roles (Role_ID, Role_Name) VALUES (?, ?)");
+            $stmt = $pdo->prepare("INSERT INTO roles (id, Role_Name) VALUES (?, ?)");
             $stmt->execute([$lastUndoAction['RoleID'], $lastUndoAction['NewRoleName']]);
             break;
 
         case 'Modified':
             // If the original action was a modification, reapply the new role name and privileges
-            $stmt = $pdo->prepare("UPDATE roles SET Role_Name = ? WHERE Role_ID = ?");
+            $stmt = $pdo->prepare("UPDATE roles SET Role_Name = ? WHERE id = ?");
             $stmt->execute([$lastUndoAction['NewRoleName'], $lastUndoAction['RoleID']]);
 
             // Reapply privileges
             $newPrivileges = json_decode($lastUndoAction['NewPrivileges'], true);
-            $stmtDelete = $pdo->prepare("DELETE FROM role_privileges WHERE Role_ID = ?");
+            $stmtDelete = $pdo->prepare("DELETE FROM role_module_privileges WHERE Role_ID = ?");
             $stmtDelete->execute([$lastUndoAction['RoleID']]);
 
-            $stmtInsert = $pdo->prepare("INSERT INTO role_privileges (Role_ID, Privilege_ID) VALUES (?, ?)");
+            $stmtInsert = $pdo->prepare("INSERT INTO role_module_privileges (Role_ID, Privilege_ID) VALUES (?, ?)");
             foreach ($newPrivileges as $privilegeID) {
                 $stmtInsert->execute([$lastUndoAction['RoleID'], $privilegeID]);
             }
@@ -44,7 +44,7 @@ try {
 
         case 'Delete':
             // If the original action was a deletion, delete the role again
-            $stmt = $pdo->prepare("DELETE FROM roles WHERE Role_ID = ?");
+            $stmt = $pdo->prepare("DELETE FROM roles WHERE id = ?");
             $stmt->execute([$lastUndoAction['RoleID']]);
             break;
 

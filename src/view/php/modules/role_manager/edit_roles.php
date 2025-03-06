@@ -19,30 +19,27 @@ if (!$role) {
     die(json_encode(['success' => false, 'message' => 'Role not found.']));
 }
 
-// 3) Fetch current privileges.
-$stmtCurrent = $pdo->prepare("SELECT Privilege_ID FROM role_module_privileges WHERE Role_ID = ?");
+// 3) Fetch current role privileges.
+// We encode each current combination as "module_id|privilege_id" for easy checking in the form.
+$stmtCurrent = $pdo->prepare("SELECT CONCAT(module_id, '|', privilege_id) AS combo FROM role_module_privileges WHERE role_id = ?");
 $stmtCurrent->execute([$roleID]);
 $currentPrivileges = $stmtCurrent->fetchAll(PDO::FETCH_COLUMN);
 
-// 4) Fetch all privileges and group them by module.
-$sql = "
-    SELECT p.id, p.priv_name, COALESCE(m.Module_Name, 'General') AS Module_Name
-    FROM privileges p
-    LEFT JOIN modules m ON p.id = m.id
-    ORDER BY Module_Name, p.priv_name
-";
-$stmtPrivileges = $pdo->query($sql);
-$allPrivileges = $stmtPrivileges->fetchAll(PDO::FETCH_ASSOC);
+// 4) Fetch all modules.
+// We expect these to be exactly the four modules:
+// 1. User Management, 2. Audit, 3. Roles and Privileges, 4. Equipment Management.
+$stmtModules = $pdo->query("SELECT * FROM modules ORDER BY id");
+$modules = $stmtModules->fetchAll(PDO::FETCH_ASSOC);
 
-$groupedPrivileges = [];
-foreach ($allPrivileges as $priv) {
-    $groupedPrivileges[$priv['Module_Name']][] = $priv;
-}
+// 5) Fetch all privileges.
+$stmtPrivileges = $pdo->query("SELECT * FROM privileges ORDER BY priv_name");
+$privileges = $stmtPrivileges->fetchAll(PDO::FETCH_ASSOC);
 
-// 5) Handle POST updates (AJAX).
+// 6) Handle POST updates (AJAX submission).
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $roleName = trim($_POST['role_name']);
-    $selectedPrivileges = $_POST['privileges'] ?? [];
+    // Expect each checkbox value as "module_id|privilege_id"
+    $selected = $_POST['privileges'] ?? [];
 
     if (empty($roleName)) {
         echo json_encode(['success' => false, 'message' => 'Role name cannot be empty.']);
@@ -53,47 +50,46 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $pdo->beginTransaction();
 
         // Update role name.
-        $stmtUpdate = $pdo->prepare("UPDATE roles SET Role_Name = ? WHERE id = ?");
+        $stmtUpdate = $pdo->prepare("UPDATE roles SET role_name = ? WHERE id = ?");
         $stmtUpdate->execute([$roleName, $roleID]);
 
-        // Fetch old privileges.
-        $stmtOldPrivileges = $pdo->prepare("SELECT Privilege_ID FROM role_module_privileges WHERE Role_ID = ?");
-        $stmtOldPrivileges->execute([$roleID]);
-        $oldPrivileges = $stmtOldPrivileges->fetchAll(PDO::FETCH_COLUMN);
-
         // Remove old privileges.
-        $stmtDelete = $pdo->prepare("DELETE FROM role_module_privileges WHERE Role_ID = ?");
+        $stmtDelete = $pdo->prepare("DELETE FROM role_module_privileges WHERE role_id = ?");
         $stmtDelete->execute([$roleID]);
 
         // Insert new privileges.
-        $stmtInsert = $pdo->prepare("INSERT INTO role_module_privileges (Role_ID, Privilege_ID) VALUES (?, ?)");
-        foreach ($selectedPrivileges as $privilegeID) {
-            $stmtInsert->execute([$roleID, $privilegeID]);
+        $stmtInsert = $pdo->prepare("INSERT INTO role_module_privileges (role_id, module_id, privilege_id) VALUES (?, ?, ?)");
+        foreach ($selected as $value) {
+            list($moduleID, $privilegeID) = explode('|', $value);
+            // Ensure moduleID is valid; if empty (shouldn't happen), set to NULL.
+            $moduleID = ($moduleID === '') ? NULL : $moduleID;
+            $stmtInsert->execute([$roleID, $moduleID, $privilegeID]);
         }
 
-        // Log the action in the role_changes table
-        $stmt = $pdo->prepare("INSERT INTO role_changes (UserID, RoleID, Action, OldRoleName, NewRoleName, OldPrivileges, NewPrivileges) VALUES (?, ?, 'Modified', ?, ?, ?, ?)");
-        $stmt->execute([
+        // (Optional) Log changes in role_changes table.
+        $stmtLog = $pdo->prepare("INSERT INTO role_changes (UserID, RoleID, Action, OldRoleName, NewRoleName, OldPrivileges, NewPrivileges) VALUES (?, ?, 'Modified', ?, ?, ?, ?)");
+        // For logging, we store the raw arrays.
+        $stmtLog->execute([
             $_SESSION['user_id'],
             $roleID,
-            $role['Role_Name'], // Old role name
-            $roleName, // New role name
-            json_encode($oldPrivileges), // Old privileges
-            json_encode($selectedPrivileges) // New privileges
+            $role['role_name'], // old role name
+            $roleName,          // new role name
+            json_encode($currentPrivileges),
+            json_encode($selected)
         ]);
 
         $pdo->commit();
 
-        // Fetch updated privileges to return in JSON.
-        $stmtUpdatedPrivileges = $pdo->prepare("
-            SELECT p.priv_name, COALESCE(m.Module_Name, 'General') AS Module_Name
-            FROM role_module_privileges rp
-            JOIN privileges p ON rp.Privilege_ID = p.id
-            LEFT JOIN modules m ON p.id = m.id
-            WHERE rp.Role_ID = ?
+        // Fetch updated privileges for display.
+        $stmtUpdated = $pdo->prepare("
+            SELECT m.module_name, p.priv_name 
+              FROM role_module_privileges rp
+              JOIN modules m ON rp.module_id = m.id
+              JOIN privileges p ON rp.privilege_id = p.id
+             WHERE rp.role_id = ?
         ");
-        $stmtUpdatedPrivileges->execute([$roleID]);
-        $updatedPrivileges = $stmtUpdatedPrivileges->fetchAll(PDO::FETCH_ASSOC);
+        $stmtUpdated->execute([$roleID]);
+        $updatedPrivileges = $stmtUpdated->fetchAll(PDO::FETCH_ASSOC);
 
         echo json_encode([
             'success'    => true,
@@ -110,10 +106,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 }
 ?>
 
-<!--
-    ONLY the inner structure for your existing modal in manage_roles.php.
-    Do not include another <div class="modal"> or <div class="modal-dialog"> or <div class="modal-content">.
--->
+<!-- The HTML below is the inner structure for your modal in manage_roles.php -->
 
 <div class="modal-header">
     <h5 class="modal-title">Edit Role</h5>
@@ -125,27 +118,46 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         <!-- Role Name -->
         <div class="mb-3">
             <label for="role_name" class="form-label">Role Name</label>
-            <input type="text" class="form-control" id="role_name" name="role_name"
-                   value="<?php echo htmlspecialchars($role['role_name']); ?>" required>
+            <input type="text" class="form-control" id="role_name" name="role_name" value="<?php echo htmlspecialchars($role['role_name']); ?>" required>
         </div>
 
-        <!-- Grouped Privileges -->
-        <?php foreach ($groupedPrivileges as $moduleName => $privileges): ?>
+        <!-- For each module, list privileges as checkboxes.
+             For the Audit module, only display the "Track" privilege. -->
+        <?php foreach ($modules as $mod): ?>
             <div class="mb-2">
-                <div class="small fw-bold text-secondary"><?php echo htmlspecialchars($moduleName); ?></div>
+                <div class="small fw-bold text-secondary"><?php echo htmlspecialchars($mod['module_name']); ?></div>
                 <div class="d-flex flex-wrap">
-                    <?php foreach ($privileges as $priv): ?>
-                        <div class="form-check form-check-inline me-2">
-                            <input class="form-check-input" type="checkbox"
-                                   name="privileges[]"
-                                   value="<?php echo $priv['id']; ?>"
-                                   id="priv_<?php echo $priv['id']; ?>"
-                                <?php echo in_array($priv['id'], $currentPrivileges) ? 'checked' : ''; ?>>
-                            <label class="form-check-label small" for="priv_<?php echo $priv['id']; ?>">
-                                <?php echo htmlspecialchars($priv['priv_name']); ?>
-                            </label>
-                        </div>
-                    <?php endforeach; ?>
+                    <?php if (strtolower($mod['module_name']) === 'audit'): ?>
+                        <?php
+                        // Only show the privilege "Track" for Audit.
+                        foreach ($privileges as $priv):
+                            if (strtolower($priv['priv_name']) === 'track'):
+                                $value = $mod['id'] . '|' . $priv['id'];
+                                ?>
+                                <div class="form-check form-check-inline me-2">
+                                    <input class="form-check-input" type="checkbox" name="privileges[]" value="<?php echo $value; ?>" id="priv_<?php echo $mod['id'] . '_' . $priv['id']; ?>"
+                                        <?php echo in_array($value, $currentPrivileges) ? 'checked' : ''; ?>>
+                                    <label class="form-check-label small" for="priv_<?php echo $mod['id'] . '_' . $priv['id']; ?>">
+                                        <?php echo htmlspecialchars($priv['priv_name']); ?>
+                                    </label>
+                                </div>
+                            <?php endif;
+                        endforeach; ?>
+                    <?php else: ?>
+                        <?php
+                        // For other modules, display all privileges.
+                        foreach ($privileges as $priv):
+                            $value = $mod['id'] . '|' . $priv['id'];
+                            ?>
+                            <div class="form-check form-check-inline me-2">
+                                <input class="form-check-input" type="checkbox" name="privileges[]" value="<?php echo $value; ?>" id="priv_<?php echo $mod['id'] . '_' . $priv['id']; ?>"
+                                    <?php echo in_array($value, $currentPrivileges) ? 'checked' : ''; ?>>
+                                <label class="form-check-label small" for="priv_<?php echo $mod['id'] . '_' . $priv['id']; ?>">
+                                    <?php echo htmlspecialchars($priv['priv_name']); ?>
+                                </label>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                 </div>
             </div>
         <?php endforeach; ?>
@@ -160,41 +172,61 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     // Handle AJAX form submission.
     $('#editRoleForm').on('submit', function(e) {
         e.preventDefault();
-        let formData = $(this).serialize();
+        const submitButton = $(this).find('button[type="submit"]');
+        submitButton.prop('disabled', true);
+
         $.ajax({
             url: 'edit_roles.php?id=<?php echo $roleID; ?>',
             type: 'POST',
-            data: formData,
+            data: $(this).serialize(),
             dataType: 'json',
             success: function(response) {
                 if (response.success) {
-                    alert('Role updated successfully.');
-                    // Update the table row in manage_roles.php
-                    let row = $('tr[data-role-id="' + response.role_id + '"]');
+                    // Optionally update the role row display in manage_roles.php.
+                    const row = $('tr[data-role-id="' + response.role_id + '"]');
                     row.find('.role-name').text(response.role_name);
+                    const privilegeCell = row.find('.privilege-list');
+                    privilegeCell.empty();
 
-                    // Rebuild the privilege list
-                    let privilegeCell = row.find('.privilege-list').empty();
-                    let grouped = {};
-                    response.privileges.forEach(function(priv) {
-                        if (!grouped[priv.Module_Name]) {
-                            grouped[priv.Module_Name] = [];
+                    // Group updated privileges by module.
+                    const grouped = {};
+                    response.privileges.forEach(function(item) {
+                        if (!grouped[item.module_name]) {
+                            grouped[item.module_name] = [];
                         }
-                        grouped[priv.Module_Name].push(priv.Privilege_Name);
+                        grouped[item.module_name].push(item.priv_name);
                     });
-                    for (let module in grouped) {
+                    Object.keys(grouped).forEach(function(moduleName) {
                         privilegeCell.append(
-                            '<div><strong>' + module + '</strong>: ' + grouped[module].join(', ') + '</div>'
+                            $('<div>').html('<strong>' + moduleName + '</strong>: ' + grouped[moduleName].join(', '))
                         );
-                    }
+                    });
+
                     $('#editRoleModal').modal('hide');
+                    showAlert('success', 'Role updated successfully!');
                 } else {
-                    alert('Error: ' + response.message);
+                    showAlert('danger', 'Error: ' + (response.message || 'Unknown error'));
                 }
             },
-            error: function() {
-                alert('Error processing request.');
+            error: function(xhr, status, error) {
+                console.error('AJAX Error:', status, error);
+                console.error('Response:', xhr.responseText);
+                showAlert('danger', 'Error processing request.');
+            },
+            complete: function() {
+                submitButton.prop('disabled', false);
             }
         });
+    });
+
+    // Optional: Global AJAX error logging.
+    $(document).ajaxError(function(event, xhr, settings, error) {
+        console.group('AJAX Error Details');
+        console.log('Event:', event);
+        console.log('XHR:', xhr);
+        console.log('Settings:', settings);
+        console.log('Error:', error);
+        console.log('Response Text:', xhr.responseText);
+        console.groupEnd();
     });
 </script>
