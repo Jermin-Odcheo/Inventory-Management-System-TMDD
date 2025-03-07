@@ -68,34 +68,48 @@ function getUserDepartments($pdo, $userId)
     return $deptIds;
 }
 
-// Modify the query to include department and search filters
-$query = "SELECT u.id, u.email, u.first_name, u.last_name, u.status as Status FROM users u";
+// Build the query to include department and search filters, plus the is_disabled=0 check
+$query = "SELECT u.id, u.email, u.first_name, u.last_name, u.status AS Status
+            FROM users u";
 
-// Add department filter if selected
+// If a specific department is selected, join user_departments and filter by that department + is_disabled=0
 if (isset($_GET['department']) && $_GET['department'] !== 'all') {
-    $query .= " JOIN user_departments ud ON u.id = ud.user_id WHERE ud.department_id = :department";
+    $query .= "
+        JOIN user_departments ud ON u.id = ud.user_id
+       WHERE ud.department_id = :department
+         AND u.is_disabled = 0";
     $whereUsed = true;
 } else {
-    $query .= " WHERE 1=1";
+    // Otherwise, show all active users
+    $query .= "
+       WHERE u.is_disabled = 0";
     $whereUsed = true;
 }
 
 // Add search filter if provided
 if (isset($_GET['search']) && !empty($_GET['search'])) {
-    $query .= " AND (u.email LIKE :search OR u.first_name LIKE :search OR u.last_name LIKE :search)";
+    $query .= " 
+       AND (u.email LIKE :search 
+         OR u.first_name LIKE :search 
+         OR u.last_name LIKE :search)";
 }
 
-$query .= " ORDER BY `$sortBy` $sortDir";
+// Finally, add sorting
+$query .= " 
+   ORDER BY `$sortBy` $sortDir";
 
+// Execute query
 try {
     $stmt = $pdo->prepare($query);
 
+    // Bind department if needed
     if (isset($_GET['department']) && $_GET['department'] !== 'all') {
-        $stmt->bindValue(':department', $_GET['department']);
+        $stmt->bindValue(':department', $_GET['department'], PDO::PARAM_INT);
     }
 
+    // Bind search if provided
     if (isset($_GET['search']) && !empty($_GET['search'])) {
-        $stmt->bindValue(':search', '%' . $_GET['search'] . '%');
+        $stmt->bindValue(':search', '%' . $_GET['search'] . '%', PDO::PARAM_STR);
     }
 
     $stmt->execute();
@@ -160,10 +174,10 @@ class RBACManager
                 JOIN roles r ON r.id = rmp.role_id
                 JOIN modules m ON m.id = rmp.module_id
                 WHERE r.role_name IN (" . str_repeat('?,', count($this->userRoles) - 1) . "?)
-                AND m.module_name = ?
-                AND p.priv_name = ?
-                AND p.is_disabled = 0
-                AND r.is_disabled = 0
+                  AND m.module_name = ?
+                  AND p.priv_name = ?
+                  AND p.is_disabled = 0
+                  AND r.is_disabled = 0
             ");
 
             $params = array_merge($this->userRoles, [$moduleName, $privilegeName]);
@@ -199,7 +213,6 @@ class RBACManager
             $targetUserMaxLevel = $this->getMaxRoleLevel($targetRoles, $roleHierarchy);
 
             return $currentUserMaxLevel > $targetUserMaxLevel;
-
         } catch (Exception $e) {
             $this->logError("Delete permission check failed", $e);
             return false;
@@ -225,7 +238,7 @@ class RBACManager
             FROM roles r 
             JOIN user_roles ur ON r.id = ur.role_id 
             WHERE ur.user_id = ?
-            AND r.is_disabled = 0
+              AND r.is_disabled = 0
         ");
         $stmt->execute([$userId]);
         return $stmt->fetchAll(PDO::FETCH_COLUMN);
@@ -255,11 +268,24 @@ class RBACManager
     {
         error_log(sprintf("[RBAC Error] %s: %s", $message, $e->getMessage()));
     }
+
+    /**
+     * Example hierarchy retrieval method
+     * (Adjust to your actual schema/logic if needed)
+     */
+    private function getRoleHierarchy(): array
+    {
+        // This is just an example. Replace with your real role-level logic:
+        return [
+            'Admin' => 3,
+            'Manager' => 2,
+            'Staff' => 1,
+        ];
+    }
 }
 
 // Initialize RBAC
 $rbac = new RBACManager($pdo, $currentUserRoles);
-
 
 // Check edit permission
 $canEdit = $rbac->hasPrivilege('User Management', 'Edit');
@@ -271,12 +297,9 @@ $canDelete = $rbac->hasPrivilege('User Management', 'Delete');
 if ($canEdit) {
     echo '<button class="edit-btn">Edit</button>';
 }
-
 if ($canDelete) {
     echo '<button class="delete-btn">Delete</button>';
 }
-
-
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -358,16 +381,6 @@ if ($canDelete) {
     <div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
-
-                <div class="col-md-4 d-flex justify-content-end">
-                    <?php if ($canCreate): ?>
-                        <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal"
-                                data-bs-target="#addUserModal">
-                            Add New User
-                        </button>
-                    <?php endif; ?>
-                </div>
-
                 <div class="modal-body">
                     <form id="addUserForm" method="POST" action="add_user.php">
                         <div class="mb-3">
@@ -436,6 +449,7 @@ if ($canDelete) {
             </div>
         </div>
     </div>
+
     <!--FILTER SEARCH AND ADD USER BUTTON-->
     <div class="row mb-3">
         <div class="col-md-8">
@@ -445,7 +459,7 @@ if ($canDelete) {
                     <option value="all">All Departments</option>
                     <?php foreach ($departments as $code => $name): ?>
                         <option value="<?php echo htmlspecialchars($code); ?>"
-                            <?php echo (isset($_GET['department']) && $_GET['department'] === $code) ? 'selected' : ''; ?>>
+                            <?php echo (isset($_GET['department']) && $_GET['department'] == $code) ? 'selected' : ''; ?>>
                             <?php echo htmlspecialchars($name['name']); ?>
                         </option>
                     <?php endforeach; ?>
@@ -507,14 +521,15 @@ if ($canDelete) {
             </thead>
             <tbody>
             <?php foreach ($users as $user): ?>
-                <tr>
+                <tr data-user-id="<?php echo htmlspecialchars($user['id']); ?>">
                     <td>
                         <input type="checkbox" class="select-row" value="<?php echo $user['id']; ?>">
                     </td>
                     <td><?php echo htmlspecialchars($user['id']); ?></td>
                     <td><?php echo htmlspecialchars($user['email']); ?></td>
                     <td><?php echo htmlspecialchars($user['first_name'] . ' ' . $user['last_name']); ?></td>
-                    <td><?php
+                    <td>
+                        <?php
                         // Get user departments from junction table
                         $userDeptIds = getUserDepartments($pdo, $user['id']);
                         if (!empty($userDeptIds)) {
@@ -528,7 +543,8 @@ if ($canDelete) {
                         } else {
                             echo "Not assigned";
                         }
-                        ?></td>
+                        ?>
+                    </td>
                     <td><?php echo htmlspecialchars($user['Status'] ?? ''); ?></td>
                     <td>
                         <?php
@@ -557,6 +573,7 @@ if ($canDelete) {
                                     data-department="<?php echo htmlspecialchars($userDeptIds[0] ?? ''); ?>">
                                 Edit
                             </button>
+
                         <?php endif; ?>
                         <?php if ($canDelete): ?>
                             <button type="button" class="btn btn-sm btn-danger delete-user"
@@ -569,8 +586,8 @@ if ($canDelete) {
             <?php endforeach; ?>
             </tbody>
         </table>
-
     </div><!-- /.table-responsive -->
+
     <!-- Pagination Controls -->
     <div class="container-fluid">
         <div class="row align-items-center g-3">
@@ -601,11 +618,11 @@ if ($canDelete) {
                     </button>
                 </div>
             </div>
-        </div>
-        <!-- New Pagination Page Numbers -->
-        <div class="row mt-3">
-            <div class="col-12">
-                <ul class="pagination justify-content-center" id="pagination"></ul>
+            <!-- New Pagination Page Numbers -->
+            <div class="row mt-3">
+                <div class="col-12">
+                    <ul class="pagination justify-content-center" id="pagination"></ul>
+                </div>
             </div>
         </div>
     </div> <!-- /.End of Pagination -->
@@ -644,92 +661,14 @@ if ($canDelete) {
                         <input type="text" class="form-control" id="editLastName" name="last_name">
                     </div>
                     <div class="mb-3">
-                        </select>
-                    </div>
-                    <div class="mb-3">
                         <label for="editDepartment" class="form-label">Department</label>
-                        <select class="form-select shadow-sm" id="editDepartment" name="department"
-                                style="height: 38px; padding: 0.375rem 2.25rem 0.375rem 0.75rem; font-size: 1rem; border-radius: 0.25rem; border: 1px solid #ced4da;">
+                        <select class="form-select shadow-sm" id="editDepartment" name="department">
                             <option value="">Select Department</option>
-                            <option value="Office of the President">Office of the President</option>
-                            <option value="Office of the Executive Assistant to the President">Office of the Executive
-                                Assistant to the President
-                            </option>
-                            <option value="Office of the Internal Auditor">Office of the Internal Auditor</option>
-
-                            <optgroup label="Mission and Identity Cluster" style="font-weight: 600; color: #6c757d;">
-                                <option value="Office of the Vice President for Mission and Identity">Office of the Vice
-                                    President for Mission and Identity
+                            <?php foreach ($departments as $dept_id => $dept_info): ?>
+                                <option value="<?php echo htmlspecialchars($dept_id); ?>">
+                                    <?php echo htmlspecialchars($dept_info['name']); ?>
                                 </option>
-                                <option value="Center for Campus Ministry">Center for Campus Ministry</option>
-                                <option value="Community Extension and Outreach Programs Office">Community Extension and
-                                    Outreach Programs Office
-                                </option>
-                                <option value="St. Aloysius Gonzaga Parish Office">St. Aloysius Gonzaga Parish Office
-                                </option>
-                                <option value="Sunflower Child and Youth Wellness Center">Sunflower Child and Youth
-                                    Wellness Center
-                                </option>
-                            </optgroup>
-
-                            <optgroup label="Academic Cluster" style="font-weight: 600; color: #6c757d;">
-                                <option value="Office of the Vice President for Academic Affairs">Office of the Vice
-                                    President for Academic Affairs
-                                </option>
-                                <option value="SAMCIS">School of Accountancy, Management, Computing and Information
-                                    Studies (SAMCIS)
-                                </option>
-                                <option value="SAS">School of Advanced Studies (SAS)</option>
-                                <option value="SEA">School of Engineering and Architecture (SEA)</option>
-                                <option value="SOL">School of Law (SOL)</option>
-                                <option value="SOM">School of Medicine (SOM)</option>
-                                <option value="SONAHBS">School of Nursing, Allied Health, and Biological Sciences
-                                    Natural Sciences (SONAHBS)
-                                </option>
-                                <option value="STELA">School of Teacher Education and Liberal Arts (STELA)</option>
-                                <option value="SLU BEdS">Basic Education School (SLU BEdS)</option>
-                            </optgroup>
-
-                            <optgroup label="External Relations, Media and Communications and Alumni Affairs"
-                                      style="font-weight: 600; color: #6c757d;">
-                                <option value="Office of Institutional Development and Quality Assurance">Office of
-                                    Institutional Development and Quality Assurance
-                                </option>
-                                <option value="University Libraries">University Libraries</option>
-                                <option value="University Registrar's Office">University Registrar's Office</option>
-                                <option value="University Research and Innovation Center">University Research and
-                                    Innovation Center
-                                </option>
-                            </optgroup>
-
-                            <optgroup label="Finance Cluster" style="font-weight: 600; color: #6c757d;">
-                                <option value="Office of the Vice President for Finance">Office of the Vice President
-                                    for Finance
-                                </option>
-                                <option value="Asset Management and Inventory Control Office">Asset Management and
-                                    Inventory Control Office
-                                </option>
-                                <option value="Finance Office">Finance Office</option>
-                                <option value="Printing Operations Office">Printing Operations Office</option>
-                                <option value="TMDD">Technology Management and Development Department (TMDD)</option>
-                            </optgroup>
-
-                            <optgroup label="Administration Cluster" style="font-weight: 600; color: #6c757d;">
-                                <option value="Office of the Vice President for Administration">Office of the Vice
-                                    President for Administration
-                                </option>
-                                <option value="Athletics and Fitness Center">Athletics and Fitness Center</option>
-                                <option value="CPMSD">Campus Planning, Maintenance, and Security Department (CPMSD)
-                                </option>
-                                <option value="CCA">Center for Culture and the Arts (CCA)</option>
-                                <option value="Dental Clinic">Dental Clinic</option>
-                                <option value="Guidance Center">Guidance Center</option>
-                                <option value="HRD">Human Resource Department (HRD)</option>
-                                <option value="Students' Residence Hall">Students' Residence Hall</option>
-                                <option value="Medical Clinic">Medical Clinic</option>
-                                <option value="OLA">Office for Legal Affairs (OLA)</option>
-                                <option value="OSA">Office of Student Affairs (OSA)</option>
-                            </optgroup>
+                            <?php endforeach; ?>
                         </select>
                     </div>
 
@@ -739,23 +678,22 @@ if ($canDelete) {
                             appearance: none;
                             transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
                         }
-
                         .form-select:focus {
                             border-color: #86b7fe;
                             box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
                         }
-
                         .form-select option {
                             padding: 10px;
                         }
-
                         .form-select optgroup {
                             margin-top: 10px;
                         }
                     </style>
+
                     <div class="mb-3">
-                        <label for="editPassword" class="form-label">Change Password (Leave blank to keep
-                            current)</label>
+                        <label for="editPassword" class="form-label">
+                            Change Password (Leave blank to keep current)
+                        </label>
                         <input type="password" class="form-control" id="editPassword" name="password">
                     </div>
                     <div class="mb-3">
@@ -769,14 +707,14 @@ if ($canDelete) {
 
 
 <script>
-    // Add this at the beginning of your $(document).ready function
+    // Show an alert in the #alertMessage container
     function showAlert(type, message) {
         const alertHtml = `
-        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    `;
+            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        `;
         $("#alertMessage").html(alertHtml).fadeIn();
 
         // Auto-dismiss after 5 seconds
@@ -786,7 +724,7 @@ if ($canDelete) {
     }
 
     $(document).ready(function () {
-        // Toggle the custom department input based on the selection
+        // Toggle the custom department input based on selection
         $('#modal_department').on('change', function () {
             if ($(this).val() === 'custom') {
                 $('#modal_custom_department').show().attr('required', true);
@@ -795,25 +733,23 @@ if ($canDelete) {
             }
         });
 
-        // Handle form submission via AJAX
+        // Handle "Add User" form submission via AJAX
         $('#addUserForm').on('submit', function (e) {
             e.preventDefault();
             <?php if (!$canCreate): ?>
             showAlert('danger', 'You do not have permission to create users');
             return false;
             <?php endif; ?>
-            // Get the action URL from the form
             var actionUrl = $(this).attr('action');
-            console.log("Submitting to URL:", actionUrl);
 
             $.ajax({
-                url: actionUrl, // The URL from the form's action attribute
+                url: actionUrl,
                 type: 'POST',
-                data: $(this).serialize(), // Serialize the form data
+                data: $(this).serialize(),
                 dataType: 'json',
                 success: function (response) {
                     if (response.success) {
-                        // Hide the modal and refresh or update UI as needed
+                        // Hide modal and refresh or update UI
                         $('#addUserModal').modal('hide');
                         location.reload();
                     } else {
@@ -821,13 +757,13 @@ if ($canDelete) {
                     }
                 },
                 error: function (xhr, status, error) {
-                    // Log the raw response for debugging
                     console.log("Response Text:", xhr.responseText);
                     alert('An error occurred: ' + error);
                 }
             });
         });
 
+        // Single-user delete
         $('.delete-user').on('click', function () {
             const userId = $(this).data("id");
             const row = $(this).closest('tr');
@@ -836,7 +772,7 @@ if ($canDelete) {
                 $.ajax({
                     type: "POST",
                     url: "delete_user.php",
-                    data: {user_id: userId},
+                    data: { user_id: userId },
                     dataType: 'json',
                     success: function (response) {
                         if (response.success) {
@@ -856,7 +792,7 @@ if ($canDelete) {
             }
         });
 
-        // Bulk delete handler
+        // Bulk delete
         $("#delete-selected").click(function () {
             const selected = $(".select-row:checked").map(function () {
                 return $(this).val();
@@ -871,7 +807,7 @@ if ($canDelete) {
                 $.ajax({
                     type: "POST",
                     url: "delete_user.php",
-                    data: {user_ids: selected},
+                    data: { user_ids: selected },
                     dataType: 'json',
                     success: function (response) {
                         if (response.success) {
@@ -888,7 +824,7 @@ if ($canDelete) {
                         }
                     },
                     error: function (xhr, status, error) {
-                        console.error("Error details:", {xhr, status, error});
+                        console.error("Error details:", { xhr, status, error });
                         showAlert('danger', "An error occurred while processing your request");
                     }
                 });
@@ -900,7 +836,7 @@ if ($canDelete) {
             $.ajax({
                 type: "POST",
                 url: "delete_account.php",
-                data: {action: "delete_account"},
+                data: { action: "delete_account" },
                 success: function (response) {
                     if (response.success) {
                         alert("Account deleted successfully.");
@@ -915,16 +851,17 @@ if ($canDelete) {
             });
         });
 
-        // Add this to handle the close button click
+        // Close button on dynamic alerts
         $(document).on('click', '.btn-close', function () {
             $(this).closest('.alert').hide();
         });
 
+        // Department filter triggers form submit
         $('.department-filter').on('change', function () {
             this.form.submit();
         });
 
-        // Search input handler with debounce
+        // Search input with debounce
         let searchTimeout;
         $('#searchUsers').on('input', function () {
             clearTimeout(searchTimeout);
@@ -933,35 +870,34 @@ if ($canDelete) {
             }, 500);
         });
 
-        // Update the edit modal handler
-        $('#editUserModal').on('show.bs.modal', function(event) {
+        // Populate the "Edit User" modal
+        $('#editUserModal').on('show.bs.modal', function (event) {
             var button = $(event.relatedTarget);
-
-            // Extract data
             var userId = button.data('id');
             var email = button.data('email');
             var firstName = button.data('first-name');
             var lastName = button.data('last-name');
-            var department = button.data('department');
+            var department = button.data('department'); // numeric ID
 
-            // Log for debugging
-            console.log("Loading user data:", {userId, email, firstName, lastName, department});
-
-            // Populate fields
             var modal = $(this);
             modal.find('#editUserID').val(userId);
             modal.find('#editEmail').val(email);
             modal.find('#editFirstName').val(firstName);
             modal.find('#editLastName').val(lastName);
+
+            // Important: Ensure the department select box is correctly set
             modal.find('#editDepartment').val(department);
         });
 
-// Update form submission handler
+
+        // Handle "Edit User" form submission
         $("#editUserForm").on("submit", function(e) {
             e.preventDefault();
 
             var submitButton = $(this).find('button[type="submit"]');
-            submitButton.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...');
+            submitButton.prop('disabled', true).html(
+                '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...'
+            );
 
             $.ajax({
                 type: "POST",
@@ -970,17 +906,20 @@ if ($canDelete) {
                 dataType: 'json',
                 success: function(response) {
                     if (response.success) {
-                        // Update table row only if there were changes
                         if (response.data.hasChanges) {
                             var userId = $("#editUserID").val();
                             var row = $("button.btn-edit[data-id='" + userId + "']").closest('tr');
 
+                            // Update email
                             row.find('td:eq(2)').text(response.data.email);
+                            // Update name
                             row.find('td:eq(3)').text(response.data.first_name + ' ' + response.data.last_name);
+                            // Update department if changed
                             if (response.data.department) {
                                 row.find('td:eq(4)').text(response.data.department);
                             }
 
+                            // Update data attributes on Edit button
                             var editButton = row.find('.btn-edit');
                             editButton.data('email', response.data.email);
                             editButton.data('first-name', response.data.first_name);
@@ -1003,8 +942,23 @@ if ($canDelete) {
                 }
             });
         });
-    });
 
+        // Handle the "Select All" checkbox for bulk delete
+        $("#select-all").on('click', function() {
+            $(".select-row").prop('checked', $(this).prop('checked'));
+            toggleBulkDeleteButton();
+        });
+
+        // Toggle bulk delete button based on selection
+        $(".select-row").on('change', function() {
+            toggleBulkDeleteButton();
+        });
+
+        function toggleBulkDeleteButton() {
+            const anyChecked = $(".select-row:checked").length > 0;
+            $("#delete-selected").prop('disabled', !anyChecked).toggle(anyChecked);
+        }
+    });
 </script>
 
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>

@@ -439,7 +439,7 @@ try {
                                     $deptName = 'N/A';
                                     if(!empty($location['department_id'])) {
                                         try {
-                                            $deptStmt = $pdo->prepare("SELECT dept_name FROM departments WHERE id = ?");
+                                            $deptStmt = $pdo->prepare("SELECT department_name FROM departments WHERE id = ?");
                                             $deptStmt->execute([$location['department_id']]);
                                             $dept = $deptStmt->fetch(PDO::FETCH_ASSOC);
                                             if($dept) {
@@ -476,41 +476,45 @@ try {
                         <?php endforeach; ?>
                         </tbody>
                     </table>
-                    <!-- Pagination Controls -->
-                    <div class="container-fluid">
-                        <div class="row align-items-center g-3">
-                            <!-- Pagination Info -->
-                            <div class="col-12 col-sm-auto">
-                                <div class="text-muted">
-                                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span
-                                            id="totalRows">0</span> entries
-                                </div>
+                </div>
+                <!-- Pagination Controls -->
+                <div class="container-fluid">
+                    <div class="row align-items-center g-3">
+                        <!-- Pagination Info -->
+                        <div class="col-12 col-sm-auto">
+                            <div class="text-muted">
+                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
+                                        id="totalRows">100</span> entries
                             </div>
+                        </div>
+                        <div class="col-12 col-sm-auto ms-sm-auto">
+                            <div class="d-flex align-items-center gap-2">
+                                <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                    <i class="bi bi-chevron-left"></i>
+                                    Previous
+                                </button>
 
-                            <!-- Pagination Controls -->
-                            <div class="col-12 col-sm-auto ms-sm-auto">
-                                <div class="d-flex align-items-center gap-2">
-                                    <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                        <i class="bi bi-chevron-left"></i>
-                                        Previous
-                                    </button>
+                                <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                    <option value="10" selected>10</option>
+                                    <option value="20">20</option>
+                                    <option value="30">30</option>
+                                    <option value="50">50</option>
+                                </select>
 
-                                    <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
-                                        <option value="10">10</option>
-                                        <option value="20" selected>20</option>
-                                        <option value="50">50</option>
-                                        <option value="100">100</option>
-                                    </select>
-
-                                    <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                        Next
-                                        <i class="bi bi-chevron-right"></i>
-                                    </button>
-                                </div>
+                                <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                    Next
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
-                </div>
+                    <!-- New Pagination Page Numbers -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <ul class="pagination justify-content-center" id="pagination"></ul>
+                        </div>
+                    </div>
+                </div> <!-- /.End of Pagination -->
             <?php else: ?>
                 <p class="mb-0">No Equipment Locations found.</p>
             <?php endif; ?>
@@ -560,7 +564,7 @@ try {
                             <option value="">Select Department</option>
                             <?php
                             try {
-                                $deptStmt = $pdo->query("SELECT id, dept_name FROM departments WHERE is_disabled = 0 ORDER BY dept_name");
+                                $deptStmt = $pdo->query("SELECT id, department_name FROM departments WHERE is_disabled = 0 ORDER BY department_name ");
                                 $departments = $deptStmt->fetchAll();
                                 foreach($departments as $department) {
                                     echo "<option value='" . htmlspecialchars($department['id']) . "'>" . htmlspecialchars($department['dept_name']) . "</option>";
@@ -642,7 +646,7 @@ try {
                             <option value="">Select Department</option>
                             <?php
                             try {
-                                $deptStmt = $pdo->query("SELECT id, dept_name FROM departments WHERE is_disabled = 0 ORDER BY dept_name");
+                                $deptStmt = $pdo->query("SELECT id, department_name FROM departments WHERE is_disabled = 0 ORDER BY department_name ");
                                 $departments = $deptStmt->fetchAll();
                                 foreach($departments as $department) {
                                     echo "<option value='" . htmlspecialchars($department['id']) . "'>" . htmlspecialchars($department['dept_name']) . "</option>";

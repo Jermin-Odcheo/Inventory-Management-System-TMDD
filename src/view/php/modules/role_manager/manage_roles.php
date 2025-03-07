@@ -5,16 +5,22 @@ include '../../general/header.php';
 
 // Updated SQL join conditions using the correct key for modules.
 $sql = "
-    SELECT
-        r.id AS Role_ID,
-        r.role_name AS Role_Name,
-        COALESCE(m.module_name, 'General') AS Module_Name,
-        p.priv_name AS Privilege_Name
-    FROM roles r
-    LEFT JOIN role_module_privileges rmp ON r.id = rmp.role_id
-    LEFT JOIN privileges p ON rmp.privilege_id = p.id
-    LEFT JOIN modules m ON rmp.module_id = m.id
-    ORDER BY r.id ASC, m.module_name, p.priv_name
+SELECT 
+    r.id AS Role_ID,
+    r.role_name AS Role_Name,
+    m.id AS Module_ID,
+    m.module_name AS Module_Name,
+    COALESCE((
+      SELECT GROUP_CONCAT(p.priv_name ORDER BY p.priv_name SEPARATOR ', ')
+      FROM role_module_privileges rmp2
+      JOIN privileges p ON p.id = rmp2.privilege_id
+      WHERE rmp2.role_id = r.id
+        AND rmp2.module_id = m.id
+    ), 'No privileges') AS Privileges
+FROM roles r
+CROSS JOIN modules m
+ORDER BY r.id, m.id;
+
 ";
 
 $stmt = $pdo->prepare($sql);
@@ -22,6 +28,7 @@ $stmt->execute();
 $roleData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Group data by role and module.
+
 $roles = [];
 foreach ($roleData as $row) {
     $roleID = $row['Role_ID'];
@@ -36,11 +43,12 @@ foreach ($roleData as $row) {
     if (!isset($roles[$roleID]['Modules'][$moduleName])) {
         $roles[$roleID]['Modules'][$moduleName] = [];
     }
-    // Only add privilege if it's not null or empty.
-    if (!empty($row['Privilege_Name'])) {
-        $roles[$roleID]['Modules'][$moduleName][] = $row['Privilege_Name'];
+    // Use the correct alias "Privileges" from your query
+    if (!empty($row['Privileges'])) {
+        $roles[$roleID]['Modules'][$moduleName][] = $row['Privileges'];
     }
 }
+
 
 // Remove duplicate privileges if any.
 foreach ($roles as $roleID => &$role) {

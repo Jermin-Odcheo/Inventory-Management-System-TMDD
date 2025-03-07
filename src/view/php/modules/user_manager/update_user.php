@@ -26,7 +26,8 @@ try {
     $email = filter_var($_POST['email'], FILTER_VALIDATE_EMAIL);
     $firstName = trim($_POST['first_name']);
     $lastName = trim($_POST['last_name']);
-    $department = trim($_POST['department'] ?? '');
+    // department should be the numeric ID
+    $department = filter_var($_POST['department'] ?? '', FILTER_VALIDATE_INT);
 
     if (!$userId || !$email) {
         throw new Exception('Invalid input data');
@@ -35,12 +36,23 @@ try {
     // Start transaction
     $pdo->beginTransaction();
 
-    // First, check if there are any actual changes
+    // Fetch user + department_id from user_departments
     $stmt = $pdo->prepare("
-        SELECT * FROM users WHERE id = ?
+        SELECT u.id,
+               u.email,
+               u.first_name,
+               u.last_name,
+               ud.department_id
+          FROM users AS u
+     LEFT JOIN user_departments AS ud ON u.id = ud.user_id
+         WHERE u.id = ?
     ");
     $stmt->execute([$userId]);
     $currentUser = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$currentUser) {
+        throw new Exception('User not found');
+    }
 
     // Check if there are any changes
     $hasChanges = false;
@@ -62,28 +74,27 @@ try {
         $changes['password'] = true;
         $hasChanges = true;
     }
-    if (!empty($department) && $department !== $currentUser['department']) {
+    // Compare the integer IDs
+    if ($department !== false && $department != $currentUser['department_id']) {
         $changes['department'] = true;
         $hasChanges = true;
     }
 
-    // Set current user for audit log
+    // Set current user for audit log triggers
     $pdo->exec("SET @current_user_id = " . $_SESSION['user_id']);
     $pdo->exec("SET @current_module = 'User Management'");
-
-    // Set a flag for the trigger to know if there were actual changes
+    // Indicate whether changes exist
     $pdo->exec("SET @has_changes = " . ($hasChanges ? "1" : "0"));
 
     if ($hasChanges) {
-        // Update user
+        // Update user table
         $stmt = $pdo->prepare("
             UPDATE users 
-            SET email = ?,
-                first_name = ?,
-                last_name = ?
-            WHERE id = ?
+               SET email = ?,
+                   first_name = ?,
+                   last_name = ?
+             WHERE id = ?
         ");
-
         if (!$stmt->execute([$email, $firstName, $lastName, $userId])) {
             throw new Exception('Failed to update user');
         }
@@ -95,14 +106,36 @@ try {
             $stmt->execute([$hashedPassword, $userId]);
         }
 
-        // Update department if provided and changed
+        // Update or insert department
         if (!empty($department) && isset($changes['department'])) {
-            $stmt = $pdo->prepare("
-                UPDATE user_departments 
-                SET department_id = ?
-                WHERE user_id = ?
-            ");
-            $stmt->execute([$department, $userId]);
+            // Optional: Validate department ID
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM departments WHERE id = ?");
+            $stmt->execute([$department]);
+            if ($stmt->fetchColumn() == 0) {
+                throw new Exception('Invalid department ID');
+            }
+
+            // Check if user_departments row exists
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM user_departments WHERE user_id = ?");
+            $stmt->execute([$userId]);
+            $exists = $stmt->fetchColumn() > 0;
+
+            if ($exists) {
+                // update
+                $stmt = $pdo->prepare("
+                    UPDATE user_departments 
+                       SET department_id = ?
+                     WHERE user_id = ?
+                ");
+                $stmt->execute([$department, $userId]);
+            } else {
+                // insert
+                $stmt = $pdo->prepare("
+                    INSERT INTO user_departments (user_id, department_id)
+                    VALUES (?, ?)
+                ");
+                $stmt->execute([$userId, $department]);
+            }
         }
 
         $message = 'User updated successfully';
@@ -139,4 +172,3 @@ try {
         'message' => $e->getMessage()
     ]);
 }
-?>
