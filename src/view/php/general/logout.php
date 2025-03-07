@@ -1,22 +1,28 @@
 <?php
 session_start();
+require '../../../../config/ims-tmdd.php';
 
-// Clear all session variables
-$_SESSION = array();
+// Set MySQL session variable for use in triggers
+if (isset($_SESSION['user_id'])) {
+    $currentUserId = intval($_SESSION['user_id']);
+    $pdo->query("SET @current_user_id = {$currentUserId}");
 
-// Destroy the session cookie
-if (isset($_COOKIE[session_name()])) {
-    setcookie(session_name(), '', time()-3600, '/');
+    // Update the user's status to 'Offline'
+    $stmt = $pdo->prepare("UPDATE users SET Status = 'Offline' WHERE id = ?");
+    $stmt->execute([$currentUserId]);
 }
 
-// Destroy the session
+
+// Now proceed with logout
+$_SESSION = array();
+if (isset($_COOKIE[session_name()])) {
+    setcookie(session_name(), '', time() - 3600, '/');
+}
 session_destroy();
 
-// Set cache-control headers to prevent back button from showing cached pages
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
-
-// Redirect to login page using relative path
 header("Location: ../../../../public/index.php");
 exit();
+?>

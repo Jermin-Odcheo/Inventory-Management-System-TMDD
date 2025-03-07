@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Mar 06, 2025 at 12:28 AM
+-- Generation Time: Mar 07, 2025 at 08:56 AM
 -- Server version: 8.2.0
 -- PHP Version: 8.2.13
 
@@ -20,6 +20,84 @@ SET time_zone = "+00:00";
 --
 -- Database: `ims_tmddrbac`
 --
+
+DELIMITER $$
+--
+-- Procedures
+--
+DROP PROCEDURE IF EXISTS `UpdateUserAndDepartment`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `UpdateUserAndDepartment` (IN `p_user_id` INT, IN `p_email` VARCHAR(255), IN `p_first_name` VARCHAR(191), IN `p_last_name` VARCHAR(191), IN `p_password` VARCHAR(255), IN `p_status` VARCHAR(50), IN `p_department_id` INT, IN `p_changed_by` INT, IN `p_module` VARCHAR(191))   BEGIN
+    DECLARE diffList TEXT DEFAULT '';
+    DECLARE old_email VARCHAR(255);
+    DECLARE old_first_name VARCHAR(191);
+    DECLARE old_last_name VARCHAR(191);
+    DECLARE old_password VARCHAR(255);
+    DECLARE old_department_id INT;
+    DECLARE old_department_name VARCHAR(191);
+    DECLARE new_department_name VARCHAR(191);
+
+    SELECT email, first_name, last_name, password INTO old_email, old_first_name, old_last_name, old_password
+    FROM users WHERE id = p_user_id;
+
+    SELECT department_id INTO old_department_id FROM user_departments WHERE user_id = p_user_id LIMIT 1;
+
+    SELECT department_name INTO old_department_name FROM departments WHERE id = old_department_id LIMIT 1;
+    SELECT department_name INTO new_department_name FROM departments WHERE id = p_department_id LIMIT 1;
+
+    -- Update user details
+    UPDATE users SET
+        email = p_email,
+        first_name = p_first_name,
+        last_name = p_last_name
+    WHERE id = p_user_id;
+
+    IF old_department_id IS NULL THEN
+        INSERT INTO user_departments(user_id, department_id) VALUES (p_user_id, p_department_id);
+        SET diffList = CONCAT(diffList, 'department (added), ');
+    ELSEIF old_department_id <> p_department_id THEN
+        UPDATE user_departments SET department_id = p_department_id WHERE user_id = p_user_id;
+        SET diffList = CONCAT(diffList, 'department, ');
+    END IF;
+
+    IF old_email <> p_email THEN SET diffList = CONCAT(diffList, 'email, '); END IF;
+    IF old_first_name <> p_first_name THEN SET diffList = CONCAT(diffList, 'first_name, '); END IF;
+    IF old_last_name <> p_last_name THEN SET diffList = CONCAT(diffList, 'last_name, '); END IF;
+
+    INSERT INTO audit_log (
+        UserID,
+        EntityID,
+        Action,
+        Details,
+        OldVal,
+        NewVal,
+        Module,
+        Status,
+        Date_Time
+    )
+    VALUES (
+        p_changed_by,
+        p_user_id,
+        'Modified',
+        IF(TRIM(diffList) <> '', CONCAT('Updated fields: ', TRIM(TRAILING ', ' FROM diffList)), 'No changes'),
+        JSON_OBJECT(
+            'email', old_email,
+            'first_name', old_first_name,
+            'last_name', old_last_name,
+            'department', old_department_name
+        ),
+        JSON_OBJECT(
+            'email', p_email,
+            'first_name', p_first_name,
+            'last_name', p_last_name,
+            'department', new_department_name
+        ),
+        IFNULL(p_module, 'User Management'),
+        IF(diffList <> '', 'Successful', 'No Changes'),
+        NOW()
+    );
+END$$
+
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -42,7 +120,27 @@ CREATE TABLE IF NOT EXISTS `audit_log` (
   PRIMARY KEY (`TrackID`),
   KEY `idx_module` (`Module`),
   KEY `idx_action` (`Action`)
-) ENGINE=InnoDB AUTO_INCREMENT=109 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=182 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `audit_log`
+--
+
+INSERT INTO `audit_log` (`TrackID`, `UserID`, `EntityID`, `Action`, `Details`, `OldVal`, `NewVal`, `Module`, `Status`, `Date_Time`) VALUES
+(109, 1, 1, 'Add', 'New equipment added', NULL, '{\"asset_tag\":\"23123\",\"asset_description_1\":\"1231\",\"asset_description_2\":\"123\",\"specifications\":\"123\",\"brand\":\"123\",\"model\":\"123\",\"serial_number\":\"123123\",\"date_created\":\"2025-03-13T16:38\",\"remarks\":\"123123\"}', 'Equipment Details', 'Successful', '2025-03-06 16:38:58'),
+(110, 1, 11, 'Create', 'New user added: ttestinglast', NULL, '{\"id\": 11, \"email\": \"testing@gmail.com\", \"status\": \"Offline\", \"username\": \"ttestinglast\", \"last_name\": \"TestingLast\", \"department\": \"Unknown\", \"first_name\": \"TestingFirst\", \"date_created\": \"2025-03-07 11:52:51.000000\"}', 'User Management', 'Successful', '2025-03-07 11:52:51'),
+(114, 1, 11, 'Modified', 'Updated fields: email, first_name, last_name', '{\"id\": 11, \"email\": \"testing@gmail.com\", \"status\": \"Offline\", \"password\": \"$2y$10$xssRq5vZk5kyOCg2TQcIuejiaLhcUYxODegrxaJJW8mFQukeH1R4q\", \"username\": \"ttestinglast\", \"last_name\": \"TestingLast\", \"department\": \"Center for Campus Ministry\", \"first_name\": \"TestingFirst\", \"date_created\": \"2025-03-07 11:52:51.000000\"}', '{\"id\": 11, \"email\": \"testingCase@gmail.com\", \"status\": \"Offline\", \"password\": \"$2y$10$xssRq5vZk5kyOCg2TQcIuejiaLhcUYxODegrxaJJW8mFQukeH1R4q\", \"username\": \"ttestinglast\", \"last_name\": \"TestingCaseLast\", \"department\": \"Center for Campus Ministry\", \"first_name\": \"TestingCaseFirst\", \"date_created\": \"2025-03-07 11:52:51.000000\"}', 'User Management', 'Successful', '2025-03-07 12:27:16'),
+(116, 1, 11, 'Modified', 'Updated fields: email, first_name, last_name', '{\"id\": 11, \"email\": \"testingCase@gmail.com\", \"status\": \"Offline\", \"password\": \"$2y$10$xssRq5vZk5kyOCg2TQcIuejiaLhcUYxODegrxaJJW8mFQukeH1R4q\", \"username\": \"ttestinglast\", \"last_name\": \"TestingCaseLast\", \"department\": \"Center for Campus Ministry\", \"first_name\": \"TestingCaseFirst\", \"date_created\": \"2025-03-07 11:52:51.000000\"}', '{\"id\": 11, \"email\": \"testingCase1@gmail.com\", \"status\": \"Offline\", \"password\": \"$2y$10$xssRq5vZk5kyOCg2TQcIuejiaLhcUYxODegrxaJJW8mFQukeH1R4q\", \"username\": \"ttestinglast\", \"last_name\": \"TestingCaseLast1\", \"department\": \"Center for Campus Ministry\", \"first_name\": \"TestingCaseFirst1\", \"date_created\": \"2025-03-07 11:52:51.000000\"}', 'User Management', 'Successful', '2025-03-07 12:45:57'),
+(118, 1, 11, 'Modified', 'Updated fields: email, first_name, last_name', '{\"id\": 11, \"email\": \"testingCase1@gmail.com\", \"status\": \"Offline\", \"password\": \"$2y$10$xssRq5vZk5kyOCg2TQcIuejiaLhcUYxODegrxaJJW8mFQukeH1R4q\", \"username\": \"ttestinglast\", \"last_name\": \"TestingCaseLast1\", \"department\": \"Center for Campus Ministry\", \"first_name\": \"TestingCaseFirst1\", \"date_created\": \"2025-03-07 11:52:51.000000\"}', '{\"id\": 11, \"email\": \"testingCase11@gmail.com\", \"status\": \"Offline\", \"password\": \"$2y$10$xssRq5vZk5kyOCg2TQcIuejiaLhcUYxODegrxaJJW8mFQukeH1R4q\", \"username\": \"ttestinglast\", \"last_name\": \"TestingCaseLast11\", \"department\": \"Center for Campus Ministry\", \"first_name\": \"TestingCaseFirst11\", \"date_created\": \"2025-03-07 11:52:51.000000\"}', 'User Management', 'Successful', '2025-03-07 12:55:32'),
+(120, 1, 11, 'Modified', 'Updated fields: email, first_name, last_name', '{\"id\": 11, \"email\": \"testingCase11@gmail.com\", \"status\": \"Offline\", \"password\": \"$2y$10$xssRq5vZk5kyOCg2TQcIuejiaLhcUYxODegrxaJJW8mFQukeH1R4q\", \"username\": \"ttestinglast\", \"last_name\": \"TestingCaseLast11\", \"department\": \"Center for Campus Ministry\", \"first_name\": \"TestingCaseFirst11\", \"date_created\": \"2025-03-07 11:52:51.000000\"}', '{\"id\": 11, \"email\": \"testingCase111@gmail.com\", \"status\": \"Offline\", \"password\": \"$2y$10$xssRq5vZk5kyOCg2TQcIuejiaLhcUYxODegrxaJJW8mFQukeH1R4q\", \"username\": \"ttestinglast\", \"last_name\": \"TestingCaseLast111\", \"department\": \"Center for Campus Ministry\", \"first_name\": \"TestingCaseFirst111\", \"date_created\": \"2025-03-07 11:52:51.000000\"}', 'User Management', 'Successful', '2025-03-07 13:00:26'),
+(122, 1, 11, 'Modified', 'Updated fields: email, first_name, last_name', '{\"id\": 11, \"email\": \"testingCase111@gmail.com\", \"status\": \"Offline\", \"password\": \"$2y$10$xssRq5vZk5kyOCg2TQcIuejiaLhcUYxODegrxaJJW8mFQukeH1R4q\", \"username\": \"ttestinglast\", \"last_name\": \"TestingCaseLast111\", \"department\": \"Center for Campus Ministry\", \"first_name\": \"TestingCaseFirst111\", \"date_created\": \"2025-03-07 11:52:51.000000\"}', '{\"id\": 11, \"email\": \"testingCase1111@gmail.com\", \"status\": \"Offline\", \"password\": \"$2y$10$xssRq5vZk5kyOCg2TQcIuejiaLhcUYxODegrxaJJW8mFQukeH1R4q\", \"username\": \"ttestinglast\", \"last_name\": \"TestingCaseLast1111\", \"department\": \"Center for Campus Ministry\", \"first_name\": \"TestingCaseFirst1111\", \"date_created\": \"2025-03-07 11:52:51.000000\"}', 'User Management', 'Successful', '2025-03-07 13:01:57'),
+(123, 1, 11, 'Modified', 'Updated fields: email, first_name, last_name', '{\"id\": 11, \"email\": \"testingCase1111@gmail.com\", \"status\": \"Offline\", \"password\": \"$2y$10$xssRq5vZk5kyOCg2TQcIuejiaLhcUYxODegrxaJJW8mFQukeH1R4q\", \"username\": \"ttestinglast\", \"last_name\": \"TestingCaseLast1111\", \"department\": \"Center for Campus Ministry\", \"first_name\": \"TestingCaseFirst1111\", \"date_created\": \"2025-03-07 11:52:51.000000\"}', '{\"id\": 11, \"email\": \"testingCase11111@gmail.com\", \"status\": \"Offline\", \"password\": \"$2y$10$xssRq5vZk5kyOCg2TQcIuejiaLhcUYxODegrxaJJW8mFQukeH1R4q\", \"username\": \"ttestinglast\", \"last_name\": \"TestingCaseLast11111\", \"department\": \"Center for Campus Ministry\", \"first_name\": \"TestingCaseFirst11111\", \"date_created\": \"2025-03-07 11:52:51.000000\"}', 'User Management', 'Successful', '2025-03-07 13:05:24'),
+(134, 1, 11, 'Restored', 'User has been restored', '{\"id\": 11, \"email\": \"testingCase11111@gmail.com\", \"status\": \"\", \"username\": \"ttestinglast\", \"last_name\": \"TestingCaseLast11111\", \"first_name\": \"TestingCaseFirst11111\", \"is_disabled\": 1, \"date_created\": \"2025-03-07 11:52:51.000000\"}', '', 'User Management', 'Successful', '2025-03-07 13:36:28'),
+(135, 1, 11, 'Remove', 'User has been removed', '{\"id\": 11, \"email\": \"testingCase11111@gmail.com\", \"status\": \"\", \"username\": \"ttestinglast\", \"last_name\": \"TestingCaseLast11111\", \"first_name\": \"TestingCaseFirst11111\", \"is_disabled\": 0, \"date_created\": \"2025-03-07 11:52:51.000000\"}', '', 'User Management', 'Successful', '2025-03-07 13:37:11'),
+(136, 1, 11, 'Restored', 'User has been restored', '{\"id\": 11, \"email\": \"testingCase11111@gmail.com\", \"status\": \"\", \"username\": \"ttestinglast\", \"last_name\": \"TestingCaseLast11111\", \"first_name\": \"TestingCaseFirst11111\", \"is_disabled\": 1, \"date_created\": \"2025-03-07 11:52:51.000000\"}', '', 'User Management', 'Successful', '2025-03-07 13:37:22'),
+(179, 1, 11, 'Modified', 'Updated fields: department, email, first_name, last_name', '{\"email\": \"testingCase@gmail.com\", \"last_name\": \"TestingCaseLast\", \"department\": \"Center for Campus Ministry\", \"first_name\": \"TestingCaseFirst\"}', '{\"email\": \"testingCase1@gmail.com\", \"last_name\": \"TestingCaseLast1\", \"department\": \"Office of the President\", \"first_name\": \"TestingCaseFirst1\"}', 'User Management', 'Successful', '2025-03-07 16:55:26'),
+(180, 1, 11, 'Modified', 'Updated fields: department', '{\"email\": \"testingCase1@gmail.com\", \"last_name\": \"TestingCaseLast1\", \"department\": \"Office of the President\", \"first_name\": \"TestingCaseFirst1\"}', '{\"email\": \"testingCase1@gmail.com\", \"last_name\": \"TestingCaseLast1\", \"department\": \"Office of the Vice President for Mission and Identity\", \"first_name\": \"TestingCaseFirst1\"}', 'User Management', 'Successful', '2025-03-07 16:55:33'),
+(181, 1, 11, 'Modified', 'Updated fields: email, first_name, last_name', '{\"email\": \"testingCase1@gmail.com\", \"last_name\": \"TestingCaseLast1\", \"department\": \"Office of the Vice President for Mission and Identity\", \"first_name\": \"TestingCaseFirst1\"}', '{\"email\": \"testingCase123@gmail.com\", \"last_name\": \"TestingCaseLast123\", \"department\": \"Office of the Vice President for Mission and Identity\", \"first_name\": \"TestingCaseFirst123\"}', 'User Management', 'Successful', '2025-03-07 16:55:38');
 
 -- --------------------------------------------------------
 
@@ -153,7 +251,14 @@ CREATE TABLE IF NOT EXISTS `equipment_details` (
   UNIQUE KEY `equipment_status_id` (`equipment_status_id`) USING BTREE,
   KEY `invoice_no` (`invoice_no`),
   KEY `rr_no` (`rr_no`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `equipment_details`
+--
+
+INSERT INTO `equipment_details` (`id`, `asset_tag`, `asset_description_1`, `asset_description_2`, `specifications`, `brand`, `model`, `serial_number`, `invoice_no`, `rr_no`, `equipment_location_id`, `equipment_status_id`, `remarks`, `date_created`, `is_disabled`) VALUES
+(1, '23123', '1231', '123', '123', '123', '123', '123123', NULL, NULL, NULL, NULL, '123123', '2025-03-13 16:38:00', 0);
 
 -- --------------------------------------------------------
 
@@ -209,7 +314,7 @@ CREATE TABLE IF NOT EXISTS `modules` (
   `module_name` varchar(100) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `module_name` (`module_name`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `modules`
@@ -233,7 +338,7 @@ CREATE TABLE IF NOT EXISTS `privileges` (
   `priv_name` varchar(191) NOT NULL,
   `is_disabled` tinyint NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=26 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `privileges`
@@ -312,7 +417,7 @@ CREATE TABLE IF NOT EXISTS `roles` (
   `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `role_name` (`role_name`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `roles`
@@ -347,7 +452,7 @@ CREATE TABLE IF NOT EXISTS `role_changes` (
   PRIMARY KEY (`ChangeID`),
   KEY `UserID` (`UserID`),
   KEY `RoleID` (`RoleID`)
-) ENGINE=MyISAM AUTO_INCREMENT=34 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=41 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `role_changes`
@@ -356,7 +461,14 @@ CREATE TABLE IF NOT EXISTS `role_changes` (
 INSERT INTO `role_changes` (`ChangeID`, `UserID`, `RoleID`, `Action`, `OldRoleName`, `NewRoleName`, `ChangeTimestamp`, `OldPrivileges`, `NewPrivileges`, `IsUndone`) VALUES
 (31, 10, 4, 'Modified', NULL, 'User Manager', '2025-03-05 10:24:57', '[1,2,3,4,5,6,7,8,9,10,11,12]', '[\"1\",\"4\",\"11\",\"10\",\"5\",\"6\",\"12\",\"8\",\"9\",\"7\",\"2\",\"3\"]', 0),
 (32, 10, 8, 'Add', NULL, 'User Management', '2025-03-05 10:25:25', NULL, NULL, 0),
-(33, 10, 8, 'Delete', NULL, NULL, '2025-03-05 10:25:30', NULL, NULL, 0);
+(33, 10, 8, 'Delete', NULL, NULL, '2025-03-05 10:25:30', NULL, NULL, 0),
+(34, 1, 1, 'Modified', 'TMDD-Dev', 'TMDD-Dev', '2025-03-06 13:54:56', '[\"1|1\",\"2|1\",\"2|2\",\"2|3\",\"2|4\",\"2|5\",\"2|6\",\"2|7\",\"2|8\",\"2|9\",\"2|10\",\"2|11\",\"2|12\",\"3|1\",\"3|2\",\"3|3\",\"3|4\",\"3|5\",\"3|6\",\"3|7\",\"3|8\",\"3|9\",\"3|10\",\"3|11\",\"3|12\",\"4|1\",\"4|2\",\"4|3\",\"4|4\",\"4|5\",\"4|6\",\"4|7\",\"4|8\",\"4|9\",\"4|10\",\"4|11\",\"4|12\"]', '[\"2|3\",\"2|11\",\"2|10\",\"2|2\",\"2|5\",\"2|6\",\"2|12\",\"2|4\",\"2|8\",\"2|1\",\"2|9\",\"2|7\",\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\",\"4|3\",\"4|11\",\"4|10\",\"4|2\",\"4|5\",\"4|6\",\"4|12\",\"4|4\",\"4|8\",\"4|1\",\"4|9\",\"4|7\"]', 0),
+(35, 1, 1, 'Modified', 'TMDD-Dev', 'TMDD-Dev', '2025-03-06 13:55:05', '[\"2|3\",\"2|11\",\"2|10\",\"2|2\",\"2|5\",\"2|6\",\"2|12\",\"2|4\",\"2|8\",\"2|1\",\"2|9\",\"2|7\",\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\",\"4|3\",\"4|11\",\"4|10\",\"4|2\",\"4|5\",\"4|6\",\"4|12\",\"4|4\",\"4|8\",\"4|1\",\"4|9\",\"4|7\"]', '[\"1|1\",\"2|3\",\"2|11\",\"2|10\",\"2|2\",\"2|5\",\"2|6\",\"2|12\",\"2|4\",\"2|8\",\"2|1\",\"2|9\",\"2|7\",\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\",\"4|3\",\"4|11\",\"4|10\",\"4|2\",\"4|5\",\"4|6\",\"4|12\",\"4|4\",\"4|8\",\"4|1\",\"4|9\",\"4|7\"]', 0),
+(36, 1, 9, 'Add', NULL, 'test', '2025-03-06 13:55:16', NULL, NULL, 0),
+(37, 1, 9, 'Delete', NULL, NULL, '2025-03-06 13:55:22', NULL, NULL, 0),
+(38, 1, 6, 'Modified', 'Auditor', 'Auditor', '2025-03-07 10:01:15', '[]', '[]', 0),
+(39, 1, 6, 'Modified', 'Auditor', 'Auditor', '2025-03-07 10:01:21', '[]', '[\"1|1\"]', 0),
+(40, 1, 4, 'Modified', 'User Manager', 'User Manager', '2025-03-07 10:04:51', '[null,null,null,null,null,null,null,null,null,null,null,null]', '[\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\"]', 0);
 
 -- --------------------------------------------------------
 
@@ -374,51 +486,13 @@ CREATE TABLE IF NOT EXISTS `role_module_privileges` (
   KEY `role_id` (`role_id`),
   KEY `module_id` (`module_id`),
   KEY `fk_rmp_privilege` (`privilege_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=88 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=184 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `role_module_privileges`
 --
 
 INSERT INTO `role_module_privileges` (`id`, `role_id`, `module_id`, `privilege_id`) VALUES
-(1, 6, 1, 1),
-(2, 1, 1, 1),
-(3, 1, 2, 1),
-(4, 1, 2, 2),
-(5, 1, 2, 3),
-(6, 1, 2, 4),
-(7, 1, 2, 5),
-(8, 1, 2, 6),
-(9, 1, 2, 7),
-(10, 1, 2, 8),
-(11, 1, 2, 9),
-(12, 1, 2, 10),
-(13, 1, 2, 11),
-(14, 1, 2, 12),
-(15, 1, 3, 1),
-(16, 1, 3, 2),
-(17, 1, 3, 3),
-(18, 1, 3, 4),
-(19, 1, 3, 5),
-(20, 1, 3, 6),
-(21, 1, 3, 7),
-(22, 1, 3, 8),
-(23, 1, 3, 9),
-(24, 1, 3, 10),
-(25, 1, 3, 11),
-(26, 1, 3, 12),
-(27, 1, 4, 1),
-(28, 1, 4, 2),
-(29, 1, 4, 3),
-(30, 1, 4, 4),
-(31, 1, 4, 5),
-(32, 1, 4, 6),
-(33, 1, 4, 7),
-(34, 1, 4, 8),
-(35, 1, 4, 9),
-(36, 1, 4, 10),
-(37, 1, 4, 11),
-(38, 1, 4, 12),
 (40, 3, 4, 1),
 (41, 3, 4, 2),
 (42, 3, 4, 3),
@@ -443,18 +517,56 @@ INSERT INTO `role_module_privileges` (`id`, `role_id`, `module_id`, `privilege_i
 (73, 5, 2, 10),
 (74, 5, 2, 11),
 (75, 5, 2, 12),
-(76, 4, NULL, 1),
-(77, 4, NULL, 4),
-(78, 4, NULL, 11),
-(79, 4, NULL, 10),
-(80, 4, NULL, 5),
-(81, 4, NULL, 6),
-(82, 4, NULL, 12),
-(83, 4, NULL, 8),
-(84, 4, NULL, 9),
-(85, 4, NULL, 7),
-(86, 4, NULL, 2),
-(87, 4, NULL, 3);
+(125, 1, 2, 3),
+(126, 1, 2, 11),
+(127, 1, 2, 10),
+(128, 1, 2, 2),
+(129, 1, 2, 5),
+(130, 1, 2, 6),
+(131, 1, 2, 12),
+(132, 1, 2, 4),
+(133, 1, 2, 8),
+(134, 1, 2, 1),
+(135, 1, 2, 9),
+(136, 1, 2, 7),
+(137, 1, 3, 3),
+(138, 1, 3, 11),
+(139, 1, 3, 10),
+(140, 1, 3, 2),
+(141, 1, 3, 5),
+(142, 1, 3, 6),
+(143, 1, 3, 12),
+(144, 1, 3, 4),
+(145, 1, 3, 8),
+(146, 1, 3, 1),
+(147, 1, 3, 9),
+(148, 1, 3, 7),
+(149, 1, 4, 3),
+(150, 1, 4, 11),
+(151, 1, 4, 10),
+(152, 1, 4, 2),
+(153, 1, 4, 5),
+(154, 1, 4, 6),
+(155, 1, 4, 12),
+(156, 1, 4, 4),
+(157, 1, 4, 8),
+(158, 1, 4, 1),
+(159, 1, 4, 9),
+(160, 1, 4, 7),
+(170, NULL, 1, 1),
+(171, 6, 1, 1),
+(172, 4, 3, 3),
+(173, 4, 3, 11),
+(174, 4, 3, 10),
+(175, 4, 3, 2),
+(176, 4, 3, 5),
+(177, 4, 3, 6),
+(178, 4, 3, 12),
+(179, 4, 3, 4),
+(180, 4, 3, 8),
+(181, 4, 3, 1),
+(182, 4, 3, 9),
+(183, 4, 3, 7);
 
 -- --------------------------------------------------------
 
@@ -476,197 +588,28 @@ CREATE TABLE IF NOT EXISTS `users` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `username` (`username`),
   UNIQUE KEY `email` (`email`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `users`
 --
 
 INSERT INTO `users` (`id`, `username`, `email`, `password`, `first_name`, `last_name`, `date_created`, `status`, `is_disabled`) VALUES
-(1, 'navithebear', 'navi@example.com', '$2y$12$2esj1uaDmbD3K6Fi.C0CiuOye96x8OjARwTc82ViEAPvmx4b1cL0S', 'navi', 'slu', '2025-02-19 01:19:52', 'Online', 0),
+(1, 'navithebear', 'navi@example.com', '$2y$12$2esj1uaDmbD3K6Fi.C0CiuOye96x8OjARwTc82ViEAPvmx4b1cL0S', 'navi', 'slu', '2025-02-19 01:19:52', 'Offline', 0),
 (2, 'userman', 'um@example.com', '$2y$12$wE3B0Dq4z0Bd1AHXf4gumexeObTqWXm7aASm7PnkCrtiL.iIfObS.', 'user', 'manager', '2025-02-19 05:40:35', 'Offline', 0),
 (3, 'equipman', 'em@example.com', '$2y$12$J0iy9bwoalbG2/NkqDZchuLU4sWramGpsw1EsSZ6se0CefM/sqpZq', 'equipment', 'manager', '2025-02-19 05:40:35', 'Offline', 0),
 (4, 'rpman', 'rp@example.com', '$2y$12$dWnJinU4uO7ETYIKi9cL0uN4wJgjACaF.q0Pbkr5yNUK2q1HUQk8G', 'ropriv', 'manager', '2025-02-19 05:41:59', 'Offline', 0),
-(5, 'auds', 'auds@example.com', '$2y$12$VRIJ5Okf3p9fE3Xtq.qyze/t./h30ZsV7y7pg4UFksFiJ8JdMSh/q', 'audi', 'broom broom', '2025-02-19 05:41:59', 'Offline', 0);
+(5, 'auds', 'auds@example.com', '$2y$12$VRIJ5Okf3p9fE3Xtq.qyze/t./h30ZsV7y7pg4UFksFiJ8JdMSh/q', 'audi', 'broom broom', '2025-02-19 05:41:59', 'Offline', 0),
+(11, 'ttestinglast', 'testingCase123@gmail.com', '$2y$10$xssRq5vZk5kyOCg2TQcIuejiaLhcUYxODegrxaJJW8mFQukeH1R4q', 'TestingCaseFirst123', 'TestingCaseLast123', '2025-03-07 03:52:51', '', 0);
 
 --
 -- Triggers `users`
 --
-DROP TRIGGER IF EXISTS `after_user_delete`;
-DELIMITER $$
-CREATE TRIGGER `after_user_delete` AFTER DELETE ON `users` FOR EACH ROW BEGIN
-    INSERT INTO audit_log (
-        `UserID`,              -- The user who performed the action
-        `EntityID`,            -- The ID of the deleted user
-        `Action`,              -- Action type
-        `Details`,             -- Description of the action
-        `OldVal`,              -- Old values before deletion
-        `NewVal`,              -- New values after deletion (NULL for DELETE)
-        `Module`,              -- Module where the action occurred
-        `Status`,              -- Status of the action
-        `Date_Time`            -- Timestamp of the action
-    ) VALUES (
-        @current_user_id,      -- Replace with the actual user ID performing the action
-        OLD.id,                -- The ID of the deleted user
-        'Remove',              -- Action type
-        'User deleted',        -- Details
-        JSON_OBJECT(           -- Old values in JSON format
-            'id', OLD.id,
-            'username', OLD.username,
-            'email', OLD.email,
-            'first_name', OLD.first_name,
-            'last_name', OLD.last_name,
-            'status', OLD.status,
-            'date_created', OLD.date_created,
-            'is_disabled', OLD.is_disabled
-        ),
-        NULL,                  -- No new values for DELETE operation
-        IFNULL(@current_module, 'User Management'), -- Default to 'User Management'
-        'Successful',          -- Status of the action
-        NOW()                  -- Current timestamp
-    );
-END
-$$
-DELIMITER ;
 DROP TRIGGER IF EXISTS `after_user_disable`;
 DELIMITER $$
 CREATE TRIGGER `after_user_disable` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
-    INSERT INTO audit_log (
-        `UserID`,              -- The user who performed the action
-        `EntityID`,            -- The ID of the deleted user
-        `Action`,              -- Action type
-        `Details`,             -- Description of the action
-        `OldVal`,              -- Old values before the delete
-        `NewVal`,              -- New values (empty for delete)
-        `Module`,              -- Module where the action occurred
-        `Status`,              -- Status of the action
-        `Date_Time`            -- Timestamp of the action
-    ) VALUES (
-                 @current_user_id,      -- Replace with the actual user ID performing the action
-                 OLD.id,                -- The ID of the deleted user
-                 'Delete',              -- Action type
-                 'User has been deleted',  -- Details
-                 JSON_OBJECT(           -- Old values in JSON format
-                         'id', OLD.id,
-                         'username', OLD.username,
-                         'email', OLD.email,
-                         'first_name', OLD.first_name,
-                         'last_name', OLD.last_name,
-                         'status', OLD.status,
-                         'date_created', OLD.date_created,
-                         'is_disabled', OLD.is_disabled
-                 ),
-                 '',                    -- New values are empty for delete
-                 IFNULL(@current_module, 'User Management'), -- Default to 'User Management'
-                 'Successful',           -- Status of the action
-                 NOW()                  -- Current timestamp
-             );
-END
-$$
-DELIMITER ;
-DROP TRIGGER IF EXISTS `user_after_modify`;
-DELIMITER $$
-CREATE TRIGGER `user_after_modify` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
-    DECLARE diffList TEXT DEFAULT '';
-    DECLARE dept_name VARCHAR(191);
-
-    -- Get department name for the user
-    SELECT d.department_name INTO dept_name
-    FROM departments d
-             JOIN user_departments ud ON d.id = ud.department_id
-    WHERE ud.user_id = NEW.id
-    LIMIT 1;
-
-    -- Only log modifications if is_disabled did not change
-    IF OLD.is_disabled = NEW.is_disabled THEN
-        IF OLD.username <> NEW.username THEN
-            SET diffList = CONCAT(diffList, 'username, ');
-        END IF;
-        IF OLD.email <> NEW.email THEN
-            SET diffList = CONCAT(diffList, 'email, ');
-        END IF;
-        IF OLD.first_name <> NEW.first_name THEN
-            SET diffList = CONCAT(diffList, 'first_name, ');
-        END IF;
-        IF OLD.last_name <> NEW.last_name THEN
-            SET diffList = CONCAT(diffList, 'last_name, ');
-        END IF;
-        IF OLD.status <> NEW.status THEN
-            SET diffList = CONCAT(diffList, 'status, ');
-        END IF;
-        IF OLD.password <> NEW.password THEN
-            SET diffList = CONCAT(diffList, 'password, ');
-        END IF;
-
-        -- Insert log entry
-        INSERT INTO audit_log (
-            UserID,
-            EntityID,
-            Action,
-            Details,
-            OldVal,
-            NewVal,
-            Module,
-            Status,
-            Date_Time
-        )
-        VALUES (
-            @current_user_id,
-            NEW.id,
-            'Modified',
-            CASE 
-                WHEN TRIM(TRAILING ', ' FROM diffList) <> '' 
-                THEN CONCAT('Updated fields: ', TRIM(TRAILING ', ' FROM diffList))
-                ELSE 'No changes made'
-            END,
-            JSON_OBJECT(
-                'id', OLD.id,
-                'username', OLD.username,
-                'email', OLD.email,
-                'first_name', OLD.first_name,
-                'last_name', OLD.last_name,
-                'password', OLD.password,
-                'status', OLD.status,
-                'department', dept_name,
-                'date_created', OLD.date_created
-            ),
-            JSON_OBJECT(
-                'id', NEW.id,
-                'username', NEW.username,
-                'email', NEW.email,
-                'first_name', NEW.first_name,
-                'last_name', NEW.last_name,
-                'password', NEW.password,
-                'status', NEW.status,
-                'department', dept_name,
-                'date_created', NEW.date_created
-            ),
-            IFNULL(@current_module, 'User Management'),
-            CASE 
-                WHEN TRIM(TRAILING ', ' FROM diffList) <> '' THEN 'Successful'
-                ELSE 'Failed'
-            END,
-            NOW()
-        );
-    END IF;
-END
-$$
-DELIMITER ;
-DROP TRIGGER IF EXISTS `user_after_restore`;
-DELIMITER $$
-CREATE TRIGGER `user_after_restore` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
-    -- Declare variables first, at the beginning of the block
-    DECLARE dept_name VARCHAR(191);
-
-    -- Then proceed with the logic
-    IF OLD.is_disabled = 1 AND NEW.is_disabled = 0 THEN
-        -- Get department name for the user
-        SELECT d.department_name INTO dept_name
-        FROM departments d
-                 JOIN user_departments ud ON d.id = ud.department_id
-        WHERE ud.user_id = NEW.id
-        LIMIT 1;
-
+    -- Only log if the user is actually being disabled (active to disabled)
+    IF OLD.is_disabled = 0 AND NEW.is_disabled = 1 THEN
         INSERT INTO audit_log (
             `UserID`,
             `EntityID`,
@@ -678,36 +621,103 @@ CREATE TRIGGER `user_after_restore` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
             `Status`,
             `Date_Time`
         ) VALUES (
-                     @current_user_id,
-                     NEW.id,
-                     'Restored',
-                     'User restored (is_disabled set to 0)',
-                     JSON_OBJECT(
-                             'id', OLD.id,
-                             'username', OLD.username,
-                             'email', OLD.email,
-                             'first_name', OLD.first_name,
-                             'last_name', OLD.last_name,
-                             'status', OLD.status,
-                             'department', dept_name,
-                             'date_created', OLD.date_created,
-                             'is_disabled', OLD.is_disabled
-                     ),
-                     JSON_OBJECT(
-                             'id', NEW.id,
-                             'username', NEW.username,
-                             'email', NEW.email,
-                             'first_name', NEW.first_name,
-                             'last_name', NEW.last_name,
-                             'status', NEW.status,
-                             'department', dept_name,
-                             'date_created', NEW.date_created,
-                             'is_disabled', NEW.is_disabled
-                     ),
-                     IFNULL(@current_module, 'User Management'),
-                     'Successful',
-                     NOW()
-                 );
+            @current_user_id,
+            OLD.id,
+            'Remove',
+            'User has been removed',
+            JSON_OBJECT(
+                'id', OLD.id,
+                'username', OLD.username,
+                'email', OLD.email,
+                'first_name', OLD.first_name,
+                'last_name', OLD.last_name,
+                'status', OLD.status,
+                'date_created', OLD.date_created,
+                'is_disabled', OLD.is_disabled
+            ),
+            '',
+            IFNULL(@current_module, 'User Management'),
+            'Successful',
+            NOW()
+        );
+    END IF;
+END
+$$
+DELIMITER ;
+DROP TRIGGER IF EXISTS `user_after_delete`;
+DELIMITER $$
+CREATE TRIGGER `user_after_delete` BEFORE DELETE ON `users` FOR EACH ROW BEGIN
+    -- Use HEX() to compare BIT(1) value: '01' indicates true
+    IF HEX(OLD.is_disabled) = '01' THEN
+        INSERT INTO audit_log (
+            `UserID`,              
+            `EntityID`,            
+            `Action`,              
+            `Details`,             
+            `OldVal`,              
+            `NewVal`,              
+            `Module`,              
+            `Status`,              
+            `Date_Time`            
+        ) VALUES (
+            @current_user_id,      
+            OLD.id,                
+            'Delete',              
+            'User deleted',        
+            JSON_OBJECT(           
+                'id', OLD.id,
+                'username', OLD.username,
+                'email', OLD.email,
+                'first_name', OLD.first_name,
+                'last_name', OLD.last_name,
+                'status', OLD.status,
+                'date_created', OLD.date_created,
+                'is_disabled', OLD.is_disabled
+            ),
+            NULL,                  
+            IFNULL(@current_module, 'User Management'),
+            'Successful',          
+            NOW()                  
+        );
+    END IF;
+END
+$$
+DELIMITER ;
+DROP TRIGGER IF EXISTS `user_after_restore`;
+DELIMITER $$
+CREATE TRIGGER `user_after_restore` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
+    -- Only log if the user is actually being disabled (active to disabled)
+    IF OLD.is_disabled = 1 AND NEW.is_disabled = 0 THEN
+        INSERT INTO audit_log (
+            `UserID`,
+            `EntityID`,
+            `Action`,
+            `Details`,
+            `OldVal`,
+            `NewVal`,
+            `Module`,
+            `Status`,
+            `Date_Time`
+        ) VALUES (
+            @current_user_id,
+            OLD.id,
+            'Restored',
+            'User has been restored',
+            JSON_OBJECT(
+                'id', OLD.id,
+                'username', OLD.username,
+                'email', OLD.email,
+                'first_name', OLD.first_name,
+                'last_name', OLD.last_name,
+                'status', OLD.status,
+                'date_created', OLD.date_created,
+                'is_disabled', OLD.is_disabled
+            ),
+            '',
+            IFNULL(@current_module, 'User Management'),
+            'Successful',
+            NOW()
+        );
     END IF;
 END
 $$
@@ -762,6 +772,56 @@ CREATE TRIGGER `users_after_create` AFTER INSERT ON `users` FOR EACH ROW BEGIN
 END
 $$
 DELIMITER ;
+DROP TRIGGER IF EXISTS `users_status_change`;
+DELIMITER $$
+CREATE TRIGGER `users_status_change` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
+    DECLARE actionType VARCHAR(50);
+    DECLARE detailsText VARCHAR(255);
+    DECLARE changesText VARCHAR(255);
+
+    -- Check if the status field has changed
+    IF OLD.status <> NEW.status THEN
+        IF OLD.status = 'offline' AND NEW.status = 'online' THEN
+            SET actionType = 'Login';
+            SET detailsText = CONCAT(NEW.username, ' is now online.');
+            SET changesText = 'Offline > Online';
+        ELSEIF OLD.status = 'online' AND NEW.status = 'offline' THEN
+            SET actionType = 'Logout';
+            SET detailsText = CONCAT(NEW.username, ' is now offline.');
+            SET changesText = 'Online > Offline';
+        ELSE
+            -- Fallback for any other status change
+            SET actionType = 'Status Change';
+            SET detailsText = CONCAT('Status changed from ', OLD.status, ' to ', NEW.status);
+            SET changesText = CONCAT(OLD.status, ' > ', NEW.status);
+        END IF;
+
+        INSERT INTO audit_log (
+            UserID,
+            EntityID,
+            Action,
+            Details,
+            OldVal,
+            NewVal,
+            Module,
+            Status,
+            Date_Time
+        )
+        VALUES (
+            @current_user_id,
+            NEW.id,
+            actionType,
+            detailsText,
+            JSON_OBJECT('status', OLD.status),
+            JSON_OBJECT('status', NEW.status),
+            'users',
+            'successful',
+            NOW()
+        );
+    END IF;
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -782,6 +842,7 @@ CREATE TABLE IF NOT EXISTS `user_departments` (
 --
 
 INSERT INTO `user_departments` (`user_id`, `department_id`) VALUES
+(11, 4),
 (1, 40);
 
 -- --------------------------------------------------------
@@ -807,7 +868,8 @@ INSERT INTO `user_roles` (`user_id`, `role_id`) VALUES
 (3, 3),
 (2, 4),
 (4, 5),
-(5, 6);
+(5, 6),
+(11, 6);
 
 --
 -- Constraints for dumped tables
