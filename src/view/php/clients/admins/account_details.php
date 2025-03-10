@@ -10,9 +10,6 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-if (!isset($_SESSION['user_id'])) {
-    die("Error: User not logged in. Please log in first.");
-}
 $user_id = $_SESSION['user_id'];
 
 // Fetch user details and role
@@ -82,6 +79,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_password'])) {
         $error_message = "Current password is incorrect.";
     }
 }
+
+// Handle account deletion
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
+    // Additional confirmation check could be added here
+    $delete_sql = "DELETE FROM users WHERE id = ?";
+    $delete_stmt = $pdo->prepare($delete_sql);
+    
+    if ($delete_stmt->execute([$user_id])) {
+        // Destroy session
+        session_destroy();
+        // Redirect to homepage or login page
+        header("Location: " . BASE_URL . "public/index.php?account_deleted=1");
+        exit();
+    } else {
+        $error_message = "Failed to delete account. Please try again later.";
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -89,10 +103,255 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_password'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&family=Roboto+Mono:wght@300;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/account_details.css">
     <title>Account Details</title>
-
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f5f8fa;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .main-content {
+            margin-left: 230px; /* Adjusted from 250px for better balance */
+            padding: 30px;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        
+        .container {
+            box-sizing: border-box;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+            padding: 25px; /* Reduced from 40px to give more internal space */
+            width: 88%; /* Maintained width percentage */
+            max-width: 1400px;
+            margin: 80px auto 15px auto;
+        }
+        
+        h2 {
+            margin-bottom: 20px; /* Reduced from 25px */
+            color: #333;
+            font-weight: 600;
+        }
+        
+        h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 12px; /* Reduced from 15px */
+            color: #444;
+        }
+        
+        /* Two-column layout for forms */
+        .account-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* Two equal columns */
+            gap: 30px; /* Reduced from 40px */
+        }
+        
+        /* For smaller screens, stack the columns */
+        @media (max-width: 992px) {
+            .account-layout {
+                grid-template-columns: 1fr;
+            }
+            
+            .main-content {
+                margin-left: 0; /* Remove margin for small screens */
+            }
+            
+            .container {
+                width: 95%; /* Wider container on small screens */
+            }
+        }
+        
+        .form-section {
+            margin-bottom: 25px; /* Reduced from 30px */
+            padding-bottom: 15px; /* Reduced from 20px */
+            border-bottom: 1px solid #eee;
+        }
+        
+        .form-group {
+            margin-bottom: 16px; /* Reduced from 20px */
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 6px; /* Reduced from 8px */
+            font-weight: 500;
+        }
+        
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 10px 12px; /* Reduced from 12px 15px */
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+        
+        input[type="email"]:focus,
+        input[type="password"]:focus {
+            border-color: #007bff;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+        }
+        
+        .password-field {
+            position: relative;
+        }
+        
+        .toggle-password {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #888;
+            transition: color 0.2s;
+        }
+        
+        .toggle-password:hover {
+            color: #333;
+        }
+        
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px; /* Reduced from 12px */
+            margin-top: 20px; /* Reduced from 25px */
+        }
+        
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 20px; /* Reduced from 10px 24px */
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        
+        .btn-primary:hover {
+            background-color: #0069d9;
+        }
+        
+        .btn-secondary {
+            background-color: #f8f9fa;
+            color: #333;
+            border: 1px solid #ddd;
+            padding: 8px 20px; /* Reduced from 10px 24px */
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #e9ecef;
+        }
+        
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 20px; /* Reduced from 10px 24px */
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+        
+        .danger-zone {
+            margin-top: 30px; /* Reduced from 40px */
+            padding-top: 15px; /* Reduced from 20px */
+            border-top: 1px solid #eee;
+        }
+        
+        .danger-zone h3 {
+            color: #dc3545;
+        }
+        
+        .alert {
+            padding: 12px; /* Reduced from 15px */
+            margin-bottom: 20px; /* Reduced from 25px */
+            border-radius: 6px;
+        }
+        
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .info-section {
+            margin-bottom: 25px; /* Reduced from 35px */
+            padding-bottom: 20px; /* Reduced from 25px */
+            border-bottom: 1px solid #eee;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* Three equal columns */
+            gap: 20px; /* Reduced from 25px */
+        }
+        
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            background-color: #f8f9fa;
+            padding: 12px; /* Reduced from 15px */
+            border-radius: 6px;
+        }
+        
+        .info-label {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 5px; /* Reduced from 6px */
+        }
+        
+        .info-value {
+            font-weight: 500;
+            font-size: 16px;
+        }
+        
+        .modal-content {
+            border-radius: 10px;
+            border: none;
+        }
+        
+        .modal-header {
+            border-bottom: 1px solid #eee;
+            padding: 18px 22px; /* Reduced from 20px 25px */
+        }
+        
+        .modal-body {
+            padding: 22px; /* Reduced from 25px */
+        }
+        
+        .modal-footer {
+            border-top: 1px solid #eee;
+            padding: 18px 22px; /* Reduced from 20px 25px */
+        }
+    </style>
 </head>
 <body>
 <?php include '../../general/sidebar.php'; ?>
@@ -114,7 +373,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_password'])) {
             <div class="info-grid">
                 <div class="info-item">
                     <span class="info-label">Full Name</span>
-                    <span class="info-value"><?php echo htmlspecialchars($user['first_name']) . ' ' . htmlspecialchars($user['last_name']); ?></span>
+                    <span class="info-value"><?php echo htmlspecialchars($user['first_name'] ?? '') . ' ' . htmlspecialchars($user['last_name'] ?? ''); ?></span>
                 </div>
                 <div class="info-item">
                     <span class="info-label">Username</span>
@@ -127,81 +386,88 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_password'])) {
             </div>
         </div>
         
-        <!-- Email Update Form -->
-        <div class="form-section">
-            <h3>Email Address</h3>
-            <form method="POST" id="email-form">
-                <div class="form-group">
-                    <label for="email">Email</label>
-                    <input type="email" id="email" name="email" value="<?php echo htmlspecialchars($email); ?>" required>
-                </div>
-                
-                <div class="form-actions">
-                    <button type="button" class="btn-secondary" onclick="document.getElementById('email-form').reset()">Cancel</button>
-                    <button type="submit" name="update_email" class="btn-primary">Update Email</button>
-                </div>
-            </form>
+        <!-- Two-column layout for forms -->
+        <div class="account-layout">
+            <!-- Email Update Form (Left column) -->
+            <div class="form-section">
+                <h3>Email Address</h3>
+                <form method="POST" id="email-form">
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" value="<?php echo htmlspecialchars($email); ?>" required>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" onclick="document.getElementById('email-form').reset()">Cancel</button>
+                        <button type="submit" name="update_email" class="btn-primary">Update Email</button>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Password Update Form (Right column) -->
+            <div class="form-section">
+                <h3>Change Password</h3>
+                <form method="POST" id="password-form">
+                    <div class="form-group">
+                        <label for="current_password">Current Password</label>
+                        <div class="password-field">
+                            <input type="password" id="current_password" name="current_password" required>
+                            <button type="button" class="toggle-password" onclick="togglePassword('current_password')">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="new_password">New Password</label>
+                        <div class="password-field">
+                            <input type="password" id="new_password" name="new_password" required>
+                            <button type="button" class="toggle-password" onclick="togglePassword('new_password')">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="confirm_password">Confirm Password</label>
+                        <div class="password-field">
+                            <input type="password" id="confirm_password" name="confirm_password" required>
+                            <button type="button" class="toggle-password" onclick="togglePassword('confirm_password')">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" onclick="document.getElementById('password-form').reset()">Cancel</button>
+                        <button type="submit" name="update_password" class="btn-primary">Update Password</button>
+                    </div>
+                </form>
+            </div>
         </div>
         
-        <!-- Password Update Form -->
-        <div class="form-section">
-            <h3>Change Password</h3>
-            <form method="POST" id="password-form">
-                <div class="form-group">
-                    <label for="current_password">Current Password</label>
-                    <div class="password-field">
-                        <input type="password" id="current_password" name="current_password" required>
-                        <button type="button" class="toggle-password" onclick="togglePassword('current_password')">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                <circle cx="12" cy="12" r="3"></circle>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="new_password">New Password</label>
-                    <div class="password-field">
-                        <input type="password" id="new_password" name="new_password" required>
-                        <button type="button" class="toggle-password" onclick="togglePassword('new_password')">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                <circle cx="12" cy="12" r="3"></circle>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="confirm_password">Confirm Password</label>
-                    <div class="password-field">
-                        <input type="password" id="confirm_password" name="confirm_password" required>
-                        <button type="button" class="toggle-password" onclick="togglePassword('confirm_password')">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                <circle cx="12" cy="12" r="3"></circle>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="form-actions">
-                    <button type="button" class="btn-secondary" onclick="document.getElementById('password-form').reset()">Cancel</button>
-                    <button type="submit" name="update_password" class="btn-primary">Update Password</button>
-                </div>
-            </form>
-
+        <!-- Danger Zone Section -->
+        <div class="danger-zone">
+            <h3>Danger Zone</h3>
+            <p>Permanently delete your account and all associated data. This action cannot be undone.</p>
+            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+                Delete My Account
+            </button>
         </div>
-        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
-            Delete My Account
-        </button>
     </div>
-
 </div>
+
 <!-- Delete Account Modal -->
-<div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel"
-     aria-hidden="true">
+<div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -210,14 +476,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_password'])) {
             </div>
             <div class="modal-body">
                 <p>Are you sure you want to delete your account? This action cannot be undone.</p>
+                <p>All your data will be permanently removed from our system.</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" id="confirmDeleteAccount">Delete</button>
+                <form method="POST" id="delete-form">
+                    <input type="hidden" name="delete_account" value="1">
+                    <button type="submit" class="btn btn-danger">Delete Permanently</button>
+                </form>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
     function togglePassword(inputId) {
         const input = document.getElementById(inputId);
@@ -227,6 +501,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_password'])) {
             input.type = 'password';
         }
     }
+    
+    // Confirm password matching validation
+    document.getElementById('password-form').addEventListener('submit', function(event) {
+        const newPassword = document.getElementById('new_password').value;
+        const confirmPassword = document.getElementById('confirm_password').value;
+        
+        if (newPassword !== confirmPassword) {
+            event.preventDefault();
+            alert('New passwords do not match.');
+        }
+    });
 </script>
 
 </body>
