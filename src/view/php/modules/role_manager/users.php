@@ -15,6 +15,7 @@
             --success: #2a9d8f;
             --warning: #e9c46a;
             --danger: #e63946;
+            --archive: #6c757d;
             --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             --radius: 8px;
             --transition: all 0.3s ease;
@@ -182,29 +183,6 @@
             background-color: rgba(67, 97, 238, 0.05);
         }
         
-        .status {
-            display: inline-block;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        
-        .status-active {
-            background-color: rgba(42, 157, 143, 0.2);
-            color: var(--success);
-        }
-        
-        .status-inactive {
-            background-color: rgba(230, 57, 70, 0.2);
-            color: var(--danger);
-        }
-        
-        .status-pending {
-            background-color: rgba(233, 196, 106, 0.2);
-            color: var(--warning);
-        }
-        
         .role-badge {
             display: inline-block;
             padding: 6px 12px;
@@ -244,6 +222,248 @@
             color: #777;
         }
         
+        /* Action Button Styles */
+        .action-buttons {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .batch-archive-btn {
+            background-color: var(--archive);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: var(--transition);
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        
+        .batch-archive-btn.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        
+        .batch-archive-btn:hover {
+            background-color: var(--dark);
+        }
+        
+        /* Checkbox Styles */
+        .checkbox-cell {
+            width: 40px;
+        }
+        
+        .user-checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        
+        /* Archive Button Styles */
+        .archive-btn {
+            background-color: var(--archive);
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: 14px;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .archive-btn:hover {
+            background-color: var(--dark);
+        }
+        
+        .archive-icon {
+            font-size: 12px;
+        }
+        
+        /* Archived User Style */
+        tr.archived {
+            opacity: 0.6;
+            background-color: rgba(200, 200, 200, 0.2);
+        }
+        
+        tr.archived td {
+            color: var(--archive);
+        }
+        
+        .restored-btn {
+            background-color: var(--success);
+        }
+        
+        .restored-btn:hover {
+            background-color: #218878;
+        }
+        
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: var(--transition);
+        }
+        
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .modal {
+            background-color: white;
+            width: 90%;
+            max-width: 500px;
+            border-radius: var(--radius);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            padding: 0;
+            transform: translateY(-20px);
+            transition: var(--transition);
+        }
+        
+        .modal-overlay.active .modal {
+            transform: translateY(0);
+        }
+        
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--gray);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #777;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        .modal-close:hover {
+            color: var(--danger);
+        }
+        
+        .modal-body {
+            padding: 20px;
+        }
+        
+        .selected-users {
+            margin-bottom: 20px;
+        }
+        
+        .selected-users-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .selected-user-badge {
+            background-color: var(--primary-light);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .modal-footer {
+            padding: 15px 20px;
+            border-top: 1px solid var(--gray);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        
+        .modal-footer button {
+            padding: 10px 16px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+        
+        .btn-cancel {
+            background-color: var(--light);
+            border: 1px solid #ddd;
+            color: var(--dark);
+        }
+        
+        .btn-cancel:hover {
+            background-color: var(--gray);
+        }
+        
+        .btn-confirm {
+            background-color: var(--archive);
+            border: none;
+            color: white;
+        }
+        
+        .btn-confirm:hover {
+            background-color: var(--dark);
+        }
+        
+        .warning-text {
+            color: var(--archive);
+            font-weight: 500;
+            margin-bottom: 15px;
+        }
+        
+        .select-all-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-right: 20px;
+        }
+        
+        #select-all {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        
+        .archived-filter-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-left: 15px;
+        }
+        
+        #show-archived {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        
         @media (max-width: 768px) {
             .controls {
                 flex-direction: column;
@@ -266,6 +486,10 @@
             .users-table {
                 overflow-x: auto;
                 display: block;
+            }
+            
+            .modal {
+                width: 95%;
             }
         }
     </style>
@@ -292,6 +516,16 @@
                     <input type="text" id="search-users" placeholder="Search users...">
                     <span class="search-icon">🔍</span>
                 </div>
+                <div class="action-buttons">
+                    <button id="batch-archive-btn" class="batch-archive-btn">
+                        <span></span> Archive Selected
+                    </button>
+                    
+                    <div class="archived-filter-container">
+                        <input type="checkbox" id="show-archived">
+                        <label for="show-archived">Show archived</label>
+                    </div>
+                </div>
             </div>
         </div>
         
@@ -299,10 +533,15 @@
             <table>
                 <thead>
                     <tr>
+                        <th class="checkbox-cell">
+                            <div class="select-all-container">
+                                <input type="checkbox" id="select-all">
+                            </div>
+                        </th>
                         <th>User Name</th>
                         <th>Email</th>
                         <th>Role</th>
-                        <th>Status</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="users-tbody">
@@ -316,6 +555,28 @@
         
         <div class="pagination" id="pagination">
             <!-- Pagination will be populated dynamically -->
+        </div>
+    </div>
+    
+    <!-- Modal for batch archive confirmation -->
+    <div class="modal-overlay" id="archive-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Archive Users</h3>
+                <button class="modal-close" id="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="warning-text">Are you sure you want to archive the following users?</p>
+                <div class="selected-users">
+                    <div class="selected-users-list" id="selected-users-list">
+                        <!-- Selected users will be displayed here -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" id="cancel-archive">Cancel</button>
+                <button class="btn-confirm" id="confirm-archive">Archive Users</button>
+            </div>
         </div>
     </div>
 
@@ -356,30 +617,33 @@
             }
         ];
 
-        // Updated sample user data to match the new roles
+        // Updated sample user data to include archive status
         const users = [
-            { id: 1, name: "John Smith", email: "john.smith@example.com", roleId: 1, status: "active" },
-            { id: 2, name: "Emily Johnson", email: "emily.j@example.com", roleId: 2, status: "active" },
-            { id: 3, name: "Michael Brown", email: "michael.b@example.com", roleId: 3, status: "active" },
-            { id: 4, name: "Sarah Davis", email: "sarah.d@example.com", roleId: 4, status: "inactive" },
-            { id: 5, name: "David Wilson", email: "david.w@example.com", roleId: 1, status: "active" },
-            { id: 6, name: "Jennifer Lee", email: "jennifer.l@example.com", roleId: 2, status: "pending" },
-            { id: 7, name: "Robert Taylor", email: "robert.t@example.com", roleId: 3, status: "active" },
-            { id: 8, name: "Linda Miller", email: "linda.m@example.com", roleId: 2, status: "active" },
-            { id: 9, name: "William Clark", email: "william.c@example.com", roleId: 3, status: "inactive" },
-            { id: 10, name: "Elizabeth Walker", email: "elizabeth.w@example.com", roleId: 4, status: "active" },
-            { id: 11, name: "Richard Hall", email: "richard.h@example.com", roleId: 3, status: "pending" },
-            { id: 12, name: "Patricia Young", email: "patricia.y@example.com", roleId: 2, status: "active" },
-            { id: 13, name: "Joseph Allen", email: "joseph.a@example.com", roleId: 1, status: "active" },
-            { id: 14, name: "Barbara Harris", email: "barbara.h@example.com", roleId: 4, status: "inactive" },
-            { id: 15, name: "Thomas King", email: "thomas.k@example.com", roleId: 4, status: "active" },
-            { id: 16, name: "Margaret Scott", email: "margaret.s@example.com", roleId: 4, status: "active" },
-            { id: 17, name: "Charles Wright", email: "charles.w@example.com", roleId: 2, status: "active" },
-            { id: 18, name: "Susan Green", email: "susan.g@example.com", roleId: 4, status: "pending" },
-            { id: 19, name: "Christopher Adams", email: "chris.a@example.com", roleId: 4, status: "active" },
-            { id: 20, name: "Jessica Baker", email: "jessica.b@example.com", roleId: 3, status: "active" }
+            { id: 1, name: "John Smith", email: "john.smith@example.com", roleId: 1, status: "active", archived: false },
+            { id: 2, name: "Emily Johnson", email: "emily.j@example.com", roleId: 2, status: "active", archived: false },
+            { id: 3, name: "Michael Brown", email: "michael.b@example.com", roleId: 3, status: "active", archived: false },
+            { id: 4, name: "Sarah Davis", email: "sarah.d@example.com", roleId: 4, status: "inactive", archived: true },
+            { id: 5, name: "David Wilson", email: "david.w@example.com", roleId: 1, status: "active", archived: false },
+            { id: 6, name: "Jennifer Lee", email: "jennifer.l@example.com", roleId: 2, status: "pending", archived: false },
+            { id: 7, name: "Robert Taylor", email: "robert.t@example.com", roleId: 3, status: "active", archived: false },
+            { id: 8, name: "Linda Miller", email: "linda.m@example.com", roleId: 2, status: "active", archived: false },
+            { id: 9, name: "William Clark", email: "william.c@example.com", roleId: 3, status: "inactive", archived: true },
+            { id: 10, name: "Elizabeth Walker", email: "elizabeth.w@example.com", roleId: 4, status: "active", archived: false },
+            { id: 11, name: "Richard Hall", email: "richard.h@example.com", roleId: 3, status: "pending", archived: false },
+            { id: 12, name: "Patricia Young", email: "patricia.y@example.com", roleId: 2, status: "active", archived: false },
+            { id: 13, name: "Joseph Allen", email: "joseph.a@example.com", roleId: 1, status: "active", archived: false },
+            { id: 14, name: "Barbara Harris", email: "barbara.h@example.com", roleId: 4, status: "inactive", archived: true },
+            { id: 15, name: "Thomas King", email: "thomas.k@example.com", roleId: 4, status: "active", archived: false },
+            { id: 16, name: "Margaret Scott", email: "margaret.s@example.com", roleId: 4, status: "active", archived: false },
+            { id: 17, name: "Charles Wright", email: "charles.w@example.com", roleId: 2, status: "active", archived: false },
+            { id: 18, name: "Susan Green", email: "susan.g@example.com", roleId: 4, status: "pending", archived: false },
+            { id: 19, name: "Christopher Adams", email: "chris.a@example.com", roleId: 4, status: "active", archived: false },
+            { id: 20, name: "Jessica Baker", email: "jessica.b@example.com", roleId: 3, status: "active", archived: false }
         ];
 
+        // Track selected users
+        let selectedUsers = [];
+        
         // Initialize page with roles and retrieve roleId from URL
         function initPage() {
             // Populate role select dropdown
@@ -407,14 +671,24 @@
             // Set up event listeners
             roleSelect.addEventListener('change', filterAndRenderUsers);
             document.getElementById('search-users').addEventListener('input', filterAndRenderUsers);
+            document.getElementById('select-all').addEventListener('change', toggleSelectAll);
+            document.getElementById('batch-archive-btn').addEventListener('click', openArchiveModal);
+            document.getElementById('close-modal').addEventListener('click', closeArchiveModal);
+            document.getElementById('cancel-archive').addEventListener('click', closeArchiveModal);
+            document.getElementById('confirm-archive').addEventListener('click', archiveSelectedUsers);
+            document.getElementById('show-archived').addEventListener('change', filterAndRenderUsers);
+            
+            // Update batch archive button state
+            updateBatchArchiveButtonState();
         }
         
         // Filter and render users based on selected role and search term
         function filterAndRenderUsers() {
             const roleId = document.getElementById('role-select').value;
             const searchTerm = document.getElementById('search-users').value.toLowerCase();
+            const showArchived = document.getElementById('show-archived').checked;
             
-            // Filter users based on role and search term
+            // Filter users based on role, search term, and archive status
             let filteredUsers = users;
             
             if (roleId) {
@@ -427,6 +701,14 @@
                     user.email.toLowerCase().includes(searchTerm)
                 );
             }
+            
+            if (!showArchived) {
+                filteredUsers = filteredUsers.filter(user => !user.archived);
+            }
+            
+            // Clear selection when filter changes
+            selectedUsers = [];
+            updateBatchArchiveButtonState();
             
             // Render filtered users
             renderUsers(filteredUsers);
@@ -454,29 +736,162 @@
                 const role = roles.find(r => r.id == user.roleId);
                 const row = document.createElement('tr');
                 
-                // Set status class based on user status
-                let statusClass = '';
-                switch(user.status) {
-                    case 'active':
-                        statusClass = 'status-active';
-                        break;
-                    case 'inactive':
-                        statusClass = 'status-inactive';
-                        break;
-                    case 'pending':
-                        statusClass = 'status-pending';
-                        break;
+                // Add archived class if user is archived
+                if (user.archived) {
+                    row.classList.add('archived');
                 }
                 
+                // Create checkbox for selection (don't allow selecting archived users)
+                const isChecked = selectedUsers.includes(user.id);
+                const checkboxDisabled = user.archived ? 'disabled' : '';
+                
+                // Create archive/restore button based on user archive status
+                const actionButton = user.archived 
+                    ? `<button class="archive-btn restored-btn" data-user-id="${user.id}" onclick="restoreUser(${user.id})">
+                        <span class="archive-icon"></span> Restore
+                      </button>`
+                    : `<button class="archive-btn" data-user-id="${user.id}" onclick="archiveUser(${user.id})">
+                        <span class="archive-icon"></span> Archive
+                      </button>`;
+                
                 row.innerHTML = `
+                    <td class="checkbox-cell">
+                        <input type="checkbox" class="user-checkbox" data-user-id="${user.id}" ${isChecked ? 'checked' : ''} ${checkboxDisabled}>
+                    </td>
                     <td>${user.name}</td>
                     <td>${user.email}</td>
                     <td><span class="role-badge">${role.name}</span></td>
-                    <td><span class="status ${statusClass}">${user.status.charAt(0).toUpperCase() + user.status.slice(1)}</span></td>
+                    <td>${actionButton}</td>
                 `;
                 
                 tbody.appendChild(row);
             });
+            
+            // Add event listeners to checkboxes
+            document.querySelectorAll('.user-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', toggleUserSelection);
+            });
+        }
+        
+        // Toggle user selection
+        function toggleUserSelection(event) {
+            const userId = parseInt(event.target.getAttribute('data-user-id'));
+            
+            if (event.target.checked) {
+                // Add user to selected users if not already in the array
+                if (!selectedUsers.includes(userId)) {
+                    selectedUsers.push(userId);
+                }
+            } else {
+                // Remove user from selected users
+                selectedUsers = selectedUsers.filter(id => id !== userId);
+                
+                // Uncheck "select all" if any user is unchecked
+                document.getElementById('select-all').checked = false;
+            }
+            
+            // Update batch archive button state
+            updateBatchArchiveButtonState();
+        }
+        
+        // Toggle select all users
+        function toggleSelectAll(event) {
+            const isChecked = event.target.checked;
+            const checkboxes = document.querySelectorAll('.user-checkbox:not([disabled])');
+            
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = isChecked;
+                const userId = parseInt(checkbox.getAttribute('data-user-id'));
+                
+                if (isChecked && !selectedUsers.includes(userId)) {
+                    selectedUsers.push(userId);
+                }
+            });
+            
+            // Clear selected users if unchecked
+            if (!isChecked) {
+                selectedUsers = [];
+            }
+            
+            // Update batch archive button state
+            updateBatchArchiveButtonState();
+        }
+        
+        // Update batch archive button state based on selected users
+        function updateBatchArchiveButtonState() {
+            const archiveButton = document.getElementById('batch-archive-btn');
+            
+            if (selectedUsers.length > 0) {
+                archiveButton.classList.add('active');
+            } else {
+                archiveButton.classList.remove('active');
+            }
+        }
+        
+        // Archive a single user
+        function archiveUser(userId) {
+            const userIndex = users.findIndex(u => u.id === userId);
+            if (userIndex !== -1) {
+                users[userIndex].archived = true;
+                filterAndRenderUsers();
+            }
+        }
+        
+        // Restore a single user
+        function restoreUser(userId) {
+            const userIndex = users.findIndex(u => u.id === userId);
+            if (userIndex !== -1) {
+                users[userIndex].archived = false;
+                filterAndRenderUsers();
+            }
+        }
+        
+        // Open archive modal for batch operations
+        function openArchiveModal() {
+            if (selectedUsers.length === 0) return;
+            
+            // Populate selected users list
+            const selectedUsersList = document.getElementById('selected-users-list');
+            selectedUsersList.innerHTML = '';
+            
+            selectedUsers.forEach(userId => {
+                const user = users.find(u => u.id === userId);
+                if (user) {
+                    const userBadge = document.createElement('div');
+                    userBadge.className = 'selected-user-badge';
+                    userBadge.textContent = user.name;
+                    selectedUsersList.appendChild(userBadge);
+                }
+            });
+            
+            // Show modal
+            document.getElementById('archive-modal').classList.add('active');
+        }
+        
+        // Close archive modal
+        function closeArchiveModal() {
+            document.getElementById('archive-modal').classList.remove('active');
+        }
+        
+        // Archive selected users
+        function archiveSelectedUsers() {
+            // Update user archive status
+            selectedUsers.forEach(userId => {
+                const userIndex = users.findIndex(u => u.id === userId);
+                if (userIndex !== -1) {
+                    users[userIndex].archived = true;
+                }
+            });
+            
+            // Re-render users
+            filterAndRenderUsers();
+            
+            // Close modal
+            closeArchiveModal();
+            
+            // Clear selection
+            selectedUsers = [];
+            updateBatchArchiveButtonState();
         }
         
         // Go back to roles page
@@ -486,6 +901,10 @@
         
         // Initialize the page when DOM is loaded
         document.addEventListener('DOMContentLoaded', initPage);
+        
+        // Make the archiveUser and restoreUser functions available globally
+        window.archiveUser = archiveUser;
+        window.restoreUser = restoreUser;
     </script>
 </body>
 </html>
