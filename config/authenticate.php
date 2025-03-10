@@ -16,6 +16,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $stmt = $pdo->prepare("SELECT id, username, email, password, is_disabled FROM users WHERE email = ? LIMIT 1");
     $stmt->execute([$email]);
     $user = $stmt->fetch();
+    $currentUserId = $user["id"];
+    $pdo->query("SET @current_user_id = {$currentUserId}");
 
     if ($user) {
         if ($user['is_disabled'] === 1) {
@@ -45,7 +47,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
             // Update user status to "Online"
             $update_status = $pdo->prepare("UPDATE users SET status = 'Online' WHERE id = ?");
-            $update_status->execute([$user["user_id"]]);
+            $update_status->execute([$user["id"]]);
 
             header("Location: ../src/view/php/clients/admins/dashboard.php");
             exit();
