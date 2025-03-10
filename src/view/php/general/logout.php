@@ -8,8 +8,9 @@ if (isset($_SESSION['user_id'])) {
     $pdo->query("SET @current_user_id = {$currentUserId}");
 
     // Update the user's status to 'Offline'
-    $stmt = $pdo->prepare("UPDATE users SET Status = 'Offline' WHERE id = ?");
+    $stmt = $pdo->prepare("UPDATE users SET status = 'Offline' WHERE id = ?");
     $stmt->execute([$currentUserId]);
+
 }
 
 

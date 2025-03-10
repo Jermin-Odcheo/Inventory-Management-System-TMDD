@@ -1,32 +1,24 @@
 <?php
-// purchase_order.php
 session_start();
 require_once('../../../../../config/ims-tmdd.php'); // Adjust the path as needed
 
-// Check for admin privileges (you should implement your privilege check).
-if (!isset($_SESSION['user_id'])) {
-    header("Location: add_user.php");
-    exit();
-}
-
-// Include the header (if your header already loads jQuery, you may omit the duplicate load below)
+// Include the header (loads common assets)
 include('../../general/header.php');
 
-// Set the audit log session variables for MySQL triggers.
+// Set audit log session variables for MySQL triggers.
 if (isset($_SESSION['user_id'])) {
     $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
 } else {
     $pdo->exec("SET @current_user_id = NULL");
 }
 
-// Set IP address; adjust as needed if you use a proxy, etc.
+// Set client IP address (adjust if using a proxy)
 $ipAddress = $_SERVER['REMOTE_ADDR'];
 $pdo->exec("SET @current_ip = '" . $ipAddress . "'");
 
 // Initialize messages
 $errors = [];
 $success = "";
-
 if (isset($_SESSION['errors'])) {
     $errors = $_SESSION['errors'];
     unset($_SESSION['errors']);
@@ -36,19 +28,67 @@ if (isset($_SESSION['success'])) {
     unset($_SESSION['success']);
 }
 
+function is_ajax_request() {
+    return isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&
+        strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+}
+
 // ------------------------
-// DELETE PURCHASE ORDER
+// DELETE EQUIPMENT LOCATION
 // ------------------------
 if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
-    $id = (int)$_GET['id'];
+    $id = $_GET['id'];
     try {
-        $stmt = $pdo->prepare("DELETE FROM purchase_order WHERE id = ?");
+        $pdo->beginTransaction();
+
+        // Get location details before deletion
+        $stmt = $pdo->prepare("SELECT * FROM equipment_location WHERE equipment_location_id = ?");
         $stmt->execute([$id]);
-        $_SESSION['success'] = "Purchase Order deleted successfully.";
+        $locationData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($locationData) {
+            // Prepare audit log data
+            $oldValues = json_encode([
+                'asset_tag'          => $locationData['asset_tag'],
+                'building_loc'       => $locationData['building_loc'],
+                'floor_no'           => $locationData['floor_no'],
+                'specific_area'      => $locationData['specific_area'],
+                'person_responsible' => $locationData['person_responsible'],
+                'department_id'      => $locationData['department_id'],
+                'remarks'            => $locationData['remarks']
+            ]);
+
+            // Delete the location
+            $stmt = $pdo->prepare("DELETE FROM equipment_location WHERE equipment_location_id = ?");
+            $stmt->execute([$id]);
+
+            // Insert audit log
+            $auditStmt = $pdo->prepare("
+                INSERT INTO audit_log (
+                    UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+            $auditStmt->execute([
+                $_SESSION['user_id'],
+                $id,
+                'Equipment Location',
+                'Delete',
+                'Equipment location deleted',
+                $oldValues,
+                null,
+                'Successful'
+            ]);
+
+            $pdo->commit();
+            $_SESSION['success'] = "Equipment Location deleted successfully.";
+        }
     } catch (PDOException $e) {
-        $_SESSION['errors'] = ["Error deleting Purchase Order: " . $e->getMessage()];
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        $_SESSION['errors'] = ["Error deleting Equipment Location: " . $e->getMessage()];
     }
-    header("Location: purchase_order.php");
+    header("Location: equipment_location.php");
     exit;
 }
 
@@ -56,317 +96,423 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 // PROCESS FORM SUBMISSIONS (Add / Update)
 // ------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $po_no = trim($_POST['po_no'] ?? '');
-    $no_of_units = trim($_POST['no_of_units'] ?? '');
-    $date_of_order = trim($_POST['date_of_order'] ?? '');
-    $item_specifications = trim($_POST['item_specifications'] ?? '');
-    $is_disabled = isset($_POST['is_disabled']) ? 1 : 0;
+    // Retrieve and sanitize form input
+    $asset_tag          = trim($_POST['asset_tag'] ?? '');
+    $building_loc       = trim($_POST['building_loc'] ?? '');
+    $floor_no           = trim($_POST['floor_no'] ?? '');
+    $specific_area      = trim($_POST['specific_area'] ?? '');
+    $person_responsible = trim($_POST['person_responsible'] ?? '');
+    $department_id      = trim($_POST['department_id'] ?? '');
+    $remarks            = trim($_POST['remarks'] ?? '');
+    $response = ['status' => '', 'message' => ''];
 
-    if (empty($po_no) || empty($no_of_units) || empty($date_of_order)) {
-        $_SESSION['errors'] = ["Please fill in all required fields (PO Number, Number of Units, and Date of Order)."];
-        header("Location: purchase_order.php");
+    // Validate required fields
+    if (empty($asset_tag) || empty($building_loc) || empty($floor_no) || empty($specific_area) || empty($person_responsible)) {
+        $response['status'] = 'error';
+        $response['message'] = 'Please fill in all required fields.';
+        echo json_encode($response);
         exit;
     }
 
     if (isset($_POST['action']) && $_POST['action'] === 'add') {
-        $stmt = $pdo->prepare("SELECT id FROM purchase_order WHERE po_no = ?");
-        $stmt->execute([$po_no]);
-        $existing = $stmt->fetch();
-
-        if ($existing) {
-            $_SESSION['errors'] = ["A Purchase Order with this PO number already exists."];
-        } else {
-            try {
-                $stmt = $pdo->prepare("INSERT INTO purchase_order 
-                    (po_no, no_of_units, date_of_order, item_specifications, is_disabled) 
-                    VALUES (?, ?, ?, ?, ?)");
-                $stmt->execute([$po_no, $no_of_units, $date_of_order, $item_specifications, $is_disabled]);
-                $_SESSION['success'] = "Purchase Order added successfully.";
-            } catch (PDOException $e) {
-                $_SESSION['errors'] = ["Error adding Purchase Order: " . $e->getMessage()];
-            }
+        try {
+            $pdo->beginTransaction();
+            $stmt = $pdo->prepare("INSERT INTO equipment_location (
+                asset_tag, building_loc, floor_no, specific_area, person_responsible, department_id, remarks, date_created
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())");
+            $stmt->execute([$asset_tag, $building_loc, $floor_no, $specific_area, $person_responsible, $department_id, $remarks]);
+            $newLocationId = $pdo->lastInsertId();
+            $newValues = json_encode([
+                'asset_tag'          => $asset_tag,
+                'building_loc'       => $building_loc,
+                'floor_no'           => $floor_no,
+                'specific_area'      => $specific_area,
+                'person_responsible' => $person_responsible,
+                'department_id'      => $department_id,
+                'remarks'            => $remarks
+            ]);
+            $auditStmt = $pdo->prepare("
+                INSERT INTO audit_log (
+                    UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+            $auditStmt->execute([
+                $_SESSION['user_id'],
+                $newLocationId,
+                'Equipment Location',
+                'Add',
+                'New equipment location added',
+                null,
+                $newValues,
+                'Successful'
+            ]);
+            $pdo->commit();
+            $response['status'] = 'success';
+            $response['message'] = 'Equipment Location has been added successfully.';
+            $_SESSION['success'] = "Equipment Location has been added successfully.";
+        } catch (PDOException $e) {
+            if ($pdo->inTransaction()) { $pdo->rollBack(); }
+            $response['status'] = 'error';
+            $response['message'] = 'Error adding Equipment Location: ' . $e->getMessage();
+            $_SESSION['errors'] = ["Error adding Equipment Location: " . $e->getMessage()];
         }
-        header("Location: purchase_order.php");
+        echo json_encode($response);
         exit;
     } elseif (isset($_POST['action']) && $_POST['action'] === 'update') {
         $id = $_POST['id'];
         try {
-            $stmt = $pdo->prepare("UPDATE purchase_order 
-                                   SET po_no = ?, no_of_units = ?, date_of_order = ?, item_specifications = ?, is_disabled = ? 
-                                   WHERE id = ?");
-            $stmt->execute([$po_no, $no_of_units, $date_of_order, $item_specifications, $is_disabled, $id]);
-            $_SESSION['success'] = "Purchase Order updated successfully.";
+            $pdo->beginTransaction();
+            $stmt = $pdo->prepare("SELECT * FROM equipment_location WHERE equipment_location_id = ?");
+            $stmt->execute([$id]);
+            $oldLocation = $stmt->fetch(PDO::FETCH_ASSOC);
+            $stmt = $pdo->prepare("UPDATE equipment_location SET 
+                asset_tag = ?, building_loc = ?, floor_no = ?, specific_area = ?, person_responsible = ?,
+                department_id = ?, remarks = ? WHERE equipment_location_id = ?");
+            $stmt->execute([
+                $_POST['asset_tag'],
+                $_POST['building_loc'],
+                $_POST['floor_no'],
+                $_POST['specific_area'],
+                $_POST['person_responsible'],
+                $_POST['department_id'],
+                $_POST['remarks'],
+                $id
+            ]);
+            $oldValues = json_encode([
+                'asset_tag'          => $oldLocation['asset_tag'],
+                'building_loc'       => $oldLocation['building_loc'],
+                'floor_no'           => $oldLocation['floor_no'],
+                'specific_area'      => $oldLocation['specific_area'],
+                'person_responsible' => $oldLocation['person_responsible'],
+                'department_id'      => $oldLocation['department_id'],
+                'remarks'            => $oldLocation['remarks'],
+                'date_created'       => $oldLocation['date_created']
+            ]);
+            $newValues = json_encode([
+                'asset_tag'          => $_POST['asset_tag'],
+                'building_loc'       => $_POST['building_loc'],
+                'floor_no'           => $_POST['floor_no'],
+                'specific_area'      => $_POST['specific_area'],
+                'person_responsible' => $_POST['person_responsible'],
+                'department_id'      => $_POST['department_id'],
+                'remarks'            => $_POST['remarks'],
+                'date_created'       => $oldLocation['date_created']
+            ]);
+            $auditStmt = $pdo->prepare("
+                INSERT INTO audit_log (
+                    UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+            $auditStmt->execute([
+                $_SESSION['user_id'],
+                $id,
+                'Equipment Location',
+                'Modified',
+                'Equipment location modified',
+                $oldValues,
+                $newValues,
+                'Successful'
+            ]);
+            $pdo->commit();
+            header('Content-Type: application/json');
+            echo json_encode([
+                'status' => 'success',
+                'message' => 'Equipment Location has been updated successfully.'
+            ]);
+            exit;
         } catch (PDOException $e) {
-            $_SESSION['errors'] = ["Error updating Purchase Order: " . $e->getMessage()];
+            if ($pdo->inTransaction()) { $pdo->rollBack(); }
+            header('Content-Type: application/json');
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Error updating Equipment Location: ' . $e->getMessage()
+            ]);
+            exit;
         }
-        header("Location: purchase_order.php");
-        exit;
     }
 }
 
-// ------------------------
-// LOAD PURCHASE ORDER DATA FOR EDITING (if applicable)
-// ------------------------
-$editPurchaseOrder = null;
+// Load equipment location for editing if requested
+$editEquipmentLocation = null;
 if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) {
-    $id = (int)$_GET['id'];
+    $id = $_GET['id'];
     try {
-        $stmt = $pdo->prepare("SELECT * FROM purchase_order WHERE id = ?");
+        $stmt = $pdo->prepare("SELECT * FROM equipment_location WHERE equipment_location_id = ?");
         $stmt->execute([$id]);
-        $editPurchaseOrder = $stmt->fetch(PDO::FETCH_ASSOC);
-        if (!$editPurchaseOrder) {
-            $_SESSION['errors'] = ["Purchase Order not found."];
-            header("Location: purchase_order.php");
+        $editEquipmentLocation = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$editEquipmentLocation) {
+            $_SESSION['errors'] = ["Equipment Location not found for editing."];
+            header("Location: equipment_location.php");
             exit;
         }
     } catch (PDOException $e) {
-        $_SESSION['errors'] = ["Error retrieving Purchase Order: " . $e->getMessage()];
-        header("Location: purchase_order.php");
-        exit;
+        $errors[] = "Error loading Equipment Location for editing: " . $e->getMessage();
     }
 }
 
-// ------------------------
-// RETRIEVE ALL PURCHASE ORDERS
-// ------------------------
+// Retrieve all equipment locations
 try {
-    $stmt = $pdo->query("SELECT id, po_no, no_of_units, date_of_order, date_created, item_specifications, is_disabled 
-                         FROM purchase_order 
-                         ORDER BY date_of_order DESC");
-    $purchaseOrders = $stmt->fetchAll();
+    $stmt = $pdo->query("SELECT * FROM equipment_location ORDER BY date_created DESC");
+    $equipmentLocations = $stmt->fetchAll();
 } catch (PDOException $e) {
-    $_SESSION['errors'] = ["Database error: " . $e->getMessage()];
+    $errors[] = "Error retrieving Equipment Locations: " . $e->getMessage();
 }
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Purchase Orders Management</title>
-    <!-- Include jQuery first -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <title>Equipment Location Management</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Removed DataTables CSS since we're not using it -->
     <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #f8f9fa; min-height: 100vh; padding-top: 80px; }
-        h2.mb-4 { margin-top: 20px; }
-        .main-content { margin-left: 300px; padding: 20px; transition: margin-left 0.3s ease; }
-        @media (max-width: 768px) { .main-content { margin-left: 0; } }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #f8f9fa;
+            min-height: 100vh;
+            padding-top: 70px;
+        }
+        .main-content {
+            margin-left: 300px;
+            padding: 20px;
+            margin-bottom: 20px;
+            width: auto;
+        }
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+            }
+        }
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+        }
     </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Pagination Script -->
+    <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 </head>
 <body>
-<?php include '../../general/sidebar.php'; ?>
+<?php include('../../general/sidebar.php'); ?>
 
-<div class="container-fluid" style="margin-left: 320px; padding: 20px; width: calc(100vw - 340px);">
-    <?php if (!empty($success)): ?>
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="bi bi-check-circle"></i> <?php echo $success; ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    <?php endif; ?>
-    <?php if (!empty($errors)): ?>
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <?php foreach ($errors as $err): ?>
-                <p><i class="bi bi-exclamation-triangle"></i> <?php echo $err; ?></p>
-            <?php endforeach; ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    <?php endif; ?>
+<div class="main-content">
+    <div class="container-fluid">
+        <h2 class="mb-4">Equipment Location Management</h2>
 
-    <h2 class="mb-4">Purchase Orders Management</h2>
-
-    <div class="card shadow">
-        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-            <span><i class="bi bi-list-ul"></i> List of Purchase Orders</span>
-            <div class="input-group w-auto">
-                <span class="input-group-text"><i class="bi bi-search"></i></span>
-                <input type="text" id="searchPO" class="form-control" placeholder="Search purchase orders...">
+        <!-- Success Message -->
+        <?php if (!empty($success)): ?>
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="bi bi-check-circle"></i> <?php echo $success; ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
+        <?php endif; ?>
+
+        <!-- Error Messages -->
+        <?php if (!empty($errors)): ?>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <?php foreach ($errors as $err): ?>
+                    <p><i class="bi bi-exclamation-triangle"></i> <?php echo $err; ?></p>
+                <?php endforeach; ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        <?php endif; ?>
+
+        <!-- Always Visible Add Equipment Location Button and Filter -->
+        <div class="mb-3 d-flex justify-content-start gap-2">
+            <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addLocationModal">
+                <i class="bi bi-plus-circle"></i> Add Equipment Location
+            </button>
+            <select class="form-select form-select-sm" id="filterBuilding" style="width: auto;">
+                <option value="">Filter Building Location</option>
+                <?php
+                $buildingLocations = array_unique(array_column($equipmentLocations, 'building_loc'));
+                foreach ($buildingLocations as $building) {
+                    if (!empty($building)) {
+                        echo "<option value='" . htmlspecialchars($building) . "'>" . htmlspecialchars($building) . "</option>";
+                    }
+                }
+                ?>
+            </select>
         </div>
-        <div class="card-body p-3">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addPOModal">
-                        <i class="bi bi-plus-circle"></i> Add Purchase Order
-                    </button>
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <select id="specFilter" class="form-select">
-                                <option value="">Filter Specification</option>
-                                <?php
-                                $specifications = array_unique(array_column($purchaseOrders, 'item_specifications'));
-                                foreach ($specifications as $spec) {
-                                    if (!empty($spec)) {
-                                        echo "<option value='" . htmlspecialchars($spec) . "'>" . htmlspecialchars($spec) . "</option>";
-                                    }
-                                }
-                                ?>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <select id="statusFilter" class="form-select">
-                                <option value="">Filter by Status</option>
-                                <option value="0">Active</option>
-                                <option value="1">Disabled</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="d-flex gap-2 align-items-center">
-                        <select class="form-select form-select-sm" id="dateFilter" style="width: auto;">
-                            <option value="">Filter by Date</option>
-                            <option value="desc">Newest to Oldest</option>
-                            <option value="asc">Oldest to Newest</option>
-                            <option value="month">Specific Month</option>
-                            <option value="range">Custom Date Range</option>
-                        </select>
-                        <div id="dateInputsContainer" style="display: none;">
-                            <div class="d-flex gap-2" id="monthPickerContainer" style="display: none;">
-                                <select class="form-select form-select-sm" id="monthSelect" style="min-width: 130px;">
-                                    <option value="">Select Month</option>
-                                    <?php
-                                    $months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-                                    foreach ($months as $index => $month) {
-                                        echo "<option value='" . ($index + 1) . "'>" . $month . "</option>";
-                                    }
-                                    ?>
-                                </select>
-                                <select class="form-select form-select-sm" id="yearSelect" style="min-width: 110px;">
-                                    <option value="">Select Year</option>
-                                    <?php
-                                    $currentYear = date('Y');
-                                    for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
-                                        echo "<option value='" . $year . "'>" . $year . "</option>";
-                                    }
-                                    ?>
-                                </select>
-                            </div>
-                            <div class="d-flex gap-2" id="dateRangePickers" style="display: none;">
-                                <input type="date" class="form-control form-control-sm" id="dateFrom" placeholder="From">
-                                <input type="date" class="form-control form-control-sm" id="dateTo" placeholder="To">
-                            </div>
-                        </div>
-                    </div>
+
+        <!-- Equipment Locations Table -->
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center bg-dark text-white">
+                <span><i class="bi bi-list-ul"></i> List of Equipment Locations</span>
+                <div class="input-group w-auto">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" placeholder="Search..." id="eqSearch">
                 </div>
             </div>
-
-            <div class="table-responsive">
-                <table class="table table-striped table-bordered table-sm mb-0" id="table">
-                    <thead class="table-dark">
-                    <tr>
-                        <th>ID</th>
-                        <th>PO Number</th>
-                        <th>Number of Units</th>
-                        <th>Date of Order</th>
-                        <th>Date Created</th>
-                        <th>Specifications</th>
-                        <th>Status</th>
-                        <th class="text-center">Actions</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <?php foreach ($purchaseOrders as $po): ?>
-                        <tr>
-                            <td><?php echo htmlspecialchars($po['id']); ?></td>
-                            <td><?php echo htmlspecialchars($po['po_no']); ?></td>
-                            <td><?php echo htmlspecialchars($po['no_of_units']); ?></td>
-                            <td><?php echo htmlspecialchars($po['date_of_order']); ?></td>
-                            <td><?php echo date('Y-m-d H:i', strtotime($po['date_created'])); ?></td>
-                            <td><?php echo htmlspecialchars($po['item_specifications']); ?></td>
-                            <td><?php echo $po['is_disabled'] ? '<span class="badge bg-danger">Disabled</span>' : '<span class="badge bg-success">Active</span>'; ?></td>
-                            <td class="text-center">
-                                <div class="btn-group" role="group">
-                                    <a class="btn btn-sm btn-outline-primary edit-po"
-                                       data-id="<?php echo htmlspecialchars($po['id']); ?>"
-                                       data-po-number="<?php echo htmlspecialchars($po['po_no']); ?>"
-                                       data-units="<?php echo htmlspecialchars($po['no_of_units']); ?>"
-                                       data-date="<?php echo htmlspecialchars($po['date_of_order']); ?>"
-                                       data-spec="<?php echo htmlspecialchars($po['item_specifications']); ?>"
-                                       data-is-disabled="<?php echo $po['is_disabled']; ?>">
-                                        <i class="bi bi-pencil-square"></i> Edit
-                                    </a>
-                                    <a class="btn btn-sm btn-outline-danger delete-po"
-                                       data-id="<?php echo htmlspecialchars($po['id']); ?>"
-                                       href="#">
-                                        <i class="bi bi-trash"></i> Delete
-                                    </a>
+            <div class="card-body">
+                <?php if (!empty($equipmentLocations)): ?>
+                    <div class="table-responsive" id="table">
+                        <table class="table table-striped table-hover align-middle">
+                            <thead class="table-dark">
+                            <tr>
+                                <th>#</th>
+                                <th>Asset Tag</th>
+                                <th>Building Location</th>
+                                <th>Floor Number</th>
+                                <th>Specific Area</th>
+                                <th>Person Responsible</th>
+                                <th>Department</th>
+                                <th>Remarks</th>
+                                <th style="width: 12%">Date Created</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <?php foreach ($equipmentLocations as $location): ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($location['equipment_location_id']); ?></td>
+                                    <td><?php echo htmlspecialchars($location['asset_tag']); ?></td>
+                                    <td><?php echo htmlspecialchars($location['building_loc']); ?></td>
+                                    <td><?php echo htmlspecialchars($location['floor_no']); ?></td>
+                                    <td><?php echo htmlspecialchars($location['specific_area']); ?></td>
+                                    <td><?php echo htmlspecialchars($location['person_responsible']); ?></td>
+                                    <td>
+                                        <?php
+                                        $deptName = 'N/A';
+                                        if (!empty($location['department_id'])) {
+                                            try {
+                                                $deptStmt = $pdo->prepare("SELECT department_name FROM departments WHERE id = ?");
+                                                $deptStmt->execute([$location['department_id']]);
+                                                $dept = $deptStmt->fetch(PDO::FETCH_ASSOC);
+                                                if ($dept) {
+                                                    $deptName = $dept['dept_name'];
+                                                }
+                                            } catch (PDOException $e) {
+                                                // Handle error if needed
+                                            }
+                                        }
+                                        echo htmlspecialchars($deptName);
+                                        ?>
+                                    </td>
+                                    <td><?php echo htmlspecialchars($location['remarks']); ?></td>
+                                    <td><?php echo !empty($location['date_created']) ? date('Y-m-d H:i', strtotime($location['date_created'])) : ''; ?></td>
+                                    <td class="text-center">
+                                        <div class="btn-group" role="group">
+                                            <a class="btn btn-sm btn-outline-primary edit-location"
+                                               data-id="<?php echo $location['equipment_location_id']; ?>"
+                                               data-asset="<?php echo htmlspecialchars($location['asset_tag']); ?>"
+                                               data-building="<?php echo htmlspecialchars($location['building_loc']); ?>"
+                                               data-floor="<?php echo htmlspecialchars($location['floor_no']); ?>"
+                                               data-area="<?php echo htmlspecialchars($location['specific_area']); ?>"
+                                               data-person="<?php echo htmlspecialchars($location['person_responsible']); ?>"
+                                               data-department="<?php echo htmlspecialchars($location['department_id']); ?>"
+                                               data-remarks="<?php echo htmlspecialchars($location['remarks']); ?>">
+                                                <i class="bi bi-pencil-square"></i> Edit
+                                            </a>
+                                            <a class="btn btn-sm btn-outline-danger" href="?action=delete&id=<?php echo htmlspecialchars($location['equipment_location_id']); ?>" onclick="return confirm('Are you sure you want to delete this Equipment Location?');">
+                                                <i class="bi bi-trash"></i> Delete
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                        <div class="container-fluid">
+                            <div class="row align-items-center g-3">
+                                <div class="col-12 col-sm-auto">
+                                    <div class="text-muted">
+                                        Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
+                                                id="totalRows">100</span> entries
+                                    </div>
                                 </div>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-            <!-- Pagination Controls -->
-            <div class="container-fluid">
-                <div class="row align-items-center g-3">
-                    <div class="col-12 col-sm-auto">
-                        <div class="text-muted">
-                            Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows">100</span> entries
+                                <div class="col-12 col-sm-auto ms-sm-auto">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                            <i class="bi bi-chevron-left"></i> Previous
+                                        </button>
+                                        <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                            <option value="10" selected>10</option>
+                                            <option value="20">20</option>
+                                            <option value="30">30</option>
+                                            <option value="50">50</option>
+                                        </select>
+                                        <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                            Next <i class="bi bi-chevron-right"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Pagination numbers (if using pagination.js) -->
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <ul class="pagination justify-content-center" id="pagination"></ul>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-12 col-sm-auto ms-sm-auto">
-                        <div class="d-flex align-items-center gap-2">
-                            <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                <i class="bi bi-chevron-left"></i>
-                                Previous
-                            </button>
-                            <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
-                                <option value="10" selected>10</option>
-                                <option value="20">20</option>
-                                <option value="30">30</option>
-                                <option value="50">50</option>
-                            </select>
-                            <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                Next
-                                <i class="bi bi-chevron-right"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <!-- Pagination placeholder for pagination.js -->
-                <div id="pagination"></div>
+                <?php else: ?>
+                    <p class="mb-0">No Equipment Locations found.</p>
+                <?php endif; ?>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Add Purchase Order Modal -->
-<div class="modal fade" id="addPOModal" tabindex="-1">
+<!-- Add Location Modal -->
+<div class="modal fade" id="addLocationModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Add New Purchase Order</h5>
+                <h5 class="modal-title"><i class="bi bi-plus-circle"></i> Add New Equipment Location</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="addPOForm" method="post">
+                <form id="addLocationForm">
                     <input type="hidden" name="action" value="add">
                     <div class="mb-3">
-                        <label for="po_no" class="form-label">Purchase Order Number <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="po_no" name="po_no" required>
+                        <label for="asset_tag" class="form-label"><i class="bi bi-tag"></i> Asset Tag <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="asset_tag" required>
                     </div>
                     <div class="mb-3">
-                        <label for="no_of_units" class="form-label">Number of Units <span class="text-danger">*</span></label>
-                        <input type="number" class="form-control" id="no_of_units" name="no_of_units" required>
+                        <label for="building_loc" class="form-label"><i class="bi bi-building"></i> Building Location <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="building_loc" required>
                     </div>
                     <div class="mb-3">
-                        <label for="date_of_order" class="form-label">Date of Purchase Order <span class="text-danger">*</span></label>
-                        <input type="date" class="form-control" id="date_of_order" name="date_of_order" required>
+                        <label for="floor_no" class="form-label"><i class="bi bi-layers"></i> Floor Number <span class="text-danger">*</span></label>
+                        <input type="number" min="1" class="form-control" name="floor_no" required>
                     </div>
                     <div class="mb-3">
-                        <label for="item_specifications" class="form-label">Items Specification</label>
-                        <textarea class="form-control" id="item_specifications" name="item_specifications" rows="3"></textarea>
-                    </div>
-                    <div class="mb-3 form-check">
-                        <input type="checkbox" class="form-check-input" id="is_disabled" name="is_disabled">
-                        <label class="form-check-label" for="is_disabled">Disabled</label>
+                        <label for="specific_area" class="form-label"><i class="bi bi-pin-map"></i> Specific Area <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="specific_area" required>
                     </div>
                     <div class="mb-3">
-                        <button type="submit" class="btn btn-primary">Add Purchase Order</button>
+                        <label for="person_responsible" class="form-label"><i class="bi bi-person"></i> Person Responsible <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="person_responsible" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="department_id" class="form-label"><i class="bi bi-building"></i> Department <span class="text-danger">*</span></label>
+                        <select class="form-control" name="department_id" required>
+                            <option value="">Select Department</option>
+                            <?php
+                            try {
+                                $deptStmt = $pdo->query("SELECT id, department_name FROM departments WHERE is_disabled = 0 ORDER BY department_name ");
+                                $departments = $deptStmt->fetchAll();
+                                foreach($departments as $department) {
+                                    echo "<option value='" . htmlspecialchars($department['id']) . "'>" . htmlspecialchars($department['department_name']) . "</option>";
+                                }
+                            } catch (PDOException $e) {
+                                // Handle error if necessary
+                            }
+                            ?>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="remarks" class="form-label"><i class="bi bi-chat-left-text"></i> Remarks</label>
+                        <textarea class="form-control" name="remarks" rows="3"></textarea>
+                    </div>
+                    <div class="modal-footer border-0">
+                        <button type="submit" class="btn btn-primary">Add Equipment Location</button>
                     </div>
                 </form>
             </div>
@@ -374,40 +520,62 @@ try {
     </div>
 </div>
 
-<!-- Edit Purchase Order Modal -->
-<div class="modal fade" id="editPOModal" tabindex="-1">
+<!-- Edit Location Modal -->
+<div class="modal fade" id="editLocationModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Edit Purchase Order</h5>
+                <h5 class="modal-title"><i class="bi bi-pencil-square"></i> Edit Location</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="editPOForm" method="post">
+                <form id="editLocationForm" method="post">
                     <input type="hidden" name="action" value="update">
-                    <input type="hidden" name="id" id="edit_po_id">
+                    <input type="hidden" name="id" id="edit_location_id">
                     <div class="mb-3">
-                        <label for="edit_po_no" class="form-label">Purchase Order Number <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="edit_po_no" name="po_no" required>
+                        <label for="edit_asset_tag" class="form-label"><i class="bi bi-tag"></i> Asset Tag <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="asset_tag" id="edit_asset_tag" required>
                     </div>
                     <div class="mb-3">
-                        <label for="edit_no_of_units" class="form-label">Number of Units <span class="text-danger">*</span></label>
-                        <input type="number" class="form-control" id="edit_no_of_units" name="no_of_units" required>
+                        <label for="edit_building_loc" class="form-label"><i class="bi bi-building"></i> Building Location <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="edit_building_loc" name="building_loc" required>
                     </div>
                     <div class="mb-3">
-                        <label for="edit_date_of_order" class="form-label">Date of Purchase Order <span class="text-danger">*</span></label>
-                        <input type="date" class="form-control" id="edit_date_of_order" name="date_of_order" required>
+                        <label for="edit_floor_no" class="form-label"><i class="bi bi-layers"></i> Floor Number <span class="text-danger">*</span></label>
+                        <input type="number" min="1" class="form-control" id="edit_floor_no" name="floor_no" required>
                     </div>
                     <div class="mb-3">
-                        <label for="edit_item_specifications" class="form-label">Items Specification</label>
-                        <textarea class="form-control" id="edit_item_specifications" name="item_specifications" rows="3"></textarea>
-                    </div>
-                    <div class="mb-3 form-check">
-                        <input type="checkbox" class="form-check-input" id="edit_is_disabled" name="is_disabled">
-                        <label class="form-check-label" for="edit_is_disabled">Disabled</label>
+                        <label for="edit_specific_area" class="form-label"><i class="bi bi-pin-map"></i> Specific Area <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="edit_specific_area" name="specific_area" required>
                     </div>
                     <div class="mb-3">
-                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                        <label for="edit_person_responsible" class="form-label"><i class="bi bi-person"></i> Person Responsible <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="edit_person_responsible" name="person_responsible" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_department_id" class="form-label"><i class="bi bi-building"></i> Department <span class="text-danger">*</span></label>
+                        <select class="form-control" id="edit_department_id" name="department_id" required>
+                            <option value="">Select Department</option>
+                            <?php
+                            try {
+                                $deptStmt = $pdo->query("SELECT id, department_name FROM departments WHERE is_disabled = 0 ORDER BY department_name ");
+                                $departments = $deptStmt->fetchAll();
+                                foreach($departments as $department) {
+                                    echo "<option value='" . htmlspecialchars($department['id']) . "'>" . htmlspecialchars($department['dept_name']) . "</option>";
+                                }
+                            } catch (PDOException $e) {
+                                // Handle error if necessary
+                            }
+                            ?>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_remarks" class="form-label"><i class="bi bi-chat-left-text"></i> Remarks</label>
+                        <textarea class="form-control" id="edit_remarks" name="remarks" rows="3"></textarea>
+                    </div>
+                    <div class="d-flex justify-content-end">
+                        <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Update Location</button>
                     </div>
                 </form>
             </div>
@@ -415,130 +583,100 @@ try {
     </div>
 </div>
 
-<!-- Include your pagination.js (if it’s handling pagination independently) -->
-<script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
+<script type="text/javascript">
+    // Search and filter functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('eqSearch');
+        const filterBuilding = document.getElementById('filterBuilding');
 
-<!-- Custom JavaScript -->
-<script>
-    $(document).ready(function() {
-
-        // Bind filtering events to custom filterTable function
-        $('#searchPO, #specFilter, #statusFilter').on('input change', function() {
-            filterTable();
-        });
-
-        $('#dateFilter').on('change', function() {
-            const value = $(this).val();
-            $('#dateInputsContainer').hide();
-            $('#monthPickerContainer, #dateRangePickers').hide();
-            $('#dateFrom, #dateTo').hide();
-
-            if (value === 'month') {
-                $('#dateInputsContainer').show();
-                $('#monthPickerContainer').show();
-            } else if (value === 'range') {
-                $('#dateInputsContainer').show();
-                $('#dateRangePickers').show();
-                $('#dateFrom, #dateTo').show();
-            }
-            filterTable();
-        });
-
-        $('#monthSelect, #yearSelect, #dateFrom, #dateTo').on('change', function() {
-            filterTable();
-        });
-
-        // Function to sort table rows based on the Date of Order (4th column)
-        function sortTableByDate(order) {
-            let rows = $(".table tbody tr").get();
-            rows.sort(function(a, b) {
-                let dateA = new Date($(a).find("td:nth-child(4)").text());
-                let dateB = new Date($(b).find("td:nth-child(4)").text());
-                return (order === "asc") ? dateA - dateB : dateB - dateA;
-            });
-            $.each(rows, function(index, row) {
-                $(".table tbody").append(row);
-            });
+        if (searchInput) {
+            searchInput.addEventListener('keyup', filterTable);
+        }
+        if (filterBuilding) {
+            filterBuilding.addEventListener('change', filterTable);
         }
 
-        // Main filtering function
         function filterTable() {
-            const searchText = $('#searchPO').val().toLowerCase();
-            const filterSpec = $('#specFilter').val().toLowerCase();
-            const filterStatus = $('#statusFilter').val();
-            const filterType = $('#dateFilter').val();
-            const selectedMonth = $('#monthSelect').val();
-            const selectedYear = $('#yearSelect').val();
-            const dateFrom = $('#dateFrom').val();
-            const dateTo = $('#dateTo').val();
+            const searchValue = searchInput.value.toLowerCase();
+            const filterValue = filterBuilding ? filterBuilding.value.toLowerCase() : '';
+            const rows = document.querySelectorAll('#table tbody tr');
 
-            // If sorting is requested, sort the table rows first.
-            if (filterType === 'asc' || filterType === 'desc') {
-                sortTableByDate(filterType);
-            }
+            rows.forEach(function(row) {
+                const rowText = row.textContent.toLowerCase();
+                const buildingCell = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
 
-            $(".table tbody tr").each(function() {
-                const row = $(this);
-                const rowText = row.text().toLowerCase();
-                const specCell = row.find('td:nth-child(6)').text().toLowerCase();
-                const statusCell = row.find('td:nth-child(7)').text().toLowerCase();
-                const dateCell = row.find('td:nth-child(4)').text();
-                const date = new Date(dateCell);
+                const searchMatch = rowText.indexOf(searchValue) > -1;
+                const buildingMatch = !filterValue || buildingCell === filterValue;
 
-                const searchMatch = rowText.indexOf(searchText) > -1;
-                const specMatch = !filterSpec || specCell === filterSpec;
-
-                let statusMatch = true;
-                if (filterStatus !== '') {
-                    if (filterStatus === '1') {
-                        statusMatch = statusCell.indexOf('disabled') > -1;
-                    } else if (filterStatus === '0') {
-                        statusMatch = statusCell.indexOf('active') > -1;
-                    }
-                }
-
-                let dateMatch = true;
-                if (filterType === 'month') {
-                    if (selectedMonth && selectedYear) {
-                        dateMatch = (date.getMonth() + 1 === parseInt(selectedMonth)) &&
-                            (date.getFullYear() === parseInt(selectedYear));
-                    }
-                } else if (filterType === 'range') {
-                    if (dateFrom && dateTo) {
-                        const from = new Date(dateFrom);
-                        const to = new Date(dateTo);
-                        to.setHours(23, 59, 59);
-                        dateMatch = date >= from && date <= to;
-                    }
-                }
-                row.toggle(searchMatch && specMatch && statusMatch && dateMatch);
+                row.style.display = (searchMatch && buildingMatch) ? '' : 'none';
             });
         }
+    });
 
-        // Edit Purchase Order modal trigger
-        $('.edit-po').click(function() {
-            var id = $(this).data('id');
-            var poNumber = $(this).data('po-number');
-            var units = $(this).data('units');
-            var date = $(this).data('date');
-            var spec = $(this).data('spec');
-            var isDisabled = $(this).data('is-disabled');
-
-            $('#edit_po_id').val(id);
-            $('#edit_po_no').val(poNumber);
-            $('#edit_no_of_units').val(units);
-            $('#edit_date_of_order').val(date);
-            $('#edit_item_specifications').val(spec);
-            $('#edit_is_disabled').prop('checked', isDisabled == 1);
-            $('#editPOModal').modal('show');
+    // Form submission handlers
+    document.addEventListener('DOMContentLoaded', function() {
+        $('#addLocationForm').on('submit', function(e) {
+            e.preventDefault();
+            $.ajax({
+                url: 'equipment_location.php',
+                method: 'POST',
+                data: $(this).serialize(),
+                dataType: 'json',
+                success: function(result) {
+                    if (result.status === 'success') {
+                        $('#addLocationModal').modal('hide');
+                        window.location.href = 'equipment_location.php';
+                    } else {
+                        alert(result.message || 'An error occurred');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    alert('Error submitting the form: ' + error);
+                }
+            });
         });
 
-        // Delete Purchase Order
-        $('.delete-po').click(function(e) {
+        $('.edit-location').on('click', function() {
+            var id = $(this).data('id');
+            var assetTag = $(this).data('asset');
+            var buildingLocation = $(this).data('building');
+            var floorNumber = $(this).data('floor');
+            var specificArea = $(this).data('area');
+            var personResponsible = $(this).data('person');
+            var departmentId = $(this).data('department');
+            var remarks = $(this).data('remarks');
+
+            $('#edit_location_id').val(id);
+            $('#edit_asset_tag').val(assetTag);
+            $('#edit_building_loc').val(buildingLocation);
+            $('#edit_floor_no').val(floorNumber);
+            $('#edit_specific_area').val(specificArea);
+            $('#edit_person_responsible').val(personResponsible);
+            $('#edit_department_id').val(departmentId);
+            $('#edit_remarks').val(remarks);
+
+            $('#editLocationModal').modal('show');
+        });
+
+        $('#editLocationForm').on('submit', function(e) {
             e.preventDefault();
-            if (confirm('Are you sure you want to delete this Purchase Order?')) {
-                window.location.href = 'purchase_order.php?action=delete&id=' + $(this).data('id');
-            }
+            $.ajax({
+                url: 'equipment_location.php',
+                method: 'POST',
+                data: $(this).serialize(),
+                dataType: 'json',
+                success: function(result) {
+                    if (result.status === 'success') {
+                        $('#editLocationModal').modal('hide');
+                        window.location.href = 'equipment_location.php';
+                    } else {
+                        alert(result.message || 'An error occurred');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    alert('Error updating location: ' + error);
+                }
+            });
         });
     });
 </script>
