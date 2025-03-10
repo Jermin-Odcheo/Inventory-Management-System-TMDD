@@ -77,7 +77,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ai_loc,
                 is_disabled
             ) VALUES (?, ?, ?, ?, ?)");
-
             $stmt->execute([
                 $_POST['rr_no'],
                 $_POST['accountable_individual'],
@@ -85,7 +84,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_POST['ai_loc'],
                 0 // Default to not disabled
             ]);
-
             $response['status'] = 'success';
             $response['message'] = 'Receiving Report has been added successfully.';
         } catch (PDOException $e) {
@@ -100,7 +98,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("UPDATE receive_report 
                                    SET rr_no = ?, accountable_individual = ?, po_no = ?, ai_loc = ?, is_disabled = ?
                                    WHERE id = ?");
-            $stmt->execute([$rr_no, $accountable_individual, $po_no, $ai_loc, isset($_POST['is_disabled']) ? 1 : 0, $id]);
+            $stmt->execute([
+                $rr_no,
+                $accountable_individual,
+                $po_no,
+                $ai_loc,
+                isset($_POST['is_disabled']) ? 1 : 0,
+                $id
+            ]);
             $_SESSION['success'] = "Receiving Report has been updated successfully.";
         } catch (PDOException $e) {
             $_SESSION['errors'] = ["Error updating Receiving Report: " . $e->getMessage()];
@@ -154,7 +159,7 @@ try {
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
     <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
-    <!-- Add jQuery -->
+    <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
         body {
@@ -163,17 +168,14 @@ try {
             min-height: 100vh;
             padding-top: 80px;
         }
-
         h2.mb-4 {
             margin-top: 20px;
         }
-
         .main-content {
             margin-left: 300px;
             padding: 20px;
             transition: margin-left 0.3s ease;
         }
-
         @media (max-width: 768px) {
             .main-content {
                 margin-left: 0;
@@ -204,7 +206,7 @@ try {
         </div>
     <?php endif; ?>
 
-    <!-- Title moved outside the card -->
+    <!-- Title -->
     <h2 class="mb-4">Receiving Report Management</h2>
 
     <div class="card shadow">
@@ -289,32 +291,35 @@ try {
                     <!-- Pagination Info -->
                     <div class="col-12 col-sm-auto">
                         <div class="text-muted">
-                            Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span
-                                    id="totalRows">0</span> entries
+                            Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span id="totalRows">0</span> entries
                         </div>
                     </div>
-
-                    <!-- Pagination Controls -->
+                    <!-- Pagination Buttons -->
                     <div class="col-12 col-sm-auto ms-sm-auto">
                         <div class="d-flex align-items-center gap-2">
                             <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
                                 <i class="bi bi-chevron-left"></i>
                                 Previous
                             </button>
-
                             <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
                                 <option value="10">10</option>
                                 <option value="20" selected>20</option>
                                 <option value="50">50</option>
                                 <option value="100">100</option>
                             </select>
-
                             <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
                                 Next
                                 <i class="bi bi-chevron-right"></i>
                             </button>
                         </div>
                     </div>
+                </div>
+            </div>
+            <!-- Added missing pagination element -->
+            <!-- New Pagination Page Numbers -->
+            <div class="row mt-3">
+                <div class="col-12">
+                    <ul class="pagination justify-content-center" id="pagination"></ul>
                 </div>
             </div>
         </div>
@@ -337,13 +342,11 @@ try {
                         <input type="text" class="form-control" name="rr_no" required>
                     </div>
                     <div class="mb-3">
-                        <label for="accountable_individual" class="form-label">Accountable Individual <span
-                                    class="text-danger">*</span></label>
+                        <label for="accountable_individual" class="form-label">Accountable Individual <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="accountable_individual" required>
                     </div>
                     <div class="mb-3">
-                        <label for="po_no" class="form-label">Purchase Order Number <span
-                                    class="text-danger">*</span></label>
+                        <label for="po_no" class="form-label">Purchase Order Number <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="po_no" required>
                     </div>
                     <div class="mb-3">
@@ -381,8 +384,7 @@ try {
                     </div>
                     <div class="mb-3">
                         <label for="edit_accountable_individual" class="form-label">Accountable Individual</label>
-                        <input type="text" class="form-control" name="accountable_individual"
-                               id="edit_accountable_individual" required>
+                        <input type="text" class="form-control" name="accountable_individual" id="edit_accountable_individual" required>
                     </div>
                     <div class="mb-3">
                         <label for="edit_po_no" class="form-label">Purchase Order Number</label>
@@ -421,15 +423,12 @@ try {
         function filterTable() {
             const searchText = $('#searchReport').val().toLowerCase();
             const filterLocation = $('#filterLocation').val().toLowerCase();
-
-            $(".table tbody tr").each(function () {
+            $("#table tbody tr").each(function () {
                 const row = $(this);
                 const rowText = row.text().toLowerCase();
                 const locationCell = row.find('td:nth-child(5)').text().toLowerCase();
-
                 const searchMatch = rowText.indexOf(searchText) > -1;
                 const locationMatch = !filterLocation || locationCell === filterLocation;
-
                 row.toggle(searchMatch && locationMatch);
             });
         }
@@ -489,45 +488,9 @@ try {
         });
     });
 </script>
-<!-- Add jQuery first -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<!-- Then Bootstrap -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<!-- Then your custom scripts -->
-<script>
-    $(document).ready(function () {
-        // Add Report form submission
-        $('#addReportForm').on('submit', function (e) {
-            e.preventDefault();
-            $.ajax({
-                url: 'receiving_report.php',
-                method: 'POST',
-                data: $(this).serialize(),
-                success: function (response) {
-                    try {
-                        const result = JSON.parse(response);
-                        if (result.status === 'success') {
-                            $('#addReportModal').modal('hide');
-                            location.reload();
-                        } else {
-                            alert(result.message || 'An error occurred');
-                        }
-                    } catch (e) {
-                        console.error('Parse error:', e);
-                        location.reload();
-                    }
-                },
-                error: function (xhr, status, error) {
-                    alert('Error submitting form: ' + error);
-                }
-            });
-        });
-
-        // Rest of your existing JavaScript...
-    });
-</script>
+<!-- Pagination script -->
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
-
+<!-- Bootstrap Bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-
 </html>

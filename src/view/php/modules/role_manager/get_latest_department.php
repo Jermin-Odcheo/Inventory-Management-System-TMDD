@@ -4,7 +4,7 @@ require_once('../../../../../config/ims-tmdd.php');
 
 try {
     // Get the latest Department_ID
-    $sql = "SELECT MAX(Department_ID) AS latest_id FROM departments";
+    $sql = "SELECT MAX(id) AS latest_id FROM departments";
     $stmt = $pdo->prepare($sql);
     $stmt->execute();
     $row = $stmt->fetch(PDO::FETCH_ASSOC);

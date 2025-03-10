@@ -38,28 +38,28 @@ if (isset($_SESSION['success'])) {
 }
 
 // ------------------------
-// DELETE DEPARTMENt
+// DELETE DEPARTMENT
 // ------------------------
 if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
     $id = $_GET['id'];
     try {
         $pdo->beginTransaction();
 
-        // Get location details before deletion
-        $stmt = $pdo->prepare("SELECT * FROM departments WHERE Department_ID = ?");
+        // Get department details before deletion
+        $stmt = $pdo->prepare("SELECT * FROM departments WHERE id = ?");
         $stmt->execute([$id]);
         $departmentData = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($departmentData) {
-            // Prepare audit log data
+            // Prepare audit log data with correct column names
             $oldValues = json_encode([
-                'Department_ID' => $departmentData['Department_ID'],
-                'Department_Acronym' => $departmentData['Department_Acronym'],
-                'Department_Name' => $departmentData['Department_Name']
+                'id'              => $departmentData['id'],
+                'abbreviation'    => $departmentData['abbreviation'],
+                'department_name' => $departmentData['department_name']
             ]);
 
-            // Delete the location
-            $stmt = $pdo->prepare("DELETE FROM departments WHERE Department_ID = ?");
+            // Delete the department
+            $stmt = $pdo->prepare("DELETE FROM departments WHERE id = ?");
             $stmt->execute([$id]);
 
             // Insert audit log
@@ -117,28 +117,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $pdo->beginTransaction();
 
-            // Insert equipment location
+            // Insert department with correct column names
             $stmt = $pdo->prepare("INSERT INTO departments (
-                id, 
-                abbreviation, 
-                Department_Name 
-            ) VALUES (?, ?, ?)");
+                    id, 
+                    abbreviation, 
+                    department_name
+                ) VALUES (?, ?, ?)");
             $stmt->execute([$DepartmentID, $DepartmentAcronym, $DepartmentName]);
 
             $newDepartmentId = $pdo->lastInsertId();
 
-            // Prepare audit log data
+            // Prepare audit log data with consistent keys
             $newValues = json_encode([
-                'Department_ID' => $DepartmentID,
-                'Department_Acronym' => $DepartmentAcronym,
-                'Department_Name' => $DepartmentName
+                'id'              => $DepartmentID,
+                'abbreviation'    => $DepartmentAcronym,
+                'department_name' => $DepartmentName
             ]);
             // Insert audit log
             $auditStmt = $pdo->prepare("
-                INSERT INTO audit_log (
-                    UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ");
+                    INSERT INTO audit_log (
+                        UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ");
 
             $auditStmt->execute([
                 $_SESSION['user_id'],
@@ -168,6 +168,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     } elseif (isset($_POST['action']) && $_POST['action'] === 'update') {
         $id = $_POST['id'];
+        $DepartmentAcronym = trim($_POST['DepartmentAcronym']);
+        $DepartmentName = trim($_POST['DepartmentName']);
+
         try {
             $pdo->beginTransaction();
 
@@ -176,32 +179,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$id]);
             $oldDepartment = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            // Update department details
-            $stmt = $pdo->prepare("UPDATE departments SET 
-                abbreviation = ?, 
-                Department_Name = ?
-                WHERE id = ?");
-            $stmt->execute([
-                $_POST['DepartmentAcronym'],
-                $_POST['DepartmentName'],
+            if (!$oldDepartment) {
+                throw new Exception('Department not found.');
+            }
+
+            // Update department details using the correct prepared statement
+            $stmtUpdate = $pdo->prepare("
+                UPDATE departments SET 
+                    abbreviation = ?, 
+                    department_name = ?
+                WHERE id = ?
+            ");
+            $stmtUpdate->execute([
+                $DepartmentAcronym,
+                $DepartmentName,
                 $id
             ]);
 
             // Prepare audit log data
             $oldValues = json_encode([
-                'Department_Acronym' => $oldDepartment['Department_Acronym'],
-                'Department_Name' => $oldDepartment['Department_Name']
+                'abbreviation'    => $oldDepartment['abbreviation'],
+                'department_name' => $oldDepartment['department_name']
             ]);
 
             $newValues = json_encode([
-                'Department_Acronym' => $_POST['DepartmentAcronym'],
-                'Department_Name' => $_POST['DepartmentName']
+                'abbreviation'    => $DepartmentAcronym,
+                'department_name' => $DepartmentName
             ]);
 
             // Insert audit log
-            $auditStmt = $pdo->prepare("INSERT INTO audit_log (
-                UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            $auditStmt = $pdo->prepare("
+                INSERT INTO audit_log (UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ");
 
             $auditStmt->execute([
                 $_SESSION['user_id'],
@@ -216,19 +226,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $pdo->commit();
 
-            // JSON response
             header('Content-Type: application/json');
             echo json_encode([
                 'status' => 'success',
                 'message' => 'Department has been updated successfully.'
             ]);
             exit;
-        } catch (PDOException $e) {
+        } catch (Exception $e) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
             }
 
-            // JSON error response
             header('Content-Type: application/json');
             echo json_encode([
                 'status' => 'error',
@@ -237,7 +245,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
     }
-
 }
 
 // ------------------------
@@ -350,13 +357,14 @@ try {
                                             <td><?php echo htmlspecialchars($department['department_name']); ?></td>
                                             <td class="text-center">
                                                 <div class="btn-group" role="group">
-                                                    <a class="btn btn-sm btn-outline-primary edit-department"
-                                                       data-id="<?php echo htmlspecialchars($department['id']); ?>"
-                                                       data-department-id="<?php echo htmlspecialchars($department['id']); ?>"
-                                                       data-department-acronym="<?php echo htmlspecialchars($department['abbreviation']); ?>"
-                                                       data-department-name="<?php echo htmlspecialchars($department['department_name']); ?>">
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-outline-primary edit-department"
+                                                            data-id="<?php echo htmlspecialchars($department['id']); ?>"
+                                                            data-department-acronym="<?php echo htmlspecialchars($department['abbreviation']); ?>"
+                                                            data-department-name="<?php echo htmlspecialchars($department['department_name']); ?>">
                                                         <i class="bi bi-pencil-square"></i> Edit
-                                                    </a>
+                                                    </button>
+
                                                     <a class="btn btn-sm btn-outline-danger"
                                                        href="?action=delete&id=<?php echo htmlspecialchars($department['id']); ?>"
                                                        onclick="return confirm('Are you sure you want to delete this department?');">
@@ -432,11 +440,13 @@ try {
                         <label for="DepartmentID" class="form-label">
                             <i class="bi bi-tag"></i> Department ID <span class="text-danger">*</span>
                         </label>
-                        <input type="number" min="1" class="form-control" name="DynamicDepartmentID" id="DynamicDepartmentID" readonly>
+                        <!-- Changed input name to DepartmentID -->
+                        <input type="number" min="1" class="form-control" name="DepartmentID"
+                               id="DynamicDepartmentID" readonly>
                     </div>
 
                     <div class="mb-3">
-                        <label for="BuildingLocation" class="form-label">
+                        <label for="DepartmentAcronym" class="form-label">
                             <i class="bi bi-building"></i> Department Acronym <span class="text-danger">*</span>
                         </label>
                         <input type="text" class="form-control" id="DepartmentAcronym" name="DepartmentAcronym"
@@ -477,7 +487,8 @@ try {
                         <label for="edit_department_id" class="form-label">
                             <i class="bi bi-tag"></i> Department ID <span class="text-danger">*</span>
                         </label>
-                        <input type="number" min="1" class="form-control" id="edit_department_id" name="DepartmentID" readonly>
+                        <input type="number" min="1" class="form-control" id="edit_department_id" name="DepartmentID"
+                               readonly>
                     </div>
 
                     <div class="mb-3">
@@ -506,7 +517,7 @@ try {
     </div>
 </div>
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
-<!-- JavaScript for Real-Time Table Filtering -->
+<!-- JavaScript for Real-Time Table Filtering and Form Submissions -->
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         // Search and filter functionality
@@ -522,7 +533,7 @@ try {
 
         function filterTable() {
             const searchValue = searchInput.value.toLowerCase();
-            const filterValue = filterBuilding.value.toLowerCase();
+            const filterValue = filterBuilding ? filterBuilding.value.toLowerCase() : '';
             const rows = document.querySelectorAll('#table tbody tr');
 
             rows.forEach(function (row) {
@@ -535,10 +546,8 @@ try {
                 row.style.display = (searchMatch && buildingMatch) ? '' : 'none';
             });
         }
-    });
 
-    document.addEventListener('DOMContentLoaded', function () {
-        // Form submissions
+        // Handle Add Department form submission
         $('#addDepartmentForm').on('submit', function (e) {
             e.preventDefault();
 
@@ -549,40 +558,36 @@ try {
                 dataType: 'json',
                 success: function (result) {
                     if (result.status === 'success') {
-                        // Hide modal and redirect
                         $('#addDepartmentModal').modal('hide');
-                        window.location.href = 'department_management.php';
+                        location.reload();
                     } else {
                         alert(result.message || 'An error occurred');
                     }
                 },
                 error: function (xhr, status, error) {
-                    console.log(xhr.responseText);
-                    alert('Error submitting the form: ' + error);
+                    alert('Error submitting form: ' + error);
                 }
             });
         });
 
-        // Edit button click handler for departments
-        $('.edit-department').click(function () {
+        // Populate Edit Department Modal on click
+        $('.edit-department').on('click', function () {
             const id = $(this).data('id');
-            const departmentId = $(this).data('department-id');
             const departmentAcronym = $(this).data('department-acronym');
             const departmentName = $(this).data('department-name');
 
-            // Populate modal fields
-            $('#edit_department_hidden_id').val(id); // Hidden field for ID
-            $('#edit_department_id').val(departmentId);
+            $('#edit_department_hidden_id').val(id);
+            $('#edit_department_id').val(id);
             $('#edit_department_acronym').val(departmentAcronym);
             $('#edit_department_name').val(departmentName);
 
-            // Show the modal
             $('#editDepartmentModal').modal('show');
         });
 
-        // Edit form submission
+        // Handle Edit Department form submission
         $('#editDepartmentForm').on('submit', function (e) {
             e.preventDefault();
+
             $.ajax({
                 url: 'department_management.php',
                 method: 'POST',
@@ -591,63 +596,24 @@ try {
                 success: function (result) {
                     if (result.status === 'success') {
                         $('#editDepartmentModal').modal('hide');
-                        window.location.href = 'department_management.php';
+                        location.reload();
                     } else {
                         alert(result.message || 'An error occurred');
                     }
                 },
                 error: function (xhr, status, error) {
-                    alert('Error updating location: ' + error);
+                    alert('Error updating department: ' + error);
                 }
             });
         });
     });
 
-    // Edit button click handler for departments
-    $('.edit-department').click(function() {
-        const id = $(this).data('id');
-        const departmentId = $(this).data('department-id');
-        const departmentAcronym = $(this).data('department-acronym');
-        const departmentName = $(this).data('department-name');
-
-        // Populate modal fields
-        $('#edit_department_hidden_id').val(id); // Hidden field for ID
-        $('#edit_department_id').val(departmentId);
-        $('#edit_department_acronym').val(departmentAcronym);
-        $('#edit_department_name').val(departmentName);
-
-        // Show the modal
-        $('#editDepartmentModal').modal('show');
-    });
-
-    // Edit form submission
-    $('#editDepartmentForm').on('submit', function(e) {
-        e.preventDefault();
-        $.ajax({
-            url: 'department_management.php',
-            method: 'POST',
-            data: $(this).serialize(),
-            dataType: 'json',
-            success: function(result) {
-                if (result.status === 'success') {
-                    $('#editDepartmentModal').modal('hide');
-                    window.location.href = 'department_management.php';
-                } else {
-                    alert(result.message || 'An error occurred');
-                }
-            },
-            error: function(xhr, status, error) {
-                alert('Error updating location: ' + error);
-            }
-        });
-    });
-});
-
-function fetchLatestDepartmentID() {
+    // Fix fetchLatestDepartmentID
+    function fetchLatestDepartmentID() {
         fetch('get_latest_department.php')
             .then(response => response.text())
             .then(data => {
-                document.getElementById("DynamicDepartmentID").value = data; // Update field with latest ID
+                document.getElementById("DynamicDepartmentID").value = data;
             })
             .catch(error => console.error("Error fetching latest department ID:", error));
     }
