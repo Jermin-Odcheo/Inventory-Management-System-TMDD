@@ -10,13 +10,14 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: " . BASE_URL . "public/index.php"); // Redirect to login page
     exit();
 }
-
-// Fetch only equipment management related audit logs
-$query = "SELECT audit_log.*, users.email AS user_email 
+// Fetch all audit logs (including permanent deletes)
+$query = "SELECT audit_log.*, users.email AS email 
           FROM audit_log 
           LEFT JOIN users ON audit_log.UserID = users.id
-          WHERE audit_log.Module IN ('Equipment Details', 'Equipment Location', 'Equipment Status')
+          WHERE audit_log.Module = 'Equipment Management'
           ORDER BY audit_log.Date_Time DESC";
+
+
 $stmt = $pdo->prepare($query);
 $stmt->execute();
 $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -133,9 +134,9 @@ function getActionIcon($action)
     $action = strtolower($action);
     if ($action === 'modified') {
         return '<i class="fas fa-user-edit"></i>';
-    } elseif ($action === 'add') {
+    } elseif ($action === 'create') {
         return '<i class="fas fa-user-plus"></i>';
-    } elseif ($action === 'soft delete' || $action === 'permanent delete') {
+    } elseif ($action === 'remove' || $action === 'delete') {
         return '<i class="fas fa-user-slash"></i>';
     } else {
         return '<i class="fas fa-info-circle"></i>';
@@ -165,51 +166,42 @@ function formatDetailsAndChanges($log)
     $oldData = !is_null($log['OldVal']) ? json_decode($log['OldVal'], true) : [];
     $newData = !is_null($log['NewVal']) ? json_decode($log['NewVal'], true) : [];
 
-    // Use user_email from the log if available, or fallback to newData email
-    $userEmail = $log['user_email'] ?? ($newData['Email'] ?? 'User');
-
-    // For soft delete, try to use the target's name (if available)
-    $targetName = $userEmail;
-    if ($action === 'soft delete') {
-        if (isset($newData['First_Name'], $newData['Last_Name'])) {
-            $targetName = $newData['First_Name'] . ' ' . $newData['Last_Name'];
-        }
-    }
-
     // Prepare default strings
     $details = '';
     $changes = '';
-
+    //Target Entity Set to ASSET TAG
+    $targetEntityName = $newData['asset_tag'] ?? $oldData['asset_tag'] ?? 'Unknown';
     switch ($action) {
-        case 'add':
-            $details = htmlspecialchars("$userEmail has been created");
+
+        case 'create':
+            $details = htmlspecialchars("$targetEntityName has been created");
             $changes = formatNewValue($log['NewVal']);
             break;
 
         case 'modified':
             $changedFields = getChangedFieldNames($oldData, $newData);
             if (!empty($changedFields)) {
-                $details = "Updated Fields: " . htmlspecialchars(implode(', ', $changedFields));
+                $details = "Modified Fields: " . htmlspecialchars(implode(', ', $changedFields));
             } else {
-                $details = "Updated Fields: None";
+                $details = "Modified Fields: None";
             }
             $changes = formatAuditDiff($log['OldVal'], $log['NewVal']);
             break;
 
         case 'restored':
-            $details = htmlspecialchars("$userEmail has been restored");
+            $details = htmlspecialchars("$targetEntityName has been restored");
             $changes = "is_deleted 1 -> 0";
             break;
 
-        case 'soft delete':
+        case 'remove':
             // Use the target's name instead of a generic message
-            $details = htmlspecialchars("$userEmail has been soft deleted");
+            $details = htmlspecialchars("$targetEntityName has been removed");
             $changes = "is_deleted 0 -> 1";
             break;
 
-        case 'permanent delete':
-            $details = htmlspecialchars("$userEmail has been deleted from the database");
-            $changes = formatNewValue($log['NewVal']);
+        case 'delete':
+            $details = htmlspecialchars("$targetEntityName has been deleted from the database");
+            $changes = formatNewValue($log['OldVal']);
             break;
 
         default:
@@ -245,7 +237,7 @@ function getChangedFieldNames(array $oldData, array $newData)
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Equipment Management Audit Logs</title>
+    <title>Audit Logs Dashboard</title>
     <link rel="stylesheet"
           href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet"
@@ -261,7 +253,7 @@ function getChangedFieldNames(array $oldData, array $newData)
             <div class="card-header d-flex justify-content-between align-items-center bg-dark">
                 <h3 class="text-white">
                     <i class="fas fa-history me-2"></i>
-                    Equipment Management Audit Logs
+                    Audit Logs Dashboard
                 </h3>
             </div>
 
@@ -278,24 +270,25 @@ function getChangedFieldNames(array $oldData, array $newData)
                     <div class="col-md-4 mb-2">
                         <select id="filterAction" class="form-select">
                             <option value="">All Actions</option>
-                            <option value="add">Add</option>
+                            <option value="create">Create</option>
                             <option value="modified">Modified</option>
+                            <option value="remove">Remove</option>
                             <option value="delete">Delete</option>
+                            <option value="restored">Restored</option>
                         </select>
                     </div>
                     <div class="col-md-4 mb-2">
-                        <select id="filterModule" class="form-select">
-                            <option value="">All Modules</option>
-                            <option value="Equipment Details">Equipment Details</option>
-                            <option value="Equipment Location">Equipment Location</option>
-                            <option value="Equipment Status">Equipment Status</option>
+                        <select id="filterStatus" class="form-select">
+                            <option value="">All Status</option>
+                            <option value="successful">Successful</option>
+                            <option value="failed">Failed</option>
                         </select>
                     </div>
                 </div>
 
-                <!-- Table container -->
-                <div class="table-responsive">
-                    <table class="table table-hover" id="table">
+                <!-- Table container with colgroup for column widths -->
+                <div class="table-responsive" id="table">
+                    <table class="table table-hover">
                         <colgroup>
                             <col class="track">
                             <col class="user">
@@ -308,7 +301,7 @@ function getChangedFieldNames(array $oldData, array $newData)
                         </colgroup>
                         <thead class="table-light">
                         <tr>
-                            <th>#</th>
+                            <th>Track ID</th>
                             <th>User</th>
                             <th>Module</th>
                             <th>Action</th>
@@ -321,26 +314,49 @@ function getChangedFieldNames(array $oldData, array $newData)
                         <tbody id="auditTable">
                         <?php if (!empty($auditLogs)): ?>
                             <?php foreach ($auditLogs as $log): ?>
+                                <?php
+                                // Normalize action to lower case for comparisons.
+                                $actionLower = strtolower($log['Action'] ?? '');
+                                ?>
                                 <tr>
-                                    <!-- Keep the same row structure but data will be equipment-specific -->
+                                    <!-- TRACK ID -->
                                     <td data-label="Track ID">
                                         <span class="badge bg-secondary">
                                             <?php echo htmlspecialchars($log['TrackID']); ?>
                                         </span>
                                     </td>
+
+                                    <!-- USER WHO PERFORMED -->
                                     <td data-label="User">
                                         <div class="d-flex align-items-center">
                                             <i class="fas fa-user-circle me-2"></i>
-                                            <?php echo htmlspecialchars($log['user_email'] ?? 'N/A'); ?>
+                                            <?php echo htmlspecialchars($log['email'] ?? 'N/A'); ?>
                                         </div>
                                     </td>
+
+                                    <!-- MODULE -->
                                     <td data-label="Module">
                                         <?php echo !empty($log['Module']) ? htmlspecialchars(trim($log['Module'])) : '<em class="text-muted">N/A</em>'; ?>
                                     </td>
+
+                                    <!-- ACTION -->
                                     <td data-label="Action">
                                         <?php
                                         $actionText = !empty($log['Action']) ? $log['Action'] : 'Unknown';
-                                        echo "<span class='action-badge action-" . strtolower($actionText) . "'>";
+                                        echo "<!-- Debug: Action Text = $actionText -->";
+
+                                        // Check for restore action based on JSON values with null checks
+                                        if (!is_null($log['OldVal']) && !is_null($log['NewVal'])) {
+                                            $oldData = json_decode($log['OldVal'], true);
+                                            $newData = json_decode($log['NewVal'], true);
+                                            if (is_array($oldData) && is_array($newData)) {
+                                                if (isset($oldData['is_deleted'], $newData['is_deleted']) &&
+                                                    (int)$oldData['is_deleted'] === 1 && (int)$newData['is_deleted'] === 0) {
+                                                    $actionText = 'Restored';
+                                                }
+                                            }
+                                        }
+                                        echo "<span class='action-bad`ge action-" . strtolower($actionText) . "'>";
                                         echo getActionIcon($actionText) . ' ' . htmlspecialchars($actionText);
                                         echo "</span>";
                                         ?>
@@ -348,17 +364,25 @@ function getChangedFieldNames(array $oldData, array $newData)
                                     <?php
                                     list($detailsHTML, $changesHTML) = formatDetailsAndChanges($log);
                                     ?>
+
+                                    <!-- DETAILS -->
                                     <td data-label="Details" class="data-container">
                                         <?php echo nl2br($detailsHTML); ?>
                                     </td>
+
+                                    <!-- CHANGES -->
                                     <td data-label="Changes" class="data-container">
                                         <?php echo nl2br($changesHTML); ?>
                                     </td>
+
+                                    <!-- STATUS -->
                                     <td data-label="Status">
                                         <span class="badge <?php echo (strtolower($log['Status'] ?? '') === 'successful') ? 'bg-success' : 'bg-danger'; ?>">
                                             <?php echo getStatusIcon($log['Status']) . ' ' . htmlspecialchars($log['Status']); ?>
                                         </span>
                                     </td>
+
+                                    <!-- DATE & TIME -->
                                     <td data-label="Date & Time">
                                         <div class="d-flex align-items-center">
                                             <i class="far fa-clock me-2"></i>
@@ -372,87 +396,62 @@ function getChangedFieldNames(array $oldData, array $newData)
                                 <td colspan="8">
                                     <div class="empty-state text-center py-4">
                                         <i class="fas fa-inbox fa-3x mb-3"></i>
-                                        <h4>No Equipment Audit Logs Found</h4>
-                                        <p class="text-muted">There are no equipment management audit log entries to display.</p>
+                                        <h4>No Audit Logs Found</h4>
+                                        <p class="text-muted">There are no audit log entries to display.</p>
                                     </div>
                                 </td>
                             </tr>
                         <?php endif; ?>
                         </tbody>
                     </table>
-                </div>
+                    <!-- Pagination Controls -->
+                    <div class="container-fluid">
+                        <div class="row align-items-center g-3">
+                            <!-- Pagination Info -->
+                            <div class="col-12 col-sm-auto">
+                                <div class="text-muted">
+                                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
+                                            id="totalRows">100</span> entries
+                                </div>
+                            </div>
 
-                <!-- Pagination Controls -->
-                <div class="container-fluid">
-                    <div class="row align-items-center g-3">
-                        <!-- Pagination Info -->
-                        <div class="col-12 col-sm-auto">
-                            <div class="text-muted">
-                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
-                                        id="totalRows">100</span> entries
+                            <!-- Pagination Controls -->
+                            <div class="col-12 col-sm-auto ms-sm-auto">
+                                <div class="d-flex align-items-center gap-2">
+                                    <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                        <i class="bi bi-chevron-left"></i>
+                                        Previous
+                                    </button>
+
+                                    <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                        <option value="10" selected>10</option>
+                                        <option value="20">20</option>
+                                        <option value="30">30</option>
+                                        <option value="50">50</option>
+                                    </select>
+
+                                    <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                        Next
+                                        <i class="bi bi-chevron-right"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
-
-                        <!-- Pagination Controls -->
-                        <div class="col-12 col-sm-auto ms-sm-auto">
-                            <div class="d-flex align-items-center gap-2">
-                                <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                    <i class="bi bi-chevron-left"></i>
-                                    Previous
-                                </button>
-
-                                <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
-                                    <option value="10">10</option>
-                                    <option value="20" selected>20</option>
-                                    <option value="50">50</option>
-                                    <option value="100">100</option>
-                                </select>
-
-                                <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                    Next
-                                    <i class="bi bi-chevron-right"></i>
-                                </button>
+                        <!-- New Pagination Page Numbers -->
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <ul class="pagination justify-content-center" id="pagination"></ul>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+                    </div> <!-- /.End of Pagination -->
+                </div><!-- /.table-responsive -->
+            </div><!-- /.card-body -->
+        </div><!-- /.card -->
+    </div><!-- /.container-fluid -->
+</div><!-- /.main-content -->
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/logs.js" defer></script>
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const searchInput = document.getElementById('searchInput');
-    const filterAction = document.getElementById('filterAction');
-    const filterModule = document.getElementById('filterModule');
-    const rows = document.querySelectorAll('#auditTable tr');
 
-    function filterTable() {
-        const searchText = searchInput.value.toLowerCase();
-        const actionFilter = filterAction.value.toLowerCase();
-        const moduleFilter = filterModule.value;
-
-        rows.forEach(row => {
-            const rowData = row.textContent.toLowerCase();
-            const actionCell = row.querySelector('[data-label="Action"]')?.textContent.toLowerCase() || '';
-            const moduleCell = row.querySelector('[data-label="Module"]')?.textContent.trim() || '';
-
-            const searchMatch = rowData.includes(searchText);
-            const actionMatch = !actionFilter || actionCell.includes(actionFilter);
-            const moduleMatch = !moduleFilter || moduleCell === moduleFilter;
-
-            row.style.display = searchMatch && actionMatch && moduleMatch ? '' : 'none';
-        });
-    }
-
-    // Add event listeners
-    if (searchInput) searchInput.addEventListener('input', filterTable);
-    if (filterAction) filterAction.addEventListener('change', filterTable);
-    if (filterModule) filterModule.addEventListener('change', filterTable);
-});
-</script>
 </body>
 </html>
 
