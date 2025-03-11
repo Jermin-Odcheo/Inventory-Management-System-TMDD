@@ -3,40 +3,87 @@ session_start();
 require_once('../../../../../config/ims-tmdd.php');
 header('Content-Type: application/json');
 
+// Only allow logged-in users.
 if (!isset($_SESSION['user_id'])) {
     echo json_encode(['success' => false, 'message' => 'Unauthorized']);
     exit;
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $moduleId = isset($_POST['module_id']) ? (int)$_POST['module_id'] : 0;
-    if ($moduleId <= 0) {
-        echo json_encode(['success' => false, 'message' => 'Invalid module ID']);
-        exit;
-    }
-
-    // Retrieve the selected privileges (an array of privilege IDs)
-    $selectedPrivileges = $_POST['privileges'] ?? [];
-
-    try {
-        // Remove all existing privilege links for this module.
-        $stmt = $pdo->prepare("DELETE FROM role_module_privileges WHERE module_id = :module_id");
-        $stmt->execute(['module_id' => $moduleId]);
-
-        // Insert each selected privilege.
-        $stmtInsertLink = $pdo->prepare("INSERT INTO role_module_privileges (module_id, privilege_id) VALUES (:module_id, :privilege_id)");
-        foreach ($selectedPrivileges as $privId) {
-            $stmtInsertLink->execute([
-                'module_id'    => $moduleId,
-                'privilege_id' => $privId
-            ]);
-        }
-
-        echo json_encode(['success' => true, 'message' => 'Privileges updated successfully.']);
-    } catch (PDOException $e) {
-        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
-    }
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    echo json_encode(['success' => false, 'message' => 'Invalid request method']);
     exit;
 }
 
-echo json_encode(['success' => false, 'message' => 'Invalid request']);
+// Get and validate the module ID.
+$moduleId = isset($_POST['module_id']) ? (int)$_POST['module_id'] : 0;
+if ($moduleId <= 0) {
+    echo json_encode(['success' => false, 'message' => 'Invalid module ID']);
+    exit;
+}
+
+// Set the default role identifier for module-level privileges.
+$defaultRoleId = 0;  // Ensure this value is never null.
+
+// Retrieve posted privileges.
+$rawPrivileges = $_POST['privileges'] ?? [];
+$selectedPrivileges = [];
+
+if (is_array($rawPrivileges)) {
+    // Determine if the privileges array is sequential (values) or associative (keys).
+    if (array_keys($rawPrivileges) === range(0, count($rawPrivileges) - 1)) {
+        $selectedPrivileges = array_map('intval', $rawPrivileges);
+    } else {
+        $selectedPrivileges = array_map('intval', array_keys($rawPrivileges));
+    }
+}
+
+// Filter out any invalid privilege IDs.
+$selectedPrivileges = array_filter($selectedPrivileges, function($id) {
+    return $id > 0;
+});
+
+try {
+    // Begin a transaction.
+    $pdo->beginTransaction();
+
+    // Fetch current module privileges (for module-level entries with role_id = 0).
+    $stmt = $pdo->prepare("SELECT privilege_id FROM role_module_privileges WHERE module_id = :module_id AND role_id = :role_id");
+    $stmt->bindValue(':module_id', $moduleId, PDO::PARAM_INT);
+    $stmt->bindValue(':role_id', $defaultRoleId, PDO::PARAM_INT);
+    $stmt->execute();
+    $currentPrivileges = $stmt->fetchAll(PDO::FETCH_COLUMN, 0);
+    $currentPrivileges = array_map('intval', $currentPrivileges);
+    sort($currentPrivileges);
+    sort($selectedPrivileges);
+
+    // If no changes are detected, do nothing.
+    if ($currentPrivileges === $selectedPrivileges) {
+        echo json_encode(['success' => true, 'message' => 'No changes detected.']);
+        exit;
+    }
+
+    // Delete existing module-level privileges for this module.
+    $stmtDelete = $pdo->prepare("DELETE FROM role_module_privileges WHERE module_id = :module_id AND role_id = :role_id");
+    $stmtDelete->bindValue(':module_id', $moduleId, PDO::PARAM_INT);
+    $stmtDelete->bindValue(':role_id', $defaultRoleId, PDO::PARAM_INT);
+    $stmtDelete->execute();
+
+    // Insert each new privilege (if any) with the default role_id.
+    if (!empty($selectedPrivileges)) {
+        $stmtInsert = $pdo->prepare("INSERT INTO role_module_privileges (module_id, privilege_id, role_id) VALUES (:module_id, :privilege_id, :role_id)");
+        foreach ($selectedPrivileges as $privId) {
+            $stmtInsert->bindValue(':module_id', $moduleId, PDO::PARAM_INT);
+            $stmtInsert->bindValue(':privilege_id', $privId, PDO::PARAM_INT);
+            $stmtInsert->bindValue(':role_id', $defaultRoleId, PDO::PARAM_INT);
+            $stmtInsert->execute();
+        }
+    }
+
+    $pdo->commit();
+    echo json_encode(['success' => true, 'message' => 'Module privileges updated successfully.']);
+} catch (PDOException $e) {
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+}

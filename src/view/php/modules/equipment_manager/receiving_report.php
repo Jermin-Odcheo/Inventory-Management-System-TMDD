@@ -60,10 +60,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $accountable_individual = trim($_POST['accountable_individual'] ?? '');
     $po_no = trim($_POST['po_no'] ?? '');
     $ai_loc = trim($_POST['ai_loc'] ?? '');
-    $is_disabled = isset($_POST['is_disabled']) ? 1 : 0;
+
+    // Since we have removed the disabled option from the modal,
+    // always set is_disabled to 0 (active).
+    $is_disabled = 0;
+
+    // Retrieve the date_created value (from a datetime-local input)
+    $date_created = trim($_POST['date_created'] ?? '');
+    if (empty($date_created)) {
+        // Default to current datetime if not provided
+        $date_created = date('Y-m-d H:i:s');
+    } else {
+        // Convert from datetime-local format (YYYY-MM-DDTHH:MM) to MySQL datetime format
+        $date_created = date('Y-m-d H:i:s', strtotime($date_created));
+    }
 
     // Validate required fields
-    if (empty($rr_no) || empty($accountable_individual) || empty($po_no) || empty($ai_loc)) {
+    if (empty($rr_no) || empty($accountable_individual) || empty($po_no) || empty($ai_loc) || empty($date_created)) {
         $_SESSION['errors'] = ["Please fill in all required fields."];
         if (is_ajax_request()) {
             echo json_encode(['status' => 'error', 'message' => $_SESSION['errors'][0]]);
@@ -76,9 +89,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action']) && $_POST['action'] === 'add') {
         $response = ['status' => '', 'message' => ''];
         try {
-            $stmt = $pdo->prepare("INSERT INTO receive_report (rr_no, accountable_individual, po_no, ai_loc, is_disabled)
-                                   VALUES (?, ?, ?, ?, ?)");
-            $stmt->execute([$rr_no, $accountable_individual, $po_no, $ai_loc, 0]);
+            $stmt = $pdo->prepare("INSERT INTO receive_report (rr_no, accountable_individual, po_no, ai_loc, date_created, is_disabled)
+                                   VALUES (?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$rr_no, $accountable_individual, $po_no, $ai_loc, $date_created, $is_disabled]);
             $_SESSION['success'] = "Receiving Report has been added successfully.";
             $response['status'] = 'success';
             $response['message'] = $_SESSION['success'];
@@ -93,9 +106,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $response = ['status' => '', 'message' => ''];
         try {
             $stmt = $pdo->prepare("UPDATE receive_report 
-                                   SET rr_no = ?, accountable_individual = ?, po_no = ?, ai_loc = ?, is_disabled = ?
+                                   SET rr_no = ?, accountable_individual = ?, po_no = ?, ai_loc = ?, date_created = ?, is_disabled = ?
                                    WHERE id = ?");
-            $stmt->execute([$rr_no, $accountable_individual, $po_no, $ai_loc, $is_disabled, $id]);
+            $stmt->execute([$rr_no, $accountable_individual, $po_no, $ai_loc, $date_created, $is_disabled, $id]);
             $_SESSION['success'] = "Receiving Report has been updated successfully.";
             $response['status'] = 'success';
             $response['message'] = $_SESSION['success'];
@@ -266,7 +279,7 @@ try {
                                                data-individual="<?php echo htmlspecialchars($rr['accountable_individual']); ?>"
                                                data-po="<?php echo htmlspecialchars($rr['po_no']); ?>"
                                                data-location="<?php echo htmlspecialchars($rr['ai_loc']); ?>"
-                                               data-disabled="<?php echo htmlspecialchars($rr['is_disabled']); ?>">
+                                               data-date_created="<?php echo htmlspecialchars($rr['date_created']); ?>">
                                                 <i class="bi bi-pencil-square"></i> Edit
                                             </a>
                                             <a class="btn btn-sm btn-outline-danger delete-report"
@@ -320,7 +333,7 @@ try {
     </div>
 </div>
 
-<!-- Add Report Modal -->
+<!-- Add Report Modal (without disabled field) -->
 <div class="modal fade" id="addReportModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -347,9 +360,10 @@ try {
                         <label for="ai_loc" class="form-label">Location <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="ai_loc" required>
                     </div>
-                    <div class="mb-3 form-check">
-                        <input type="checkbox" class="form-check-input" name="is_disabled" id="is_disabled">
-                        <label class="form-check-label" for="is_disabled">Disabled</label>
+                    <div class="mb-3">
+                        <label for="date_created" class="form-label">Date Created <span class="text-danger">*</span></label>
+                        <!-- Pre-fill with current date/time in the correct format for datetime-local -->
+                        <input type="datetime-local" class="form-control" name="date_created" id="date_created" required value="<?php echo date('Y-m-d\TH:i'); ?>">
                     </div>
                     <div class="mb-3">
                         <button type="submit" class="btn btn-primary">Add Receiving Report</button>
@@ -360,7 +374,7 @@ try {
     </div>
 </div>
 
-<!-- Edit Report Modal -->
+<!-- Edit Report Modal (without disabled field) -->
 <div class="modal fade" id="editReportModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -388,9 +402,9 @@ try {
                         <label for="edit_ai_loc" class="form-label">Location <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="ai_loc" id="edit_ai_loc" required>
                     </div>
-                    <div class="mb-3 form-check">
-                        <input type="checkbox" class="form-check-input" name="is_disabled" id="edit_is_disabled">
-                        <label class="form-check-label" for="edit_is_disabled">Disabled</label>
+                    <div class="mb-3">
+                        <label for="edit_date_created" class="form-label">Date Created <span class="text-danger">*</span></label>
+                        <input type="datetime-local" class="form-control" name="date_created" id="edit_date_created" required>
                     </div>
                     <div class="mb-3">
                         <button type="submit" class="btn btn-primary">Save Changes</button>
@@ -426,14 +440,17 @@ try {
             var individual = $(this).data('individual');
             var po = $(this).data('po');
             var location = $(this).data('location');
-            var isDisabled = $(this).data('disabled');
+            var dateCreated = $(this).data('date_created');
 
             $('#edit_report_id').val(id);
             $('#edit_rr_no').val(rr);
             $('#edit_accountable_individual').val(individual);
             $('#edit_po_no').val(po);
             $('#edit_ai_loc').val(location);
-            $('#edit_is_disabled').prop('checked', isDisabled == 1);
+            // Convert dateCreated from "YYYY-MM-DD HH:MM:SS" to "YYYY-MM-DDTHH:MM" for datetime-local input
+            var formattedDate = dateCreated.replace(' ', 'T').substring(0, 16);
+            $('#edit_date_created').val(formattedDate);
+
             $('#editReportModal').modal('show');
         });
 

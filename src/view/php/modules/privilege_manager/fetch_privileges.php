@@ -15,14 +15,13 @@ if ($moduleId <= 0) {
 }
 
 try {
-    $stmt = $pdo->prepare("
-        SELECT p.id, p.priv_name 
-          FROM role_module_privileges mp
-          JOIN privileges p ON mp.privilege_id = p.id
-         WHERE mp.module_id = :module_id
-    ");
+    $stmt = $pdo->prepare("SELECT p.priv_name 
+                           FROM role_module_privileges rmp
+                           JOIN privileges p ON p.id = rmp.privilege_id
+                           WHERE rmp.module_id = :module_id AND rmp.role_id = 0
+                           ORDER BY p.priv_name");
     $stmt->execute(['module_id' => $moduleId]);
-    $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $privileges = $stmt->fetchAll(PDO::FETCH_COLUMN, 0);
     echo json_encode(['success' => true, 'privileges' => $privileges]);
 } catch (PDOException $e) {
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);

@@ -33,7 +33,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $_SESSION["email"] = $user["email"];
 
             // Fetch User Roles and Store in Session
-// In authenticate.php
+            // In authenticate.php
             $role_stmt = $pdo->prepare("
             SELECT GROUP_CONCAT(r.role_name SEPARATOR ', ') as roles
             FROM user_roles ur

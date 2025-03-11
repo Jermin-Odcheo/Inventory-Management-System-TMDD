@@ -3,8 +3,8 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Mar 07, 2025 at 08:56 AM
--- Server version: 8.2.0
+-- Generation Time: Mar 11, 2025 at 02:06 AM
+-- Server version: 9.1.0
 -- PHP Version: 8.2.13
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
@@ -121,7 +121,7 @@ CREATE TABLE IF NOT EXISTS `audit_log` (
   PRIMARY KEY (`TrackID`),
   KEY `idx_module` (`Module`),
   KEY `idx_action` (`Action`)
-) ENGINE=InnoDB AUTO_INCREMENT=182 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=209 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `audit_log`
@@ -141,7 +141,31 @@ INSERT INTO `audit_log` (`TrackID`, `UserID`, `EntityID`, `Action`, `Details`, `
 (136, 1, 11, 'Restored', 'User has been restored', '{\"id\": 11, \"email\": \"testingCase11111@gmail.com\", \"status\": \"\", \"username\": \"ttestinglast\", \"last_name\": \"TestingCaseLast11111\", \"first_name\": \"TestingCaseFirst11111\", \"is_disabled\": 1, \"date_created\": \"2025-03-07 11:52:51.000000\"}', '', 'User Management', 'Successful', '2025-03-07 13:37:22'),
 (179, 1, 11, 'Modified', 'Updated fields: department, email, first_name, last_name', '{\"email\": \"testingCase@gmail.com\", \"last_name\": \"TestingCaseLast\", \"department\": \"Center for Campus Ministry\", \"first_name\": \"TestingCaseFirst\"}', '{\"email\": \"testingCase1@gmail.com\", \"last_name\": \"TestingCaseLast1\", \"department\": \"Office of the President\", \"first_name\": \"TestingCaseFirst1\"}', 'User Management', 'Successful', '2025-03-07 16:55:26'),
 (180, 1, 11, 'Modified', 'Updated fields: department', '{\"email\": \"testingCase1@gmail.com\", \"last_name\": \"TestingCaseLast1\", \"department\": \"Office of the President\", \"first_name\": \"TestingCaseFirst1\"}', '{\"email\": \"testingCase1@gmail.com\", \"last_name\": \"TestingCaseLast1\", \"department\": \"Office of the Vice President for Mission and Identity\", \"first_name\": \"TestingCaseFirst1\"}', 'User Management', 'Successful', '2025-03-07 16:55:33'),
-(181, 1, 11, 'Modified', 'Updated fields: email, first_name, last_name', '{\"email\": \"testingCase1@gmail.com\", \"last_name\": \"TestingCaseLast1\", \"department\": \"Office of the Vice President for Mission and Identity\", \"first_name\": \"TestingCaseFirst1\"}', '{\"email\": \"testingCase123@gmail.com\", \"last_name\": \"TestingCaseLast123\", \"department\": \"Office of the Vice President for Mission and Identity\", \"first_name\": \"TestingCaseFirst123\"}', 'User Management', 'Successful', '2025-03-07 16:55:38');
+(181, 1, 11, 'Modified', 'Updated fields: email, first_name, last_name', '{\"email\": \"testingCase1@gmail.com\", \"last_name\": \"TestingCaseLast1\", \"department\": \"Office of the Vice President for Mission and Identity\", \"first_name\": \"TestingCaseFirst1\"}', '{\"email\": \"testingCase123@gmail.com\", \"last_name\": \"TestingCaseLast123\", \"department\": \"Office of the Vice President for Mission and Identity\", \"first_name\": \"TestingCaseFirst123\"}', 'User Management', 'Successful', '2025-03-07 16:55:38'),
+(182, 1, 20, 'Modified', 'Department details modified', '{\"Department_Acronym\":null,\"Department_Name\":null}', '{\"Department_Acronym\":\"URO\",\"Department_Name\":\"University Registrar\\u2019s Offices\"}', 'Departments', 'Successful', '2025-03-10 08:17:20'),
+(183, 1, 20, 'Modified', 'Department details modified', '{\"Department_Acronym\":null,\"Department_Name\":null}', '{\"Department_Acronym\":\"URO\",\"Department_Name\":\"University Registrar\\u2019s Offices\"}', 'Departments', 'Successful', '2025-03-10 08:17:54'),
+(184, 1, 20, 'Modified', 'Department details modified', '{\"Department_Acronym\":null,\"Department_Name\":null}', '{\"Department_Acronym\":\"URO\",\"Department_Name\":\"University Registrar\\u2019s Offices\"}', 'Departments', 'Successful', '2025-03-10 08:18:00'),
+(185, 1, 20, 'Modified', 'Department details modified', '{\"abbreviation\":\"URO\",\"department_name\":\"University Registrar\\u2019s Offices\"}', '{\"abbreviation\":\"URO\",\"department_name\":\"University Registrar\\u2019s Offices\"}', 'Departments', 'Successful', '2025-03-10 08:34:13'),
+(186, 1, 20, 'Modified', 'Department details modified', '{\"abbreviation\":\"URO\",\"department_name\":\"University Registrar\\u2019s Offices\"}', '{\"abbreviation\":\"URO\",\"department_name\":\"University Registrar\\u2019s Offices\"}', 'Departments', 'Successful', '2025-03-10 08:34:19'),
+(187, 1, 20, 'Modified', 'Department details modified', '{\"abbreviation\":\"URO\",\"department_name\":\"University Registrar\\u2019s Offices\"}', '{\"abbreviation\":\"URO\",\"department_name\":\"University Registrar\\u2019s Office\"}', 'Departments', 'Successful', '2025-03-10 08:34:22'),
+(188, 1, 1, 'Delete', 'Equipment has been deleted', '{\"id\":1,\"asset_tag\":\"23123\",\"asset_description_1\":\"1231\",\"asset_description_2\":\"123\",\"specifications\":\"123\",\"brand\":\"123\",\"model\":\"123\",\"serial_number\":\"123123\",\"date_created\":\"2025-03-13 16:38:00\"}', NULL, 'Equipment Management', 'Successful', '2025-03-10 09:02:35'),
+(189, 1, 41, 'Add', 'New department added', NULL, '{\"id\":\"41\",\"abbreviation\":\"test\",\"department_name\":\"test\"}', 'Department Management', 'Successful', '2025-03-10 09:27:11'),
+(190, 1, 41, 'Delete', 'Department deleted', '{\"id\":41,\"abbreviation\":\"test\",\"department_name\":\"test\"}', NULL, 'Departments', 'Successful', '2025-03-10 09:27:15'),
+(191, 1, 2, 'Add', 'New equipment added', NULL, '{\"asset_tag\":\"asd\",\"asset_description_1\":\"asd\",\"asset_description_2\":\"asd\",\"specifications\":\"asd\",\"brand\":\"asd\",\"model\":\"asd\",\"serial_number\":\"asd\",\"date_created\":\"2025-03-15T13:02\",\"remarks\":\"asd\"}', 'Equipment Details', 'Successful', '2025-03-10 13:03:02'),
+(192, 1, 4, 'Add', 'New equipment added', NULL, '{\"asset_tag\":\"asdasd\",\"asset_description_1\":\"asdasd\",\"asset_description_2\":\"asdasd\",\"specifications\":\"asdasd\",\"brand\":\"asdasd\",\"model\":\"asdasd\",\"serial_number\":\"asdasd\",\"date_created\":\"2025-03-10T13:05\",\"remarks\":\"asdasd\"}', 'Equipment Details', 'Successful', '2025-03-10 13:05:46'),
+(193, 1, 5, 'Add', 'New equipment added', NULL, '{\"asset_tag\":\"test\",\"asset_description_1\":\"test\",\"asset_description_2\":\"test\",\"specifications\":\"test\",\"brand\":\"test\",\"model\":\"test\",\"serial_number\":\"test\",\"date_created\":\"2025-03-10T13:15\",\"remarks\":\"testetset\"}', 'Equipment Details', 'Successful', '2025-03-10 13:15:53'),
+(194, 1, 7, 'Add', 'New equipment added', NULL, '{\"asset_tag\":\"asdasd123\",\"asset_description_1\":\"asdasdaa\",\"asset_description_2\":\"asdasdas\",\"specifications\":\"asdasd\",\"brand\":\"asdasd\",\"model\":\"asdasd\",\"serial_number\":\"asdasdasd\",\"date_created\":\"2025-03-23T13:36\",\"remarks\":\"asdasd\"}', 'Equipment Details', 'Successful', '2025-03-10 13:36:34'),
+(195, 1, 7, 'Modified', 'Equipment details modified', '{\"id\":7,\"asset_tag\":\"asdasd123\",\"asset_description_1\":\"asdasdaa\",\"asset_description_2\":\"asdasdas\",\"specifications\":\"asdasd\",\"brand\":\"asdasd\",\"model\":\"asdasd\",\"serial_number\":\"asdasdasd\",\"date_created\":\"2025-03-23 13:36:00\",\"remarks\":\"asdasd\"}', '{\"asset_tag\":\"asdasd123\",\"asset_description_1\":\"asdasdaa\",\"asset_description_2\":\"asdasdas\",\"specifications\":\"test\",\"brand\":\"asdasd\",\"model\":\"asdasd\",\"serial_number\":\"asdasdasd\",\"date_created\":\"2025-03-23T13:36\",\"remarks\":\"asdasd\"}', 'Equipment Details', 'Successful', '2025-03-10 13:41:36'),
+(196, 1, 5, 'Modified', 'Equipment details modified', '{\"id\":5,\"asset_tag\":\"test\",\"asset_description_1\":\"test\",\"asset_description_2\":\"test\",\"specifications\":\"test\",\"brand\":\"test\",\"model\":\"test\",\"serial_number\":\"test\",\"date_created\":\"2025-03-10 13:15:00\",\"remarks\":\"testetset\"}', '{\"asset_tag\":\"test\",\"asset_description_1\":\"test\",\"asset_description_2\":\"test\",\"specifications\":\"testing\",\"brand\":\"test\",\"model\":\"test\",\"serial_number\":\"test\",\"date_created\":\"2025-03-10T13:15\",\"remarks\":\"testetset\"}', 'Equipment Details', 'Successful', '2025-03-10 13:41:50'),
+(197, 1, 5, 'Modified', 'Equipment details modified', '{\"id\":5,\"asset_tag\":\"test\",\"asset_description_1\":\"test\",\"asset_description_2\":\"test\",\"specifications\":\"testing\",\"brand\":\"test\",\"model\":\"test\",\"serial_number\":\"test\",\"date_created\":\"2025-03-10 13:15:00\",\"remarks\":\"testetset\"}', '{\"asset_tag\":\"test123\",\"asset_description_1\":\"test123\",\"asset_description_2\":\"test123\",\"specifications\":\"testing123\",\"brand\":\"test123\",\"model\":\"test123\",\"serial_number\":\"test123\",\"date_created\":\"2025-03-10T13:15\",\"remarks\":\"testetset123\"}', 'Equipment Details', 'Successful', '2025-03-10 13:42:26'),
+(198, 1, 2, 'Delete', 'Equipment has been deleted', '{\"id\":2,\"asset_tag\":\"asd\",\"asset_description_1\":\"asd\",\"asset_description_2\":\"asd\",\"specifications\":\"asd\",\"brand\":\"asd\",\"model\":\"asd\",\"serial_number\":\"asd\",\"date_created\":\"2025-03-15 13:02:00\"}', NULL, 'Equipment Management', 'Successful', '2025-03-10 13:43:29'),
+(199, 1, 4, 'Delete', 'Equipment has been deleted', '{\"id\":4,\"asset_tag\":\"asdasd\",\"asset_description_1\":\"asdasd\",\"asset_description_2\":\"asdasd\",\"specifications\":\"asdasd\",\"brand\":\"asdasd\",\"model\":\"asdasd\",\"serial_number\":\"asdasd\",\"date_created\":\"2025-03-10 13:05:00\"}', NULL, 'Equipment Management', 'Successful', '2025-03-10 13:43:31'),
+(203, 1, 1, '', 'navithebear is now offline.', '{\"status\": \"Online\"}', '{\"status\": \"Offline\"}', 'User Management', 'Successful', '2025-03-11 09:40:30'),
+(204, 1, 1, '', 'navithebear is now online.', '{\"status\": \"Offline\"}', '{\"status\": \"Online\"}', 'User Management', 'Successful', '2025-03-11 09:40:35'),
+(205, 1, 1, '', 'navithebear is now offline.', '{\"status\": \"Online\"}', '{\"status\": \"Offline\"}', 'User Management', 'Successful', '2025-03-11 09:42:38'),
+(206, 1, 1, '', 'navithebear is now online.', '{\"status\": \"Offline\"}', '{\"status\": \"Online\"}', 'User Management', 'Successful', '2025-03-11 09:42:43'),
+(207, 1, 1, '', 'navithebear is now offline.', '{\"status\": \"Online\"}', '{\"status\": \"Offline\"}', 'User Management', 'Successful', '2025-03-11 10:01:31'),
+(208, 1, 1, '', 'navithebear is now online.', '{\"status\": \"Offline\"}', '{\"status\": \"Online\"}', 'User Management', 'Successful', '2025-03-11 10:01:36');
 
 -- --------------------------------------------------------
 
@@ -160,7 +184,7 @@ CREATE TABLE IF NOT EXISTS `charge_invoice` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `invoice_no` (`invoice_no`),
   KEY `po_no` (`po_no`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
 
@@ -177,7 +201,7 @@ CREATE TABLE IF NOT EXISTS `departments` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `department_name` (`department_name`),
   UNIQUE KEY `abbreviation` (`abbreviation`)
-) ENGINE=InnoDB AUTO_INCREMENT=41 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=42 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `departments`
@@ -203,7 +227,7 @@ INSERT INTO `departments` (`id`, `department_name`, `abbreviation`, `is_disabled
 (17, 'Basic Education School', 'SLU BEdS', 1),
 (18, 'Office of Institutional Development and Quality Assurance', 'OIDQA', 1),
 (19, 'University Libraries', 'UL', 1),
-(20, 'University Registrar\'s Office', 'URO', 1),
+(20, 'University Registrar’s Office', 'URO', 1),
 (21, 'University Research and Innovation Center', 'URIC', 1),
 (22, 'Office of the Vice President for Finance', 'OVPF', 1),
 (23, 'Asset Management and Inventory Control Office', 'AMICO', 1),
@@ -217,7 +241,7 @@ INSERT INTO `departments` (`id`, `department_name`, `abbreviation`, `is_disabled
 (31, 'Dental Clinic', 'DC', 1),
 (32, 'Guidance Center', 'GC', 1),
 (33, 'Human Resource Department', 'HRD', 1),
-(34, 'Students\' Residence Hall', 'SRH', 1),
+(34, 'Students’ Residence Hall', 'SRH', 1),
 (35, 'Medical Clinic', 'MC', 1),
 (36, 'Office for Legal Affairs', 'OLA', 1),
 (37, 'Office of Student Affairs', 'OSA', 1),
@@ -374,14 +398,7 @@ CREATE TABLE IF NOT EXISTS `purchase_order` (
   `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `po_no` (`po_no`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
---
--- Dumping data for table `purchase_order`
---
-
-INSERT INTO `purchase_order` (`id`, `po_no`, `date_of_order`, `no_of_units`, `item_specifications`, `date_created`, `is_disabled`) VALUES
-(1, '3246789', '2025-03-05', 3, 'qwe', '2025-03-04 09:50:19', 0);
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
 
@@ -401,7 +418,7 @@ CREATE TABLE IF NOT EXISTS `receive_report` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `rr_no` (`rr_no`),
   KEY `po_no` (`po_no`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
 
@@ -451,7 +468,7 @@ CREATE TABLE IF NOT EXISTS `role_changes` (
   PRIMARY KEY (`ChangeID`),
   KEY `UserID` (`UserID`),
   KEY `RoleID` (`RoleID`)
-) ENGINE=MyISAM AUTO_INCREMENT=41 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=50 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `role_changes`
@@ -467,7 +484,16 @@ INSERT INTO `role_changes` (`ChangeID`, `UserID`, `RoleID`, `Action`, `OldRoleNa
 (37, 1, 9, 'Delete', NULL, NULL, '2025-03-06 13:55:22', NULL, NULL, 0),
 (38, 1, 6, 'Modified', 'Auditor', 'Auditor', '2025-03-07 10:01:15', '[]', '[]', 0),
 (39, 1, 6, 'Modified', 'Auditor', 'Auditor', '2025-03-07 10:01:21', '[]', '[\"1|1\"]', 0),
-(40, 1, 4, 'Modified', 'User Manager', 'User Manager', '2025-03-07 10:04:51', '[null,null,null,null,null,null,null,null,null,null,null,null]', '[\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\"]', 0);
+(40, 1, 4, 'Modified', 'User Manager', 'User Manager', '2025-03-07 10:04:51', '[null,null,null,null,null,null,null,null,null,null,null,null]', '[\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\"]', 0),
+(41, 1, 1, 'Modified', 'TMDD-Dev', 'TMDD-Dev', '2025-03-10 16:02:21', '[\"2|3\",\"2|11\",\"2|10\",\"2|2\",\"2|5\",\"2|6\",\"2|12\",\"2|4\",\"2|8\",\"2|1\",\"2|9\",\"2|7\",\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\",\"4|3\",\"4|11\",\"4|10\",\"4|2\",\"4|5\",\"4|6\",\"4|12\",\"4|4\",\"4|8\",\"4|1\",\"4|9\",\"4|7\"]', '[\"1|1\",\"2|3\",\"2|11\",\"2|10\",\"2|2\",\"2|5\",\"2|6\",\"2|12\",\"2|4\",\"2|8\",\"2|1\",\"2|9\",\"2|7\",\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\",\"4|3\",\"4|11\",\"4|10\",\"4|2\",\"4|5\",\"4|6\",\"4|12\",\"4|4\",\"4|8\",\"4|1\",\"4|9\",\"4|7\"]', 0),
+(42, 1, 1, 'Modified', 'TMDD-Dev', 'TMDD-Dev', '2025-03-10 16:03:38', '[\"1|1\",\"2|3\",\"2|11\",\"2|10\",\"2|2\",\"2|5\",\"2|6\",\"2|12\",\"2|4\",\"2|8\",\"2|1\",\"2|9\",\"2|7\",\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\",\"4|3\",\"4|11\",\"4|10\",\"4|2\",\"4|5\",\"4|6\",\"4|12\",\"4|4\",\"4|8\",\"4|1\",\"4|9\",\"4|7\"]', '[\"2|3\",\"2|11\",\"2|10\",\"2|2\",\"2|5\",\"2|6\",\"2|12\",\"2|4\",\"2|8\",\"2|1\",\"2|9\",\"2|7\",\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\",\"4|3\",\"4|11\",\"4|10\",\"4|2\",\"4|5\",\"4|6\",\"4|12\",\"4|4\",\"4|8\",\"4|1\",\"4|9\",\"4|7\"]', 0),
+(43, 1, 1, 'Modified', 'TMDD-Dev', 'TMDD-Dev', '2025-03-10 16:03:41', '[\"2|3\",\"2|11\",\"2|10\",\"2|2\",\"2|5\",\"2|6\",\"2|12\",\"2|4\",\"2|8\",\"2|1\",\"2|9\",\"2|7\",\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\",\"4|3\",\"4|11\",\"4|10\",\"4|2\",\"4|5\",\"4|6\",\"4|12\",\"4|4\",\"4|8\",\"4|1\",\"4|9\",\"4|7\"]', '[\"1|1\",\"2|3\",\"2|11\",\"2|10\",\"2|2\",\"2|5\",\"2|6\",\"2|12\",\"2|4\",\"2|8\",\"2|1\",\"2|9\",\"2|7\",\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\",\"4|3\",\"4|11\",\"4|10\",\"4|2\",\"4|5\",\"4|6\",\"4|12\",\"4|4\",\"4|8\",\"4|1\",\"4|9\",\"4|7\"]', 0),
+(44, 1, 1, 'Modified', 'TMDD-Dev', 'TMDD-Dev', '2025-03-10 16:04:35', '[\"1|1\",\"1|1\",\"2|3\",\"2|11\",\"2|10\",\"2|2\",\"2|5\",\"2|6\",\"2|12\",\"2|4\",\"2|8\",\"2|1\",\"2|9\",\"2|7\",\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\",\"4|3\",\"4|11\",\"4|10\",\"4|2\",\"4|5\",\"4|6\",\"4|12\",\"4|4\",\"4|8\",\"4|1\",\"4|9\",\"4|7\"]', '[\"2|3\",\"2|11\",\"2|10\",\"2|2\",\"2|5\",\"2|6\",\"2|12\",\"2|4\",\"2|8\",\"2|1\",\"2|9\",\"2|7\",\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\",\"4|3\",\"4|11\",\"4|10\",\"4|2\",\"4|5\",\"4|6\",\"4|12\",\"4|4\",\"4|8\",\"4|1\",\"4|9\",\"4|7\"]', 0),
+(45, 1, 1, 'Modified', 'TMDD-Dev', 'TMDD-Dev', '2025-03-10 16:04:38', '[\"2|3\",\"2|11\",\"2|10\",\"2|2\",\"2|5\",\"2|6\",\"2|12\",\"2|4\",\"2|8\",\"2|1\",\"2|9\",\"2|7\",\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\",\"4|3\",\"4|11\",\"4|10\",\"4|2\",\"4|5\",\"4|6\",\"4|12\",\"4|4\",\"4|8\",\"4|1\",\"4|9\",\"4|7\"]', '[\"1|1\",\"2|3\",\"2|11\",\"2|10\",\"2|2\",\"2|5\",\"2|6\",\"2|12\",\"2|4\",\"2|8\",\"2|1\",\"2|9\",\"2|7\",\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\",\"4|3\",\"4|11\",\"4|10\",\"4|2\",\"4|5\",\"4|6\",\"4|12\",\"4|4\",\"4|8\",\"4|1\",\"4|9\",\"4|7\"]', 0),
+(46, 1, 1, 'Modified', 'TMDD-Dev', 'TMDD-Dev', '2025-03-10 16:04:56', '[\"1|1\",\"2|3\",\"2|11\",\"2|10\",\"2|2\",\"2|5\",\"2|6\",\"2|12\",\"2|4\",\"2|8\",\"2|1\",\"2|9\",\"2|7\",\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\",\"4|3\",\"4|11\",\"4|10\",\"4|2\",\"4|5\",\"4|6\",\"4|12\",\"4|4\",\"4|8\",\"4|1\",\"4|9\",\"4|7\"]', '[\"2|3\",\"2|11\",\"2|10\",\"2|2\",\"2|5\",\"2|6\",\"2|12\",\"2|4\",\"2|8\",\"2|1\",\"2|9\",\"2|7\",\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\",\"4|3\",\"4|11\",\"4|10\",\"4|2\",\"4|5\",\"4|6\",\"4|12\",\"4|4\",\"4|8\",\"4|1\",\"4|9\",\"4|7\"]', 0),
+(47, 1, 1, 'Modified', 'TMDD-Dev', 'TMDD-Dev', '2025-03-10 16:05:23', '[\"2|3\",\"2|11\",\"2|10\",\"2|2\",\"2|5\",\"2|6\",\"2|12\",\"2|4\",\"2|8\",\"2|1\",\"2|9\",\"2|7\",\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\",\"4|3\",\"4|11\",\"4|10\",\"4|2\",\"4|5\",\"4|6\",\"4|12\",\"4|4\",\"4|8\",\"4|1\",\"4|9\",\"4|7\"]', '[\"1|1\",\"2|3\",\"2|11\",\"2|10\",\"2|2\",\"2|5\",\"2|6\",\"2|12\",\"2|4\",\"2|8\",\"2|1\",\"2|9\",\"2|7\",\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\",\"4|3\",\"4|11\",\"4|10\",\"4|2\",\"4|5\",\"4|6\",\"4|12\",\"4|4\",\"4|8\",\"4|1\",\"4|9\",\"4|7\"]', 0),
+(48, 1, 1, 'Modified', 'TMDD-Dev', 'TMDD-Dev', '2025-03-10 16:05:38', '[\"1|1\",\"2|3\",\"2|11\",\"2|10\",\"2|2\",\"2|5\",\"2|6\",\"2|12\",\"2|4\",\"2|8\",\"2|1\",\"2|9\",\"2|7\",\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\",\"4|3\",\"4|11\",\"4|10\",\"4|2\",\"4|5\",\"4|6\",\"4|12\",\"4|4\",\"4|8\",\"4|1\",\"4|9\",\"4|7\"]', '[\"2|3\",\"2|11\",\"2|10\",\"2|2\",\"2|5\",\"2|6\",\"2|12\",\"2|4\",\"2|8\",\"2|1\",\"2|9\",\"2|7\",\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\",\"4|3\",\"4|11\",\"4|10\",\"4|2\",\"4|5\",\"4|6\",\"4|12\",\"4|4\",\"4|8\",\"4|1\",\"4|9\",\"4|7\"]', 0),
+(49, 1, 1, 'Modified', 'TMDD-Dev', 'TMDD-Dev', '2025-03-10 16:05:47', '[\"2|3\",\"2|11\",\"2|10\",\"2|2\",\"2|5\",\"2|6\",\"2|12\",\"2|4\",\"2|8\",\"2|1\",\"2|9\",\"2|7\",\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\",\"4|3\",\"4|11\",\"4|10\",\"4|2\",\"4|5\",\"4|6\",\"4|12\",\"4|4\",\"4|8\",\"4|1\",\"4|9\",\"4|7\"]', '[\"1|1\",\"2|3\",\"2|11\",\"2|10\",\"2|2\",\"2|5\",\"2|6\",\"2|12\",\"2|4\",\"2|8\",\"2|1\",\"2|9\",\"2|7\",\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\",\"4|3\",\"4|11\",\"4|10\",\"4|2\",\"4|5\",\"4|6\",\"4|12\",\"4|4\",\"4|8\",\"4|1\",\"4|9\",\"4|7\"]', 0);
 
 -- --------------------------------------------------------
 
@@ -485,7 +511,7 @@ CREATE TABLE IF NOT EXISTS `role_module_privileges` (
   KEY `role_id` (`role_id`),
   KEY `module_id` (`module_id`),
   KEY `fk_rmp_privilege` (`privilege_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=184 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=516 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `role_module_privileges`
@@ -516,44 +542,6 @@ INSERT INTO `role_module_privileges` (`id`, `role_id`, `module_id`, `privilege_i
 (73, 5, 2, 10),
 (74, 5, 2, 11),
 (75, 5, 2, 12),
-(125, 1, 2, 3),
-(126, 1, 2, 11),
-(127, 1, 2, 10),
-(128, 1, 2, 2),
-(129, 1, 2, 5),
-(130, 1, 2, 6),
-(131, 1, 2, 12),
-(132, 1, 2, 4),
-(133, 1, 2, 8),
-(134, 1, 2, 1),
-(135, 1, 2, 9),
-(136, 1, 2, 7),
-(137, 1, 3, 3),
-(138, 1, 3, 11),
-(139, 1, 3, 10),
-(140, 1, 3, 2),
-(141, 1, 3, 5),
-(142, 1, 3, 6),
-(143, 1, 3, 12),
-(144, 1, 3, 4),
-(145, 1, 3, 8),
-(146, 1, 3, 1),
-(147, 1, 3, 9),
-(148, 1, 3, 7),
-(149, 1, 4, 3),
-(150, 1, 4, 11),
-(151, 1, 4, 10),
-(152, 1, 4, 2),
-(153, 1, 4, 5),
-(154, 1, 4, 6),
-(155, 1, 4, 12),
-(156, 1, 4, 4),
-(157, 1, 4, 8),
-(158, 1, 4, 1),
-(159, 1, 4, 9),
-(160, 1, 4, 7),
-(170, NULL, 1, 1),
-(171, 6, 1, 1),
 (172, 4, 3, 3),
 (173, 4, 3, 11),
 (174, 4, 3, 10),
@@ -565,7 +553,44 @@ INSERT INTO `role_module_privileges` (`id`, `role_id`, `module_id`, `privilege_i
 (180, 4, 3, 8),
 (181, 4, 3, 1),
 (182, 4, 3, 9),
-(183, 4, 3, 7);
+(183, 4, 3, 7),
+(479, 1, 1, 1),
+(480, 1, 2, 3),
+(481, 1, 2, 11),
+(482, 1, 2, 10),
+(483, 1, 2, 2),
+(484, 1, 2, 5),
+(485, 1, 2, 6),
+(486, 1, 2, 12),
+(487, 1, 2, 4),
+(488, 1, 2, 8),
+(489, 1, 2, 1),
+(490, 1, 2, 9),
+(491, 1, 2, 7),
+(492, 1, 3, 3),
+(493, 1, 3, 11),
+(494, 1, 3, 10),
+(495, 1, 3, 2),
+(496, 1, 3, 5),
+(497, 1, 3, 6),
+(498, 1, 3, 12),
+(499, 1, 3, 4),
+(500, 1, 3, 8),
+(501, 1, 3, 1),
+(502, 1, 3, 9),
+(503, 1, 3, 7),
+(504, 1, 4, 3),
+(505, 1, 4, 11),
+(506, 1, 4, 10),
+(507, 1, 4, 2),
+(508, 1, 4, 5),
+(509, 1, 4, 6),
+(510, 1, 4, 12),
+(511, 1, 4, 4),
+(512, 1, 4, 8),
+(513, 1, 4, 1),
+(514, 1, 4, 9),
+(515, 1, 4, 7);
 
 -- --------------------------------------------------------
 
@@ -594,7 +619,7 @@ CREATE TABLE IF NOT EXISTS `users` (
 --
 
 INSERT INTO `users` (`id`, `username`, `email`, `password`, `first_name`, `last_name`, `date_created`, `status`, `is_disabled`) VALUES
-(1, 'navithebear', 'navi@example.com', '$2y$12$2esj1uaDmbD3K6Fi.C0CiuOye96x8OjARwTc82ViEAPvmx4b1cL0S', 'navi', 'slu', '2025-02-19 01:19:52', 'Offline', 0),
+(1, 'navithebear', 'navi@example.com', '$2y$12$2esj1uaDmbD3K6Fi.C0CiuOye96x8OjARwTc82ViEAPvmx4b1cL0S', 'navi', 'slu', '2025-02-19 01:19:52', 'Online', 0),
 (2, 'userman', 'um@example.com', '$2y$12$wE3B0Dq4z0Bd1AHXf4gumexeObTqWXm7aASm7PnkCrtiL.iIfObS.', 'user', 'manager', '2025-02-19 05:40:35', 'Offline', 0),
 (3, 'equipman', 'em@example.com', '$2y$12$J0iy9bwoalbG2/NkqDZchuLU4sWramGpsw1EsSZ6se0CefM/sqpZq', 'equipment', 'manager', '2025-02-19 05:40:35', 'Offline', 0),
 (4, 'rpman', 'rp@example.com', '$2y$12$dWnJinU4uO7ETYIKi9cL0uN4wJgjACaF.q0Pbkr5yNUK2q1HUQk8G', 'ropriv', 'manager', '2025-02-19 05:41:59', 'Offline', 0),
@@ -813,7 +838,7 @@ CREATE TRIGGER `users_status_change` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
             detailsText,
             JSON_OBJECT('status', OLD.status),
             JSON_OBJECT('status', NEW.status),
-            'users',
+            'User Management',
             'successful',
             NOW()
         );

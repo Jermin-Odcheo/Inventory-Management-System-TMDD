@@ -1,7 +1,9 @@
+<div id="toastContainer"></div>
 
 <footer class="footer">
     <p class="footer-text">&copy; 2025 TMDD Interns</p>
 </footer>
+<script src="<?php echo BASE_URL; ?>src/control/js/toast.js"></script>
 
 <style>
     /* Base styles for the footer */
@@ -25,6 +27,16 @@
 </style>
 
 <script>
+    $(document).ready(function() {
+        <?php if (!empty($_SESSION['success'])) { ?>
+        showToast("<?php echo addslashes($_SESSION['success']); ?>", 'success');
+        <?php unset($_SESSION['success']); ?>
+        <?php } ?>
+        <?php if (!empty($_SESSION['error'])) { ?>
+        showToast("<?php echo addslashes($_SESSION['error']); ?>", 'error');
+        <?php unset($_SESSION['error']); ?>
+        <?php } ?>
+    });
     /**
      * Parses an rgb/rgba string (e.g. "rgb(255, 255, 255)") and returns its brightness.
      * Uses the formula: brightness = (299*R + 587*G + 114*B) / 1000.
