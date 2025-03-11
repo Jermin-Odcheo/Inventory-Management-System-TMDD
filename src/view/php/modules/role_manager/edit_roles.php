@@ -20,14 +20,11 @@ if (!$role) {
 }
 
 // 3) Fetch current role privileges.
-// We encode each current combination as "module_id|privilege_id" for easy checking in the form.
 $stmtCurrent = $pdo->prepare("SELECT CONCAT(module_id, '|', privilege_id) AS combo FROM role_module_privileges WHERE role_id = ?");
 $stmtCurrent->execute([$roleID]);
 $currentPrivileges = $stmtCurrent->fetchAll(PDO::FETCH_COLUMN);
 
 // 4) Fetch all modules.
-// We expect these to be exactly the four modules:
-// 1. User Management, 2. Audit, 3. Roles and Privileges, 4. Equipment Management.
 $stmtModules = $pdo->query("SELECT * FROM modules ORDER BY id");
 $modules = $stmtModules->fetchAll(PDO::FETCH_ASSOC);
 
@@ -38,7 +35,6 @@ $privileges = $stmtPrivileges->fetchAll(PDO::FETCH_ASSOC);
 // 6) Handle POST updates (AJAX submission).
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $roleName = trim($_POST['role_name']);
-    // Expect each checkbox value as "module_id|privilege_id"
     $selected = $_POST['privileges'] ?? [];
 
     if (empty($roleName)) {
@@ -61,19 +57,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $stmtInsert = $pdo->prepare("INSERT INTO role_module_privileges (role_id, module_id, privilege_id) VALUES (?, ?, ?)");
         foreach ($selected as $value) {
             list($moduleID, $privilegeID) = explode('|', $value);
-            // Ensure moduleID is valid; if empty (shouldn't happen), set to NULL.
             $moduleID = ($moduleID === '') ? NULL : $moduleID;
             $stmtInsert->execute([$roleID, $moduleID, $privilegeID]);
         }
 
-        // (Optional) Log changes in role_changes table.
+        // Log changes in role_changes table.
         $stmtLog = $pdo->prepare("INSERT INTO role_changes (UserID, RoleID, Action, OldRoleName, NewRoleName, OldPrivileges, NewPrivileges) VALUES (?, ?, 'Modified', ?, ?, ?, ?)");
-        // For logging, we store the raw arrays.
         $stmtLog->execute([
             $_SESSION['user_id'],
             $roleID,
-            $role['role_name'], // old role name
-            $roleName,          // new role name
+            $role['role_name'],
+            $roleName,
             json_encode($currentPrivileges),
             json_encode($selected)
         ]);
@@ -106,127 +100,203 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 }
 ?>
 
-<!-- The HTML below is the inner structure for your modal in manage_roles.php -->
+<!-- Simplified Modern Edit Role Modal -->
+<div class="modal-content border-0 shadow-lg rounded-4">
+  <!-- Clean header with minimal design -->
+  <div class="modal-header bg-primary py-3 px-4 border-0">
+    <h5 class="modal-title text-white m-0 d-flex align-items-center">
+      <i class="bi bi-shield-lock me-2"></i>Edit Role
+    </h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+  </div>
 
-<div class="modal-header">
-    <h5 class="modal-title">Edit Role</h5>
-    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-</div>
-
-<div class="modal-body">
+  <div class="modal-body p-4">
     <form id="editRoleForm" method="POST">
-        <!-- Role Name -->
-        <div class="mb-3">
-            <label for="role_name" class="form-label">Role Name</label>
-            <input type="text" class="form-control" id="role_name" name="role_name" value="<?php echo htmlspecialchars($role['role_name']); ?>" required>
-        </div>
-
-        <!-- For each module, list privileges as checkboxes.
-             For the Audit module, only display the "Track" privilege. -->
-        <?php foreach ($modules as $mod): ?>
-            <div class="mb-2">
-                <div class="small fw-bold text-secondary"><?php echo htmlspecialchars($mod['module_name']); ?></div>
-                <div class="d-flex flex-wrap">
-                    <?php if (strtolower($mod['module_name']) === 'audit'): ?>
-                        <?php
-                        // Only show the privilege "Track" for Audit.
-                        foreach ($privileges as $priv):
-                            if (strtolower($priv['priv_name']) === 'track'):
-                                $value = $mod['id'] . '|' . $priv['id'];
-                                ?>
-                                <div class="form-check form-check-inline me-2">
-                                    <input class="form-check-input" type="checkbox" name="privileges[]" value="<?php echo $value; ?>" id="priv_<?php echo $mod['id'] . '_' . $priv['id']; ?>"
-                                        <?php echo in_array($value, $currentPrivileges) ? 'checked' : ''; ?>>
-                                    <label class="form-check-label small" for="priv_<?php echo $mod['id'] . '_' . $priv['id']; ?>">
-                                        <?php echo htmlspecialchars($priv['priv_name']); ?>
-                                    </label>
-                                </div>
-                            <?php endif;
-                        endforeach; ?>
-                    <?php else: ?>
-                        <?php
-                        // For other modules, display all privileges.
-                        foreach ($privileges as $priv):
-                            $value = $mod['id'] . '|' . $priv['id'];
-                            ?>
-                            <div class="form-check form-check-inline me-2">
-                                <input class="form-check-input" type="checkbox" name="privileges[]" value="<?php echo $value; ?>" id="priv_<?php echo $mod['id'] . '_' . $priv['id']; ?>"
-                                    <?php echo in_array($value, $currentPrivileges) ? 'checked' : ''; ?>>
-                                <label class="form-check-label small" for="priv_<?php echo $mod['id'] . '_' . $priv['id']; ?>">
-                                    <?php echo htmlspecialchars($priv['priv_name']); ?>
-                                </label>
-                            </div>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </div>
-            </div>
+      <!-- Role name input -->
+      <div class="form-floating mb-4">
+        <input type="text" class="form-control" 
+               id="role_name" name="role_name" placeholder="Role Name"
+               value="<?php echo htmlspecialchars($role['role_name']); ?>" required>
+        <label for="role_name">Role Name</label>
+      </div>
+      
+      <!-- Permissions section -->
+      <h6 class="mb-3">Permissions</h6>
+      
+      <!-- Module Navigation Tabs - Simplified -->
+      <ul class="nav nav-tabs mb-3" id="modulesTabs" role="tablist">
+        <?php foreach ($modules as $index => $mod): ?>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link <?php echo ($index === 0) ? 'active' : ''; ?>" 
+                  id="module-<?php echo $mod['id']; ?>-tab" 
+                  data-bs-toggle="tab" 
+                  data-bs-target="#module-<?php echo $mod['id']; ?>" 
+                  type="button" role="tab">
+            <?php echo htmlspecialchars($mod['module_name']); ?>
+          </button>
+        </li>
         <?php endforeach; ?>
+      </ul>
+      
+      <!-- Tab Content - Simplified -->
+      <div class="tab-content" id="modulesContent">
+        <?php foreach ($modules as $index => $mod): ?>
+        <div class="tab-pane fade <?php echo ($index === 0) ? 'show active' : ''; ?>" 
+             id="module-<?php echo $mod['id']; ?>" 
+             role="tabpanel">
+          
+          <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center py-2">
+              <span><?php echo htmlspecialchars($mod['module_name']); ?></span>
+              <span class="badge bg-light text-primary">Module</span>
+            </div>
+            
+            <div class="card-body">
+              <div class="row g-3">
+                <?php 
+                // Determine which privileges to show
+                $showPrivileges = strtolower($mod['module_name']) === 'audit' ? 
+                  array_filter($privileges, function($p) { return strtolower($p['priv_name']) === 'track'; }) : 
+                  $privileges;
+                
+                foreach ($showPrivileges as $priv):
+                  if (strtolower($mod['module_name']) !== 'audit' || strtolower($priv['priv_name']) === 'track'):
+                    $value = $mod['id'] . '|' . $priv['id'];
+                    
+                    // Simplified icon selection
+                    $iconClass = '';
+                    switch(strtolower($priv['priv_name'])) {
+                      case 'view': $iconClass = 'bi-eye'; break;
+                      case 'create': $iconClass = 'bi-plus-circle'; break;
+                      case 'edit': $iconClass = 'bi-pencil'; break;
+                      case 'delete': $iconClass = 'bi-trash'; break;
+                      case 'track': $iconClass = 'bi-graph-up'; break;
+                      default: $iconClass = 'bi-shield-check';
+                    }
+                ?>
+                <div class="col-md-4 col-lg-3">
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           name="privileges[]" value="<?php echo $value; ?>" 
+                           id="priv_<?php echo $mod['id'] . '_' . $priv['id']; ?>"
+                           <?php echo in_array($value, $currentPrivileges) ? 'checked' : ''; ?>>
+                    <label class="form-check-label" for="priv_<?php echo $mod['id'] . '_' . $priv['id']; ?>">
+                      <i class="bi <?php echo $iconClass; ?> me-1"></i>
+                      <?php echo htmlspecialchars($priv['priv_name']); ?>
+                    </label>
+                  </div>
+                </div>
+                <?php endif; endforeach; ?>
+              </div>
+            </div>
+          </div>
+        </div>
+        <?php endforeach; ?>
+      </div>
     </form>
+  </div>
+  
+  <!-- Footer with actions -->
+  <div class="modal-footer border-top py-3">
+    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+    <button type="submit" form="editRoleForm" class="btn btn-primary">
+      <i class="bi bi-check2 me-1"></i>Update Role
+    </button>
+  </div>
 </div>
 
-<div class="modal-footer">
-    <button type="submit" form="editRoleForm" class="btn btn-primary">Update Role</button>
-</div>
+<!-- Add this to your CSS -->
+<style>
+.nav-tabs .nav-link {
+  color: #495057;
+  font-weight: 500;
+}
+.nav-tabs .nav-link.active {
+  color: #0d6efd;
+  border-bottom-color: #0d6efd;
+  border-bottom-width: 2px;
+}
+.form-check-input:checked {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+}
+</style>
 
 <script>
-    // Handle AJAX form submission.
-    $('#editRoleForm').on('submit', function(e) {
-        e.preventDefault();
-        const submitButton = $(this).find('button[type="submit"]');
-        submitButton.prop('disabled', true);
+$('#editRoleForm').on('submit', function(e) {
+  e.preventDefault();
+  const submitBtn = $('button[type="submit"]', this);
+  
+  submitBtn.html('<span class="spinner-border spinner-border-sm me-2"></span> Updating...');
+  submitBtn.prop('disabled', true);
 
-        $.ajax({
-            url: 'edit_roles.php?id=<?php echo $roleID; ?>',
-            type: 'POST',
-            data: $(this).serialize(),
-            dataType: 'json',
-            success: function(response) {
-                if (response.success) {
-                    // Optionally update the role row display in manage_roles.php.
-                    const row = $('tr[data-role-id="' + response.role_id + '"]');
-                    row.find('.role-name').text(response.role_name);
-                    const privilegeCell = row.find('.privilege-list');
-                    privilegeCell.empty();
-
-                    // Group updated privileges by module.
-                    const grouped = {};
-                    response.privileges.forEach(function(item) {
-                        if (!grouped[item.module_name]) {
-                            grouped[item.module_name] = [];
-                        }
-                        grouped[item.module_name].push(item.priv_name);
-                    });
-                    Object.keys(grouped).forEach(function(moduleName) {
-                        privilegeCell.append(
-                            $('<div>').html('<strong>' + moduleName + '</strong>: ' + grouped[moduleName].join(', '))
-                        );
-                    });
-
-                    $('#editRoleModal').modal('hide');
-                    showAlert('success', 'Role updated successfully!');
-                } else {
-                    showAlert('danger', 'Error: ' + (response.message || 'Unknown error'));
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('AJAX Error:', status, error);
-                console.error('Response:', xhr.responseText);
-                showAlert('danger', 'Error processing request.');
-            },
-            complete: function() {
-                submitButton.prop('disabled', false);
-            }
+  $.ajax({
+    url: 'edit_roles.php?id=<?php echo $roleID; ?>',
+    type: 'POST',
+    data: $(this).serialize(),
+    dataType: 'json',
+    success: function(response) {
+      if (response.success) {
+        // Update table row and close modal
+        const row = $('tr[data-role-id="' + response.role_id + '"]');
+        row.find('.role-name').text(response.role_name);
+        
+        // Update privileges display
+        const privilegeCell = row.find('.privilege-list');
+        privilegeCell.empty();
+        
+        // Group by module
+        const grouped = {};
+        response.privileges.forEach(function(item) {
+          if (!grouped[item.module_name]) grouped[item.module_name] = [];
+          grouped[item.module_name].push(item.priv_name);
         });
-    });
+        
+        Object.keys(grouped).forEach(function(moduleName) {
+          privilegeCell.append(
+            $('<div class="mb-1">').html('<b>' + moduleName + ':</b> ' + grouped[moduleName].join(', '))
+          );
+        });
 
-    // Optional: Global AJAX error logging.
-    $(document).ajaxError(function(event, xhr, settings, error) {
-        console.group('AJAX Error Details');
-        console.log('Event:', event);
-        console.log('XHR:', xhr);
-        console.log('Settings:', settings);
-        console.log('Error:', error);
-        console.log('Response Text:', xhr.responseText);
-        console.groupEnd();
-    });
+        $('#editRoleModal').modal('hide');
+        showToast('success', 'Role Updated', 'Permissions updated successfully');
+      } else {
+        showToast('danger', 'Update Failed', response.message || 'An error occurred');
+      }
+    },
+    error: function() {
+      showToast('danger', 'System Error', 'Please try again later');
+    },
+    complete: function() {
+      submitBtn.html('<i class="bi bi-check2 me-1"></i>Update Role');
+      submitBtn.prop('disabled', false);
+    }
+  });
+});
+
+function showToast(type, title, message) {
+  const toastId = 'toast-' + Date.now();
+  const toast = `
+    <div id="${toastId}" class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body">
+          <b>${title}</b> - ${message}
+        </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
+    </div>
+  `;
+  
+  if (!$('#toast-container').length) {
+    $('body').append('<div id="toast-container" class="toast-container position-fixed top-0 end-0 p-3"></div>');
+  }
+  
+  $('#toast-container').append(toast);
+  
+  const toastElement = new bootstrap.Toast(document.getElementById(toastId), {
+    autohide: true,
+    delay: 3000
+  });
+  toastElement.show();
+}
 </script>
