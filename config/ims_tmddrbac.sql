@@ -11,7 +11,6 @@ SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
 
-
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
@@ -20,6 +19,8 @@ SET time_zone = "+00:00";
 --
 -- Database: `ims_tmddrbac`
 --
+CREATE DATABASE IF NOT EXISTS `ims_tmddrbac` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+USE `ims_tmddrbac`;
 
 DELIMITER $$
 --
@@ -264,26 +265,22 @@ CREATE TABLE IF NOT EXISTS `equipment_details` (
   `serial_number` varchar(100) DEFAULT NULL,
   `invoice_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
   `rr_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
-  `equipment_location_id` int DEFAULT NULL,
-  `equipment_status_id` int DEFAULT NULL,
+  `location` varchar(255) DEFAULT NULL,
+  `accountable_individual` varchar(255) DEFAULT NULL,
   `remarks` text,
   `date_created` datetime DEFAULT CURRENT_TIMESTAMP,
   `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `asset_tag` (`asset_tag`),
-  UNIQUE KEY `equipment_location_id` (`equipment_location_id`) USING BTREE,
-  UNIQUE KEY `equipment_status_id` (`equipment_status_id`) USING BTREE,
-  KEY `invoice_no` (`invoice_no`),
-  KEY `rr_no` (`rr_no`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  KEY `invoice_no` (`invoice_no`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `equipment_details`
 --
 
-INSERT INTO `equipment_details` (`id`, `asset_tag`, `asset_description_1`, `asset_description_2`, `specifications`, `brand`, `model`, `serial_number`, `invoice_no`, `rr_no`, `equipment_location_id`, `equipment_status_id`, `remarks`, `date_created`, `is_disabled`) VALUES
-(5, 'test123', 'test123', 'test123', 'testing123', 'test123', 'test123', 'test123', NULL, NULL, NULL, NULL, 'testetset123', '2025-03-10 13:15:00', 0),
-(7, 'asdasd123', 'asdasdaa', 'asdasdas', 'test', 'asdasd', 'asdasd', 'asdasdasd', NULL, NULL, NULL, NULL, 'asdasd', '2025-03-23 13:36:00', 0);
+INSERT INTO `equipment_details` (`id`, `asset_tag`, `asset_description_1`, `asset_description_2`, `specifications`, `brand`, `model`, `serial_number`, `invoice_no`, `rr_no`, `location`, `accountable_individual`, `remarks`, `date_created`, `is_disabled`) VALUES
+(1, '23123', '1231', '123', '123', '123', '123', '123123', NULL, NULL, NULL, NULL, '123123', '2025-03-13 16:38:00', 0);
 
 -- --------------------------------------------------------
 
@@ -303,10 +300,11 @@ CREATE TABLE IF NOT EXISTS `equipment_location` (
   `remarks` text,
   `date_created` datetime DEFAULT CURRENT_TIMESTAMP,
   `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
-  PRIMARY KEY (`equipment_location_id`) USING BTREE,
-  UNIQUE KEY `asset_tag` (`asset_tag`) USING BTREE,
-  KEY `department_id` (`department_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  PRIMARY KEY (`equipment_location_id`),
+  UNIQUE KEY `asset_tag` (`asset_tag`),
+  KEY `department_id` (`department_id`),
+  CONSTRAINT `equipment_location_ibfk_2` FOREIGN KEY (`department_id`) REFERENCES `departments` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
 
@@ -911,52 +909,25 @@ ALTER TABLE `charge_invoice`
 -- Constraints for table `equipment_details`
 --
 ALTER TABLE `equipment_details`
-  ADD CONSTRAINT `equipment_details_ibfk_1` FOREIGN KEY (`invoice_no`) REFERENCES `charge_invoice` (`invoice_no`) ON DELETE SET NULL ON UPDATE CASCADE,
-  ADD CONSTRAINT `equipment_details_ibfk_2` FOREIGN KEY (`rr_no`) REFERENCES `receive_report` (`rr_no`) ON DELETE SET NULL ON UPDATE CASCADE,
-  ADD CONSTRAINT `equipment_details_ibfk_3` FOREIGN KEY (`equipment_location_id`) REFERENCES `equipment_location` (`equipment_location_id`) ON DELETE SET NULL ON UPDATE CASCADE,
-  ADD CONSTRAINT `equipment_details_ibfk_4` FOREIGN KEY (`equipment_status_id`) REFERENCES `equipment_status` (`equipment_status_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+  ADD CONSTRAINT `equipment_details_ibfk_1` FOREIGN KEY (`invoice_no`) REFERENCES `charge_invoice` (`invoice_no`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 --
 -- Constraints for table `equipment_location`
 --
-ALTER TABLE `equipment_location`
-  ADD CONSTRAINT `equipment_location_ibfk_1` FOREIGN KEY (`asset_tag`) REFERENCES `equipment_details` (`asset_tag`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Constraints for table `equipment_status`
---
-ALTER TABLE `equipment_status`
-  ADD CONSTRAINT `equipment_status_ibfk_1` FOREIGN KEY (`asset_tag`) REFERENCES `equipment_details` (`asset_tag`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Constraints for table `receive_report`
---
-ALTER TABLE `receive_report`
-  ADD CONSTRAINT `receive_report_ibfk_1` FOREIGN KEY (`po_no`) REFERENCES `purchase_order` (`po_no`) ON DELETE SET NULL ON UPDATE CASCADE;
-
---
--- Constraints for table `role_module_privileges`
---
-ALTER TABLE `role_module_privileges`
-  ADD CONSTRAINT `fk_rmp_module` FOREIGN KEY (`module_id`) REFERENCES `modules` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `fk_rmp_privilege` FOREIGN KEY (`privilege_id`) REFERENCES `privileges` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `fk_rmp_role` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE;
-
---
--- Constraints for table `user_departments`
---
-ALTER TABLE `user_departments`
-  ADD CONSTRAINT `user_departments_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `user_departments_ibfk_2` FOREIGN KEY (`department_id`) REFERENCES `departments` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Constraints for table `user_roles`
---
-ALTER TABLE `user_roles`
-  ADD CONSTRAINT `user_roles_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `user_roles_ibfk_2` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-COMMIT;
-
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+DROP TABLE IF EXISTS `equipment_location`;
+CREATE TABLE IF NOT EXISTS `equipment_location` (
+  `equipment_location_id` int NOT NULL AUTO_INCREMENT,
+  `asset_tag` varchar(50) NOT NULL,
+  `building_loc` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `floor_no` varchar(50) DEFAULT NULL,
+  `specific_area` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci,
+  `person_responsible` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `department_id` int DEFAULT NULL,
+  `remarks` text,
+  `date_created` datetime DEFAULT CURRENT_TIMESTAMP,
+  `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`equipment_location_id`),
+  UNIQUE KEY `asset_tag` (`asset_tag`),
+  KEY `department_id` (`department_id`),
+  CONSTRAINT `equipment_location_ibfk_2` FOREIGN KEY (`department_id`) REFERENCES `departments` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

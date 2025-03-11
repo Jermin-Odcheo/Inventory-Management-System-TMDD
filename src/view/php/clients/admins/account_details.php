@@ -108,11 +108,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/account_details.css">
     <title>Account Details</title>
     <style>
-        body {
-            font-family: 'Poppins', sans-serif;
-            background-color: #f5f8fa;
+        html, body {
+            overflow: hidden; /* Prevent scrolling on the root elements */
+            height: 100%;
             margin: 0;
             padding: 0;
+        }
+
+        /* Apply to all potential scrollable containers */
+        .main-content, .container, .sidebar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+
+        /* Chrome, Safari and Opera specific scrollbar hiding */
+        .main-content::-webkit-scrollbar,
+        .container::-webkit-scrollbar,
+        .sidebar::-webkit-scrollbar,
+            body::-webkit-scrollbar,
+            html::-webkit-scrollbar {
+            display: none;
         }
         
         .main-content {
@@ -457,7 +472,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
         
         <!-- Danger Zone Section -->
         <div class="danger-zone">
-            <h3>Danger Zone</h3>
             <p>Permanently delete your account and all associated data. This action cannot be undone.</p>
             <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
                 Delete My Account
