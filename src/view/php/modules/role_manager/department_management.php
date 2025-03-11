@@ -256,13 +256,32 @@ try {
 } catch (PDOException $e) {
     $errors[] = "Error retrieving departments: " . $e->getMessage();
 }
+
+// -----------------------
+// Live search departments
+// -----------------------
+$q = isset($_GET["q"]) ? $conn->real_escape_string($_GET["q"]) : '';
+
+// Only search if query is not empty
+if (strlen($q) > 0) {
+    $sql = "SELECT name FROM departments WHERE name LIKE '%$q%' LIMIT 10";
+    $result = $conn->query($sql);
+
+    if ($result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            echo "<div class='result-item'>" . htmlspecialchars($row['name']) . "</div>";
+        }
+    } else {
+        echo "<div class='result-item'>No results found</div>";
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
-    <title>Equipment Location Management</title>
+    <title>Department Management</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
@@ -324,7 +343,7 @@ try {
                 <div class="card shadow-sm">
                     <div class="card-header d-flex justify-content-between align-items-center bg-dark text-white">
                         <span><i class="bi bi-list-ul"></i> List of Departments</span>
-                        <div class="input-group w-auto">
+                        <div class="input-group w-auto" div id="livesearch">
                             <span class="input-group-text"><i class="bi bi-search"></i></span>
                             <input type="text" class="form-control" placeholder="Search..." id="eqSearch">
                         </div>
@@ -619,6 +638,24 @@ try {
     }
 
     document.addEventListener("DOMContentLoaded", fetchLatestDepartmentID);
+
+    //live search
+    function showResult(str) {
+  if (str.length==0) {
+    document.getElementById("livesearch").innerHTML="";
+    document.getElementById("livesearch").style.border="0px";
+    return;
+  }
+  var xmlhttp=new XMLHttpRequest();
+  xmlhttp.onreadystatechange=function() {
+    if (this.readyState==4 && this.status==200) {
+      document.getElementById("livesearch").innerHTML=this.responseText;
+      document.getElementById("livesearch").style.border="1px solid #A5ACB2";
+    }
+  }
+  xmlhttp.open("GET","department_management.php?q="+str,true);
+  xmlhttp.send();
+}
 </script>
 </body>
 
