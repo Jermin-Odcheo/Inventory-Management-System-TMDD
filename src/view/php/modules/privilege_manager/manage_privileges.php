@@ -108,6 +108,89 @@ try {
             margin: 2px;
             display: inline-block;
         }
+        /* Toast styling */
+        #toastContainer {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            width: 350px;
+        }
+        .custom-toast {
+            margin-bottom: 10px;
+            min-width: 300px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+            display: none;
+            position: relative;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        .custom-toast.show {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .toast-success {
+            background-color: #d4edda;
+            color: #155724;
+            border-left: 5px solid #28a745;
+        }
+        .toast-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-left: 5px solid #dc3545;
+        }
+        .toast-header {
+            background-color: rgba(255, 255, 255, 0.85);
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        .toast-body {
+            padding: 15px;
+            font-size: 16px;
+        }
+        .toast-close {
+            cursor: pointer;
+            background: transparent;
+            border: 0;
+            font-size: 1.25rem;
+            font-weight: 700;
+            opacity: 0.5;
+            padding: 0;
+            margin-left: auto;
+        }
+        .toast-close:hover {
+            opacity: 1;
+        }
+        /* Progress bar for toast timeout */
+        .toast-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background-color: rgba(255, 255, 255, 0.7);
+            width: 100%;
+            transform-origin: left;
+        }
+        
+        .toast-success .toast-progress {
+            background-color: #28a745;
+        }
+        
+        .toast-error .toast-progress {
+            background-color: #dc3545;
+        }
+        
+        /* Animation for the progress bar */
+        @keyframes countdown {
+            from { transform: scaleX(1); }
+            to { transform: scaleX(0); }
+        }
     </style>
 </head>
 <body>
@@ -185,6 +268,9 @@ try {
     </div><!-- /.main-content -->
 </div><!-- /.wrapper -->
 
+<!-- Toast container - moved outside of wrapper to ensure visibility -->
+<div id="toastContainer"></div>
+
 <!-- Add Module Modal -->
 <div class="modal fade" id="addModuleModal" tabindex="-1">
     <div class="modal-dialog">
@@ -226,7 +312,6 @@ try {
 </div>
 
 <!-- Edit Privileges Modal -->
-<!-- Edit Privileges Modal (Updated to use checkboxes) -->
 <div class="modal fade" id="editPrivilegesModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -260,7 +345,6 @@ try {
     </div>
 </div>
 
-
 <!-- Confirm Delete Modal -->
 <div class="modal fade" id="confirmDeleteModal" tabindex="-1">
     <div class="modal-dialog">
@@ -286,6 +370,66 @@ try {
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     $(document).ready(function () {
+        // Custom Toast implementation
+        function showToast(message, type = 'success') {
+            const toastId = 'toast-' + Date.now();
+            const toastClass = type === 'success' ? 'toast-success' : 'toast-error';
+            const iconClass = type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill';
+            const duration = 3000; // Toast duration in milliseconds
+            
+            const toast = `
+                <div id="${toastId}" class="custom-toast ${toastClass}">
+                    <div class="toast-header">
+                        <i class="bi ${iconClass} me-2"></i>
+                        <strong class="me-auto">${type === 'success' ? 'Success' : 'Error'}</strong>
+                        <button type="button" class="toast-close" onclick="closeToast('${toastId}')">&times;</button>
+                    </div>
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                    <div id="progress-${toastId}" class="toast-progress"></div>
+                </div>
+            `;
+            
+            $('#toastContainer').append(toast);
+            
+            // Show the toast with a slight delay for better visual effect
+            setTimeout(function() {
+                const toast = $(`#${toastId}`);
+                toast.css('display', 'block');
+                
+                // Trigger reflow to ensure transition applies
+                toast[0].offsetHeight;
+                
+                // Apply visible state
+                toast.addClass('show');
+                
+                // Start the progress bar animation
+                const progressBar = $(`#progress-${toastId}`);
+                progressBar.css({
+                    'animation': `countdown ${duration/1000}s linear forwards`
+                });
+            }, 100);
+            
+            // Auto-hide the toast after specified duration
+            setTimeout(function() {
+                closeToast(toastId);
+            }, duration);
+        }
+        
+        // Make closeToast function global so it can be called from the onclick attribute
+        window.closeToast = function(toastId) {
+            const toast = $(`#${toastId}`);
+            
+            // Remove the show class to trigger the CSS transition
+            toast.removeClass('show');
+            
+            // Remove from DOM after transition completes
+            setTimeout(function() {
+                toast.remove();
+            }, 300); // Match transition duration (300ms)
+        };
+
         // Add Module AJAX call
         $('#saveModuleBtn').on('click', function () {
             let formData = $('#addModuleForm').serialize();
@@ -296,21 +440,22 @@ try {
                 dataType: 'json',
                 success: function (response) {
                     if (response.success) {
-                        alert('Module added successfully.');
+                        showToast(response.message, 'success');
                         $('#addModuleModal').modal('hide');
-                        location.reload();
+                        setTimeout(function() {
+                            location.reload();
+                        }, 5000);
                     } else {
-                        alert('Error: ' + response.message);
+                        showToast(response.message, 'error');
                     }
                 },
                 error: function () {
-                    alert('Error submitting form.');
+                    showToast('Error submitting form.', 'error');
                 }
             });
         });
 
         // Load current privileges when Edit button is clicked
-        // When the Edit button is clicked, load the current privileges and check the appropriate checkboxes.
         $('.edit-privileges-btn').on('click', function () {
             var moduleId = $(this).data('module-id');
             $('#editModuleId').val(moduleId);
@@ -328,15 +473,14 @@ try {
                             $('#editPrivilegesCheckboxes input[type=checkbox][value="' + priv.id + '"]').prop('checked', true);
                         });
                     } else {
-                        alert('Error: ' + response.message);
+                        showToast(response.message, 'error');
                     }
                 },
                 error: function () {
-                    alert('Error fetching privileges.');
+                    showToast('Error fetching privileges.', 'error');
                 }
             });
         });
-
 
         // Submit updated privileges
         $('#editPrivilegesForm').on('submit', function (event) {
@@ -349,15 +493,17 @@ try {
                 dataType: 'json',
                 success: function (response) {
                     if (response.success) {
-                        alert(response.message);
+                        showToast(response.message, 'success');
                         $('#editPrivilegesModal').modal('hide');
-                        location.reload();
+                        setTimeout(function() {
+                            location.reload();
+                        }, 5000);
                     } else {
-                        alert('Error: ' + response.message);
+                        showToast(response.message, 'error');
                     }
                 },
                 error: function () {
-                    alert('Error updating privileges.');
+                    showToast('Error updating privileges.', 'error');
                 }
             });
         });
@@ -378,15 +524,17 @@ try {
                 dataType: 'json',
                 success: function (response) {
                     if (response.success) {
-                        alert(response.message);
+                        showToast(response.message, 'success');
                         $('#confirmDeleteModal').modal('hide');
-                        location.reload();
+                        setTimeout(function() {
+                            location.reload();
+                        }, 5000);
                     } else {
-                        alert('Error: ' + response.message);
+                        showToast(response.message, 'error');
                     }
                 },
                 error: function () {
-                    alert('Error deleting module.');
+                    showToast('Error deleting module.', 'error');
                 }
             });
         });
