@@ -30,7 +30,8 @@ if (isset($_SESSION['success'])) {
     unset($_SESSION['success']);
 }
 
-function is_ajax_request() {
+function is_ajax_request()
+{
     return isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 }
 
@@ -198,6 +199,7 @@ try {
 
     <div class="card shadow">
         <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+
             <span><i class="bi bi-list-ul"></i> List of Charge Invoices</span>
             <div class="input-group w-auto">
                 <span class="input-group-text"><i class="bi bi-search"></i></span>
@@ -342,15 +344,18 @@ try {
                 <form id="addInvoiceForm" method="post">
                     <input type="hidden" name="action" value="add">
                     <div class="mb-3">
-                        <label for="invoice_no" class="form-label">Invoice Number <span class="text-danger">*</span></label>
+                        <label for="invoice_no" class="form-label">Invoice Number <span
+                                    class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="invoice_no" required>
                     </div>
                     <div class="mb-3">
-                        <label for="date_of_purchase" class="form-label">Date of Purchase <span class="text-danger">*</span></label>
+                        <label for="date_of_purchase" class="form-label">Date of Purchase <span
+                                    class="text-danger">*</span></label>
                         <input type="date" class="form-control" name="date_of_purchase" required>
                     </div>
                     <div class="mb-3">
-                        <label for="po_no" class="form-label">Purchase Order Number <span class="text-danger">*</span></label>
+                        <label for="po_no" class="form-label">Purchase Order Number <span
+                                    class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="po_no" required>
                     </div>
                     <div class="mb-3">
