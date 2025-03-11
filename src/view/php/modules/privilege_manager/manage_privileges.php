@@ -24,8 +24,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['module_name'])) {
         $stmt = $pdo->prepare("INSERT INTO modules (module_name) VALUES (:module_name)");
         $stmt->execute(['module_name' => $moduleName]);
         $newModuleId = $pdo->lastInsertId();
+
+        // Insert any selected privileges
         if (!empty($_POST['privileges']) && is_array($_POST['privileges'])) {
-            $stmtLink = $pdo->prepare("INSERT INTO role_module_privileges (module_id, privilege_id) VALUES (:module_id, :privilege_id)");
+            $stmtLink = $pdo->prepare("
+                INSERT INTO role_module_privileges (module_id, privilege_id)
+                VALUES (:module_id, :privilege_id)
+            ");
             foreach ($_POST['privileges'] as $privId) {
                 $stmtLink->execute(['module_id' => $newModuleId, 'privilege_id' => $privId]);
             }
@@ -37,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['module_name'])) {
     exit;
 }
 
-// Otherwise, render the page.
+// Otherwise, render the page
 try {
     $stmt = $pdo->prepare("
         SELECT DISTINCT
@@ -52,6 +57,7 @@ try {
     ");
     $stmt->execute();
     $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
     $modules = [];
     foreach ($results as $row) {
         if (!isset($modules[$row['module_id']])) {
@@ -61,7 +67,9 @@ try {
                 'privileges' => []
             ];
         }
-        if ($row['privilege_id'] && !in_array(['id' => $row['privilege_id'], 'name' => $row['priv_name']], $modules[$row['module_id']]['privileges'])) {
+        // Only push if there's an actual privilege_id
+        if ($row['privilege_id']) {
+            // Avoid duplicates
             $modules[$row['module_id']]['privileges'][] = [
                 'id'   => $row['privilege_id'],
                 'name' => $row['priv_name']
@@ -72,6 +80,7 @@ try {
     die("Database error: " . $e->getMessage());
 }
 
+// Fetch all privileges (for Add Module modal)
 try {
     $stmt = $pdo->prepare("SELECT id, priv_name FROM privileges ORDER BY priv_name");
     $stmt->execute();
@@ -128,6 +137,7 @@ try {
                     </button>
                 </div>
             </div>
+
             <div class="card">
                 <div class="card-body">
                     <div class="table-responsive">
@@ -148,8 +158,8 @@ try {
                                             <?php if (!empty($module['privileges'])): ?>
                                                 <?php foreach ($module['privileges'] as $privilege): ?>
                                                     <span class="badge bg-info privilege-badge">
-                                                            <?= htmlspecialchars($privilege['name']) ?>
-                                                        </span>
+                                                        <?= htmlspecialchars($privilege['name']) ?>
+                                                    </span>
                                                 <?php endforeach; ?>
                                             <?php else: ?>
                                                 <em>None</em>
@@ -202,9 +212,11 @@ try {
                     <div class="mb-3">
                         <label class="form-label">Select Privileges</label>
                         <div class="privilege-checkboxes">
+                            <?php // We still show ALL privileges here so a new module can pick any of them ?>
                             <?php foreach ($allPrivileges as $privilege): ?>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox"
+                                    <input class="form-check-input"
+                                           type="checkbox"
                                            name="privileges[]"
                                            value="<?= $privilege['id'] ?>"
                                            id="priv<?= $privilege['id'] ?>">
@@ -225,8 +237,11 @@ try {
     </div>
 </div>
 
-<!-- Edit Privileges Modal -->
-<!-- Edit Privileges Modal (Updated to use checkboxes) -->
+<!--
+     Edit Privileges Modal
+     NOTE: We remove the big PHP loop that printed ALL privileges here.
+     Instead, we dynamically fill #editPrivilegesCheckboxes via AJAX.
+-->
 <div class="modal fade" id="editPrivilegesModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -239,19 +254,8 @@ try {
                     <input type="hidden" id="editModuleId" name="module_id">
                     <div class="mb-3">
                         <label class="form-label">Select Privileges</label>
-                        <div id="editPrivilegesCheckboxes" class="privilege-checkboxes">
-                            <?php foreach ($allPrivileges as $privilege): ?>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox"
-                                           name="privileges[]"
-                                           value="<?= $privilege['id'] ?>"
-                                           id="edit_priv_<?= $privilege['id'] ?>">
-                                    <label class="form-check-label" for="edit_priv_<?= $privilege['id'] ?>">
-                                        <?= htmlspecialchars($privilege['priv_name']) ?>
-                                    </label>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
+                        <!-- We'll populate these checkboxes in JS after the AJAX call -->
+                        <div id="editPrivilegesCheckboxes" class="privilege-checkboxes"></div>
                     </div>
                     <button type="submit" class="btn btn-primary">Save Changes</button>
                 </form>
@@ -259,7 +263,6 @@ try {
         </div>
     </div>
 </div>
-
 
 <!-- Confirm Delete Modal -->
 <div class="modal fade" id="confirmDeleteModal" tabindex="-1">
@@ -286,7 +289,10 @@ try {
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     $(document).ready(function () {
-        // Add Module AJAX call
+
+        // -------------------------------
+        // 1) ADD MODULE AJAX
+        // -------------------------------
         $('#saveModuleBtn').on('click', function () {
             let formData = $('#addModuleForm').serialize();
             $.ajax({
@@ -309,13 +315,20 @@ try {
             });
         });
 
-        // Load current privileges when Edit button is clicked
-        // When the Edit button is clicked, load the current privileges and check the appropriate checkboxes.
+        // -------------------------------
+        // 2) EDIT PRIVILEGES BUTTON
+        //    - fetch assigned privileges
+        //    - build checkboxes in the modal
+        // -------------------------------
+        // 2) EDIT PRIVILEGES BUTTON -> load assigned privileges and build checkboxes accordingly
         $('.edit-privileges-btn').on('click', function () {
             var moduleId = $(this).data('module-id');
             $('#editModuleId').val(moduleId);
-            // First, uncheck all checkboxes
-            $('#editPrivilegesCheckboxes input[type=checkbox]').prop('checked', false);
+
+            // Clear out any old checkboxes
+            $('#editPrivilegesCheckboxes').empty();
+
+            // AJAX to fetch all privileges with an "assigned" flag for this module
             $.ajax({
                 url: 'fetch_privileges.php',
                 type: 'GET',
@@ -323,9 +336,23 @@ try {
                 dataType: 'json',
                 success: function (response) {
                     if (response.success) {
-                        // Iterate over the returned privileges and check the matching checkboxes.
+                        // Loop through all privileges
                         response.privileges.forEach(function(priv) {
-                            $('#editPrivilegesCheckboxes input[type=checkbox][value="' + priv.id + '"]').prop('checked', true);
+                            let checked = priv.assigned ? 'checked' : '';
+                            let checkboxHtml = `
+                        <div class="form-check">
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   name="privileges[]"
+                                   value="${priv.id}"
+                                   id="edit_priv_${priv.id}"
+                                   ${checked}>
+                            <label class="form-check-label" for="edit_priv_${priv.id}">
+                                ${priv.priv_name}
+                            </label>
+                        </div>
+                    `;
+                            $('#editPrivilegesCheckboxes').append(checkboxHtml);
                         });
                     } else {
                         alert('Error: ' + response.message);
@@ -338,7 +365,9 @@ try {
         });
 
 
-        // Submit updated privileges
+        // -------------------------------
+        // 3) SAVE CHANGES TO PRIVILEGES
+        // -------------------------------
         $('#editPrivilegesForm').on('submit', function (event) {
             event.preventDefault();
             let formData = $(this).serialize();
@@ -362,13 +391,17 @@ try {
             });
         });
 
-        // Set module id for deletion
+        // -------------------------------
+        // 4) SET MODULE ID FOR DELETION
+        // -------------------------------
         $('.delete-module-btn').on('click', function () {
             var moduleId = $(this).data('module-id');
             $('#deleteModuleId').val(moduleId);
         });
 
-        // Delete module AJAX call
+        // -------------------------------
+        // 5) DELETE MODULE AJAX
+        // -------------------------------
         $('#confirmDeleteBtn').on('click', function () {
             var moduleId = $('#deleteModuleId').val();
             $.ajax({
