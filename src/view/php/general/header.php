@@ -9,10 +9,7 @@ if (!isset($_SESSION['user_id'])) {
 }
 $role = isset($_SESSION["role"]) ? $_SESSION["role"] : "";
 $email = $_SESSION['email'];
-//// Add this temporarily near the top of your header file
-//echo "<pre>";
-//print_r($_SESSION);
-//echo "</pre>";
+
 ?>
 
 <!DOCTYPE html>
@@ -24,6 +21,7 @@ $email = $_SESSION['email'];
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&family=Roboto+Mono:wght@300;500&display=swap"
           rel="stylesheet">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/header_footer.css">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/toast.css">
 
 </head>
 <body>
@@ -58,10 +56,12 @@ $email = $_SESSION['email'];
                         Settings <span class="submenu-arrow">▸</span>
                     </div>
                     <ul class="subdropdown-menu">
-                        <li><a href="<?php echo BASE_URL; ?>src/view/php/clients/admins/account_details.php">Account Details</a></li>
+                        <li><a href="<?php echo BASE_URL; ?>src/view/php/clients/admins/account_details.php">Account
+                                Details</a></li>
                         <li><a href="#">Personalization</a></li>
                     </ul>
                 </div>
+
                 <a href="<?php echo BASE_URL; ?>src/view/php/general/logout.php">Logout</a>
             </div>
         </div>
@@ -81,7 +81,7 @@ $email = $_SESSION['email'];
         event.stopPropagation();
         const submenu = event.currentTarget.nextElementSibling;
         const arrow = event.currentTarget.querySelector('.submenu-arrow');
-        
+
         submenu.classList.toggle('show');
         if (submenu.classList.contains('show')) {
             arrow.style.transform = 'rotate(180deg)';
@@ -91,12 +91,12 @@ $email = $_SESSION['email'];
     }
 
     // Close the dropdown if the user clicks outside of it
-    window.onclick = function(event) {
+    window.onclick = function (event) {
         if (!event.target.closest('.user-profile')) {
             const dropdownMenu = document.getElementById('dropdownMenu');
             const subdropdowns = document.querySelectorAll('.subdropdown-menu');
             const arrows = document.querySelectorAll('.submenu-arrow');
-            
+
             if (dropdownMenu.classList.contains('show')) {
                 dropdownMenu.classList.remove('show');
                 document.querySelector('.user-profile').classList.remove('active');

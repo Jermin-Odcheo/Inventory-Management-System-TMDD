@@ -30,7 +30,8 @@ if (isset($_SESSION['success'])) {
     unset($_SESSION['success']);
 }
 
-function is_ajax_request() {
+function is_ajax_request()
+{
     return isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 }
 
@@ -164,169 +165,282 @@ try {
             min-height: 100vh;
             padding-top: 80px;
         }
-        .main-content {
-            margin-left: 300px;
-            padding: 20px;
-            transition: margin-left 0.3s ease;
+
+        .wrapper {
+            display: flex;
+            min-height: 100vh;
         }
-        @media (max-width: 768px) {
-            .main-content {
-                margin-left: 0;
+        .sidebar {
+            width: 300px;
+            background-color: #2c3e50;
+            color: #fff;
+        }
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            margin-left: 300px;
+        }
+
+        /* Toast container */
+        #toastContainer {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            width: 350px;
+        }
+
+        * Toast styling *
+
+        /
+        #toastContainer {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            width: 350px;
+        }
+
+        .custom-toast {
+            margin-bottom: 10px;
+            min-width: 300px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+            display: none;
+            position: relative;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .custom-toast.show {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .toast-success {
+            background-color: #d4edda;
+            color: #155724;
+            border-left: 5px solid #28a745;
+        }
+
+        .toast-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-left: 5px solid #dc3545;
+        }
+
+        .toast-header {
+            background-color: rgba(255, 255, 255, 0.85);
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .toast-body {
+            padding: 15px;
+            font-size: 16px;
+        }
+
+        .toast-close {
+            cursor: pointer;
+            background: transparent;
+            border: 0;
+            font-size: 1.25rem;
+            font-weight: 700;
+            opacity: 0.5;
+            padding: 0;
+            margin-left: auto;
+        }
+
+        .toast-close:hover {
+            opacity: 1;
+        }
+
+        /* Progress bar for toast timeout */
+        .toast-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background-color: rgba(255, 255, 255, 0.7);
+            width: 100%;
+            transform-origin: left;
+        }
+
+        .toast-success .toast-progress {
+            background-color: #28a745;
+        }
+
+        .toast-error .toast-progress {
+            background-color: #dc3545;
+        }
+
+        /* Animation for the progress bar */
+        @keyframes countdown {
+            from {
+                transform: scaleX(1);
+            }
+            to {
+                transform: scaleX(0);
             }
         }
+
+
     </style>
 </head>
 <body>
 <?php include('../../general/sidebar.php'); ?>
+<div class="wrapper">
+    <div class="main-content"
+    <div class="container-fluid">
 
-<div class="container-fluid" style="margin-left: 320px; padding: 20px; width: calc(100vw - 340px);">
-    <!-- Display Success Message -->
-    <?php if (!empty($success)): ?>
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="bi bi-check-circle"></i> <?php echo $success; ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    <?php endif; ?>
-
-    <!-- Display Error Messages -->
-    <?php if (!empty($errors)): ?>
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <?php foreach ($errors as $err): ?>
-                <p><i class="bi bi-exclamation-triangle"></i> <?php echo $err; ?></p>
-            <?php endforeach; ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    <?php endif; ?>
-
-    <h2 class="mb-4">Purchase Order Management</h2>
-
-    <div class="card shadow">
-        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-            <span><i class="bi bi-list-ul"></i> List of Purchase Orders</span>
-            <div class="input-group w-auto">
-                <span class="input-group-text"><i class="bi bi-search"></i></span>
-                <input type="text" id="searchPO" class="form-control" placeholder="Search purchase order...">
+        <!-- Display Error Messages -->
+        <?php if (!empty($errors)): ?>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <?php foreach ($errors as $err): ?>
+                    <p><i class="bi bi-exclamation-triangle"></i> <?php echo $err; ?></p>
+                <?php endforeach; ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
-        </div>
-        <div class="card-body p-3">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal"
-                        data-bs-target="#addPOModal">
-                    <i class="bi bi-plus-circle"></i> Add Purchase Order
-                </button>
-                <!-- Optionally add date filters -->
-                <select class="form-select form-select-sm" id="dateFilter" style="width: auto;">
-                    <option value="">Filter by Date</option>
-                    <option value="desc">Newest to Oldest</option>
-                    <option value="asc">Oldest to Newest</option>
-                    <option value="month">Specific Month</option>
-                    <option value="range">Custom Date Range</option>
-                </select>
-                <div id="dateInputsContainer" style="display: none;">
-                    <div class="d-flex gap-2" id="monthPickerContainer" style="display: none;">
-                        <select class="form-select form-select-sm" id="monthSelect" style="min-width: 130px;">
-                            <option value="">Select Month</option>
-                            <?php
-                            $months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-                            foreach ($months as $index => $month) {
-                                echo "<option value='" . ($index + 1) . "'>" . $month . "</option>";
-                            }
-                            ?>
-                        </select>
-                        <select class="form-select form-select-sm" id="yearSelect" style="min-width: 110px;">
-                            <option value="">Select Year</option>
-                            <?php
-                            $currentYear = date('Y');
-                            for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
-                                echo "<option value='" . $year . "'>" . $year . "</option>";
-                            }
-                            ?>
-                        </select>
-                    </div>
-                    <div class="d-flex gap-2" id="dateRangePickers" style="display: none;">
-                        <input type="date" class="form-control form-control-sm" id="dateFrom" placeholder="From">
-                        <input type="date" class="form-control form-control-sm" id="dateTo" placeholder="To">
-                    </div>
+        <?php endif; ?>
+
+        <h2 class="mb-4">Purchase Order Management</h2>
+
+        <div class="card shadow">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-list-ul"></i> List of Purchase Orders</span>
+                <div class="input-group w-auto">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" id="searchPO" class="form-control" placeholder="Search purchase order...">
                 </div>
             </div>
-
-            <div class="table-responsive" id="table">
-                <table class="table table-hover">
-                    <thead class="table-dark">
-                    <tr>
-                        <th>#</th>
-                        <th>PO Number</th>
-                        <th>Date of Order</th>
-                        <th>No. of Units</th>
-                        <th>Item Specifications</th>
-                        <th>Created Date</th>
-                        <th class="text-center">Actions</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <?php if (!empty($purchaseOrders)): ?>
-                        <?php foreach ($purchaseOrders as $po): ?>
-                            <tr>
-                                <td><?php echo htmlspecialchars($po['id']); ?></td>
-                                <td><?php echo htmlspecialchars($po['po_no']); ?></td>
-                                <td><?php echo htmlspecialchars($po['date_of_order']); ?></td>
-                                <td><?php echo htmlspecialchars($po['no_of_units']); ?></td>
-                                <td><?php echo htmlspecialchars($po['item_specifications']); ?></td>
-                                <td><?php echo date('Y-m-d H:i', strtotime($po['date_created'])); ?></td>
-                                <td class="text-center">
-                                    <div class="btn-group" role="group">
-                                        <a class="btn btn-sm btn-outline-primary edit-po"
-                                           data-id="<?php echo htmlspecialchars($po['id']); ?>"
-                                           data-po="<?php echo htmlspecialchars($po['po_no']); ?>"
-                                           data-date="<?php echo htmlspecialchars($po['date_of_order']); ?>"
-                                           data-units="<?php echo htmlspecialchars($po['no_of_units']); ?>"
-                                           data-item="<?php echo htmlspecialchars($po['item_specifications']); ?>">
-                                            <i class="bi bi-pencil-square"></i> Edit
-                                        </a>
-                                        <a class="btn btn-sm btn-outline-danger delete-po"
-                                           data-id="<?php echo htmlspecialchars($po['id']); ?>"
-                                           href="#">
-                                            <i class="bi bi-trash"></i> Delete
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr>
-                            <td colspan="7">No Purchase Orders found.</td>
-                        </tr>
-                    <?php endif; ?>
-                    </tbody>
-                </table>
-                <!-- Pagination Controls (optional) -->
-                <div class="container-fluid">
-                    <div class="row align-items-center g-3">
-                        <div class="col-12 col-sm-auto">
-                            <div class="text-muted">
-                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows">100</span> entries
-                            </div>
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal"
+                            data-bs-target="#addPOModal">
+                        <i class="bi bi-plus-circle"></i> Add Purchase Order
+                    </button>
+                    <!-- Optionally add date filters -->
+                    <select class="form-select form-select-sm" id="dateFilter" style="width: auto;">
+                        <option value="">Filter by Date</option>
+                        <option value="desc">Newest to Oldest</option>
+                        <option value="asc">Oldest to Newest</option>
+                        <option value="month">Specific Month</option>
+                        <option value="range">Custom Date Range</option>
+                    </select>
+                    <div id="dateInputsContainer" style="display: none;">
+                        <div class="d-flex gap-2" id="monthPickerContainer" style="display: none;">
+                            <select class="form-select form-select-sm" id="monthSelect" style="min-width: 130px;">
+                                <option value="">Select Month</option>
+                                <?php
+                                $months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                                foreach ($months as $index => $month) {
+                                    echo "<option value='" . ($index + 1) . "'>" . $month . "</option>";
+                                }
+                                ?>
+                            </select>
+                            <select class="form-select form-select-sm" id="yearSelect" style="min-width: 110px;">
+                                <option value="">Select Year</option>
+                                <?php
+                                $currentYear = date('Y');
+                                for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
+                                    echo "<option value='" . $year . "'>" . $year . "</option>";
+                                }
+                                ?>
+                            </select>
                         </div>
-                        <div class="col-12 col-sm-auto ms-sm-auto">
-                            <div class="d-flex align-items-center gap-2">
-                                <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                    <i class="bi bi-chevron-left"></i> Previous
-                                </button>
-                                <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
-                                    <option value="10" selected>10</option>
-                                    <option value="20">20</option>
-                                    <option value="30">30</option>
-                                    <option value="50">50</option>
-                                </select>
-                                <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                    Next <i class="bi bi-chevron-right"></i>
-                                </button>
-                            </div>
+                        <div class="d-flex gap-2" id="dateRangePickers" style="display: none;">
+                            <input type="date" class="form-control form-control-sm" id="dateFrom" placeholder="From">
+                            <input type="date" class="form-control form-control-sm" id="dateTo" placeholder="To">
                         </div>
                     </div>
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <ul class="pagination justify-content-center" id="pagination"></ul>
+                </div>
+
+                <div class="table-responsive" id="table">
+                    <table class="table table-hover">
+                        <thead class="table-dark">
+                        <tr>
+                            <th>#</th>
+                            <th>PO Number</th>
+                            <th>Date of Order</th>
+                            <th>No. of Units</th>
+                            <th>Item Specifications</th>
+                            <th>Created Date</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <?php if (!empty($purchaseOrders)): ?>
+                            <?php foreach ($purchaseOrders as $po): ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($po['id']); ?></td>
+                                    <td><?php echo htmlspecialchars($po['po_no']); ?></td>
+                                    <td><?php echo htmlspecialchars($po['date_of_order']); ?></td>
+                                    <td><?php echo htmlspecialchars($po['no_of_units']); ?></td>
+                                    <td><?php echo htmlspecialchars($po['item_specifications']); ?></td>
+                                    <td><?php echo date('Y-m-d H:i', strtotime($po['date_created'])); ?></td>
+                                    <td class="text-center">
+                                        <div class="btn-group" role="group">
+                                            <a class="btn btn-sm btn-outline-primary edit-po"
+                                               data-id="<?php echo htmlspecialchars($po['id']); ?>"
+                                               data-po="<?php echo htmlspecialchars($po['po_no']); ?>"
+                                               data-date="<?php echo htmlspecialchars($po['date_of_order']); ?>"
+                                               data-units="<?php echo htmlspecialchars($po['no_of_units']); ?>"
+                                               data-item="<?php echo htmlspecialchars($po['item_specifications']); ?>">
+                                                <i class="bi bi-pencil-square"></i> Edit
+                                            </a>
+                                            <a class="btn btn-sm btn-outline-danger delete-po"
+                                               data-id="<?php echo htmlspecialchars($po['id']); ?>"
+                                               href="#">
+                                                <i class="bi bi-trash"></i> Delete
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr>
+                                <td colspan="7">No Purchase Orders found.</td>
+                            </tr>
+                        <?php endif; ?>
+                        </tbody>
+                    </table>
+                    <!-- Pagination Controls (optional) -->
+                    <div class="container-fluid">
+                        <div class="row align-items-center g-3">
+                            <div class="col-12 col-sm-auto">
+                                <div class="text-muted">
+                                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
+                                            id="totalRows">100</span> entries
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-auto ms-sm-auto">
+                                <div class="d-flex align-items-center gap-2">
+                                    <button id="prevPage"
+                                            class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                        <i class="bi bi-chevron-left"></i> Previous
+                                    </button>
+                                    <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                        <option value="10" selected>10</option>
+                                        <option value="20">20</option>
+                                        <option value="30">30</option>
+                                        <option value="50">50</option>
+                                    </select>
+                                    <button id="nextPage"
+                                            class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                        Next <i class="bi bi-chevron-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <ul class="pagination justify-content-center" id="pagination"></ul>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -334,6 +448,8 @@ try {
         </div>
     </div>
 </div>
+
+<div id="toastContainer"></div>
 
 <!-- Add Purchase Order Modal -->
 <div class="modal fade" id="addPOModal" tabindex="-1">
@@ -351,15 +467,18 @@ try {
                         <input type="text" class="form-control" name="po_no" required>
                     </div>
                     <div class="mb-3">
-                        <label for="date_of_order" class="form-label">Date of Order <span class="text-danger">*</span></label>
+                        <label for="date_of_order" class="form-label">Date of Order <span
+                                    class="text-danger">*</span></label>
                         <input type="date" class="form-control" name="date_of_order" required>
                     </div>
                     <div class="mb-3">
-                        <label for="no_of_units" class="form-label">No. of Units <span class="text-danger">*</span></label>
+                        <label for="no_of_units" class="form-label">No. of Units <span
+                                    class="text-danger">*</span></label>
                         <input type="number" class="form-control" name="no_of_units" required>
                     </div>
                     <div class="mb-3">
-                        <label for="item_specifications" class="form-label">Item Specifications <span class="text-danger">*</span></label>
+                        <label for="item_specifications" class="form-label">Item Specifications <span
+                                    class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="item_specifications" required>
                     </div>
                     <div class="mb-3">
@@ -388,7 +507,8 @@ try {
                         <input type="text" class="form-control" name="po_no" id="edit_po_no" required>
                     </div>
                     <div class="mb-3">
-                        <label for="edit_date_of_order" class="form-label">Date of Order <span class="text-danger">*</span></label>
+                        <label for="edit_date_of_order" class="form-label">Date of Order <span
+                                    class="text-danger">*</span></label>
                         <input type="date" class="form-control" name="date_of_order" id="edit_date_of_order" required>
                     </div>
                     <div class="mb-3">
@@ -396,8 +516,10 @@ try {
                         <input type="number" class="form-control" name="no_of_units" id="edit_no_of_units" required>
                     </div>
                     <div class="mb-3">
-                        <label for="edit_item_specifications" class="form-label">Item Specifications <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="item_specifications" id="edit_item_specifications" required>
+                        <label for="edit_item_specifications" class="form-label">Item Specifications <span
+                                    class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="item_specifications" id="edit_item_specifications"
+                               required>
                     </div>
                     <div class="mb-3">
                         <button type="submit" class="btn btn-primary">Save Changes</button>
@@ -408,8 +530,10 @@ try {
     </div>
 </div>
 
+
 <!-- JavaScript for functionality -->
 <script>
+
     $(document).ready(function () {
         // Search filter for purchase orders
         $('#searchPO').on('input', function () {
@@ -501,6 +625,7 @@ try {
 <!-- Bootstrap Bundle JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <!-- Optional: Include your pagination.js if required -->
-<script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js" defer></script>
+<script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js"
+        defer></script>
 </body>
 </html>

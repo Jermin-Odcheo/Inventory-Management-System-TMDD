@@ -1,7 +1,9 @@
+<div id="toastContainer"></div>
 
 <footer class="footer">
     <p class="footer-text">&copy; 2025 TMDD Interns</p>
 </footer>
+<script src="<?php echo BASE_URL; ?>src/control/js/toast.js"></script>
 
 <style>
     /* Base styles for the footer */
@@ -23,6 +25,19 @@
         left: 0;
     }
 </style>
+
+<script>
+    $(document).ready(function() {
+        <?php if (!empty($success)) { ?>
+        showToast("<?php echo addslashes($success); ?>", 'success');
+        <?php } ?>
+        <?php if (!empty($errors)) {
+        foreach ($errors as $error) { ?>
+        showToast("<?php echo addslashes($error); ?>", 'error');
+        <?php }
+        } ?>
+    });
+</script>
 
 <script>
     /**
