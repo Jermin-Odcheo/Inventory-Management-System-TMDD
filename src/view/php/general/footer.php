@@ -28,18 +28,15 @@
 
 <script>
     $(document).ready(function() {
-        <?php if (!empty($success)) { ?>
-        showToast("<?php echo addslashes($success); ?>", 'success');
+        <?php if (!empty($_SESSION['success'])) { ?>
+        showToast("<?php echo addslashes($_SESSION['success']); ?>", 'success');
+        <?php unset($_SESSION['success']); ?>
         <?php } ?>
-        <?php if (!empty($errors)) {
-        foreach ($errors as $error) { ?>
-        showToast("<?php echo addslashes($error); ?>", 'error');
-        <?php }
-        } ?>
+        <?php if (!empty($_SESSION['error'])) { ?>
+        showToast("<?php echo addslashes($_SESSION['error']); ?>", 'error');
+        <?php unset($_SESSION['error']); ?>
+        <?php } ?>
     });
-</script>
-
-<script>
     /**
      * Parses an rgb/rgba string (e.g. "rgb(255, 255, 255)") and returns its brightness.
      * Uses the formula: brightness = (299*R + 587*G + 114*B) / 1000.

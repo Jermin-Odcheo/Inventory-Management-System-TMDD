@@ -1,7 +1,5 @@
 <?php
 require_once(__DIR__ . '/../../../../config/config.php');
-
-
 //If not logged in redirect to the LOGIN PAGE
 if (!isset($_SESSION['user_id'])) {
     header("Location: " . BASE_URL . "public/index.php"); // Redirect to login page
@@ -9,7 +7,6 @@ if (!isset($_SESSION['user_id'])) {
 }
 $role = isset($_SESSION["role"]) ? $_SESSION["role"] : "";
 $email = $_SESSION['email'];
-
 ?>
 
 <!DOCTYPE html>
@@ -20,8 +17,8 @@ $email = $_SESSION['email'];
     <title>Inventory Management System</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&family=Roboto+Mono:wght@300;500&display=swap"
           rel="stylesheet">
-    <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/header_footer.css">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/toast.css">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/header_footer.css">
 
 </head>
 <body>
@@ -37,7 +34,6 @@ $email = $_SESSION['email'];
             <div class="logo-text">Inventory Management System</div>
         </div>
     </div>
-
     <div class="header-widgets">
         <div class="user-profile" onclick="toggleDropdown()">
             <div class="profile-picture-container">

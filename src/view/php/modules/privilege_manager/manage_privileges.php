@@ -149,18 +149,32 @@ $modules = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 dataType: 'json',
                 success: function(response){
                     if(response.success){
-                        alert(response.message);
-                        location.reload();
+                        // Use toast notification instead of alert
+                        showToast(response.message, 'success');
+                        // Optionally, reload page after a short delay so the toast can be seen
+                        setTimeout(function(){
+                            location.reload();
+                        }, 3000);
                     } else {
-                        alert(response.message);
+                        showToast(response.message, 'error');
                     }
                 },
                 error: function(){
-                    alert('Error deleting module.');
+                    showToast('Error deleting module.', 'error');
                 }
             });
         });
+
     });
 </script>
+<script>
+    $(document).ready(function() {
+        // Test toast on page load
+        showToast('Test toast message!', 'success');
+    });
+</script>
+
+
+<?php include '../../general/footer.php';?>
 </body>
 </html>

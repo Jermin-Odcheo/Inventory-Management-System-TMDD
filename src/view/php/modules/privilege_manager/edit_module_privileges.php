@@ -63,16 +63,18 @@ $currentPrivileges = array_map('intval', $currentPrivileges);
             dataType: 'json',
             success: function(response){
                 if(response.success){
-                    $('#editModulePrivilegesAlert').html('<div class="alert alert-success">'+response.message+'</div>');
+                    // Use toast notification instead of alert
+                    showToast(response.message, 'success');
+                    // Optionally, reload page after a short delay so the toast can be seen
                     setTimeout(function(){
                         location.reload();
-                    }, 1500);
+                    }, 3000);
                 } else {
-                    $('#editModulePrivilegesAlert').html('<div class="alert alert-danger">'+response.message+'</div>');
+                    showToast(response.message, 'error');
                 }
             },
             error: function(){
-                $('#editModulePrivilegesAlert').html('<div class="alert alert-danger">An error occurred. Please try again.</div>');
+                showToast('Error deleting module.', 'error');
             }
         });
     });
