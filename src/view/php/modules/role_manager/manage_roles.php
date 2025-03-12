@@ -57,6 +57,15 @@ foreach ($roles as $roleID => &$role) {
     }
 }
 unset($role); // break the reference
+
+if (isset($_SESSION['success'])) {
+    $success = $_SESSION['success'];
+    unset($_SESSION['success']);
+}
+if (isset($_SESSION['errors'])) {
+    $errors = $_SESSION['errors'];
+    unset($_SESSION['errors']);
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">

@@ -31,13 +31,13 @@ $errors = [];
 $success = "";
 
 // Retrieve any session messages from previous requests
-if (isset($_SESSION['errors'])) {
-    $errors = $_SESSION['errors'];
-    unset($_SESSION['errors']);
-}
 if (isset($_SESSION['success'])) {
     $success = $_SESSION['success'];
     unset($_SESSION['success']);
+}
+if (isset($_SESSION['errors'])) {
+    $errors = $_SESSION['errors'];
+    unset($_SESSION['errors']);
 }
 
 // Function to check user permissions
