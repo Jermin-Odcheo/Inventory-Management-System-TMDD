@@ -274,9 +274,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         );
                     });
 
-                    setTimeout(function () {
-                        $('#editRoleModal').modal('hide');
-                    }, 1000);
                     showToast(response.message, 'success');
                 } else {
                     showToast(response.message || 'An error occurred while updating the role', 'error');

@@ -20,7 +20,6 @@ SELECT
 FROM roles r
 CROSS JOIN modules m
 ORDER BY r.id, m.id;
-
 ";
 
 $stmt = $pdo->prepare($sql);
@@ -28,7 +27,6 @@ $stmt->execute();
 $roleData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Group data by role and module.
-
 $roles = [];
 foreach ($roleData as $row) {
     $roleID = $row['Role_ID'];
@@ -49,7 +47,6 @@ foreach ($roleData as $row) {
     }
 }
 
-
 // Remove duplicate privileges if any.
 foreach ($roles as $roleID => &$role) {
     foreach ($role['Modules'] as $moduleName => &$privileges) {
@@ -57,15 +54,6 @@ foreach ($roles as $roleID => &$role) {
     }
 }
 unset($role); // break the reference
-
-if (isset($_SESSION['success'])) {
-    $success = $_SESSION['success'];
-    unset($_SESSION['success']);
-}
-if (isset($_SESSION['errors'])) {
-    $errors = $_SESSION['errors'];
-    unset($_SESSION['errors']);
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -82,6 +70,8 @@ if (isset($_SESSION['errors'])) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Ensure toast.js is loaded on the page -->
+    <script src="path/to/toast.js"></script>
     <style>
         /* Flex container to hold sidebar and main content */
         .wrapper {
@@ -118,7 +108,7 @@ if (isset($_SESSION['errors'])) {
     <div class="main-content container-fluid">
         <h1>Role Management</h1>
 
-        <!-- Alert container -->
+        <!-- (Optional) Alert container if you need it elsewhere -->
         <div id="alertMessage" style="position: fixed; top: 20px; right: 20px; z-index: 1050;"></div>
 
         <div class="d-flex justify-content-end mb-3">
@@ -130,7 +120,7 @@ if (isset($_SESSION['errors'])) {
             </button>
         </div>
 
-        <div class="table-responsive" id="table">
+        <div class="table-responsive">
             <table class="table table-striped table-hover">
                 <thead class="table-dark">
                 <tr>
@@ -173,40 +163,6 @@ if (isset($_SESSION['errors'])) {
                 <?php endif; ?>
                 </tbody>
             </table>
-            <!-- Pagination Controls (optional) -->
-            <div class="container-fluid">
-                <div class="row align-items-center g-3">
-                    <div class="col-12 col-sm-auto">
-                        <div class="text-muted">
-                            Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
-                                    id="totalRows">100</span> entries
-                        </div>
-                    </div>
-                    <div class="col-12 col-sm-auto ms-sm-auto">
-                        <div class="d-flex align-items-center gap-2">
-                            <button id="prevPage"
-                                    class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                <i class="bi bi-chevron-left"></i> Previous
-                            </button>
-                            <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
-                                <option value="10" selected>10</option>
-                                <option value="20">20</option>
-                                <option value="30">30</option>
-                                <option value="50">50</option>
-                            </select>
-                            <button id="nextPage"
-                                    class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                Next <i class="bi bi-chevron-right"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="row mt-3">
-                    <div class="col-12">
-                        <ul class="pagination justify-content-center" id="pagination"></ul>
-                    </div>
-                </div>
-            </div>
         </div><!-- /.table-responsive -->
     </div><!-- /.main-content -->
 </div><!-- /.wrapper -->
@@ -255,7 +211,6 @@ if (isset($_SESSION['errors'])) {
 </div>
 
 <script>
-
     $(document).ready(function() {
         // Load edit role modal content via AJAX.
         $('.edit-role-btn').on('click', function() {
@@ -296,10 +251,10 @@ if (isset($_SESSION['errors'])) {
                 url: 'add_role.php',
                 type: 'GET',
                 success: function(response) {
-                    showToast(response.message, 'success');
+                    $('#addRoleContent').html(response);
                 },
                 error: function() {
-                    showToast('Error adding role', 'error');
+                    $('#addRoleContent').html('<p class="text-danger">Error loading form.</p>');
                 }
             });
         });
@@ -319,7 +274,7 @@ if (isset($_SESSION['errors'])) {
                     }
                 },
                 error: function() {
-                    showToast('Error processing undo request.','error');
+                    showToast('Error processing undo request.', 'error');
                 }
             });
         });
@@ -339,15 +294,12 @@ if (isset($_SESSION['errors'])) {
                     }
                 },
                 error: function() {
-                    showToast('Error processing redo request: ' , 'error');
+                    showToast('Error processing redo request.', 'error');
                 }
             });
         });
     });
 </script>
-
-<script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
-
 <?php include '../../general/footer.php';?>
 </body>
 </html>

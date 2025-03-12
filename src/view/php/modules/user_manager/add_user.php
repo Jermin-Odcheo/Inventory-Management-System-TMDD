@@ -102,7 +102,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         $pdo->commit();
 
-        // Success response with a toast message
+        // Success response
         echo json_encode([
             'success' => true,
             'message' => 'User created successfully',
@@ -127,7 +127,7 @@ while ($role = $roleStmt->fetch(PDO::FETCH_ASSOC)) {
     $roles[] = $role;
 }
 
-// Return data for form initialization (for GET requests)
+// Return data for form initialization
 echo json_encode([
     'departments' => $departments,
     'roles' => $roles

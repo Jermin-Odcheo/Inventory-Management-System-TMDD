@@ -7,55 +7,46 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-$error = '';
-$success = '';
-
-// Process form submission
+// Process form submission via POST and return JSON response.
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
     $role_name = trim($_POST['role_name']);
 
     if (empty($role_name)) {
-        $error = "Role name is required.";
+        echo json_encode(['success' => false, 'message' => 'Role name is required.']);
+        exit();
     } else {
         try {
             $stmt = $pdo->prepare("SELECT COUNT(*) FROM roles WHERE Role_Name = ?");
             $stmt->execute([$role_name]);
             if ($stmt->fetchColumn() > 0) {
-                $error = "Role already exists.";
+                echo json_encode(['success' => false, 'message' => 'Role already exists.']);
+                exit();
             } else {
                 $stmt = $pdo->prepare("INSERT INTO roles (Role_Name) VALUES (?)");
                 if ($stmt->execute([$role_name])) {
                     $roleID = $pdo->lastInsertId();
 
-                    // Log the action in the role_changes table
+                    // Log the action in the role_changes table.
                     $stmt = $pdo->prepare("INSERT INTO role_changes (UserID, RoleID, Action, NewRoleName) VALUES (?, ?, 'Add', ?)");
-                    $stmt->execute([
-                        $_SESSION['user_id'],
-                        $roleID,
-                        $role_name
-                    ]);
+                    $stmt->execute([$_SESSION['user_id'], $roleID, $role_name]);
 
-                    echo "<script>window.location.reload();</script>";
+                    echo json_encode(['success' => true, 'message' => 'Role created successfully.']);
                     exit();
                 } else {
-                    $error = "Error inserting role. Please try again.";
+                    echo json_encode(['success' => false, 'message' => 'Error inserting role. Please try again.']);
+                    exit();
                 }
             }
         } catch (PDOException $e) {
-            $error = "Database error: " . $e->getMessage();
+            echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+            exit();
         }
     }
 }
 ?>
 
-<!-- Display errors if any -->
-<?php if (!empty($error)): ?>
-    <div class="alert alert-danger">
-        <?php echo htmlspecialchars($error); ?>
-    </div>
-<?php endif; ?>
-
-<!-- Role addition form -->
+<!-- Display the add role form when not processing a POST request -->
 <form id="addRoleForm" method="POST">
     <div class="mb-3">
         <label for="role_name" class="form-label">Role Name</label>
@@ -66,11 +57,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </form>
 
 <script>
-    // Submit form via AJAX
+    // Submit form via AJAX with toast notifications.
     $("#addRoleForm").submit(function(e) {
         e.preventDefault();
-        $.post("add_role.php", $(this).serialize(), function(response) {
-            $("#addRoleContent").html(response);
+        const submitBtn = $("button[type='submit']", this);
+        submitBtn.prop('disabled', true);
+        submitBtn.html('<span class="spinner-border spinner-border-sm me-2"></span> Adding...');
+        $.ajax({
+            url: "add_role.php",
+            type: "POST",
+            data: $(this).serialize(),
+            dataType: "json",
+            success: function(response) {
+                if(response.success) {
+                    showToast(response.message, 'success');
+                    // Optionally refresh your roles content via AJAX (see refresh function example)
+                    // e.g., refreshRolesTable();
+                    $('#addRoleModal').modal('hide');
+                } else {
+                    showToast(response.message, 'error');
+                }
+            },
+            error: function() {
+                showToast('System error occurred. Please try again.', 'error');
+            },
+            complete: function() {
+                submitBtn.prop('disabled', false);
+                submitBtn.html('Add Role');
+            }
         });
     });
 </script>

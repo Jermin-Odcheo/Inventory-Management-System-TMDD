@@ -611,6 +611,24 @@ if ($canDelete) {
     </div>
 
 </div><!-- /.main-content -->
+<!-- Confirm Delete Modal -->
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmDeleteModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmDeleteMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteButton">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Modal for editing user -->
 <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
@@ -654,13 +672,16 @@ if ($canDelete) {
                             appearance: none;
                             transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
                         }
+
                         .form-select:focus {
                             border-color: #86b7fe;
                             box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
                         }
+
                         .form-select option {
                             padding: 10px;
                         }
+
                         .form-select optgroup {
                             margin-top: 10px;
                         }
@@ -693,13 +714,14 @@ if ($canDelete) {
             }
         });
 
-        // Handle "Add User" form submission via AJAX
+// Handle "Add User" form submission via AJAX
         $('#addUserForm').on('submit', function (e) {
             e.preventDefault();
             <?php if (!$canCreate): ?>
             showToast('danger', 'You do not have permission to create users');
             return false;
             <?php endif; ?>
+
             var actionUrl = $(this).attr('action');
 
             $.ajax({
@@ -709,119 +731,147 @@ if ($canDelete) {
                 dataType: 'json',
                 success: function (response) {
                     if (response.success) {
-                        showToast(response.message, 'success');
-                        location.reload();
+                        // Hide the modal
+                        $("#addUserModal").modal('hide');
+                        // Reload the table and then show the toast message
+                        $('#table').load(location.href + ' #table > *', function () {
+                            showToast(response.message, 'success');
+                        });
+                        // Optionally, reset the form for the next user addition
+                        $('#addUserForm')[0].reset();
                     } else {
                         showToast(response.message, 'error');
                     }
                 },
-                error: function(){
-                    showToast('Error deleting module.', 'error');
+                error: function () {
+                    showToast('Error adding user.', 'error');
                 }
             });
         });
 
-        // Single-user delete
-        $('.delete-user').on('click', function () {
+// Global variable to store delete action data.
+        var deleteAction = null;
+
+// Single-user delete using modal confirmation.
+        $(document).on('click', '.delete-user', function () {
             const userId = $(this).data("id");
-            const row = $(this).closest('tr');
-
-            if (confirm("Are you sure you want to archive this user?")) {
-                $.ajax({
-                    type: "POST",
-                    url: "delete_user.php",
-                    data: { user_id: userId },
-                    dataType: 'json',
-                    success: function (response) {
-                        if (response.success) {
-                            showToast(response.message, 'success');
-                            row.fadeOut(400, function () {
-                                $(this).remove();
-                            });
-
-                        } else {
-                            showToast(response.message, 'error');
-                        }
-                    },
-                    error: function(){
-                        showToast('Error deleting module.', 'error');
-                    }
-                });
-            }
+            // Store the action data.
+            deleteAction = {type: 'single', userId: userId};
+            // Set the modal confirmation message.
+            $('#confirmDeleteMessage').text("Are you sure you want to archive this user?");
+            // Show the confirmation modal.
+            $('#confirmDeleteModal').modal('show');
         });
 
-        // Bulk delete
+// Bulk delete using modal confirmation.
         $("#delete-selected").click(function () {
             const selected = $(".select-row:checked").map(function () {
                 return $(this).val();
             }).get();
 
             if (selected.length === 0) {
-                showToast('warning', 'Please select users to archive.');
+                showToast('Please select users to archive.', 'warning');
                 return;
             }
+            // Store the bulk action data.
+            deleteAction = {type: 'bulk', selected: selected};
+            $('#confirmDeleteMessage').text(`Are you sure you want to archive ${selected.length} selected user(s)?`);
+            $('#confirmDeleteModal').modal('show');
+        });
 
-            if (confirm(`Are you sure you want to archive ${selected.length} selected user(s)?`)) {
-                $.ajax({
-                    type: "POST",
-                    url: "delete_user.php",
-                    data: { user_ids: selected },
-                    dataType: 'json',
-                    success: function (response) {
-                        if (response.success) {
-                            showToast('success', response.message);
-                            selected.forEach(id => {
-                                $(`tr[data-user-id="${id}"]`).fadeOut(400, function () {
-                                    $(this).remove();
+// Delete account confirmation using modal.
+        $("#confirmDeleteAccount").click(function () {
+            deleteAction = {type: 'account'};
+            $('#confirmDeleteMessage').text("Are you sure you want to delete your account?");
+            $('#confirmDeleteModal').modal('show');
+            $('#delete-selected').modal('hide');
+        });
+
+// When the user clicks the modal's confirm button.
+        $('#confirmDeleteButton').on('click', function () {
+            // Remove focus from the button to prevent ARIA issues.
+            $(this).blur();
+            // Hide the modal.
+            $('#confirmDeleteModal').modal('hide');
+
+            // Capture current deleteAction in a local variable.
+            var currentAction = deleteAction;
+            // Reset the global variable.
+            deleteAction = null;
+
+            if (currentAction) {
+                if (currentAction.type === 'single') {
+                    $.ajax({
+                        type: "POST",
+                        url: "delete_user.php",
+                        data: {user_id: currentAction.userId},
+                        dataType: 'json',
+                        success: function (response) {
+                            if (response.success) {
+                                // Reload the table and then show the toast.
+                                $('#table').load(location.href + ' #table > *', function () {
+                                    showToast(response.message, 'success');
                                 });
-                            });
-                            $("#select-all").prop('checked', false);
-                            $("#delete-selected").prop('disabled', true).hide();
-
-                        } else {
-                            showToast(response.message, 'error');
+                            } else {
+                                showToast(response.message, 'error');
+                            }
+                        },
+                        error: function () {
+                            showToast('Error deleting user.', 'error');
                         }
-                    },
-                    error: function(){
-                        showToast('Error deleting module.', 'error');
-                    }
-                });
+                    });
+                } else if (currentAction.type === 'bulk') {
+                    $.ajax({
+                        type: "POST",
+                        url: "delete_user.php",
+                        data: {user_ids: currentAction.selected},
+                        dataType: 'json',
+                        success: function (response) {
+                            if (response.success) {
+                                $('#table').load(location.href + ' #table > *', function () {
+                                    showToast(response.message, 'success');
+                                });
+                            } else {
+                                showToast(response.message, 'error');
+                            }
+                        },
+                        error: function () {
+                            showToast('Error deleting users.', 'error');
+                        }
+                    });
+                } else if (currentAction.type === 'account') {
+                    $.ajax({
+                        type: "POST",
+                        url: "delete_account.php",
+                        data: {action: "delete_account"},
+                        dataType: 'json',
+                        success: function (response) {
+                            if (response.success) {
+                                showToast(response.message, 'success');
+                                setTimeout(function () {
+                                    location.reload();
+                                }, 3000);
+                            } else {
+                                showToast(response.message, 'error');
+                            }
+                        },
+                        error: function () {
+                            showToast('Error deleting account.', 'error');
+                        }
+                    });
+                }
             }
         });
 
-        // Handle delete account confirmation
-        $("#confirmDeleteAccount").click(function () {
-            $.ajax({
-                type: "POST",
-                url: "delete_account.php",
-                data: { action: "delete_account" },
-                success: function (response) {
-                    if (response.success) {
-                        showToast(response.message, 'success');
-                        setTimeout(function(){
-                            location.reload();
-                        }, 3000);
-                    } else {
-                        alert("Error: " + response.message);
-                    }
-                },
-                error: function(){
-                    showToast('Error deleting module.', 'error');
-                }
-            });
-        });
-
-        // Close button on dynamic alerts
+// Other event handlers remain unchanged.
         $(document).on('click', '.btn-close', function () {
             $(this).closest('.alert').hide();
         });
 
-        // Department filter triggers form submit
         $('.department-filter').on('change', function () {
             this.form.submit();
         });
 
-        // Search input with debounce
         let searchTimeout;
         $('#searchUsers').on('input', function () {
             clearTimeout(searchTimeout);
@@ -829,6 +879,7 @@ if ($canDelete) {
                 this.form.submit();
             }, 500);
         });
+
 
         // Populate the "Edit User" modal
         $('#editUserModal').on('show.bs.modal', function (event) {
@@ -851,7 +902,7 @@ if ($canDelete) {
 
 
         // Handle "Edit User" form submission
-        $("#editUserForm").on("submit", function(e) {
+        $("#editUserForm").on("submit", function (e) {
             e.preventDefault();
 
             var submitButton = $(this).find('button[type="submit"]');
@@ -864,7 +915,7 @@ if ($canDelete) {
                 url: "update_user.php",
                 data: $(this).serialize(),
                 dataType: 'json',
-                success: function(response) {
+                success: function (response) {
                     if (response.success) {
                         if (response.data.hasChanges) {
                             var userId = $("#editUserID").val();
@@ -893,34 +944,34 @@ if ($canDelete) {
                         showToast(response.message, 'error');
                     }
                 },
-                error: function() {
-                    showToast('Error updating user: ' , 'error');
+                error: function () {
+                    showToast('Error updating user: ', 'error');
                 },
-                complete: function() {
+                complete: function () {
                     submitButton.prop('disabled', false).text('Save Changes');
                 }
             });
         });
 
         // Handle the "Select All" checkbox for bulk delete
-        $("#select-all").on('click', function() {
+        $("#select-all").on('click', function () {
             $(".select-row").prop('checked', $(this).prop('checked'));
             toggleBulkDeleteButton();
         });
 
         // Toggle bulk delete button based on selection
-        $(".select-row").on('change', function() {
+        $(".select-row").on('change', function () {
             toggleBulkDeleteButton();
         });
 
         function toggleBulkDeleteButton() {
-            const anyChecked = $(".select-row:checked").length > 0;
+            const anyChecked = $(".select-row:checked").length > 1;
             $("#delete-selected").prop('disabled', !anyChecked).toggle(anyChecked);
         }
     });
 </script>
 
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
-<?php include '../../general/footer.php';?>
+<?php include '../../general/footer.php'; ?>
 </body>
 </html>
