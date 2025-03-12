@@ -683,8 +683,6 @@ if ($canDelete) {
 
 
 <script>
-
-
     $(document).ready(function () {
         // Toggle the custom department input based on selection
         $('#modal_department').on('change', function () {
@@ -711,8 +709,7 @@ if ($canDelete) {
                 dataType: 'json',
                 success: function (response) {
                     if (response.success) {
-
-                        $('#addUserModal').html(response);
+                        showToast(response.message, 'success');
                         location.reload();
                     } else {
                         showToast(response.message, 'error');
@@ -922,7 +919,7 @@ if ($canDelete) {
         }
     });
 </script>
- 
+
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 <?php include '../../general/footer.php';?>
 </body>

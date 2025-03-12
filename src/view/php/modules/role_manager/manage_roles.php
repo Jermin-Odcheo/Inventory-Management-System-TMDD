@@ -121,7 +121,7 @@ unset($role); // break the reference
             </button>
         </div>
 
-        <div class="table-responsive">
+        <div class="table-responsive" id="table">
             <table class="table table-striped table-hover">
                 <thead class="table-dark">
                 <tr>
@@ -164,6 +164,40 @@ unset($role); // break the reference
                 <?php endif; ?>
                 </tbody>
             </table>
+            <!-- Pagination Controls (optional) -->
+            <div class="container-fluid">
+                <div class="row align-items-center g-3">
+                    <div class="col-12 col-sm-auto">
+                        <div class="text-muted">
+                            Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
+                                    id="totalRows">100</span> entries
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-auto ms-sm-auto">
+                        <div class="d-flex align-items-center gap-2">
+                            <button id="prevPage"
+                                    class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                <i class="bi bi-chevron-left"></i> Previous
+                            </button>
+                            <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                <option value="10" selected>10</option>
+                                <option value="20">20</option>
+                                <option value="30">30</option>
+                                <option value="50">50</option>
+                            </select>
+                            <button id="nextPage"
+                                    class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                Next <i class="bi bi-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <ul class="pagination justify-content-center" id="pagination"></ul>
+                    </div>
+                </div>
+            </div>
         </div><!-- /.table-responsive -->
     </div><!-- /.main-content -->
 </div><!-- /.wrapper -->
@@ -212,20 +246,6 @@ unset($role); // break the reference
 </div>
 
 <script>
-    function showAlert(type, message) {
-        const alertHtml = `
-        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-        `;
-        $("#alertMessage").html(alertHtml).fadeIn();
-
-        // Auto-dismiss after 5 seconds
-        setTimeout(() => {
-            $("#alertMessage .alert").fadeOut(() => $(this).remove());
-        }, 5000);
-    }
 
     $(document).ready(function() {
         // Load edit role modal content via AJAX.
@@ -241,6 +261,7 @@ unset($role); // break the reference
                 },
                 success: function(response) {
                     $('#editRoleContent').html(response);
+
                 },
                 error: function(xhr, status, error) {
                     console.error('AJAX Error:', status, error);
@@ -266,10 +287,10 @@ unset($role); // break the reference
                 url: 'add_role.php',
                 type: 'GET',
                 success: function(response) {
-                    $('#addRoleContent').html(response);
+                    showToast(response.message, 'success');
                 },
                 error: function() {
-                    $('#addRoleContent').html('<p class="text-danger">Error loading form.</p>');
+                    showToast('Error adding role', 'error');
                 }
             });
         });
@@ -282,14 +303,14 @@ unset($role); // break the reference
                 dataType: 'json',
                 success: function(response) {
                     if (response.success) {
-                        alert(response.message);
+                        showToast(response.message, 'success');
                         window.location.reload();
                     } else {
-                        alert(response.message);
+                        showToast(response.message, 'error');
                     }
                 },
                 error: function() {
-                    alert('Error processing undo request.');
+                    showToast('Error processing undo request.','error');
                 }
             });
         });
@@ -302,18 +323,22 @@ unset($role); // break the reference
                 dataType: 'json',
                 success: function(response) {
                     if (response.success) {
-                        alert(response.message);
+                        showToast(response.message, 'success');
                         window.location.reload();
                     } else {
-                        alert(response.message);
+                        showToast(response.message, 'error');
                     }
                 },
                 error: function() {
-                    alert('Error processing redo request.');
+                    showToast('Error processing redo request: ' , 'error');
                 }
             });
         });
     });
 </script>
+
+<script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
+
+<?php include '../../general/footer.php';?>
 </body>
 </html>
