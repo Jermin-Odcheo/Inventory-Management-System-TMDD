@@ -167,12 +167,6 @@ $modules = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     });
 </script>
-<script>
-    $(document).ready(function() {
-        // Test toast on page load
-        showToast('Test toast message!', 'success');
-    });
-</script>
 
 
 <?php include '../../general/footer.php';?>

@@ -165,7 +165,6 @@ try {
             min-height: 100vh;
             padding-top: 80px;
         }
-
         .wrapper {
             display: flex;
             min-height: 100vh;
@@ -180,116 +179,6 @@ try {
             padding: 20px;
             margin-left: 300px;
         }
-
-        /* Toast container */
-        #toastContainer {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 9999;
-            width: 350px;
-        }
-
-        * Toast styling *
-
-        /
-        #toastContainer {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 9999;
-            width: 350px;
-        }
-
-        .custom-toast {
-            margin-bottom: 10px;
-            min-width: 300px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            border-radius: 4px;
-            display: none;
-            position: relative;
-            opacity: 0;
-            transform: translateY(20px);
-            transition: opacity 0.3s ease, transform 0.3s ease;
-        }
-
-        .custom-toast.show {
-            display: block;
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .toast-success {
-            background-color: #d4edda;
-            color: #155724;
-            border-left: 5px solid #28a745;
-        }
-
-        .toast-error {
-            background-color: #f8d7da;
-            color: #721c24;
-            border-left: 5px solid #dc3545;
-        }
-
-        .toast-header {
-            background-color: rgba(255, 255, 255, 0.85);
-            padding: 10px 15px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-        }
-
-        .toast-body {
-            padding: 15px;
-            font-size: 16px;
-        }
-
-        .toast-close {
-            cursor: pointer;
-            background: transparent;
-            border: 0;
-            font-size: 1.25rem;
-            font-weight: 700;
-            opacity: 0.5;
-            padding: 0;
-            margin-left: auto;
-        }
-
-        .toast-close:hover {
-            opacity: 1;
-        }
-
-        /* Progress bar for toast timeout */
-        .toast-progress {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            height: 3px;
-            background-color: rgba(255, 255, 255, 0.7);
-            width: 100%;
-            transform-origin: left;
-        }
-
-        .toast-success .toast-progress {
-            background-color: #28a745;
-        }
-
-        .toast-error .toast-progress {
-            background-color: #dc3545;
-        }
-
-        /* Animation for the progress bar */
-        @keyframes countdown {
-            from {
-                transform: scaleX(1);
-            }
-            to {
-                transform: scaleX(0);
-            }
-        }
-
-
     </style>
 </head>
 <body>

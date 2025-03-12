@@ -347,30 +347,6 @@ if ($canDelete) {
 <div class="main-content container-fluid">
     <h1>User Management</h1>
 
-    <?php if (isset($_GET['success'])): ?>
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            User added successfully!
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    <?php endif; ?>
-
-    <?php if (isset($_SESSION['delete_success'])): ?>
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <?php
-            if (isset($_SESSION['deleted_count'])) {
-                echo "{$_SESSION['deleted_count']} user(s) have been successfully deleted.";
-                unset($_SESSION['deleted_count']);
-            } else {
-                echo "User has been successfully deleted.";
-            }
-            ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-        <?php
-        unset($_SESSION['delete_success']);
-    endif;
-    ?>
-
     <!-- Add this new div for delete messages -->
     <div id="deleteMessage" class="alert alert-success alert-dismissible fade show" style="display: none;" role="alert">
         <span id="deleteMessageText"></span>
@@ -707,21 +683,7 @@ if ($canDelete) {
 
 
 <script>
-    // Show an alert in the #alertMessage container
-    function showAlert(type, message) {
-        const alertHtml = `
-            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        `;
-        $("#alertMessage").html(alertHtml).fadeIn();
 
-        // Auto-dismiss after 5 seconds
-        setTimeout(() => {
-            $("#alertMessage .alert").fadeOut(() => $(this).remove());
-        }, 5000);
-    }
 
     $(document).ready(function () {
         // Toggle the custom department input based on selection
@@ -737,7 +699,7 @@ if ($canDelete) {
         $('#addUserForm').on('submit', function (e) {
             e.preventDefault();
             <?php if (!$canCreate): ?>
-            showAlert('danger', 'You do not have permission to create users');
+            showToast('danger', 'You do not have permission to create users');
             return false;
             <?php endif; ?>
             var actionUrl = $(this).attr('action');
@@ -749,16 +711,15 @@ if ($canDelete) {
                 dataType: 'json',
                 success: function (response) {
                     if (response.success) {
-                        // Hide modal and refresh or update UI
-                        $('#addUserModal').modal('hide');
+
+                        $('#addUserModal').html(response);
                         location.reload();
                     } else {
-                        alert("Error: " + response.message);
+                        showToast(response.message, 'error');
                     }
                 },
-                error: function (xhr, status, error) {
-                    console.log("Response Text:", xhr.responseText);
-                    alert('An error occurred: ' + error);
+                error: function(){
+                    showToast('Error deleting module.', 'error');
                 }
             });
         });
@@ -776,17 +737,17 @@ if ($canDelete) {
                     dataType: 'json',
                     success: function (response) {
                         if (response.success) {
+                            showToast(response.message, 'success');
                             row.fadeOut(400, function () {
                                 $(this).remove();
                             });
-                            showAlert('success', response.message);
+
                         } else {
-                            showAlert('danger', response.message || "Failed to archive user");
+                            showToast(response.message, 'error');
                         }
                     },
-                    error: function (xhr, status, error) {
-                        console.error("Error details:", xhr.responseText);
-                        showAlert('danger', "An error occurred while processing your request");
+                    error: function(){
+                        showToast('Error deleting module.', 'error');
                     }
                 });
             }
@@ -799,7 +760,7 @@ if ($canDelete) {
             }).get();
 
             if (selected.length === 0) {
-                showAlert('warning', 'Please select users to archive.');
+                showToast('warning', 'Please select users to archive.');
                 return;
             }
 
@@ -811,6 +772,7 @@ if ($canDelete) {
                     dataType: 'json',
                     success: function (response) {
                         if (response.success) {
+                            showToast('success', response.message);
                             selected.forEach(id => {
                                 $(`tr[data-user-id="${id}"]`).fadeOut(400, function () {
                                     $(this).remove();
@@ -818,14 +780,13 @@ if ($canDelete) {
                             });
                             $("#select-all").prop('checked', false);
                             $("#delete-selected").prop('disabled', true).hide();
-                            showAlert('success', response.message);
+
                         } else {
-                            showAlert('danger', response.message || "Failed to archive users");
+                            showToast(response.message, 'error');
                         }
                     },
-                    error: function (xhr, status, error) {
-                        console.error("Error details:", { xhr, status, error });
-                        showAlert('danger', "An error occurred while processing your request");
+                    error: function(){
+                        showToast('Error deleting module.', 'error');
                     }
                 });
             }
@@ -839,14 +800,16 @@ if ($canDelete) {
                 data: { action: "delete_account" },
                 success: function (response) {
                     if (response.success) {
-                        alert("Account deleted successfully.");
-                        window.location.href = "../../../../../public/index.php";
+                        showToast(response.message, 'success');
+                        setTimeout(function(){
+                            location.reload();
+                        }, 3000);
                     } else {
                         alert("Error: " + response.message);
                     }
                 },
-                error: function () {
-                    alert("An error occurred while deleting the account.");
+                error: function(){
+                    showToast('Error deleting module.', 'error');
                 }
             });
         });
@@ -928,14 +891,13 @@ if ($canDelete) {
                         }
 
                         $("#editUserModal").modal('hide');
-                        showAlert('success', response.message);
+                        showToast(response.message, 'success');
                     } else {
-                        showAlert('warning', response.message);
+                        showToast(response.message, 'error');
                     }
                 },
-                error: function(xhr, status, error) {
-                    console.error("AJAX Error:", xhr.responseText);
-                    showAlert('danger', 'Error updating user: ' + error);
+                error: function() {
+                    showToast('Error updating user: ' , 'error');
                 },
                 complete: function() {
                     submitButton.prop('disabled', false).text('Save Changes');
@@ -960,7 +922,8 @@ if ($canDelete) {
         }
     });
 </script>
-
+ 
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
+<?php include '../../general/footer.php';?>
 </body>
 </html>
