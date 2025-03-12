@@ -120,6 +120,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         <label for="role_name">Role Name</label>
       </div>
       
+      <!-- Status message area -->
+      <div id="statusMessage" class="alert d-none mb-3"></div>
+      
       <!-- Permissions section -->
       <h6 class="mb-3">Permissions</h6>
       
@@ -226,7 +229,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 $('#editRoleForm').on('submit', function(e) {
   e.preventDefault();
   const submitBtn = $('button[type="submit"]', this);
+  const statusMsg = $('#statusMessage');
   
+  // Hide any previous status messages
+  statusMsg.addClass('d-none').removeClass('alert-success alert-danger');
+  
+  // Disable button and show loading state
   submitBtn.html('<span class="spinner-border spinner-border-sm me-2"></span> Updating...');
   submitBtn.prop('disabled', true);
 
@@ -258,45 +266,30 @@ $('#editRoleForm').on('submit', function(e) {
           );
         });
 
-        $('#editRoleModal').modal('hide');
-        showToast('success', 'Role Updated', 'Permissions updated successfully');
+        // Display success message and close modal after a short delay
+        statusMsg.addClass('alert-success').removeClass('d-none')
+                .html('<i class="bi bi-check-circle me-2"></i>Role updated successfully');
+        
+        setTimeout(function() {
+          $('#editRoleModal').modal('hide');
+        }, 1000);
       } else {
-        showToast('danger', 'Update Failed', response.message || 'An error occurred');
+        // Show error message
+        statusMsg.addClass('alert-danger').removeClass('d-none')
+                .html('<i class="bi bi-exclamation-triangle me-2"></i>' + 
+                      (response.message || 'An error occurred while updating the role'));
       }
     },
     error: function() {
-      showToast('danger', 'System Error', 'Please try again later');
+      // Show error message for system errors
+      statusMsg.addClass('alert-danger').removeClass('d-none')
+              .html('<i class="bi bi-exclamation-triangle me-2"></i>System error occurred. Please try again.');
     },
     complete: function() {
+      // Restore button state
       submitBtn.html('<i class="bi bi-check2 me-1"></i>Update Role');
       submitBtn.prop('disabled', false);
     }
   });
 });
-
-function showToast(type, title, message) {
-  const toastId = 'toast-' + Date.now();
-  const toast = `
-    <div id="${toastId}" class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
-      <div class="d-flex">
-        <div class="toast-body">
-          <b>${title}</b> - ${message}
-        </div>
-        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-      </div>
-    </div>
-  `;
-  
-  if (!$('#toast-container').length) {
-    $('body').append('<div id="toast-container" class="toast-container position-fixed top-0 end-0 p-3"></div>');
-  }
-  
-  $('#toast-container').append(toast);
-  
-  const toastElement = new bootstrap.Toast(document.getElementById(toastId), {
-    autohide: true,
-    delay: 3000
-  });
-  toastElement.show();
-}
 </script>
