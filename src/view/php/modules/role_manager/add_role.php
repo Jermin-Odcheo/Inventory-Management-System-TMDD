@@ -70,10 +70,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             dataType: "json",
             success: function(response) {
                 if(response.success) {
-                    showToast(response.message, 'success');
-                    // Optionally refresh your roles content via AJAX (see refresh function example)
-                    // e.g., refreshRolesTable();
-                    $('#addRoleModal').modal('hide');
+                    $('#rolesTable').load(location.href + ' #rolesTable', function() {
+                        showToast(response.message, 'success');
+                    });
+                    hideModal('addRoleModal');
                 } else {
                     showToast(response.message, 'error');
                 }

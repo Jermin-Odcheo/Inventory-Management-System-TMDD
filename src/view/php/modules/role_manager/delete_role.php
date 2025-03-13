@@ -2,53 +2,50 @@
 session_start();
 require_once('../../../../../config/ims-tmdd.php'); // Adjust path as needed
 
-// Optional: Check if the logged-in user has permission to manage roles.
-if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
+// Ensure the request method is POST.
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    echo json_encode(['success' => false, 'message' => 'Invalid request method.']);
     exit();
 }
 
-// Check if the role ID is provided in the URL
-if (!isset($_GET['id']) || empty($_GET['id'])) {
-    // Optionally, you can set an error message in the session
-    $_SESSION['error'] = "No role ID specified.";
-    header("Location: manage_roles.php");
+// Check if the role ID is provided in the POST data.
+if (!isset($_POST['id']) || empty($_POST['id'])) {
+    echo json_encode(['success' => false, 'message' => 'No role ID specified.']);
     exit();
 }
 
-$role_id = intval($_GET['id']); // Convert to integer to sanitize input
+$role_id = intval($_POST['id']);
 
 try {
-    // First, verify that the role exists
+    // Verify that the role exists.
     $stmt = $pdo->prepare("SELECT * FROM roles WHERE id = ?");
     $stmt->execute([$role_id]);
     $role = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$role) {
-        $_SESSION['error'] = "Role not found.";
-        header("Location: manage_roles.php");
+        echo json_encode(['success' => false, 'message' => 'Role not found.']);
         exit();
     }
 
     // Delete the role from the roles table.
     $stmt = $pdo->prepare("DELETE FROM roles WHERE id = ?");
     if ($stmt->execute([$role_id])) {
-        // Log the action in the role_changes table
+        // Log the deletion action in the role_changes table.
         $stmt = $pdo->prepare("INSERT INTO role_changes (UserID, RoleID, Action, OldRoleName) VALUES (?, ?, 'Delete', ?)");
+        // Use 'role_name' key based on your table schema.
         $stmt->execute([
             $_SESSION['user_id'],
             $role_id,
-            $role['Role_Name'] // Old role name
+            $role['role_name']
         ]);
 
-        $_SESSION['success'] = "Role deleted successfully.";
+        echo json_encode(['success' => true, 'message' => 'Role deleted successfully.']);
     } else {
-        $_SESSION['error'] = "Failed to delete the role. Please try again.";
+        echo json_encode(['success' => false, 'message' => 'Failed to delete the role. Please try again.']);
     }
 } catch (PDOException $e) {
-    $_SESSION['error'] = "Database error: " . $e->getMessage();
+    echo json_encode(['success' => false, 'message' => "Database error: " . $e->getMessage()]);
 }
 
-// Redirect back to the manage roles page
-header("Location: manage_roles.php");
 exit();
+?>

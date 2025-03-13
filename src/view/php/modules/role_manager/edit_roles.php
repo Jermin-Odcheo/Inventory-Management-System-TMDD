@@ -1,5 +1,8 @@
 <?php
 session_start();
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 require_once('../../../../../config/ims-tmdd.php');
 
 // 1) Check session and role ID.
@@ -42,6 +45,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         exit;
     }
 
+    // Check if the new role name already exists for a different role.
+    $stmtDuplicate = $pdo->prepare("SELECT id FROM roles WHERE role_name = ? AND id != ?");
+    $stmtDuplicate->execute([$roleName, $roleID]);
+    if ($stmtDuplicate->fetch(PDO::FETCH_ASSOC)) {
+        echo json_encode(['success' => false, 'message' => 'Role name already exists.']);
+        exit;
+    }
+
     try {
         $pdo->beginTransaction();
 
@@ -62,11 +73,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
 
         // Log changes in role_changes table.
+        // >>>> Temporarily comment out or wrap this section if you suspect a schema mismatch <<<<
         $stmtLog = $pdo->prepare("INSERT INTO role_changes (UserID, RoleID, Action, OldRoleName, NewRoleName, OldPrivileges, NewPrivileges) VALUES (?, ?, 'Modified', ?, ?, ?, ?)");
         $stmtLog->execute([
             $_SESSION['user_id'],
             $roleID,
-            $role['role_name'],
+            $role['role_name'], // Verify this column name matches your DB schema
             $roleName,
             json_encode($currentPrivileges),
             json_encode($selected)
@@ -95,11 +107,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         exit;
     } catch (Exception $e) {
         $pdo->rollBack();
+        // Log error for debugging
+        error_log("Error updating role: " . $e->getMessage());
         echo json_encode(['success' => false, 'message' => 'Error updating role: ' . $e->getMessage()]);
         exit;
     }
 }
 ?>
+
 
 <!-- Simplified Modern Edit Role Modal -->
 <div class="modal-content border-0 shadow-lg rounded-4">
@@ -238,7 +253,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 </style>
 
 <script>
-    $('#editRoleForm').on('submit', function (e) {
+    // Ensure the submit event is bound only once using delegation.
+    $(document).off('submit', '#editRoleForm').on('submit', '#editRoleForm', function (e) {
         e.preventDefault();
         const submitBtn = $('button[type="submit"]', this);
 
@@ -253,28 +269,32 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             dataType: 'json',
             success: function (response) {
                 if (response.success) {
-                    // Update table row and close modal
+                    // Update table row and update privileges display (if needed)
                     const row = $('tr[data-role-id="' + response.role_id + '"]');
                     row.find('.role-name').text(response.role_name);
-
-                    // Update privileges display
                     const privilegeCell = row.find('.privilege-list');
                     privilegeCell.empty();
-
-                    // Group by module
                     const grouped = {};
                     response.privileges.forEach(function (item) {
                         if (!grouped[item.module_name]) grouped[item.module_name] = [];
                         grouped[item.module_name].push(item.priv_name);
                     });
-
                     Object.keys(grouped).forEach(function (moduleName) {
                         privilegeCell.append(
                             $('<div class="mb-1">').html('<b>' + moduleName + ':</b> ' + grouped[moduleName].join(', '))
                         );
                     });
 
-                    showToast(response.message, 'success');
+                    // Remove focus from the submit button to avoid aria-hidden issues.
+                    submitBtn.blur();
+
+                    // Hide the modal (using Bootstrap’s modal method)
+                    $('#editRoleModal').modal('hide');
+
+                    $('#rolesTable').load(location.href + ' #rolesTable', function() {
+                        showToast(response.message, 'success');
+                    });
+                    hideModal('confirmDeleteModal');
                 } else {
                     showToast(response.message || 'An error occurred while updating the role', 'error');
                 }
@@ -283,10 +303,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 showToast('System error occurred. Please try again.', 'error');
             },
             complete: function () {
-                // Restore button state
+                // Restore button state.
                 submitBtn.html('<i class="bi bi-check2 me-1"></i>Update Role');
                 submitBtn.prop('disabled', false);
             }
         });
     });
+
 </script>
