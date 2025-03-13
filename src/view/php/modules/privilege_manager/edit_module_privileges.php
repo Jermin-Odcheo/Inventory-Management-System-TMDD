@@ -53,6 +53,7 @@ $currentPrivileges = array_map('intval', $currentPrivileges);
     </form>
     <div id="editModulePrivilegesAlert"></div>
 </div>
+
 <script>
     $('#editModulePrivilegesForm').on('submit', function(e){
         e.preventDefault();
@@ -63,12 +64,10 @@ $currentPrivileges = array_map('intval', $currentPrivileges);
             dataType: 'json',
             success: function(response){
                 if(response.success){
-                    // Use toast notification instead of alert
-                    showToast(response.message, 'success');
-                    // Optionally, reload page after a short delay so the toast can be seen
-                    setTimeout(function(){
-                        location.reload();
-                    }, 3000);
+                    $('#privilegeTable').load(location.href + ' #privilegeTable', function() {
+                        showToast(response.message, 'success');
+                    });
+                    $('#editModuleModal').modal('hide');
                 } else {
                     showToast(response.message, 'error');
                 }

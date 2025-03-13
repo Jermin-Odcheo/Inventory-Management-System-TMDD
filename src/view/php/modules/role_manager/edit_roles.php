@@ -294,7 +294,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     $('#rolesTable').load(location.href + ' #rolesTable', function() {
                         showToast(response.message, 'success');
                     });
-                    hideModal('confirmDeleteModal');
                 } else {
                     showToast(response.message || 'An error occurred while updating the role', 'error');
                 }
@@ -309,5 +308,4 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             }
         });
     });
-
 </script>

@@ -21,6 +21,10 @@ ORDER BY m.id
 $stmt = $pdo->prepare($sql);
 $stmt->execute();
 $modules = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Fetch available privileges that are enabled (is_disabled = 0)
+$stmt = $pdo->query("SELECT id, priv_name FROM privileges WHERE is_disabled = 0 ORDER BY priv_name");
+$privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -41,15 +45,21 @@ $modules = $stmt->fetchAll(PDO::FETCH_ASSOC);
             display: flex;
             min-height: 100vh;
         }
+        /* Sidebar with fixed width */
         .sidebar {
             width: 300px;
             background-color: #2c3e50;
             color: #fff;
         }
+        /* Main content takes remaining space */
         .main-content {
             flex: 1;
             padding: 20px;
             margin-left: 300px;
+        }
+        /* (Optional) Override container-fluid padding if needed */
+        .container-fluid {
+            padding: 100px 15px;
         }
     </style>
 </head>
@@ -63,11 +73,19 @@ $modules = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <!-- Main Content Area -->
     <div class="main-content container-fluid">
         <h1>Module Privilege Management</h1>
+
+        <!-- Add Module Button -->
+        <div class="d-flex justify-content-end mb-3">
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModuleModal">
+                Add Module
+            </button>
+        </div>
+
         <!-- Alert container -->
         <div id="alertMessage" style="position: fixed; top: 20px; right: 20px; z-index: 1050;"></div>
 
-        <div class="table-responsive">
-            <table class="table table-striped table-hover">
+        <div class="table-responsive" id="table">
+            <table id="privilegeTable" class="table table-striped table-hover">
                 <thead class="table-dark">
                 <tr>
                     <th>Module ID</th>
@@ -101,9 +119,108 @@ $modules = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <?php endif; ?>
                 </tbody>
             </table>
+            <!-- Pagination Controls (optional) -->
+            <div class="container-fluid">
+                <div class="row align-items-center g-3">
+                    <div class="col-12 col-sm-auto">
+                        <div class="text-muted">
+                            Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
+                                    id="totalRows">100</span> entries
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-auto ms-sm-auto">
+                        <div class="d-flex align-items-center gap-2">
+                            <button id="prevPage"
+                                    class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                <i class="bi bi-chevron-left"></i> Previous
+                            </button>
+                            <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                <option value="10" selected>10</option>
+                                <option value="20">20</option>
+                                <option value="30">30</option>
+                                <option value="50">50</option>
+                            </select>
+                            <button id="nextPage"
+                                    class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                Next <i class="bi bi-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <ul class="pagination justify-content-center" id="pagination"></ul>
+                    </div>
+                </div>
+            </div>
         </div><!-- .table-responsive -->
+
     </div><!-- .main-content -->
 </div><!-- .wrapper -->
+
+<script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
+
+<!-- Confirm Delete Modal -->
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete the module "<span id="roleNamePlaceholder"></span>"?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button id="confirmDeleteButton" type="button" class="btn btn-danger">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Module Modal -->
+<div class="modal fade" id="addModuleModal" tabindex="-1" aria-labelledby="addModuleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="addModuleForm">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addModuleModalLabel">Add Module</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Module Name -->
+                    <div class="mb-3">
+                        <label for="moduleName" class="form-label">Module Name</label>
+                        <input type="text" class="form-control" id="moduleName" name="module_name" required>
+                    </div>
+                    <!-- Privileges as Checkboxes -->
+                    <div class="mb-3">
+                        <label class="form-label">Select Privileges (Optional)</label>
+                        <?php if (!empty($privileges)): ?>
+                            <?php foreach ($privileges as $privilege): ?>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="privileges[]"
+                                           value="<?php echo htmlspecialchars($privilege['id']); ?>"
+                                           id="privilege_<?php echo htmlspecialchars($privilege['id']); ?>">
+                                    <label class="form-check-label" for="privilege_<?php echo htmlspecialchars($privilege['id']); ?>">
+                                        <?php echo htmlspecialchars($privilege['priv_name']); ?>
+                                    </label>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <p>No privileges available.</p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Add Module</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <!-- Edit Module Privileges Modal -->
 <div class="modal fade" id="editModuleModal" tabindex="-1" aria-labelledby="editModuleModalLabel" aria-hidden="true">
@@ -118,8 +235,8 @@ $modules = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 <script>
     $(document).ready(function(){
-        // When "Edit Privileges" is clicked, load the edit form via AJAX.
-        $('.edit-module-btn').on('click', function(){
+        // Delegate event binding for edit button to handle dynamically loaded elements.
+        $(document).on('click', '.edit-module-btn', function(){
             var moduleID = $(this).data('module-id');
             $('#editModuleContent').html("Loading...");
             $.ajax({
@@ -136,25 +253,33 @@ $modules = $stmt->fetchAll(PDO::FETCH_ASSOC);
             });
         });
 
-        // Handle deletion of a module.
-        $('.delete-module-btn').on('click', function(){
-            if(!confirm('Are you sure you want to delete this module?')){
+        // Use delegation for delete button as well.
+        var moduleToDelete = null;
+        $(document).on('click', '.delete-module-btn', function(){
+            var moduleID = $(this).data('module-id');
+            var moduleName = $(this).closest('tr').find('td:eq(1)').text();
+            moduleToDelete = moduleID;
+            $('#roleNamePlaceholder').text(moduleName);
+            $('#confirmDeleteModal').modal('show');
+        });
+
+        // Confirm delete button click.
+        $('#confirmDeleteButton').on('click', function(){
+            if(moduleToDelete === null){
                 return;
             }
-            var moduleID = $(this).data('module-id');
             $.ajax({
                 url: 'delete_module.php',
                 type: 'POST',
-                data: { module_id: moduleID },
+                data: { module_id: moduleToDelete },
                 dataType: 'json',
                 success: function(response){
                     if(response.success){
-                        // Use toast notification instead of alert
-                        showToast(response.message, 'success');
-                        // Optionally, reload page after a short delay so the toast can be seen
-                        setTimeout(function(){
-                            location.reload();
-                        }, 3000);
+                        // Reload the table after deletion
+                        $('#privilegeTable').load(location.href + ' #privilegeTable', function() {
+                            showToast(response.message, 'success');
+                        });
+                        $('#confirmDeleteModal').modal('hide');
                     } else {
                         showToast(response.message, 'error');
                     }
@@ -165,9 +290,31 @@ $modules = $stmt->fetchAll(PDO::FETCH_ASSOC);
             });
         });
 
+        // Handle Add Module form submission.
+        $('#addModuleForm').on('submit', function(e) {
+            e.preventDefault();
+            $.ajax({
+                url: 'add_module.php',
+                type: 'POST',
+                data: $(this).serialize(),
+                dataType: 'json',
+                success: function(response) {
+                    if(response.success){
+                        $('#privilegeTable').load(location.href + ' #privilegeTable', function() {
+                            showToast(response.message, 'success');
+                        });
+                        $('#addModuleModal').modal('hide');
+                    } else {
+                        showToast(response.message, 'error');
+                    }
+                },
+                error: function(){
+                    showToast('Error adding module.', 'error');
+                }
+            });
+        });
     });
 </script>
-
 
 <?php include '../../general/footer.php';?>
 </body>

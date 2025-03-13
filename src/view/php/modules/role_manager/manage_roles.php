@@ -115,7 +115,7 @@ unset($role); // break the reference
             </button>
         </div>
 
-        <div class="table-responsive">
+        <div class="table-responsive" id="table">
             <table id="rolesTable" class="table table-striped table-hover">
                 <thead class="table-dark">
                 <tr>
@@ -158,9 +158,46 @@ unset($role); // break the reference
                 <?php endif; ?>
                 </tbody>
             </table>
+            <!-- Pagination Controls (optional) -->
+            <div class="container-fluid">
+                <div class="row align-items-center g-3">
+                    <div class="col-12 col-sm-auto">
+                        <div class="text-muted">
+                            Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
+                                    id="totalRows">100</span> entries
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-auto ms-sm-auto">
+                        <div class="d-flex align-items-center gap-2">
+                            <button id="prevPage"
+                                    class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                <i class="bi bi-chevron-left"></i> Previous
+                            </button>
+                            <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                <option value="10" selected>10</option>
+                                <option value="20">20</option>
+                                <option value="30">30</option>
+                                <option value="50">50</option>
+                            </select>
+                            <button id="nextPage"
+                                    class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                Next <i class="bi bi-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <ul class="pagination justify-content-center" id="pagination"></ul>
+                    </div>
+                </div>
+            </div>
         </div><!-- /.table-responsive -->
+
     </div><!-- /.main-content -->
 </div><!-- /.wrapper -->
+
+<script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 
 <!-- Edit Role Modal -->
 <div class="modal fade" id="editRoleModal" tabindex="-1" aria-labelledby="editRoleModalLabel" aria-hidden="true">
@@ -206,18 +243,6 @@ unset($role); // break the reference
 </div>
 
 <script>
-    // Helper function to hide a modal using Bootstrap 5 native API
-    function hideModal(modalId) {
-        var modalEl = document.getElementById(modalId);
-        var modalInstance = bootstrap.Modal.getInstance(modalEl);
-        if (modalInstance) {
-            modalInstance.hide();
-        } else {
-            modalInstance = new bootstrap.Modal(modalEl);
-            modalInstance.hide();
-        }
-    }
-
     $(document).ready(function() {
         // 1. Load edit role modal content via AJAX.
         $('.edit-role-btn').on('click', function() {
@@ -265,7 +290,7 @@ unset($role); // break the reference
                         $('#rolesTable').load(location.href + ' #rolesTable', function() {
                             showToast(response.message, 'success');
                         });
-                        hideModal('confirmDeleteModal');
+                        $('#confirmDeleteModal').modal('hide');
                     } else {
                         showToast(response.message, 'error');
                     }
@@ -302,8 +327,6 @@ unset($role); // break the reference
                 dataType: 'json',
                 success: function (response) {
                     if (response.success) {
-                        // Hide the modal using the helper function.
-                        hideModal('addRoleModal');
                         // Reload the table and then show the toast.
                         $('#rolesTable').load(location.href + ' #rolesTable', function() {
                             showToast(response.message, 'success');
@@ -354,8 +377,6 @@ unset($role); // break the reference
                                 );
                             });
                         }
-                        // Hide the modal using the helper function.
-                        hideModal('editRoleModal');
                     } else {
                         showToast(response.message || 'An error occurred while updating the role', 'error');
                     }

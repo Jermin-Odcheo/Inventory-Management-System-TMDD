@@ -73,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $('#rolesTable').load(location.href + ' #rolesTable', function() {
                         showToast(response.message, 'success');
                     });
-                    hideModal('addRoleModal');
+                    $('#addRoleModal').modal('hide');
                 } else {
                     showToast(response.message, 'error');
                 }

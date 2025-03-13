@@ -150,4 +150,6 @@ function playToastSound(type) {
     audio.play().catch(e => {
         // Browser might block autoplay, just ignore
     });
+
+
 }
