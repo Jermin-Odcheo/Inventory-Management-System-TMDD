@@ -435,22 +435,6 @@ unset($role); // break the reference
             });
         });
     });
-
-    // Function to refresh the roles table content
-    function refreshRolesTable() {
-        $.ajax({
-            url: 'manage_roles.php', // Endpoint that returns the updated table HTML
-            type: 'GET',
-            success: function(response) {
-                $('#table-responsive').html(response); // Replace your table's container content
-            },
-            error: function() {
-                console.error('Failed to refresh roles table.');
-            }
-        });
-    }
-
-
 </script>
 
 <?php include '../../general/footer.php'; ?>

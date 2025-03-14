@@ -274,11 +274,13 @@ if (strlen($q) > 0) {
             background-color: #f8f9fa;
             min-height: 100vh;
         }
+
         .main-content {
             margin-left: 300px;
             padding: 20px;
             transition: margin-left 0.3s ease;
         }
+
         @media (max-width: 768px) {
             .main-content {
                 margin-left: 0;
@@ -355,7 +357,8 @@ if (strlen($q) > 0) {
                                     <div class="row align-items-center g-3">
                                         <div class="col-12 col-sm-auto">
                                             <div class="text-muted">
-                                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
+                                                Showing <span id="currentPage">1</span> to <span
+                                                        id="rowsPerPage">20</span> of <span
                                                         id="totalRows">100</span> entries
                                             </div>
                                         </div>
@@ -412,13 +415,15 @@ if (strlen($q) > 0) {
                         <label for="DepartmentID" class="form-label">
                             <i class="bi bi-tag"></i> Department ID <span class="text-danger">*</span>
                         </label>
-                        <input type="number" min="1" class="form-control" name="DepartmentID" id="DynamicDepartmentID" readonly>
+                        <input type="number" min="1" class="form-control" name="DepartmentID" id="DynamicDepartmentID"
+                               readonly>
                     </div>
                     <div class="mb-3">
                         <label for="DepartmentAcronym" class="form-label">
                             <i class="bi bi-building"></i> Department Acronym <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control" id="DepartmentAcronym" name="DepartmentAcronym" required>
+                        <input type="text" class="form-control" id="DepartmentAcronym" name="DepartmentAcronym"
+                               required>
                     </div>
                     <div class="mb-3">
                         <label for="DepartmentName" class="form-label">
@@ -452,19 +457,22 @@ if (strlen($q) > 0) {
                         <label for="edit_department_id" class="form-label">
                             <i class="bi bi-tag"></i> Department ID <span class="text-danger">*</span>
                         </label>
-                        <input type="number" min="1" class="form-control" id="edit_department_id" name="DepartmentID" readonly>
+                        <input type="number" min="1" class="form-control" id="edit_department_id" name="DepartmentID"
+                               readonly>
                     </div>
                     <div class="mb-3">
                         <label for="edit_department_acronym" class="form-label">
                             <i class="bi bi-building"></i> Department Acronym <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control" id="edit_department_acronym" name="DepartmentAcronym" required>
+                        <input type="text" class="form-control" id="edit_department_acronym" name="DepartmentAcronym"
+                               required>
                     </div>
                     <div class="mb-3">
                         <label for="edit_department_name" class="form-label">
                             <i class="bi bi-layers"></i> Department Name <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control" id="edit_department_name" name="DepartmentName" required>
+                        <input type="text" class="form-control" id="edit_department_name" name="DepartmentName"
+                               required>
                     </div>
                     <div class="d-flex justify-content-end">
                         <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
@@ -477,7 +485,8 @@ if (strlen($q) > 0) {
 </div>
 
 <!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteDepartmentModal" tabindex="-1" aria-labelledby="deleteDepartmentModalLabel" aria-hidden="true">
+<div class="modal fade" id="deleteDepartmentModal" tabindex="-1" aria-labelledby="deleteDepartmentModalLabel"
+     aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -500,7 +509,7 @@ if (strlen($q) > 0) {
         // Live search filtering
         const searchInput = document.getElementById('eqSearch');
         if (searchInput) {
-            searchInput.addEventListener('keyup', function() {
+            searchInput.addEventListener('keyup', function () {
                 const searchValue = searchInput.value.toLowerCase();
                 const rows = document.querySelectorAll('#table tbody tr');
                 rows.forEach(function (row) {
@@ -588,9 +597,10 @@ if (strlen($q) > 0) {
                 })
                 .catch(error => console.error("Error fetching latest department ID:", error));
         }
+
         fetchLatestDepartmentID();
     });
 </script>
-<?php include '../../general/footer.php';?>
+<?php include '../../general/footer.php'; ?>
 </body>
 </html>

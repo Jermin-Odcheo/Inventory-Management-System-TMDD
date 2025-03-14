@@ -1,5 +1,5 @@
-// Ultra-modern badass toast notification system
-function showToast(message, type = 'info', duration = 5000) {
+// Ultra-modern toast notification system with enhanced animations
+function showToast(message, type = 'info', duration = 5000, title = null) {
     // Create or get container
     let container = document.getElementById('toastContainer');
     if (!container) {
@@ -8,15 +8,17 @@ function showToast(message, type = 'info', duration = 5000) {
         document.body.appendChild(container);
     }
 
-    // Create toast element with badass design
+    // Create toast element with enhanced design
     const toast = document.createElement('div');
     toast.className = `custom-toast toast-${type}`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'polite');
 
     // Create header
     const header = document.createElement('div');
     header.className = 'toast-header';
 
-    // Add slick icon with appropriate symbol
+    // Add icon with appropriate symbol
     const icon = document.createElement('div');
     icon.className = 'toast-icon';
 
@@ -39,78 +41,121 @@ function showToast(message, type = 'info', duration = 5000) {
     icon.textContent = iconContent;
     header.appendChild(icon);
 
-    // Add title with appropriate text based on type
-    const title = document.createElement('h5');
-    title.className = 'toast-title';
+    // Add title with appropriate text based on type or custom title
+    const titleElement = document.createElement('h5');
+    titleElement.className = 'toast-title';
 
-    switch(type) {
-        case 'success':
-            title.textContent = 'Success';
-            break;
-        case 'error':
-            title.textContent = 'Error';
-            break;
-        case 'warning':
-            title.textContent = 'Warning';
-            break;
-        case 'info':
-        default:
-            title.textContent = 'Information';
-            break;
+    // Use custom title if provided, otherwise use default based on type
+    if (title) {
+        titleElement.textContent = title;
+    } else {
+        switch(type) {
+            case 'success':
+                titleElement.textContent = 'Success';
+                break;
+            case 'error':
+                titleElement.textContent = 'Error';
+                break;
+            case 'warning':
+                titleElement.textContent = 'Warning';
+                break;
+            case 'info':
+            default:
+                titleElement.textContent = 'Information';
+                break;
+        }
     }
-    header.appendChild(title);
+    header.appendChild(titleElement);
 
     // Add modern close button
     const closeBtn = document.createElement('button');
     closeBtn.className = 'toast-close';
     closeBtn.innerHTML = '×';
     closeBtn.setAttribute('aria-label', 'Close');
-    closeBtn.onclick = function() {
+    closeBtn.onclick = function(event) {
+        event.stopPropagation(); // Prevent triggering toast click
         dismissToast(toast);
     };
     header.appendChild(closeBtn);
 
     toast.appendChild(header);
 
-    // Add sleek body
+    // Add body with support for HTML content
     const body = document.createElement('div');
     body.className = 'toast-body';
-    body.textContent = message;
+
+    // Check if we're dealing with HTML or plain text
+    if (message.includes('<') && message.includes('>')) {
+        body.innerHTML = message;
+    } else {
+        body.textContent = message;
+    }
+
     toast.appendChild(body);
 
     // Add progress bar with gradient
     const progress = document.createElement('div');
     progress.className = 'toast-progress';
-    progress.style.animation = `countdown ${duration}ms linear forwards`;
+
+    // Only animate progress if duration is positive
+    if (duration > 0) {
+        progress.style.animation = `countdown ${duration}ms linear forwards`;
+    }
+
     toast.appendChild(progress);
 
     // Add to DOM with a slight delay between multiple toasts
+    const delay = Math.min(container.children.length * 100, 300);
+
     setTimeout(() => {
         container.appendChild(toast);
 
-        // Trigger show animation
-        requestAnimationFrame(() => {
-            toast.classList.add('show');
-        });
+        // Force reflow before adding show class
+        void toast.offsetWidth;
 
-        // Add sound effect for extra badassery (optional)
-        // playToastSound(type);
+        // Trigger show animation
+        toast.classList.add('show');
+        toast.classList.add('new-toast');
+
+        // Remove new-toast class after animation completes
+        setTimeout(() => {
+            toast.classList.remove('new-toast');
+        }, 500);
 
         // Auto-dismiss
         if (duration > 0) {
-            setTimeout(() => {
+            const dismissTimeout = setTimeout(() => {
                 dismissToast(toast);
             }, duration);
+
+            // Store the timeout ID so we can cancel it if manually closed
+            toast._dismissTimeout = dismissTimeout;
         }
-    }, container.children.length * 100);
+
+        // Make the entire toast clickable (optional) - can remove if not desired
+        toast.addEventListener('click', function(event) {
+            // Don't trigger if they clicked the close button
+            if (event.target !== closeBtn && !closeBtn.contains(event.target)) {
+                // Custom action when toast is clicked - modify as needed
+                // Example: console.log('Toast clicked:', type, message);
+            }
+        });
+
+    }, delay);
 
     return toast;
 }
 
-// Smooth dismiss animation
+// Enhanced dismiss animation
 function dismissToast(toast) {
-    toast.style.opacity = '0';
-    toast.style.transform = 'translateY(20px) scale(0.98)';
+    // Clear any existing dismiss timeout
+    if (toast._dismissTimeout) {
+        clearTimeout(toast._dismissTimeout);
+    }
+
+    // Add hide class to trigger exit animation
+    toast.classList.add('hide');
+    toast.classList.remove('show');
 
     // Remove from DOM after animation completes
     setTimeout(() => {
@@ -120,36 +165,44 @@ function dismissToast(toast) {
             // Remove container if empty
             const container = document.getElementById('toastContainer');
             if (container && container.children.length === 0) {
-                container.parentNode.removeChild(container);
+                document.body.removeChild(container);
             }
         }
-    }, 400); // Match the CSS transition time
+    }, 600); // Match the CSS transition duration
 }
 
-// Optional: Play sound based on toast type
-function playToastSound(type) {
-    // Only implement if you want sound effects
-    const audio = new Audio();
+// Create specialized toast functions for convenience
+const Toast = {
+    success: function(message, duration = 5000, title = null) {
+        return showToast(message, 'success', duration, title);
+    },
 
-    switch(type) {
-        case 'success':
-            audio.src = 'path/to/success-sound.mp3';
-            break;
-        case 'error':
-            audio.src = 'path/to/error-sound.mp3';
-            break;
-        case 'warning':
-            audio.src = 'path/to/warning-sound.mp3';
-            break;
-        case 'info':
-            audio.src = 'path/to/info-sound.mp3';
-            break;
+    error: function(message, duration = 5000, title = null) {
+        return showToast(message, 'error', duration, title);
+    },
+
+    warning: function(message, duration = 5000, title = null) {
+        return showToast(message, 'warning', duration, title);
+    },
+
+    info: function(message, duration = 5000, title = null) {
+        return showToast(message, 'info', duration, title);
     }
+};
 
-    audio.volume = 0.5;
-    audio.play().catch(e => {
-        // Browser might block autoplay, just ignore
-    });
-
-
+// Optional: Utility to dismiss all visible toasts
+function dismissAllToasts() {
+    const container = document.getElementById('toastContainer');
+    if (container) {
+        const toasts = container.querySelectorAll('.custom-toast');
+        toasts.forEach(toast => {
+            dismissToast(toast);
+        });
+    }
 }
+
+// Usage examples:
+// showToast('Your file has been uploaded successfully!', 'success', 5000);
+// Toast.error('Failed to connect to the server. Please try again.');
+// Toast.warning('Your session will expire in 5 minutes.', 10000, 'Session Expiring');
+// Toast.info('<strong>Tip:</strong> You can also use HTML in your messages!');
