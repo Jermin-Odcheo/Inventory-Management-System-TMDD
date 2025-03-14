@@ -90,9 +90,10 @@ unset($role); // break the reference
             margin-left: 300px;
         }
         /* (Optional) Override container-fluid padding if needed */
-        .container-fluid {
+        .main-content.container-fluid {
             padding: 100px 15px;
         }
+
     </style>
 </head>
 <body>

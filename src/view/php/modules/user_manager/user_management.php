@@ -333,9 +333,10 @@ if ($canDelete) {
             pointer-events: none;
         }
 
-        .container-fluid {
+        .main-content.container-fluid {
             padding: 100px 15px;
         }
+
     </style>
 </head>
 <body>

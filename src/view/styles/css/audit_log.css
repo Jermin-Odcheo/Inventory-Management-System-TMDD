@@ -10,10 +10,8 @@ body {
     min-height: 100vh;
 }
 
-.main-content {
-    margin-left: var(--sidebar-width);
-    padding: 2rem;
-
+.main-content{
+    padding: 100px 15px;
 }
 
 @media (max-width: 768px) {

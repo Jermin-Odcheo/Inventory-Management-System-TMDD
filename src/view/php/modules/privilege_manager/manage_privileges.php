@@ -45,20 +45,23 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
             display: flex;
             min-height: 100vh;
         }
+
         /* Sidebar with fixed width */
         .sidebar {
             width: 300px;
             background-color: #2c3e50;
             color: #fff;
         }
+
         /* Main content takes remaining space */
         .main-content {
             flex: 1;
             padding: 20px;
             margin-left: 300px;
         }
+
         /* (Optional) Override container-fluid padding if needed */
-        .container-fluid {
+        .main-content.container-fluid {
             padding: 100px 15px;
         }
     </style>
@@ -81,9 +84,6 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </button>
         </div>
 
-        <!-- Alert container -->
-        <div id="alertMessage" style="position: fixed; top: 20px; right: 20px; z-index: 1050;"></div>
-
         <div class="table-responsive" id="table">
             <table id="privilegeTable" class="table table-striped table-hover">
                 <thead class="table-dark">
@@ -95,8 +95,8 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 </tr>
                 </thead>
                 <tbody>
-                <?php if(!empty($modules)): ?>
-                    <?php foreach($modules as $module): ?>
+                <?php if (!empty($modules)): ?>
+                    <?php foreach ($modules as $module): ?>
                         <tr data-module-id="<?php echo $module['Module_ID']; ?>">
                             <td><?php echo htmlspecialchars($module['Module_ID']); ?></td>
                             <td><?php echo htmlspecialchars($module['Module_Name']); ?></td>
@@ -115,7 +115,9 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         </tr>
                     <?php endforeach; ?>
                 <?php else: ?>
-                    <tr><td colspan="4">No modules found.</td></tr>
+                    <tr>
+                        <td colspan="4">No modules found.</td>
+                    </tr>
                 <?php endif; ?>
                 </tbody>
             </table>
@@ -161,7 +163,8 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 
 <!-- Confirm Delete Modal -->
-<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel"
+     aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -203,7 +206,8 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     <input class="form-check-input" type="checkbox" name="privileges[]"
                                            value="<?php echo htmlspecialchars($privilege['id']); ?>"
                                            id="privilege_<?php echo htmlspecialchars($privilege['id']); ?>">
-                                    <label class="form-check-label" for="privilege_<?php echo htmlspecialchars($privilege['id']); ?>">
+                                    <label class="form-check-label"
+                                           for="privilege_<?php echo htmlspecialchars($privilege['id']); ?>">
                                         <?php echo htmlspecialchars($privilege['priv_name']); ?>
                                     </label>
                                 </div>
@@ -234,20 +238,20 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
 </div>
 
 <script>
-    $(document).ready(function(){
+    $(document).ready(function () {
         // Delegate event binding for edit button to handle dynamically loaded elements.
-        $(document).on('click', '.edit-module-btn', function(){
+        $(document).on('click', '.edit-module-btn', function () {
             var moduleID = $(this).data('module-id');
             $('#editModuleContent').html("Loading...");
             $.ajax({
                 url: 'edit_module_privileges.php',
                 type: 'GET',
-                data: { module_id: moduleID },
-                headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                success: function(response){
+                data: {module_id: moduleID},
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                success: function (response) {
                     $('#editModuleContent').html(response);
                 },
-                error: function(xhr, status, error){
+                error: function (xhr, status, error) {
                     $('#editModuleContent').html('<p class="text-danger">Error loading module privileges. Please try again.</p>');
                 }
             });
@@ -255,7 +259,7 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Use delegation for delete button as well.
         var moduleToDelete = null;
-        $(document).on('click', '.delete-module-btn', function(){
+        $(document).on('click', '.delete-module-btn', function () {
             var moduleID = $(this).data('module-id');
             var moduleName = $(this).closest('tr').find('td:eq(1)').text();
             moduleToDelete = moduleID;
@@ -264,19 +268,19 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
         });
 
         // Confirm delete button click.
-        $('#confirmDeleteButton').on('click', function(){
-            if(moduleToDelete === null){
+        $('#confirmDeleteButton').on('click', function () {
+            if (moduleToDelete === null) {
                 return;
             }
             $.ajax({
                 url: 'delete_module.php',
                 type: 'POST',
-                data: { module_id: moduleToDelete },
+                data: {module_id: moduleToDelete},
                 dataType: 'json',
-                success: function(response){
-                    if(response.success){
+                success: function (response) {
+                    if (response.success) {
                         // Reload the table after deletion
-                        $('#privilegeTable').load(location.href + ' #privilegeTable', function() {
+                        $('#privilegeTable').load(location.href + ' #privilegeTable', function () {
                             showToast(response.message, 'success');
                         });
                         $('#confirmDeleteModal').modal('hide');
@@ -284,23 +288,23 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         showToast(response.message, 'error');
                     }
                 },
-                error: function(){
+                error: function () {
                     showToast('Error deleting module.', 'error');
                 }
             });
         });
 
         // Handle Add Module form submission.
-        $('#addModuleForm').on('submit', function(e) {
+        $('#addModuleForm').on('submit', function (e) {
             e.preventDefault();
             $.ajax({
                 url: 'add_module.php',
                 type: 'POST',
                 data: $(this).serialize(),
                 dataType: 'json',
-                success: function(response) {
-                    if(response.success){
-                        $('#privilegeTable').load(location.href + ' #privilegeTable', function() {
+                success: function (response) {
+                    if (response.success) {
+                        $('#privilegeTable').load(location.href + ' #privilegeTable', function () {
                             showToast(response.message, 'success');
                         });
                         $('#addModuleModal').modal('hide');
@@ -308,7 +312,7 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         showToast(response.message, 'error');
                     }
                 },
-                error: function(){
+                error: function () {
                     showToast('Error adding module.', 'error');
                 }
             });
@@ -316,6 +320,6 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
     });
 </script>
 
-<?php include '../../general/footer.php';?>
+<?php include '../../general/footer.php'; ?>
 </body>
 </html>
