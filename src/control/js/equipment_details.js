@@ -169,44 +169,5 @@ $(document).ready(function() {
         $('#editEquipmentModal').modal('show');
     });
 
-    // Delete Equipment
-    $('.delete-equipment').off('click').on('click', function(e) {
-        e.preventDefault();
-        var id = $(this).data('id');
 
-        if (confirm('Are you sure you want to delete this equipment?')) {
-            $.ajax({
-                url: '../../modules/equipment_manager/equipment_details.php',
-                method: 'POST',
-                data: {
-                    action: 'delete',
-                    equipment_id: id
-                },
-                success: function(response) {
-                    var result = JSON.parse(response);
-                    if (result.status === 'success') {
-                        location.reload();
-                    } else {
-                        alert('Error: ' + result.message);
-                    }
-                },
-                error: function(xhr, status, error) {
-                    alert('Error deleting equipment: ' + error);
-                }
-            });
-        }
-    });
-
-    // Update Equipment
-    $('#editEquipmentForm').on('submit', function(e) {
-        e.preventDefault();
-        $.ajax({
-            url: '../../modules/equipment_manager/equipment_details.php',
-            method: 'POST',
-            data: $(this).serialize(),
-            success: function(response) {
-                location.reload();
-            }
-        });
-    });
 });
