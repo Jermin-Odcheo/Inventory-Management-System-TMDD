@@ -413,7 +413,7 @@ include('../../general/header.php');
                     <div class="mb-3">
                         <label for="edit_no_of_units" class="form-label">No. of Units <span class="text-danger">*</span></label>
                         <input type="number" class="form-control" name="no_of_units" id="edit_no_of_units" required>
-                    </div>
+                    </div>kfaodnerkadmfnlkdfasldnfkernasdfpom3opasdfillaldkfilm
                     <div class="mb-3">
                         <label for="edit_item_specifications" class="form-label">Item Specifications <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="item_specifications" id="edit_item_specifications" required>

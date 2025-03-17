@@ -1,5 +1,6 @@
 <?php
 session_start();
+ob_start();
 require_once('../../../../../config/ims-tmdd.php'); // Adjust the path as needed
 
 // Include the header (this should load common assets)
@@ -30,9 +31,9 @@ if (isset($_SESSION['success'])) {
     unset($_SESSION['success']);
 }
 
-function is_ajax_request()
-{
-    return isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+function is_ajax_request() {
+    return isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&
+        strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 }
 
 // ------------------------
@@ -46,13 +47,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($invoice_no) || empty($date_of_purchase) || empty($po_no)) {
         $_SESSION['errors'] = ["Please fill in all required fields."];
         if (is_ajax_request()) {
+            header('Content-Type: application/json');
             echo json_encode(['status' => 'error', 'message' => $_SESSION['errors'][0]]);
             exit;
         }
         header("Location: charge_invoice.php");
         exit;
     }
-
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && is_ajax_request()) {
     if (isset($_POST['action']) && $_POST['action'] === 'add') {
         // Validate that the provided PO number exists in the purchase_order table
         $stmt = $pdo->prepare("SELECT po_no FROM purchase_order WHERE po_no = ?");
@@ -61,6 +63,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$existingPO) {
             $_SESSION['errors'] = ["Invalid Purchase Order Number. Please ensure the Purchase Order exists."];
             if (is_ajax_request()) {
+                ob_clean();
+                header('Content-Type: application/json');
                 echo json_encode(['status' => 'error', 'message' => $_SESSION['errors'][0]]);
                 exit;
             }
@@ -76,9 +80,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['errors'] = ["Error adding Charge Invoice: " . $e->getMessage()];
         }
     }
-
-    // If this is an AJAX request, return a JSON response.
+}
     if (is_ajax_request()) {
+        ob_clean();
+        header('Content-Type: application/json');
         $response = ['status' => 'success', 'message' => $_SESSION['success'] ?? 'Operation completed successfully'];
         if (!empty($_SESSION['errors'])) {
             $response = ['status' => 'error', 'message' => $_SESSION['errors'][0]];
@@ -101,6 +106,16 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
         $_SESSION['success'] = "Charge Invoice deleted successfully.";
     } catch (PDOException $e) {
         $_SESSION['errors'] = ["Error deleting Charge Invoice: " . $e->getMessage()];
+    }
+    if (is_ajax_request()) {
+        ob_clean();
+        header('Content-Type: application/json');
+        $response = ['status' => 'success', 'message' => $_SESSION['success'] ?? 'Operation completed successfully'];
+        if (!empty($_SESSION['errors'])) {
+            $response = ['status' => 'error', 'message' => $_SESSION['errors'][0]];
+        }
+        echo json_encode($response);
+        exit;
     }
     header("Location: charge_invoice.php");
     exit;
@@ -159,47 +174,21 @@ try {
             min-height: 100vh;
             padding-top: 80px;
         }
-
         .main-content {
             margin-left: 300px;
             padding: 20px;
-            transition: margin-left 0.3s ease;
-        }
-
-        @media (max-width: 768px) {
-            .main-content {
-                margin-left: 0;
-            }
         }
     </style>
 </head>
 <body>
 <?php include('../../general/sidebar.php'); ?>
-
 <div class="container-fluid" style="margin-left: 320px; padding: 20px; width: calc(100vw - 340px);">
-    <!-- Display Success Message -->
-    <?php if (!empty($success)): ?>
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="bi bi-check-circle"></i> <?php echo $success; ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    <?php endif; ?>
-
-    <!-- Display Error Messages -->
-    <?php if (!empty($errors)): ?>
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <?php foreach ($errors as $err): ?>
-                <p><i class="bi bi-exclamation-triangle"></i> <?php echo $err; ?></p>
-            <?php endforeach; ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    <?php endif; ?>
+    <!-- The page now displays notifications only via toast messages -->
 
     <h2 class="mb-4">Charge Invoice Management</h2>
 
     <div class="card shadow">
         <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-
             <span><i class="bi bi-list-ul"></i> List of Charge Invoices</span>
             <div class="input-group w-auto">
                 <span class="input-group-text"><i class="bi bi-search"></i></span>
@@ -249,7 +238,7 @@ try {
             </div>
 
             <div class="table-responsive" id="table">
-                <table class="table table-hover">
+                <table id="invoiceTable" class="table table-hover">
                     <thead class="table-dark">
                     <tr>
                         <th>#</th>
@@ -299,8 +288,7 @@ try {
                     <div class="row align-items-center g-3">
                         <div class="col-12 col-sm-auto">
                             <div class="text-muted">
-                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
-                                        id="totalRows">100</span> entries
+                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows">100</span> entries
                             </div>
                         </div>
                         <div class="col-12 col-sm-auto ms-sm-auto">
@@ -332,6 +320,27 @@ try {
     </div>
 </div>
 
+<!-- Delete Invoice Modal -->
+<div class="modal fade" id="deleteInvoiceModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Invoice Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete this charge invoice?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="confirmDeleteInvoiceBtn" class="btn btn-danger">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="toastContainer" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1055;"></div>
+
 <!-- Add Invoice Modal -->
 <div class="modal fade" id="addInvoiceModal" tabindex="-1">
     <div class="modal-dialog">
@@ -344,18 +353,15 @@ try {
                 <form id="addInvoiceForm" method="post">
                     <input type="hidden" name="action" value="add">
                     <div class="mb-3">
-                        <label for="invoice_no" class="form-label">Invoice Number <span
-                                    class="text-danger">*</span></label>
+                        <label for="invoice_no" class="form-label">Invoice Number <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="invoice_no" required>
                     </div>
                     <div class="mb-3">
-                        <label for="date_of_purchase" class="form-label">Date of Purchase <span
-                                    class="text-danger">*</span></label>
+                        <label for="date_of_purchase" class="form-label">Date of Purchase <span class="text-danger">*</span></label>
                         <input type="date" class="form-control" name="date_of_purchase" required>
                     </div>
                     <div class="mb-3">
-                        <label for="po_no" class="form-label">Purchase Order Number <span
-                                    class="text-danger">*</span></label>
+                        <label for="po_no" class="form-label">Purchase Order Number <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="po_no" required>
                     </div>
                     <div class="mb-3">
@@ -366,8 +372,8 @@ try {
         </div>
     </div>
 </div>
-<!-- Edit Invoice Modal -->
 
+<!-- Edit Invoice Modal -->
 <div class="modal fade" id="editInvoiceModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -380,19 +386,15 @@ try {
                     <input type="hidden" name="action" value="update">
                     <input type="hidden" name="id" id="edit_invoice_id">
                     <div class="mb-3">
-                        <label for="edit_invoice_no" class="form-label">Invoice Number <span
-                                    class="text-danger">*</span></label>
+                        <label for="edit_invoice_no" class="form-label">Invoice Number <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="invoice_no" id="edit_invoice_no" required>
                     </div>
                     <div class="mb-3">
-                        <label for="edit_date_of_purchase" class="form-label">Date of Purchase <span
-                                    class="text-danger">*</span></label>
-                        <input type="date" class="form-control" name="date_of_purchase" id="edit_date_of_purchase"
-                               required>
+                        <label for="edit_date_of_purchase" class="form-label">Date of Purchase <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" name="date_of_purchase" id="edit_date_of_purchase" required>
                     </div>
                     <div class="mb-3">
-                        <label for="edit_po_no" class="form-label">Purchase Order Number <span
-                                    class="text-danger">*</span></label>
+                        <label for="edit_po_no" class="form-label">Purchase Order Number <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="po_no" id="edit_po_no" required>
                     </div>
                     <div class="mb-3">
@@ -406,8 +408,10 @@ try {
 
 <!-- JavaScript for functionality -->
 <script>
+    var deleteInvoiceId = null;
+
     $(document).ready(function () {
-        // Search filter
+        // Search filter for invoices
         $('#searchInvoice').on('input', function () {
             var searchText = $(this).val().toLowerCase();
             $("#table tbody tr").filter(function () {
@@ -415,8 +419,8 @@ try {
             });
         });
 
-        // Trigger Edit Invoice Modal
-        $('.edit-invoice').click(function () {
+        // Trigger Edit Invoice Modal using Bootstrap 5 Modal API
+        $(document).on('click', '.edit-invoice', function () {
             var id = $(this).data('id');
             var invoice = $(this).data('invoice');
             var date = $(this).data('date');
@@ -425,15 +429,42 @@ try {
             $('#edit_invoice_no').val(invoice);
             $('#edit_date_of_purchase').val(date);
             $('#edit_po_no').val(po);
-            $('#editInvoiceModal').modal('show');
+            var editModal = new bootstrap.Modal(document.getElementById('editInvoiceModal'));
+            editModal.show();
         });
 
-        // Delete Invoice confirmation
-        $('.delete-invoice').click(function (e) {
+        // Trigger Delete Invoice Modal
+        $(document).on('click', '.delete-invoice', function (e) {
             e.preventDefault();
-            var id = $(this).data('id');
-            if (confirm('Are you sure you want to delete this invoice?')) {
-                window.location.href = '?action=delete&id=' + id;
+            deleteInvoiceId = $(this).data('id');
+            var deleteModal = new bootstrap.Modal(document.getElementById('deleteInvoiceModal'));
+            deleteModal.show();
+        });
+
+        // Confirm Delete Invoice via AJAX
+        $('#confirmDeleteInvoiceBtn').on('click', function () {
+            if (deleteInvoiceId) {
+                $.ajax({
+                    url: 'charge_invoice.php',
+                    method: 'GET',
+                    data: { action: 'delete', id: deleteInvoiceId },
+                    dataType: 'json',
+                    success: function (response) {
+                        if (response.status === 'success') {
+                            $('#invoiceTable').load(location.href + ' #invoiceTable', function() {
+                                showToast(response.message, 'success');
+                            });
+                        } else {
+                            showToast(response.message, 'error');
+                        }
+                        var deleteModalEl = document.getElementById('deleteInvoiceModal');
+                        var deleteModalInstance = bootstrap.Modal.getInstance(deleteModalEl);
+                        deleteModalInstance.hide();
+                    },
+                    error: function () {
+                        showToast('Error processing request.', 'error');
+                    }
+                });
             }
         });
 
@@ -444,22 +475,23 @@ try {
                 url: 'charge_invoice.php',
                 method: 'POST',
                 data: $(this).serialize(),
+                dataType: 'json',
                 success: function (response) {
-                    try {
-                        var result = JSON.parse(response);
-                        if (result.status === 'success') {
-                            $('#addInvoiceModal').modal('hide');
-                            location.reload();
-                        } else {
-                            alert(result.message || 'An error occurred');
+                    if (response.status === 'success') {
+                        $('#invoiceTable').load(location.href + ' #invoiceTable', function() {
+                            showToast(response.message, 'success');
+                        });
+                        var addModalEl = document.getElementById('addInvoiceModal');
+                        var addModal = bootstrap.Modal.getInstance(addModalEl);
+                        if (addModal) {
+                            addModal.hide();
                         }
-                    } catch (e) {
-                        console.error('Parse error:', e);
-                        location.reload();
+                    } else {
+                        showToast(response.message, 'error');
                     }
                 },
-                error: function (xhr, status, error) {
-                    alert('Error submitting form: ' + error);
+                error: function () {
+                    showToast('Error processing request.', 'error');
                 }
             });
         });
@@ -471,31 +503,44 @@ try {
                 url: 'charge_invoice.php',
                 method: 'POST',
                 data: $(this).serialize(),
+                dataType: 'json',
                 success: function (response) {
-                    try {
-                        var result = JSON.parse(response);
-                        if (result.status === 'success') {
-                            $('#editInvoiceModal').modal('hide');
-                            location.reload();
-                        } else {
-                            alert(result.message || 'An error occurred');
+                    if (response.status === 'success') {
+                        $('#invoiceTable').load(location.href + ' #invoiceTable', function() {
+                            showToast(response.message, 'success');
+                        });
+                        var editModalEl = document.getElementById('editInvoiceModal');
+                        var editModal = bootstrap.Modal.getInstance(editModalEl);
+                        if (editModal) {
+                            editModal.hide();
                         }
-                    } catch (e) {
-                        console.error('Parse error:', e);
-                        location.reload();
+                    } else {
+                        showToast(response.message, 'error');
                     }
                 },
-                error: function (xhr, status, error) {
-                    alert('Error submitting form: ' + error);
+                error: function () {
+                    showToast('Error processing request.', 'error');
                 }
             });
         });
     });
+
+    // On page load, display any PHP messages as toast notifications
+    $(document).ready(function() {
+        <?php if(!empty($success)): ?>
+        showToast("<?php echo addslashes($success); ?>", "success");
+        <?php endif; ?>
+        <?php if(!empty($errors)): ?>
+        <?php foreach($errors as $err): ?>
+        showToast("<?php echo addslashes($err); ?>", "error");
+        <?php endforeach; ?>
+        <?php endif; ?>
+    });
 </script>
-<!-- Bootstrap Bundle JS -->
+<!-- Bootstrap Bundle JS (includes Popper) -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <!-- Optional: Include your pagination.js if required -->
-<script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js"
-        defer></script>
+<script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js" defer></script>
+<?php include '../../general/footer.php'; ?>
 </body>
 </html>

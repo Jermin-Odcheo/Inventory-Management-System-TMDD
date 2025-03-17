@@ -1,5 +1,6 @@
 <?php
 session_start();
+ob_start(); // Start buffering to ensure clean JSON responses
 require_once('../../../../../config/ims-tmdd.php'); // Adjust the path as needed
 
 // Include the header (loads common assets)
@@ -30,7 +31,8 @@ if (isset($_SESSION['success'])) {
     unset($_SESSION['success']);
 }
 
-function is_ajax_request() {
+function is_ajax_request()
+{
     return isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&
         strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 }
@@ -47,6 +49,16 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
     } catch (PDOException $e) {
         $_SESSION['errors'] = ["Error deleting Receiving Report: " . $e->getMessage()];
     }
+    if (is_ajax_request()) {
+        ob_clean();
+        header('Content-Type: application/json');
+        $response = ['status' => 'success', 'message' => $_SESSION['success'] ?? 'Operation completed successfully'];
+        if (!empty($_SESSION['errors'])) {
+            $response = ['status' => 'error', 'message' => $_SESSION['errors'][0]];
+        }
+        echo json_encode($response);
+        exit;
+    }
     header("Location: receiving_report.php");
     exit;
 }
@@ -61,17 +73,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $po_no = trim($_POST['po_no'] ?? '');
     $ai_loc = trim($_POST['ai_loc'] ?? '');
 
-    // Since we have removed the disabled option from the modal,
-    // always set is_disabled to 0 (active).
+    // Always set is_disabled to 0 (active)
     $is_disabled = 0;
 
     // Retrieve the date_created value (from a datetime-local input)
     $date_created = trim($_POST['date_created'] ?? '');
     if (empty($date_created)) {
-        // Default to current datetime if not provided
         $date_created = date('Y-m-d H:i:s');
     } else {
-        // Convert from datetime-local format (YYYY-MM-DDTHH:MM) to MySQL datetime format
         $date_created = date('Y-m-d H:i:s', strtotime($date_created));
     }
 
@@ -79,6 +88,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($rr_no) || empty($accountable_individual) || empty($po_no) || empty($ai_loc) || empty($date_created)) {
         $_SESSION['errors'] = ["Please fill in all required fields."];
         if (is_ajax_request()) {
+            ob_clean();
+            header('Content-Type: application/json');
             echo json_encode(['status' => 'error', 'message' => $_SESSION['errors'][0]]);
             exit;
         }
@@ -99,6 +110,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $response['status'] = 'error';
             $response['message'] = "Error adding Receiving Report: " . $e->getMessage();
         }
+        ob_clean();
+        header('Content-Type: application/json');
         echo json_encode($response);
         exit;
     } elseif (isset($_POST['action']) && $_POST['action'] === 'update') {
@@ -116,6 +129,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $response['status'] = 'error';
             $response['message'] = "Error updating Receiving Report: " . $e->getMessage();
         }
+        ob_clean();
+        header('Content-Type: application/json');
         echo json_encode($response);
         exit;
     }
@@ -170,17 +185,20 @@ try {
             background-color: #f8f9fa;
             min-height: 100vh;
         }
+
         .main-content {
             margin-left: 300px; /* Adjust if you have a sidebar */
             padding: 20px;
             margin-bottom: 20px;
             width: auto;
         }
+
         @media (max-width: 768px) {
             .main-content {
                 margin-left: 0;
             }
         }
+
         /* Ensure table responsiveness */
         .table-responsive {
             width: 100%;
@@ -193,24 +211,6 @@ try {
 
 <div class="main-content">
     <div class="container-fluid">
-        <!-- Success Message -->
-        <?php if (!empty($success)): ?>
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="bi bi-check-circle"></i> <?php echo $success; ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        <?php endif; ?>
-
-        <!-- Error Messages -->
-        <?php if (!empty($errors)): ?>
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <?php foreach ($errors as $err): ?>
-                    <p><i class="bi bi-exclamation-triangle"></i> <?php echo $err; ?></p>
-                <?php endforeach; ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        <?php endif; ?>
-
         <!-- Title -->
         <h2 class="mb-4">Receiving Report Management</h2>
         <div class="card shadow">
@@ -224,7 +224,8 @@ try {
             <div class="card-body p-3">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addReportModal">
+                        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal"
+                                data-bs-target="#addReportModal">
                             <i class="bi bi-plus-circle"></i> Add Receiving Report
                         </button>
                         <select class="form-select form-select-sm" id="filterLocation" style="width: auto;">
@@ -242,7 +243,7 @@ try {
                 </div>
 
                 <div class="table-responsive" id="table">
-                    <table class="table table-striped table-bordered table-sm mb-0">
+                    <table id="rrTable" class="table table-striped table-bordered table-sm mb-0">
                         <thead class="table-dark">
                         <tr>
                             <th>#</th>
@@ -283,8 +284,7 @@ try {
                                                 <i class="bi bi-pencil-square"></i> Edit
                                             </a>
                                             <a class="btn btn-sm btn-outline-danger delete-report"
-                                               data-id="<?php echo htmlspecialchars($rr['id']); ?>"
-                                               href="#">
+                                               data-id="<?php echo htmlspecialchars($rr['id']); ?>" href="#">
                                                 <i class="bi bi-trash"></i> Delete
                                             </a>
                                         </div>
@@ -292,17 +292,20 @@ try {
                                 </tr>
                             <?php endforeach; ?>
                         <?php else: ?>
-                            <tr><td colspan="8">No Receiving Reports found.</td></tr>
+                            <tr>
+                                <td colspan="8">No Receiving Reports found.</td>
+                            </tr>
                         <?php endif; ?>
                         </tbody>
                     </table>
                 </div>
-                <!-- Pagination Controls -->
+                <!-- Pagination Controls (if needed) -->
                 <div class="container-fluid mt-3">
                     <div class="row align-items-center g-3">
                         <div class="col-12 col-sm-auto">
                             <div class="text-muted">
-                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">0</span> of <span id="totalRows">0</span> entries
+                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">0</span> of <span
+                                        id="totalRows">0</span> entries
                             </div>
                         </div>
                         <div class="col-12 col-sm-auto ms-sm-auto">
@@ -349,11 +352,13 @@ try {
                         <input type="text" class="form-control" name="rr_no" required>
                     </div>
                     <div class="mb-3">
-                        <label for="accountable_individual" class="form-label">Accountable Individual <span class="text-danger">*</span></label>
+                        <label for="accountable_individual" class="form-label">Accountable Individual <span
+                                    class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="accountable_individual" required>
                     </div>
                     <div class="mb-3">
-                        <label for="po_no" class="form-label">Purchase Order Number <span class="text-danger">*</span></label>
+                        <label for="po_no" class="form-label">Purchase Order Number <span
+                                    class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="po_no" required>
                     </div>
                     <div class="mb-3">
@@ -361,9 +366,11 @@ try {
                         <input type="text" class="form-control" name="ai_loc" required>
                     </div>
                     <div class="mb-3">
-                        <label for="date_created" class="form-label">Date Created <span class="text-danger">*</span></label>
+                        <label for="date_created" class="form-label">Date Created <span
+                                    class="text-danger">*</span></label>
                         <!-- Pre-fill with current date/time in the correct format for datetime-local -->
-                        <input type="datetime-local" class="form-control" name="date_created" id="date_created" required value="<?php echo date('Y-m-d\TH:i'); ?>">
+                        <input type="datetime-local" class="form-control" name="date_created" id="date_created" required
+                               value="<?php echo date('Y-m-d\TH:i'); ?>">
                     </div>
                     <div class="mb-3">
                         <button type="submit" class="btn btn-primary">Add Receiving Report</button>
@@ -387,15 +394,19 @@ try {
                     <input type="hidden" name="action" value="update">
                     <input type="hidden" name="id" id="edit_report_id">
                     <div class="mb-3">
-                        <label for="edit_rr_no" class="form-label">Receiving Report Number <span class="text-danger">*</span></label>
+                        <label for="edit_rr_no" class="form-label">Receiving Report Number <span
+                                    class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="rr_no" id="edit_rr_no" required>
                     </div>
                     <div class="mb-3">
-                        <label for="edit_accountable_individual" class="form-label">Accountable Individual <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="accountable_individual" id="edit_accountable_individual" required>
+                        <label for="edit_accountable_individual" class="form-label">Accountable Individual <span
+                                    class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="accountable_individual"
+                               id="edit_accountable_individual" required>
                     </div>
                     <div class="mb-3">
-                        <label for="edit_po_no" class="form-label">Purchase Order Number <span class="text-danger">*</span></label>
+                        <label for="edit_po_no" class="form-label">Purchase Order Number <span
+                                    class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="po_no" id="edit_po_no" required>
                     </div>
                     <div class="mb-3">
@@ -403,13 +414,35 @@ try {
                         <input type="text" class="form-control" name="ai_loc" id="edit_ai_loc" required>
                     </div>
                     <div class="mb-3">
-                        <label for="edit_date_created" class="form-label">Date Created <span class="text-danger">*</span></label>
-                        <input type="datetime-local" class="form-control" name="date_created" id="edit_date_created" required>
+                        <label for="edit_date_created" class="form-label">Date Created <span
+                                    class="text-danger">*</span></label>
+                        <input type="datetime-local" class="form-control" name="date_created" id="edit_date_created"
+                               required>
                     </div>
                     <div class="mb-3">
                         <button type="submit" class="btn btn-primary">Save Changes</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Delete Recieving Report Order Modal -->
+<div class="modal fade" id="deleteRRModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete this Receiving Report order?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="confirmDeleteBtn" class="btn btn-danger">Delete</button>
             </div>
         </div>
     </div>
@@ -434,7 +467,7 @@ try {
         });
 
         // Open Edit Report Modal and populate fields
-        $('.edit-report').click(function () {
+        $(document).on('click', '.edit-report', function () {
             var id = $(this).data('id');
             var rr = $(this).data('rr');
             var individual = $(this).data('individual');
@@ -454,74 +487,105 @@ try {
             $('#editReportModal').modal('show');
         });
 
-        // Delete Report confirmation
-        $('.delete-report').click(function (e) {
+
+
+        // Global variable to store the ID for deletion
+        var deleteId = null;
+
+// When a delete-report link is clicked, show the delete modal
+        $(document).on('click', '.delete-report', function (e) {
             e.preventDefault();
-            var id = $(this).data('id');
-            if (confirm('Are you sure you want to delete this report?')) {
-                window.location.href = '?action=delete&id=' + id;
+            deleteId = $(this).data('id');
+            var deleteModal = new bootstrap.Modal(document.getElementById('deleteRRModal'));
+            deleteModal.show();
+        });
+
+// When the confirm delete button is clicked, process deletion via AJAX
+        $('#confirmDeleteBtn').on('click', function () {
+            if (deleteId) {
+                $.ajax({
+                    url: 'receiving_report.php',
+                    method: 'GET',
+                    data: { action: 'delete', id: deleteId },
+                    dataType: 'json',
+                    success: function (response) {
+                        if (response.status === 'success') {
+                            $('#rrTable').load(location.href + ' #rrTable', function () {
+                                showToast(response.message, 'success');
+                            });
+                        } else {
+                            showToast(response.message, 'error');
+                        }
+                        // Hide the modal after processing
+                        var deleteModalInstance = bootstrap.Modal.getInstance(document.getElementById('deleteRRModal'));
+                        deleteModalInstance.hide();
+                    },
+                    error: function () {
+                        showToast('Error processing request.', 'error');
+                    }
+                });
             }
         });
 
-        // AJAX submission for Add Report form
+
+        // AJAX submission for Add Report form using toast notifications
         $('#addReportForm').on('submit', function (e) {
             e.preventDefault();
             $.ajax({
                 url: 'receiving_report.php',
                 method: 'POST',
                 data: $(this).serialize(),
+                dataType: 'json', // ensures jQuery parses the JSON response automatically
                 success: function (response) {
-                    try {
-                        const result = JSON.parse(response);
-                        if (result.status === 'success') {
-                            $('#addReportModal').modal('hide');
-                            location.reload();
-                        } else {
-                            alert(result.message || 'An error occurred');
-                        }
-                    } catch (e) {
-                        console.error('Parse error:', e);
-                        location.reload();
+                    if (response.status === 'success') {
+                        $('#addReportModal').modal('hide');
+                        $('#rrTable').load(location.href + ' #rrTable', function () {
+                            showToast(response.message, 'success');
+                        });
+                    } else {
+                        showToast(response.message || 'An error occurred', 'error');
                     }
                 },
                 error: function (xhr, status, error) {
-                    alert('Error submitting form: ' + error);
+                    showToast('Error submitting form: ' + error, 'error');
                 }
             });
         });
 
-        // AJAX submission for Edit Report form
+
+        // AJAX submission for Edit Report form using toast notifications
         $('#editReportForm').on('submit', function (e) {
             e.preventDefault();
             $.ajax({
                 url: 'receiving_report.php',
                 method: 'POST',
                 data: $(this).serialize(),
+                dataType: 'json',
                 success: function (response) {
-                    try {
-                        const result = JSON.parse(response);
-                        if (result.status === 'success') {
-                            $('#editReportModal').modal('hide');
-                            location.reload();
-                        } else {
-                            alert(result.message || 'An error occurred');
-                        }
-                    } catch (e) {
-                        console.error('Parse error:', e);
-                        location.reload();
+                    if (response.status === 'success') {
+                        $('#editReportModal').modal('hide');
+                        $('#rrTable').load(location.href + ' #rrTable', function () {
+                            showToast(response.message, 'success');
+                        });
+                    } else {
+                        showToast(response.message, 'error');
                     }
                 },
-                error: function (xhr, status, error) {
-                    alert('Error submitting form: ' + error);
+                error: function () {
+                    showToast('Error processing request.', 'error');
                 }
             });
         });
+
     });
 </script>
 
 <!-- Pagination script (if needed) -->
-<script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js" defer></script>
+<script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js"
+        defer></script>
 <!-- Bootstrap Bundle -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<?php include '../../general/footer.php'; ?>
 </body>
 </html>
