@@ -568,7 +568,7 @@ function safeHtml($value) {
                         if (response.status === 'success') {
                             $('#elTable').load(location.href + '#elTable', function ()){
                                 showToast(response.message, 'success');
-                                
+
                             }
 
                         } else {

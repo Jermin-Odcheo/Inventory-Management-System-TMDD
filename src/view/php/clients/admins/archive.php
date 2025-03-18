@@ -225,17 +225,17 @@ function getStatusIcon($status)
                                     </td>
                                     <!-- Actions (Restore / Permanent Delete) -->
                                     <td data-label="Actions">
-                                        <div class="btn-vertical-compact">
+                                        <div class="btn-group-vertical gap-1">
                                             <button type="button" class="btn btn-success restore-btn"
                                                     data-id="<?php echo $log['deleted_user_id']; ?>">
                                                 <i class="fas fa-undo me-1"></i> Restore
                                             </button>
+
                                             <button type="button" class="btn btn-danger delete-permanent-btn"
                                                     data-id="<?php echo $log['deleted_user_id']; ?>">
                                                 <i class="fas fa-trash me-1"></i> Delete
                                             </button>
                                         </div>
-
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
