@@ -50,7 +50,6 @@ try {
         ];
     }
 } catch (PDOException $e) {
-    // Handle error silently
     error_log("Error fetching departments: " . $e->getMessage());
 }
 
@@ -72,21 +71,16 @@ function getUserDepartments($pdo, $userId)
 $query = "SELECT u.id, u.email, u.first_name, u.last_name, u.status AS Status
             FROM users u";
 
-// If a specific department is selected, join user_departments and filter by that department + is_disabled=0
 if (isset($_GET['department']) && $_GET['department'] !== 'all') {
     $query .= "
         JOIN user_departments ud ON u.id = ud.user_id
        WHERE ud.department_id = :department
          AND u.is_disabled = 0";
-    $whereUsed = true;
 } else {
-    // Otherwise, show all active users
     $query .= "
        WHERE u.is_disabled = 0";
-    $whereUsed = true;
 }
 
-// Add search filter if provided
 if (isset($_GET['search']) && !empty($_GET['search'])) {
     $query .= " 
        AND (u.email LIKE :search 
@@ -94,24 +88,17 @@ if (isset($_GET['search']) && !empty($_GET['search'])) {
          OR u.last_name LIKE :search)";
 }
 
-// Finally, add sorting
 $query .= " 
    ORDER BY `$sortBy` $sortDir";
 
-// Execute query
 try {
     $stmt = $pdo->prepare($query);
-
-    // Bind department if needed
     if (isset($_GET['department']) && $_GET['department'] !== 'all') {
         $stmt->bindValue(':department', $_GET['department'], PDO::PARAM_INT);
     }
-
-    // Bind search if provided
     if (isset($_GET['search']) && !empty($_GET['search'])) {
         $stmt->bindValue(':search', '%' . $_GET['search'] . '%', PDO::PARAM_STR);
     }
-
     $stmt->execute();
     $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
     if (!$users) {
@@ -121,7 +108,6 @@ try {
     die("Database query error: " . $e->getMessage());
 }
 
-// Helper functions for sorting links/icons
 function toggleDirection($currentSort, $currentDir, $column)
 {
     return $currentSort === $column ? ($currentDir === 'asc' ? 'desc' : 'asc') : 'asc';
@@ -137,7 +123,6 @@ function sortIcon($currentSort, $column, $sortDir)
     return '';
 }
 
-// Add this function near the top of the file, after session_start()
 function getCurrentUserRoles($pdo, $userId)
 {
     $stmt = $pdo->prepare("
@@ -161,9 +146,6 @@ class RBACManager
         $this->userRoles = $userRoles;
     }
 
-    /**
-     * Check if user has specific privilege for a module
-     */
     public function hasPrivilege(string $moduleName, string $privilegeName): bool
     {
         try {
@@ -179,10 +161,8 @@ class RBACManager
                   AND p.is_disabled = 0
                   AND r.is_disabled = 0
             ");
-
             $params = array_merge($this->userRoles, [$moduleName, $privilegeName]);
             $stmt->execute($params);
-
             return (int)$stmt->fetchColumn() > 0;
         } catch (PDOException $e) {
             $this->logError("Permission check failed", $e);
@@ -190,28 +170,17 @@ class RBACManager
         }
     }
 
-    /**
-     * Check if user can delete target user
-     */
     public function canDeleteUser(int $targetUserId): bool
     {
         try {
-            // First check if user has delete privilege
             if (!$this->hasPrivilege('User Management', 'Delete')) {
                 return false;
             }
-
-            // Get target user's roles
             $targetRoles = $this->getUserRoles($targetUserId);
             $currentUserRoles = $this->userRoles;
-
-            // Get role hierarchies from database
             $roleHierarchy = $this->getRoleHierarchy();
-
-            // Check if current user's role level is higher than target user's
             $currentUserMaxLevel = $this->getMaxRoleLevel($currentUserRoles, $roleHierarchy);
             $targetUserMaxLevel = $this->getMaxRoleLevel($targetRoles, $roleHierarchy);
-
             return $currentUserMaxLevel > $targetUserMaxLevel;
         } catch (Exception $e) {
             $this->logError("Delete permission check failed", $e);
@@ -228,9 +197,6 @@ class RBACManager
         return $maxLevel;
     }
 
-    /**
-     * Get user's roles
-     */
     private function getUserRoles(int $userId): array
     {
         $stmt = $this->pdo->prepare("
@@ -244,23 +210,18 @@ class RBACManager
         return $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
 
-    /**
-     * Check if user can perform bulk delete
-     */
     public function canBulkDelete(array $targetUserIds): array
     {
         $results = [
             'can_delete' => true,
             'unauthorized_users' => []
         ];
-
         foreach ($targetUserIds as $targetId) {
             if (!$this->canDeleteUser($targetId)) {
                 $results['can_delete'] = false;
                 $results['unauthorized_users'][] = $targetId;
             }
         }
-
         return $results;
     }
 
@@ -269,13 +230,8 @@ class RBACManager
         error_log(sprintf("[RBAC Error] %s: %s", $message, $e->getMessage()));
     }
 
-    /**
-     * Example hierarchy retrieval method
-     * (Adjust to your actual schema/logic if needed)
-     */
     private function getRoleHierarchy(): array
     {
-        // This is just an example. Replace with your real role-level logic:
         return [
             'Admin' => 3,
             'Manager' => 2,
@@ -284,16 +240,10 @@ class RBACManager
     }
 }
 
-// Initialize RBAC
 $rbac = new RBACManager($pdo, $currentUserRoles);
-
-// Check edit permission
 $canEdit = $rbac->hasPrivilege('User Management', 'Edit');
-
-// Check delete permission
 $canDelete = $rbac->hasPrivilege('User Management', 'Delete');
 
-// In your HTML/PHP view:
 if ($canEdit) {
     echo '<button class="edit-btn">Edit</button>';
 }
@@ -314,29 +264,24 @@ if ($canDelete) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css" rel="stylesheet">
     <style>
         .main-content {
-            margin-left: 300px; /* Adjust if you have a sidebar */
+            margin-left: 300px;
             padding: 20px;
             margin-bottom: 20px;
             width: auto;
         }
-
         .search-container {
             width: 250px;
         }
-
         .search-container input {
             padding-right: 30px;
         }
-
         .search-container i {
             color: #6c757d;
             pointer-events: none;
         }
-
         .main-content.container-fluid {
             padding: 100px 15px;
         }
-
     </style>
 </head>
 <body>
@@ -347,13 +292,10 @@ if ($canDelete) {
 <!-- Main Content Area -->
 <div class="main-content container-fluid">
     <h1>User Management</h1>
-
-    <!-- Add this new div for delete messages -->
     <div id="deleteMessage" class="alert alert-success alert-dismissible fade show" style="display: none;" role="alert">
         <span id="deleteMessageText"></span>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
-
     <!-- Modal for adding a new user -->
     <div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
         <div class="modal-dialog">
@@ -364,22 +306,18 @@ if ($canDelete) {
                             <label for="email" class="form-label">Email:</label>
                             <input type="email" name="email" id="email" class="form-control" required>
                         </div>
-
                         <div class="mb-3">
                             <label for="password" class="form-label">Password:</label>
                             <input type="password" name="password" id="password" class="form-control" required>
                         </div>
-
                         <div class="mb-3">
                             <label for="first_name" class="form-label">First Name:</label>
                             <input type="text" name="first_name" id="first_name" class="form-control" required>
                         </div>
-
                         <div class="mb-3">
                             <label for="last_name" class="form-label">Last Name:</label>
                             <input type="text" name="last_name" id="last_name" class="form-control" required>
                         </div>
-
                         <div class="mb-3">
                             <label for="modal_department" class="form-label">Department:</label>
                             <select name="department" id="modal_department" class="form-select mb-2" required>
@@ -392,20 +330,15 @@ if ($canDelete) {
                                 <option value="custom">Custom Department</option>
                             </select>
                             <input type="text" id="modal_custom_department" name="custom_department"
-                                   class="form-control"
-                                   style="display: none;"
-                                   placeholder="Enter custom department">
+                                   class="form-control" style="display: none;" placeholder="Enter custom department">
                         </div>
-
                         <fieldset class="mb-3">
                             <legend>Assign Roles: <span class="text-danger">*</span></legend>
                             <div class="text-muted mb-2">At least one role must be selected</div>
                             <?php
-                            // Fetch roles for the modal
                             $stmt = $pdo->prepare("SELECT * FROM roles");
                             $stmt->execute();
                             $modal_roles = $stmt->fetchAll();
-
                             foreach ($modal_roles as $role): ?>
                                 <div class="form-check">
                                     <input type="checkbox" name="roles[]" value="<?php echo $role['id']; ?>"
@@ -417,7 +350,6 @@ if ($canDelete) {
                                 </div>
                             <?php endforeach; ?>
                         </fieldset>
-
                         <div class="mb-3">
                             <button type="submit" class="btn btn-primary">Add User</button>
                         </div>
@@ -426,12 +358,10 @@ if ($canDelete) {
             </div>
         </div>
     </div>
-
-    <!--FILTER SEARCH AND ADD USER BUTTON-->
+    <!-- FILTER SEARCH AND ADD USER BUTTON -->
     <div class="row mb-3">
         <div class="col-md-8">
             <form class="d-flex" method="GET">
-                <!--Filter Department/Search-->
                 <select name="department" class="form-select me-2 department-filter">
                     <option value="all">All Departments</option>
                     <?php foreach ($departments as $code => $name): ?>
@@ -455,10 +385,8 @@ if ($canDelete) {
             </button>
         </div>
     </div>
-
-    <div id="alertMessage"></div>
-    <div class="table-responsive">
-        <table class="table table-striped table-hover" id="table">
+    <div class="table-responsive" id="table">
+        <table class="table table-striped table-hover" id="umTable">
             <thead class="table-dark">
             <tr>
                 <th><input type="checkbox" id="select-all"></th>
@@ -499,15 +427,12 @@ if ($canDelete) {
             <tbody>
             <?php foreach ($users as $user): ?>
                 <tr data-user-id="<?php echo htmlspecialchars($user['id']); ?>">
-                    <td>
-                        <input type="checkbox" class="select-row" value="<?php echo $user['id']; ?>">
-                    </td>
+                    <td><input type="checkbox" class="select-row" value="<?php echo $user['id']; ?>"></td>
                     <td><?php echo htmlspecialchars($user['id']); ?></td>
                     <td><?php echo htmlspecialchars($user['email']); ?></td>
                     <td><?php echo htmlspecialchars($user['first_name'] . ' ' . $user['last_name']); ?></td>
                     <td>
                         <?php
-                        // Get user departments from junction table
                         $userDeptIds = getUserDepartments($pdo, $user['id']);
                         if (!empty($userDeptIds)) {
                             $deptNames = [];
@@ -525,7 +450,6 @@ if ($canDelete) {
                     <td><?php echo htmlspecialchars($user['Status'] ?? ''); ?></td>
                     <td>
                         <?php
-                        // Fetch roles for each user.
                         $stmtRole = $pdo->prepare("
                             SELECT r.Role_Name
                             FROM roles r 
@@ -539,23 +463,20 @@ if ($canDelete) {
                     </td>
                     <td>
                         <?php if ($canModify): ?>
-                            <button type="button"
-                                    class="btn btn-sm btn-warning btn-edit"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#editUserModal"
+                            <button type="button" class="btn btn-sm btn-warning btn-edit"
+                                    data-bs-toggle="modal" data-bs-target="#editUserModal"
                                     data-id="<?php echo htmlspecialchars($user['id']); ?>"
                                     data-email="<?php echo htmlspecialchars($user['email']); ?>"
                                     data-first-name="<?php echo htmlspecialchars($user['first_name']); ?>"
                                     data-last-name="<?php echo htmlspecialchars($user['last_name']); ?>"
                                     data-department="<?php echo htmlspecialchars($userDeptIds[0] ?? ''); ?>">
-                                Edit
+                                Modify
                             </button>
-
                         <?php endif; ?>
                         <?php if ($canDelete): ?>
                             <button type="button" class="btn btn-sm btn-danger delete-user"
                                     data-id="<?php echo htmlspecialchars($user['id']); ?>">
-                                Delete
+                                Remove
                             </button>
                         <?php endif; ?>
                     </td>
@@ -563,55 +484,45 @@ if ($canDelete) {
             <?php endforeach; ?>
             </tbody>
         </table>
-    </div><!-- /.table-responsive -->
-
+    </div>
     <!-- Pagination Controls -->
     <div class="container-fluid">
         <div class="row align-items-center g-3">
-            <!-- Pagination Info -->
             <div class="col-12 col-sm-auto">
                 <div class="text-muted">
-                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
-                            id="totalRows">100</span> entries
+                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows">100</span> entries
                 </div>
             </div>
             <div class="col-12 col-sm-auto ms-sm-auto">
                 <div class="d-flex align-items-center gap-2">
                     <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                        <i class="bi bi-chevron-left"></i>
-                        Previous
+                        <i class="bi bi-chevron-left"></i> Previous
                     </button>
-
                     <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
                         <option value="10" selected>10</option>
                         <option value="20">20</option>
                         <option value="30">30</option>
                         <option value="50">50</option>
                     </select>
-
                     <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                        Next
-                        <i class="bi bi-chevron-right"></i>
+                        Next <i class="bi bi-chevron-right"></i>
                     </button>
                 </div>
             </div>
-            <!-- New Pagination Page Numbers -->
             <div class="row mt-3">
                 <div class="col-12">
                     <ul class="pagination justify-content-center" id="pagination"></ul>
                 </div>
             </div>
         </div>
-    </div> <!-- /.End of Pagination -->
-
+    </div>
     <!-- Bulk action button for active users -->
     <div class="mb-3">
         <button type="button" id="delete-selected" class="btn btn-danger" style="display: none;" disabled>
             Delete Selected
         </button>
     </div>
-
-</div><!-- /.main-content -->
+</div>
 <!-- Confirm Delete Modal -->
 <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
     <div class="modal-dialog">
@@ -630,7 +541,6 @@ if ($canDelete) {
         </div>
     </div>
 </div>
-
 <!-- Modal for editing user -->
 <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
     <div class="modal-dialog">
@@ -640,7 +550,6 @@ if ($canDelete) {
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <!-- Form for editing user -->
                 <form id="editUserForm" action="update_user.php" method="post">
                     <input type="hidden" id="editUserID" name="user_id">
                     <div class="mb-3">
@@ -666,28 +575,22 @@ if ($canDelete) {
                             <?php endforeach; ?>
                         </select>
                     </div>
-
                     <style>
-                        /* Custom styles for the select dropdown */
                         .form-select {
                             appearance: none;
                             transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
                         }
-
                         .form-select:focus {
                             border-color: #86b7fe;
                             box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
                         }
-
                         .form-select option {
                             padding: 10px;
                         }
-
                         .form-select optgroup {
                             margin-top: 10px;
                         }
                     </style>
-
                     <div class="mb-3">
                         <label for="editPassword" class="form-label">
                             Change Password (Leave blank to keep current)
@@ -698,15 +601,20 @@ if ($canDelete) {
                         <button type="submit" class="btn btn-primary">Save Changes</button>
                     </div>
                 </form>
-            </div><!-- /.modal-body -->
+            </div>
         </div>
     </div>
 </div>
-
-
 <script>
     $(document).ready(function () {
-        // Toggle the custom department input based on selection
+        // Helper: Build a cache-busted URL for reloading content.
+        function getCacheBustedUrl(selector) {
+            var baseUrl = location.href.split('#')[0];
+            var connector = (baseUrl.indexOf('?') > -1) ? '&' : '?';
+            return baseUrl + connector + '_=' + new Date().getTime() + ' ' + selector;
+        }
+
+        // Toggle custom department input
         $('#modal_department').on('change', function () {
             if ($(this).val() === 'custom') {
                 $('#modal_custom_department').show().attr('required', true);
@@ -715,16 +623,14 @@ if ($canDelete) {
             }
         });
 
-// Handle "Add User" form submission via AJAX
+        // Handle "Add User" form submission via AJAX
         $('#addUserForm').on('submit', function (e) {
             e.preventDefault();
             <?php if (!$canCreate): ?>
             showToast('danger', 'You do not have permission to create users');
             return false;
             <?php endif; ?>
-
             var actionUrl = $(this).attr('action');
-
             $.ajax({
                 url: actionUrl,
                 type: 'POST',
@@ -732,13 +638,11 @@ if ($canDelete) {
                 dataType: 'json',
                 success: function (response) {
                     if (response.success) {
-                        // Hide the modal
                         $("#addUserModal").modal('hide');
-                        // Reload the table and then show the toast message
-                        $('#table').load(location.href + ' #table > *', function () {
+                        // Reload only the table body with a cache-busted URL.
+                        $('#umTable tbody').load(getCacheBustedUrl('#umTable tbody > *'), function () {
                             showToast(response.message, 'success');
                         });
-                        // Optionally, reset the form for the next user addition
                         $('#addUserForm')[0].reset();
                     } else {
                         showToast(response.message, 'error');
@@ -750,37 +654,30 @@ if ($canDelete) {
             });
         });
 
-// Global variable to store delete action data.
         var deleteAction = null;
-
-// Single-user delete using modal confirmation.
+        // Single-user delete
         $(document).on('click', '.delete-user', function () {
             const userId = $(this).data("id");
-            // Store the action data.
             deleteAction = {type: 'single', userId: userId};
-            // Set the modal confirmation message.
             $('#confirmDeleteMessage').text("Are you sure you want to archive this user?");
-            // Show the confirmation modal.
             $('#confirmDeleteModal').modal('show');
         });
 
-// Bulk delete using modal confirmation.
+        // Bulk delete
         $("#delete-selected").click(function () {
             const selected = $(".select-row:checked").map(function () {
                 return $(this).val();
             }).get();
-
             if (selected.length === 0) {
                 showToast('Please select users to archive.', 'warning');
                 return;
             }
-            // Store the bulk action data.
             deleteAction = {type: 'bulk', selected: selected};
             $('#confirmDeleteMessage').text(`Are you sure you want to archive ${selected.length} selected user(s)?`);
             $('#confirmDeleteModal').modal('show');
         });
 
-// Delete account confirmation using modal.
+        // Delete account confirmation
         $("#confirmDeleteAccount").click(function () {
             deleteAction = {type: 'account'};
             $('#confirmDeleteMessage').text("Are you sure you want to delete your account?");
@@ -788,18 +685,12 @@ if ($canDelete) {
             $('#delete-selected').modal('hide');
         });
 
-// When the user clicks the modal's confirm button.
+        // Confirm delete action
         $('#confirmDeleteButton').on('click', function () {
-            // Remove focus from the button to prevent ARIA issues.
             $(this).blur();
-            // Hide the modal.
             $('#confirmDeleteModal').modal('hide');
-
-            // Capture current deleteAction in a local variable.
             var currentAction = deleteAction;
-            // Reset the global variable.
             deleteAction = null;
-
             if (currentAction) {
                 if (currentAction.type === 'single') {
                     $.ajax({
@@ -809,8 +700,7 @@ if ($canDelete) {
                         dataType: 'json',
                         success: function (response) {
                             if (response.success) {
-                                // Reload the table and then show the toast.
-                                $('#table').load(location.href + ' #table > *', function () {
+                                $('#umTable tbody').load(getCacheBustedUrl('#umTable tbody > *'), function () {
                                     showToast(response.message, 'success');
                                 });
                             } else {
@@ -829,7 +719,7 @@ if ($canDelete) {
                         dataType: 'json',
                         success: function (response) {
                             if (response.success) {
-                                $('#table').load(location.href + ' #table > *', function () {
+                                $('#umTable tbody').load(getCacheBustedUrl('#umTable tbody > *'), function () {
                                     showToast(response.message, 'success');
                                 });
                             } else {
@@ -848,10 +738,9 @@ if ($canDelete) {
                         dataType: 'json',
                         success: function (response) {
                             if (response.success) {
-                                showToast(response.message, 'success');
-                                setTimeout(function () {
-                                    location.reload();
-                                }, 3000);
+                                $('#umTable tbody').load(getCacheBustedUrl('#umTable tbody > *'), function () {
+                                    showToast(response.message, 'success');
+                                });
                             } else {
                                 showToast(response.message, 'error');
                             }
@@ -864,7 +753,18 @@ if ($canDelete) {
             }
         });
 
-// Other event handlers remain unchanged.
+        // Remove lingering modal backdrop for delete modal
+        $('#confirmDeleteModal').on('hidden.bs.modal', function () {
+            $('body').removeClass('modal-open');
+            $('.modal-backdrop').remove();
+        });
+
+        // Remove lingering backdrop for edit modal as well
+        $('#editUserModal').on('hidden.bs.modal', function () {
+            $('body').removeClass('modal-open');
+            $('.modal-backdrop').remove();
+        });
+
         $(document).on('click', '.btn-close', function () {
             $(this).closest('.alert').hide();
         });
@@ -881,36 +781,29 @@ if ($canDelete) {
             }, 500);
         });
 
-
-        // Populate the "Edit User" modal
+        // Populate Edit Modal with existing data
         $('#editUserModal').on('show.bs.modal', function (event) {
             var button = $(event.relatedTarget);
             var userId = button.data('id');
             var email = button.data('email');
             var firstName = button.data('first-name');
             var lastName = button.data('last-name');
-            var department = button.data('department'); // numeric ID
-
+            var department = button.data('department');
             var modal = $(this);
             modal.find('#editUserID').val(userId);
             modal.find('#editEmail').val(email);
             modal.find('#editFirstName').val(firstName);
             modal.find('#editLastName').val(lastName);
-
-            // Important: Ensure the department select box is correctly set
             modal.find('#editDepartment').val(department);
         });
 
-
-        // Handle "Edit User" form submission
+        // Handle "Edit User" form submission via AJAX
         $("#editUserForm").on("submit", function (e) {
             e.preventDefault();
-
             var submitButton = $(this).find('button[type="submit"]');
             submitButton.prop('disabled', true).html(
                 '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...'
             );
-
             $.ajax({
                 type: "POST",
                 url: "update_user.php",
@@ -921,57 +814,49 @@ if ($canDelete) {
                         if (response.data.hasChanges) {
                             var userId = $("#editUserID").val();
                             var row = $("button.btn-edit[data-id='" + userId + "']").closest('tr');
-
-                            // Update email
                             row.find('td:eq(2)').text(response.data.email);
-                            // Update name
                             row.find('td:eq(3)').text(response.data.first_name + ' ' + response.data.last_name);
-                            // Update department if changed
                             if (response.data.department) {
                                 row.find('td:eq(4)').text(response.data.department);
                             }
-
-                            // Update data attributes on Edit button
                             var editButton = row.find('.btn-edit');
                             editButton.data('email', response.data.email);
                             editButton.data('first-name', response.data.first_name);
                             editButton.data('last-name', response.data.last_name);
                             editButton.data('department', response.data.department);
                         }
-
-                        $("#editUserModal").modal('hide');
                         showToast(response.message, 'success');
                     } else {
                         showToast(response.message, 'error');
                     }
                 },
                 error: function () {
-                    showToast('Error updating user: ', 'error');
+                    showToast('Error updating user.', 'error');
                 },
                 complete: function () {
+                    // Ensure the edit modal is hidden and remove any lingering backdrop
+                    $("#editUserModal").modal('hide');
                     submitButton.prop('disabled', false).text('Save Changes');
+                    $('body').removeClass('modal-open');
+                    $('.modal-backdrop').remove();
                 }
             });
         });
 
-        // Handle the "Select All" checkbox for bulk delete
+        // Handle "Select All" checkbox
         $("#select-all").on('click', function () {
             $(".select-row").prop('checked', $(this).prop('checked'));
             toggleBulkDeleteButton();
         });
-
-        // Toggle bulk delete button based on selection
         $(".select-row").on('change', function () {
             toggleBulkDeleteButton();
         });
-
         function toggleBulkDeleteButton() {
             const anyChecked = $(".select-row:checked").length > 1;
             $("#delete-selected").prop('disabled', !anyChecked).toggle(anyChecked);
         }
     });
 </script>
-
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 <?php include '../../general/footer.php'; ?>
 </body>

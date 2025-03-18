@@ -492,7 +492,7 @@ try {
         // Global variable to store the ID for deletion
         var deleteId = null;
 
-// When a delete-report link is clicked, show the delete modal
+    // When a delete-report link is clicked, show the delete modal
         $(document).on('click', '.delete-report', function (e) {
             e.preventDefault();
             deleteId = $(this).data('id');
@@ -500,7 +500,7 @@ try {
             deleteModal.show();
         });
 
-// When the confirm delete button is clicked, process deletion via AJAX
+    // When the confirm delete button is clicked, process deletion via AJAX
         $('#confirmDeleteBtn').on('click', function () {
             if (deleteId) {
                 $.ajax({
@@ -579,11 +579,8 @@ try {
     });
 </script>
 
-<!-- Pagination script (if needed) -->
 <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js"
         defer></script>
-<!-- Bootstrap Bundle -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <?php include '../../general/footer.php'; ?>
 </body>
