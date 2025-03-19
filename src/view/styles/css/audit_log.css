@@ -141,7 +141,7 @@ col.checkbox {
     width: 25px;
 }
 col.actions {
-    width: 150px;
+    width: 180px;
 }
 .vertical-btn-group {
     flex-direction: column !important;

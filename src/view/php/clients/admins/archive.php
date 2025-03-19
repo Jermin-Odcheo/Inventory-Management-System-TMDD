@@ -5,9 +5,9 @@ require '../../../../../config/ims-tmdd.php';
 // Include Header
 include '../../general/header.php';
 
-//If not logged in redirect to the LOGIN PAGE
+// If not logged in, redirect to the LOGIN PAGE
 if (!isset($_SESSION['user_id'])) {
-    header("Location: " . BASE_URL . "public/index.php"); // Redirect to login page
+    header("Location: " . BASE_URL . "public/index.php");
     exit();
 }
 
@@ -47,8 +47,7 @@ try {
 }
 
 /**
- * Format JSON data into a list (for the 'Changes' column)
- * to match the audit logs dashboard design.
+ * Format JSON data into a list (for the 'Changes' column).
  */
 function formatNewValue($jsonStr)
 {
@@ -94,7 +93,6 @@ function getStatusIcon($status)
         ? '<i class="fas fa-check-circle"></i>'
         : '<i class="fas fa-times-circle"></i>';
 }
-
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -107,6 +105,8 @@ function getStatusIcon($status)
     <!-- Custom CSS for audit logs -->
     <link rel="stylesheet" href="/Inventory-Managment-System-TMDD/src/view/styles/css/audit_log.css">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/pagination.css">
+    <!-- Include Toast CSS/JS (make sure showToast is defined) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
 <?php include '../../general/sidebar.php'; ?>
@@ -121,28 +121,20 @@ function getStatusIcon($status)
                     Archived Users Audit Log
                 </h3>
             </div>
-
             <div class="card-body">
-                <!-- Alert message placeholder -->
-                <div id="alertMessage"></div>
-
                 <!-- Bulk action buttons -->
                 <div class="row mb-3">
                     <div class="col-md-12">
                         <div class="bulk-actions mb-3">
-                            <button type="button" id="restore-selected" class="btn btn-success" disabled
-                                    style="display: none;">Restore Selected
-                            </button>
-                            <button type="button" id="delete-selected-permanently" class="btn btn-danger" disabled
-                                    style="display: none;">Delete Selected Permanently
-                            </button>
+                            <!-- Bulk actions only show if 2 or more are selected -->
+                            <button type="button" id="restore-selected" class="btn btn-success" disabled style="display: none;">Restore Selected</button>
+                            <button type="button" id="delete-selected-permanently" class="btn btn-danger" disabled style="display: none;">Delete Selected Permanently</button>
                         </div>
                     </div>
                 </div>
-
                 <!-- Table container -->
-                <div class="table-responsive">
-                    <table class="table table-hover" id="table">
+                <div class="table-responsive" id="table">
+                    <table id="archiveTable" class="table table-hover">
                         <colgroup>
                             <col class="checkbox">
                             <col class="track">
@@ -169,31 +161,25 @@ function getStatusIcon($status)
                             <th>Actions</th>
                         </tr>
                         </thead>
-                        <tbody id="archiveTable">
+                        <tbody id="archiveTableBody">
                         <?php if (!empty($logs)): ?>
                             <?php foreach ($logs as $log): ?>
                                 <tr>
-                                    <!-- Checkbox column -->
                                     <td data-label="Select">
-                                        <input type="checkbox" class="select-row"
-                                               value="<?php echo $log['deleted_user_id']; ?>">
+                                        <input type="checkbox" class="select-row" value="<?php echo $log['deleted_user_id']; ?>">
                                     </td>
-                                    <!-- Track ID -->
                                     <td data-label="Track ID">
                                         <span class="badge bg-secondary"><?php echo htmlspecialchars($log['track_id']); ?></span>
                                     </td>
-                                    <!-- User -->
                                     <td data-label="User">
                                         <div class="d-flex align-items-center">
                                             <i class="fas fa-user-circle me-2"></i>
                                             <small><?php echo htmlspecialchars($log['operator_email']); ?></small>
                                         </div>
                                     </td>
-                                    <!-- Module -->
                                     <td data-label="Module">
                                         <?php echo !empty($log['module']) ? htmlspecialchars(trim($log['module'])) : '<em class="text-muted">N/A</em>'; ?>
                                     </td>
-                                    <!-- Action -->
                                     <td data-label="Action">
                                         <?php
                                         $actionText = !empty($log['action']) ? $log['action'] : 'Unknown';
@@ -202,40 +188,33 @@ function getStatusIcon($status)
                                         echo '</span>';
                                         ?>
                                     </td>
-                                    <!-- Details -->
                                     <td data-label="Details">
                                         <?php echo nl2br(htmlspecialchars($log['details'])); ?>
                                     </td>
-                                    <!-- Changes -->
                                     <td data-label="Changes">
                                         <?php echo formatNewValue($log['new_val']); ?>
                                     </td>
-                                    <!-- Status -->
                                     <td data-label="Status">
                                         <span class="badge <?php echo (strtolower($log['status']) === 'successful') ? 'bg-success' : 'bg-danger'; ?>">
                                             <?php echo getStatusIcon($log['status']) . ' ' . htmlspecialchars($log['status']); ?>
                                         </span>
                                     </td>
-                                    <!-- Date & Time -->
                                     <td data-label="Date &amp; Time">
                                         <div class="d-flex align-items-center">
                                             <i class="far fa-clock me-2"></i>
                                             <?php echo htmlspecialchars($log['date_time']); ?>
                                         </div>
                                     </td>
-                                    <!-- Actions (Restore / Permanent Delete) -->
                                     <td data-label="Actions">
-                                        <div class="btn-vertical-compact">
-                                            <button type="button" class="btn btn-success restore-btn"
-                                                    data-id="<?php echo $log['deleted_user_id']; ?>">
+                                        <div class="btn-group-vertical gap-1">
+                                            <!-- Individual restore now triggers a confirmation modal -->
+                                            <button type="button" class="btn btn-success restore-btn" data-id="<?php echo $log['deleted_user_id']; ?>">
                                                 <i class="fas fa-undo me-1"></i> Restore
                                             </button>
-                                            <button type="button" class="btn btn-danger delete-permanent-btn"
-                                                    data-id="<?php echo $log['deleted_user_id']; ?>">
+                                            <button type="button" class="btn btn-danger delete-permanent-btn" data-id="<?php echo $log['deleted_user_id']; ?>">
                                                 <i class="fas fa-trash me-1"></i> Delete
                                             </button>
                                         </div>
-
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -252,182 +231,298 @@ function getStatusIcon($status)
                         <?php endif; ?>
                         </tbody>
                     </table>
-                </div><!-- /.table-responsive -->
+                </div>
                 <!-- Pagination Controls -->
                 <div class="container-fluid">
                     <div class="row align-items-center g-3">
-                        <!-- Pagination Info -->
                         <div class="col-12 col-sm-auto">
                             <div class="text-muted">
-                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
-                                        id="totalRows">100</span> entries
+                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows">100</span> entries
                             </div>
                         </div>
-
-                        <!-- Pagination Controls -->
                         <div class="col-12 col-sm-auto ms-sm-auto">
                             <div class="d-flex align-items-center gap-2">
                                 <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                    <i class="bi bi-chevron-left"></i>
-                                    Previous
+                                    <i class="bi bi-chevron-left"></i> Previous
                                 </button>
-
                                 <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
                                     <option value="10" selected>10</option>
                                     <option value="20">20</option>
                                     <option value="30">30</option>
                                     <option value="50">50</option>
                                 </select>
-
                                 <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                    Next
-                                    <i class="bi bi-chevron-right"></i>
+                                    Next <i class="bi bi-chevron-right"></i>
                                 </button>
                             </div>
                         </div>
                     </div>
-                    <!-- New Pagination Page Numbers -->
                     <div class="row mt-3">
                         <div class="col-12">
                             <ul class="pagination justify-content-center" id="pagination"></ul>
                         </div>
                     </div>
                 </div> <!-- /.End of Pagination -->
-
             </div>
         </div>
-    </div><!-- /.card-body -->
-</div><!-- /.card -->
-</div><!-- /.container-fluid -->
-</div><!-- /.main-content -->
+    </div>
+</div> <!-- /.End of Main Content -->
 
-<!-- JavaScript for bulk actions and AJAX calls -->
+<!-- Delete Archive Modal (for individual deletion) -->
+<div class="modal fade" id="deleteArchiveModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to permanently delete this record?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="confirmDeleteBtn" class="btn btn-danger">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Restore Archive Modal (for individual restore) -->
+<div class="modal fade" id="restoreArchiveModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Restore</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to restore this record?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="confirmRestoreBtn" class="btn btn-success">Restore</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Delete Modal -->
+<div class="modal fade" id="bulkDeleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Bulk Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to permanently delete the selected users?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="confirmBulkDeleteBtn" class="btn btn-danger">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Restore Modal -->
+<div class="modal fade" id="bulkRestoreModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Bulk Restore</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to restore the selected users?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="confirmBulkRestoreBtn" class="btn btn-success">Restore</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include pagination script if needed -->
+<script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js" defer></script>
 <script>
-    // Function to update the visibility and state of bulk action buttons
+    var deleteId = null;
+    var restoreId = null;
+    var bulkDeleteIds = [];
+
+    // Delegated events for checkboxes
+    $(document).on('change', '#select-all', function () {
+        $('.select-row').prop('checked', $(this).prop('checked'));
+        updateBulkButtons();
+    });
+    $(document).on('change', '.select-row', updateBulkButtons);
     function updateBulkButtons() {
-        const checkboxes = document.querySelectorAll(".select-row:checked");
-        const count = checkboxes.length;
-        const restoreButton = document.getElementById("restore-selected");
-        const deleteButton = document.getElementById("delete-selected-permanently");
+        var count = $('.select-row:checked').length;
+        // Show bulk actions only if 2 or more are selected
         if (count >= 2) {
-            restoreButton.disabled = false;
-            deleteButton.disabled = false;
-            restoreButton.style.display = "";
-            deleteButton.style.display = "";
+            $('#restore-selected, #delete-selected-permanently').prop('disabled', false).show();
         } else {
-            restoreButton.disabled = true;
-            deleteButton.disabled = true;
-            restoreButton.style.display = "none";
-            deleteButton.style.display = "none";
+            $('#restore-selected, #delete-selected-permanently').prop('disabled', true).hide();
         }
     }
 
-    // Select-all checkbox functionality
-    document.getElementById("select-all").addEventListener("change", function () {
-        const checkboxes = document.querySelectorAll(".select-row");
-        checkboxes.forEach(function (checkbox) {
-            checkbox.checked = document.getElementById("select-all").checked;
-        });
-        updateBulkButtons();
+    // --- Individual Restore (with modal) ---
+    $(document).on('click', '.restore-btn', function (e) {
+        e.preventDefault();
+        restoreId = $(this).data('id');
+        var restoreModal = new bootstrap.Modal(document.getElementById('restoreArchiveModal'));
+        restoreModal.show();
     });
+    $(document).on('click', '#confirmRestoreBtn', function () {
+        if (restoreId) {
+            $.ajax({
+                url: '../../modules/user_manager/restore_user.php',
+                method: 'POST',
+                data: { id: restoreId },
+                dataType: 'json',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                success: function(response) {
+                    // Hide restore modal immediately
+                    var modalInstance = bootstrap.Modal.getInstance(document.getElementById('restoreArchiveModal'));
+                    modalInstance.hide();
 
-    document.querySelectorAll(".select-row").forEach(function (checkbox) {
-        checkbox.addEventListener("change", updateBulkButtons);
-    });
-
-    // Restore individual user
-    document.querySelectorAll(".restore-btn").forEach(function (button) {
-        button.addEventListener("click", function () {
-            const userId = this.getAttribute("data-id");
-            const xhr = new XMLHttpRequest();
-            xhr.open("POST", "../../modules/user_manager/restore_user.php", true);
-            xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-            xhr.onload = function () {
-                if (xhr.status === 200) {
-                    document.getElementById("alertMessage").innerHTML = '<div class="alert alert-success alert-dismissible fade show" role="alert">' + xhr.responseText +
-                        '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>';
-                    location.reload();
-                } else {
-                    document.getElementById("alertMessage").innerHTML = '<div class="alert alert-danger alert-dismissible fade show" role="alert">Error restoring user: ' + xhr.responseText +
-                        '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>';
-                }
-            };
-            xhr.send("id=" + encodeURIComponent(userId));
-        });
-    });
-
-    // Permanently delete individual user
-    document.querySelectorAll(".delete-permanent-btn").forEach(function (button) {
-        button.addEventListener("click", function () {
-            const userId = this.getAttribute("data-id");
-            if (confirm("Are you sure you want to permanently delete this user?")) {
-                const xhr = new XMLHttpRequest();
-                xhr.open("POST", "../../modules/user_manager/delete_user.php", true);
-                xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-                xhr.onload = function () {
-                    if (xhr.status === 200) {
-                        document.getElementById("alertMessage").innerHTML = '<div class="alert alert-success alert-dismissible fade show" role="alert">' + xhr.responseText +
-                            '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>';
-                        location.reload();
+                    if (response.status === 'success') {
+                        $('#archiveTable').load(location.href + ' #archiveTable', function () {
+                            updateBulkButtons();
+                            showToast(response.message, 'success');
+                        });
                     } else {
-                        document.getElementById("alertMessage").innerHTML = '<div class="alert alert-danger alert-dismissible fade show" role="alert">Error permanently deleting user: ' + xhr.responseText +
-                            '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>';
+                        showToast(response.message, 'error');
                     }
-                };
-                xhr.send("user_id=" + encodeURIComponent(userId) + "&permanent=1");
-            }
-        });
-    });
-
-    // Bulk restore selected users
-    document.getElementById("restore-selected").addEventListener("click", function () {
-        const selected = document.querySelectorAll(".select-row:checked");
-        const ids = [];
-        selected.forEach(function (checkbox) {
-            ids.push(checkbox.value);
-        });
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", "../../modules/user_manager/restore_user.php", true);
-        xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-        xhr.onload = function () {
-            if (xhr.status === 200) {
-                document.getElementById("alertMessage").innerHTML = '<div class="alert alert-success alert-dismissible fade show" role="alert">' + xhr.responseText +
-                    '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>';
-                location.reload();
-            } else {
-                document.getElementById("alertMessage").innerHTML = '<div class="alert alert-danger alert-dismissible fade show" role="alert">Error restoring selected users: ' + xhr.responseText +
-                    '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>';
-            }
-        };
-        xhr.send("user_ids=" + encodeURIComponent(JSON.stringify(ids)));
-    });
-
-    // Bulk permanently delete selected users
-    document.getElementById("delete-selected-permanently").addEventListener("click", function () {
-        const selected = document.querySelectorAll(".select-row:checked");
-        const ids = [];
-        selected.forEach(function (checkbox) {
-            ids.push(checkbox.value);
-        });
-        if (confirm("Are you sure you want to permanently delete the selected users?")) {
-            const xhr = new XMLHttpRequest();
-            xhr.open("POST", "../../modules/user_manager/delete_user.php", true);
-            xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-            xhr.onload = function () {
-                if (xhr.status === 200) {
-                    document.getElementById("alertMessage").innerHTML = '<div class="alert alert-success alert-dismissible fade show" role="alert">' + xhr.responseText +
-                        '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>';
-                    location.reload();
-                } else {
-                    document.getElementById("alertMessage").innerHTML = '<div class="alert alert-danger alert-dismissible fade show" role="alert">Error permanently deleting selected users: ' + xhr.responseText +
-                        '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>';
+                },
+                error: function() {
+                    showToast('Error processing restore request.', 'error');
                 }
-            };
-            xhr.send("user_ids=" + encodeURIComponent(JSON.stringify(ids)) + "&permanent=1");
+            });
+        }
+    });
+
+    // --- Individual Permanent Delete ---
+    $(document).on('click', '.delete-permanent-btn', function(e) {
+        e.preventDefault();
+        deleteId = $(this).data('id');
+        var deleteModal = new bootstrap.Modal(document.getElementById('deleteArchiveModal'));
+        deleteModal.show();
+    });
+    $(document).on('click', '#confirmDeleteBtn', function () {
+        if (deleteId) {
+            $.ajax({
+                url: '../../modules/user_manager/delete_user.php',
+                method: 'POST',
+                data: { user_id: deleteId, permanent: 1 },
+                dataType: 'json',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                success: function(response) {
+                    // Hide delete modal immediately
+                    var modalInstance = bootstrap.Modal.getInstance(document.getElementById('deleteArchiveModal'));
+                    modalInstance.hide();
+
+                    if (response.status === 'success') {
+                        $('#archiveTable').load(location.href + ' #archiveTable', function () {
+                            updateBulkButtons();
+                            showToast(response.message, 'success');
+                        });
+                    } else {
+                        showToast(response.message, 'error');
+                    }
+                },
+                error: function() {
+                    showToast('Error processing request.', 'error');
+                }
+            });
+        }
+    });
+
+    var bulkRestoreIds = [];
+
+    // When bulk restore button is clicked, gather selected IDs and show modal
+    $(document).on('click', '#restore-selected', function () {
+        var selected = $('.select-row:checked');
+        bulkRestoreIds = [];
+        selected.each(function () {
+            bulkRestoreIds.push($(this).val());
+        });
+        var bulkRestoreModal = new bootstrap.Modal(document.getElementById('bulkRestoreModal'));
+        bulkRestoreModal.show();
+    });
+
+    // When confirming bulk restore in the modal, perform the AJAX call
+    $(document).on('click', '#confirmBulkRestoreBtn', function () {
+        if (bulkRestoreIds.length > 0) {
+            $.ajax({
+                url: '../../modules/user_manager/restore_user.php',
+                method: 'POST',
+                data: { user_ids: bulkRestoreIds },
+                dataType: 'json',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                success: function(response) {
+                    // Hide the bulk restore modal
+                    var modalInstance = bootstrap.Modal.getInstance(document.getElementById('bulkRestoreModal'));
+                    modalInstance.hide();
+                    if (response.status === 'success') {
+                        $('#archiveTable').load(location.href + ' #archiveTable', function () {
+                            updateBulkButtons();
+                            showToast(response.message, 'success');
+                        });
+                    } else {
+                        showToast(response.message, 'error');
+                    }
+                },
+                error: function() {
+                    showToast('Error processing bulk restore.', 'error');
+                }
+            });
+        }
+    });
+
+
+    // --- Bulk Delete ---
+    $(document).on('click', '#delete-selected-permanently', function () {
+        var selected = $('.select-row:checked');
+        bulkDeleteIds = [];
+        selected.each(function () {
+            bulkDeleteIds.push($(this).val());
+        });
+        var bulkModal = new bootstrap.Modal(document.getElementById('bulkDeleteModal'));
+        bulkModal.show();
+    });
+    $(document).on('click', '#confirmBulkDeleteBtn', function () {
+        if (bulkDeleteIds.length > 0) {
+            $.ajax({
+                url: '../../modules/user_manager/delete_user.php',
+                method: 'POST',
+                data: { user_ids: bulkDeleteIds, permanent: 1 },
+                dataType: 'json',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                success: function(response) {
+                    // Hide bulk delete modal immediately
+                    var bulkModalInstance = bootstrap.Modal.getInstance(document.getElementById('bulkDeleteModal'));
+                    bulkModalInstance.hide();
+
+                    if (response.status === 'success') {
+                        $('#archiveTable').load(location.href + ' #archiveTable', function () {
+                            updateBulkButtons();
+                            showToast(response.message, 'success');
+                        });
+                    } else {
+                        showToast(response.message, 'error');
+                    }
+                },
+                error: function() {
+                    showToast('Error processing bulk delete.', 'error');
+                }
+            });
         }
     });
 </script>
-
-<script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
+<?php include '../../general/footer.php'; ?>
+<!-- Bootstrap 5 JS Bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
