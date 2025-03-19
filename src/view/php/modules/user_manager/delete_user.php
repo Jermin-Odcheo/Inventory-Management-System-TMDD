@@ -141,11 +141,12 @@ try {
 
     $pdo->commit();
     echo json_encode([
-        'status' => 'success',
+        'success' => true,
         'message' => isset($_POST['user_ids']) ?
             ($isPermanent ? "$rowCount users have been permanently deleted" : "$rowCount users have been archived successfully") :
             ($isPermanent ? "User has been permanently deleted" : "User has been archived successfully")
     ]);
+
 
 } catch (Exception $e) {
     if ($pdo->inTransaction()) {
@@ -153,8 +154,9 @@ try {
     }
     error_log("Delete user error: " . $e->getMessage());
     echo json_encode([
-        'status' => 'error',
+        'success' => false,
         'message' => $e->getMessage()
     ]);
+
 }
 ?>

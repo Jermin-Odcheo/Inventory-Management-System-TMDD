@@ -381,7 +381,7 @@ if ($canDelete) {
         </div>
         <div class="col-md-4 d-flex justify-content-end">
             <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#addUserModal">
-                Add New User
+                Create New User
             </button>
         </div>
     </div>
@@ -605,8 +605,7 @@ if ($canDelete) {
         </div>
     </div>
 </div>
-<script>
-    $(document).ready(function () {
+<script>$(document).ready(function () {
         // Helper: Build a cache-busted URL for reloading content.
         function getCacheBustedUrl(selector) {
             var baseUrl = location.href.split('#')[0];
@@ -811,21 +810,10 @@ if ($canDelete) {
                 dataType: 'json',
                 success: function (response) {
                     if (response.success) {
-                        if (response.data.hasChanges) {
-                            var userId = $("#editUserID").val();
-                            var row = $("button.btn-edit[data-id='" + userId + "']").closest('tr');
-                            row.find('td:eq(2)').text(response.data.email);
-                            row.find('td:eq(3)').text(response.data.first_name + ' ' + response.data.last_name);
-                            if (response.data.department) {
-                                row.find('td:eq(4)').text(response.data.department);
-                            }
-                            var editButton = row.find('.btn-edit');
-                            editButton.data('email', response.data.email);
-                            editButton.data('first-name', response.data.first_name);
-                            editButton.data('last-name', response.data.last_name);
-                            editButton.data('department', response.data.department);
-                        }
-                        showToast(response.message, 'success');
+                        // Instead of manually updating the row, reload the table body to get updated data
+                        $('#umTable tbody').load(getCacheBustedUrl('#umTable tbody > *'), function () {
+                            showToast(response.message, 'success');
+                        });
                     } else {
                         showToast(response.message, 'error');
                     }
@@ -856,6 +844,7 @@ if ($canDelete) {
             $("#delete-selected").prop('disabled', !anyChecked).toggle(anyChecked);
         }
     });
+
 </script>
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 <?php include '../../general/footer.php'; ?>
