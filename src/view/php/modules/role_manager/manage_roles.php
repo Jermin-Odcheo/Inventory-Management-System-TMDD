@@ -144,10 +144,10 @@ unset($role); // break the reference
                             </td>
                             <td>
                                 <button type="button" class="btn btn-sm btn-warning edit-role-btn" data-role-id="<?php echo $roleID; ?>" data-bs-toggle="modal" data-bs-target="#editRoleModal">
-                                    Modify
+                                    Modify Role
                                 </button>
                                 <button type="button" class="btn btn-sm btn-danger delete-role-btn" data-role-id="<?php echo $roleID; ?>" data-role-name="<?php echo htmlspecialchars($role['Role_Name']); ?>" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
-                                    Delete
+                                    Remove Role
                                 </button>
                             </td>
                         </tr>

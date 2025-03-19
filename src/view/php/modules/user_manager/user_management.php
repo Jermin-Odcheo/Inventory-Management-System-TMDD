@@ -470,13 +470,13 @@ if ($canDelete) {
                                     data-first-name="<?php echo htmlspecialchars($user['first_name']); ?>"
                                     data-last-name="<?php echo htmlspecialchars($user['last_name']); ?>"
                                     data-department="<?php echo htmlspecialchars($userDeptIds[0] ?? ''); ?>">
-                                Modify
+                                Modify User
                             </button>
                         <?php endif; ?>
                         <?php if ($canDelete): ?>
                             <button type="button" class="btn btn-sm btn-danger delete-user"
                                     data-id="<?php echo htmlspecialchars($user['id']); ?>">
-                                Remove
+                                Remove User
                             </button>
                         <?php endif; ?>
                     </td>

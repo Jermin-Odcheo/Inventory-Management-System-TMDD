@@ -467,7 +467,7 @@ function getStatusIcon($status)
                     modalInstance.hide();
                     if (response.status === 'success') {
                         $('#archiveTable').load(location.href + ' #archiveTable', function () {
-                            updateBulkButtons();
+                            update BulkButtons();
                             showToast(response.message, 'success');
                         });
                     } else {

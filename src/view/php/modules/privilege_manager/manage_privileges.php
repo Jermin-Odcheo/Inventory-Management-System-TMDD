@@ -80,7 +80,7 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <!-- Add Module Button -->
         <div class="d-flex justify-content-end mb-3">
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModuleModal">
-                Add Module
+                Create Module
             </button>
         </div>
 
@@ -109,7 +109,7 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 </button>
                                 <button type="button" class="btn btn-sm btn-danger delete-module-btn"
                                         data-module-id="<?php echo $module['Module_ID']; ?>">
-                                    Delete Module
+                                    Remove Module
                                 </button>
                             </td>
                         </tr>
@@ -188,7 +188,7 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <div class="modal-content">
             <form id="addModuleForm">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="addModuleModalLabel">Add Module</h5>
+                    <h5 class="modal-title" id="addModuleModalLabel">Create Module</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -218,7 +218,7 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary">Add Module</button>
+                    <button type="submit" class="btn btn-primary">Create Module</button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
             </form>

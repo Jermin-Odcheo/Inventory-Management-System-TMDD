@@ -73,12 +73,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
 
         // Log changes in role_changes table.
-        // >>>> Temporarily comment out or wrap this section if you suspect a schema mismatch <<<<
         $stmtLog = $pdo->prepare("INSERT INTO role_changes (UserID, RoleID, Action, OldRoleName, NewRoleName, OldPrivileges, NewPrivileges) VALUES (?, ?, 'Modified', ?, ?, ?, ?)");
         $stmtLog->execute([
             $_SESSION['user_id'],
             $roleID,
-            $role['role_name'], // Verify this column name matches your DB schema
+            $role['role_name'],
             $roleName,
             json_encode($currentPrivileges),
             json_encode($selected)
@@ -107,7 +106,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         exit;
     } catch (Exception $e) {
         $pdo->rollBack();
-        // Log error for debugging
         error_log("Error updating role: " . $e->getMessage());
         echo json_encode(['success' => false, 'message' => 'Error updating role: ' . $e->getMessage()]);
         exit;
@@ -115,10 +113,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 }
 ?>
 
-
 <!-- Simplified Modern Edit Role Modal -->
 <div class="modal-content border-0 shadow-lg rounded-4">
-    <!-- Clean header with minimal design -->
     <div class="modal-header bg-primary py-3 px-4 border-0">
         <h5 class="modal-title text-white m-0 d-flex align-items-center">
             <i class="bi bi-shield-lock me-2"></i>Edit Role
@@ -160,17 +156,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     <div class="tab-pane fade <?php echo ($index === 0) ? 'show active' : ''; ?>"
                          id="module-<?php echo $mod['id']; ?>"
                          role="tabpanel">
-
                         <div class="card shadow-sm">
                             <div class="card-header d-flex justify-content-between align-items-center py-2">
                                 <span><?php echo htmlspecialchars($mod['module_name']); ?></span>
                                 <span class="badge bg-light text-primary">Module</span>
                             </div>
-
                             <div class="card-body">
                                 <div class="row g-3">
                                     <?php
-                                    // Determine which privileges to show
                                     $showPrivileges = strtolower($mod['module_name']) === 'audit' ?
                                         array_filter($privileges, function ($p) {
                                             return strtolower($p['priv_name']) === 'track';
@@ -180,8 +173,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                     foreach ($showPrivileges as $priv):
                                         if (strtolower($mod['module_name']) !== 'audit' || strtolower($priv['priv_name']) === 'track'):
                                             $value = $mod['id'] . '|' . $priv['id'];
-
-                                            // Simplified icon selection
                                             $iconClass = '';
                                             switch (strtolower($priv['priv_name'])) {
                                                 case 'view':
@@ -253,7 +244,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 </style>
 
 <script>
-    // Ensure the submit event is bound only once using delegation.
+    // Handle the Edit Role form submission via AJAX.
     $(document).off('submit', '#editRoleForm').on('submit', '#editRoleForm', function (e) {
         e.preventDefault();
         const submitBtn = $('button[type="submit"]', this);
@@ -269,7 +260,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             dataType: 'json',
             success: function (response) {
                 if (response.success) {
-                    // Update table row and update privileges display (if needed)
+                    // Update table row with new role name and privileges
                     const row = $('tr[data-role-id="' + response.role_id + '"]');
                     row.find('.role-name').text(response.role_name);
                     const privilegeCell = row.find('.privilege-list');
@@ -285,12 +276,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         );
                     });
 
-                    // Remove focus from the submit button to avoid aria-hidden issues.
                     submitBtn.blur();
-
-                    // Hide the modal (using Bootstrap’s modal method)
+                    // Hide the modal using Bootstrap’s modal method.
                     $('#editRoleModal').modal('hide');
 
+                    // Reload roles table.
                     $('#rolesTable').load(location.href + ' #rolesTable', function() {
                         showToast(response.message, 'success');
                     });
@@ -307,5 +297,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 submitBtn.prop('disabled', false);
             }
         });
+    });
+
+    // Remove lingering modal backdrop when any modal is hidden.
+    $('#editRoleModal, #addRoleModal, #confirmDeleteModal').on('hidden.bs.modal', function () {
+        $('body').removeClass('modal-open');
+        $('.modal-backdrop').remove();
     });
 </script>
