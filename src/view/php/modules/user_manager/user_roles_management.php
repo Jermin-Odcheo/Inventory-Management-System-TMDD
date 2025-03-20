@@ -7,11 +7,6 @@ include '../../general/header.php';
 include '../../general/sidebar.php';
 include '../../general/footer.php';
 
-
-// Note: This main file does not include header/sidebar/footer to avoid extra HTML
-// that would break JSON responses from AJAX endpoints. Instead, you can include them
-// around the main content if needed (but not in the endpoint files).
-
 // Query active users
 $stmt = $pdo->query("SELECT id, username, email, first_name, last_name, date_created, status FROM users WHERE is_disabled = 0");
 $usersData = $stmt->fetchAll();
@@ -192,6 +187,18 @@ foreach ($userRoles as $assignment) {
     </div>
 </div>
 
+<!-- Delete Confirmation Modal -->
+<div id="delete-confirm-modal" class="modal">
+    <div class="modal-content">
+        <h2>Confirm Deletion</h2>
+        <p>Are you sure you want to delete this role assignment?</p>
+        <div class="modal-footer">
+            <button id="cancel-delete-btn">Cancel</button>
+            <button id="confirm-delete-btn">Delete</button>
+        </div>
+    </div>
+</div>
+
 <!-- Pass PHP data to JavaScript -->
 <script>
     let usersData = <?php echo json_encode($usersData); ?>;
@@ -199,132 +206,6 @@ foreach ($userRoles as $assignment) {
     let departmentsData = <?php echo json_encode($departmentsData); ?>;
     let userRoleDepartments = <?php echo json_encode($userRoleDepartments); ?>;
 </script>
-
-<!-- Inline Toast.js Code -->
-<script>
-    // Ultra-modern toast notification system with enhanced animations
-    function showToast(message, type = 'info', duration = 5000, title = null) {
-        let container = document.getElementById('toastContainer');
-        if (!container) {
-            container = document.createElement('div');
-            container.id = 'toastContainer';
-            document.body.appendChild(container);
-        }
-        const toast = document.createElement('div');
-        toast.className = `custom-toast toast-${type}`;
-        toast.setAttribute('role', 'alert');
-        toast.setAttribute('aria-live', 'polite');
-        const header = document.createElement('div');
-        header.className = 'toast-header';
-        const icon = document.createElement('div');
-        icon.className = 'toast-icon';
-        let iconContent = '';
-        switch(type) {
-            case 'success': iconContent = '✓'; break;
-            case 'error': iconContent = '×'; break;
-            case 'warning': iconContent = '!'; break;
-            case 'info': default: iconContent = 'i'; break;
-        }
-        icon.textContent = iconContent;
-        header.appendChild(icon);
-        const titleElement = document.createElement('h5');
-        titleElement.className = 'toast-title';
-        if (title) {
-            titleElement.textContent = title;
-        } else {
-            switch(type) {
-                case 'success': titleElement.textContent = 'Success'; break;
-                case 'error': titleElement.textContent = 'Error'; break;
-                case 'warning': titleElement.textContent = 'Warning'; break;
-                case 'info': default: titleElement.textContent = 'Information'; break;
-            }
-        }
-        header.appendChild(titleElement);
-        const closeBtn = document.createElement('button');
-        closeBtn.className = 'toast-close';
-        closeBtn.innerHTML = '×';
-        closeBtn.setAttribute('aria-label', 'Close');
-        closeBtn.onclick = function(event) {
-            event.stopPropagation();
-            dismissToast(toast);
-        };
-        header.appendChild(closeBtn);
-        toast.appendChild(header);
-        const body = document.createElement('div');
-        body.className = 'toast-body';
-        if (message.includes('<') && message.includes('>')) {
-            body.innerHTML = message;
-        } else {
-            body.textContent = message;
-        }
-        toast.appendChild(body);
-        const progress = document.createElement('div');
-        progress.className = 'toast-progress';
-        if (duration > 0) {
-            progress.style.animation = `countdown ${duration}ms linear forwards`;
-        }
-        toast.appendChild(progress);
-        const delay = Math.min(container.children.length * 100, 300);
-        setTimeout(() => {
-            container.appendChild(toast);
-            void toast.offsetWidth;
-            toast.classList.add('show');
-            toast.classList.add('new-toast');
-            setTimeout(() => { toast.classList.remove('new-toast'); }, 500);
-            if (duration > 0) {
-                const dismissTimeout = setTimeout(() => { dismissToast(toast); }, duration);
-                toast._dismissTimeout = dismissTimeout;
-            }
-            toast.addEventListener('click', function(event) {
-                if (event.target !== closeBtn && !closeBtn.contains(event.target)) {
-                    // Optional: custom action on toast click
-                }
-            });
-        }, delay);
-        return toast;
-    }
-
-    function dismissToast(toast) {
-        if (toast._dismissTimeout) {
-            clearTimeout(toast._dismissTimeout);
-        }
-        toast.classList.add('hide');
-        toast.classList.remove('show');
-        setTimeout(() => {
-            if (toast.parentNode) {
-                toast.parentNode.removeChild(toast);
-                const container = document.getElementById('toastContainer');
-                if (container && container.children.length === 0) {
-                    document.body.removeChild(container);
-                }
-            }
-        }, 600);
-    }
-
-    const Toast = {
-        success: function(message, duration = 5000, title = null) {
-            return showToast(message, 'success', duration, title);
-        },
-        error: function(message, duration = 5000, title = null) {
-            return showToast(message, 'error', duration, title);
-        },
-        warning: function(message, duration = 5000, title = null) {
-            return showToast(message, 'warning', duration, title);
-        },
-        info: function(message, duration = 5000, title = null) {
-            return showToast(message, 'info', duration, title);
-        }
-    };
-
-    function dismissAllToasts() {
-        const container = document.getElementById('toastContainer');
-        if (container) {
-            const toasts = container.querySelectorAll('.custom-toast');
-            toasts.forEach(toast => { dismissToast(toast); });
-        }
-    }
-</script>
-
 <!-- Main JavaScript Code -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -343,6 +224,13 @@ foreach ($userRoles as $assignment) {
         const closeDepartmentRoleModal = document.getElementById('close-department-role-modal');
         const saveUserRolesBtn = document.getElementById('save-user-roles');
         const saveDepartmentRoleBtn = document.getElementById('save-department-role');
+
+        // Delete confirmation modal elements
+        const deleteConfirmModal = document.getElementById('delete-confirm-modal');
+        const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+        const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+        // Variable to store assignment info pending deletion.
+        let pendingDelete = null;
 
         // Dropdowns
         const searchRoleDropdown = document.getElementById('search-role-dropdown');
@@ -526,35 +414,15 @@ foreach ($userRoles as $assignment) {
                 button.addEventListener('click', function() {
                     const userId = parseInt(this.dataset.userId);
                     const roleId = parseInt(this.dataset.roleId);
-                    if (confirm('Are you sure you want to delete this role assignment?')) {
-                        // Send AJAX request to delete assignment from the database
-                        fetch('delete_user_role.php', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ userId, roleId })
-                        })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.success) {
-                                    userRoleDepartments = userRoleDepartments.filter(a => !(a.userId === userId && a.roleId === roleId));
-                                    renderUserRolesTable();
-                                    Toast.success('Role assignment has been removed successfully', 5000, 'Deleted');
-                                } else {
-                                    Toast.error('Failed to delete assignment', 5000, 'Error');
-                                }
-                            })
-                            .catch(error => {
-                                console.error(error);
-                                Toast.error('Error deleting assignment', 5000, 'Error');
-                            });
-                    }
+                    // Instead of a simple confirm(), show the custom delete modal.
+                    pendingDelete = { userId, roleId };
+                    deleteConfirmModal.style.display = 'block';
                 });
             });
             document.querySelectorAll('.add-role-btn').forEach(button => {
                 button.addEventListener('click', function() {
                     const userId = parseInt(this.dataset.userId);
                     addUserRolesModal.style.display = 'block';
-                    // Optionally, store userId for the new assignment
                 });
             });
         }
@@ -626,6 +494,48 @@ foreach ($userRoles as $assignment) {
             addDepartmentRoleModal.style.display = 'none';
         });
 
+        // Delete confirmation modal handlers
+        document.getElementById('cancel-delete-btn').addEventListener('click', function() {
+            pendingDelete = null;
+            deleteConfirmModal.style.display = 'none';
+        });
+        document.getElementById('confirm-delete-btn').addEventListener('click', function() {
+            if (pendingDelete) {
+                const { userId, roleId } = pendingDelete;
+                // Send AJAX request to delete assignment from the database
+                fetch('delete_user_role.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId, roleId })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            userRoleDepartments = userRoleDepartments.filter(a => !(a.userId === userId && a.roleId === roleId));
+                            renderUserRolesTable();
+                            Toast.success('Role assignment has been removed successfully', 5000, 'Deleted');
+                        } else {
+                            Toast.error('Failed to delete assignment', 5000, 'Error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error(error);
+                        Toast.error('Error deleting assignment', 5000, 'Error');
+                    })
+                    .finally(() => {
+                        pendingDelete = null;
+                        deleteConfirmModal.style.display = 'none';
+                    });
+            }
+        });
+
+        // Close delete modal when clicking outside
+        window.addEventListener('click', function(event) {
+            if (event.target === deleteConfirmModal) {
+                deleteConfirmModal.style.display = 'none';
+            }
+        });
+
         // Save handlers
         saveUserRolesBtn.addEventListener('click', function() {
             if (selectedUsers.length === 0 || selectedRoles.length === 0) {
@@ -645,7 +555,6 @@ foreach ($userRoles as $assignment) {
                     }
                 });
             });
-            // Send AJAX request to save new assignments to the database
             fetch('save_user_role.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -677,7 +586,6 @@ foreach ($userRoles as $assignment) {
                 const index = userRoleDepartments.findIndex(a => a.userId === currentEditingData.userId && a.roleId === currentEditingData.roleId);
                 if (index !== -1) {
                     let updatedDepartments = selectedDepartments.map(dept => dept.id);
-                    // Send AJAX request to update departments for the assignment
                     fetch('update_user_department.php', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -721,6 +629,7 @@ foreach ($userRoles as $assignment) {
             if (event.key === 'Escape') {
                 addUserRolesModal.style.display = 'none';
                 addDepartmentRoleModal.style.display = 'none';
+                deleteConfirmModal.style.display = 'none';
             }
             if (event.ctrlKey && event.key === 'k') {
                 event.preventDefault();
