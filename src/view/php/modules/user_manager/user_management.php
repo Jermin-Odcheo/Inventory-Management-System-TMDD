@@ -19,6 +19,8 @@ $canDelete = $rbac->hasPrivilege('User Management', 'Remove');
 $canTrack = $rbac->hasPrivilege('User Management', 'Track');
 
 include '../../general/header.php';
+include '../../general/sidebar.php';
+include '../../general/footer.php';
 
 // Get current user's roles and initialize RBAC
 $currentUserRoles = getCurrentUserRoles($pdo, $_SESSION['user_id']);
@@ -262,6 +264,8 @@ if ($canDelete) {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/pagination.css">
+
     <style>
         .main-content {
             margin-left: 300px;
@@ -269,26 +273,27 @@ if ($canDelete) {
             margin-bottom: 20px;
             width: auto;
         }
+
         .search-container {
             width: 250px;
         }
+
         .search-container input {
             padding-right: 30px;
         }
+
         .search-container i {
             color: #6c757d;
             pointer-events: none;
         }
+
         .main-content.container-fluid {
             padding: 100px 15px;
         }
     </style>
 </head>
 <body>
-<div class="sidebar">
-    <?php include '../../general/sidebar.php'; ?>
-    <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/pagination.css">
-</div>
+
 <!-- Main Content Area -->
 <div class="main-content container-fluid">
     <h1>User Management</h1>
@@ -490,7 +495,8 @@ if ($canDelete) {
         <div class="row align-items-center g-3">
             <div class="col-12 col-sm-auto">
                 <div class="text-muted">
-                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows">100</span> entries
+                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows">100</span>
+                    entries
                 </div>
             </div>
             <div class="col-12 col-sm-auto ms-sm-auto">
@@ -524,7 +530,8 @@ if ($canDelete) {
     </div>
 </div>
 <!-- Confirm Delete Modal -->
-<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel"
+     aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -580,13 +587,16 @@ if ($canDelete) {
                             appearance: none;
                             transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
                         }
+
                         .form-select:focus {
                             border-color: #86b7fe;
                             box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
                         }
+
                         .form-select option {
                             padding: 10px;
                         }
+
                         .form-select optgroup {
                             margin-top: 10px;
                         }
@@ -839,6 +849,7 @@ if ($canDelete) {
         $(".select-row").on('change', function () {
             toggleBulkDeleteButton();
         });
+
         function toggleBulkDeleteButton() {
             const anyChecked = $(".select-row:checked").length > 1;
             $("#delete-selected").prop('disabled', !anyChecked).toggle(anyChecked);
@@ -847,6 +858,5 @@ if ($canDelete) {
 
 </script>
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
-<?php include '../../general/footer.php'; ?>
 </body>
 </html>

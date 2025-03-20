@@ -66,7 +66,7 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/role_manager/user_roles_management.php"
+                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/user_manager/user_roles_management.php"
                            class="nav-link">
                             <span class="submenu-text">User Roles Management</span>
                         </a>
