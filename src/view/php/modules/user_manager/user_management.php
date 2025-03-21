@@ -19,8 +19,6 @@ $canDelete = $rbac->hasPrivilege('User Management', 'Remove');
 $canTrack = $rbac->hasPrivilege('User Management', 'Track');
 
 include '../../general/header.php';
-include '../../general/sidebar.php';
-include '../../general/footer.php';
 
 // Get current user's roles and initialize RBAC
 $currentUserRoles = getCurrentUserRoles($pdo, $_SESSION['user_id']);
@@ -71,43 +69,54 @@ function getUserDepartments($pdo, $userId)
 
 // Build the query to include department and search filters, plus the is_disabled=0 check
 $query = "SELECT u.id, u.email, u.first_name, u.last_name, u.status AS Status
-            FROM users u";
+            FROM users u
+            WHERE u.is_disabled = 0";
 
-if (isset($_GET['department']) && $_GET['department'] !== 'all') {
-    $query .= "
-        JOIN user_departments ud ON u.id = ud.user_id
-       WHERE ud.department_id = :department
-         AND u.is_disabled = 0";
-} else {
-    $query .= "
-       WHERE u.is_disabled = 0";
+$hasDepartmentFilter = isset($_GET['department']) && $_GET['department'] !== 'all';
+$hasSearchFilter = isset($_GET['search']) && !empty($_GET['search']);
+
+if ($hasDepartmentFilter) {
+    $query .= " AND u.id IN (
+        SELECT ud.user_id
+        FROM user_departments ud
+        WHERE ud.department_id = :department
+    )";
 }
 
-if (isset($_GET['search']) && !empty($_GET['search'])) {
-    $query .= " 
-       AND (u.email LIKE :search 
-         OR u.first_name LIKE :search 
-         OR u.last_name LIKE :search)";
+if ($hasSearchFilter) {
+    $query .= " AND (
+        u.email LIKE :search
+        OR u.first_name LIKE :search
+        OR u.last_name LIKE :search
+    )";
 }
 
-$query .= " 
-   ORDER BY `$sortBy` $sortDir";
+$query .= " ORDER BY `$sortBy` $sortDir";
 
 try {
     $stmt = $pdo->prepare($query);
-    if (isset($_GET['department']) && $_GET['department'] !== 'all') {
-        $stmt->bindValue(':department', $_GET['department'], PDO::PARAM_INT);
+    
+    if ($hasDepartmentFilter) {
+        $departmentId = filter_var($_GET['department'], FILTER_VALIDATE_INT);
+        if ($departmentId === false) {
+            die("Invalid department ID.");
+        }
+        $stmt->bindValue(':department', $departmentId, PDO::PARAM_INT);
     }
-    if (isset($_GET['search']) && !empty($_GET['search'])) {
-        $stmt->bindValue(':search', '%' . $_GET['search'] . '%', PDO::PARAM_STR);
+    
+    if ($hasSearchFilter) {
+        $searchTerm = '%' . $_GET['search'] . '%';
+        $stmt->bindValue(':search', $searchTerm, PDO::PARAM_STR);
     }
+    
     $stmt->execute();
     $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
     if (!$users) {
         $users = [];
     }
 } catch (PDOException $e) {
-    die("Database query error: " . $e->getMessage());
+    error_log("Database query error: " . $e->getMessage());
+    die("An error occurred while fetching users. Please try again later.");
 }
 
 function toggleDirection($currentSort, $currentDir, $column)
@@ -264,8 +273,6 @@ if ($canDelete) {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css" rel="stylesheet">
-    <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/pagination.css">
-
     <style>
         .main-content {
             margin-left: 300px;
@@ -273,27 +280,26 @@ if ($canDelete) {
             margin-bottom: 20px;
             width: auto;
         }
-
         .search-container {
             width: 250px;
         }
-
         .search-container input {
             padding-right: 30px;
         }
-
         .search-container i {
             color: #6c757d;
             pointer-events: none;
         }
-
         .main-content.container-fluid {
             padding: 100px 15px;
         }
     </style>
 </head>
 <body>
-
+<div class="sidebar">
+    <?php include '../../general/sidebar.php'; ?>
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/pagination.css">
+</div>
 <!-- Main Content Area -->
 <div class="main-content container-fluid">
     <h1>User Management</h1>
@@ -302,87 +308,69 @@ if ($canDelete) {
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
     <!-- Modal for adding a new user -->
-    <div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-body">
-                    <form id="addUserForm" method="POST" action="add_user.php">
-                        <div class="mb-3">
-                            <label for="email" class="form-label">Email:</label>
-                            <input type="email" name="email" id="email" class="form-control" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="password" class="form-label">Password:</label>
-                            <input type="password" name="password" id="password" class="form-control" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="first_name" class="form-label">First Name:</label>
-                            <input type="text" name="first_name" id="first_name" class="form-control" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="last_name" class="form-label">Last Name:</label>
-                            <input type="text" name="last_name" id="last_name" class="form-control" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="modal_department" class="form-label">Department:</label>
-                            <select name="department" id="modal_department" class="form-select mb-2" required>
-                                <option value="">Select Department</option>
-                                <?php foreach ($departments as $code => $name): ?>
-                                    <option value="<?php echo htmlspecialchars($code); ?>">
-                                        <?php echo htmlspecialchars($name['name']); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                                <option value="custom">Custom Department</option>
-                            </select>
-                            <input type="text" id="modal_custom_department" name="custom_department"
-                                   class="form-control" style="display: none;" placeholder="Enter custom department">
-                        </div>
-                        <fieldset class="mb-3">
-                            <legend>Assign Roles: <span class="text-danger">*</span></legend>
-                            <div class="text-muted mb-2">At least one role must be selected</div>
-                            <?php
-                            $stmt = $pdo->prepare("SELECT * FROM roles");
-                            $stmt->execute();
-                            $modal_roles = $stmt->fetchAll();
-                            foreach ($modal_roles as $role): ?>
-                                <div class="form-check">
-                                    <input type="checkbox" name="roles[]" value="<?php echo $role['id']; ?>"
-                                           id="modal_role_<?php echo $role['id']; ?>"
-                                           class="form-check-input modal-role-checkbox">
-                                    <label for="modal_role_<?php echo $role['id']; ?>" class="form-check-label">
-                                        <?php echo htmlspecialchars($role['role_name']); ?>
-                                    </label>
-                                </div>
+<div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-body">
+                <form id="addUserForm" method="POST" action="add_user.php">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email:</label>
+                        <input type="email" name="email" id="email" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password:</label>
+                        <input type="password" name="password" id="password" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="first_name" class="form-label">First Name:</label>
+                        <input type="text" name="first_name" id="first_name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="last_name" class="form-label">Last Name:</label>
+                        <input type="text" name="last_name" id="last_name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="modal_department" class="form-label">Department:</label>
+                        <select name="department" id="modal_department" class="form-select mb-2" required>
+                            <option value="">Select Department</option>
+                            <?php foreach ($departments as $code => $name): ?>
+                                <option value="<?php echo htmlspecialchars($code); ?>">
+                                    <?php echo htmlspecialchars($name['name']); ?>
+                                </option>
                             <?php endforeach; ?>
-                        </fieldset>
-                        <div class="mb-3">
-                            <button type="submit" class="btn btn-primary">Add User</button>
-                        </div>
-                    </form>
-                </div>
+                            <option value="custom">Custom Department</option>
+                        </select>
+                        <input type="text" id="modal_custom_department" name="custom_department"
+                               class="form-control" style="display: none;" placeholder="Enter custom department">
+                    </div>
+                    <div class="mb-3">
+                        <button type="submit" class="btn btn-primary">Add User</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
+</div>
     <!-- FILTER SEARCH AND ADD USER BUTTON -->
     <div class="row mb-3">
         <div class="col-md-8">
-            <form class="d-flex" method="GET">
-                <select name="department" class="form-select me-2 department-filter">
-                    <option value="all">All Departments</option>
-                    <?php foreach ($departments as $code => $name): ?>
-                        <option value="<?php echo htmlspecialchars($code); ?>"
-                            <?php echo (isset($_GET['department']) && $_GET['department'] == $code) ? 'selected' : ''; ?>>
-                            <?php echo htmlspecialchars($name['name']); ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-                <div class="search-container position-relative">
-                    <input type="text" name="search" id="searchUsers" class="form-control"
-                           placeholder="Search users..."
-                           value="<?php echo htmlspecialchars($_GET['search'] ?? ''); ?>">
-                    <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-2"></i>
-                </div>
-            </form>
+        <form class="d-flex" method="GET">
+    <select name="department" class="form-select me-2 department-filter">
+        <option value="all">All Departments</option>
+        <?php foreach ($departments as $code => $name): ?>
+            <option value="<?php echo htmlspecialchars($code); ?>"
+                <?php echo (isset($_GET['department']) && $_GET['department'] == $code) ? 'selected' : ''; ?>>
+                <?php echo htmlspecialchars($name['name']); ?>
+            </option>
+        <?php endforeach; ?>
+    </select>
+    <div class="search-container position-relative">
+        <input type="text" name="search" id="searchUsers" class="form-control"
+               placeholder="Search users by email, first name, or last name..."
+               value="<?php echo htmlspecialchars($_GET['search'] ?? ''); ?>">
+        <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-2"></i>
+    </div>
+</form>
         </div>
         <div class="col-md-4 d-flex justify-content-end">
             <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#addUserModal">
@@ -495,8 +483,7 @@ if ($canDelete) {
         <div class="row align-items-center g-3">
             <div class="col-12 col-sm-auto">
                 <div class="text-muted">
-                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows">100</span>
-                    entries
+                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows">100</span> entries
                 </div>
             </div>
             <div class="col-12 col-sm-auto ms-sm-auto">
@@ -530,8 +517,7 @@ if ($canDelete) {
     </div>
 </div>
 <!-- Confirm Delete Modal -->
-<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel"
-     aria-hidden="true">
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -587,16 +573,13 @@ if ($canDelete) {
                             appearance: none;
                             transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
                         }
-
                         .form-select:focus {
                             border-color: #86b7fe;
                             box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
                         }
-
                         .form-select option {
                             padding: 10px;
                         }
-
                         .form-select optgroup {
                             margin-top: 10px;
                         }
@@ -623,14 +606,16 @@ if ($canDelete) {
             return baseUrl + connector + '_=' + new Date().getTime() + ' ' + selector;
         }
 
-        // Toggle custom department input
-        $('#modal_department').on('change', function () {
-            if ($(this).val() === 'custom') {
-                $('#modal_custom_department').show().attr('required', true);
-            } else {
-                $('#modal_custom_department').hide().attr('required', false);
-            }
-        });
+        $(document).ready(function () {
+    // Toggle custom department input
+    $('#modal_department').on('change', function () {
+        if ($(this).val() === 'custom') {
+            $('#modal_custom_department').show().attr('required', true);
+        } else {
+            $('#modal_custom_department').hide().attr('required', false);
+        }
+    });
+});
 
         // Handle "Add User" form submission via AJAX
         $('#addUserForm').on('submit', function (e) {
@@ -782,13 +767,23 @@ if ($canDelete) {
             this.form.submit();
         });
 
-        let searchTimeout;
-        $('#searchUsers').on('input', function () {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                this.form.submit();
-            }, 500);
-        });
+        $(document).ready(function () {
+    let searchTimeout;
+
+    // Handle search input
+    $('#searchUsers').on('input', function () {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            // Submit the form when the user stops typing
+            $(this).closest('form').submit();
+        }, 500); // Adjust the delay as needed
+    });
+
+    // Handle department filter change
+    $('.department-filter').on('change', function () {
+        $(this).closest('form').submit();
+    });
+});
 
         // Populate Edit Modal with existing data
         $('#editUserModal').on('show.bs.modal', function (event) {
@@ -827,7 +822,7 @@ if ($canDelete) {
                     } else {
                         showToast(response.message, 'error');
                     }
-                },
+                }, 
                 error: function () {
                     showToast('Error updating user.', 'error');
                 },
@@ -849,7 +844,6 @@ if ($canDelete) {
         $(".select-row").on('change', function () {
             toggleBulkDeleteButton();
         });
-
         function toggleBulkDeleteButton() {
             const anyChecked = $(".select-row:checked").length > 1;
             $("#delete-selected").prop('disabled', !anyChecked).toggle(anyChecked);
@@ -858,5 +852,6 @@ if ($canDelete) {
 
 </script>
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
+<?php include '../../general/footer.php'; ?>
 </body>
 </html>
