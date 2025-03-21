@@ -178,6 +178,37 @@ if (isset($_SESSION['errors'])) {
     unset($_SESSION['errors']);
 }
 
+
+// ------------------------
+// LIVE SEARCH DEPARTMENTS
+// ------------------------
+$q = isset($_GET["q"]) ? $conn->real_escape_string($_GET["q"]) : '';
+if (strlen($q) > 0) {
+    $sql = "SELECT asset_tag, building_loc, floor_no, specific_area, person_responsible, remarks 
+                FROM equipment_location 
+                WHERE asset_tag LIKE '%$q%' 
+                OR building_loc LIKE '%$q%' 
+                OR specific_area LIKE '%$q%' 
+                OR person_responsible LIKE '%$q%' 
+                OR remarks LIKE '%$q%'
+                LIMIT 10";
+    $result = $conn->query($sql);
+    if ($result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            echo "<div class='result-item'>"
+                . "<strong>Asset Tag:</strong> " . htmlspecialchars($row['asset_tag']) . " - "
+                . "<strong>Building:</strong> " . htmlspecialchars($row['building_loc']) . " - "
+                . "<strong>Area:</strong> " . htmlspecialchars($row['specific_area']) . " - "
+                . "<strong>Person:</strong> " . htmlspecialchars($row['person_responsible']) . " - "
+                . "<strong>Remarks:</strong> " . htmlspecialchars($row['remarks']) .
+                "</div>";
+        }
+    } else {
+        echo "<div class='result-item'>No results found</div>";
+    }
+    exit;
+}
+
 // Retrieve all equipment locations...
 try {
     $stmt = $pdo->query("
@@ -260,10 +291,11 @@ function safeHtml($value) {
     <div class="card shadow-sm">
         <div class="card-header d-flex justify-content-between align-items-center bg-dark text-white">
             <span><i class="bi bi-list-ul"></i> List of Equipment Locations</span>
-            <div class="input-group w-auto">
+            <div class="input-group w-auto" id="livesearch">
                 <span class="input-group-text"><i class="bi bi-search"></i></span>
                 <input type="text" class="form-control" placeholder="Search..." id="eqSearch">
             </div>
+            <div id="liveSearchResults" class="search-results"></div>
         </div>
         <div class="card-body">
             <div class="d-flex justify-content-start mb-3 gap-2">
@@ -498,6 +530,27 @@ function safeHtml($value) {
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 <!-- JavaScript for Real-Time Table Filtering and AJAX Actions -->
 <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const searchInput = document.getElementById('eqSearch');
+
+        if (searchInput) {
+            searchInput.addEventListener('keyup', function () {
+                const searchValue = searchInput.value.trim();
+
+                if (searchValue.length > 0) {
+                    fetch(`search_equipment_location.php?q=${encodeURIComponent(searchValue)}`)
+                        .then(response => response.text())
+                        .then(data => {
+                            document.getElementById('liveSearchResults').innerHTML = data;
+                        })
+                        .catch(error => console.error('Error:', error));
+                } else {
+                    document.getElementById('liveSearchResults').innerHTML = "";
+                }
+            });
+        }
+    });
+
     $(document).ready(function() {
         // Real-time search & filter
         $('#eqSearch, #filterBuilding').on('input change', function() {

@@ -6,8 +6,6 @@ require_once('../../../../../config/ims-tmdd.php');
 // Set audit log variables
 if (isset($_SESSION['user_id'])) {
     $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
-    // Determine if we're in edit mode
-    $isEditing = isset($_GET['id']);  // Checks if an ID parameter exists in the URL
 } else {
     $pdo->exec("SET @current_user_id = NULL");
 }
@@ -29,7 +27,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $firstName = trim($_POST['first_name']);
         $lastName = trim($_POST['last_name']);
         $password = $_POST['password'];
-        $roleIDs = $_POST['roles'] ?? [];
         $departmentID = $_POST['department'];
         $customDept = trim($_POST['custom_department'] ?? '');
 
@@ -38,8 +35,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if (empty($email)) $errors[] = "Email is required";
         if (empty($firstName)) $errors[] = "First name is required";
         if (empty($lastName)) $errors[] = "Last name is required";
-        if (empty($roleIDs)) $errors[] = "At least one role must be selected";
-        if (!$isEditing && empty($password)) $errors[] = "Password is required";
+        if (empty($password)) $errors[] = "Password is required";
+        if (empty($departmentID)) $errors[] = "Department is required";
 
         // Handle department selection
         $selectedDeptId = null;
@@ -65,14 +62,48 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             throw new Exception(implode("<br>", $errors));
         }
 
-        // Check email uniqueness
+        /* AUDIT LOG - USER MANAGEMENT
+         * Check email uniqueness
+         * Creating a user with existing email address will log and mark the status as 'Failed'
+         */
+        // Check email uniqueness for create
         $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
         $stmt->execute([$email]);
         if ($stmt->rowCount() > 0) {
+            // Get the existing user record (the conflicting record)
+            $existingUser = $stmt->fetch(PDO::FETCH_ASSOC);
+            $existingUserId = $existingUser['id'];
+
+            // Prepare a JSON object that includes the attempted email address without extra labels
+            $newValJson = json_encode(['email' => $email]);
+
+            // Insert an audit log entry for the duplicate email creation attempt.
+            $auditStmt = $pdo->prepare("
+        INSERT INTO audit_log (
+            UserID,
+            EntityID,
+            Action,
+            Details,
+            OldVal,
+            NewVal,
+            Module,
+            `Status`,
+            Date_Time
+        )
+        VALUES (?, ?, 'create', ?, NULL, ?, 'User Management', 'Failed', NOW())
+    ");
+            // Custom details message explaining the failure
+            $customMessage = 'Attempted to create user with existing email: ' . $email;
+            $auditStmt->execute([
+                $_SESSION['user_id'],
+                $existingUserId, // The conflicting user's ID
+                $customMessage,
+                $newValJson
+            ]);
+
             throw new Exception("Email address already exists");
         }
 
-        $pdo->beginTransaction();
 
         // Create user
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
@@ -94,12 +125,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $stmt = $pdo->prepare("INSERT INTO user_departments (user_id, department_id) VALUES (?, ?)");
         $stmt->execute([$userID, $selectedDeptId]);
 
-        // Add roles
-        $stmt = $pdo->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)");
-        foreach ($roleIDs as $roleID) {
-            $stmt->execute([$userID, $roleID]);
-        }
-
         $pdo->commit();
 
         // Success response
@@ -110,8 +135,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         ]);
 
     } catch (Exception $e) {
-        $pdo->rollBack();
-        http_response_code(400);
         echo json_encode([
             'success' => false,
             'message' => 'Error: ' . $e->getMessage()
@@ -120,16 +143,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     exit();
 }
 
-// Fetch roles for form
-$roles = [];
-$roleStmt = $pdo->query("SELECT id, role_name FROM roles");
-while ($role = $roleStmt->fetch(PDO::FETCH_ASSOC)) {
-    $roles[] = $role;
-}
-
 // Return data for form initialization
 echo json_encode([
-    'departments' => $departments,
-    'roles' => $roles
+    'departments' => $departments
 ]);
 ?>

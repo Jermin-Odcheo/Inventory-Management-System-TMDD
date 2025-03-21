@@ -63,9 +63,14 @@ function formatNewValue($jsonStr)
 /**
  * Helper function to compare old/new JSON data for modifications.
  * Special handling for the "is_deleted" field is included.
- */
-function formatAuditDiff($oldJson, $newJson)
+ **/
+function formatAuditDiff($oldJson, $newJson, $status = null)
 {
+    // If status is provided and indicates failure, return an empty string.
+    if ($status !== null && strtolower($status) === 'failed') {
+        return '';
+    }
+
     if ($oldJson === null || $newJson === null) {
         return '<em class="text-muted">No comparison data available</em>';
     }
@@ -184,19 +189,63 @@ function formatDetailsAndChanges($log)
     switch ($action) {
 
         case 'create':
-            $details = htmlspecialchars("$targetEntityName has been created");
-            $changes = formatNewValue($log['NewVal']);
+            // Build the default creation message
+            $defaultMessage = htmlspecialchars("$targetEntityName has been created");
+
+            // Check if the log status is failed
+            if (strtolower($log['Status']) === 'failed') {
+                $customMessage = trim($log['Details']);
+                if (!empty($customMessage) && $customMessage !== $defaultMessage) {
+                    $details = $defaultMessage
+                        . "<hr>"
+                        . "<br><strong style='color:red;font-style:italic;'>Error:</strong> "
+                        . '<span style="color:red;font-style:italic;">'
+                        . nl2br(htmlspecialchars($customMessage))
+                        . '</span>';
+                    $changes = 'N/A';
+                } else {
+                    $details = $defaultMessage;
+
+                }
+            } else {
+                $details = $defaultMessage;
+                $changes = formatNewValue($log['NewVal']);
+            }
+
+
             break;
 
+
         case 'modified':
+            // Generate the default summary message based on changed fields.
             $changedFields = getChangedFieldNames($oldData, $newData);
-            if (!empty($changedFields)) {
-                $details = "Modified Fields: " . htmlspecialchars(implode(', ', $changedFields));
-            } else {
-                $details = "Modified Fields: None";
-            }
+            $defaultMessage = !empty($changedFields)
+                ? "Modified Fields: " . htmlspecialchars(implode(', ', $changedFields))
+                : "Modified Fields: None";
+
+            // Generate the changes diff as before.
             $changes = formatAuditDiff($log['OldVal'], $log['NewVal']);
+
+            // Only show the custom error message if the status is 'failed'
+            if (strtolower($log['Status']) === 'failed') {
+                $customMessage = trim($log['Details']);
+                if (!empty($customMessage) && $customMessage !== $defaultMessage) {
+                    $details = $defaultMessage
+                        . "<hr>"
+                        . "<br><strong style='color:red;font-style:italic;'>Error:</strong> "
+                        . '<span style="color:red;font-style:italic;">'
+                        . nl2br(htmlspecialchars($customMessage))
+                        . '</span>';
+                    $changes = 'N/A';
+                } else {
+                    $details = $defaultMessage;
+                }
+            } else {
+                $details = $defaultMessage;
+                $changes = formatNewValue($log['NewVal']);
+            }
             break;
+
 
         case 'restored':
             $details = htmlspecialchars("$targetEntityName has been restored");
@@ -428,7 +477,8 @@ function getChangedFieldNames(array $oldData, array $newData)
                             <!-- Pagination Controls -->
                             <div class="col-12 col-sm-auto ms-sm-auto">
                                 <div class="d-flex align-items-center gap-2">
-                                    <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                    <button id="prevPage"
+                                            class="btn btn-outline-primary d-flex align-items-center gap-1">
                                         <i class="bi bi-chevron-left"></i>
                                         Previous
                                     </button>
@@ -440,7 +490,8 @@ function getChangedFieldNames(array $oldData, array $newData)
                                         <option value="50">50</option>
                                     </select>
 
-                                    <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                    <button id="nextPage"
+                                            class="btn btn-outline-primary d-flex align-items-center gap-1">
                                         Next
                                         <i class="bi bi-chevron-right"></i>
                                     </button>
