@@ -6,8 +6,6 @@ require_once('../../../../../config/ims-tmdd.php');
 // Set audit log variables
 if (isset($_SESSION['user_id'])) {
     $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
-    // Determine if we're in edit mode
-    $isEditing = isset($_GET['id']);  // Checks if an ID parameter exists in the URL
 } else {
     $pdo->exec("SET @current_user_id = NULL");
 }
@@ -29,7 +27,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $firstName = trim($_POST['first_name']);
         $lastName = trim($_POST['last_name']);
         $password = $_POST['password'];
-        $roleIDs = $_POST['roles'] ?? [];
         $departmentID = $_POST['department'];
         $customDept = trim($_POST['custom_department'] ?? '');
 
@@ -38,8 +35,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if (empty($email)) $errors[] = "Email is required";
         if (empty($firstName)) $errors[] = "First name is required";
         if (empty($lastName)) $errors[] = "Last name is required";
-        if (empty($roleIDs)) $errors[] = "At least one role must be selected";
-        if (!$isEditing && empty($password)) $errors[] = "Password is required";
+        if (empty($password)) $errors[] = "Password is required";
+        if (empty($departmentID)) $errors[] = "Department is required";
 
         // Handle department selection
         $selectedDeptId = null;
@@ -94,12 +91,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $stmt = $pdo->prepare("INSERT INTO user_departments (user_id, department_id) VALUES (?, ?)");
         $stmt->execute([$userID, $selectedDeptId]);
 
-        // Add roles
-        $stmt = $pdo->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)");
-        foreach ($roleIDs as $roleID) {
-            $stmt->execute([$userID, $roleID]);
-        }
-
         $pdo->commit();
 
         // Success response
@@ -120,16 +111,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     exit();
 }
 
-// Fetch roles for form
-$roles = [];
-$roleStmt = $pdo->query("SELECT id, role_name FROM roles");
-while ($role = $roleStmt->fetch(PDO::FETCH_ASSOC)) {
-    $roles[] = $role;
-}
-
 // Return data for form initialization
 echo json_encode([
-    'departments' => $departments,
-    'roles' => $roles
+    'departments' => $departments
 ]);
 ?>
