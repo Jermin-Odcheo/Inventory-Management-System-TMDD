@@ -71,43 +71,54 @@ function getUserDepartments($pdo, $userId)
 
 // Build the query to include department and search filters, plus the is_disabled=0 check
 $query = "SELECT u.id, u.email, u.first_name, u.last_name, u.status AS Status
-            FROM users u";
+            FROM users u
+            WHERE u.is_disabled = 0";
 
-if (isset($_GET['department']) && $_GET['department'] !== 'all') {
-    $query .= "
-        JOIN user_departments ud ON u.id = ud.user_id
-       WHERE ud.department_id = :department
-         AND u.is_disabled = 0";
-} else {
-    $query .= "
-       WHERE u.is_disabled = 0";
+$hasDepartmentFilter = isset($_GET['department']) && $_GET['department'] !== 'all';
+$hasSearchFilter = isset($_GET['search']) && !empty($_GET['search']);
+
+if ($hasDepartmentFilter) {
+    $query .= " AND u.id IN (
+        SELECT ud.user_id
+        FROM user_departments ud
+        WHERE ud.department_id = :department
+    )";
 }
 
-if (isset($_GET['search']) && !empty($_GET['search'])) {
-    $query .= " 
-       AND (u.email LIKE :search 
-         OR u.first_name LIKE :search 
-         OR u.last_name LIKE :search)";
+if ($hasSearchFilter) {
+    $query .= " AND (
+        u.email LIKE :search
+        OR u.first_name LIKE :search
+        OR u.last_name LIKE :search
+    )";
 }
 
-$query .= " 
-   ORDER BY `$sortBy` $sortDir";
+$query .= " ORDER BY `$sortBy` $sortDir";
 
 try {
     $stmt = $pdo->prepare($query);
-    if (isset($_GET['department']) && $_GET['department'] !== 'all') {
-        $stmt->bindValue(':department', $_GET['department'], PDO::PARAM_INT);
+
+    if ($hasDepartmentFilter) {
+        $departmentId = filter_var($_GET['department'], FILTER_VALIDATE_INT);
+        if ($departmentId === false) {
+            die("Invalid department ID.");
+        }
+        $stmt->bindValue(':department', $departmentId, PDO::PARAM_INT);
     }
-    if (isset($_GET['search']) && !empty($_GET['search'])) {
-        $stmt->bindValue(':search', '%' . $_GET['search'] . '%', PDO::PARAM_STR);
+
+    if ($hasSearchFilter) {
+        $searchTerm = '%' . $_GET['search'] . '%';
+        $stmt->bindValue(':search', $searchTerm, PDO::PARAM_STR);
     }
+
     $stmt->execute();
     $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
     if (!$users) {
         $users = [];
     }
 } catch (PDOException $e) {
-    die("Database query error: " . $e->getMessage());
+    error_log("Database query error: " . $e->getMessage());
+    die("An error occurred while fetching users. Please try again later.");
 }
 
 function toggleDirection($currentSort, $currentDir, $column)
@@ -273,20 +284,16 @@ if ($canDelete) {
             margin-bottom: 20px;
             width: auto;
         }
-
         .search-container {
             width: 250px;
         }
-
         .search-container input {
             padding-right: 30px;
         }
-
         .search-container i {
             color: #6c757d;
             pointer-events: none;
         }
-
         .main-content.container-fluid {
             padding: 100px 15px;
         }
@@ -366,23 +373,23 @@ if ($canDelete) {
     <!-- FILTER SEARCH AND ADD USER BUTTON -->
     <div class="row mb-3">
         <div class="col-md-8">
-            <form class="d-flex" method="GET">
-                <select name="department" class="form-select me-2 department-filter">
-                    <option value="all">All Departments</option>
-                    <?php foreach ($departments as $code => $name): ?>
-                        <option value="<?php echo htmlspecialchars($code); ?>"
-                            <?php echo (isset($_GET['department']) && $_GET['department'] == $code) ? 'selected' : ''; ?>>
-                            <?php echo htmlspecialchars($name['name']); ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-                <div class="search-container position-relative">
-                    <input type="text" name="search" id="searchUsers" class="form-control"
-                           placeholder="Search users..."
-                           value="<?php echo htmlspecialchars($_GET['search'] ?? ''); ?>">
-                    <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-2"></i>
-                </div>
-            </form>
+        <form class="d-flex" method="GET">
+    <select name="department" class="form-select me-2 department-filter">
+        <option value="all">All Departments</option>
+        <?php foreach ($departments as $code => $name): ?>
+            <option value="<?php echo htmlspecialchars($code); ?>"
+                <?php echo (isset($_GET['department']) && $_GET['department'] == $code) ? 'selected' : ''; ?>>
+                <?php echo htmlspecialchars($name['name']); ?>
+            </option>
+        <?php endforeach; ?>
+    </select>
+    <div class="search-container position-relative">
+        <input type="text" name="search" id="searchUsers" class="form-control"
+               placeholder="Search users by email, first name, or last name..."
+               value="<?php echo htmlspecialchars($_GET['search'] ?? ''); ?>">
+        <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-2"></i>
+    </div>
+</form>
         </div>
         <div class="col-md-4 d-flex justify-content-end">
             <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#addUserModal">
@@ -495,8 +502,7 @@ if ($canDelete) {
         <div class="row align-items-center g-3">
             <div class="col-12 col-sm-auto">
                 <div class="text-muted">
-                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows">100</span>
-                    entries
+                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows">100</span> entries
                 </div>
             </div>
             <div class="col-12 col-sm-auto ms-sm-auto">
@@ -530,8 +536,7 @@ if ($canDelete) {
     </div>
 </div>
 <!-- Confirm Delete Modal -->
-<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel"
-     aria-hidden="true">
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -587,16 +592,13 @@ if ($canDelete) {
                             appearance: none;
                             transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
                         }
-
                         .form-select:focus {
                             border-color: #86b7fe;
                             box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
                         }
-
                         .form-select option {
                             padding: 10px;
                         }
-
                         .form-select optgroup {
                             margin-top: 10px;
                         }
@@ -623,14 +625,16 @@ if ($canDelete) {
             return baseUrl + connector + '_=' + new Date().getTime() + ' ' + selector;
         }
 
-        // Toggle custom department input
-        $('#modal_department').on('change', function () {
-            if ($(this).val() === 'custom') {
-                $('#modal_custom_department').show().attr('required', true);
-            } else {
-                $('#modal_custom_department').hide().attr('required', false);
-            }
-        });
+        $(document).ready(function () {
+    // Toggle custom department input
+    $('#modal_department').on('change', function () {
+        if ($(this).val() === 'custom') {
+            $('#modal_custom_department').show().attr('required', true);
+        } else {
+            $('#modal_custom_department').hide().attr('required', false);
+        }
+    });
+});
 
         // Handle "Add User" form submission via AJAX
         $('#addUserForm').on('submit', function (e) {
@@ -793,13 +797,23 @@ if ($canDelete) {
             this.form.submit();
         });
 
-        let searchTimeout;
-        $('#searchUsers').on('input', function () {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                this.form.submit();
-            }, 500);
-        });
+        $(document).ready(function () {
+    let searchTimeout;
+
+    // Handle search input
+    $('#searchUsers').on('input', function () {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            // Submit the form when the user stops typing
+            $(this).closest('form').submit();
+        }, 500); // Adjust the delay as needed
+    });
+
+    // Handle department filter change
+    $('.department-filter').on('change', function () {
+        $(this).closest('form').submit();
+    });
+});
 
         // Populate Edit Modal with existing data
         $('#editUserModal').on('show.bs.modal', function (event) {
@@ -862,7 +876,6 @@ if ($canDelete) {
         $(".select-row").on('change', function () {
             toggleBulkDeleteButton();
         });
-
         function toggleBulkDeleteButton() {
             const anyChecked = $(".select-row:checked").length > 1;
             $("#delete-selected").prop('disabled', !anyChecked).toggle(anyChecked);
