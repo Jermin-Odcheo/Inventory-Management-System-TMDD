@@ -65,14 +65,48 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             throw new Exception(implode("<br>", $errors));
         }
 
-        // Check email uniqueness
+        /* AUDIT LOG - USER MANAGEMENT
+         * Check email uniqueness
+         * Creating a user with existing email address will log and mark the status as 'Failed'
+         */
+        // Check email uniqueness for create
         $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
         $stmt->execute([$email]);
         if ($stmt->rowCount() > 0) {
+            // Get the existing user record (the conflicting record)
+            $existingUser = $stmt->fetch(PDO::FETCH_ASSOC);
+            $existingUserId = $existingUser['id'];
+
+            // Prepare a JSON object that includes the attempted email address without extra labels
+            $newValJson = json_encode(['email' => $email]);
+
+            // Insert an audit log entry for the duplicate email creation attempt.
+            $auditStmt = $pdo->prepare("
+        INSERT INTO audit_log (
+            UserID,
+            EntityID,
+            Action,
+            Details,
+            OldVal,
+            NewVal,
+            Module,
+            `Status`,
+            Date_Time
+        )
+        VALUES (?, ?, 'create', ?, NULL, ?, 'User Management', 'Failed', NOW())
+    ");
+            // Custom details message explaining the failure
+            $customMessage = 'Attempted to create user with existing email: ' . $email;
+            $auditStmt->execute([
+                $_SESSION['user_id'],
+                $existingUserId, // The conflicting user's ID
+                $customMessage,
+                $newValJson
+            ]);
+
             throw new Exception("Email address already exists");
         }
 
-        $pdo->beginTransaction();
 
         // Create user
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
@@ -110,8 +144,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         ]);
 
     } catch (Exception $e) {
-        $pdo->rollBack();
-        http_response_code(400);
         echo json_encode([
             'success' => false,
             'message' => 'Error: ' . $e->getMessage()

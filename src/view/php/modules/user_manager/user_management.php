@@ -356,7 +356,7 @@ if ($canDelete) {
                             <?php endforeach; ?>
                         </fieldset>
                         <div class="mb-3">
-                            <button type="submit" class="btn btn-primary">Add User</button>
+                            <button type="submit" class="btn btn-primary">Create User</button>
                         </div>
                     </form>
                 </div>
@@ -648,7 +648,6 @@ if ($canDelete) {
                 success: function (response) {
                     if (response.success) {
                         $("#addUserModal").modal('hide');
-                        // Reload only the table body with a cache-busted URL.
                         $('#umTable tbody').load(getCacheBustedUrl('#umTable tbody > *'), function () {
                             showToast(response.message, 'success');
                         });
@@ -657,11 +656,18 @@ if ($canDelete) {
                         showToast(response.message, 'error');
                     }
                 },
-                error: function () {
-                    showToast('Error adding user.', 'error');
+                error: function (xhr) {
+                    // Attempt to parse the JSON error message from the response
+                    var response = xhr.responseJSON;
+                    if (response && response.message) {
+                        showToast(response.message, 'error');
+                    } else {
+                        showToast('Error adding user.', 'error');
+                    }
                 }
             });
         });
+
 
         var deleteAction = null;
         // Single-user delete
@@ -774,6 +780,11 @@ if ($canDelete) {
             $('.modal-backdrop').remove();
         });
 
+        $('#addUserModal').on('hidden.bs.modal', function () {
+            $('body').removeClass('modal-open');
+            $('.modal-backdrop').remove();
+        });
+
         $(document).on('click', '.btn-close', function () {
             $(this).closest('.alert').hide();
         });
@@ -820,11 +831,14 @@ if ($canDelete) {
                 dataType: 'json',
                 success: function (response) {
                     if (response.success) {
-                        // Instead of manually updating the row, reload the table body to get updated data
+                        // Hide the modal only when the update is successful.
+                        $("#editUserModal").modal('hide');
+                        // Reload table and show a success message.
                         $('#umTable tbody').load(getCacheBustedUrl('#umTable tbody > *'), function () {
                             showToast(response.message, 'success');
                         });
                     } else {
+                        // In case of error, show error message and keep modal open.
                         showToast(response.message, 'error');
                     }
                 },
@@ -832,14 +846,13 @@ if ($canDelete) {
                     showToast('Error updating user.', 'error');
                 },
                 complete: function () {
-                    // Ensure the edit modal is hidden and remove any lingering backdrop
-                    $("#editUserModal").modal('hide');
+                    // Always re-enable the submit button regardless of outcome.
                     submitButton.prop('disabled', false).text('Save Changes');
-                    $('body').removeClass('modal-open');
-                    $('.modal-backdrop').remove();
+                    // Do not hide the modal here so it remains open on error.
                 }
             });
         });
+
 
         // Handle "Select All" checkbox
         $("#select-all").on('click', function () {
