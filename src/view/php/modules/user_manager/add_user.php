@@ -21,6 +21,7 @@ while ($dept = $deptStmt->fetch(PDO::FETCH_ASSOC)) {
 }
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
+
     try {
         // Retrieve form values
         $email = trim($_POST['email']);
@@ -66,7 +67,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
          * Check email uniqueness
          * Creating a user with existing email address will log and mark the status as 'Failed'
          */
-        // Check email uniqueness for create
         $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
         $stmt->execute([$email]);
         if ($stmt->rowCount() > 0) {
@@ -103,7 +103,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
             throw new Exception("Email address already exists");
         }
-
+        $pdo->beginTransaction();
 
         // Create user
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
@@ -135,6 +135,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         ]);
 
     } catch (Exception $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        error_log("Update user error: " . $e->getMessage());
         echo json_encode([
             'success' => false,
             'message' => 'Error: ' . $e->getMessage()
@@ -147,4 +151,5 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 echo json_encode([
     'departments' => $departments
 ]);
-?>
+
+ob_end_flush();

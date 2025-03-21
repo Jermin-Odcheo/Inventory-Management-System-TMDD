@@ -211,11 +211,7 @@ function formatDetailsAndChanges($log)
                 $details = $defaultMessage;
                 $changes = formatNewValue($log['NewVal']);
             }
-
-
             break;
-
-
         case 'modified':
             // Generate the default summary message based on changed fields.
             $changedFields = getChangedFieldNames($oldData, $newData);

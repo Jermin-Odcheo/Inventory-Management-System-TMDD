@@ -12,28 +12,32 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 $query = "
-    SELECT 
-        a.TrackID AS track_id,
-        CONCAT(op.First_Name, ' ', op.Last_Name) AS operator_name,
-        op.Email AS operator_email,
-        a.Module AS module,
-        a.Action AS action,
-        a.Details AS details,
-        a.NewVal AS new_val,
-        a.Status AS status,
-        a.Date_Time AS date_time,
-        u.id AS deleted_user_id
-    FROM audit_log a
-    JOIN users u ON a.EntityID = u.id
-    JOIN users op ON a.UserID = op.id
-    WHERE u.is_disabled = 1
-      AND a.TrackID = (
-            SELECT MAX(a2.TrackID)
-            FROM audit_log a2
-            WHERE a2.EntityID = a.EntityID
-        )
-    ORDER BY a.Date_Time DESC
+ 
+SELECT
+    a.TrackID AS track_id,
+    CONCAT(op.First_Name, ' ', op.Last_Name) AS operator_name,
+    op.Email AS operator_email,
+    a.Module AS module,
+    a.Action AS action,
+    a.Details AS details,
+    a.OldVal AS old_val,
+    a.NewVal AS new_val,
+    a.Status AS status,
+    a.Date_Time AS date_time,
+    a.EntityID AS deleted_user_id
+FROM audit_log a
+LEFT JOIN users u ON a.EntityID = u.id
+JOIN users op ON a.UserID = op.id
+WHERE (u.is_disabled = 1)
+AND a.TrackID = (
+SELECT MAX(a2.TrackID)
+        FROM audit_log a2
+        WHERE a2.EntityID = a.EntityID
+    )
+ORDER BY a.Date_Time DESC
+ 
 ";
+
 
 try {
     $stmt = $pdo->prepare($query);
@@ -92,6 +96,32 @@ function getStatusIcon($status)
     return (strtolower($status) === 'successful')
         ? '<i class="fas fa-check-circle"></i>'
         : '<i class="fas fa-times-circle"></i>';
+}
+/**
+ * Format JSON data to display old values only.
+ */
+function formatChanges($oldJsonStr)
+{
+    $oldData = json_decode($oldJsonStr, true);
+
+    // If not an array, simply return the value
+    if (!is_array($oldData)) {
+        return '<span>' . htmlspecialchars($oldJsonStr) . '</span>';
+    }
+
+    $html = '<ul class="list-group">';
+    foreach ($oldData as $key => $value) {
+        // Format the value
+        $displayValue = is_null($value) ? '<em>null</em>' : htmlspecialchars($value);
+        $friendlyKey = ucwords(str_replace('_', ' ', $key));
+
+        $html .= '<li class="list-group-item d-flex justify-content-between align-items-center">
+                    <strong>' . $friendlyKey . ':</strong>
+                    <span class="old-value text-danger"><i class="fas fa-history me-1"></i> ' . $displayValue . '</span>
+                  </li>';
+    }
+    $html .= '</ul>';
+    return $html;
 }
 ?>
 <!DOCTYPE html>
@@ -192,7 +222,7 @@ function getStatusIcon($status)
                                         <?php echo nl2br(htmlspecialchars($log['details'])); ?>
                                     </td>
                                     <td data-label="Changes">
-                                        <?php echo formatNewValue($log['new_val']); ?>
+                                        <?php echo formatChanges($log['old_val']); ?>
                                     </td>
                                     <td data-label="Status">
                                         <span class="badge <?php echo (strtolower($log['status']) === 'successful') ? 'bg-success' : 'bg-danger'; ?>">
@@ -467,7 +497,7 @@ function getStatusIcon($status)
                     modalInstance.hide();
                     if (response.status === 'success') {
                         $('#archiveTable').load(location.href + ' #archiveTable', function () {
-                            update BulkButtons();
+                            updateBulkButtons();
                             showToast(response.message, 'success');
                         });
                     } else {

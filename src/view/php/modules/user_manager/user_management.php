@@ -284,16 +284,20 @@ if ($canDelete) {
             margin-bottom: 20px;
             width: auto;
         }
+
         .search-container {
             width: 250px;
         }
+
         .search-container input {
             padding-right: 30px;
         }
+
         .search-container i {
             color: #6c757d;
             pointer-events: none;
         }
+
         .main-content.container-fluid {
             padding: 100px 15px;
         }
@@ -373,23 +377,23 @@ if ($canDelete) {
     <!-- FILTER SEARCH AND ADD USER BUTTON -->
     <div class="row mb-3">
         <div class="col-md-8">
-        <form class="d-flex" method="GET">
-    <select name="department" class="form-select me-2 department-filter">
-        <option value="all">All Departments</option>
-        <?php foreach ($departments as $code => $name): ?>
-            <option value="<?php echo htmlspecialchars($code); ?>"
-                <?php echo (isset($_GET['department']) && $_GET['department'] == $code) ? 'selected' : ''; ?>>
-                <?php echo htmlspecialchars($name['name']); ?>
-            </option>
-        <?php endforeach; ?>
-    </select>
-    <div class="search-container position-relative">
-        <input type="text" name="search" id="searchUsers" class="form-control"
-               placeholder="Search users by email, first name, or last name..."
-               value="<?php echo htmlspecialchars($_GET['search'] ?? ''); ?>">
-        <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-2"></i>
-    </div>
-</form>
+            <form class="d-flex" method="GET">
+                <select name="department" class="form-select me-2 department-filter">
+                    <option value="all">All Departments</option>
+                    <?php foreach ($departments as $code => $name): ?>
+                        <option value="<?php echo htmlspecialchars($code); ?>"
+                            <?php echo (isset($_GET['department']) && $_GET['department'] == $code) ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($name['name']); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <div class="search-container position-relative">
+                    <input type="text" name="search" id="searchUsers" class="form-control"
+                           placeholder="Search users by email, first name, or last name..."
+                           value="<?php echo htmlspecialchars($_GET['search'] ?? ''); ?>">
+                    <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-2"></i>
+                </div>
+            </form>
         </div>
         <div class="col-md-4 d-flex justify-content-end">
             <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#addUserModal">
@@ -502,7 +506,8 @@ if ($canDelete) {
         <div class="row align-items-center g-3">
             <div class="col-12 col-sm-auto">
                 <div class="text-muted">
-                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows">100</span> entries
+                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows">100</span>
+                    entries
                 </div>
             </div>
             <div class="col-12 col-sm-auto ms-sm-auto">
@@ -536,7 +541,8 @@ if ($canDelete) {
     </div>
 </div>
 <!-- Confirm Delete Modal -->
-<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel"
+     aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -592,13 +598,16 @@ if ($canDelete) {
                             appearance: none;
                             transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
                         }
+
                         .form-select:focus {
                             border-color: #86b7fe;
                             box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
                         }
+
                         .form-select option {
                             padding: 10px;
                         }
+
                         .form-select optgroup {
                             margin-top: 10px;
                         }
@@ -617,272 +626,8 @@ if ($canDelete) {
         </div>
     </div>
 </div>
-<script>$(document).ready(function () {
-        // Helper: Build a cache-busted URL for reloading content.
-        function getCacheBustedUrl(selector) {
-            var baseUrl = location.href.split('#')[0];
-            var connector = (baseUrl.indexOf('?') > -1) ? '&' : '?';
-            return baseUrl + connector + '_=' + new Date().getTime() + ' ' + selector;
-        }
 
-        $(document).ready(function () {
-    // Toggle custom department input
-    $('#modal_department').on('change', function () {
-        if ($(this).val() === 'custom') {
-            $('#modal_custom_department').show().attr('required', true);
-        } else {
-            $('#modal_custom_department').hide().attr('required', false);
-        }
-    });
-});
-
-        // Handle "Add User" form submission via AJAX
-        $('#addUserForm').on('submit', function (e) {
-            e.preventDefault();
-            <?php if (!$canCreate): ?>
-            showToast('danger', 'You do not have permission to create users');
-            return false;
-            <?php endif; ?>
-            var actionUrl = $(this).attr('action');
-            $.ajax({
-                url: actionUrl,
-                type: 'POST',
-                data: $(this).serialize(),
-                dataType: 'json',
-                success: function (response) {
-                    if (response.success) {
-                        $("#addUserModal").modal('hide');
-                        $('#umTable tbody').load(getCacheBustedUrl('#umTable tbody > *'), function () {
-                            showToast(response.message, 'success');
-                        });
-                        $('#addUserForm')[0].reset();
-                    } else {
-                        showToast(response.message, 'error');
-                    }
-                },
-                error: function (xhr) {
-                    // Attempt to parse the JSON error message from the response
-                    var response = xhr.responseJSON;
-                    if (response && response.message) {
-                        showToast(response.message, 'error');
-                    } else {
-                        showToast('Error adding user.', 'error');
-                    }
-                }
-            });
-        });
-
-
-        var deleteAction = null;
-        // Single-user delete
-        $(document).on('click', '.delete-user', function () {
-            const userId = $(this).data("id");
-            deleteAction = {type: 'single', userId: userId};
-            $('#confirmDeleteMessage').text("Are you sure you want to archive this user?");
-            $('#confirmDeleteModal').modal('show');
-        });
-
-        // Bulk delete
-        $("#delete-selected").click(function () {
-            const selected = $(".select-row:checked").map(function () {
-                return $(this).val();
-            }).get();
-            if (selected.length === 0) {
-                showToast('Please select users to archive.', 'warning');
-                return;
-            }
-            deleteAction = {type: 'bulk', selected: selected};
-            $('#confirmDeleteMessage').text(`Are you sure you want to archive ${selected.length} selected user(s)?`);
-            $('#confirmDeleteModal').modal('show');
-        });
-
-        // Delete account confirmation
-        $("#confirmDeleteAccount").click(function () {
-            deleteAction = {type: 'account'};
-            $('#confirmDeleteMessage').text("Are you sure you want to delete your account?");
-            $('#confirmDeleteModal').modal('show');
-            $('#delete-selected').modal('hide');
-        });
-
-        // Confirm delete action
-        $('#confirmDeleteButton').on('click', function () {
-            $(this).blur();
-            $('#confirmDeleteModal').modal('hide');
-            var currentAction = deleteAction;
-            deleteAction = null;
-            if (currentAction) {
-                if (currentAction.type === 'single') {
-                    $.ajax({
-                        type: "POST",
-                        url: "delete_user.php",
-                        data: {user_id: currentAction.userId},
-                        dataType: 'json',
-                        success: function (response) {
-                            if (response.success) {
-                                $('#umTable tbody').load(getCacheBustedUrl('#umTable tbody > *'), function () {
-                                    showToast(response.message, 'success');
-                                });
-                            } else {
-                                showToast(response.message, 'error');
-                            }
-                        },
-                        error: function () {
-                            showToast('Error deleting user.', 'error');
-                        }
-                    });
-                } else if (currentAction.type === 'bulk') {
-                    $.ajax({
-                        type: "POST",
-                        url: "delete_user.php",
-                        data: {user_ids: currentAction.selected},
-                        dataType: 'json',
-                        success: function (response) {
-                            if (response.success) {
-                                $('#umTable tbody').load(getCacheBustedUrl('#umTable tbody > *'), function () {
-                                    showToast(response.message, 'success');
-                                });
-                            } else {
-                                showToast(response.message, 'error');
-                            }
-                        },
-                        error: function () {
-                            showToast('Error deleting users.', 'error');
-                        }
-                    });
-                } else if (currentAction.type === 'account') {
-                    $.ajax({
-                        type: "POST",
-                        url: "delete_account.php",
-                        data: {action: "delete_account"},
-                        dataType: 'json',
-                        success: function (response) {
-                            if (response.success) {
-                                $('#umTable tbody').load(getCacheBustedUrl('#umTable tbody > *'), function () {
-                                    showToast(response.message, 'success');
-                                });
-                            } else {
-                                showToast(response.message, 'error');
-                            }
-                        },
-                        error: function () {
-                            showToast('Error deleting account.', 'error');
-                        }
-                    });
-                }
-            }
-        });
-
-        // Remove lingering modal backdrop for delete modal
-        $('#confirmDeleteModal').on('hidden.bs.modal', function () {
-            $('body').removeClass('modal-open');
-            $('.modal-backdrop').remove();
-        });
-
-        // Remove lingering backdrop for edit modal as well
-        $('#editUserModal').on('hidden.bs.modal', function () {
-            $('body').removeClass('modal-open');
-            $('.modal-backdrop').remove();
-        });
-
-        $('#addUserModal').on('hidden.bs.modal', function () {
-            $('body').removeClass('modal-open');
-            $('.modal-backdrop').remove();
-        });
-
-        $(document).on('click', '.btn-close', function () {
-            $(this).closest('.alert').hide();
-        });
-
-        $('.department-filter').on('change', function () {
-            this.form.submit();
-        });
-
-        $(document).ready(function () {
-    let searchTimeout;
-
-    // Handle search input
-    $('#searchUsers').on('input', function () {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            // Submit the form when the user stops typing
-            $(this).closest('form').submit();
-        }, 500); // Adjust the delay as needed
-    });
-
-    // Handle department filter change
-    $('.department-filter').on('change', function () {
-        $(this).closest('form').submit();
-    });
-});
-
-        // Populate Edit Modal with existing data
-        $('#editUserModal').on('show.bs.modal', function (event) {
-            var button = $(event.relatedTarget);
-            var userId = button.data('id');
-            var email = button.data('email');
-            var firstName = button.data('first-name');
-            var lastName = button.data('last-name');
-            var department = button.data('department');
-            var modal = $(this);
-            modal.find('#editUserID').val(userId);
-            modal.find('#editEmail').val(email);
-            modal.find('#editFirstName').val(firstName);
-            modal.find('#editLastName').val(lastName);
-            modal.find('#editDepartment').val(department);
-        });
-
-        // Handle "Edit User" form submission via AJAX
-        $("#editUserForm").on("submit", function (e) {
-            e.preventDefault();
-            var submitButton = $(this).find('button[type="submit"]');
-            submitButton.prop('disabled', true).html(
-                '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...'
-            );
-            $.ajax({
-                type: "POST",
-                url: "update_user.php",
-                data: $(this).serialize(),
-                dataType: 'json',
-                success: function (response) {
-                    if (response.success) {
-                        // Hide the modal only when the update is successful.
-                        $("#editUserModal").modal('hide');
-                        // Reload table and show a success message.
-                        $('#umTable tbody').load(getCacheBustedUrl('#umTable tbody > *'), function () {
-                            showToast(response.message, 'success');
-                        });
-                    } else {
-                        // In case of error, show error message and keep modal open.
-                        showToast(response.message, 'error');
-                    }
-                },
-                error: function () {
-                    showToast('Error updating user.', 'error');
-                },
-                complete: function () {
-                    // Always re-enable the submit button regardless of outcome.
-                    submitButton.prop('disabled', false).text('Save Changes');
-                    // Do not hide the modal here so it remains open on error.
-                }
-            });
-        });
-
-
-        // Handle "Select All" checkbox
-        $("#select-all").on('click', function () {
-            $(".select-row").prop('checked', $(this).prop('checked'));
-            toggleBulkDeleteButton();
-        });
-        $(".select-row").on('change', function () {
-            toggleBulkDeleteButton();
-        });
-        function toggleBulkDeleteButton() {
-            const anyChecked = $(".select-row:checked").length > 1;
-            $("#delete-selected").prop('disabled', !anyChecked).toggle(anyChecked);
-        }
-    });
-
-</script>
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
+<script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/user_management.js" defer></script>
 </body>
 </html>

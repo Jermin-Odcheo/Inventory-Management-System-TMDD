@@ -45,7 +45,11 @@ try {
     // Hash the password only if provided
     $hashedPassword = !empty($password) ? password_hash($password, PASSWORD_DEFAULT) : '';
 
-    // Check if the new email already exists (excluding the current user)
+    /* AUDIT LOG - USER MANAGEMENT
+     * Check email uniqueness
+     * Check if the new email already exists (excluding the current user)
+     * Updating a user with existing email address will log and mark the status as 'Failed'
+     */
     $dupStmt = $pdo->prepare("SELECT id FROM users WHERE email = ? AND id != ?");
     $dupStmt->execute([$email, $userId]);
     if ($dupStmt->rowCount() > 0) {

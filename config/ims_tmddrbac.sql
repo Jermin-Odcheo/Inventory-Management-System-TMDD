@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Mar 21, 2025 at 03:00 AM
+-- Generation Time: Mar 21, 2025 at 08:50 AM
 -- Server version: 9.1.0
 -- PHP Version: 8.2.13
 
@@ -162,7 +162,7 @@ CREATE TABLE IF NOT EXISTS `audit_log` (
   PRIMARY KEY (`TrackID`),
   KEY `idx_module` (`Module`),
   KEY `idx_action` (`Action`)
-) ENGINE=InnoDB AUTO_INCREMENT=457 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=537 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `audit_log`
@@ -411,7 +411,75 @@ INSERT INTO `audit_log` (`TrackID`, `UserID`, `EntityID`, `Action`, `Details`, `
 (453, 1, 86, 'Create', 'Attempted to create user with existing email: admin12345@example.com', NULL, '{\"email\":\"admin12345@example.com\"}', 'User Management', 'Failed', '2025-03-21 10:39:35'),
 (454, 1, 86, 'Modified', 'Attempted to change email from admin12345@example.com to an existing email: admin1234@example.com', '{\"email\":\"admin12345@example.com\"}', '{\"email\":\"admin1234@example.com\"}', 'User Management', 'Failed', '2025-03-21 10:41:59'),
 (455, 1, 86, 'Modified', 'Attempted to change email from admin12345@example.com to an existing email: admin1234@example.com', '{\"email\":\"admin12345@example.com\"}', '{\"email\":\"admin1234@example.com\"}', 'User Management', 'Failed', '2025-03-21 10:53:52'),
-(456, 1, 86, 'Modified', 'Attempted to change email from admin12345@example.com to an existing email: admin1234@example.com', '{\"email\":\"admin12345@example.com\"}', '{\"email\":\"admin1234@example.com\"}', 'User Management', 'Failed', '2025-03-21 10:55:39');
+(456, 1, 86, 'Modified', 'Attempted to change email from admin12345@example.com to an existing email: admin1234@example.com', '{\"email\":\"admin12345@example.com\"}', '{\"email\":\"admin1234@example.com\"}', 'User Management', 'Failed', '2025-03-21 10:55:39'),
+(457, 1, 86, 'Remove', 'User has been removed', '{\"id\": 86, \"email\": \"admin12345@example.com\", \"status\": \"Offline\", \"username\": \"3321\", \"last_name\": \"321222\", \"first_name\": \"321222\", \"is_disabled\": 0, \"date_created\": \"2025-03-21 09:51:15.000000\"}', '', 'User Management', 'Successful', '2025-03-21 13:25:50'),
+(459, 1, 12, 'Remove', 'User has been removed', '{\"id\": 12, \"email\": \"admin1234@example.com\", \"status\": \"\", \"username\": \"1123\", \"last_name\": \"321\", \"first_name\": \"321\", \"is_disabled\": 0, \"date_created\": \"2025-03-12 14:09:07.000000\"}', '', 'User Management', 'Successful', '2025-03-21 13:31:04'),
+(460, 1, 1, '', 'navithebear is now offline.', '{\"status\": \"Online\"}', '{\"status\": \"Offline\"}', 'User Management', 'Successful', '2025-03-21 13:31:10'),
+(461, 1, 1, '', 'navithebear is now online.', '{\"status\": \"Offline\"}', '{\"status\": \"Online\"}', 'User Management', 'Successful', '2025-03-21 13:31:14'),
+(462, 1, 12, 'Restored', 'User has been restored', '{\"id\": 12, \"email\": \"admin1234@example.com\", \"status\": \"\", \"username\": \"1123\", \"last_name\": \"321\", \"first_name\": \"321\", \"is_disabled\": 1, \"date_created\": \"2025-03-12 14:09:07.000000\"}', '', 'User Management', 'Successful', '2025-03-21 13:44:18'),
+(463, 1, 86, 'Restored', 'User has been restored', '{\"id\": 86, \"email\": \"admin12345@example.com\", \"status\": \"\", \"username\": \"3321\", \"last_name\": \"321222\", \"first_name\": \"321222\", \"is_disabled\": 1, \"date_created\": \"2025-03-21 09:51:15.000000\"}', '', 'User Management', 'Successful', '2025-03-21 13:44:18'),
+(464, 1, 12, 'Remove', 'User has been removed', '{\"id\": 12, \"email\": \"admin1234@example.com\", \"status\": \"\", \"username\": \"1123\", \"last_name\": \"321\", \"first_name\": \"321\", \"is_disabled\": 0, \"date_created\": \"2025-03-12 14:09:07.000000\"}', '', 'User Management', 'Successful', '2025-03-21 13:44:29'),
+(465, 1, 86, 'Remove', 'User has been removed', '{\"id\": 86, \"email\": \"admin12345@example.com\", \"status\": \"\", \"username\": \"3321\", \"last_name\": \"321222\", \"first_name\": \"321222\", \"is_disabled\": 0, \"date_created\": \"2025-03-21 09:51:15.000000\"}', '', 'User Management', 'Successful', '2025-03-21 13:44:29'),
+(466, 1, 12, 'Restored', 'User has been restored', '{\"id\": 12, \"email\": \"admin1234@example.com\", \"status\": \"\", \"username\": \"1123\", \"last_name\": \"321\", \"first_name\": \"321\", \"is_disabled\": 1, \"date_created\": \"2025-03-12 14:09:07.000000\"}', '', 'User Management', 'Successful', '2025-03-21 13:51:58'),
+(467, 1, 86, 'Restored', 'User has been restored', '{\"id\": 86, \"email\": \"admin12345@example.com\", \"status\": \"\", \"username\": \"3321\", \"last_name\": \"321222\", \"first_name\": \"321222\", \"is_disabled\": 1, \"date_created\": \"2025-03-21 09:51:15.000000\"}', '', 'User Management', 'Successful', '2025-03-21 13:51:58'),
+(468, 1, 12, 'Remove', 'User has been removed', '{\"id\": 12, \"email\": \"admin1234@example.com\", \"status\": \"\", \"username\": \"1123\", \"last_name\": \"321\", \"first_name\": \"321\", \"is_disabled\": 0, \"date_created\": \"2025-03-12 14:09:07.000000\"}', '', 'User Management', 'Successful', '2025-03-21 13:56:32'),
+(469, 1, 86, 'Remove', 'User has been removed', '{\"id\": 86, \"email\": \"admin12345@example.com\", \"status\": \"\", \"username\": \"3321\", \"last_name\": \"321222\", \"first_name\": \"321222\", \"is_disabled\": 0, \"date_created\": \"2025-03-21 09:51:15.000000\"}', '', 'User Management', 'Successful', '2025-03-21 13:56:32'),
+(470, 1, 12, 'Restored', 'User has been restored', '{\"id\": 12, \"email\": \"admin1234@example.com\", \"status\": \"\", \"username\": \"1123\", \"last_name\": \"321\", \"first_name\": \"321\", \"is_disabled\": 1, \"date_created\": \"2025-03-12 14:09:07.000000\"}', '', 'User Management', 'Successful', '2025-03-21 13:56:39'),
+(471, 1, 86, 'Restored', 'User has been restored', '{\"id\": 86, \"email\": \"admin12345@example.com\", \"status\": \"\", \"username\": \"3321\", \"last_name\": \"321222\", \"first_name\": \"321222\", \"is_disabled\": 1, \"date_created\": \"2025-03-21 09:51:15.000000\"}', '', 'User Management', 'Successful', '2025-03-21 13:56:39'),
+(472, 1, 87, 'Create', 'New user added: tcase', NULL, '{\"id\": 87, \"email\": \"TestCase@gmail.com\", \"status\": \"Offline\", \"username\": \"tcase\", \"last_name\": \"Case\", \"department\": \"Unknown\", \"first_name\": \"Test\", \"date_created\": \"2025-03-21 14:09:13.000000\"}', 'User Management', 'Successful', '2025-03-21 14:09:13'),
+(473, 1, 92, 'Create', 'New user added: 333333', NULL, '{\"id\": 92, \"email\": \"admin12344444@example.com\", \"status\": \"Offline\", \"username\": \"333333\", \"last_name\": \"33333\", \"department\": \"Unknown\", \"first_name\": \"3333\", \"date_created\": \"2025-03-21 14:12:37.000000\"}', 'User Management', 'Successful', '2025-03-21 14:12:37'),
+(474, 1, 92, 'Remove', 'User has been removed', '{\"id\": 92, \"email\": \"admin12344444@example.com\", \"status\": \"Offline\", \"username\": \"333333\", \"last_name\": \"33333\", \"first_name\": \"3333\", \"is_disabled\": 0, \"date_created\": \"2025-03-21 14:12:37.000000\"}', '', 'User Management', 'Successful', '2025-03-21 14:12:55'),
+(475, 1, 87, 'Remove', 'User has been removed', '{\"id\": 87, \"email\": \"TestCase@gmail.com\", \"status\": \"Offline\", \"username\": \"tcase\", \"last_name\": \"Case\", \"first_name\": \"Test\", \"is_disabled\": 0, \"date_created\": \"2025-03-21 14:09:13.000000\"}', '', 'User Management', 'Successful', '2025-03-21 14:12:57'),
+(476, 1, 86, 'Remove', 'User has been removed', '{\"id\": 86, \"email\": \"admin12345@example.com\", \"status\": \"\", \"username\": \"3321\", \"last_name\": \"321222\", \"first_name\": \"321222\", \"is_disabled\": 0, \"date_created\": \"2025-03-21 09:51:15.000000\"}', '', 'User Management', 'Successful', '2025-03-21 14:13:04'),
+(477, 1, 12, 'Remove', 'User has been removed', '{\"id\": 12, \"email\": \"admin1234@example.com\", \"status\": \"\", \"username\": \"1123\", \"last_name\": \"321\", \"first_name\": \"321\", \"is_disabled\": 0, \"date_created\": \"2025-03-12 14:09:07.000000\"}', '', 'User Management', 'Successful', '2025-03-21 14:13:05'),
+(478, 1, 93, 'Create', 'New user added: ttest', NULL, '{\"id\": 93, \"email\": \"testingCase123@gmail.com\", \"status\": \"Offline\", \"username\": \"ttest\", \"last_name\": \"test\", \"department\": \"Unknown\", \"first_name\": \"test\", \"date_created\": \"2025-03-21 14:14:16.000000\"}', 'User Management', 'Successful', '2025-03-21 14:14:16'),
+(479, 1, 94, 'Create', 'New user added: 1123123', NULL, '{\"id\": 94, \"email\": \"superuser3123123@example.com\", \"status\": \"Offline\", \"username\": \"1123123\", \"last_name\": \"123123\", \"department\": \"Unknown\", \"first_name\": \"123123\", \"date_created\": \"2025-03-21 14:14:31.000000\"}', 'User Management', 'Successful', '2025-03-21 14:14:31'),
+(480, 1, 95, 'Create', 'New user added: 3321', NULL, '{\"id\": 95, \"email\": \"testcase321@example.com\", \"status\": \"Offline\", \"username\": \"3321\", \"last_name\": \"321\", \"department\": \"Unknown\", \"first_name\": \"321\", \"date_created\": \"2025-03-21 14:17:55.000000\"}', 'User Management', 'Successful', '2025-03-21 14:17:55'),
+(481, 1, 96, 'Create', 'New user added: 1123321', NULL, '{\"id\": 96, \"email\": \"testtest@example.com\", \"status\": \"Offline\", \"username\": \"1123321\", \"last_name\": \"123321\", \"department\": \"Unknown\", \"first_name\": \"123321\", \"date_created\": \"2025-03-21 14:23:15.000000\"}', 'User Management', 'Successful', '2025-03-21 14:23:15'),
+(482, 1, 96, 'Remove', 'User has been removed', '{\"id\": 96, \"email\": \"testtest@example.com\", \"status\": \"Offline\", \"username\": \"1123321\", \"last_name\": \"123321\", \"first_name\": \"123321\", \"is_disabled\": 0, \"date_created\": \"2025-03-21 14:23:15.000000\"}', '', 'User Management', 'Successful', '2025-03-21 14:23:20'),
+(483, 1, 95, 'Modified', 'Updated fields: email, first_name, last_name', '{\"email\": \"testcase321@example.com\", \"last_name\": \"321\", \"department\": \"Office of the Internal Auditor\", \"first_name\": \"321\"}', '{\"email\": \"testcase3213@example.com\", \"last_name\": \"3213\", \"department\": \"Office of the Internal Auditor\", \"first_name\": \"3213\"}', 'User Management', 'Successful', '2025-03-21 14:23:25'),
+(484, 1, 95, 'Modified', 'Updated fields: email, first_name, last_name', '{\"email\": \"testcase3213@example.com\", \"last_name\": \"3213\", \"department\": \"Office of the Internal Auditor\", \"first_name\": \"3213\"}', '{\"email\": \"testcase32131@example.com\", \"last_name\": \"32131\", \"department\": \"Office of the Internal Auditor\", \"first_name\": \"32131\"}', 'User Management', 'Successful', '2025-03-21 14:23:32'),
+(485, 1, 95, 'Modified', 'Updated fields: email', '{\"email\": \"testcase32131@example.com\", \"last_name\": \"32131\", \"department\": \"Office of the Internal Auditor\", \"first_name\": \"32131\"}', '{\"email\": \"testcase123@example.com\", \"last_name\": \"32131\", \"department\": \"Office of the Internal Auditor\", \"first_name\": \"32131\"}', 'User Management', 'Successful', '2025-03-21 14:23:41'),
+(486, 1, 95, 'Modified', 'Updated fields: email', '{\"email\": \"testcase123@example.com\", \"last_name\": \"32131\", \"department\": \"Office of the Internal Auditor\", \"first_name\": \"32131\"}', '{\"email\": \"testingcase123@example.com\", \"last_name\": \"32131\", \"department\": \"Office of the Internal Auditor\", \"first_name\": \"32131\"}', 'User Management', 'Successful', '2025-03-21 14:23:53'),
+(488, 1, 95, 'Modified', 'No changes', '{\"email\": \"testingcase123@example.com\", \"last_name\": \"32131\", \"department\": \"Office of the Internal Auditor\", \"first_name\": \"32131\"}', '{\"email\": \"testingcase123@example.com\", \"last_name\": \"32131\", \"department\": \"Office of the Internal Auditor\", \"first_name\": \"32131\"}', 'User Management', 'Successful', '2025-03-21 14:24:21'),
+(489, 1, 95, 'Modified', 'No changes', '{\"email\": \"testingcase123@example.com\", \"last_name\": \"32131\", \"department\": \"Office of the Internal Auditor\", \"first_name\": \"32131\"}', '{\"email\": \"testingcase123@example.com\", \"last_name\": \"32131\", \"department\": \"Office of the Internal Auditor\", \"first_name\": \"32131\"}', 'User Management', 'Successful', '2025-03-21 14:24:50'),
+(490, 1, 95, 'Modified', 'No changes', '{\"email\": \"testingcase123@example.com\", \"last_name\": \"32131\", \"department\": \"Office of the Internal Auditor\", \"first_name\": \"32131\"}', '{\"email\": \"testingcase123@example.com\", \"last_name\": \"32131\", \"department\": \"Office of the Internal Auditor\", \"first_name\": \"32131\"}', 'User Management', 'Successful', '2025-03-21 14:27:18'),
+(491, 1, 95, 'Modified', 'No changes', '{\"email\": \"testingcase123@example.com\", \"last_name\": \"32131\", \"department\": \"Office of the Internal Auditor\", \"first_name\": \"32131\"}', '{\"email\": \"testingcase123@example.com\", \"last_name\": \"32131\", \"department\": \"Office of the Internal Auditor\", \"first_name\": \"32131\"}', 'User Management', 'Successful', '2025-03-21 14:29:52'),
+(492, 1, 95, 'Modified', 'Attempted to change email from testingcase123@example.com to an existing email: testingcase123@gmail.com', '{\"email\":\"testingcase123@example.com\"}', '{\"email\":\"testingcase123@gmail.com\"}', 'User Management', 'Failed', '2025-03-21 14:30:12'),
+(493, 1, 95, 'Modified', 'No changes', '{\"email\": \"testingcase123@example.com\", \"last_name\": \"32131\", \"department\": \"Office of the Internal Auditor\", \"first_name\": \"32131\"}', '{\"email\": \"testingcase123@example.com\", \"last_name\": \"32131\", \"department\": \"Office of the Internal Auditor\", \"first_name\": \"32131\"}', 'User Management', 'Successful', '2025-03-21 14:30:22'),
+(500, 1, 95, 'Create', 'Attempted to create user with existing email: testingcase123@example.com', NULL, '{\"email\":\"testingcase123@example.com\"}', 'User Management', 'Failed', '2025-03-21 14:47:03'),
+(503, 1, 95, 'Create', 'Attempted to create user with existing email: testingcase123@example.com', NULL, '{\"email\":\"testingcase123@example.com\"}', 'User Management', 'Failed', '2025-03-21 15:03:47'),
+(504, 1, 95, 'Create', 'Attempted to create user with existing email: testingcase123@example.com', NULL, '{\"email\":\"testingcase123@example.com\"}', 'User Management', 'Failed', '2025-03-21 15:04:26'),
+(505, 1, 97, 'Create', 'Attempted to create user with existing email: testingcase1233@example.com', NULL, '{\"email\":\"testingcase1233@example.com\"}', 'User Management', 'Failed', '2025-03-21 15:05:33'),
+(508, 1, 96, 'Restored', 'User has been restored', '{\"id\": 96, \"email\": \"testtest@example.com\", \"status\": \"\", \"username\": \"1123321\", \"last_name\": \"123321\", \"first_name\": \"123321\", \"is_disabled\": 1, \"date_created\": \"2025-03-21 14:23:15.000000\"}', '', 'User Management', 'Successful', '2025-03-21 15:10:29'),
+(509, 1, 97, 'Remove', 'User has been removed', '{\"id\": 97, \"email\": \"testingcase1233@example.com\", \"status\": \"Offline\", \"username\": \"1123\", \"last_name\": \"123\", \"first_name\": \"123\", \"is_disabled\": 0, \"date_created\": \"2025-03-21 14:47:10.000000\"}', '', 'User Management', 'Successful', '2025-03-21 15:10:40'),
+(510, 1, 101, 'Remove', 'User has been removed', '{\"id\": 101, \"email\": \"testingcase87654@example.com\", \"status\": \"Offline\", \"username\": \"1213456u\", \"last_name\": \"213456u\", \"first_name\": \"123456\", \"is_disabled\": 0, \"date_created\": \"2025-03-21 15:05:45.000000\"}', '', 'User Management', 'Successful', '2025-03-21 15:10:40'),
+(511, 1, 96, 'Create', 'Attempted to create user with existing email: testtest@example.com', NULL, '{\"email\":\"testtest@example.com\"}', 'User Management', 'Failed', '2025-03-21 15:10:52'),
+(512, 1, 96, 'Create', 'Attempted to create user with existing email: testtest@example.com', NULL, '{\"email\":\"testtest@example.com\"}', 'User Management', 'Failed', '2025-03-21 15:11:14'),
+(513, 1, 103, 'Create', 'New user added: 1123321333', NULL, '{\"id\": 103, \"email\": \"testtesttest@example.com\", \"status\": \"Offline\", \"username\": \"1123321333\", \"last_name\": \"123321333\", \"department\": \"Unknown\", \"first_name\": \"123321333\", \"date_created\": \"2025-03-21 15:11:33.000000\"}', 'User Management', 'Successful', '2025-03-21 15:11:33'),
+(514, 1, 103, 'Create', 'Attempted to create user with existing email: testtesttest@example.com', NULL, '{\"email\":\"testtesttest@example.com\"}', 'User Management', 'Failed', '2025-03-21 15:11:44'),
+(515, 1, 103, 'Modified', 'No changes', '{\"email\": \"testtesttest@example.com\", \"last_name\": \"123321333\", \"department\": \"Office of the Executive Assistant to the President\", \"first_name\": \"123321333\"}', '{\"email\": \"testtesttest@example.com\", \"last_name\": \"123321333\", \"department\": \"Office of the Executive Assistant to the President\", \"first_name\": \"123321333\"}', 'User Management', 'Successful', '2025-03-21 15:13:52'),
+(516, 1, 103, 'Create', 'Attempted to create user with existing email: testtesttest@example.com', NULL, '{\"email\":\"testtesttest@example.com\"}', 'User Management', 'Failed', '2025-03-21 15:14:05'),
+(517, 1, 104, 'Create', 'New user added: jjjjj', NULL, '{\"id\": 104, \"email\": \"testtesttest123@example.com\", \"status\": \"Offline\", \"username\": \"jjjjj\", \"last_name\": \"jjjj\", \"department\": \"Unknown\", \"first_name\": \"jjjj\", \"date_created\": \"2025-03-21 15:14:11.000000\"}', 'User Management', 'Successful', '2025-03-21 15:14:11'),
+(518, 1, 104, 'Modified', 'Attempted to change email from testtesttest123@example.com to an existing email: testtesttest@example.com', '{\"email\":\"testtesttest123@example.com\"}', '{\"email\":\"testtesttest@example.com\"}', 'User Management', 'Failed', '2025-03-21 15:14:27'),
+(519, 1, 104, 'Modified', 'Updated fields: email, first_name, last_name', '{\"email\": \"testtesttest123@example.com\", \"last_name\": \"jjjj\", \"department\": \"Office of the President\", \"first_name\": \"jjjj\"}', '{\"email\": \"testtesttest1111@example.com\", \"last_name\": \"jjjj11\", \"department\": \"Office of the President\", \"first_name\": \"jjjj11\"}', 'User Management', 'Successful', '2025-03-21 15:14:37'),
+(520, 1, 96, 'Remove', 'User has been removed', '{\"id\": 96, \"email\": \"testtest@example.com\", \"status\": \"\", \"username\": \"1123321\", \"last_name\": \"123321\", \"first_name\": \"123321\", \"is_disabled\": 0, \"date_created\": \"2025-03-21 14:23:15.000000\"}', '', 'User Management', 'Successful', '2025-03-21 15:14:46'),
+(521, 1, 103, 'Remove', 'User has been removed', '{\"id\": 103, \"email\": \"testtesttest@example.com\", \"status\": \"Offline\", \"username\": \"1123321333\", \"last_name\": \"123321333\", \"first_name\": \"123321333\", \"is_disabled\": 0, \"date_created\": \"2025-03-21 15:11:33.000000\"}', '', 'User Management', 'Successful', '2025-03-21 15:14:46'),
+(522, 1, 104, 'Remove', 'User has been removed', '{\"id\": 104, \"email\": \"testtesttest1111@example.com\", \"status\": \"Offline\", \"username\": \"jjjjj\", \"last_name\": \"jjjj11\", \"first_name\": \"jjjj11\", \"is_disabled\": 0, \"date_created\": \"2025-03-21 15:14:11.000000\"}', '', 'User Management', 'Successful', '2025-03-21 15:14:46'),
+(523, 1, 95, 'Remove', 'User has been removed', '{\"id\": 95, \"email\": \"testingcase123@example.com\", \"status\": \"Offline\", \"username\": \"3321\", \"last_name\": \"32131\", \"first_name\": \"32131\", \"is_disabled\": 0, \"date_created\": \"2025-03-21 14:17:55.000000\"}', '', 'User Management', 'Successful', '2025-03-21 15:14:48'),
+(524, 1, 94, 'Remove', 'User has been removed', '{\"id\": 94, \"email\": \"superuser3123123@example.com\", \"status\": \"Offline\", \"username\": \"1123123\", \"last_name\": \"123123\", \"first_name\": \"123123\", \"is_disabled\": 0, \"date_created\": \"2025-03-21 14:14:31.000000\"}', '', 'User Management', 'Successful', '2025-03-21 15:28:17'),
+(525, 1, 96, 'Delete', 'User permanently deleted: testtest@example.com', '{\"id\": 96, \"email\": \"testtest@example.com\", \"username\": \"1123321\", \"is_disabled\": 1}', NULL, 'User Management', 'Successful', '2025-03-21 15:32:49'),
+(526, 1, 95, 'Delete', 'User permanently deleted: testingcase123@example.com', '{\"id\": 95, \"email\": \"testingcase123@example.com\", \"username\": \"3321\", \"is_disabled\": 1}', NULL, 'User Management', 'Successful', '2025-03-21 15:33:20'),
+(527, 1, 94, 'Delete', 'User permanently deleted: superuser3123123@example.com', '{\"id\": 94, \"email\": \"superuser3123123@example.com\", \"username\": \"1123123\", \"is_disabled\": 1}', NULL, 'User Management', 'Successful', '2025-03-21 15:38:42'),
+(528, 1, 93, 'Remove', 'User has been removed', '{\"id\": 93, \"email\": \"testingCase123@gmail.com\", \"status\": \"Offline\", \"username\": \"ttest\", \"last_name\": \"test\", \"first_name\": \"test\", \"is_disabled\": 0, \"date_created\": \"2025-03-21 14:14:16.000000\"}', '', 'User Management', 'Successful', '2025-03-21 15:43:07'),
+(529, 1, 93, 'Delete', 'User permanently deleted: testingCase123@gmail.com', '{\"id\": 93, \"email\": \"testingCase123@gmail.com\", \"username\": \"ttest\", \"is_disabled\": 1}', NULL, 'User Management', 'Successful', '2025-03-21 16:26:50'),
+(530, 1, 105, 'Create', 'New user added: ttest', NULL, '{\"id\": 105, \"email\": \"admintest@example.com\", \"status\": \"Offline\", \"username\": \"ttest\", \"last_name\": \"test\", \"department\": \"Unknown\", \"first_name\": \"test\", \"date_created\": \"2025-03-21 16:27:19.000000\"}', 'User Management', 'Successful', '2025-03-21 16:27:19'),
+(531, 1, 105, 'Remove', 'User has been removed', '{\"id\": 105, \"email\": \"admintest@example.com\", \"status\": \"Offline\", \"username\": \"ttest\", \"last_name\": \"test\", \"first_name\": \"test\", \"is_disabled\": 0, \"date_created\": \"2025-03-21 16:27:19.000000\"}', '', 'User Management', 'Successful', '2025-03-21 16:27:22'),
+(532, 1, 105, 'Delete', 'User permanently deleted: admintest@example.com', '{\"id\": 105, \"email\": \"admintest@example.com\", \"username\": \"ttest\", \"is_disabled\": 1}', NULL, 'User Management', 'Successful', '2025-03-21 16:27:34'),
+(533, 1, 106, 'Create', 'New user added: ttest1', NULL, '{\"id\": 106, \"email\": \"test1@example.com\", \"status\": \"Offline\", \"username\": \"ttest1\", \"last_name\": \"test1\", \"department\": \"Unknown\", \"first_name\": \"test1\", \"date_created\": \"2025-03-21 16:30:58.000000\"}', 'User Management', 'Successful', '2025-03-21 16:30:58'),
+(534, 1, 107, 'Create', 'New user added: ttest2', NULL, '{\"id\": 107, \"email\": \"test2@example.com\", \"status\": \"Offline\", \"username\": \"ttest2\", \"last_name\": \"test2\", \"department\": \"Unknown\", \"first_name\": \"test2\", \"date_created\": \"2025-03-21 16:31:14.000000\"}', 'User Management', 'Successful', '2025-03-21 16:31:14'),
+(535, 1, 106, 'Remove', 'User has been removed', '{\"id\": 106, \"email\": \"test1@example.com\", \"status\": \"Offline\", \"username\": \"ttest1\", \"last_name\": \"test1\", \"first_name\": \"test1\", \"is_disabled\": 0, \"date_created\": \"2025-03-21 16:30:58.000000\"}', '', 'User Management', 'Successful', '2025-03-21 16:31:21'),
+(536, 1, 107, 'Remove', 'User has been removed', '{\"id\": 107, \"email\": \"test2@example.com\", \"status\": \"Offline\", \"username\": \"ttest2\", \"last_name\": \"test2\", \"first_name\": \"test2\", \"is_disabled\": 0, \"date_created\": \"2025-03-21 16:31:14.000000\"}', '', 'User Management', 'Successful', '2025-03-21 16:31:21');
 
 -- --------------------------------------------------------
 
@@ -1094,7 +1162,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `username` (`username`),
   UNIQUE KEY `email` (`email`)
-) ENGINE=InnoDB AUTO_INCREMENT=87 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=108 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `users`
@@ -1105,8 +1173,8 @@ INSERT INTO `users` (`id`, `username`, `email`, `password`, `first_name`, `last_
 (2, 'userman', 'um@example.com', '$2y$12$wE3B0Dq4z0Bd1AHXf4gumexeObTqWXm7aASm7PnkCrtiL.iIfObS.', 'user', 'manager', '2025-02-19 05:40:35', 'Offline', 0),
 (3, 'equipman', 'em@example.com', '$2y$12$J0iy9bwoalbG2/NkqDZchuLU4sWramGpsw1EsSZ6se0CefM/sqpZq', 'equipment', 'manager', '2025-02-19 05:40:35', 'Offline', 0),
 (4, 'rpman', 'rp@example.com', '$2y$12$dWnJinU4uO7ETYIKi9cL0uN4wJgjACaF.q0Pbkr5yNUK2q1HUQk8G', 'ropriv', 'manager', '2025-02-19 05:41:59', '', 0),
-(12, '1123', 'admin1234@example.com', '$2y$10$UM8Zh3jHbpk273SyOmCc/u31EkhoGp.3dgPDHN18zg91TArhnPxUG', '321', '321', '2025-03-12 06:09:07', '', 0),
-(86, '3321', 'admin12345@example.com', '$2y$10$lJpQQuS5kh4lTdlWjBgnmOv7gi0mlR.JpA/YrK7ZshHarLpKjuiAq', '321222', '321222', '2025-03-21 01:51:15', 'Offline', 0);
+(106, 'ttest1', 'test1@example.com', '$2y$10$2bz/ybJjCzyFYEd26NEZr.tsuqUZTpSwQtSTU1IQ8fVHyD2dzjTkO', 'test1', 'test1', '2025-03-21 08:30:58', '', 1),
+(107, 'ttest2', 'test2@example.com', '$2y$10$9uEUFx90zNh3wJmh8deSXenpr6PVopkRfkkzq4PtPAwPFRCx4cecW', 'test2', 'test2', '2025-03-21 08:31:14', '', 1);
 
 --
 -- Triggers `users`
@@ -1152,38 +1220,34 @@ $$
 DELIMITER ;
 DROP TRIGGER IF EXISTS `user_after_delete`;
 DELIMITER $$
-CREATE TRIGGER `user_after_delete` BEFORE DELETE ON `users` FOR EACH ROW BEGIN
-    -- Use HEX() to compare BIT(1) value: '01' indicates true
-    IF HEX(OLD.is_disabled) = '01' THEN
+CREATE TRIGGER `user_after_delete` AFTER DELETE ON `users` FOR EACH ROW BEGIN
+    -- Only log if the user was archived (is_disabled = 1)
+    IF OLD.is_disabled = 1 THEN
         INSERT INTO audit_log (
-            `UserID`,              
-            `EntityID`,            
-            `Action`,              
-            `Details`,             
-            `OldVal`,              
-            `NewVal`,              
-            `Module`,              
-            `Status`,              
-            `Date_Time`            
+            UserID,            -- ID of the user performing the deletion
+            EntityID,          -- ID of the deleted user
+            Action,            -- Type of action
+            Details,           -- Description of the action
+            OldVal,            -- Old data as JSON
+            NewVal,            -- New data (NULL for deletions)
+            Module,            -- Module context
+            Status,            -- Status of the action
+            Date_Time          -- Timestamp
         ) VALUES (
-            @current_user_id,      
-            OLD.id,                
-            'Delete',              
-            'User deleted',        
-            JSON_OBJECT(           
+            @current_user_id,  -- Set this variable before deletion
+            OLD.id,            -- The deleted user’s ID
+            'Delete',          -- Action type
+            CONCAT('User permanently deleted: ', OLD.email),
+            JSON_OBJECT(       -- Store old user data
                 'id', OLD.id,
                 'username', OLD.username,
                 'email', OLD.email,
-                'first_name', OLD.first_name,
-                'last_name', OLD.last_name,
-                'status', OLD.status,
-                'date_created', OLD.date_created,
                 'is_disabled', OLD.is_disabled
             ),
-            NULL,                  
-            IFNULL(@current_module, 'User Management'),
-            'Successful',          
-            NOW()                  
+            NULL,              -- No new value for a deletion
+            'User Management', -- Module name
+            'Successful',      -- Status
+            NOW()              -- Current timestamp
         );
     END IF;
 END
@@ -1224,6 +1288,64 @@ CREATE TRIGGER `user_after_restore` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
             'Successful',
             NOW()
         );
+    END IF;
+END
+$$
+DELIMITER ;
+DROP TRIGGER IF EXISTS `user_status_change`;
+DELIMITER $$
+CREATE TRIGGER `user_status_change` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
+    -- Only log if the status has changed
+    IF OLD.status <> NEW.status THEN
+        -- When user goes online (offline -> online)
+        IF OLD.status = 'offline' AND NEW.status = 'online' THEN
+            INSERT INTO audit_log (
+                UserID,
+                EntityID,
+                Action,
+                Details,
+                OldVal,
+                NewVal,
+                Module,
+                Status,
+                Date_Time
+            )
+            VALUES (
+                @current_user_id,
+                NEW.id,
+                'Login',
+                CONCAT(NEW.username, ' is now online.'),
+                JSON_OBJECT('status', OLD.status),
+                JSON_OBJECT('status', NEW.status),
+                'User Management',
+                'Successful',
+                NOW()
+            );
+        -- When user goes offline (online -> offline)
+        ELSEIF OLD.status = 'online' AND NEW.status = 'offline' THEN
+            INSERT INTO audit_log (
+                UserID,
+                EntityID,
+                Action,
+                Details,
+                OldVal,
+                NewVal,
+                Module,
+                Status,
+                Date_Time
+            )
+            VALUES (
+                @current_user_id,
+                NEW.id,
+                'Logout',
+                CONCAT(NEW.username, ' is now offline.'),
+                JSON_OBJECT('status', OLD.status),
+                JSON_OBJECT('status', NEW.status),
+                'User Management',
+                'Successful',
+                NOW()
+            );
+        END IF;
     END IF;
 END
 $$
@@ -1278,56 +1400,6 @@ CREATE TRIGGER `users_after_create` AFTER INSERT ON `users` FOR EACH ROW BEGIN
 END
 $$
 DELIMITER ;
-DROP TRIGGER IF EXISTS `users_status_change`;
-DELIMITER $$
-CREATE TRIGGER `users_status_change` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
-    DECLARE actionType VARCHAR(50);
-    DECLARE detailsText VARCHAR(255);
-    DECLARE changesText VARCHAR(255);
-
-    -- Check if the status field has changed
-    IF OLD.status <> NEW.status THEN
-        IF OLD.status = 'offline' AND NEW.status = 'online' THEN
-            SET actionType = 'Login';
-            SET detailsText = CONCAT(NEW.username, ' is now online.');
-            SET changesText = 'Offline > Online';
-        ELSEIF OLD.status = 'online' AND NEW.status = 'offline' THEN
-            SET actionType = 'Logout';
-            SET detailsText = CONCAT(NEW.username, ' is now offline.');
-            SET changesText = 'Online > Offline';
-        ELSE
-            -- Fallback for any other status change
-            SET actionType = 'Status Change';
-            SET detailsText = CONCAT('Status changed');
- 
-        END IF;
-
-        INSERT INTO audit_log (
-            UserID,
-            EntityID,
-            Action,
-            Details,
-            OldVal,
-            NewVal,
-            Module,
-            Status,
-            Date_Time
-        )
-        VALUES (
-            @current_user_id,
-            NEW.id,
-            actionType,
-            detailsText,
-            JSON_OBJECT('status', OLD.status),
-            JSON_OBJECT('status', NEW.status),
-            'User Management',
-            'successful',
-            NOW()
-        );
-    END IF;
-END
-$$
-DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -1354,16 +1426,29 @@ INSERT INTO `user_departments` (`user_id`, `department_id`) VALUES
 (49, 1),
 (50, 1),
 (75, 1),
+(104, 1),
+(106, 1),
 (5, 2),
 (83, 2),
+(96, 2),
+(97, 2),
+(103, 2),
+(105, 2),
 (48, 3),
 (69, 3),
 (84, 3),
+(87, 3),
+(93, 3),
+(94, 3),
+(95, 3),
+(107, 3),
 (11, 4),
+(92, 4),
 (12, 5),
 (82, 5),
 (85, 5),
 (86, 5),
+(101, 5),
 (74, 40),
 (13, 42);
 
