@@ -414,9 +414,9 @@ function safeHtml($value) {
                         <input type="text" class="form-control" name="person_responsible" required>
                     </div>
                     <div class="mb-3">
-                        <label for="department_id" class="form-label">Department</label>
+                        <label for="department_id" class="form-label">Department <span class="text-danger">*</span></label>
                         <select class="form-control" name="department_id" required>
-                            <option value="">Select Department (Optional)</option>
+                            <option value="">Select Department</option>
                             <?php
                             try {
                                 $deptStmt = $pdo->query("SELECT id, department_name FROM departments WHERE is_disabled = 0 ORDER BY department_name");
@@ -619,11 +619,9 @@ function safeHtml($value) {
                     },
                     success: function(response) {
                         if (response.status === 'success') {
-                            $('#elTable').load(location.href + '#elTable', function ()){
+                            $('#elTable').load(location.href + ' #elTable', function() {
                                 showToast(response.message, 'success');
-
-                            }
-
+                            });
                         } else {
                             showToast(response.message, 'error');
                         }
@@ -653,9 +651,9 @@ function safeHtml($value) {
                 success: function(result) {
                     if (result.status === 'success') {
                         $('#addLocationModal').modal('hide');
-                        $('elTable').load(location.href + '#elTable', function ()){
+                        $('#elTable').load(location.href + ' #elTable', function() {
                             showToast(result.message, 'success');
-                        }
+                        });
                     } else {
                         showToast(result.message, 'error');
                     }
@@ -682,9 +680,9 @@ function safeHtml($value) {
                 success: function(result) {
                     if (result.status === 'success') {
                         $('#editLocationModal').modal('hide');
-                        $('elTable').load(location.href + '#elTable', function ()){
+                        $('#elTable').load(location.href + ' #elTable', function() {
                             showToast(result.message, 'success');
-                        }
+                        });
                     } else {
                         showToast(result.message, 'error');
                     }

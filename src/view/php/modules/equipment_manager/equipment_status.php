@@ -1,4 +1,8 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
 
@@ -30,6 +34,8 @@ if (isset($_SESSION['success'])) {
 
 // Handle CRUD operations
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    header('Content-Type: application/json'); // Ensure JSON content type is set
+
     if (isset($_POST['action'])) {
         switch ($_POST['action']) {
             case 'add':
@@ -48,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $stmt->execute([
                         $_POST['asset_tag'],
                         $_POST['status'],
-                        $_POST['action'], // now coming from the corrected field name
+                        $_POST['action'],
                         $_POST['remarks'],
                         isset($_POST['is_disabled']) ? 1 : 0
                     ]);
@@ -84,14 +90,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
                     $pdo->commit();
 
-                    $_SESSION['success'] = "Equipment Status has been added successfully.";
                     $response['status'] = 'success';
                     $response['message'] = 'Equipment Status has been added successfully.';
                 } catch (PDOException $e) {
                     if ($pdo->inTransaction()) {
                         $pdo->rollBack();
                     }
-                    $_SESSION['errors'] = ["Error adding status: " . $e->getMessage()];
                     $response['status'] = 'error';
                     $response['message'] = 'Error adding status: ' . $e->getMessage();
                 }
@@ -343,7 +347,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
     <!-- Add Bootstrap Icons CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <!-- Add sidebar CSS -->
-    <link rel="stylesheet" href="/src/view/styles/css/sidebar.css">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/sidebar.css">
     <!-- Add equipment manager CSS -->
     <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
     <style>
@@ -433,9 +437,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                     <select class="form-select form-select-sm" id="filterStatus" style="width: auto;">
                         <option value="">Filter By Status</option>
                         <option value="Working">Working</option>
-                        <option value="Defective">Defective</option>
-                        <option value="Replacement">Replacement</option>
-                        <option value="Maintenance">Maintenance</option>
+                        <option value="For Repair">For Repair</option>
+                        <option value="For Disposal">For Disposal</option>
+                        <option value="Disposed">Disposed</option>
                     </select>
                     <!-- Add date filter controls -->
                     <div class="d-flex gap-2 align-items-center">
@@ -682,29 +686,39 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
+<script src="<?php echo BASE_URL; ?>src/control/js/toast.js"></script>
 <!-- Main Script -->
 <script>
     $(document).ready(function () {
         // Add Status
         $('#addStatusForm').on('submit', function (e) {
             e.preventDefault();
+            const submitBtn = $(this).find('button[type="submit"]');
+            submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Adding...');
+
             $.ajax({
                 url: 'equipment_status.php',
                 method: 'POST',
                 data: $(this).serialize(),
+                dataType: 'json',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
                 success: function (response) {
-                    try {
-                        const result = JSON.parse(response);
-                        if (result.status === 'success') {
-                            $('#addStatusModal').modal('hide');
-                            location.reload();
-                        } else {
-                            alert(result.message);
-                        }
-                    } catch (e) {
-                        console.error('Parse error:', e);
-                        location.reload();
+                    if (response.status === 'success') {
+                        $('#addStatusModal').modal('hide');
+                        $('#table').load(location.href + ' #table', function() {
+                            showToast(response.message, 'success');
+                        });
+                    } else {
+                        showToast(response.message, 'error');
                     }
+                },
+                error: function (xhr, status, error) {
+                    showToast('Error adding status: ' + error, 'error');
+                },
+                complete: function () {
+                    submitBtn.prop('disabled', false).html('Add Equipment Status');
                 }
             });
         });

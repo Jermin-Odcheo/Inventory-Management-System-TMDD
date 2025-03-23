@@ -150,8 +150,7 @@ body {
 }
 
 .modal-backdrop.show {
-    opacity: 0.75;
-    backdrop-filter: blur(4px);
+    display:none;
 }
 
 /* Enhanced Form Styling */
