@@ -39,17 +39,16 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentEditingData = null;
 
     // Render user roles table using all active users.
+    // Render user roles table using all active users.
     function renderUserRolesTable(filterUserId = null, filterRoleName = null, filterDepartmentId = null) {
-        const tbody = userRolesTable.querySelector('tbody');
-        tbody.innerHTML = '';
-        // Filter active users based on username
+        const tbody = $('#urTable tbody');
+        tbody.empty();
         let filteredUsers = usersData.filter(user => {
             if (filterUserId && !user.username.toLowerCase().includes(filterUserId.toLowerCase())) {
                 return false;
             }
             return true;
         });
-        // For each user, find assignments (if any)
         filteredUsers.forEach(user => {
             let assignments = userRoleDepartments.filter(assignment => assignment.userId === user.id);
             if (filterRoleName) {
@@ -63,88 +62,96 @@ document.addEventListener('DOMContentLoaded', function() {
                     assignment.departmentIds.includes(parseInt(filterDepartmentId))
                 );
             }
-            // If role/department filters are active and no assignments match, skip this user.
             if ((filterRoleName || filterDepartmentId) && assignments.length === 0) {
                 return;
             }
             if (assignments.length === 0) {
-                // No assignments: show one row with empty Role/Department cells and an Add Role button.
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                  <td>${user.username}</td>
-                  <td></td>
-                  <td></td>
-                  <td>
-                      <button class="add-role-btn" data-user-id="${user.id}">Add Role</button>
-                  </td>
-              `;
-                tbody.appendChild(tr);
+                const tr = $(`
+                  <tr>
+                    <td><input type="checkbox" class="select-row" value="${user.id}"></td>
+                    <td>${user.username}</td>
+                    <td></td>
+                    <td></td>
+                    <td><button class="add-role-btn" data-user-id="${user.id}">Add Role</button></td>
+                  </tr>
+                `);
+                tbody.append(tr);
             } else {
-                // For users with assignments, group rows.
                 assignments.forEach((assignment, index) => {
                     const role = getRoleById(assignment.roleId);
                     const departmentNames = assignment.departmentIds.map(deptId => {
                         const dept = getDepartmentById(deptId);
                         return dept ? dept.department_name : 'Unknown';
                     }).join(', ');
-                    const tr = document.createElement('tr');
+                    let tr;
                     if (index === 0) {
-                        tr.innerHTML = `
-                          <td rowspan="${assignments.length}">${user.username}</td>
-                          <td>${role.role_name}</td>
-                          <td>${departmentNames}</td>
-                          <td>
+                        tr = $(`
+                          <tr>
+                            <td rowspan="${assignments.length}"><input type="checkbox" class="select-row" value="${user.id}"></td>
+                            <td rowspan="${assignments.length}">${user.username}</td>
+                            <td>${role.role_name}</td>
+                            <td>${departmentNames}</td>
+                            <td>
                               <button class="edit-btn" data-user-id="${user.id}" data-role-id="${assignment.roleId}">✏️</button>
                               <button class="delete-btn" data-user-id="${user.id}" data-role-id="${assignment.roleId}">🗑️</button>
-                          </td>
-                      `;
+                            </td>
+                          </tr>
+                        `);
                     } else {
-                        tr.innerHTML = `
-                          <td>${role.role_name}</td>
-                          <td>${departmentNames}</td>
-                          <td>
+                        tr = $(`
+                          <tr>
+                            <td>${role.role_name}</td>
+                            <td>${departmentNames}</td>
+                            <td>
                               <button class="edit-btn" data-user-id="${user.id}" data-role-id="${assignment.roleId}">✏️</button>
                               <button class="delete-btn" data-user-id="${user.id}" data-role-id="${assignment.roleId}">🗑️</button>
-                          </td>
-                      `;
+                            </td>
+                          </tr>
+                        `);
                     }
-                    tbody.appendChild(tr);
+                    tbody.append(tr);
                 });
             }
         });
-        if (tbody.innerHTML.trim() === '') {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-              <td colspan="4">
+        if ($.trim(tbody.html()) === '') {
+            const tr = $(`
+              <tr>
+                <td colspan="5">
                   <div class="empty-state">
-                      <div class="empty-state-icon">🔍</div>
-                      <div class="empty-state-message">No matching user roles found</div>
-                      <button class="empty-state-action" id="clear-filters-btn">Clear filters</button>
+                    <div class="empty-state-icon">🔍</div>
+                    <div class="empty-state-message">No matching user roles found</div>
+                    <button class="empty-state-action" id="clear-filters-btn">Clear filters</button>
                   </div>
-              </td>
-          `;
-            tbody.appendChild(tr);
-            document.getElementById('clear-filters-btn').addEventListener('click', () => {
-                searchUsersInput.value = '';
-                searchRolesInput.value = '';
-                filterDropdown.value = '';
+                </td>
+              </tr>
+            `);
+            tbody.append(tr);
+            $('#clear-filters-btn').click(function() {
+                $('#search-users').val('');
+                $('#search-roles').val('');
+                $('#filter-dropdown').val('');
                 renderUserRolesTable();
             });
         }
         addEventListenersToButtons();
+        // Update the bulk delete button visibility whenever table is rendered.
+        toggleBulkDeleteButton();
     }
 
+    // Utility functions remain unchanged
     function getUserById(id) {
         return usersData.find(user => user.id === id) || { username: 'Unknown User' };
     }
-
     function getRoleById(id) {
         return rolesData.find(role => role.id === id) || { role_name: 'Unknown Role' };
     }
-
     function getDepartmentById(id) {
         return departmentsData.find(dept => dept.id === id) || { department_name: 'Unknown Dept' };
     }
+
+    // (Other code such as modal and button event listeners remains unchanged)
+
+
 
     // Handling selection in modals
     function addItemToSelection(containerId, item, type) {
@@ -431,6 +438,63 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    function toggleBulkDeleteButton() {
+        const selectedCount = $('.select-row:checked').length;
+        if (selectedCount >= 2) {
+            $("#delete-selected").show().prop("disabled", false);
+        } else {
+            $("#delete-selected").hide().prop("disabled", true);
+        }
+    }
+
+    // Listen for changes on any checkbox in the table
+    $(document).on('change', '.select-row', function () {
+        toggleBulkDeleteButton();
+    });
+
+    // Bulk delete event handler
+    $("#delete-selected").click(function () {
+        const selected = $(".select-row:checked").map(function () {
+            return $(this).val();
+        }).get();
+        if (selected.length === 0) {
+            showToast('Please select user roles to remove.', 'warning');
+            return;
+        }
+        // Confirm bulk deletion
+        if (confirm(`Are you sure you want to remove ${selected.length} selected user role(s)?`)) {
+            $.ajax({
+                type: "POST",
+                url: "delete_user_role.php", // Adjust endpoint as needed
+                data: { user_ids: selected },
+                dataType: "json",
+                success: function (response) {
+                    if (response.success) {
+                        // Uncheck all checkboxes
+                        $("#select-all").prop("checked", false);
+                        $(".select-row").prop("checked", false);
+                        toggleBulkDeleteButton();
+                        // Reload or re-render table
+                        renderUserRolesTable();
+                        showToast(response.message, 'success');
+                    } else {
+                        showToast(response.message, 'error');
+                    }
+                },
+                error: function () {
+                    showToast('Error removing selected user roles.', 'error');
+                }
+            });
+        }
+    });
+
+    // "Select All" checkbox functionality (placed after table render)
+    $("#select-all").on("change", function () {
+        $(".select-row").prop("checked", this.checked);
+        toggleBulkDeleteButton();
+    });
+
     // Initial render of the table
     renderUserRolesTable();
+
 });

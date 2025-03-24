@@ -50,17 +50,14 @@ foreach ($userRoles as $assignment) {
         'departmentIds' => $departments
     ];
 }
-?>
-<!DOCTYPE html>
+?><!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- BASE_URL is assumed to be defined in your config -->
-    <link rel="stylesheet" type="text/css"
-          href="<?php echo BASE_URL; ?>src/view/styles/css/user_roles_management.css?ref=v1">
+    <link rel="stylesheet" type="text/css" href="<?php echo BASE_URL; ?>src/view/styles/css/user_roles_management.css?ref=v1">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/pagination.css">
-
     <title>User Roles Management</title>
 </head>
 <body>
@@ -88,7 +85,7 @@ foreach ($userRoles as $assignment) {
             </select>
         </div>
         <div class="action-buttons">
-            <button id="add-user-role-btn">add user to role</button>
+            <button id="add-user-role-btn">Create user to role</button>
         </div>
     </div>
     <!-- Table body will be built via JavaScript -->
@@ -96,6 +93,8 @@ foreach ($userRoles as $assignment) {
         <table class="table table-striped table-hover" id="urTable">
             <thead>
             <tr>
+                <!-- Added checkbox column header with "select all" -->
+                <th><input type="checkbox" id="select-all"></th>
                 <th>User</th>
                 <th>Role</th>
                 <th>Departments</th>
@@ -103,17 +102,22 @@ foreach ($userRoles as $assignment) {
             </tr>
             </thead>
             <tbody>
-            <!-- Table rows will be dynamically populated -->
+            <!-- Table rows will be dynamically populated via JavaScript -->
             </tbody>
         </table>
+    </div>
+    <!-- Bulk Delete Button (initially hidden) -->
+    <div class="mb-3">
+        <button type="button" id="delete-selected" class="btn btn-danger" style="display: none;" disabled>
+            Remove Selected User Roles
+        </button>
     </div>
     <!-- Pagination Controls -->
     <div class="container-fluid">
         <div class="row align-items-center g-3">
             <div class="col-12 col-sm-auto">
                 <div class="text-muted">
-                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows">100</span>
-                    entries
+                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows">100</span> entries
                 </div>
             </div>
             <div class="col-12 col-sm-auto ms-sm-auto">

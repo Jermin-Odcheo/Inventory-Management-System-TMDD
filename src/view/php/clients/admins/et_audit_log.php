@@ -268,13 +268,15 @@ function getChangedFieldNames(array $oldData, array $newData)
             <div class="card-body">
                 <!-- Filter Section -->
                 <div class="row mb-4">
+                    <!-- Search Filter -->
                     <div class="col-md-4 mb-2">
                         <div class="input-group">
                             <span class="input-group-text"><i class="fas fa-search"></i></span>
-                            <input type="text" id="searchInput" class="form-control"
-                                   placeholder="Search audit logs...">
+                            <input type="text" id="searchInput" class="form-control" placeholder="Search audit logs...">
                         </div>
                     </div>
+
+                    <!-- Action Filter -->
                     <div class="col-md-4 mb-2">
                         <select id="filterAction" class="form-select">
                             <option value="">All Actions</option>
@@ -283,15 +285,18 @@ function getChangedFieldNames(array $oldData, array $newData)
                             <option value="delete">Delete</option>
                         </select>
                     </div>
+
+                    <!-- Status Filter (New) -->
                     <div class="col-md-4 mb-2">
-                        <select id="filterModule" class="form-select">
-                            <option value="">All Modules</option>
-                            <option value="Purchase Order">Purchase Order</option>
-                            <option value="Charge Invoice">Charge Invoice</option>
-                            <option value="Receiving Report">Receiving Report</option>
+                        <select id="filterStatus" class="form-select">
+                            <option value="">All Statuses</option>
+                            <option value="successful">Successful</option>
+                            <option value="failed">Failed</option>
                         </select>
                     </div>
                 </div>
+
+            </div>
 
                 <!-- Table container -->
                 <div class="table-responsive">
@@ -382,40 +387,44 @@ function getChangedFieldNames(array $oldData, array $newData)
                     </table>
                 </div>
 
+
                 <!-- Pagination Controls -->
                 <div class="container-fluid">
                     <div class="row align-items-center g-3">
                         <!-- Pagination Info -->
                         <div class="col-12 col-sm-auto">
                             <div class="text-muted">
-                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
-                                        id="totalRows">100</span> entries
+                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows">100</span> entries
                             </div>
                         </div>
-
-                        <!-- Pagination Controls -->
+                        <!-- Pagination Navigation -->
                         <div class="col-12 col-sm-auto ms-sm-auto">
                             <div class="d-flex align-items-center gap-2">
                                 <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                    <i class="bi bi-chevron-left"></i>
-                                    Previous
+                                    <i class="bi bi-chevron-left"></i> Previous
                                 </button>
-
                                 <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
                                     <option value="10">10</option>
                                     <option value="20" selected>20</option>
                                     <option value="50">50</option>
                                     <option value="100">100</option>
                                 </select>
-
                                 <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                    Next
-                                    <i class="bi bi-chevron-right"></i>
+                                    Next <i class="bi bi-chevron-right"></i>
                                 </button>
                             </div>
                         </div>
                     </div>
+                    <!-- Pagination Numbers Container -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <ul id="pagination" class="pagination justify-content-center">
+                                <!-- Pagination numbers will be rendered here by the script -->
+                            </ul>
+                        </div>
+                    </div>
                 </div>
+                <!-- End Pagination Controls -->
             </div>
         </div>
     </div>

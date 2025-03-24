@@ -268,40 +268,10 @@ if ($canDelete) {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Manage Users</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- jQuery, Bootstrap CSS/JS, and Bootstrap Icons -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/pagination.css">
-
-    <style>
-        .main-content {
-            margin-left: 300px;
-            padding: 20px;
-            margin-bottom: 20px;
-            width: auto;
-        }
-
-        .search-container {
-            width: 250px;
-        }
-
-        .search-container input {
-            padding-right: 30px;
-        }
-
-        .search-container i {
-            color: #6c757d;
-            pointer-events: none;
-        }
-
-        .main-content.container-fluid {
-            padding: 100px 15px;
-        }
-    </style>
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/user_roles_management.css">
+    <title>Manage Users</title>
 </head>
 <body>
 
@@ -391,7 +361,6 @@ if ($canDelete) {
                     <input type="text" name="search" id="searchUsers" class="form-control"
                            placeholder="Search users by email, first name, or last name..."
                            value="<?php echo htmlspecialchars($_GET['search'] ?? ''); ?>">
-                    <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-2"></i>
                 </div>
             </form>
         </div>
@@ -403,35 +372,35 @@ if ($canDelete) {
     </div>
     <div class="table-responsive" id="table">
         <table class="table table-striped table-hover" id="umTable">
-            <thead class="table-dark">
+            <thead>
             <tr>
                 <th><input type="checkbox" id="select-all"></th>
                 <th>
-                    <a class="text-white text-decoration-none"
+                    <a class="text-black text-decoration-none"
                        href="?sort=User_ID&dir=<?php echo toggleDirection($sortBy, $sortDir, 'User_ID'); ?>">
                         #<?php echo sortIcon($sortBy, 'User_ID', $sortDir); ?>
                     </a>
                 </th>
                 <th>
-                    <a class="text-white text-decoration-none"
+                    <a class="text-black text-decoration-none"
                        href="?sort=Email&dir=<?php echo toggleDirection($sortBy, $sortDir, 'Email'); ?>">
                         Email<?php echo sortIcon($sortBy, 'Email', $sortDir); ?>
                     </a>
                 </th>
                 <th>
-                    <a class="text-white text-decoration-none"
+                    <a class="text-black text-decoration-none"
                        href="?sort=First_Name&dir=<?php echo toggleDirection($sortBy, $sortDir, 'First_Name'); ?>">
                         Name<?php echo sortIcon($sortBy, 'First_Name', $sortDir); ?>
                     </a>
                 </th>
                 <th>
-                    <a class="text-white text-decoration-none"
+                    <a class="text-black text-decoration-none"
                        href="?sort=Department&dir=<?php echo toggleDirection($sortBy, $sortDir, 'Department'); ?>">
                         Department<?php echo sortIcon($sortBy, 'Department', $sortDir); ?>
                     </a>
                 </th>
                 <th>
-                    <a class="text-white text-decoration-none"
+                    <a class="text-black text-decoration-none"
                        href="?sort=Status&dir=<?php echo toggleDirection($sortBy, $sortDir, 'Status'); ?>">
                         Status<?php echo sortIcon($sortBy, 'Status', $sortDir); ?>
                     </a>
