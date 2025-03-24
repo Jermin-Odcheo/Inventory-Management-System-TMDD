@@ -32,6 +32,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAjax) {
             exit;
         }
 
+        // Begin transaction
+        $pdo->beginTransaction();
+
+        // Get old location details for audit log
+        $stmt = $pdo->prepare("SELECT * FROM equipment_location WHERE equipment_location_id = ?");
+        $stmt->execute([$id]);
+        $oldLocation = $stmt->fetch(PDO::FETCH_ASSOC);
+
         // Proceed with the update
         $updateStmt = $pdo->prepare("UPDATE equipment_location 
             SET asset_tag = ?, building_loc = ?, floor_no = ?, specific_area = ?, person_responsible = ?, department_id = ?, remarks = ?
@@ -39,8 +47,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAjax) {
         $updateStmt->execute([$assetTag, $buildingLoc, $floorNo, $specificArea, $personResponsible, $departmentId, $remarks, $id]);
 
         if ($updateStmt->rowCount() > 0) {
+            // Prepare audit log data
+            $oldValue = json_encode($oldLocation);
+            $newValues = json_encode([
+                'asset_tag' => $assetTag,
+                'building_loc' => $buildingLoc,
+                'floor_no' => $floorNo,
+                'specific_area' => $specificArea,
+                'person_responsible' => $personResponsible,
+                'department_id' => $departmentId,
+                'remarks' => $remarks
+            ]);
+
+            // Insert into audit_log
+            $auditStmt = $pdo->prepare("
+                INSERT INTO audit_log (
+                    UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+
+            $auditStmt->execute([
+                $_SESSION['user_id'],
+                $id,
+                'Equipment Location',
+                'Modified',
+                'Equipment location modified',
+                $oldValue,
+                $newValues,
+                'Successful'
+            ]);
+
+            $pdo->commit();
             echo json_encode(['status' => 'success', 'message' => 'Location updated successfully']);
         } else {
+            $pdo->rollBack();
             echo json_encode(['status' => 'error', 'message' => 'No changes made or invalid ID']);
         }
         exit;
@@ -102,7 +142,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAjax) {
     }
 }
 
-// Handle AJAX delete requests via GET as well
+// Handle AJAX delete requests via GET
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && $isAjax && isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
     header('Content-Type: application/json');
     $id = $_GET['id'];

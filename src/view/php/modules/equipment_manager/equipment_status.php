@@ -206,9 +206,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     // Begin transaction
                     $pdo->beginTransaction();
 
-                    // Set current user for audit logging
-                    $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
-
                     // Prepare audit log data
                     $oldValue = json_encode([
                         'equipment_status_id' => $statusData['equipment_status_id'],
@@ -234,7 +231,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $auditStmt->execute([
                         $_SESSION['user_id'],
                         $statusData['equipment_status_id'],
-                        'Equipment Management',
+                        'Equipment Status',
                         'Delete',
                         'Equipment status has been deleted',
                         $oldValue,
