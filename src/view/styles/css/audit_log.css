@@ -8,6 +8,7 @@ body {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     background-color: #f8f9fa;
     min-height: 100vh;
+
 }
 
 .main-content{
@@ -135,7 +136,7 @@ col.changes {
 
 /* Add smooth opacity transitions to rows */
 tbody tr {
-    transition: opacity 0.1s linear;
+    transition: none;
 }
 col.checkbox {
     width: 25px;

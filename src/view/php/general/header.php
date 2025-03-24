@@ -541,6 +541,9 @@ $email = $_SESSION['email'];
             }
         }
     }
+    window.onload = function() {
+        window.scrollTo(0, 0); // Resets the main window scroll to the top.
+    };
 </script>
 
 </body>

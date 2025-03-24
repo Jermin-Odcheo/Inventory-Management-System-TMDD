@@ -508,7 +508,7 @@ function getChangedFieldNames(array $oldData, array $newData)
 </div><!-- /.main-content -->
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/logs.js" defer></script>
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
-
 </body>
-</html>
 
+
+</html>
