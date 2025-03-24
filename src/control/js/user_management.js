@@ -158,114 +158,139 @@ $(document).ready(function () {
 
 
 // Remove lingering modal backdrop for delete modal
-$('#confirmDeleteModal').on('hidden.bs.modal', function () {
-    $('body').removeClass('modal-open');
-    $('.modal-backdrop').remove();
-});
-
-// Remove lingering backdrop for edit modal as well
-$('#editUserModal').on('hidden.bs.modal', function () {
-    $('body').removeClass('modal-open');
-    $('.modal-backdrop').remove();
-});
-
-$('#addUserModal').on('hidden.bs.modal', function () {
-    $('body').removeClass('modal-open');
-    $('.modal-backdrop').remove();
-});
-
-$(document).on('click', '.btn-close', function () {
-    $(this).closest('.alert').hide();
-});
-
-$('.department-filter').on('change', function () {
-    this.form.submit();
-});
-
-$(document).ready(function () {
-    let searchTimeout;
-
-    // Handle search input
-    $('#searchUsers').on('input', function () {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            // Submit the form when the user stops typing
-            $(this).closest('form').submit();
-        }, 500); // Adjust the delay as needed
+    $('#confirmDeleteModal').on('hidden.bs.modal', function () {
+        $('body').removeClass('modal-open');
+        $('.modal-backdrop').remove();
     });
 
-    // Handle department filter change
+// Remove lingering backdrop for edit modal as well
+    $('#editUserModal').on('hidden.bs.modal', function () {
+        $('body').removeClass('modal-open');
+        $('.modal-backdrop').remove();
+    });
+
+    $('#addUserModal').on('hidden.bs.modal', function () {
+        $('body').removeClass('modal-open');
+        $('.modal-backdrop').remove();
+    });
+
+    $(document).on('click', '.btn-close', function () {
+        $(this).closest('.alert').hide();
+    });
+
     $('.department-filter').on('change', function () {
         $(this).closest('form').submit();
     });
-});
+
+
+    $(document).ready(function () {
+        let searchTimeout;
+
+        // Handle search input
+        $('#searchUsers').on('input', function () {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                // Submit the form when the user stops typing
+                $(this).closest('form').submit();
+            }, 500); // Adjust the delay as needed
+        });
+
+        // Handle department filter change
+        $('.department-filter').on('change', function () {
+            $(this).closest('form').submit();
+        });
+    });
 
 // Populate Edit Modal with existing data
-$('#editUserModal').on('show.bs.modal', function (event) {
-    var button = $(event.relatedTarget);
-    var userId = button.data('id');
-    var email = button.data('email');
-    var firstName = button.data('first-name');
-    var lastName = button.data('last-name');
-    var department = button.data('department');
-    var modal = $(this);
-    modal.find('#editUserID').val(userId);
-    modal.find('#editEmail').val(email);
-    modal.find('#editFirstName').val(firstName);
-    modal.find('#editLastName').val(lastName);
-    modal.find('#editDepartment').val(department);
-});
+    $('#editUserModal').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget);
+        var userId = button.data('id');
+        var email = button.data('email');
+        var firstName = button.data('first-name');
+        var lastName = button.data('last-name');
+        var department = button.data('department');
+        var modal = $(this);
+        modal.find('#editUserID').val(userId);
+        modal.find('#editEmail').val(email);
+        modal.find('#editFirstName').val(firstName);
+        modal.find('#editLastName').val(lastName);
+        modal.find('#editDepartment').val(department);
+    });
 
 // Handle "Edit User" form submission via AJAX
-$("#editUserForm").on("submit", function (e) {
-    e.preventDefault();
-    var submitButton = $(this).find('button[type="submit"]');
-    submitButton.prop('disabled', true).html(
-        '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...'
-    );
-    $.ajax({
-        type: "POST",
-        url: "update_user.php",
-        data: $(this).serialize(),
-        dataType: 'json',
-        success: function (response) {
-            if (response.success) {
-                // Hide the modal only when the update is successful.
-                $("#editUserModal").modal('hide');
-                // Reload table and show a success message.
-                $('#umTable tbody').load(getCacheBustedUrl('#umTable tbody > *'), function () {
-                    showToast(response.message, 'success');
-                });
-            } else {
-                // In case of error, show error message and keep modal open.
-                showToast(response.message, 'error');
+    $("#editUserForm").on("submit", function (e) {
+        e.preventDefault();
+        var submitButton = $(this).find('button[type="submit"]');
+        submitButton.prop('disabled', true).html(
+            '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...'
+        );
+        $.ajax({
+            type: "POST",
+            url: "update_user.php",
+            data: $(this).serialize(),
+            dataType: 'json',
+            success: function (response) {
+                if (response.success) {
+                    // Hide the modal only when the update is successful.
+                    $("#editUserModal").modal('hide');
+                    // Reload table and show a success message.
+                    $('#umTable tbody').load(getCacheBustedUrl('#umTable tbody > *'), function () {
+                        showToast(response.message, 'success');
+                    });
+                } else {
+                    // In case of error, show error message and keep modal open.
+                    showToast(response.message, 'error');
+                }
+            },
+            error: function () {
+                showToast('Error updating user.', 'error');
+            },
+            complete: function () {
+                // Always re-enable the submit button regardless of outcome.
+                submitButton.prop('disabled', false).text('Save Changes');
+                // Do not hide the modal here so it remains open on error.
             }
-        },
-        error: function () {
-            showToast('Error updating user.', 'error');
-        },
-        complete: function () {
-            // Always re-enable the submit button regardless of outcome.
-            submitButton.prop('disabled', false).text('Save Changes');
-            // Do not hide the modal here so it remains open on error.
-        }
+        });
     });
-});
 
 
-$(document).on('click', '#select-all', function () {
-    $(".select-row").prop('checked', $(this).prop('checked'));
-    toggleBulkDeleteButton();
-});
+    $(document).on('click', '#select-all', function () {
+        $(".select-row").prop('checked', $(this).prop('checked'));
+        toggleBulkDeleteButton();
+    });
 
-$(document).on('change', '.select-row', function () {
-    toggleBulkDeleteButton();
-});
+    $(document).on('change', '.select-row', function () {
+        toggleBulkDeleteButton();
+    });
 
 
-function toggleBulkDeleteButton() {
-    const anyChecked = $(".select-row:checked").length > 1;
-    $("#delete-selected").prop('disabled', !anyChecked).toggle(anyChecked);
-}
+    function toggleBulkDeleteButton() {
+        const anyChecked = $(".select-row:checked").length > 1;
+        $("#delete-selected").prop('disabled', !anyChecked).toggle(anyChecked);
+    }
+
+    $('form.d-flex').on('submit', function (e) {
+        e.preventDefault();
+        var formData = $(this).serialize();
+        var baseUrl = window.location.href.split('?')[0];
+        var newUrl = baseUrl + '?' + formData;
+
+        $('#umTable tbody').load(newUrl + ' #umTable tbody > *', function () {
+            history.pushState(null, '', newUrl);
+        });
+    });
+
+    let searchTimeout;
+
+    $('#searchUsers').on('input', function () {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            $(this).closest('form').submit();
+        }, 500);
+    });
+
+    $('.department-filter').on('change', function () {
+        $(this).closest('form').submit();
+    });
 
 });

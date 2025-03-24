@@ -3,6 +3,10 @@ session_start();
 require_once('../../../../../config/ims-tmdd.php');
 require_once('../../clients/admins/RBACService.php');
 
+// Enable error reporting for debugging (disable in production)
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
 // Check if the user is logged in
 if (!isset($_SESSION['user_id'])) {
     header("Location: ../../../../../public/index.php");
@@ -13,16 +17,16 @@ if (!isset($_SESSION['user_id'])) {
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
 
 // Define available actions based on privileges
-$canCreate = $rbac->hasPrivilege('User Management', 'Create');
-$canModify = $rbac->hasPrivilege('User Management', 'Modify');
-$canDelete = $rbac->hasPrivilege('User Management', 'Remove');
-$canTrack = $rbac->hasPrivilege('User Management', 'Track');
+$canCreate  = $rbac->hasPrivilege('User Management', 'Create');
+$canModify  = $rbac->hasPrivilege('User Management', 'Modify');
+$canDelete  = $rbac->hasPrivilege('User Management', 'Remove');
+$canTrack   = $rbac->hasPrivilege('User Management', 'Track');
 
 include '../../general/header.php';
 include '../../general/sidebar.php';
 include '../../general/footer.php';
 
-// Get current user's roles and initialize RBAC
+// Get current user's roles and initialize RBAC manager
 $currentUserRoles = getCurrentUserRoles($pdo, $_SESSION['user_id']);
 $rbac = new RBACManager($pdo, $currentUserRoles);
 
@@ -33,13 +37,22 @@ if (!$rbac->hasPrivilege('User Management', 'View')) {
 }
 
 // Get permissions for use in template
-$canEdit = $rbac->hasPrivilege('User Management', 'Edit');
+$canEdit   = $rbac->hasPrivilege('User Management', 'Edit');
 $canDelete = $rbac->hasPrivilege('User Management', 'Delete');
 
-// Define allowed sorting columns (for active users)
-$allowedSortColumns = ['id', 'Email', 'First_Name', 'Last_Name', 'Department', 'Status'];
-$sortBy = isset($_GET['sort']) && in_array($_GET['sort'], $allowedSortColumns) ? $_GET['sort'] : 'id';
-$sortDir = isset($_GET['dir']) && $_GET['dir'] == 'desc' ? 'desc' : 'asc';
+// Define allowed sort columns mapping to actual SQL expressions
+$sortColumnMap = [
+    'id'         => 'u.id',
+    'Email'      => 'u.email',
+    'First_Name' => 'u.first_name',
+    'Last_Name'  => 'u.last_name',
+    'Department' => 'd.department_name',
+    'Status'     => 'u.status'
+];
+
+// Use allowed sort columns from GET parameters
+$sortBy  = (isset($_GET['sort']) && isset($sortColumnMap[$_GET['sort']])) ? $_GET['sort'] : 'id';
+$sortDir = (isset($_GET['dir']) && $_GET['dir'] == 'desc') ? 'desc' : 'asc';
 
 // Fetch departments from database
 $departments = [];
@@ -47,7 +60,7 @@ try {
     $deptStmt = $pdo->query("SELECT id, department_name, abbreviation FROM departments WHERE is_disabled = 0 ORDER BY department_name");
     while ($dept = $deptStmt->fetch(PDO::FETCH_ASSOC)) {
         $departments[$dept['id']] = [
-            'name' => $dept['department_name'],
+            'name'         => $dept['department_name'],
             'abbreviation' => $dept['abbreviation']
         ];
     }
@@ -69,31 +82,41 @@ function getUserDepartments($pdo, $userId)
     return $deptIds;
 }
 
-// Build the query to include department and search filters, plus the is_disabled=0 check
-$query = "SELECT u.id, u.email, u.first_name, u.last_name, u.status AS Status
-            FROM users u
-            WHERE u.is_disabled = 0";
-
+// Define filters based on GET parameters, using trim to remove extra spaces
 $hasDepartmentFilter = isset($_GET['department']) && $_GET['department'] !== 'all';
-$hasSearchFilter = isset($_GET['search']) && !empty($_GET['search']);
+$hasSearchFilter     = isset($_GET['search']) && strlen(trim($_GET['search'])) > 0;
+
+// Build the query to include department and search filters, plus the is_disabled=0 check
+$query = "SELECT DISTINCT 
+            u.id, 
+            u.email, 
+            u.first_name, 
+            u.last_name, 
+            u.status AS Status
+          FROM users u
+          LEFT JOIN user_departments ud ON u.id = ud.user_id
+          LEFT JOIN departments d ON ud.department_id = d.id
+          LEFT JOIN user_roles ur ON u.id = ur.user_id
+          LEFT JOIN roles r ON ur.Role_ID = r.id
+          WHERE u.is_disabled = 0";
 
 if ($hasDepartmentFilter) {
-    $query .= " AND u.id IN (
-        SELECT ud.user_id
-        FROM user_departments ud
-        WHERE ud.department_id = :department
-    )";
+    $query .= " AND ud.department_id = :department";
 }
 
 if ($hasSearchFilter) {
     $query .= " AND (
-        u.email LIKE :search
-        OR u.first_name LIKE :search
-        OR u.last_name LIKE :search
+        u.email LIKE :search1
+        OR u.first_name LIKE :search2
+        OR u.last_name LIKE :search3
+        OR d.department_name LIKE :search4
+        OR d.abbreviation LIKE :search5
+        OR r.Role_Name LIKE :search6
     )";
 }
 
-$query .= " ORDER BY `$sortBy` $sortDir";
+// Apply ordering using the mapped sort column
+$query .= " ORDER BY " . $sortColumnMap[$sortBy] . " " . $sortDir;
 
 try {
     $stmt = $pdo->prepare($query);
@@ -107,9 +130,16 @@ try {
     }
 
     if ($hasSearchFilter) {
-        $searchTerm = '%' . $_GET['search'] . '%';
-        $stmt->bindValue(':search', $searchTerm, PDO::PARAM_STR);
+        $searchTerm = '%' . trim($_GET['search']) . '%';
+        $stmt->bindValue(':search1', $searchTerm, PDO::PARAM_STR);
+        $stmt->bindValue(':search2', $searchTerm, PDO::PARAM_STR);
+        $stmt->bindValue(':search3', $searchTerm, PDO::PARAM_STR);
+        $stmt->bindValue(':search4', $searchTerm, PDO::PARAM_STR);
+        $stmt->bindValue(':search5', $searchTerm, PDO::PARAM_STR);
+        $stmt->bindValue(':search6', $searchTerm, PDO::PARAM_STR);
     }
+
+    $pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, true);
 
     $stmt->execute();
     $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -246,9 +276,9 @@ class RBACManager
     private function getRoleHierarchy(): array
     {
         return [
-            'Admin' => 3,
+            'Admin'   => 3,
             'Manager' => 2,
-            'Staff' => 1,
+            'Staff'   => 1,
         ];
     }
 }
@@ -264,6 +294,7 @@ if ($canDelete) {
     echo '<button class="delete-btn">Delete</button>';
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -376,9 +407,10 @@ if ($canDelete) {
             <tr>
                 <th><input type="checkbox" id="select-all"></th>
                 <th>
+                    <!-- Updated sort key for ID column to use "id" -->
                     <a class="text-black text-decoration-none"
-                       href="?sort=User_ID&dir=<?php echo toggleDirection($sortBy, $sortDir, 'User_ID'); ?>">
-                        #<?php echo sortIcon($sortBy, 'User_ID', $sortDir); ?>
+                       href="?sort=id&dir=<?php echo toggleDirection($sortBy, $sortDir, 'id'); ?>">
+                        #<?php echo sortIcon($sortBy, 'id', $sortDir); ?>
                     </a>
                 </th>
                 <th>
@@ -567,16 +599,13 @@ if ($canDelete) {
                             appearance: none;
                             transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
                         }
-
                         .form-select:focus {
                             border-color: #86b7fe;
                             box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
                         }
-
                         .form-select option {
                             padding: 10px;
                         }
-
                         .form-select optgroup {
                             margin-top: 10px;
                         }
