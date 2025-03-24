@@ -233,30 +233,24 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
 
             case 'delete':
                 try {
-                    // Get equipment details before deletion for audit log
-                    $stmt = $pdo->prepare("SELECT * FROM equipment_details WHERE id = ?");
-                    $stmt->execute([$_POST['equipment_id']]);
-                    $equipmentData = $stmt->fetch(PDO::FETCH_ASSOC);
-
-                    if (!$equipmentData) {
-                        throw new Exception("Equipment not found");
+                    if (!isset($_POST['details_id'])) {
+                        throw new Exception('Details ID is required');
                     }
 
-                    // Set current user for audit logging
-                    $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
+                    // Get details before deletion for audit log
+                    $stmt = $pdo->prepare("SELECT * FROM equipment_details WHERE id = ?");
+                    $stmt->execute([$_POST['details_id']]);
+                    $detailsData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                    if (!$detailsData) {
+                        throw new Exception('Details not found');
+                    }
+
+                    // Begin transaction
+                    $pdo->beginTransaction();
 
                     // Prepare audit log data
-                    $oldValue = json_encode([
-                        'id' => $equipmentData['id'],
-                        'asset_tag' => $equipmentData['asset_tag'],
-                        'asset_description_1' => $equipmentData['asset_description_1'],
-                        'asset_description_2' => $equipmentData['asset_description_2'],
-                        'specifications' => $equipmentData['specifications'],
-                        'brand' => $equipmentData['brand'],
-                        'model' => $equipmentData['model'],
-                        'serial_number' => $equipmentData['serial_number'],
-                        'date_created' => $equipmentData['date_created'],
-                    ]);
+                    $oldValue = json_encode($detailsData);
 
                     // Insert into audit_log
                     $auditStmt = $pdo->prepare("
@@ -274,26 +268,32 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
 
                     $auditStmt->execute([
                         $_SESSION['user_id'],
-                        $equipmentData['id'],
-                        'Equipment Management',
+                        $detailsData['id'],
+                        'Equipment Details',
                         'Delete',
-                        'Equipment has been deleted',
+                        'Equipment details have been deleted',
                         $oldValue,
                         null,
                         'Successful'
                     ]);
 
                     // Now perform the delete
-                    $stmt = $pdo->prepare("UPDATE equipment_details SET is_disabled = 1 WHERE id = ?");
+                    $stmt = $pdo->prepare("DELETE FROM equipment_details WHERE id = ?");
+                    $stmt->execute([$_POST['details_id']]);
 
-                    $stmt->execute([$_POST['equipment_id']]);
+                    // Commit transaction
+                    $pdo->commit();
 
+                    $_SESSION['success'] = "Equipment Details deleted successfully.";
                     $response['status'] = 'success';
                     $response['message'] = 'Equipment Details deleted successfully.';
-
                 } catch (Exception $e) {
+                    if ($pdo->inTransaction()) {
+                        $pdo->rollBack();
+                    }
+                    $_SESSION['errors'] = ["Error deleting details: " . $e->getMessage()];
                     $response['status'] = 'error';
-                    $response['message'] = $e->getMessage();
+                    $response['message'] = 'Error deleting details: ' . $e->getMessage();
                 }
                 echo json_encode($response);
                 exit;
@@ -921,7 +921,7 @@ function safeHtml($value)
                     method: 'POST',
                     data: {
                         action: 'delete',
-                        equipment_id: deleteId
+                        details_id: deleteId
                     },
                     dataType: 'json',
                     headers: {

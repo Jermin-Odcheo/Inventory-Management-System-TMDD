@@ -14,7 +14,7 @@ if (!isset($_SESSION['user_id'])) {
 $query = "SELECT audit_log.*, users.email AS email 
           FROM audit_log 
           LEFT JOIN users ON audit_log.UserID = users.id
-          WHERE audit_log.Module = 'Equipment Management'
+          WHERE audit_log.Module IN ('Equipment Management', 'Equipment Details', 'Equipment Location')
           ORDER BY audit_log.Date_Time DESC";
 
 
