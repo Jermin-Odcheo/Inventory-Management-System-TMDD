@@ -184,22 +184,60 @@ $(document).ready(function () {
 
 
     $(document).ready(function () {
+        const searchInput = $('#search-filters');
+        const departmentFilter = $('#department-filter');
+
         let searchTimeout;
 
-        // Handle search input
-        $('#searchUsers').on('input', function () {
+        function loadFilteredData() {
+            const searchQuery = searchInput.val();
+            const selectedDepartment = departmentFilter.val();
+
+            const queryParams = new URLSearchParams({
+                search: searchQuery,
+                department: selectedDepartment
+            });
+
+            const baseUrl = window.location.href.split('?')[0];
+            const newUrl = `${baseUrl}?${queryParams.toString()}`;
+
+            $('#umTable tbody').load(`${newUrl} #umTable tbody > *`, function () {
+                history.pushState(null, '', newUrl);
+
+                if ($.trim($('#umTable tbody').html()) === '') {
+                    const emptyStateHtml = `
+                    <tr>
+                        <td colspan="100%">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">🔍</div>
+                                <div class="empty-state-message">No matching search found</div>
+                                <button class="empty-state-action" id="clear-filters-btn">Clear filters</button>
+                            </div>
+                        </td>
+                    </tr>`;
+
+                    $('#umTable tbody').html(emptyStateHtml);
+                    $('#clear-filters-btn').click(function() {
+                        searchInput.val('');
+                        departmentFilter.val('all');
+                        loadFilteredData();
+                    });
+                }
+            });
+        }
+
+        // Debounce search input
+        searchInput.on('input', function () {
             clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                // Submit the form when the user stops typing
-                $(this).closest('form').submit();
-            }, 500); // Adjust the delay as needed
+            searchTimeout = setTimeout(loadFilteredData, 500);
         });
 
-        // Handle department filter change
-        $('.department-filter').on('change', function () {
-            $(this).closest('form').submit();
+        // Immediate department filter submission
+        departmentFilter.on('change', function () {
+            loadFilteredData();
         });
     });
+
 
 // Populate Edit Modal with existing data
     $('#editUserModal').on('show.bs.modal', function (event) {
@@ -280,14 +318,8 @@ $(document).ready(function () {
         });
     });
 
-    let searchTimeout;
 
-    $('#searchUsers').on('input', function () {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            $(this).closest('form').submit();
-        }, 500);
-    });
+
 
     $('.department-filter').on('change', function () {
         $(this).closest('form').submit();

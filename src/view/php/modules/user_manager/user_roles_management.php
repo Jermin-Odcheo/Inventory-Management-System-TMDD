@@ -64,14 +64,15 @@ foreach ($userRoles as $assignment) {
 <div class="main-content container-fluid">
     <header>
         <h1>USER ROLES MANAGER</h1>
-        <div class="search-container">
-            <input type="text" id="search-users" placeholder="search user">
-        </div>
     </header>
     <div class="filters-container">
-        <div class="search-role">
-            <label for="search-roles">search for role</label>
-            <input type="text" id="search-roles">
+        <div class="search-filter">
+            <label for="search-filters">search for role</label>
+            <input type="text" id="search-filters">
+        </div>
+        <div class="search-container">
+            <label for="search-filters">search for users</label>
+            <input type="text" id="search-users" placeholder="search user">
         </div>
         <div class="filter-container">
             <label for="filter-dropdown">filter</label>
@@ -85,9 +86,10 @@ foreach ($userRoles as $assignment) {
             </select>
         </div>
         <div class="action-buttons">
-            <button id="add-user-role-btn">Create user to role</button>
+            <button id="create-btn">Create user to role</button>
         </div>
     </div>
+
     <!-- Table body will be built via JavaScript -->
     <div class="table-responsive" id="table">
         <table class="table table-striped table-hover" id="urTable">

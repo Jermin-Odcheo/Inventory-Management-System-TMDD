@@ -1,10 +1,10 @@
 document.addEventListener('DOMContentLoaded', function() {
 
     // DOM elements
-    const addUserRoleBtn = document.getElementById('add-user-role-btn');
+    const addUserRoleBtn = document.getElementById('create-btn');
     const userRolesTable = document.getElementById('urTable');
     const searchUsersInput = document.getElementById('search-users');
-    const searchRolesInput = document.getElementById('search-roles');
+    const searchRolesInput = document.getElementById('search-filters');
     const filterDropdown = document.getElementById('filter-dropdown');
 
     // Modal elements
@@ -38,7 +38,6 @@ document.addEventListener('DOMContentLoaded', function() {
     let selectedDepartments = [];
     let currentEditingData = null;
 
-    // Render user roles table using all active users.
     // Render user roles table using all active users.
     function renderUserRolesTable(filterUserId = null, filterRoleName = null, filterDepartmentId = null) {
         const tbody = $('#urTable tbody');
@@ -128,7 +127,7 @@ document.addEventListener('DOMContentLoaded', function() {
             tbody.append(tr);
             $('#clear-filters-btn').click(function() {
                 $('#search-users').val('');
-                $('#search-roles').val('');
+                $('#search-filters').val('');
                 $('#filter-dropdown').val('');
                 renderUserRolesTable();
             });
@@ -148,9 +147,6 @@ document.addEventListener('DOMContentLoaded', function() {
     function getDepartmentById(id) {
         return departmentsData.find(dept => dept.id === id) || { department_name: 'Unknown Dept' };
     }
-
-    // (Other code such as modal and button event listeners remains unchanged)
-
 
 
     // Handling selection in modals
