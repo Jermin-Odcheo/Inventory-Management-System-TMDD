@@ -148,7 +148,7 @@ body {
 .modal .btn-close {
     margin: -0.5rem -0.5rem -0.5rem auto;
 }
- 
+
 /* Enhanced Form Styling */
 .modal .mb-3 {
     margin-bottom: 2rem !important;
@@ -223,7 +223,79 @@ body {
         padding: 1.25rem;
     }
 }
+body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: #f8f9fa;
+    min-height: 100vh;
+    padding-top: 80px;
+    overflow-x: hidden;
+}
 
+h2.mb-4 {
+    margin-top: 20px;
+}
+
+.table-responsive {
+    overflow-x: auto;
+    max-width: 100%;
+}
+
+table {
+    width: 100%;
+    table-layout: auto;
+}
+
+th, td {
+    white-space: normal;
+    text-overflow: clip;
+    min-width: 100px;
+    max-width: 200px;
+    padding: 8px;
+    vertical-align: middle;
+}
+
+table th:nth-child(1),
+table td:nth-child(1) {
+    min-width: 50px;
+    max-width: 70px;
+}
+
+table th:nth-child(2),
+table td:nth-child(2) {
+    min-width: 100px;
+    max-width: 150px;
+}
+
+table th:last-child,
+table td:last-child {
+    min-width: 160px;
+    white-space: nowrap;
+}
+
+.card-body {
+    overflow-x: auto;
+}
+
+.btn-group {
+    display: flex;
+    gap: 5px;
+    flex-wrap: nowrap;
+}
+
+.btn-group .btn {
+    padding: 0.25rem 0.5rem;
+    white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    .main-content {
+        margin-left: 0;
+    }
+}
+/* Custom style for a darker modal backdrop */
+.modal-backdrop.show {
+    background-color: rgba(0, 0, 0, 0.8);
+}
 /* Loading State */
 .modal .btn-primary.loading {
     position: relative;

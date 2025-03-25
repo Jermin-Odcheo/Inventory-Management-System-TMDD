@@ -418,7 +418,8 @@ function getChangedFieldNames(array $oldData, array $newData)
                             <!-- Pagination Controls -->
                             <div class="col-12 col-sm-auto ms-sm-auto">
                                 <div class="d-flex align-items-center gap-2">
-                                    <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                    <button id="prevPage"
+                                            class="btn btn-outline-primary d-flex align-items-center gap-1">
                                         <i class="bi bi-chevron-left"></i>
                                         Previous
                                     </button>
@@ -430,7 +431,8 @@ function getChangedFieldNames(array $oldData, array $newData)
                                         <option value="50">50</option>
                                     </select>
 
-                                    <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                    <button id="nextPage"
+                                            class="btn btn-outline-primary d-flex align-items-center gap-1">
                                         Next
                                         <i class="bi bi-chevron-right"></i>
                                     </button>
