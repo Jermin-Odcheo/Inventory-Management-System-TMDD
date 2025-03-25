@@ -355,10 +355,7 @@ function safeHtml($value)
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>Equipment Details Management</title>
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+
     <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -438,6 +435,10 @@ function safeHtml($value)
                 margin-left: 0;
             }
         }
+        /* Custom style for a darker modal backdrop */
+        .modal-backdrop.show {
+            background-color: rgba(0, 0, 0, 0.8);
+        }
     </style>
 </head>
 <body>
@@ -460,7 +461,7 @@ function safeHtml($value)
                 <div class="d-flex gap-2">
                     <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal"
                             data-bs-target="#addEquipmentModal">
-                        <i class="bi bi-plus-circle"></i> Add Equipment
+                        <i class="bi bi-plus-circle"></i> Create Equipment
                     </button>
                     <select class="form-select form-select-sm" id="filterEquipment" style="width: auto;">
                         <option value="">Filter Equipment Type</option>
@@ -619,7 +620,7 @@ function safeHtml($value)
 </div>
 
 <!-- Add Equipment Modal -->
-<div class="modal fade" id="addEquipmentModal" tabindex="-1">
+<div class="modal fade" id="addEquipmentModal" tabindex="-1"  aria-labelledby="addUserEquipmentLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -678,7 +679,7 @@ function safeHtml($value)
                         <textarea class="form-control" name="remarks" rows="3"></textarea>
                     </div>
                     <div class="mb-3">
-                        <button type="submit" class="btn btn-primary">Add Equipment</button>
+                        <button type="submit" class="btn btn-primary">Create Equipment</button>
                     </div>
                 </form>
             </div>
@@ -687,7 +688,7 @@ function safeHtml($value)
 </div>
 
 <!-- Edit Equipment Modal -->
-<div class="modal fade" id="editEquipmentModal" tabindex="-1">
+<div class="modal fade" id="editEquipmentModal" tabindex="-1" data-bs-backdrop="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -760,7 +761,7 @@ function safeHtml($value)
 </div>
 
 <!-- Delete Equipment Details Modal -->
-<div class="modal fade" id="deleteEDModal" tabindex="-1">
+<div class="modal fade" id="deleteEDModal" tabindex="-1" data-bs-backdrop="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
@@ -905,7 +906,7 @@ function safeHtml($value)
         // Global variable to store the ID for deletion
         var deleteId = null;
 
-// When a delete-equipment button is clicked, show the delete modal
+        // When a delete-equipment button is clicked, show the delete modal
         $(document).on('click', '.delete-equipment', function (e) {
             e.preventDefault();
             deleteId = $(this).data('id');
@@ -913,7 +914,7 @@ function safeHtml($value)
             deleteModal.show();
         });
 
-// When the confirm delete button is clicked, perform the AJAX deletion
+        // When the confirm delete button is clicked, perform the AJAX deletion
         $('#confirmDeleteBtn').on('click', function () {
             if (deleteId) {
                 $.ajax({
@@ -944,7 +945,6 @@ function safeHtml($value)
                 });
             }
         });
-
 
         // Function to refresh the equipment list via AJAX and reattach event handlers
         function refreshEquipmentList() {
@@ -988,10 +988,10 @@ function safeHtml($value)
                     }
                 },
                 error: function (xhr, status, error) {
-                    showToast('Error adding equipment: ' + error, 'error');
+                    showToast('Error Create equipment: ' + error, 'error');
                 },
                 complete: function () {
-                    submitBtn.prop('disabled', false).html('Add Equipment');
+                    submitBtn.prop('disabled', false).html('Create Equipment');
                 }
             });
         });

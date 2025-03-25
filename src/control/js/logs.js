@@ -101,3 +101,6 @@ document.querySelectorAll('thead th').forEach((header, index) => {
         sortTableByColumn(tableElement, index, !currentIsAscending);
     });
 });
+window.addEventListener('load', () => {
+    document.body.classList.remove('preload');
+});
