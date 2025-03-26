@@ -371,10 +371,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     saveDepartmentRoleBtn.addEventListener('click', function() {
-        if (selectedDepartments.length === 0) {
-            Toast.error('Please select at least one department', 5000, 'Validation Error');
-            return;
-        }
+
         if (currentEditingData) {
             const index = userRoleDepartments.findIndex(a => a.userId === currentEditingData.userId && a.roleId === currentEditingData.roleId);
             if (index !== -1) {
