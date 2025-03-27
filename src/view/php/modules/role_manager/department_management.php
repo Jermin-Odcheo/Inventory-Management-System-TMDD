@@ -246,18 +246,36 @@ try {
 // LIVE SEARCH DEPARTMENTS
 // ------------------------
 $q = isset($_GET["q"]) ? $conn->real_escape_string($_GET["q"]) : '';
+
+//only first 3 letters of the query
+$q = substr($q, 0, 3);
+
 if (strlen($q) > 0) {
-    $sql = "SELECT name FROM departments WHERE name LIKE '%$q%' LIMIT 10";
+    $sql = "SELECT id, department_name, abbreviation FROM departments 
+            WHERE id LIKE '%$q%' 
+            OR department_name LIKE '%$q%' 
+            OR abbreviation LIKE '%$q%' 
+            LIMIT 10";
+
     $result = $conn->query($sql);
+
     if ($result->num_rows > 0) {
         while ($row = $result->fetch_assoc()) {
-            echo "<div class='result-item'>" . htmlspecialchars($row['name']) . "</div>";
+            echo "<div class='result-item'>"
+                . "<strong>ID:</strong> " . htmlspecialchars($row['id']) . " - "
+                . "<strong>Department Name:</strong> " . htmlspecialchars($row['department_name']) . " - "
+                . "<strong>Abbreviation:</strong> " . htmlspecialchars($row['abbreviation'])
+                . "</div>";
         }
     } else {
         echo "<div class='result-item'>No results found</div>";
     }
     exit;
+} else {
+    echo "<div class='result-item'>Enter at least 1 letter...</div>";
 }
+?>
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
