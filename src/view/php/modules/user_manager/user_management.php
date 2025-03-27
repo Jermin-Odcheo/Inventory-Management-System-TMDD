@@ -331,7 +331,7 @@ if ($canDelete) {
         </div>
         <div class="action-buttons">
             <button id="create-btn" type="button" class="btn btn-primary me-2" data-bs-toggle="modal"
-                    data-bs-target="#addUserModal">
+                    data-bs-target="#createUserModal">
                 Create New User
             </button>
         </div>
@@ -444,13 +444,17 @@ if ($canDelete) {
     </div>
 </div>
 
-<!-- Modal for adding a new user -->
-<div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
+<!-- Modal for Creating a new user -->
+<div class="modal fade" id="createUserModal" tabindex="-1" aria-labelledby="createUserModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-body">
-                <form id="addUserForm" method="POST" action="add_user.php">
+                <form id="createUserForm" method="POST" action="create_user.php">
                     <!-- Form fields for add user -->
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="createUserModalLabel">Create User</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
                     <div class="mb-3">
                         <label for="email" class="form-label">Email:</label>
                         <input type="email" name="email" id="email" class="form-control" required>

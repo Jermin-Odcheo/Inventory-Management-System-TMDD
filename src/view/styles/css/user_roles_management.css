@@ -315,7 +315,6 @@ tr td:first-child {
 .modal {
     display: none;
     position: fixed;
-    z-index: 1000;
     left: 0;
     top: 0;
     width: 100%;
@@ -324,14 +323,16 @@ tr td:first-child {
     overflow: auto;
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
+    z-index: 1050 !important;
 }
-
+ .modal-backdrop {
+     z-index: 1040 !important;
+ }
 .modal-content {
     background-color: var(--background-alt);
-    margin: 5% auto;
-    padding: var(--spacing-xl);
+    margin: 2% auto;
+    padding: var(--spacing-lg);
     width: 650px;
-    max-width: 90%;
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-xl);
     animation: modalFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -367,9 +368,6 @@ tr td:first-child {
     letter-spacing: 0.05em;
 }
 
-.modal-body {
-    margin-bottom: var(--spacing-lg);
-}
 
 .form-group {
     margin-bottom: var(--spacing-lg);

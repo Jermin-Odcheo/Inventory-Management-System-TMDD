@@ -16,8 +16,8 @@ $(document).ready(function () {
         }
     });
 
-    // Handle "Add User" form submission via AJAX
-    $('#addUserForm').on('submit', function (e) {
+    // Handle "Create User" form submission via AJAX
+    $('#createUserForm').on('submit', function (e) {
         e.preventDefault();
         var actionUrl = $(this).attr('action');
         $.ajax({
@@ -27,11 +27,11 @@ $(document).ready(function () {
             dataType: 'json',
             success: function (response) {
                 if (response.success) {
-                    $("#addUserModal").modal('hide');
+                    $("#createUserModal").modal('hide');  // Hides the modal container
                     $('#umTable tbody').load(getCacheBustedUrl('#umTable tbody > *'), function () {
                         showToast(response.message, 'success');
                     });
-                    $('#addUserForm')[0].reset();
+                    $('#createUserForm')[0].reset();  // Resets the form fields
                 } else {
                     showToast(response.message, 'error');
                 }
@@ -46,6 +46,7 @@ $(document).ready(function () {
             }
         });
     });
+
 
     var deleteAction = null;
     // Single-user delete
@@ -236,7 +237,11 @@ $(document).ready(function () {
         $('body').removeClass('modal-open');
         $('.modal-backdrop').remove();
     });
-
+    // Ensure modal backdrop is removed properly after the edit modal closes
+    $('#createUserModal').on('hidden.bs.modal', function () {
+        $('body').removeClass('modal-open');
+        $('.modal-backdrop').remove();
+    });
     // Handle "Edit User" form submission via AJAX
     $("#editUserForm").on("submit", function (e) {
         e.preventDefault();
@@ -298,14 +303,6 @@ $(document).ready(function () {
         $(this).closest('form').submit();
     });
 
-    // Global modal backdrop fix: On any modal hidden, if no modal is visible remove the backdrop and reset the body class.
-    $(document).on('hidden.bs.modal', '.modal', function () {
-        if ($('.modal.show').length) {
-            $('body').addClass('modal-open');
-        } else {
-            $('body').removeClass('modal-open');
-            $('.modal-backdrop').remove();
-        }
-    });
 
 });
+
