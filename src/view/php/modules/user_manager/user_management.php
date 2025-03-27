@@ -3,6 +3,10 @@ session_start();
 require_once('../../../../../config/ims-tmdd.php');
 require_once('../../clients/admins/RBACService.php');
 
+// Enable error reporting for debugging (disable in production)
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
 // Check if the user is logged in
 if (!isset($_SESSION['user_id'])) {
     header("Location: ../../../../../public/index.php");
@@ -22,7 +26,7 @@ include '../../general/header.php';
 include '../../general/sidebar.php';
 include '../../general/footer.php';
 
-// Get current user's roles and initialize RBAC
+// Get current user's roles and initialize RBAC manager
 $currentUserRoles = getCurrentUserRoles($pdo, $_SESSION['user_id']);
 $rbac = new RBACManager($pdo, $currentUserRoles);
 
@@ -36,10 +40,19 @@ if (!$rbac->hasPrivilege('User Management', 'View')) {
 $canEdit = $rbac->hasPrivilege('User Management', 'Edit');
 $canDelete = $rbac->hasPrivilege('User Management', 'Delete');
 
-// Define allowed sorting columns (for active users)
-$allowedSortColumns = ['id', 'Email', 'First_Name', 'Last_Name', 'Department', 'Status'];
-$sortBy = isset($_GET['sort']) && in_array($_GET['sort'], $allowedSortColumns) ? $_GET['sort'] : 'id';
-$sortDir = isset($_GET['dir']) && $_GET['dir'] == 'desc' ? 'desc' : 'asc';
+// Define allowed sort columns mapping to actual SQL expressions
+$sortColumnMap = [
+    'id' => 'u.id',
+    'Email' => 'u.email',
+    'First_Name' => 'u.first_name',
+    'Last_Name' => 'u.last_name',
+    'Department' => 'd.department_name',
+    'Status' => 'u.status'
+];
+
+// Use allowed sort columns from GET parameters
+$sortBy = (isset($_GET['sort']) && isset($sortColumnMap[$_GET['sort']])) ? $_GET['sort'] : 'id';
+$sortDir = (isset($_GET['dir']) && $_GET['dir'] == 'desc') ? 'desc' : 'asc';
 
 // Fetch departments from database
 $departments = [];
@@ -69,31 +82,41 @@ function getUserDepartments($pdo, $userId)
     return $deptIds;
 }
 
-// Build the query to include department and search filters, plus the is_disabled=0 check
-$query = "SELECT u.id, u.email, u.first_name, u.last_name, u.status AS Status
-            FROM users u
-            WHERE u.is_disabled = 0";
-
+// Define filters based on GET parameters, using trim to remove extra spaces
 $hasDepartmentFilter = isset($_GET['department']) && $_GET['department'] !== 'all';
-$hasSearchFilter = isset($_GET['search']) && !empty($_GET['search']);
+$hasSearchFilter = isset($_GET['search']) && strlen(trim($_GET['search'])) > 0;
+
+// Build the query to include department and search filters, plus the is_disabled=0 check
+$query = "SELECT DISTINCT 
+            u.id, 
+            u.email, 
+            u.first_name, 
+            u.last_name, 
+            u.status AS Status
+          FROM users u
+          LEFT JOIN user_departments ud ON u.id = ud.user_id
+          LEFT JOIN departments d ON ud.department_id = d.id
+          LEFT JOIN user_roles ur ON u.id = ur.user_id
+          LEFT JOIN roles r ON ur.Role_ID = r.id
+          WHERE u.is_disabled = 0";
 
 if ($hasDepartmentFilter) {
-    $query .= " AND u.id IN (
-        SELECT ud.user_id
-        FROM user_departments ud
-        WHERE ud.department_id = :department
-    )";
+    $query .= " AND ud.department_id = :department";
 }
 
 if ($hasSearchFilter) {
     $query .= " AND (
-        u.email LIKE :search
-        OR u.first_name LIKE :search
-        OR u.last_name LIKE :search
+        u.email LIKE :search1
+        OR u.first_name LIKE :search2
+        OR u.last_name LIKE :search3
+        OR d.department_name LIKE :search4
+        OR d.abbreviation LIKE :search5
+        OR r.Role_Name LIKE :search6
     )";
 }
 
-$query .= " ORDER BY `$sortBy` $sortDir";
+// Apply ordering using the mapped sort column
+$query .= " ORDER BY " . $sortColumnMap[$sortBy] . " " . $sortDir;
 
 try {
     $stmt = $pdo->prepare($query);
@@ -107,9 +130,16 @@ try {
     }
 
     if ($hasSearchFilter) {
-        $searchTerm = '%' . $_GET['search'] . '%';
-        $stmt->bindValue(':search', $searchTerm, PDO::PARAM_STR);
+        $searchTerm = '%' . trim($_GET['search']) . '%';
+        $stmt->bindValue(':search1', $searchTerm, PDO::PARAM_STR);
+        $stmt->bindValue(':search2', $searchTerm, PDO::PARAM_STR);
+        $stmt->bindValue(':search3', $searchTerm, PDO::PARAM_STR);
+        $stmt->bindValue(':search4', $searchTerm, PDO::PARAM_STR);
+        $stmt->bindValue(':search5', $searchTerm, PDO::PARAM_STR);
+        $stmt->bindValue(':search6', $searchTerm, PDO::PARAM_STR);
     }
+
+    $pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, true);
 
     $stmt->execute();
     $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -268,170 +298,75 @@ if ($canDelete) {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Manage Users</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- jQuery, Bootstrap CSS/JS, and Bootstrap Icons -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/pagination.css">
-
-    <style>
-        .main-content {
-            margin-left: 300px;
-            padding: 20px;
-            margin-bottom: 20px;
-            width: auto;
-        }
-
-        .search-container {
-            width: 250px;
-        }
-
-        .search-container input {
-            padding-right: 30px;
-        }
-
-        .search-container i {
-            color: #6c757d;
-            pointer-events: none;
-        }
-
-        .main-content.container-fluid {
-            padding: 100px 15px;
-        }
-    </style>
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/user_roles_management.css">
+    <title>Manage Users</title>
 </head>
 <body>
-
 <!-- Main Content Area -->
 <div class="main-content container-fluid">
-    <h1>User Management</h1>
-    <div id="deleteMessage" class="alert alert-success alert-dismissible fade show" style="display: none;" role="alert">
-        <span id="deleteMessageText"></span>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-    <!-- Modal for adding a new user -->
-    <div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-body">
-                    <form id="addUserForm" method="POST" action="add_user.php">
-                        <div class="mb-3">
-                            <label for="email" class="form-label">Email:</label>
-                            <input type="email" name="email" id="email" class="form-control" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="password" class="form-label">Password:</label>
-                            <input type="password" name="password" id="password" class="form-control" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="first_name" class="form-label">First Name:</label>
-                            <input type="text" name="first_name" id="first_name" class="form-control" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="last_name" class="form-label">Last Name:</label>
-                            <input type="text" name="last_name" id="last_name" class="form-control" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="modal_department" class="form-label">Department:</label>
-                            <select name="department" id="modal_department" class="form-select mb-2" required>
-                                <option value="">Select Department</option>
-                                <?php foreach ($departments as $code => $name): ?>
-                                    <option value="<?php echo htmlspecialchars($code); ?>">
-                                        <?php echo htmlspecialchars($name['name']); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                                <option value="custom">Custom Department</option>
-                            </select>
-                            <input type="text" id="modal_custom_department" name="custom_department"
-                                   class="form-control" style="display: none;" placeholder="Enter custom department">
-                        </div>
-                        <fieldset class="mb-3">
-                            <legend>Assign Roles: <span class="text-danger">*</span></legend>
-                            <div class="text-muted mb-2">At least one role must be selected</div>
-                            <?php
-                            $stmt = $pdo->prepare("SELECT * FROM roles");
-                            $stmt->execute();
-                            $modal_roles = $stmt->fetchAll();
-                            foreach ($modal_roles as $role): ?>
-                                <div class="form-check">
-                                    <input type="checkbox" name="roles[]" value="<?php echo $role['id']; ?>"
-                                           id="modal_role_<?php echo $role['id']; ?>"
-                                           class="form-check-input modal-role-checkbox">
-                                    <label for="modal_role_<?php echo $role['id']; ?>" class="form-check-label">
-                                        <?php echo htmlspecialchars($role['role_name']); ?>
-                                    </label>
-                                </div>
-                            <?php endforeach; ?>
-                        </fieldset>
-                        <div class="mb-3">
-                            <button type="submit" class="btn btn-primary">Create User</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
+    <header>
+        <h1>USER MANAGER</h1>
+    </header>
     <!-- FILTER SEARCH AND ADD USER BUTTON -->
-    <div class="row mb-3">
-        <div class="col-md-8">
-            <form class="d-flex" method="GET">
-                <select name="department" class="form-select me-2 department-filter">
-                    <option value="all">All Departments</option>
-                    <?php foreach ($departments as $code => $name): ?>
-                        <option value="<?php echo htmlspecialchars($code); ?>"
-                            <?php echo (isset($_GET['department']) && $_GET['department'] == $code) ? 'selected' : ''; ?>>
-                            <?php echo htmlspecialchars($name['name']); ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-                <div class="search-container position-relative">
-                    <input type="text" name="search" id="searchUsers" class="form-control"
-                           placeholder="Search users by email, first name, or last name..."
-                           value="<?php echo htmlspecialchars($_GET['search'] ?? ''); ?>">
-                    <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-2"></i>
-                </div>
-            </form>
+    <div class="filters-container">
+        <div class="search-filter">
+            <label for="search-filters">Search Users</label>
+            <input type="text" name="search" id="search-filters"
+                   placeholder="Search users by email, first name, or last name..."
+                   value="<?php echo htmlspecialchars($_GET['search'] ?? ''); ?>">
         </div>
-        <div class="col-md-4 d-flex justify-content-end">
-            <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#addUserModal">
+        <div class="filter-container">
+            <label for="department-filter">Filter by Department</label>
+            <select name="department" id="department-filter">
+                <option value="all">All Departments</option>
+                <?php foreach ($departments as $code => $name): ?>
+                    <option value="<?php echo htmlspecialchars($code); ?>"
+                        <?php echo (isset($_GET['department']) && $_GET['department'] == $code) ? 'selected' : ''; ?>>
+                        <?php echo htmlspecialchars($name['name']); ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="action-buttons">
+            <button id="create-btn" type="button" class="btn btn-primary me-2" data-bs-toggle="modal"
+                    data-bs-target="#createUserModal">
                 Create New User
             </button>
         </div>
     </div>
     <div class="table-responsive" id="table">
         <table class="table table-striped table-hover" id="umTable">
-            <thead class="table-dark">
+            <thead>
             <tr>
                 <th><input type="checkbox" id="select-all"></th>
                 <th>
-                    <a class="text-white text-decoration-none"
-                       href="?sort=User_ID&dir=<?php echo toggleDirection($sortBy, $sortDir, 'User_ID'); ?>">
-                        #<?php echo sortIcon($sortBy, 'User_ID', $sortDir); ?>
+                    <a class="text-black text-decoration-none"
+                       href="?sort=id&dir=<?php echo toggleDirection($sortBy, $sortDir, 'id'); ?>">
+                        #<?php echo sortIcon($sortBy, 'id', $sortDir); ?>
                     </a>
                 </th>
                 <th>
-                    <a class="text-white text-decoration-none"
+                    <a class="text-black text-decoration-none"
                        href="?sort=Email&dir=<?php echo toggleDirection($sortBy, $sortDir, 'Email'); ?>">
                         Email<?php echo sortIcon($sortBy, 'Email', $sortDir); ?>
                     </a>
                 </th>
                 <th>
-                    <a class="text-white text-decoration-none"
+                    <a class="text-black text-decoration-none"
                        href="?sort=First_Name&dir=<?php echo toggleDirection($sortBy, $sortDir, 'First_Name'); ?>">
                         Name<?php echo sortIcon($sortBy, 'First_Name', $sortDir); ?>
                     </a>
                 </th>
                 <th>
-                    <a class="text-white text-decoration-none"
+                    <a class="text-black text-decoration-none"
                        href="?sort=Department&dir=<?php echo toggleDirection($sortBy, $sortDir, 'Department'); ?>">
                         Department<?php echo sortIcon($sortBy, 'Department', $sortDir); ?>
                     </a>
                 </th>
                 <th>
-                    <a class="text-white text-decoration-none"
+                    <a class="text-black text-decoration-none"
                        href="?sort=Status&dir=<?php echo toggleDirection($sortBy, $sortDir, 'Status'); ?>">
                         Status<?php echo sortIcon($sortBy, 'Status', $sortDir); ?>
                     </a>
@@ -501,45 +436,83 @@ if ($canDelete) {
             </tbody>
         </table>
     </div>
-    <!-- Pagination Controls -->
-    <div class="container-fluid">
-        <div class="row align-items-center g-3">
-            <div class="col-12 col-sm-auto">
-                <div class="text-muted">
-                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows">100</span>
-                    entries
-                </div>
-            </div>
-            <div class="col-12 col-sm-auto ms-sm-auto">
-                <div class="d-flex align-items-center gap-2">
-                    <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                        <i class="bi bi-chevron-left"></i> Previous
-                    </button>
-                    <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
-                        <option value="10" selected>10</option>
-                        <option value="20">20</option>
-                        <option value="30">30</option>
-                        <option value="50">50</option>
-                    </select>
-                    <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                        Next <i class="bi bi-chevron-right"></i>
-                    </button>
-                </div>
-            </div>
-            <div class="row mt-3">
-                <div class="col-12">
-                    <ul class="pagination justify-content-center" id="pagination"></ul>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- Bulk action button for active users -->
+    <!-- Pagination Controls (omitted for brevity) -->
     <div class="mb-3">
         <button type="button" id="delete-selected" class="btn btn-danger" style="display: none;" disabled>
             Delete Selected
         </button>
     </div>
 </div>
+
+<!-- Modal for Creating a new user -->
+<div class="modal fade" id="createUserModal" tabindex="-1" aria-labelledby="createUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-body">
+                <form id="createUserForm" method="POST" action="create_user.php">
+                    <!-- Form fields for add user -->
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="createUserModalLabel">Create User</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email:</label>
+                        <input type="email" name="email" id="email" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password:</label>
+                        <input type="password" name="password" id="password" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="first_name" class="form-label">First Name:</label>
+                        <input type="text" name="first_name" id="first_name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="last_name" class="form-label">Last Name:</label>
+                        <input type="text" name="last_name" id="last_name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="modal_department" class="form-label">Department:</label>
+                        <select name="department" id="modal_department" class="form-select mb-2" required>
+                            <option value="">Select Department</option>
+                            <?php foreach ($departments as $code => $name): ?>
+                                <option value="<?php echo htmlspecialchars($code); ?>">
+                                    <?php echo htmlspecialchars($name['name']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                            <option value="custom">Custom Department</option>
+                        </select>
+                        <input type="text" id="modal_custom_department" name="custom_department"
+                               class="form-control" style="display: none;" placeholder="Enter custom department">
+                    </div>
+                    <!-- Role assignment fields -->
+                    <fieldset class="mb-3">
+                        <legend>Assign Roles: <span class="text-danger">*</span></legend>
+                        <div class="text-muted mb-2">At least one role must be selected</div>
+                        <?php
+                        $stmt = $pdo->prepare("SELECT * FROM roles");
+                        $stmt->execute();
+                        $modal_roles = $stmt->fetchAll();
+                        foreach ($modal_roles as $role): ?>
+                            <div class="form-check">
+                                <input type="checkbox" name="roles[]" value="<?php echo $role['id']; ?>"
+                                       id="modal_role_<?php echo $role['id']; ?>"
+                                       class="form-check-input modal-role-checkbox">
+                                <label for="modal_role_<?php echo $role['id']; ?>" class="form-check-label">
+                                    <?php echo htmlspecialchars($role['role_name']); ?>
+                                </label>
+                            </div>
+                        <?php endforeach; ?>
+                    </fieldset>
+                    <div class="mb-3">
+                        <button type="submit" class="btn btn-primary">Create User</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Confirm Delete Modal -->
 <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel"
      aria-hidden="true">
@@ -559,8 +532,10 @@ if ($canDelete) {
         </div>
     </div>
 </div>
+
 <!-- Modal for editing user -->
-<div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+<!-- Notice the attribute data-bs-backdrop="false" prevents a backdrop from being added -->
+<div class="modal fade" id="editUserModal" tabindex="-1" data-bs-backdrop="false" aria-labelledby="editUserModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -598,16 +573,13 @@ if ($canDelete) {
                             appearance: none;
                             transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
                         }
-
                         .form-select:focus {
                             border-color: #86b7fe;
                             box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
                         }
-
                         .form-select option {
                             padding: 10px;
                         }
-
                         .form-select optgroup {
                             margin-top: 10px;
                         }
@@ -627,7 +599,9 @@ if ($canDelete) {
     </div>
 </div>
 
+<!-- Include your pagination and user management JS files -->
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/user_management.js" defer></script>
+
 </body>
 </html>

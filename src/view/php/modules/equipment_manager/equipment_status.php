@@ -206,9 +206,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     // Begin transaction
                     $pdo->beginTransaction();
 
-                    // Set current user for audit logging
-                    $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
-
                     // Prepare audit log data
                     $oldValue = json_encode([
                         'equipment_status_id' => $statusData['equipment_status_id'],
@@ -234,7 +231,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $auditStmt->execute([
                         $_SESSION['user_id'],
                         $statusData['equipment_status_id'],
-                        'Equipment Management',
+                        'Equipment Status',
                         'Delete',
                         'Equipment status has been deleted',
                         $oldValue,
@@ -399,22 +396,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 <!-- Main Content -->
 <div class="container-fluid">
     <h2 class="mb-4">Equipment Status Management</h2>
-    <!-- Success Message -->
-    <?php if (!empty($success)): ?>
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="bi bi-check-circle"></i> <?php echo $success; ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    <?php endif; ?>
-    <!-- Error Messages -->
-    <?php if (!empty($errors)): ?>
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <?php foreach ($errors as $err): ?>
-                <p><i class="bi bi-exclamation-triangle"></i> <?php echo $err; ?></p>
-            <?php endforeach; ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    <?php endif; ?>
+
 
     <div class="card shadow">
         <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">

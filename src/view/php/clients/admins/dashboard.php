@@ -1,13 +1,15 @@
 <?php
 session_start();
 require '../../../../../config/ims-tmdd.php';
- include '../../general/header.php';
-
 // If not logged in, redirect to the LOGIN PAGE
 if (!isset($_SESSION['user_id'])) {
     header("Location: " . BASE_URL . "public/index.php");
     exit();
 }
+
+include '../../general/header.php';
+include '../../general/sidebar.php';
+include '../../general/footer.php';
 
 $role = $_SESSION['role'];
 $email = $_SESSION['email']; // Assuming you stored email in session
@@ -18,7 +20,7 @@ switch (strtolower(trim($role))) { // Normalize role to avoid case issues
     case 'super admin':
         $dashboardTitle = "Super Admin Dashboard";
         break;
-    case 'TMDD-Dev':
+    case 'tmdd-dev':
         $dashboardTitle = "TMDD-Dev";
         break;
     case 'super user':
@@ -29,7 +31,10 @@ switch (strtolower(trim($role))) { // Normalize role to avoid case issues
         break;
     default:
         $dashboardTitle = "User Dashboard"; // Fallback
-}function getUserDetails($pdo, $userId) {
+
+}
+function getUserDetails($pdo, $userId)
+{
     // Get Roles
     $roleQuery = $pdo->prepare("
         SELECT DISTINCT r.role_name
@@ -91,7 +96,7 @@ try {
         $stmt = $pdo->prepare("SELECT * FROM departments WHERE id IN ($placeholders)");
         $stmt->execute($departmentIds);
         $departments = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
+
     } else {
         $departments = []; // No departments found
     }
@@ -107,26 +112,37 @@ try {
     <meta charset="UTF-8">
     <title><?php echo $dashboardTitle; ?></title>
     <link rel="stylesheet" href="../../../styles/css/dashboard.css">
-<style>
-         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid black; padding: 10px; text-align: left; }
-</style>
-<body>
-    <!-- Include Sidebar -->
-    <?php include '../../general/sidebar.php'; ?>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
 
-    <div class="main-content">
-        <div class="dashboard-container">
-            <h2>Welcome to the <?php echo $dashboardTitle; ?></h2>
-            <p>Hello, <?php echo htmlspecialchars($email); ?>!</p>
-            
-            <!-- Role-Based Dashboard Content -->
-            <?php if (strtolower(trim($role)) === 'super admin'): ?>
-                <section>
-                    <h3>Super Admin Panel</h3>
-                    <p>Audit Trail, Roles &amp; Permissions, User Accounts, Equipment Modules, etc.</p>
-                </section>
-            <?php elseif (strtolower(trim($role)) === 'tmdd-dev'): ?>
+        th, td {
+            border: 1px solid black;
+            padding: 10px;
+            text-align: left;
+        }
+    </style>
+<body>
+
+
+<div class="main-content">
+    <header>
+        <h1>Welcome to the <?php echo $dashboardTitle; ?></h1>
+        <p>Hello, <?php echo htmlspecialchars($email); ?>!</p>
+    </header>
+
+    <div class="dashboard-container">
+
+        <!-- Role-Based Dashboard Content -->
+        <?php if (strtolower(trim($role)) === 'super admin'): ?>
+            <section>
+                <h3>Super Admin Panel</h3>
+                <p>Audit Trail, Roles &amp; Permissions, User Accounts, Equipment Modules, etc.</p>
+            </section>
+        <?php elseif (strtolower(trim($role)) === 'tmdd-dev'): ?>
             <section class="tmdd-dev-panel">
                 <h3>TMDD-Dev Panel</h3>
 
@@ -164,63 +180,63 @@ try {
                 </div>
             </section>
 
-            <?php elseif (strtolower(trim($role)) === 'super user'): ?>
-                <section>
-                    <h3>Super User Panel</h3>
-                    <p>Roles &amp; Permissions (Group), User Accounts (Group), etc.</p>
-                </section>
-            <?php elseif (strtolower(trim($role)) === 'regular user'): ?>
-                <section>
-                    <h3>Regular User Panel</h3>
-                    <p>User Accounts (Own), Equipment Modules (Dept), etc.</p>
-                </section>
-            <?php else: ?>
-                <section>
-                    <h3>Standard User Panel</h3>
-                    <p>You have limited access to the system.</p>
-                </section>
-            <?php endif; ?>
+        <?php elseif (strtolower(trim($role)) === 'super user'): ?>
+            <section>
+                <h3>Super User Panel</h3>
+                <p>Roles &amp; Permissions (Group), User Accounts (Group), etc.</p>
+            </section>
+        <?php elseif (strtolower(trim($role)) === 'regular user'): ?>
+            <section>
+                <h3>Regular User Panel</h3>
+                <p>User Accounts (Own), Equipment Modules (Dept), etc.</p>
+            </section>
+        <?php else: ?>
+            <section>
+                <h3>Standard User Panel</h3>
+                <p>You have limited access to the system.</p>
+            </section>
+        <?php endif; ?>
 
-            <!-- Dropdown List, show depts the user is part of (user_departments table) -->
-            <form method="POST">
-                <div class="mb-3">
-                    <select class="form-control" name="DepartmentID" id="departmentSelect" onchange="this.form.submit()">
-                        <option value="" disabled selected>Select a department</option>
-                        <?php foreach ($departments as $dept): ?>
-                            <option value="<?= $dept['id'] ?>" <?= ($selectedDeptId == $dept['id']) ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($dept['abbreviation'] . ' - ' . $dept['department_name']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-            </form>
-
-
-            <?php if ($selectedDeptId): ?>
-                <h2>Details for Selected Department</h2>
-                <table>
-                    <tr>
-                        <th>Department ID</th>
-                        <th>Department Acronym</th>
-                        <th>Department Name</th>
-                    </tr>
+        <!-- Dropdown List, show depts the user is part of (user_departments table) -->
+        <form method="POST">
+            <div class="mb-3">
+                <select class="form-control" name="DepartmentID" id="departmentSelect" onchange="this.form.submit()">
+                    <option value="" disabled selected>Select a department</option>
                     <?php foreach ($departments as $dept): ?>
-                        <?php if ($dept['id'] == $selectedDeptId): ?>
-                            <tr>
-                                <td><?= htmlspecialchars($dept['id']) ?></td>
-                                <td><?= htmlspecialchars($dept['abbreviation']) ?></td>
-                                <td><?= htmlspecialchars($dept['department_name']) ?></td>
-                            </tr>
-                        <?php endif; ?>
+                        <option value="<?= $dept['id'] ?>" <?= ($selectedDeptId == $dept['id']) ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($dept['abbreviation'] . ' - ' . $dept['department_name']) ?>
+                        </option>
                     <?php endforeach; ?>
-                </table>
-            <?php endif; ?>
+                </select>
+            </div>
+        </form>
 
 
-            <hr>
+        <?php if ($selectedDeptId): ?>
+            <h2>Details for Selected Department</h2>
+            <table>
+                <tr>
+                    <th>Department ID</th>
+                    <th>Department Acronym</th>
+                    <th>Department Name</th>
+                </tr>
+                <?php foreach ($departments as $dept): ?>
+                    <?php if ($dept['id'] == $selectedDeptId): ?>
+                        <tr>
+                            <td><?= htmlspecialchars($dept['id']) ?></td>
+                            <td><?= htmlspecialchars($dept['abbreviation']) ?></td>
+                            <td><?= htmlspecialchars($dept['department_name']) ?></td>
+                        </tr>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+            </table>
+        <?php endif; ?>
 
-        </div>
+
+        <hr>
+
     </div>
+</div>
 </body>
 
 </html>

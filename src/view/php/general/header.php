@@ -13,6 +13,11 @@ $email = $_SESSION['email'];
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inventory Management System</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&family=Roboto+Mono:wght@300;500&display=swap"
@@ -23,6 +28,10 @@ $email = $_SESSION['email'];
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/toast.css">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/header_footer.css">
@@ -52,10 +61,6 @@ $email = $_SESSION['email'];
             z-index: 900; /* Lower than sidebar's z-index */
         }
 
-        .main-content {
-            margin-left: 300px; /* Match sidebar width */
-            padding-top: 70px; /* Match header height + some padding */
-        }
 
         .logo-container {
             display: flex;
@@ -298,11 +303,11 @@ $email = $_SESSION['email'];
         .subdropdown-menu li a:hover {
             background: rgba(255, 255, 255, 0.1);
         }
-        
+
         .dropdownMenu{
             background: #2d3d59;
         }
-        
+
         /* Rotate arrow for dropdown */
         .settings-item .submenu-arrow {
             transform: rotate(90deg);
@@ -416,7 +421,7 @@ $email = $_SESSION['email'];
                 width: 100%;
                 justify-content: center;
             }
-            
+
             .main-content {
                 margin-left: 220px; /* Match responsive sidebar width */
             }
@@ -524,6 +529,9 @@ $email = $_SESSION['email'];
             }
         }
     }
+    window.onload = function() {
+        window.scrollTo(0, 0); // Resets the main window scroll to the top.
+    };
 </script>
 
 </body>

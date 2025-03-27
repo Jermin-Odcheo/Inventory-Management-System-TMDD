@@ -14,7 +14,7 @@ if (!isset($_SESSION['user_id'])) {
 $query = "SELECT audit_log.*, users.email AS email 
           FROM audit_log 
           LEFT JOIN users ON audit_log.UserID = users.id
-          WHERE audit_log.Module = 'Equipment Management'
+          WHERE audit_log.Module IN ('Equipment Management', 'Equipment Details', 'Equipment Location')
           ORDER BY audit_log.Date_Time DESC";
 
 
@@ -418,7 +418,8 @@ function getChangedFieldNames(array $oldData, array $newData)
                             <!-- Pagination Controls -->
                             <div class="col-12 col-sm-auto ms-sm-auto">
                                 <div class="d-flex align-items-center gap-2">
-                                    <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                    <button id="prevPage"
+                                            class="btn btn-outline-primary d-flex align-items-center gap-1">
                                         <i class="bi bi-chevron-left"></i>
                                         Previous
                                     </button>
@@ -430,7 +431,8 @@ function getChangedFieldNames(array $oldData, array $newData)
                                         <option value="50">50</option>
                                     </select>
 
-                                    <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                    <button id="nextPage"
+                                            class="btn btn-outline-primary d-flex align-items-center gap-1">
                                         Next
                                         <i class="bi bi-chevron-right"></i>
                                     </button>

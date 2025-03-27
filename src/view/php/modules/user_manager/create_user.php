@@ -1,5 +1,5 @@
 <?php
-// add_user.php
+// create_user.php
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
 
@@ -41,22 +41,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         // Handle department selection
         $selectedDeptId = null;
-        if ($departmentID === 'custom' && !empty($customDept)) {
-            // Check if custom department exists
-            $stmt = $pdo->prepare("SELECT id FROM departments WHERE department_name = ?");
-            $stmt->execute([$customDept]);
-            $existingDept = $stmt->fetch();
 
-            if ($existingDept) {
-                $selectedDeptId = $existingDept['id'];
-            } else {
-                // Insert new department
-                $stmt = $pdo->prepare("INSERT INTO departments (department_name) VALUES (?)");
+        if (!empty($departmentID)) {  // Only process department if provided
+            if ($departmentID === 'custom' && !empty($customDept)) {
+                // Check if custom department exists
+                $stmt = $pdo->prepare("SELECT id FROM departments WHERE department_name = ?");
                 $stmt->execute([$customDept]);
-                $selectedDeptId = $pdo->lastInsertId();
+                $existingDept = $stmt->fetch();
+
+                if ($existingDept) {
+                    $selectedDeptId = $existingDept['id'];
+                } else {
+                    // Insert new department
+                    $stmt = $pdo->prepare("INSERT INTO departments (department_name) VALUES (?)");
+                    $stmt->execute([$customDept]);
+                    $selectedDeptId = $pdo->lastInsertId();
+                }
+            } else {
+                $selectedDeptId = $departmentID;
             }
-        } else {
-            $selectedDeptId = $departmentID;
         }
 
         if (!empty($errors)) {

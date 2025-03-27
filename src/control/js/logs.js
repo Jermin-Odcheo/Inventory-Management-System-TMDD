@@ -21,29 +21,28 @@ function filterTable() {
             row.style.opacity = '0';
             setTimeout(() => {
                 row.style.display = 'none';
-            }, 300); // Match the CSS transition duration.
+            }, 50); // Reduced from 300ms for minimal transition.
         }
     });
 
-    setTimeout(updatePagination, 300); // Wait for fade-out before paginating
+    setTimeout(updatePagination, 50); // Minimal delay before paginating.
 }
 
 document.getElementById('searchInput').addEventListener('keyup', filterTable);
 document.getElementById('filterAction').addEventListener('change', filterTable);
 document.getElementById('filterStatus').addEventListener('change', filterTable);
 
-// Sorting functionality with smooth fade-out and fade-in transitions.
+// Sorting functionality with minimal fade-out and fade-in transitions.
 function sortTableByColumn(table, column, asc = true) {
     const tbody = table.querySelector('tbody');
     const rows = Array.from(tbody.querySelectorAll('tr'));
 
-    // Fade out rows.
+    // Fade out rows quickly.
     rows.forEach(row => {
         row.style.opacity = '0';
     });
 
-
-    // Wait for the fade-out transition.
+    // Wait for the minimal fade-out transition.
     setTimeout(() => {
         const dirModifier = asc ? 1 : -1;
         const sortedRows = rows.sort((a, b) => {
@@ -73,31 +72,41 @@ function sortTableByColumn(table, column, asc = true) {
             tbody.removeChild(tbody.firstChild);
         }
         sortedRows.forEach(row => {
-            row.style.opacity = '0';  // Ensure they start faded out.
+            row.style.opacity = '0';  // Start faded out.
             tbody.appendChild(row);
         });
 
-        // Fade in sorted rows.
+        // Fade in sorted rows quickly.
         setTimeout(() => {
             sortedRows.forEach(row => {
                 row.style.opacity = '1';
             });
-        }, 50);
+        }, 10); // Minimal fade-in delay.
 
         // Update header classes for sort indicators.
         table.querySelectorAll('th').forEach(th => th.classList.remove('th-sort-asc', 'th-sort-desc'));
-        table.querySelector(`thead th:nth-child(${column + 1})`).classList.toggle('th-sort-asc', asc);
-        table.querySelector(`thead th:nth-child(${column + 1})`).classList.toggle('th-sort-desc', !asc);
-    }, 300); // 300ms matches the CSS transition duration.
+        const targetHeader = table.querySelector(`thead th:nth-child(${column + 1})`);
+        targetHeader.classList.toggle('th-sort-asc', asc);
+        targetHeader.classList.toggle('th-sort-desc', !asc);
+    }, 50); // Minimal fade-out delay.
 
     updatePagination();
 }
 
 // Attach click event listeners to each table header.
+// For the Track ID column (index 0) default sort will be descending.
 document.querySelectorAll('thead th').forEach((header, index) => {
     header.addEventListener('click', () => {
         const tableElement = header.closest('table');
-        const currentIsAscending = header.classList.contains('th-sort-asc');
-        sortTableByColumn(tableElement, index, !currentIsAscending);
+        let asc;
+        if (index === 0) {
+            // For Track ID column, default to descending (highest to lowest).
+            // If already sorted descending, then switch to ascending.
+            asc = header.classList.contains('th-sort-desc') ? true : false;
+        } else {
+            // For other columns, toggle normal.
+            asc = header.classList.contains('th-sort-asc') ? false : true;
+        }
+        sortTableByColumn(tableElement, index, asc);
     });
 });

@@ -22,6 +22,9 @@ try {
     // Insert new department assignments.
     $stmtInsert = $pdo->prepare("INSERT INTO user_departments (user_id, department_id) VALUES (?, ?)");
     foreach ($departmentIds as $deptId) {
+        // Convert an empty string to NULL.
+        // Use this convention to represent full access (i.e., department_id = NULL)
+        $deptId = ($deptId === "" ? null : $deptId);
         $stmtInsert->execute([$userId, $deptId]);
     }
     echo json_encode(['success' => true]);

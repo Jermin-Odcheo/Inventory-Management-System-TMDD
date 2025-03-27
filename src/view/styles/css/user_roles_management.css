@@ -89,6 +89,17 @@ body {
 }
 
 /* Header Section */
+ .main-content > header {
+     margin-bottom: 1rem; /* Adjust this value to match the spacing you prefer */
+     padding-top: 0;
+     padding-bottom: 0;
+ }
+
+ .main-content > header h1 {
+     margin: 0; /* Removes default browser margins on h1 */
+ }
+
+
 header {
     display: flex;
     justify-content: space-between;
@@ -147,13 +158,13 @@ header h1 {
     gap: var(--spacing-md);
 }
 
-.search-role, .filter-container {
+.search-filter, .filter-container {
     display: flex;
     flex-direction: column;
     min-width: 220px;
 }
 
-.search-role label, .filter-container label {
+.search-filter label, .filter-container label, .search-container {
     font-size: 0.75rem;
     text-transform: uppercase;
     color: var(--text-tertiary);
@@ -162,7 +173,7 @@ header h1 {
     letter-spacing: 0.05em;
 }
 
-.search-role input, .filter-container select {
+.search-filter input, .filter-container select {
     padding: 0.625rem 0.75rem;
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
@@ -171,7 +182,7 @@ header h1 {
     transition: var(--transition);
 }
 
-.search-role input:focus, .filter-container select:focus {
+.search-filter input:focus, .filter-container select:focus {
     outline: none;
     border-color: var(--border-focus);
     box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
@@ -190,7 +201,7 @@ header h1 {
     align-items: flex-end;
 }
 
-#add-user-role-btn {
+#create-btn {
     background-color: var(--primary);
     color: white;
     border: none;
@@ -207,19 +218,19 @@ header h1 {
     box-shadow: var(--shadow-sm);
 }
 
-#add-user-role-btn::before {
+#create-btn::before {
     content: "+";
     font-size: 1rem;
     font-weight: 600;
 }
 
-#add-user-role-btn:hover {
+#create-btn:hover {
     background-color: var(--primary-hover);
     transform: translateY(-1px);
     box-shadow: var(--shadow-md);
 }
 
-#add-user-role-btn:active {
+#create-btn:active {
     transform: translateY(0);
 }
 
@@ -304,7 +315,6 @@ tr td:first-child {
 .modal {
     display: none;
     position: fixed;
-    z-index: 1000;
     left: 0;
     top: 0;
     width: 100%;
@@ -313,14 +323,16 @@ tr td:first-child {
     overflow: auto;
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
+    z-index: 1050 !important;
 }
-
+ .modal-backdrop {
+     z-index: 1040 !important;
+ }
 .modal-content {
     background-color: var(--background-alt);
-    margin: 5% auto;
-    padding: var(--spacing-xl);
+    margin: 2% auto;
+    padding: var(--spacing-lg);
     width: 650px;
-    max-width: 90%;
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-xl);
     animation: modalFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -356,9 +368,6 @@ tr td:first-child {
     letter-spacing: 0.05em;
 }
 
-.modal-body {
-    margin-bottom: var(--spacing-lg);
-}
 
 .form-group {
     margin-bottom: var(--spacing-lg);
