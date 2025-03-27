@@ -427,24 +427,7 @@ $email = $_SESSION['email'];
 <body>
 
 <header class="header">
-    <!-- Left side dropdown -->
-    <div class="header-dropdown">
-        <div class="dropdown-trigger" onclick="toggleMainDropdown()">
-            <i class="fas fa-bars"></i>
-            <span>Menu</span>
-            <i class="fas fa-chevron-down dropdown-arrow"></i>
-        </div>
-        <div class="main-dropdown-menu" id="mainDropdownMenu">
-            <a href="#"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
-            <a href="#"><i class="fas fa-box"></i> Inventory</a>
-            <a href="#"><i class="fas fa-chart-line"></i> Analytics</a>
-            <a href="#"><i class="fas fa-users"></i> Users</a>
-            <a href="#"><i class="fas fa-truck"></i> Suppliers</a>
-            <a href="#"><i class="fas fa-cog"></i> System Settings</a>
-        </div>
-    </div>
-    
-    <div class="logo-container">
+      <div class="logo-container">
         <div class="logo-icon">
             <svg viewBox="0 0 24 24">
                 <path d="M20 6h-4V4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zM10 4h4v2h-4V4zm10 16H4V8h16v12z"/>
