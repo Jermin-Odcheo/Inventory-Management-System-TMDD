@@ -17,6 +17,7 @@ SELECT
 FROM modules m
 ORDER BY m.id
 ";
+
 $stmt = $pdo->prepare($sql);
 $stmt->execute();
 $modules = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -32,7 +33,7 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <title>Module Privilege Management</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- jQuery -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min   "></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Bootstrap CSS -->
@@ -44,16 +45,22 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
             display: flex;
             min-height: 100vh;
         }
+
+        /* Sidebar with fixed width */
         .sidebar {
             width: 300px;
             background-color: #2c3e50;
             color: #fff;
         }
+
+        /* Main content takes remaining space */
         .main-content {
             flex: 1;
             padding: 20px;
             margin-left: 300px;
         }
+
+        /* (Optional) Override container-fluid padding if needed */
         .main-content.container-fluid {
             padding: 100px 15px;
         }
@@ -65,15 +72,18 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <div class="sidebar">
         <?php include '../../general/sidebar.php'; ?>
     </div>
+
     <!-- Main Content Area -->
     <div class="main-content container-fluid">
         <h1>Module Privilege Management</h1>
+
         <!-- Add Module Button -->
         <div class="d-flex justify-content-end mb-3">
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModuleModal">
                 Create Module
             </button>
         </div>
+
         <div class="table-responsive" id="table">
             <table id="privilegeTable" class="table table-striped table-hover">
                 <thead class="table-dark">
@@ -116,12 +126,14 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <div class="row align-items-center g-3">
                     <div class="col-12 col-sm-auto">
                         <div class="text-muted">
-                            Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows">100</span> entries
+                            Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
+                                    id="totalRows">100</span> entries
                         </div>
                     </div>
                     <div class="col-12 col-sm-auto ms-sm-auto">
                         <div class="d-flex align-items-center gap-2">
-                            <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                            <button id="prevPage"
+                                    class="btn btn-outline-primary d-flex align-items-center gap-1">
                                 <i class="bi bi-chevron-left"></i> Previous
                             </button>
                             <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
@@ -130,21 +142,25 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <option value="30">30</option>
                                 <option value="50">50</option>
                             </select>
-                            <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                            <button id="nextPage"
+                                    class="btn btn-outline-primary d-flex align-items-center gap-1">
                                 Next <i class="bi bi-chevron-right"></i>
                             </button>
                         </div>
                     </div>
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <ul class="pagination justify-content-center" id="pagination"></ul>
-                        </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <ul class="pagination justify-content-center" id="pagination"></ul>
                     </div>
                 </div>
             </div>
         </div><!-- .table-responsive -->
+
     </div><!-- .main-content -->
 </div><!-- .wrapper -->
+
+<script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 
 <!-- Confirm Delete Modal -->
 <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel"
@@ -211,7 +227,6 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
 </div>
 
 <!-- Edit Module Privileges Modal -->
-<!-- When editing, you may want to keep the backdrop; if you wish to disable it, add data-bs-backdrop="false" -->
 <div class="modal fade" id="editModuleModal" tabindex="-1" aria-labelledby="editModuleModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -222,8 +237,91 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </div>
 </div>
 
-<!-- Include your pagination JS file -->
-<script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
+<script>
+    $(document).ready(function () {
+        // Delegate event binding for edit button to handle dynamically loaded elements.
+        $(document).on('click', '.edit-module-btn', function () {
+            var moduleID = $(this).data('module-id');
+            $('#editModuleContent').html("Loading...");
+            $.ajax({
+                url: 'edit_module_privileges.php',
+                type: 'GET',
+                data: {module_id: moduleID},
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                success: function (response) {
+                    $('#editModuleContent').html(response);
+                },
+                error: function (xhr, status, error) {
+                    $('#editModuleContent').html('<p class="text-danger">Error loading module privileges. Please try again.</p>');
+                }
+            });
+        });
+
+        // Use delegation for delete button as well.
+        var moduleToDelete = null;
+        $(document).on('click', '.delete-module-btn', function () {
+            var moduleID = $(this).data('module-id');
+            var moduleName = $(this).closest('tr').find('td:eq(1)').text();
+            moduleToDelete = moduleID;
+            $('#roleNamePlaceholder').text(moduleName);
+            $('#confirmDeleteModal').modal('show');
+        });
+
+        // Confirm delete button click.
+        $('#confirmDeleteButton').on('click', function () {
+            if (moduleToDelete === null) {
+                return;
+            }
+            $.ajax({
+                url: 'delete_module.php',
+                type: 'POST',
+                data: {module_id: moduleToDelete},
+                dataType: 'json',
+                success: function (response) {
+                    if (response.success) {
+                        // Reload the table after deletion
+                        $('#privilegeTable').load(location.href + ' #privilegeTable', function () {
+                            showToast(response.message, 'success');
+                        });
+                        $('#confirmDeleteModal').modal('hide');
+                    } else {
+                        showToast(response.message, 'error');
+                    }
+                },
+                error: function () {
+                    showToast('Error deleting module.', 'error');
+                }
+            });
+        });
+
+        // Handle Add Module form submission.
+        $('#addModuleForm').on('submit', function (e) {
+            e.preventDefault();
+            $.ajax({
+                url: 'add_module.php',
+                type: 'POST',
+                data: $(this).serialize(),
+                dataType: 'json',
+                success: function (response) {
+                    if (response.success) {
+                        $('#privilegeTable').load(location.href + ' #privilegeTable', function () {
+                            showToast(response.message, 'success');
+                        });
+                        $('#addModuleModal').modal('hide');
+                        // Remove any leftover modal backdrop
+                        $('.modal-backdrop').remove();
+                    } else {
+                        showToast(response.message, 'error');
+                    }
+                },
+                error: function () {
+                    showToast('Error adding module.', 'error');
+                }
+            });
+        });
+
+    });
+</script>
 
 <?php include '../../general/footer.php'; ?>
 </body>

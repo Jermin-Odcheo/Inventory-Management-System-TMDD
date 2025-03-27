@@ -67,14 +67,18 @@ $currentPrivileges = array_map('intval', $currentPrivileges);
                     $('#privilegeTable').load(location.href + ' #privilegeTable', function() {
                         showToast(response.message, 'success');
                     });
+
                     $('#editModuleModal').modal('hide');
+                    // Remove any leftover modal backdrop
+                    $('.modal-backdrop').remove();
                 } else {
                     showToast(response.message, 'error');
                 }
             },
             error: function(){
-                showToast('Error deleting module.', 'error');
+                showToast('Error updating privileges.', 'error');
             }
         });
     });
+
 </script>

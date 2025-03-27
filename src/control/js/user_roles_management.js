@@ -348,6 +348,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         });
+
+        // Pre-check for empty newAssignments
+        if (newAssignments.length === 0) {
+            Toast.error('User already has that role.', 5000, 'Error');
+            return;
+        }
+
         fetch('save_user_role.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -361,7 +368,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     renderUserRolesTable();
                     Toast.success(`${newAssignments.length} new role assignments added`, 5000, 'Success');
                 } else {
-                    Toast.error('Failed to save assignments', 5000, 'Error');
+                    // Display the error message from the server
+                    Toast.error(data.error || 'Failed to save assignments', 5000, 'Error');
                 }
             })
             .catch(error => {
