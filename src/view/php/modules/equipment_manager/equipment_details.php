@@ -1144,6 +1144,7 @@ include '../../general/footer.php';
             });
         });
     });
+    $('#addEquipmentModal').on('hidden.bs.modal', function () {
+        $(this).find('form')[0].reset();
+    });
 </script>
-</body>
-</html>
