@@ -52,7 +52,7 @@ $(document).ready(function () {
     // Single-user delete
     $(document).on('click', '.delete-user', function () {
         const userId = $(this).data("id");
-        deleteAction = { type: 'single', userId: userId };
+        deleteAction = {type: 'single', userId: userId};
         $('#confirmDeleteMessage').text("Are you sure you want to archive this user?");
         $('#confirmDeleteModal').modal('show');
     });
@@ -66,14 +66,14 @@ $(document).ready(function () {
             showToast('Please select users to archive.', 'warning');
             return;
         }
-        deleteAction = { type: 'bulk', selected: selected };
+        deleteAction = {type: 'bulk', selected: selected};
         $('#confirmDeleteMessage').text(`Are you sure you want to archive ${selected.length} selected user(s)?`);
         $('#confirmDeleteModal').modal('show');
     });
 
     // Delete account confirmation
     $("#confirmDeleteAccount").click(function () {
-        deleteAction = { type: 'account' };
+        deleteAction = {type: 'account'};
         $('#confirmDeleteMessage').text("Are you sure you want to delete your account?");
         $('#confirmDeleteModal').modal('show');
         $('#delete-selected').modal('hide');
@@ -90,7 +90,7 @@ $(document).ready(function () {
                 $.ajax({
                     type: "POST",
                     url: "delete_user.php",
-                    data: { user_id: currentAction.userId },
+                    data: {user_id: currentAction.userId},
                     dataType: 'json',
                     success: function (response) {
                         if (response.success) {
@@ -109,7 +109,7 @@ $(document).ready(function () {
                 $.ajax({
                     type: "POST",
                     url: "delete_user.php",
-                    data: { user_ids: currentAction.selected },
+                    data: {user_ids: currentAction.selected},
                     dataType: 'json',
                     success: function (response) {
                         if (response.success) {
@@ -131,7 +131,7 @@ $(document).ready(function () {
                 $.ajax({
                     type: "POST",
                     url: "delete_account.php",
-                    data: { action: "delete_account" },
+                    data: {action: "delete_account"},
                     dataType: 'json',
                     success: function (response) {
                         if (response.success) {
@@ -150,10 +150,11 @@ $(document).ready(function () {
         }
     });
 
-    // Remove lingering modal backdrop for delete and add modals
-    $('#confirmDeleteModal, #addUserModal').on('hidden.bs.modal', function () {
+    //Clears modal input when user closes the modal and removes lingering backdrops
+    $('#createUserModal, #editUserModal,#confirmDeleteModal,#addUserModal' ).on('hidden.bs.modal', function () {
         $('body').removeClass('modal-open');
         $('.modal-backdrop').remove();
+        $(this).find('form')[0].reset();
     });
 
     // Close alerts when close button is clicked
@@ -232,16 +233,8 @@ $(document).ready(function () {
         modal.find('#editDepartment').val(department);
     });
 
-    // Ensure modal backdrop is removed properly after the edit modal closes
-    $('#editUserModal').on('hidden.bs.modal', function () {
-        $('body').removeClass('modal-open');
-        $('.modal-backdrop').remove();
-    });
-    // Ensure modal backdrop is removed properly after the edit modal closes
-    $('#createUserModal').on('hidden.bs.modal', function () {
-        $('body').removeClass('modal-open');
-        $('.modal-backdrop').remove();
-    });
+
+
     // Handle "Edit User" form submission via AJAX
     $("#editUserForm").on("submit", function (e) {
         e.preventDefault();
@@ -297,10 +290,6 @@ $(document).ready(function () {
         $('#umTable tbody').load(newUrl + ' #umTable tbody > *', function () {
             history.pushState(null, '', newUrl);
         });
-    });
-
-    $('.department-filter').on('change', function () {
-        $(this).closest('form').submit();
     });
 
 

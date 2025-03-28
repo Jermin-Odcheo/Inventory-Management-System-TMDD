@@ -200,9 +200,24 @@ function formatDetailsAndChanges($log)
             break;
 
         default:
+            // Use htmlspecialchars if you want to escape HTML entities in the details
             $details = htmlspecialchars($log['Details'] ?? '');
-            $changes = formatNewValue($log['OldVal']);
+
+            // Format the old and new values
+            $oldFormatted = isset($log['OldVal']) ? formatNewValue($log['OldVal']) : '';
+            $newFormatted = isset($log['NewVal']) ? formatNewValue($log['NewVal']) : '';
+
+            // Priority: NewVal if non-empty, otherwise OldVal, otherwise "No changes"
+            if (!empty($newFormatted)) {
+                $changes = $newFormatted;
+            } elseif (!empty($oldFormatted)) {
+                $changes = $oldFormatted;
+            } else {
+                $changes = 'No changes';
+            }
+
             break;
+
     }
 
     return [$details, $changes];

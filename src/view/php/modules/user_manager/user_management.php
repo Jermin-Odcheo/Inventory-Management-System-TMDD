@@ -534,8 +534,9 @@ if ($canDelete) {
 </div>
 
 <!-- Modal for editing user -->
-<!-- Notice the attribute data-bs-backdrop="false" prevents a backdrop from being added -->
-<div class="modal fade" id="editUserModal" tabindex="-1" data-bs-backdrop="false" aria-labelledby="editUserModalLabel" aria-hidden="true">
+ 
+<div class="modal fade" id="editUserModal" tabindex="-1"  aria-labelledby="editUserModalLabel"
+     aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -573,13 +574,16 @@ if ($canDelete) {
                             appearance: none;
                             transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
                         }
+
                         .form-select:focus {
                             border-color: #86b7fe;
                             box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
                         }
+
                         .form-select option {
                             padding: 10px;
                         }
+
                         .form-select optgroup {
                             margin-top: 10px;
                         }
