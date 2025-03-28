@@ -534,7 +534,6 @@ if ($canDelete) {
 </div>
 
 <!-- Modal for editing user -->
- 
 <div class="modal fade" id="editUserModal" tabindex="-1"  aria-labelledby="editUserModalLabel"
      aria-hidden="true">
     <div class="modal-dialog">

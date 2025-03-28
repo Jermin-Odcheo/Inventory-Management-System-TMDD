@@ -238,7 +238,11 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
 </div>
 
 <script>
+
     $(document).ready(function () {
+        $('#addModuleModal').on('hidden.bs.modal', function () {
+            $(this).find('form')[0].reset();
+        });
         // Delegate event binding for edit button to handle dynamically loaded elements.
         $(document).on('click', '.edit-module-btn', function () {
             var moduleID = $(this).data('module-id');

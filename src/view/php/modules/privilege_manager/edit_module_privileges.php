@@ -55,6 +55,8 @@ $currentPrivileges = array_map('intval', $currentPrivileges);
 </div>
 
 <script>
+
+
     $('#editModulePrivilegesForm').on('submit', function(e){
         e.preventDefault();
         $.ajax({
