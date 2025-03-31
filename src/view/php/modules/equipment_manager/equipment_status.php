@@ -302,7 +302,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                 <div class="row align-items-center g-2">
                     <div class="col-auto">
                         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addStatusModal">
-                            <i class="bi bi-plus-lg"></i> Add New Status
+                            <i class="bi bi-plus-lg"></i> Create New Status
                         </button>
                     </div>
                     <div class="col-md-4">
@@ -623,6 +623,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             });
         }
     });
+    // Reset the form when the modal is completely closed
+    $('#addStatusModal').on('hidden.bs.modal', function () {
+        $(this).find('form').trigger('reset');
+    });
+
+    $('#editStatusModal').on('hidden.bs.modal', function () {
+        $(this).find('form').trigger('reset');
+    });
+
 </script>
 </body>
 </html>
