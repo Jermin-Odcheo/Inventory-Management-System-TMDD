@@ -32,6 +32,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAjax) {
             exit;
         }
 
+        // Begin transaction
+        $pdo->beginTransaction();
+
+        // Get old location details for audit log
+        $stmt = $pdo->prepare("SELECT * FROM equipment_location WHERE equipment_location_id = ?");
+        $stmt->execute([$id]);
+        $oldLocation = $stmt->fetch(PDO::FETCH_ASSOC);
+
         // Proceed with the update
         $updateStmt = $pdo->prepare("UPDATE equipment_location 
             SET asset_tag = ?, building_loc = ?, floor_no = ?, specific_area = ?, person_responsible = ?, department_id = ?, remarks = ?
@@ -39,8 +47,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAjax) {
         $updateStmt->execute([$assetTag, $buildingLoc, $floorNo, $specificArea, $personResponsible, $departmentId, $remarks, $id]);
 
         if ($updateStmt->rowCount() > 0) {
+            // Prepare audit log data
+            $oldValue = json_encode($oldLocation);
+            $newValues = json_encode([
+                'asset_tag' => $assetTag,
+                'building_loc' => $buildingLoc,
+                'floor_no' => $floorNo,
+                'specific_area' => $specificArea,
+                'person_responsible' => $personResponsible,
+                'department_id' => $departmentId,
+                'remarks' => $remarks
+            ]);
+
+            // Insert into audit_log
+            $auditStmt = $pdo->prepare("
+                INSERT INTO audit_log (
+                    UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+
+            $auditStmt->execute([
+                $_SESSION['user_id'],
+                $id,
+                'Equipment Location',
+                'Modified',
+                'Equipment location modified',
+                $oldValue,
+                $newValues,
+                'Successful'
+            ]);
+
+            $pdo->commit();
             echo json_encode(['status' => 'success', 'message' => 'Location updated successfully']);
         } else {
+            $pdo->rollBack();
             echo json_encode(['status' => 'error', 'message' => 'No changes made or invalid ID']);
         }
         exit;
@@ -102,7 +142,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAjax) {
     }
 }
 
-// Handle AJAX delete requests via GET as well
+// Handle AJAX delete requests via GET
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && $isAjax && isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
     header('Content-Type: application/json');
     $id = $_GET['id'];
@@ -159,11 +199,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && $isAjax && isset($_GET['action']) &&
     exit;
 }
 
-// ------------------------
-// Normal page load continues below...
-// ------------------------
-
-include('../../general/header.php');
 
 // (Now your normal non-AJAX HTML output begins)
 
@@ -224,163 +259,157 @@ try {
     $errors[] = "Error retrieving Equipment Locations: " . $e->getMessage();
 }
 
-function safeHtml($value) {
+function safeHtml($value)
+{
     return htmlspecialchars($value ?? 'N/A');
 }
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Equipment Location Management</title>
-    <!-- Bootstrap 5 CSS and Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+
     <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <style>
-        body {
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background-color: #f8f9fa;
-            min-height: 100vh;
-            padding-top: 70px;
-        }
-        .container-fluid {
-            margin-left: 300px;
-            padding: 20px;
-            width: calc(100% - 300px);
-        }
-        h2.mb-4 {
-            margin-top: 5px;
-            margin-bottom: 15px !important;
-        }
-        .card.shadow-sm {
-            margin-top: 10px;
-        }
-        @media (max-width: 768px) {
-            .container-fluid {
-                margin-left: 0;
-                width: 100%;
-            }
-        }
-    </style>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.min.css" rel="stylesheet">
 </head>
 <body>
-<?php include '../../general/sidebar.php'; ?>
+<?php
+include '../../general/header.php';
+include '../../general/sidebar.php';
+include '../../general/footer.php';
+?>
 
-<div class="container-fluid">
-    <h2 class="mb-4">Equipment Location</h2>
+<div class="main-container">
+    <header class="main-header">
+        <h1><i class="bi bi-geo-alt-fill"></i> Equipment Location Management</h1>
+    </header>
 
-    <!-- Success and Error Messages (if any) -->
-    <?php if (!empty($success)): ?>
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="bi bi-check-circle"></i> <?php echo $success; ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <section class="card">
+        <div class="card-header">
+            <h2><i class="bi bi-list-task"></i> List of Equipment Locations</h2>
         </div>
-    <?php endif; ?>
-    <?php if (!empty($errors)): ?>
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <?php foreach ($errors as $err): ?>
-                <p><i class="bi bi-exclamation-triangle"></i> <?php echo $err; ?></p>
-            <?php endforeach; ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    <?php endif; ?>
 
-    <!-- List of Equipment Locations -->
-    <div class="card shadow-sm">
-        <div class="card-header d-flex justify-content-between align-items-center bg-dark text-white">
-            <span><i class="bi bi-list-ul"></i> List of Equipment Locations</span>
-            <div class="input-group w-auto" id="livesearch">
-                <span class="input-group-text"><i class="bi bi-search"></i></span>
-                <input type="text" class="form-control" placeholder="Search..." id="eqSearch">
-            </div>
-            <div id="liveSearchResults" class="search-results"></div>
-        </div>
         <div class="card-body">
-            <div class="d-flex justify-content-start mb-3 gap-2">
-                <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addLocationModal">
-                    <i class="bi bi-plus-circle"></i> Add Equipment Location
-                </button>
-                <select class="form-select form-select-sm" id="filterBuilding" style="width: auto;">
-                    <option value="">Filter Building Location</option>
-                    <?php
-                    if (!empty($equipmentLocations)) {
-                        $buildingLocations = array_unique(array_column($equipmentLocations, 'building_loc'));
-                        foreach($buildingLocations as $building) {
-                            if(!empty($building)) {
-                                echo "<option value='" . htmlspecialchars($building) . "'>" . htmlspecialchars($building) . "</option>";
+            <div class="container-fluid px-0">
+                <div class="row align-items-center g-2">
+                    <div class="col-auto">
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addLocationModal">
+                            <i class="bi bi-plus-lg"></i> Create Location
+                        </button>
+                    </div>
+                    <div class="col-md-4">
+                        <select class="form-select" id="filterBuilding">
+                            <option value="">Filter by Building</option>
+                            <?php
+                            if (!empty($equipmentLocations)) {
+                                $buildings = array_unique(array_column($equipmentLocations, 'building_loc'));
+                                foreach ($buildings as $building) {
+                                    echo "<option>" . htmlspecialchars($building) . "</option>";
+                                }
                             }
-                        }
-                    }
-                    ?>
-                </select>
+                            ?>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="input-group">
+                            <input type="text" id="eqSearch" class="form-control" placeholder="Search Equipment...">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <!-- Equipment Locations Table -->
-            <div class="table-responsive">
-                <table id="elTable" class="table table-striped table-hover align-middle" id="table">
-                    <thead class="table-dark">
+            <div class="table-responsive" id="table">
+                <table class="table" id="elTable">
+                    <thead>
                     <tr>
                         <th>#</th>
                         <th>Asset Tag</th>
-                        <th>Building Location</th>
-                        <th>Floor Number</th>
-                        <th>Specific Area</th>
+                        <th>Building</th>
+                        <th>Floor</th>
+                        <th>Area</th>
                         <th>Person Responsible</th>
                         <th>Department</th>
                         <th>Remarks</th>
                         <th>Date Created</th>
-                        <th class="text-center">Actions</th>
+                        <th>Actions</th>
                     </tr>
                     </thead>
                     <tbody>
                     <?php if (!empty($equipmentLocations)): ?>
-                        <?php foreach ($equipmentLocations as $index => $location): ?>
+                        <?php foreach ($equipmentLocations as $index => $loc): ?>
                             <tr>
-                                    <td><?php echo $index + 1; ?></td>
-                                    <td><?php echo htmlspecialchars($location['asset_tag'] ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
-                                    <td><?php echo htmlspecialchars($location['building_loc'] ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
-                                    <td><?php echo htmlspecialchars($location['floor_no'] ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
-                                    <td><?php echo htmlspecialchars($location['specific_area'] ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
-                                    <td><?php echo htmlspecialchars($location['person_responsible'] ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
-                                    <td><?php echo htmlspecialchars($location['department_name'] ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
-                                    <td><?php echo htmlspecialchars($location['remarks'] ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
-                                    <td><?php echo !empty($location['date_created']) ? date('Y-m-d H:i', strtotime($location['date_created'])) : ''; ?></td> ''; ?></td>
-                                <td class="text-center">
-                                    <div class="btn-group" role="group">
-                                        <button type="button" class="btn btn-sm btn-outline-primary edit-location"
-                                                data-id="<?php echo $location['equipment_location_id']; ?>"
-                                                data-asset="<?php echo htmlspecialchars($location['asset_tag'] ?? ''); ?>"
-                                                data-building="<?php echo htmlspecialchars($location['building_loc'] ?? ''); ?>"
-                                                data-floor="<?php echo htmlspecialchars($location['floor_no'] ?? ''); ?>"
-                                                data-area="<?php echo htmlspecialchars($location['specific_area'] ?? ''); ?>"
-                                                data-person="<?php echo htmlspecialchars($location['person_responsible'] ?? ''); ?>"
-                                                data-department="<?php echo htmlspecialchars($location['department_id'] ?? ''); ?>"
-                                                data-remarks="<?php echo htmlspecialchars($location['remarks'] ?? ''); ?>"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#editLocationModal">
-                                            <i class="bi bi-pencil-square"></i> Edit
-                                        </button>
-                                        <a href="#" class="btn btn-sm btn-outline-danger delete-location" data-id="<?php echo $location['equipment_location_id']; ?>">
-                                            <i class="bi bi-trash"></i> Delete
-                                        </a>
-                                    </div>
+                                <td><?= $index + 1 ?></td>
+                                <td><?= htmlspecialchars($loc['asset_tag']) ?></td>
+                                <td><?= htmlspecialchars($loc['building_loc']) ?></td>
+                                <td><?= htmlspecialchars($loc['floor_no']) ?></td>
+                                <td><?= htmlspecialchars($loc['specific_area']) ?></td>
+                                <td><?= htmlspecialchars($loc['person_responsible']) ?></td>
+                                <td><?= htmlspecialchars($loc['department_name']) ?></td>
+                                <td><?= htmlspecialchars($loc['remarks']) ?></td>
+                                <td><?= date('Y-m-d H:i', strtotime($loc['date_created'])) ?></td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal"
+                                            data-bs-target="#editLocationModal"
+                                            data-id="<?= $loc['equipment_location_id'] ?>">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+
+                                    <button class="btn btn-sm btn-outline-danger delete-location"
+                                            data-id="<?= $loc['equipment_location_id'] ?>">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="10" class="text-center">No Equipment Locations found.</td>
+                            <td colspan="10" class="text-center">No Equipment Locations Found.</td>
                         </tr>
                     <?php endif; ?>
                     </tbody>
                 </table>
             </div>
+            <!-- Pagination Controls -->
+            <div class="container-fluid">
+                <div class="row align-items-center g-3">
+                    <div class="col-12 col-sm-auto">
+                        <div class="text-muted">
+                            Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
+                                    id="totalRows">100</span>
+                            entries
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-auto ms-sm-auto">
+                        <div class="d-flex align-items-center gap-2">
+                            <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                <i class="bi bi-chevron-left"></i> Previous
+                            </button>
+                            <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                <option value="10" selected>10</option>
+                                <option value="20">20</option>
+                                <option value="30">30</option>
+                                <option value="50">50</option>
+                            </select>
+                            <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                Next <i class="bi bi-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <ul class="pagination justify-content-center" id="pagination"></ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
+    </section>
 </div>
-</div>
+
 
 <!-- Add Location Modal -->
 <div class="modal fade" id="addLocationModal" tabindex="-1">
@@ -398,7 +427,8 @@ function safeHtml($value) {
                         <input type="text" class="form-control" name="asset_tag" required>
                     </div>
                     <div class="mb-3">
-                        <label for="building_loc" class="form-label">Building Location <span class="text-danger">*</span></label>
+                        <label for="building_loc" class="form-label">Building Location <span
+                                    class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="building_loc" required>
                     </div>
                     <div class="mb-3">
@@ -406,7 +436,8 @@ function safeHtml($value) {
                         <input type="number" min="1" class="form-control" name="floor_no" required>
                     </div>
                     <div class="mb-3">
-                        <label for="specific_area" class="form-label">Specific Area <span class="text-danger">*</span></label>
+                        <label for="specific_area" class="form-label">Specific Area <span
+                                    class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="specific_area" required>
                     </div>
                     <div class="mb-3">
@@ -414,14 +445,15 @@ function safeHtml($value) {
                         <input type="text" class="form-control" name="person_responsible" required>
                     </div>
                     <div class="mb-3">
-                        <label for="department_id" class="form-label">Department</label>
+                        <label for="department_id" class="form-label">Department <span
+                                    class="text-danger">*</span></label>
                         <select class="form-control" name="department_id" required>
-                            <option value="">Select Department (Optional)</option>
+                            <option value="">Select Department</option>
                             <?php
                             try {
                                 $deptStmt = $pdo->query("SELECT id, department_name FROM departments WHERE is_disabled = 0 ORDER BY department_name");
                                 $departments = $deptStmt->fetchAll();
-                                foreach($departments as $department) {
+                                foreach ($departments as $department) {
                                     echo "<option value='" . htmlspecialchars($department['id']) . "'>" . htmlspecialchars($department['department_name']) . "</option>";
                                 }
                             } catch (PDOException $e) {
@@ -457,34 +489,41 @@ function safeHtml($value) {
                     <input type="hidden" name="id" id="edit_location_id">
 
                     <div class="mb-3">
-                        <label for="edit_asset_tag" class="form-label"><i class="bi bi-tag"></i> Asset Tag <span class="text-danger">*</span></label>
+                        <label for="edit_asset_tag" class="form-label"><i class="bi bi-tag"></i> Asset Tag <span
+                                    class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="asset_tag" id="edit_asset_tag" required>
                     </div>
                     <div class="mb-3">
-                        <label for="edit_building_loc" class="form-label"><i class="bi bi-building"></i> Building Location <span class="text-danger">*</span></label>
+                        <label for="edit_building_loc" class="form-label"><i class="bi bi-building"></i> Building
+                            Location <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="edit_building_loc" name="building_loc" required>
                     </div>
                     <div class="mb-3">
-                        <label for="edit_floor_no" class="form-label"><i class="bi bi-layers"></i> Floor Number <span class="text-danger">*</span></label>
+                        <label for="edit_floor_no" class="form-label"><i class="bi bi-layers"></i> Floor Number <span
+                                    class="text-danger">*</span></label>
                         <input type="number" min="1" class="form-control" id="edit_floor_no" name="floor_no" required>
                     </div>
                     <div class="mb-3">
-                        <label for="edit_specific_area" class="form-label"><i class="bi bi-pin-map"></i> Specific Area <span class="text-danger">*</span></label>
+                        <label for="edit_specific_area" class="form-label"><i class="bi bi-pin-map"></i> Specific Area
+                            <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="edit_specific_area" name="specific_area" required>
                     </div>
                     <div class="mb-3">
-                        <label for="edit_person_responsible" class="form-label"><i class="bi bi-person"></i> Person Responsible <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="edit_person_responsible" name="person_responsible" required>
+                        <label for="edit_person_responsible" class="form-label"><i class="bi bi-person"></i> Person
+                            Responsible <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="edit_person_responsible" name="person_responsible"
+                               required>
                     </div>
                     <div class="mb-3">
-                        <label for="edit_department_id" class="form-label"><i class="bi bi-building"></i> Department <span class="text-danger">*</span></label>
+                        <label for="edit_department_id" class="form-label"><i class="bi bi-building"></i> Department
+                            <span class="text-danger">*</span></label>
                         <select class="form-control" id="edit_department_id" name="department_id" required>
                             <option value="">Select Department</option>
                             <?php
                             try {
                                 $deptStmt = $pdo->query("SELECT id, department_name FROM departments WHERE is_disabled = 0 ORDER BY department_name");
                                 $departments = $deptStmt->fetchAll();
-                                foreach($departments as $department) {
+                                foreach ($departments as $department) {
                                     echo "<option value='" . htmlspecialchars($department['id']) . "'>" . htmlspecialchars($department['department_name']) . "</option>";
                                 }
                             } catch (PDOException $e) {
@@ -494,7 +533,8 @@ function safeHtml($value) {
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label for="edit_remarks" class="form-label"><i class="bi bi-chat-left-text"></i> Remarks</label>
+                        <label for="edit_remarks" class="form-label"><i class="bi bi-chat-left-text"></i>
+                            Remarks</label>
                         <textarea class="form-control" id="edit_remarks" name="remarks" rows="3"></textarea>
                     </div>
                     <div class="d-flex justify-content-end">
@@ -525,10 +565,7 @@ function safeHtml($value) {
         </div>
     </div>
 </div>
-
-<!-- Include pagination script if needed -->
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
-<!-- JavaScript for Real-Time Table Filtering and AJAX Actions -->
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const searchInput = document.getElementById('eqSearch');
@@ -551,9 +588,9 @@ function safeHtml($value) {
         }
     });
 
-    $(document).ready(function() {
+    $(document).ready(function () {
         // Real-time search & filter
-        $('#eqSearch, #filterBuilding').on('input change', function() {
+        $('#eqSearch, #filterBuilding').on('input change', function () {
             filterTable();
         });
 
@@ -562,7 +599,7 @@ function safeHtml($value) {
             const filterValue = $('#filterBuilding').val().toLowerCase();
             const rows = $('#table tbody tr');
 
-            rows.each(function() {
+            rows.each(function () {
                 const rowText = $(this).text().toLowerCase();
                 const buildingCell = $(this).find('td:nth-child(3)').text().toLowerCase();
                 $(this).toggle(rowText.includes(searchValue) && (!filterValue || buildingCell === filterValue));
@@ -570,7 +607,7 @@ function safeHtml($value) {
         }
 
         // Delegate event for editing location
-        $(document).on('click', '.edit-location', function() {
+        $(document).on('click', '.edit-location', function () {
             var id = $(this).data('id');
             var assetTag = $(this).data('asset');
             var buildingLocation = $(this).data('building');
@@ -596,7 +633,7 @@ function safeHtml($value) {
         var deleteId = null;
 
         // Delegate event for delete button to show modal
-        $(document).on('click', '.delete-location', function(e) {
+        $(document).on('click', '.delete-location', function (e) {
             e.preventDefault();
             deleteId = $(this).data('id');
             var deleteModal = new bootstrap.Modal(document.getElementById('deleteEDModal'));
@@ -604,7 +641,7 @@ function safeHtml($value) {
         });
 
         // When confirm delete button is clicked, perform AJAX delete
-        $('#confirmDeleteBtn').on('click', function() {
+        $('#confirmDeleteBtn').on('click', function () {
             if (deleteId) {
                 $.ajax({
                     url: window.location.href,
@@ -617,20 +654,18 @@ function safeHtml($value) {
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest'
                     },
-                    success: function(response) {
+                    success: function (response) {
                         if (response.status === 'success') {
-                            $('#elTable').load(location.href + '#elTable', function ()){
+                            $('#elTable').load(location.href + ' #elTable', function () {
                                 showToast(response.message, 'success');
-
-                            }
-
+                            });
                         } else {
                             showToast(response.message, 'error');
                         }
                         var deleteModalInstance = bootstrap.Modal.getInstance(document.getElementById('deleteEDModal'));
                         deleteModalInstance.hide();
                     },
-                    error: function(xhr, status, error) {
+                    error: function (xhr, status, error) {
                         showToast('Error deleting location: ' + error, 'error');
                     }
                 });
@@ -638,7 +673,7 @@ function safeHtml($value) {
         });
 
         // AJAX submission for Add Location form using toast notifications
-        $('#addLocationForm').on('submit', function(e) {
+        $('#addLocationForm').on('submit', function (e) {
             e.preventDefault();
             const submitBtn = $(this).find('button[type="submit"]');
             const originalBtnText = submitBtn.text();
@@ -649,25 +684,25 @@ function safeHtml($value) {
                 method: 'POST',
                 data: $(this).serialize(),
                 dataType: 'json',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                success: function(result) {
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                success: function (result) {
                     if (result.status === 'success') {
                         $('#addLocationModal').modal('hide');
-                        $('elTable').load(location.href + '#elTable', function ()){
+                        $('#elTable').load(location.href + ' #elTable', function () {
                             showToast(result.message, 'success');
-                        }
+                        });
                     } else {
                         showToast(result.message, 'error');
                     }
                 },
-                error: function(xhr, status, error) {
+                error: function (xhr, status, error) {
                     showToast('Error updating location: ' + error, 'error');
                 }
             });
         });
 
         // AJAX submission for Edit Location form using toast notifications
-        $('#edit LocationForm').on('submit', function(e) {
+        $('#editLocationForm').on('submit', function (e) {
             e.preventDefault();
             const submitBtn = $(this).find('button[type="submit"]');
             const originalBtnText = submitBtn.text();
@@ -678,26 +713,24 @@ function safeHtml($value) {
                 method: 'POST',
                 data: $(this).serialize(),
                 dataType: 'json',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                success: function(result) {
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                success: function (result) {
                     if (result.status === 'success') {
                         $('#editLocationModal').modal('hide');
-                        $('elTable').load(location.href + '#elTable', function ()){
+                        $('#elTable').load(location.href + ' #elTable', function () {
                             showToast(result.message, 'success');
-                        }
+                        });
                     } else {
                         showToast(result.message, 'error');
                     }
                 },
-                error: function(xhr, status, error) {
+                error: function (xhr, status, error) {
                     showToast('Error updating location: ' + error, 'error');
                 }
             });
         });
     });
 </script>
-<?php include '../../general/footer.php'; ?>
-<!-- Bootstrap 5 JS Bundle -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 </body>
 </html>

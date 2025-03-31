@@ -268,7 +268,6 @@ function safeHtml($value)
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Equipment Details Management</title>
     <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.min.css" rel="stylesheet">
 </head>
 <body>
 <?php
@@ -287,68 +286,85 @@ include '../../general/footer.php';
             <h2><i class="bi bi-list-task"></i> List of Equipment Details</h2>
         </div>
         <div class="card-body">
-            <div class="toolbar">
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEquipmentModal">
-                    <i class="bi bi-plus-lg"></i> Create Equipment
-                </button>
-                <select class="form-select" id="filterEquipment">
-                    <option value="">Filter Equipment Type</option>
-                    <?php
-                    $equipmentTypes = array_unique(array_column($equipmentDetails, 'asset_description_1'));
-                    foreach ($equipmentTypes as $type) {
-                        if (!empty($type)) {
-                            echo "<option value='" . safeHtml($type) . "'>" . safeHtml($type) . "</option>";
-                        }
-                    }
-                    ?>
-                </select>
-                <div class="search-input">
-                    <input type="text" id="searchEquipment" placeholder="Search equipment...">
-                    <i class="bi bi-search"></i>
-                </div>
-                <select class="form-select" id="dateFilter">
-                    <option value="">Filter by Date</option>
-                    <option value="desc">Newest to Oldest</option>
-                    <option value="asc">Oldest to Newest</option>
-                    <option value="month">Specific Month</option>
-                    <option value="range">Custom Date Range</option>
-                </select>
-                <div id="dateInputsContainer" style="display: none;">
-                    <div class="d-flex gap-2" id="monthPickerContainer" style="display: none;">
-                        <select class="form-select" id="monthSelect">
-                            <option value="">Select Month</option>
+            <div class="container-fluid px-0">
+                <!-- Toolbar Row -->
+                <div class="row align-items-lg-center g-2">
+                    <div class="col-auto">
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEquipmentModal">
+                            <i class="bi bi-plus-lg"></i> Create Equipment
+                        </button>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" id="filterEquipment">
+                            <option value="">Filter Equipment Type</option>
                             <?php
-                            $months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-                            foreach ($months as $index => $month) {
-                                echo "<option value='" . ($index + 1) . "'>" . $month . "</option>";
-                            }
-                            ?>
-                        </select>
-                        <select class="form-select" id="yearSelect">
-                            <option value="">Select Year</option>
-                            <?php
-                            $currentYear = date('Y');
-                            for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
-                                echo "<option value='" . $year . "'>" . $year . "</option>";
+                            $equipmentTypes = array_unique(array_column($equipmentDetails, 'asset_description_1'));
+                            foreach ($equipmentTypes as $type) {
+                                if (!empty($type)) {
+                                    echo "<option value='" . safeHtml($type) . "'>" . safeHtml($type) . "</option>";
+                                }
                             }
                             ?>
                         </select>
                     </div>
-                    <div class="d-flex gap-2" id="dateRangePickers" style="display: none;">
-                        <input type="date" class="form-control" id="dateFrom" placeholder="From">
-                        <input type="date" class="form-control" id="dateTo" placeholder="To">
+                    <div class="col-md-3">
+                        <div class="input-group">
+                            <input type="text" id="searchEquipment" class="form-control"
+                                   placeholder="Search equipment...">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" id="dateFilter">
+                            <option value="">Filter by Date</option>
+                            <option value="desc">Newest to Oldest</option>
+                            <option value="asc">Oldest to Newest</option>
+                            <option value="month">Specific Month</option>
+                            <option value="range">Custom Date Range</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Date Inputs Row -->
+                <div class="row mt-3 g-2" id="dateInputsContainer" style="display: none;">
+                    <div class="col-md-6">
+                        <div class="d-flex gap-2" id="monthPickerContainer" style="display: none;">
+                            <select class="form-select" id="monthSelect">
+                                <option value="">Select Month</option>
+                                <?php
+                                $months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                                foreach ($months as $index => $month) {
+                                    echo "<option value='" . ($index + 1) . "'>" . $month . "</option>";
+                                }
+                                ?>
+                            </select>
+                            <select class="form-select" id="yearSelect">
+                                <option value="">Select Year</option>
+                                <?php
+                                $currentYear = date('Y');
+                                for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
+                                    echo "<option value='" . $year . "'>" . $year . "</option>";
+                                }
+                                ?>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex gap-2" id="dateRangePickers" style="display: none;">
+                            <input type="date" class="form-control" id="dateFrom" placeholder="From">
+                            <input type="date" class="form-control" id="dateTo" placeholder="To">
+                        </div>
                     </div>
                 </div>
             </div>
-
             <div class="table-responsive" id="table">
                 <table class="table" id="edTable">
                     <thead>
                     <tr>
                         <th>#</th>
                         <th>Asset Tag</th>
-                        <th>Description 1</th>
-                        <th>Description 2</th>
+                        <th>Desc 1</th>
+                        <th>Desc 2</th>
                         <th>Specification</th>
                         <th>Brand</th>
                         <th>Model</th>
@@ -381,7 +397,7 @@ include '../../general/footer.php';
                             <td><?= safeHtml($equipment['location']); ?></td>
                             <td><?= safeHtml($equipment['accountable_individual']); ?></td>
                             <td><?= safeHtml($equipment['remarks']); ?></td>
-                            <td class="text-center">
+                            <td>
                                 <div class="btn-group">
                                     <button class="btn btn-outline-info btn-sm edit-equipment"
                                             data-id="<?= safeHtml($equipment['id']); ?>"
@@ -397,11 +413,12 @@ include '../../general/footer.php';
                                             data-rr="<?= safeHtml($equipment['rr_no']); ?>"
                                             data-date="<?= safeHtml($equipment['date_created']); ?>"
                                             data-remarks="<?= safeHtml($equipment['remarks']); ?>">
-                                        <i class="bi bi-pencil-square"></i> Edit
+                                        <i class="bi bi-pencil-square"></i>
                                     </button>
+
                                     <button class="btn btn-outline-danger btn-sm remove-equipment"
                                             data-id="<?= safeHtml($equipment['id']); ?>">
-                                        <i class="bi bi-trash"></i> Remove
+                                        <i class="bi bi-trash"></i>
                                     </button>
                                 </div>
                             </td>
@@ -416,12 +433,14 @@ include '../../general/footer.php';
                 <div class="row align-items-center g-3">
                     <div class="col-12 col-sm-auto">
                         <div class="text-muted">
-                            Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows">100</span> entries
+                            Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
+                                    id="totalRows">100</span>
+                            entries
                         </div>
                     </div>
                     <div class="col-12 col-sm-auto ms-sm-auto">
                         <div class="d-flex align-items-center gap-2">
-                            <button id="prevPage" class="btn btn-outline-primary">
+                            <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
                                 <i class="bi bi-chevron-left"></i> Previous
                             </button>
                             <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
@@ -430,7 +449,7 @@ include '../../general/footer.php';
                                 <option value="30">30</option>
                                 <option value="50">50</option>
                             </select>
-                            <button id="nextPage" class="btn btn-outline-primary">
+                            <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
                                 Next <i class="bi bi-chevron-right"></i>
                             </button>
                         </div>
@@ -442,7 +461,6 @@ include '../../general/footer.php';
                     </div>
                 </div>
             </div>
-
         </div>
     </section>
 </div>
@@ -534,15 +552,18 @@ include '../../general/footer.php';
                     </div>
                     <div class="mb-3">
                         <label for="edit_asset_description_1" class="form-label">Description 1</label>
-                        <input type="text" class="form-control" name="asset_description_1" id="edit_asset_description_1">
+                        <input type="text" class="form-control" name="asset_description_1"
+                               id="edit_asset_description_1">
                     </div>
                     <div class="mb-3">
                         <label for="edit_asset_description_2" class="form-label">Description 2</label>
-                        <input type="text" class="form-control" name="asset_description_2" id="edit_asset_description_2">
+                        <input type="text" class="form-control" name="asset_description_2"
+                               id="edit_asset_description_2">
                     </div>
                     <div class="mb-3">
                         <label for="edit_specifications" class="form-label">Specification</label>
-                        <textarea class="form-control" name="specifications" id="edit_specifications" rows="3"></textarea>
+                        <textarea class="form-control" name="specifications" id="edit_specifications"
+                                  rows="3"></textarea>
                     </div>
                     <div class="mb-3">
                         <label for="edit_brand" class="form-label">Brand</label>
@@ -570,7 +591,8 @@ include '../../general/footer.php';
                     </div>
                     <div class="mb-3">
                         <label for="edit_accountable_individual" class="form-label">Accountable Individual</label>
-                        <input type="text" class="form-control" name="accountable_individual" id="edit_accountable_individual">
+                        <input type="text" class="form-control" name="accountable_individual"
+                               id="edit_accountable_individual">
                     </div>
                     <div class="mb-3">
                         <label for="edit_remarks" class="form-label">Remarks</label>
@@ -703,9 +725,9 @@ include '../../general/footer.php';
                 $.ajax({
                     url: window.location.href,
                     method: 'POST',
-                    data: { action: 'remove', details_id: deleteId },
+                    data: {action: 'remove', details_id: deleteId},
                     dataType: 'json',
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    headers: {'X-Requested-With': 'XMLHttpRequest'},
                     success: function (response) {
                         showToast(response.message, response.status === 'success' ? 'success' : 'error');
                         refreshEquipmentList();
@@ -741,7 +763,7 @@ include '../../general/footer.php';
                 method: 'POST',
                 data: $(this).serialize(),
                 dataType: 'json',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
                 success: function (response) {
                     if (response.status === 'success') {
                         bootstrap.Modal.getInstance(document.getElementById('addEquipmentModal')).hide();
@@ -770,7 +792,7 @@ include '../../general/footer.php';
                 method: 'POST',
                 data: $(this).serialize(),
                 dataType: 'json',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
                 success: function (response) {
                     if (response.status === 'success') {
                         bootstrap.Modal.getInstance(document.getElementById('editEquipmentModal')).hide();
@@ -792,7 +814,6 @@ include '../../general/footer.php';
 </script>
 </body>
 </html>
-
 
 
 <!-- Modals -->
