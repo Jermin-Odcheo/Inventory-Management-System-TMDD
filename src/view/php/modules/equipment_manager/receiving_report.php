@@ -577,6 +577,11 @@ try {
             });
         });
     });
+
+    $('#addReportModal').on('hidden.bs.modal', function () {
+        $('#addReportForm')[0].reset();
+    });
+
 </script>
 
 <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js"

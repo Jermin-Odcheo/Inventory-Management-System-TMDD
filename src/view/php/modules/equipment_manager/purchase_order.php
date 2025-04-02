@@ -208,7 +208,7 @@ include('../../general/header.php');
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal"
                                 data-bs-target="#addPOModal">
-                            <i class="bi bi-plus-circle"></i> Add Purchase Order
+                            <i class="bi bi-plus-circle"></i> Create Purchase Order
                         </button>
                         <!-- Optionally add date filters -->
                         <select class="form-select form-select-sm" id="dateFilter" style="width: auto;">
@@ -359,7 +359,7 @@ include('../../general/header.php');
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Add New Purchase Order</h5>
+                <h5 class="modal-title">Create New Purchase Order</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -413,7 +413,7 @@ include('../../general/header.php');
                     <div class="mb-3">
                         <label for="edit_no_of_units" class="form-label">No. of Units <span class="text-danger">*</span></label>
                         <input type="number" class="form-control" name="no_of_units" id="edit_no_of_units" required>
-                    </div>kfaodnerkadmfnlkdfasldnfkernasdfpom3opasdfillaldkfilm
+                    </div>
                     <div class="mb-3">
                         <label for="edit_item_specifications" class="form-label">Item Specifications <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="item_specifications" id="edit_item_specifications" required>
@@ -548,10 +548,13 @@ include('../../general/header.php');
             }
         });
     });
+
+    $('#addPOModal').on('hidden.bs.modal', function () {
+        $('#addPOForm')[0].reset();
+    });
+
 </script>
-<!-- Bootstrap Bundle JS (includes Popper) -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<!-- Optional: Include your pagination.js if required -->
+
 <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js" defer></script>
 <?php include '../../general/footer.php'; ?>
 </body>

@@ -536,10 +536,13 @@ try {
         <?php endforeach; ?>
         <?php endif; ?>
     });
+
+        $('#addInvoiceModal').on('hidden.bs.modal', function () {
+        $('#addInvoiceForm')[0].reset();
+    });
+
 </script>
-<!-- Bootstrap Bundle JS (includes Popper) -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<!-- Optional: Include your pagination.js if required -->
+
 <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js" defer></script>
 <?php include '../../general/footer.php'; ?>
 </body>
