@@ -46,9 +46,9 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
                 ];
 
                 $stmt = $pdo->prepare("INSERT INTO equipment_details (
-                    asset_tag, asset_description_1, asset_description_2, specifications, 
-                    brand, model, serial_number, location, accountable_individual, rr_no, date_created, remarks
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            asset_tag, asset_description_1, asset_description_2, specifications, 
+            brand, model, serial_number, location, accountable_individual, rr_no, date_created, remarks
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 $stmt->execute($values);
                 $newEquipmentId = $pdo->lastInsertId();
 
@@ -68,8 +68,8 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
                     'remarks' => $_POST['remarks'] ?? null
                 ]);
                 $auditStmt = $pdo->prepare("INSERT INTO audit_log (
-                    UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                 $auditStmt->execute([
                     $_SESSION['user_id'],
                     $newEquipmentId,
@@ -88,12 +88,17 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
                 if ($pdo->inTransaction()) {
                     $pdo->rollBack();
                 }
-                $response['status'] = 'error';
-                $response['message'] = $e->getMessage();
+                // Check if the error is a duplicate entry error for the asset_tag field.
+                if ($e instanceof PDOException && isset($e->errorInfo[1]) && $e->errorInfo[1] == 1062 && strpos($e->getMessage(), 'asset_tag') !== false) {
+                    $response['status'] = 'error';
+                    $response['message'] = 'Asset tag already exists. Please use a unique asset tag.';
+                } else {
+                    $response['status'] = 'error';
+                    $response['message'] = $e->getMessage();
+                }
             }
             echo json_encode($response);
             exit;
-
         case 'update':
             header('Content-Type: application/json');
             try {
@@ -1119,14 +1124,10 @@ include '../../general/footer.php';
                 dataType: 'json',
                 headers: {'X-Requested-With': 'XMLHttpRequest'},
                 success: function (response) {
-                    if (response.status === 'success') {
                         bootstrap.Modal.getInstance(document.getElementById('addEquipmentModal')).hide();
                         showToast(response.message, 'success');
                         $('#addEquipmentForm')[0].reset();
                         refreshEquipmentList();
-                    } else {
-                        showToast(response.message, 'error');
-                    }
                 },
                 error: function (xhr, status, error) {
                     showToast('Error creating equipment: ' + error, 'error');
