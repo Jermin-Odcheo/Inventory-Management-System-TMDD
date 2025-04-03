@@ -548,7 +548,7 @@ INSERT INTO `departments` (`id`, `department_name`, `abbreviation`, `is_disabled
 (17, 'Basic Education School', 'SLU BEdS', 1),
 (18, 'Office of Institutional Development and Quality Assurance', 'OIDQA', 1),
 (19, 'University Libraries', 'UL', 1),
-(20, 'University Registrar’s Office', 'URO', 1),
+(20, 'University Registrar''s Office', 'URO', 1),
 (21, 'University Research and Innovation Center', 'URIC', 1),
 (22, 'Office of the Vice President for Finance', 'OVPF', 1),
 (23, 'Asset Management and Inventory Control Office', 'AMICO', 1),
@@ -562,7 +562,7 @@ INSERT INTO `departments` (`id`, `department_name`, `abbreviation`, `is_disabled
 (31, 'Dental Clinic', 'DC', 1),
 (32, 'Guidance Center', 'GC', 1),
 (33, 'Human Resource Department', 'HRD', 1),
-(34, 'Students’ Residence Hall', 'SRH', 1),
+(34, 'Students'' Residence Hall', 'SRH', 1),
 (35, 'Medical Clinic', 'MC', 1),
 (36, 'Office for Legal Affairs', 'OLA', 1);
 
@@ -639,16 +639,15 @@ INSERT INTO `equipment_location` (`equipment_location_id`, `asset_tag`, `buildin
 
 DROP TABLE IF EXISTS `equipment_status`;
 CREATE TABLE IF NOT EXISTS `equipment_status` (
-  `equipment_status_id` int NOT NULL AUTO_INCREMENT,
-  `asset_tag` varchar(50) NOT NULL,
-  `status` enum('Operational','Under Maintenance','Decommissioned','Disposed') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
-  `action` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci,
-  `remarks` text,
-  `date_created` datetime DEFAULT CURRENT_TIMESTAMP,
-  `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
-  PRIMARY KEY (`equipment_status_id`) USING BTREE,
-  UNIQUE KEY `asset_tag` (`asset_tag`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+    `equipment_status_id` INT AUTO_INCREMENT PRIMARY KEY,
+    `asset_tag` VARCHAR(255) NOT NULL,
+    `status` VARCHAR(255) NOT NULL,
+    `action` VARCHAR(255) NOT NULL,
+    `remarks` TEXT,
+    `date_created` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `is_disabled` TINYINT(1) DEFAULT 0
+    -- Add other columns as necessary
+);
 
 -- --------------------------------------------------------
 
@@ -1076,18 +1075,6 @@ INSERT INTO `role_module_privileges` (`id`, `role_id`, `module_id`, `privilege_i
 (878, 0, 2, 10),
 (879, 0, 2, 11),
 (880, 0, 2, 12),
-(881, 0, 3, 1),
-(882, 0, 3, 2),
-(883, 0, 3, 3),
-(884, 0, 3, 4),
-(885, 0, 3, 5),
-(886, 0, 3, 6),
-(887, 0, 3, 7),
-(888, 0, 3, 8),
-(889, 0, 3, 9),
-(890, 0, 3, 10),
-(891, 0, 3, 11),
-(892, 0, 3, 12),
 (1017, 0, 1, 1),
 (1105, 21, 1, 1),
 (1109, 20, 1, 1),
@@ -1235,7 +1222,7 @@ CREATE TRIGGER `user_after_delete` AFTER DELETE ON `users` FOR EACH ROW BEGIN
             Date_Time          -- Timestamp
         ) VALUES (
             @current_user_id,  -- Set this variable before deletion
-            OLD.id,            -- The deleted user’s ID
+            OLD.id,            -- The deleted user's ID
             'Delete',          -- Action type
             CONCAT('User permanently deleted: ', OLD.email),
             JSON_OBJECT(       -- Store old user data
