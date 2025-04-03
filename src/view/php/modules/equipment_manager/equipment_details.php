@@ -1,5 +1,5 @@
 <?php
-session_start();
+session_start();ob_start();
 require_once('../../../../../config/ims-tmdd.php'); // Adjust path as needed
 
 // -------------------------
@@ -52,7 +52,6 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
                 $stmt->execute($values);
                 $newEquipmentId = $pdo->lastInsertId();
 
-                // Log audit entry with action "Create"
                 $newValues = json_encode([
                     'asset_tag' => $_POST['asset_tag'],
                     'asset_description_1' => $_POST['asset_description_1'],
@@ -88,7 +87,6 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
                 if ($pdo->inTransaction()) {
                     $pdo->rollBack();
                 }
-                // Check if the error is a duplicate entry error for the asset_tag field.
                 if ($e instanceof PDOException && isset($e->errorInfo[1]) && $e->errorInfo[1] == 1062 && strpos($e->getMessage(), 'asset_tag') !== false) {
                     $response['status'] = 'error';
                     $response['message'] = 'Asset tag already exists. Please use a unique asset tag.';
@@ -97,10 +95,12 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
                     $response['message'] = $e->getMessage();
                 }
             }
+            ob_clean();
             echo json_encode($response);
             exit;
         case 'update':
             header('Content-Type: application/json');
+            $response = ['status' => '', 'message' => ''];
             try {
                 $pdo->beginTransaction();
                 $stmt = $pdo->prepare("SELECT * FROM equipment_details WHERE id = ?");
@@ -110,7 +110,6 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
                     throw new Exception('Equipment not found');
                 }
 
-                // Update the record as usual.
                 $values = [
                     $_POST['asset_tag'],
                     $_POST['asset_description_1'],
@@ -127,26 +126,13 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
                     $_POST['equipment_id']
                 ];
                 $stmt = $pdo->prepare("UPDATE equipment_details SET 
-            asset_tag = ?,
-            asset_description_1 = ?,
-            asset_description_2 = ?,
-            specifications = ?,
-            brand = ?,
-            model = ?,
-            serial_number = ?,
-            location = ?,
-            accountable_individual = ?,
-            rr_no = ?,
-            date_created = ?,
-            remarks = ?
-            WHERE id = ?");
+            asset_tag = ?, asset_description_1 = ?, asset_description_2 = ?, specifications = ?, 
+            brand = ?, model = ?, serial_number = ?, location = ?, accountable_individual = ?, 
+            rr_no = ?, date_created = ?, remarks = ? WHERE id = ?");
                 $stmt->execute($values);
 
-                // Remove fixed fields from the old equipment before logging.
                 unset($oldEquipment['id'], $oldEquipment['is_disabled'], $oldEquipment['date_created']);
                 $oldValue = json_encode($oldEquipment);
-
-                // Prepare new values without the fixed fields.
                 $newValues = json_encode([
                     'asset_tag' => $_POST['asset_tag'],
                     'asset_description_1' => $_POST['asset_description_1'],
@@ -158,7 +144,6 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
                     'location' => $_POST['location'],
                     'accountable_individual' => $_POST['accountable_individual'],
                     'rr_no' => $_POST['rr_no'],
-                    // Exclude date_created as it is fixed.
                     'remarks' => $_POST['remarks']
                 ]);
                 $auditStmt = $pdo->prepare("INSERT INTO audit_log (
@@ -175,15 +160,18 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
                     'Successful'
                 ]);
                 $pdo->commit();
-                echo json_encode(['status' => 'success', 'message' => 'Equipment updated successfully']);
-                exit;
+                $response['status'] = 'success';
+                $response['message'] = 'Equipment updated successfully';
             } catch (Exception $e) {
                 if ($pdo->inTransaction()) {
                     $pdo->rollBack();
                 }
-                echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
-                exit;
+                $response['status'] = 'error';
+                $response['message'] = $e->getMessage();
             }
+            ob_clean(); // Clear any prior output
+            echo json_encode($response);
+            exit;
         case 'remove':
             try {
                 if (!isset($_POST['details_id'])) {
@@ -197,21 +185,15 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
                 }
                 $pdo->beginTransaction();
 
-                // Capture old record state
                 $oldValue = json_encode($detailsData);
-
-                // Soft delete: set is_disabled = 1
                 $stmt = $pdo->prepare("UPDATE equipment_details SET is_disabled = 1 WHERE id = ?");
                 $stmt->execute([$_POST['details_id']]);
-
-                // Update new value with is_disabled set to 1
                 $detailsData['is_disabled'] = 1;
                 $newValue = json_encode($detailsData);
 
-                // Log audit entry with action "Remove"
                 $auditStmt = $pdo->prepare("INSERT INTO audit_log (
-                    UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                 $auditStmt->execute([
                     $_SESSION['user_id'],
                     $detailsData['id'],
@@ -224,17 +206,16 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
                 ]);
 
                 $pdo->commit();
-                $_SESSION['success'] = "Equipment Details removed successfully.";
                 $response['status'] = 'success';
                 $response['message'] = 'Equipment Details removed successfully.';
             } catch (Exception $e) {
                 if ($pdo->inTransaction()) {
                     $pdo->rollBack();
                 }
-                $_SESSION['errors'] = ["Error removing details: " . $e->getMessage()];
                 $response['status'] = 'error';
                 $response['message'] = 'Error removing details: ' . $e->getMessage();
             }
+            ob_clean();
             echo json_encode($response);
             exit;
     }
@@ -265,8 +246,10 @@ function safeHtml($value)
 {
     return htmlspecialchars($value ?? 'N/A');
 }
+ob_end_clean();
+?>
 
-?><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -754,6 +737,7 @@ include '../../general/footer.php';
                 },
                 error: function (xhr, status, error) {
                     console.error('Error refreshing list:', error);
+                    // Avoid showing a toast here unless necessary
                 }
             });
         }
@@ -1124,13 +1108,24 @@ include '../../general/footer.php';
                 dataType: 'json',
                 headers: {'X-Requested-With': 'XMLHttpRequest'},
                 success: function (response) {
+                    if (response.status === 'success') {
                         bootstrap.Modal.getInstance(document.getElementById('addEquipmentModal')).hide();
                         showToast(response.message, 'success');
                         $('#addEquipmentForm')[0].reset();
                         refreshEquipmentList();
+                    } else {
+                        showToast(response.message, 'error');
+                    }
                 },
                 error: function (xhr, status, error) {
-                    showToast('Error creating equipment: ' + error, 'error');
+                    let errorMsg = 'Error creating equipment: ';
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        errorMsg += response.message || error;
+                    } catch (e) {
+                        errorMsg += error;
+                    }
+                    showToast(errorMsg, 'error');
                 },
                 complete: function () {
                     submitBtn.prop('disabled', false).html('Create Equipment');
@@ -1158,14 +1153,22 @@ include '../../general/footer.php';
                     }
                 },
                 error: function (xhr, status, error) {
-                    showToast('Error updating equipment: ' + error, 'error');
+                    let errorMsg = 'Error updating equipment: ';
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        errorMsg += response.message || error;
+                    } catch (e) {
+                        errorMsg += error;
+                    }
+                    showToast(errorMsg, 'error');
                 },
                 complete: function () {
                     submitBtn.prop('disabled', false).html('Save Changes');
                 }
             });
         });
-    });
+
+
     $('#addEquipmentModal').on('hidden.bs.modal', function () {
         $(this).find('form')[0].reset();
     });

@@ -1,4 +1,4 @@
-// Global Variables
+
 let currentPage = 1;
 let rowsPerPage;
 let prevButton, nextButton, rowsSelect, currentPageSpan, rowsPerPageSpan, totalRowsSpan;
