@@ -409,214 +409,67 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Equipment Status Management</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Add Bootstrap Icons CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Add sidebar CSS -->
-    <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/sidebar.css">
-    <!-- Add equipment manager CSS -->
+
     <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background-color: #f8f9fa;
-            min-height: 100vh;
-            padding-top: 70px;
-        }
-        .container-fluid {
-            margin-left: 300px;
-            padding: 20px;
-            width: calc(100% - 300px);
-        }
-        h2.mb-4 {
-            margin-top: 5px;
-            margin-bottom: 15px !important;
-        }
-        .card.shadow {
-            margin-top: 10px;
-        }
-        @media (max-width: 768px) {
-            .container-fluid {
-                margin-left: 0;
-                width: 100%;
-            }
-        }
-        .search-container {
-            width: 250px;
-        }
-        .search-container input {
-            padding-right: 30px;
-        }
-        .search-container i {
-            color: #6c757d;
-            pointer-events: none;
-        }
-        .form-select-sm {
-            min-width: 150px;
-            padding-right: 30px;
-        }
-        .d-flex.gap-2 {
-            gap: 0.5rem !important;
-        }
-        
-        /* Toast Container */
-        #toastContainer {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 99999; /* Increased z-index */
-            pointer-events: none;
-        }
-
-        .custom-toast {
-            pointer-events: auto;
-            margin-bottom: 10px;
-            min-width: 300px;
-            max-width: 400px;
-            background: white;
-            border-radius: 4px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            opacity: 0;
-            transform: translateX(100%);
-            transition: all 0.3s ease-in-out;
-        }
-
-        .custom-toast.show {
-            opacity: 1;
-            transform: translateX(0);
-        }
-
-        .toast-progress {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 3px;
-            background: linear-gradient(to right, #4CAF50, #8BC34A);
-            transform-origin: left;
-        }
-
-        /* Toast Types */
-        .toast-success { border-left: 4px solid #28a745; }
-        .toast-error { border-left: 4px solid #dc3545; }
-        .toast-warning { border-left: 4px solid #ffc107; }
-        .toast-info { border-left: 4px solid #17a2b8; }
-
-        /* Toast Header */
-        .toast-header {
-            padding: 12px 15px;
-            display: flex;
-            align-items: center;
-            border-bottom: 1px solid #dee2e6;
-        }
-
-        .toast-title {
-            margin: 0;
-            font-size: 1rem;
-            font-weight: 500;
-            flex-grow: 1;
-        }
-
-        /* Toast Body */
-        .toast-body {
-            padding: 12px 15px;
-            color: #666;
-        }
-    </style>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.min.css" rel="stylesheet">
 </head>
 <body>
-<!-- Include Sidebar -->
-<?php include('../../general/sidebar.php'); ?>
-<!-- Main Content -->
-<div class="container-fluid">
-    <h2 class="mb-4">Equipment Status Management</h2>
+<?php
+include '../../general/header.php';
+include '../../general/sidebar.php';
+include '../../general/footer.php';
+?>
 
+<div class="main-container">
+    <header class="main-header">
+        <h1><i class="bi bi-list-ul"></i> Equipment Status Management</h1>
+    </header>
 
-    <div class="card shadow">
-        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-            <span><i class="bi bi-list-ul"></i> List of Equipment Status</span>
-            <!-- Move search to header -->
-            <div class="input-group w-auto">
-                <span class="input-group-text"><i class="bi bi-search"></i></span>
-                <input type="text" id="searchStatus" class="form-control" placeholder="Search status...">
-            </div>
+    <section class="card">
+        <div class="card-header">
+            <h2><i class="bi bi-list-task"></i> List of Equipment Status</h2>
         </div>
-        <div class="card-body p-3">
-            <!-- Add Location Button and Filter -->
-            <div class="d-flex justify-content-between mb-3">
-                <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-success btn-sm d-inline-flex align-items-center gap-1"
-                            data-bs-toggle="modal" data-bs-target="#addStatusModal">
-                        <i class="bi bi-plus-circle"></i>
-                        <span>Add New Status</span>
-                    </button>
-                    <select class="form-select form-select-sm" id="filterStatus" style="width: auto;">
-                        <option value="">Filter By Status</option>
-                        <option value="Working">Working</option>
-                        <option value="For Repair">For Repair</option>
-                        <option value="For Disposal">For Disposal</option>
-                        <option value="Disposed">Disposed</option>
-                    </select>
-                    <!-- Add date filter controls -->
-                    <div class="d-flex gap-2 align-items-center">
-                        <select class="form-select form-select-sm" id="dateFilter" style="width: auto;">
-                            <option value="">Filter by Date</option>
-                            <option value="desc">Newest to Oldest</option>
-                            <option value="asc">Oldest to Newest</option>
-                            <option value="month">Specific Month</option>
-                            <option value="range">Custom Date Range</option>
+
+        <div class="card-body">
+            <div class="container-fluid px-0">
+                <div class="row align-items-center g-2">
+                    <div class="col-auto">
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addStatusModal">
+                            <i class="bi bi-plus-lg"></i> Add New Status
+                        </button>
+                    </div>
+                    <div class="col-md-4">
+                        <select class="form-select" id="filterStatus">
+                            <option value="">Filter by Status</option>
+                            <option value="Working">Working</option>
+                            <option value="For Repair">For Repair</option>
+                            <option value="For Disposal">For Disposal</option>
+                            <option value="Disposed">Disposed</option>
                         </select>
-                        <!-- Date inputs container -->
-                        <div id="dateInputsContainer" style="display: none;">
-                            <!-- Month Picker -->
-                            <div class="d-flex gap-2" id="monthPickerContainer" style="display: none;">
-                                <select class="form-select form-select-sm" id="monthSelect" style="min-width: 130px;">
-                                    <option value="">Select Month</option>
-                                    <?php
-                                    $months = [
-                                        'January', 'February', 'March', 'April', 'May', 'June',
-                                        'July', 'August', 'September', 'October', 'November', 'December'
-                                    ];
-                                    foreach ($months as $index => $month) {
-                                        echo "<option value='" . ($index + 1) . "'>" . $month . "</option>";
-                                    }
-                                    ?>
-                                </select>
-                                <select class="form-select form-select-sm" id="yearSelect" style="min-width: 110px;">
-                                    <option value="">Select Year</option>
-                                    <?php
-                                    $currentYear = date('Y');
-                                    for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
-                                        echo "<option value='" . $year . "'>" . $year . "</option>";
-                                    }
-                                    ?>
-                                </select>
-                            </div>
-                            <!-- Date Range Pickers -->
-                            <div class="d-flex gap-2" id="dateRangePickers" style="display: none;">
-                                <input type="date" class="form-control form-control-sm" id="dateFrom" placeholder="From">
-                                <input type="date" class="form-control form-control-sm" id="dateTo" placeholder="To">
-                            </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="input-group">
+                            <input type="text" id="searchStatus" class="form-control" placeholder="Search status...">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Status List Table -->
-            <div class="table-responsive">
-                <table class="table table-striped table-bordered table-sm mb-0" id="table">
-                    <thead class="table-dark">
+            <div class="table-responsive" id="table">
+                <table class="table" id="statusTable">
+                    <thead>
                     <tr>
-                        <th style="width: 7%">#</th>
-                        <th style="width: 13%">Asset Tag</th>
-                        <th style="width: 15%">Status</th>
-                        <th style="width: 15%">Action</th>
-                        <th style="width: 10%">Created Date</th>
-                        <th style="width: 20%">Remarks</th>
-                        <th style="width: 5%">Status</th>
-                        <th style="width: 15%">Actions</th>
+                        <th>#</th>
+                        <th>Asset Tag</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                        <th>Created Date</th>
+                        <th>Remarks</th>
+                        <th>Status</th>
+                        <th>Actions</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -635,18 +488,18 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                             echo "<td>" . ($row['is_disabled'] ? '<span class=\"badge bg-danger\">Disabled</span>' : '<span class=\"badge bg-success\">Active</span>') . "</td>";
                             echo "<td>
                               <div class='d-flex justify-content-center gap-2'>
-                                <button class='btn btn-sm btn-outline-primary edit-status' 
+                                <button class='btn btn-sm btn-outline-info edit-status' 
                                         data-id='" . htmlspecialchars($row['equipment_status_id']) . "'
                                         data-asset='" . htmlspecialchars($row['asset_tag']) . "'
                                         data-status='" . htmlspecialchars($row['status']) . "'
                                         data-action='" . htmlspecialchars($row['action']) . "'
                                         data-remarks='" . htmlspecialchars($row['remarks']) . "'
                                         data-disabled='" . htmlspecialchars($row['is_disabled']) . "'>
-                                  <i class='far fa-edit'></i> Edit
+                                  <i class='bi bi-pencil'></i>
                                 </button>
                                 <button class='btn btn-sm btn-outline-danger delete-status' 
                                         data-id='" . htmlspecialchars($row['equipment_status_id']) . "'>
-                                  <i class='far fa-trash-alt'></i> Delete
+                                  <i class='bi bi-trash'></i>
                                 </button>
                               </div>
                             </td>";
@@ -659,43 +512,41 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                     </tbody>
                 </table>
             </div>
+            <!-- Pagination Controls -->
+            <div class="container-fluid">
+                <div class="row align-items-center g-3">
+                    <div class="col-12 col-sm-auto">
+                        <div class="text-muted">
+                            Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
+                                    id="totalRows">100</span>
+                            entries
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-auto ms-sm-auto">
+                        <div class="d-flex align-items-center gap-2">
+                            <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                <i class="bi bi-chevron-left"></i> Previous
+                            </button>
+                            <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                <option value="10" selected>10</option>
+                                <option value="20">20</option>
+                                <option value="30">30</option>
+                                <option value="50">50</option>
+                            </select>
+                            <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                Next <i class="bi bi-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <ul class="pagination justify-content-center" id="pagination"></ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <!-- Pagination Controls -->
-        <div class="container-fluid">
-            <div class="row align-items-center g-3">
-                <!-- Pagination Info -->
-                <div class="col-12 col-sm-auto">
-                    <div class="text-muted">
-                        Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows">100</span> entries
-                    </div>
-                </div>
-                <div class="col-12 col-sm-auto ms-sm-auto">
-                    <div class="d-flex align-items-center gap-2">
-                        <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                            <i class="bi bi-chevron-left"></i>
-                            Previous
-                        </button>
-                        <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
-                            <option value="10" selected>10</option>
-                            <option value="20">20</option>
-                            <option value="30">30</option>
-                            <option value="50">50</option>
-                        </select>
-                        <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                            Next
-                            <i class="bi bi-chevron-right"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <!-- New Pagination Page Numbers -->
-            <div class="row mt-3">
-                <div class="col-12">
-                    <ul class="pagination justify-content-center" id="pagination"></ul>
-                </div>
-            </div>
-        </div> <!-- /.End of Pagination -->
-    </div>
+    </section>
 </div>
 
 <!-- Add Status Modal -->
@@ -710,11 +561,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                 <form id="addStatusForm">
                     <input type="hidden" name="action" value="add">
                     <div class="mb-3">
-                        <label for="asset_tag" class="form-label">Asset Tag</label>
+                        <label for="asset_tag" class="form-label">Asset Tag <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="asset_tag" required>
                     </div>
                     <div class="mb-3">
-                        <label for="status" class="form-label">Status</label>
+                        <label for="status" class="form-label">Status <span class="text-danger">*</span></label>
                         <select class="form-select" name="status" required>
                             <option value="">Select Status</option>
                             <option value="Working">Working</option>
@@ -724,17 +575,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label for="action_description" class="form-label">Action</label>
+                        <label for="action_description" class="form-label">Action <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="action_description" required>
                     </div>
                     <div class="mb-3">
                         <label for="remarks" class="form-label">Remarks</label>
                         <textarea class="form-control" name="remarks" rows="3"></textarea>
                     </div>
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-plus-circle"></i> Create Equipment Status
-                        </button>
+                    <div class="modal-footer border-0">
+                        <button type="submit" class="btn btn-primary">Add Equipment Status</button>
                     </div>
                 </form>
             </div>
@@ -755,11 +604,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                     <input type="hidden" name="action" value="update">
                     <input type="hidden" name="status_id" id="edit_status_id">
                     <div class="mb-3">
-                        <label for="edit_asset_tag" class="form-label">Asset Tag</label>
+                        <label for="edit_asset_tag" class="form-label"><i class="bi bi-tag"></i> Asset Tag <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="edit_asset_tag" name="asset_tag" required>
                     </div>
                     <div class="mb-3">
-                        <label for="edit_status" class="form-label">Status</label>
+                        <label for="edit_status" class="form-label"><i class="bi bi-info-circle"></i> Status <span class="text-danger">*</span></label>
                         <select class="form-select" id="edit_status" name="status" required>
                             <option value="">Select Status</option>
                             <option value="Working">Working</option>
@@ -769,18 +618,19 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label for="edit_action" class="form-label">Action</label>
+                        <label for="edit_action" class="form-label"><i class="bi bi-gear"></i> Action <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="edit_action" name="action_description" required>
                     </div>
                     <div class="mb-3">
-                        <label for="edit_remarks" class="form-label">Remarks</label>
+                        <label for="edit_remarks" class="form-label"><i class="bi bi-chat-left-text"></i> Remarks</label>
                         <textarea class="form-control" id="edit_remarks" name="remarks" rows="3"></textarea>
                     </div>
                     <div class="mb-3 form-check">
                         <input type="checkbox" class="form-check-input" id="edit_is_disabled" name="is_disabled">
                         <label class="form-check-label" for="edit_is_disabled">Disabled</label>
                     </div>
-                    <div class="d-grid">
+                    <div class="d-flex justify-content-end">
+                        <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-primary">Update Status</button>
                     </div>
                 </form>
@@ -789,11 +639,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
     </div>
 </div>
 
-<!-- JavaScript and jQuery -->
+<!-- JavaScript Dependencies -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 <script src="<?php echo BASE_URL; ?>src/control/js/toast.js"></script>
+
 <!-- Main Script -->
 <script>
     $(document).ready(function () {
@@ -1002,91 +853,23 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
         });
 
         // Search and Filter functionality
-        $('#searchStatus, #filterStatus, #dateFilter, #monthSelect, #yearSelect, #dateFrom, #dateTo').on('input change', function () {
+        $('#searchStatus, #filterStatus').on('input change', function () {
             filterTable();
-        });
-
-        $('#dateFilter').on('change', function () {
-            const value = $(this).val();
-
-            $('#dateInputsContainer').hide();
-            $('#monthPickerContainer, #dateRangePickers').hide();
-            $('#dateFrom, #dateTo').hide();
-
-            switch (value) {
-                case 'month':
-                    $('#dateInputsContainer').show();
-                    $('#monthPickerContainer').show();
-                    break;
-                case 'range':
-                    $('#dateInputsContainer').show();
-                    $('#dateRangePickers').show();
-                    $('#dateFrom, #dateTo').show();
-                    break;
-                default:
-                    filterTable();
-                    break;
-            }
         });
 
         function filterTable() {
             const searchText = $('#searchStatus').val().toLowerCase();
             const filterStatus = $('#filterStatus').val().toLowerCase();
-            const filterType = $('#dateFilter').val();
-            const selectedMonth = $('#monthSelect').val();
-            const selectedYear = $('#yearSelect').val();
-            const dateFrom = $('#dateFrom').val();
-            const dateTo = $('#dateTo').val();
 
             $(".table tbody tr").each(function () {
                 const row = $(this);
                 const rowText = row.text().toLowerCase();
                 const statusCell = row.find('td:eq(2)').text().toLowerCase();
-                const dateCell = row.find('td:eq(4)').text(); // Created Date column
-                const date = new Date(dateCell);
 
                 const searchMatch = rowText.indexOf(searchText) > -1;
                 const statusMatch = !filterStatus || statusCell === filterStatus;
-                let dateMatch = true;
 
-                switch (filterType) {
-                    case 'asc':
-                        const tbody = $('.table tbody');
-                        const rows = tbody.find('tr').toArray();
-                        rows.sort((a, b) => {
-                            const dateA = new Date($(a).find('td:eq(4)').text());
-                            const dateB = new Date($(b).find('td:eq(4)').text());
-                            return dateA - dateB;
-                        });
-                        tbody.append(rows);
-                        return;
-                    case 'desc':
-                        const tbody2 = $('.table tbody');
-                        const rows2 = tbody2.find('tr').toArray();
-                        rows2.sort((a, b) => {
-                            const dateA = new Date($(a).find('td:eq(4)').text());
-                            const dateB = new Date($(b).find('td:eq(4)').text());
-                            return dateB - dateA;
-                        });
-                        tbody2.append(rows2);
-                        return;
-                    case 'month':
-                        if (selectedMonth && selectedYear) {
-                            dateMatch = date.getMonth() + 1 === parseInt(selectedMonth) &&
-                                date.getFullYear() === parseInt(selectedYear);
-                        }
-                        break;
-                    case 'range':
-                        if (dateFrom && dateTo) {
-                            const from = new Date(dateFrom);
-                            const to = new Date(dateTo);
-                            to.setHours(23, 59, 59);
-                            dateMatch = date >= from && date <= to;
-                        }
-                        break;
-                }
-
-                row.toggle(searchMatch && statusMatch && dateMatch);
+                row.toggle(searchMatch && statusMatch);
             });
         }
 
