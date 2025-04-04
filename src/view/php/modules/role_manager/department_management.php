@@ -378,13 +378,15 @@ if (strlen($q) > 0) {
                                     <div class="row align-items-center g-3">
                                         <div class="col-12 col-sm-auto">
                                             <div class="text-muted">
-                                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of
+                                                Showing <span id="currentPage">1</span> to <span
+                                                        id="rowsPerPage">10</span> of
                                                 <span id="totalRows">100</span> entries
                                             </div>
                                         </div>
                                         <div class="col-12 col-sm-auto ms-sm-auto">
                                             <div class="d-flex align-items-center gap-2">
-                                                <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                                <button id="prevPage"
+                                                        class="btn btn-outline-primary d-flex align-items-center gap-1">
                                                     <i class="bi bi-chevron-left"></i> Previous
                                                 </button>
                                                 <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
@@ -393,7 +395,8 @@ if (strlen($q) > 0) {
                                                     <option value="30">30</option>
                                                     <option value="50">50</option>
                                                 </select>
-                                                <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                                <button id="nextPage"
+                                                        class="btn btn-outline-primary d-flex align-items-center gap-1">
                                                     Next <i class="bi bi-chevron-right"></i>
                                                 </button>
                                             </div>
@@ -434,7 +437,8 @@ if (strlen($q) > 0) {
                         <label for="DepartmentAcronym" class="form-label">
                             <i class="bi bi-building"></i> Department Acronym <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control" id="DepartmentAcronym" name="DepartmentAcronym" required>
+                        <input type="text" class="form-control" id="DepartmentAcronym" name="DepartmentAcronym"
+                               required>
                     </div>
                     <div class="mb-3">
                         <label for="DepartmentName" class="form-label">
@@ -468,19 +472,22 @@ if (strlen($q) > 0) {
                         <label for="edit_department_id" class="form-label">
                             <i class="bi bi-tag"></i> Department ID <span class="text-danger">*</span>
                         </label>
-                        <input type="number" min="1" class="form-control" id="edit_department_id" name="DepartmentID" readonly>
+                        <input type="number" min="1" class="form-control" id="edit_department_id" name="DepartmentID"
+                               readonly>
                     </div>
                     <div class="mb-3">
                         <label for="edit_department_acronym" class="form-label">
                             <i class="bi bi-building"></i> Department Acronym <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control" id="edit_department_acronym" name="DepartmentAcronym" required>
+                        <input type="text" class="form-control" id="edit_department_acronym" name="DepartmentAcronym"
+                               required>
                     </div>
                     <div class="mb-3">
                         <label for="edit_department_name" class="form-label">
                             <i class="bi bi-layers"></i> Department Name <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control" id="edit_department_name" name="DepartmentName" required>
+                        <input type="text" class="form-control" id="edit_department_name" name="DepartmentName"
+                               required>
                     </div>
                     <div class="d-flex justify-content-end">
                         <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
@@ -493,7 +500,8 @@ if (strlen($q) > 0) {
 </div>
 
 <!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteDepartmentModal" tabindex="-1" aria-labelledby="deleteDepartmentModalLabel" aria-hidden="true">
+<div class="modal fade" id="deleteDepartmentModal" tabindex="-1" aria-labelledby="deleteDepartmentModalLabel"
+     aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -512,50 +520,7 @@ if (strlen($q) > 0) {
 </div>
 
 <script>
-    // Client-side pagination function: shows only the specified number of rows per page.
-    function initPagination() {
-        var rows = $("#departmentTable tbody tr");
-        var rowsPerPage = parseInt($("#rowsPerPageSelect").val()) || 10;
-        var totalRows = rows.length;
-        $("#totalRows").text(totalRows);
-        var currentPage = 1;
-        $("#currentPage").text(currentPage);
-
-        // Hide all rows then show only the first set
-        rows.hide();
-        rows.slice(0, rowsPerPage).show();
-
-        // Next Page button event
-        $("#nextPage").off("click").on("click", function () {
-            var currentPage = parseInt($("#currentPage").text());
-            var start = currentPage * rowsPerPage;
-            if (start < totalRows) {
-                $("#currentPage").text(currentPage + 1);
-                rows.hide();
-                rows.slice(currentPage * rowsPerPage, (currentPage + 1) * rowsPerPage).show();
-            }
-        });
-
-        // Previous Page button event
-        $("#prevPage").off("click").on("click", function () {
-            var currentPage = parseInt($("#currentPage").text());
-            if (currentPage > 1) {
-                $("#currentPage").text(currentPage - 1);
-                rows.hide();
-                rows.slice((currentPage - 2) * rowsPerPage, (currentPage - 1) * rowsPerPage).show();
-            }
-        });
-    }
-
     document.addEventListener('DOMContentLoaded', function () {
-        // Initialize pagination on page load.
-        initPagination();
-
-        // Reinitialize pagination when the rows per page selection changes.
-        $("#rowsPerPageSelect").on("change", function () {
-            initPagination();
-        });
-
         // Live search filtering
         const searchInput = document.getElementById('eqSearch');
         if (searchInput) {
@@ -579,8 +544,8 @@ if (strlen($q) > 0) {
                 success: function (response) {
                     if (response.status === 'success') {
                         // Reload the table and reinitialize pagination
-                        $('#table').load(location.href + ' #table', function () {
-                            initPagination();
+                        $('#departmentTable').load(location.href + ' #departmentTable', function () {
+                            updatePagination();
                             showToast(response.message, 'success', 5000);
                         });
                         $('#addDepartmentModal').modal('hide');
@@ -606,11 +571,12 @@ if (strlen($q) > 0) {
                 success: function (response) {
                     if (response.status === 'success') {
                         // Reload the table and reinitialize pagination
-                        $('#table').load(location.href + ' #table', function () {
-                            initPagination();
+                        $('#departmentTable').load(location.href + ' #departmentTable', function () {
+                            updatePagination();
                             showToast(response.message, 'success', 5000);
                         });
                         $('#editDepartmentModal').modal('hide');
+                        $('.modal-backdrop').remove();
                     } else {
                         showToast(response.message || 'An error occurred', 'error', 5000);
                     }

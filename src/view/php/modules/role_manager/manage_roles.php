@@ -33,7 +33,7 @@ foreach ($roleData as $row) {
     if (!isset($roles[$roleID])) {
         $roles[$roleID] = [
             'Role_Name' => $row['Role_Name'],
-            'Modules'   => []
+            'Modules' => []
         ];
     }
     // Use COALESCE result; if empty, default to "General"
@@ -77,18 +77,21 @@ unset($role); // break the reference
             display: flex;
             min-height: 100vh;
         }
+
         /* Sidebar with fixed width */
         .sidebar {
             width: 300px;
             background-color: #2c3e50;
             color: #fff;
         }
+
         /* Main content takes remaining space */
         .main-content {
             flex: 1;
             padding: 20px;
             margin-left: 300px;
         }
+
         /* (Optional) Override container-fluid padding if needed */
         .main-content.container-fluid {
             padding: 100px 15px;
@@ -143,10 +146,15 @@ unset($role); // break the reference
                                 <?php endforeach; ?>
                             </td>
                             <td>
-                                <button type="button" class="btn btn-sm btn-warning edit-role-btn" data-role-id="<?php echo $roleID; ?>" data-bs-toggle="modal" data-bs-target="#editRoleModal">
+                                <button type="button" class="btn btn-sm btn-warning edit-role-btn"
+                                        data-role-id="<?php echo $roleID; ?>" data-bs-toggle="modal"
+                                        data-bs-target="#editRoleModal">
                                     Modify Role
                                 </button>
-                                <button type="button" class="btn btn-sm btn-danger delete-role-btn" data-role-id="<?php echo $roleID; ?>" data-role-name="<?php echo htmlspecialchars($role['Role_Name']); ?>" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
+                                <button type="button" class="btn btn-sm btn-danger delete-role-btn"
+                                        data-role-id="<?php echo $roleID; ?>"
+                                        data-role-name="<?php echo htmlspecialchars($role['Role_Name']); ?>"
+                                        data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
                                     Remove Role
                                 </button>
                             </td>
@@ -212,7 +220,8 @@ unset($role); // break the reference
 </div>
 
 <!-- Confirm Delete Modal -->
-<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel"
+     aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -235,7 +244,7 @@ unset($role); // break the reference
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Add New Role</h5>
+                <h5 class="modal-title">Create New Role</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body" id="addRoleContent">Loading...</div>
@@ -244,22 +253,22 @@ unset($role); // break the reference
 </div>
 
 <script>
-    $(document).ready(function() {
+    $(document).ready(function () {
         // 1. Load edit role modal content via AJAX.
-        $('.edit-role-btn').on('click', function() {
+        $('.edit-role-btn').on('click', function () {
             var roleID = $(this).data('role-id');
             $('#editRoleContent').html("Loading...");
             $.ajax({
                 url: 'edit_roles.php',
                 type: 'GET',
-                data: { id: roleID },
-                headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                success: function(response) {
+                data: {id: roleID},
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                success: function (response) {
                     $('#editRoleContent').html(response);
-                    // Ensure the modal form has a hidden input with id="roleID"
                     $('#roleID').val(roleID);
+
                 },
-                error: function(xhr, status, error) {
+                error: function (xhr, status, error) {
                     console.error('AJAX Error:', status, error);
                     $('#editRoleContent').html('<p class="text-danger">Error loading role data. Please try again.</p>');
                 }
@@ -267,7 +276,7 @@ unset($role); // break the reference
         });
 
         // 2. Handle delete role modal: store role info when modal is shown.
-        $('#confirmDeleteModal').on('show.bs.modal', function(event) {
+        $('#confirmDeleteModal').on('show.bs.modal', function (event) {
             var button = $(event.relatedTarget);
             var roleID = button.data('role-id');
             var roleName = button.data('role-name');
@@ -277,26 +286,28 @@ unset($role); // break the reference
         });
 
         // 3. Confirm delete role using event delegation.
-        $(document).on('click', '#confirmDeleteButton', function(e) {
+        $(document).on('click', '#confirmDeleteButton', function (e) {
             e.preventDefault();
             $(this).blur(); // Remove focus to avoid ARIA issues.
             var roleID = $(this).data('role-id');
             $.ajax({
                 type: "POST",
                 url: "delete_role.php",
-                data: { id: roleID },
+                data: {id: roleID},
                 dataType: 'json',
-                success: function(response) {
-                    if (response.success) {
-                        $('#rolesTable').load(location.href + ' #rolesTable', function() {
+                success: function (response) {
+                    if (response.success === 'success') {
+                        $('#rolesTable').load(location.href + ' #rolesTable', function () {
+                            updatePagination();
                             showToast(response.message, 'success');
                         });
                         $('#confirmDeleteModal').modal('hide');
+                        $('.modal-backdrop').remove();
                     } else {
                         showToast(response.message, 'error');
                     }
                 },
-                error: function() {
+                error: function () {
                     showToast('Error deleting role.', 'error');
                 }
             });
@@ -308,10 +319,10 @@ unset($role); // break the reference
             $.ajax({
                 url: 'add_role.php',
                 type: 'GET',
-                success: function(response) {
+                success: function (response) {
                     $('#addRoleContent').html(response);
                 },
-                error: function() {
+                error: function () {
                     $('#addRoleContent').html('<p class="text-danger">Error loading form.</p>');
                 }
             });
@@ -329,8 +340,9 @@ unset($role); // break the reference
                 success: function (response) {
                     if (response.success) {
                         // Reload the table and then show the toast.
-                        $('#rolesTable').load(location.href + ' #rolesTable', function() {
+                        $('#rolesTable').load(location.href + ' #rolesTable', function () {
                             showToast(response.message, 'success');
+                            $('.modal-backdrop').remove();
                         });
                         // Optionally, reset the form.
                         $('#addRoleForm')[0].reset();
@@ -394,42 +406,42 @@ unset($role); // break the reference
         });
 
         // 7. Undo button click handler.
-        $('#undoButton').on('click', function() {
+        $('#undoButton').on('click', function () {
             $.ajax({
                 url: 'undo.php',
                 type: 'GET',
                 dataType: 'json',
-                success: function(response) {
+                success: function (response) {
                     if (response.success) {
-                        $('#rolesTable').load(location.href + ' #rolesTable', function() {
+                        $('#rolesTable').load(location.href + ' #rolesTable', function () {
                             showToast(response.message, 'success');
                         });
                     } else {
                         showToast(response.message, 'error');
                     }
                 },
-                error: function() {
+                error: function () {
                     showToast('Error processing undo request.', 'error');
                 }
             });
         });
 
         // 8. Redo button click handler.
-        $('#redoButton').on('click', function() {
+        $('#redoButton').on('click', function () {
             $.ajax({
                 url: 'redo.php',
                 type: 'GET',
                 dataType: 'json',
-                success: function(response) {
+                success: function (response) {
                     if (response.success) {
-                        $('#rolesTable').load(location.href + ' #rolesTable', function() {
+                        $('#rolesTable').load(location.href + ' #rolesTable', function () {
                             showToast(response.message, 'success');
                         });
                     } else {
                         showToast(response.message, 'error');
                     }
                 },
-                error: function() {
+                error: function () {
                     showToast('Error processing redo request.', 'error');
                 }
             });

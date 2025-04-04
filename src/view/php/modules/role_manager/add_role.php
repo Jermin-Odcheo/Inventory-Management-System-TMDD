@@ -60,9 +60,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Submit form via AJAX with toast notifications.
     $("#addRoleForm").submit(function(e) {
         e.preventDefault();
-        const submitBtn = $("button[type='submit']", this);
-        submitBtn.prop('disabled', true);
-        submitBtn.html('<span class="spinner-border spinner-border-sm me-2"></span> Adding...');
         $.ajax({
             url: "add_role.php",
             type: "POST",
@@ -71,9 +68,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             success: function(response) {
                 if(response.success) {
                     $('#rolesTable').load(location.href + ' #rolesTable', function() {
-                        showToast(response.message, 'success');
+                        updatePagination();
+                        showToast(response.message, 'success', 5000);
                     });
                     $('#addRoleModal').modal('hide');
+                    $('.modal-backdrop').remove();
                 } else {
                     showToast(response.message, 'error');
                 }

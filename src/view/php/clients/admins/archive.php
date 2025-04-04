@@ -417,7 +417,8 @@ function formatChanges($oldJsonStr)
                     var modalInstance = bootstrap.Modal.getInstance(document.getElementById('restoreArchiveModal'));
                     modalInstance.hide();
 
-                    if (response.status === 'success') {
+                    // Check for success status in a case-insensitive manner
+                    if (response.status && response.status.toLowerCase() === 'success') {
                         $('#archiveTable').load(location.href + ' #archiveTable', function () {
                             updateBulkButtons();
                             showToast(response.message, 'success');
@@ -433,6 +434,7 @@ function formatChanges($oldJsonStr)
         }
     });
 
+
     // --- Individual Permanent Delete ---
     $(document).on('click', '.delete-permanent-btn', function(e) {
         e.preventDefault();
@@ -440,6 +442,7 @@ function formatChanges($oldJsonStr)
         var deleteModal = new bootstrap.Modal(document.getElementById('deleteArchiveModal'));
         deleteModal.show();
     });
+
     $(document).on('click', '#confirmDeleteBtn', function () {
         if (deleteId) {
             $.ajax({
@@ -453,7 +456,8 @@ function formatChanges($oldJsonStr)
                     var modalInstance = bootstrap.Modal.getInstance(document.getElementById('deleteArchiveModal'));
                     modalInstance.hide();
 
-                    if (response.status === 'success') {
+                    // Use case-insensitive check for "success"
+                    if (response.status && response.status.toLowerCase() === 'success') {
                         $('#archiveTable').load(location.href + ' #archiveTable', function () {
                             updateBulkButtons();
                             showToast(response.message, 'success');
@@ -468,6 +472,7 @@ function formatChanges($oldJsonStr)
             });
         }
     });
+
 
     var bulkRestoreIds = [];
 
