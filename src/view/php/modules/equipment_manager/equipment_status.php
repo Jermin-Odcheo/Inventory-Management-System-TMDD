@@ -424,11 +424,11 @@ include '../../general/footer.php';
 
 <div class="main-container">
     <header class="main-header">
-        <h1><i class="bi bi-list-ul"></i> Equipment Status Management</h1>
+        <h1>Equipment Status Management</h1>
     </header>
 
     <section class="card">
-        <div class="card-header">
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
             <h2><i class="bi bi-list-task"></i> List of Equipment Status</h2>
         </div>
 
@@ -436,7 +436,7 @@ include '../../general/footer.php';
             <div class="container-fluid px-0">
                 <div class="row align-items-center g-2">
                     <div class="col-auto">
-                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addStatusModal">
+                        <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#addStatusModal">
                             <i class="bi bi-plus-lg"></i> Add New Status
                         </button>
                     </div>

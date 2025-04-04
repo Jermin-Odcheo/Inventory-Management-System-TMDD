@@ -81,7 +81,7 @@ body {
 }
 
 .form-select, .search-input input {
-    padding: 0.5rem 0.75rem;
+
     border-radius: var(--radius);
     border: 1px solid #ccc;
 }

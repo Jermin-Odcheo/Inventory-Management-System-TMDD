@@ -266,11 +266,11 @@ include '../../general/footer.php';
 
 <div class="main-container">
     <header class="main-header">
-        <h1><i class="bi bi-clipboard-data"></i> Equipment Details Management</h1>
+        <h1> Equipment Details Management</h1>
     </header>
 
     <section class="card">
-        <div class="card-header">
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
             <h2><i class="bi bi-list-task"></i> List of Equipment Details</h2>
         </div>
         <div class="card-body">
@@ -278,7 +278,7 @@ include '../../general/footer.php';
                 <!-- Toolbar Row -->
                 <div class="row align-items-lg-center g-2">
                     <div class="col-auto">
-                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEquipmentModal">
+                        <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#addEquipmentModal">
                             <i class="bi bi-plus-lg"></i> Create Equipment
                         </button>
                     </div>
@@ -295,13 +295,7 @@ include '../../general/footer.php';
                             ?>
                         </select>
                     </div>
-                    <div class="col-md-3">
-                        <div class="input-group">
-                            <input type="text" id="searchEquipment" class="form-control"
-                                   placeholder="Search equipment...">
-                            <span class="input-group-text"><i class="bi bi-search"></i></span>
-                        </div>
-                    </div>
+
                     <div class="col-md-3">
                         <select class="form-select" id="dateFilter">
                             <option value="">Filter by Date</option>
@@ -310,6 +304,13 @@ include '../../general/footer.php';
                             <option value="month">Specific Month</option>
                             <option value="range">Custom Date Range</option>
                         </select>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="input-group">
+                            <input type="text" id="searchEquipment" class="form-control"
+                                   placeholder="Search equipment...">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        </div>
                     </div>
                 </div>
 
