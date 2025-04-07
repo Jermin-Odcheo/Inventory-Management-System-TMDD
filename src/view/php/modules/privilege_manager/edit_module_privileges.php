@@ -67,6 +67,7 @@ $currentPrivileges = array_map('intval', $currentPrivileges);
             success: function(response){
                 if(response.success){
                     $('#privilegeTable').load(location.href + ' #privilegeTable', function() {
+                        updatePagination();
                         showToast(response.message, 'success');
                     });
 

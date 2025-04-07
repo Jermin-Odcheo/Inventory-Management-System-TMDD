@@ -238,7 +238,6 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
 </div>
 
 <script>
-
     $(document).ready(function () {
         $('#addModuleModal').on('hidden.bs.modal', function () {
             $(this).find('form')[0].reset();
@@ -253,6 +252,7 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 data: {module_id: moduleID},
                 headers: {'X-Requested-With': 'XMLHttpRequest'},
                 success: function (response) {
+
                     $('#editModuleContent').html(response);
                 },
                 error: function (xhr, status, error) {
@@ -285,6 +285,7 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     if (response.success) {
                         // Reload the table after deletion
                         $('#privilegeTable').load(location.href + ' #privilegeTable', function () {
+                            updatePagination();
                             showToast(response.message, 'success');
                         });
                         $('#confirmDeleteModal').modal('hide');
@@ -309,6 +310,7 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 success: function (response) {
                     if (response.success) {
                         $('#privilegeTable').load(location.href + ' #privilegeTable', function () {
+                            updatePagination();
                             showToast(response.message, 'success');
                         });
                         $('#addModuleModal').modal('hide');
