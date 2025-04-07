@@ -1,5 +1,5 @@
 // Ultra-modern toast notification system with enhanced animations
-function showToast(message, type = 'info', duration = 5000, title = null) {
+function showToast(message, type = 'info', duration = 2800, title = null) {
     // Create or get container
     let container = document.getElementById('toastContainer');
     if (!container) {
