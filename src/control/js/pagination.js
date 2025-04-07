@@ -6,7 +6,7 @@ let prevButton, nextButton, rowsSelect, currentPageSpan, rowsPerPageSpan, totalR
 // Pagination function with simpler, more direct approach
 function updatePagination() {
     // Get all data rows
-    const allRows = document.querySelectorAll('#table tbody tr');
+    const allRows = document.querySelectorAll('#table table tbody tr');
     console.log("Total rows in table:", allRows.length);
 
     // Get the total number of valid rows

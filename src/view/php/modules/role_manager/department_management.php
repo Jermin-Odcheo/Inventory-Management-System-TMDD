@@ -3,15 +3,9 @@
 ob_start();
 session_start();
 require_once('../../../../../config/ims-tmdd.php'); // Adjust the path as needed
-
+include '../../general/header.php';
 // Determine if this is an AJAX request.
 $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
-
-// Only include header.php (which outputs HTML and sets up the toast container)
-// if this is not an AJAX call.
-if (!$isAjax) {
-    include '../../general/header.php';
-}
 
 // Optionally check for admin privileges
 if (!isset($_SESSION['user_id'])) {
@@ -285,10 +279,6 @@ if (strlen($q) > 0) {
 <head>
     <meta charset="UTF-8">
     <title>Department Management</title>
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -308,9 +298,7 @@ if (strlen($q) > 0) {
             }
         }
     </style>
-    <!-- jQuery and Bootstrap Bundle -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 </head>
 <body>
 <?php include '../../general/sidebar.php'; ?>
@@ -331,6 +319,8 @@ if (strlen($q) > 0) {
                     </div>
                     <div class="card-body">
                         <?php if (!empty($departments)): ?>
+
+
                             <div class="table-responsive" id="table">
                                 <div class="d-flex justify-content-start mb-3 gap-2">
                                     <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal"

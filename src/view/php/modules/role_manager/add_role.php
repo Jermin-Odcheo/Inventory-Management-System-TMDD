@@ -47,12 +47,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ?>
 
 <!-- Display the add role form when not processing a POST request -->
-<form id="addRoleForm" method="POST">
+<form id="addRoleForm" method="POST" action="add_role.php">
     <div class="mb-3">
         <label for="role_name" class="form-label">Role Name</label>
         <input type="text" name="role_name" id="role_name" class="form-control" placeholder="Enter role name" required>
     </div>
-    <button type="submit" class="btn btn-primary">Add Role</button>
+    <button type="submit" class="btn btn-primary">Create Role</button>
     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
 </form>
 
@@ -80,10 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             error: function() {
                 showToast('System error occurred. Please try again.', 'error');
             },
-            complete: function() {
-                submitBtn.prop('disabled', false);
-                submitBtn.html('Add Role');
-            }
+
         });
     });
 </script>

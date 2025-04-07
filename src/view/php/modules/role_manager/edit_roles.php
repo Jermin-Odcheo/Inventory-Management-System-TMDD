@@ -299,6 +299,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                     // Reload roles table and show toast message
                     $('#rolesTable').load(location.href + ' #rolesTable', function () {
+                        updatePagination();
                         showToast(response.message, 'success');
                     });
                 } else {

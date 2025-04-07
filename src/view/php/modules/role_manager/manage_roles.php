@@ -1,9 +1,10 @@
 <?php
+ob_start();
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
 include '../../general/header.php';
 
-// Updated SQL join conditions using the correct key for modules.
+// SQL query remains the same
 $sql = "
 SELECT 
     r.id AS Role_ID,
@@ -26,7 +27,7 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute();
 $roleData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Group data by role and module.
+// Group data by role and module (unchanged)
 $roles = [];
 foreach ($roleData as $row) {
     $roleID = $row['Role_ID'];
@@ -36,82 +37,62 @@ foreach ($roleData as $row) {
             'Modules' => []
         ];
     }
-    // Use COALESCE result; if empty, default to "General"
     $moduleName = !empty($row['Module_Name']) ? $row['Module_Name'] : 'General';
     if (!isset($roles[$roleID]['Modules'][$moduleName])) {
         $roles[$roleID]['Modules'][$moduleName] = [];
     }
-    // Use the correct alias "Privileges" from your query
     if (!empty($row['Privileges'])) {
         $roles[$roleID]['Modules'][$moduleName][] = $row['Privileges'];
     }
 }
 
-// Remove duplicate privileges if any.
 foreach ($roles as $roleID => &$role) {
     foreach ($role['Modules'] as $moduleName => &$privileges) {
         $privileges = array_unique($privileges);
     }
 }
-unset($role); // break the reference
+unset($role);
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Role Management</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- jQuery -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <!-- Bootstrap JS Bundle -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Ensure toast.js is loaded on the page -->
 
     <style>
-        /* Flex container to hold sidebar and main content */
         .wrapper {
             display: flex;
             min-height: 100vh;
         }
 
-        /* Sidebar with fixed width */
         .sidebar {
             width: 300px;
             background-color: #2c3e50;
             color: #fff;
         }
 
-        /* Main content takes remaining space */
         .main-content {
             flex: 1;
             padding: 20px;
             margin-left: 300px;
         }
 
-        /* (Optional) Override container-fluid padding if needed */
-        .main-content.container-fluid {
-            padding: 100px 15px;
+        #tableContainer {
+            max-height: 500px;
+            overflow-y: auto;
         }
-
     </style>
 </head>
 <body>
 <div class="wrapper">
-    <!-- Sidebar -->
     <div class="sidebar">
         <?php include '../../general/sidebar.php'; ?>
     </div>
-
-    <!-- Main Content Area -->
     <div class="main-content container-fluid">
         <h1>Role Management</h1>
-
         <div class="d-flex justify-content-end mb-3">
-            <!-- Add Undo and Redo buttons here -->
             <button type="button" class="btn btn-secondary me-2" id="undoButton">Undo</button>
             <button type="button" class="btn btn-secondary" id="redoButton">Redo</button>
             <button type="button" class="btn btn-primary ms-2" data-bs-toggle="modal" data-bs-target="#addRoleModal">
@@ -120,12 +101,12 @@ unset($role); // break the reference
         </div>
 
         <div class="table-responsive" id="table">
-            <table id="rolesTable" class="table table-striped table-hover">
+            <table id="rolesTable" class="table table-striped table-hover align-middle">
                 <thead class="table-dark">
                 <tr>
                     <th>Role ID</th>
                     <th>Role Name</th>
-                    <th>Modules &amp; Privileges</th>
+                    <th>Modules & Privileges</th>
                     <th>Actions</th>
                 </tr>
                 </thead>
@@ -167,7 +148,6 @@ unset($role); // break the reference
                 <?php endif; ?>
                 </tbody>
             </table>
-            <!-- Pagination Controls (optional) -->
             <div class="container-fluid">
                 <div class="row align-items-center g-3">
                     <div class="col-12 col-sm-auto">
@@ -178,8 +158,7 @@ unset($role); // break the reference
                     </div>
                     <div class="col-12 col-sm-auto ms-sm-auto">
                         <div class="d-flex align-items-center gap-2">
-                            <button id="prevPage"
-                                    class="btn btn-outline-primary d-flex align-items-center gap-1">
+                            <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
                                 <i class="bi bi-chevron-left"></i> Previous
                             </button>
                             <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
@@ -188,8 +167,7 @@ unset($role); // break the reference
                                 <option value="30">30</option>
                                 <option value="50">50</option>
                             </select>
-                            <button id="nextPage"
-                                    class="btn btn-outline-primary d-flex align-items-center gap-1">
+                            <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
                                 Next <i class="bi bi-chevron-right"></i>
                             </button>
                         </div>
@@ -201,25 +179,21 @@ unset($role); // break the reference
                     </div>
                 </div>
             </div>
-        </div><!-- /.table-responsive -->
-
-    </div><!-- /.main-content -->
-</div><!-- /.wrapper -->
-
-<script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
-
-<!-- Edit Role Modal -->
-<div class="modal fade" id="editRoleModal" tabindex="-1" aria-labelledby="editRoleModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div id="editRoleContent">
-                Loading...
-            </div>
         </div>
     </div>
 </div>
 
-<!-- Confirm Delete Modal -->
+<script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
+
+<!-- Modals (unchanged) -->
+<div class="modal fade" id="editRoleModal" tabindex="-1" aria-labelledby="editRoleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div id="editRoleContent">Loading...</div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel"
      aria-hidden="true">
     <div class="modal-dialog">
@@ -239,7 +213,6 @@ unset($role); // break the reference
     </div>
 </div>
 
-<!-- Add Role Modal -->
 <div class="modal fade" id="addRoleModal" tabindex="-1" aria-labelledby="addRoleModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -253,9 +226,9 @@ unset($role); // break the reference
 </div>
 
 <script>
-    $(document).ready(function () {
-        // 1. Load edit role modal content via AJAX.
-        $('.edit-role-btn').on('click', function () {
+    document.addEventListener('DOMContentLoaded', function () {
+        // **1. Load edit role modal content via AJAX**
+        $(document).on('click', '.edit-role-btn', function () {
             var roleID = $(this).data('role-id');
             $('#editRoleContent').html("Loading...");
             $.ajax({
@@ -266,7 +239,6 @@ unset($role); // break the reference
                 success: function (response) {
                     $('#editRoleContent').html(response);
                     $('#roleID').val(roleID);
-
                 },
                 error: function (xhr, status, error) {
                     console.error('AJAX Error:', status, error);
@@ -275,45 +247,44 @@ unset($role); // break the reference
             });
         });
 
-        // 2. Handle delete role modal: store role info when modal is shown.
+        // **2. Handle delete role modal**
         $('#confirmDeleteModal').on('show.bs.modal', function (event) {
             var button = $(event.relatedTarget);
             var roleID = button.data('role-id');
             var roleName = button.data('role-name');
             $('#roleNamePlaceholder').text(roleName);
-            // Store roleID on the confirm button.
             $('#confirmDeleteButton').data('role-id', roleID);
         });
 
-        // 3. Confirm delete role using event delegation.
+        // **3. Confirm delete role via AJAX**
         $(document).on('click', '#confirmDeleteButton', function (e) {
             e.preventDefault();
-            $(this).blur(); // Remove focus to avoid ARIA issues.
+            $(this).blur();
             var roleID = $(this).data('role-id');
             $.ajax({
-                type: "POST",
-                url: "delete_role.php",
+                type: 'POST',
+                url: 'delete_role.php',
                 data: {id: roleID},
                 dataType: 'json',
                 success: function (response) {
-                    if (response.success === 'success') {
+                    if (response.success) {
                         $('#rolesTable').load(location.href + ' #rolesTable', function () {
                             updatePagination();
-                            showToast(response.message, 'success');
+                            showToast(response.message, 'success', 5000);
                         });
                         $('#confirmDeleteModal').modal('hide');
                         $('.modal-backdrop').remove();
                     } else {
-                        showToast(response.message, 'error');
+                        showToast(response.message || 'An error occurred', 'error', 5000);
                     }
                 },
-                error: function () {
-                    showToast('Error deleting role.', 'error');
+                error: function (xhr, status, error) {
+                    showToast('Error deleting role: ' + error, 'error', 5000);
                 }
             });
         });
 
-        // 4. Load add role modal content via AJAX.
+        // **4. Load add role modal content**
         $('#addRoleModal').on('show.bs.modal', function () {
             $('#addRoleContent').html("Loading...");
             $.ajax({
@@ -328,85 +299,8 @@ unset($role); // break the reference
             });
         });
 
-        // 5. Handle "Add Role" form submission via AJAX.
-        $(document).on('submit', '#addRoleForm', function (e) {
-            e.preventDefault();
-            var actionUrl = $(this).attr('action');
-            $.ajax({
-                url: actionUrl,
-                type: 'POST',
-                data: $(this).serialize(),
-                dataType: 'json',
-                success: function (response) {
-                    if (response.success) {
-                        // Reload the table and then show the toast.
-                        $('#rolesTable').load(location.href + ' #rolesTable', function () {
-                            showToast(response.message, 'success');
-                            $('.modal-backdrop').remove();
-                        });
-                        // Optionally, reset the form.
-                        $('#addRoleForm')[0].reset();
-                    } else {
-                        showToast(response.message, 'error');
-                    }
-                },
-            });
-        });
-
-        // 6. Handle "Edit Role" form submission via AJAX.
-        $(document).on('submit', '#editRoleForm', function (e) {
-            e.preventDefault();
-            const submitBtn = $('button[type="submit"]', this);
-            // Disable button and show loading state
-            submitBtn.html('<span class="spinner-border spinner-border-sm me-2"></span> Updating...');
-            submitBtn.prop('disabled', true);
-            $.ajax({
-                url: 'edit_roles.php?id=<?php echo $roleID; ?>',
-                type: 'POST',
-                data: $(this).serialize(),
-                dataType: 'json',
-                success: function (response) {
-                    if (response.success) {
-                        // Update table row with new role name
-                        const row = $('tr[data-role-id="' + response.role_id + '"]');
-                        row.find('.role-name').text(response.role_name);
-                        // Update the modules & privileges cell
-                        const privilegeCell = row.find('.privilege-list');
-                        privilegeCell.empty();
-                        if (response.privileges.length === 0) {
-                            privilegeCell.html('<em>No privileges</em>');
-                        } else {
-                            // Group privileges by module name
-                            const grouped = {};
-                            response.privileges.forEach(function (item) {
-                                if (!grouped[item.module_name]) {
-                                    grouped[item.module_name] = [];
-                                }
-                                grouped[item.module_name].push(item.priv_name);
-                            });
-                            Object.keys(grouped).forEach(function (moduleName) {
-                                privilegeCell.append(
-                                    $('<div class="mb-1">').html('<b>' + moduleName + ':</b> ' + grouped[moduleName].join(', '))
-                                );
-                            });
-                        }
-                    } else {
-                        showToast(response.message || 'An error occurred while updating the role', 'error');
-                    }
-                },
-                error: function () {
-                    showToast('System error occurred. Please try again.', 'error');
-                },
-                complete: function () {
-                    // Restore button state.
-                    submitBtn.html('<i class="bi bi-check2 me-1"></i>Update Role');
-                    submitBtn.prop('disabled', false);
-                }
-            });
-        });
-
-        // 7. Undo button click handler.
-        $('#undoButton').on('click', function () {
+        // **7. Undo button via AJAX**
+        $(document).on('click', '#undoButton', function () {
             $.ajax({
                 url: 'undo.php',
                 type: 'GET',
@@ -414,20 +308,21 @@ unset($role); // break the reference
                 success: function (response) {
                     if (response.success) {
                         $('#rolesTable').load(location.href + ' #rolesTable', function () {
-                            showToast(response.message, 'success');
+                            updatePagination();
+                            showToast(response.message, 'success', 5000);
                         });
                     } else {
-                        showToast(response.message, 'error');
+                        showToast(response.message || 'An error occurred', 'error', 5000);
                     }
                 },
-                error: function () {
-                    showToast('Error processing undo request.', 'error');
+                error: function (xhr, status, error) {
+                    showToast('Error processing undo request: ' + error, 'error', 5000);
                 }
             });
         });
 
-        // 8. Redo button click handler.
-        $('#redoButton').on('click', function () {
+        // **8. Redo button via AJAX**
+        $(document).on('click', '#redoButton', function () {
             $.ajax({
                 url: 'redo.php',
                 type: 'GET',
@@ -435,14 +330,15 @@ unset($role); // break the reference
                 success: function (response) {
                     if (response.success) {
                         $('#rolesTable').load(location.href + ' #rolesTable', function () {
-                            showToast(response.message, 'success');
+                            updatePagination();
+                            showToast(response.message, 'success', 5000);
                         });
                     } else {
-                        showToast(response.message, 'error');
+                        showToast(response.message || 'An error occurred', 'error', 5000);
                     }
                 },
-                error: function () {
-                    showToast('Error processing redo request.', 'error');
+                error: function (xhr, status, error) {
+                    showToast('Error processing redo request: ' + error, 'error', 5000);
                 }
             });
         });
