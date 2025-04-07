@@ -54,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header("Location: charge_invoice.php");
         exit;
     }
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && is_ajax_request()) {
+
     if (isset($_POST['action']) && $_POST['action'] === 'add') {
         // Validate that the provided PO number exists in the purchase_order table
         $stmt = $pdo->prepare("SELECT po_no FROM purchase_order WHERE po_no = ?");
@@ -80,7 +80,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && is_ajax_request()) {
             $_SESSION['errors'] = ["Error adding Charge Invoice: " . $e->getMessage()];
         }
     }
-}
+
+    if (isset($_POST['action']) && $_POST['action'] === 'update') {
+        // Clear any previous output
+        ob_clean();
+        
+        $id = $_POST['id'];
+        $invoice_no = trim($_POST['invoice_no']);
+        $date_of_purchase = trim($_POST['date_of_purchase']);
+        $po_no = trim($_POST['po_no']);
+
+        if (empty($invoice_no) || empty($date_of_purchase) || empty($po_no)) {
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'error', 'message' => 'Please fill in all required fields.']);
+            exit;
+        }
+
+        try {
+            // Validate that the provided PO number exists in the purchase_order table
+            $stmt = $pdo->prepare("SELECT po_no FROM purchase_order WHERE po_no = ?");
+            $stmt->execute([$po_no]);
+            $existingPO = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$existingPO) {
+                header('Content-Type: application/json');
+                echo json_encode(['status' => 'error', 'message' => 'Invalid Purchase Order Number. Please ensure the Purchase Order exists.']);
+                exit;
+            }
+
+            $stmt = $pdo->prepare("UPDATE charge_invoice 
+                                  SET invoice_no = ?, 
+                                      date_of_purchase = ?, 
+                                      po_no = ? 
+                                  WHERE id = ? AND is_disabled = 0");
+            $stmt->execute([$invoice_no, $date_of_purchase, $po_no, $id]);
+            
+            if ($stmt->rowCount() > 0) {
+                header('Content-Type: application/json');
+                echo json_encode(['status' => 'success', 'message' => 'Charge Invoice updated successfully.']);
+                exit;
+            } else {
+                header('Content-Type: application/json');
+                echo json_encode(['status' => 'error', 'message' => 'No changes were made or record not found.']);
+                exit;
+            }
+        } catch (PDOException $e) {
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'error', 'message' => 'Error updating Charge Invoice: ' . $e->getMessage()]);
+            exit;
+        }
+    }
+
     if (is_ajax_request()) {
         ob_clean();
         header('Content-Type: application/json');
@@ -486,12 +536,20 @@ try {
                         if (addModal) {
                             addModal.hide();
                         }
+                        // Remove modal backdrop
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open').css('overflow', '');
+                        $('body').css('padding-right', '');
                     } else {
                         showToast(response.message, 'error');
                     }
                 },
                 error: function () {
                     showToast('Error processing request.', 'error');
+                    // Also remove modal backdrop in case of error
+                    $('.modal-backdrop').remove();
+                    $('body').removeClass('modal-open').css('overflow', '');
+                    $('body').css('padding-right', '');
                 }
             });
         });
@@ -504,22 +562,43 @@ try {
                 method: 'POST',
                 data: $(this).serialize(),
                 dataType: 'json',
+                beforeSend: function() {
+                    // Optionally add loading state
+                },
                 success: function (response) {
                     if (response.status === 'success') {
-                        $('#invoiceTable').load(location.href + ' #invoiceTable', function() {
-                            showToast(response.message, 'success');
-                        });
+                        // Close the modal first
                         var editModalEl = document.getElementById('editInvoiceModal');
                         var editModal = bootstrap.Modal.getInstance(editModalEl);
                         if (editModal) {
                             editModal.hide();
                         }
+                        
+                        // Remove modal backdrop
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open').css('overflow', '');
+                        $('body').css('padding-right', '');
+                        
+                        // Show success message
+                        showToast(response.message, 'success');
+                        
+                        // Delay the page reload to allow reading the toast message
+                        setTimeout(function() {
+                            location.reload();
+                        }, 2000); // 2 seconds delay
                     } else {
-                        showToast(response.message, 'error');
+                        showToast(response.message || 'Error updating invoice', 'error');
                     }
                 },
-                error: function () {
-                    showToast('Error processing request.', 'error');
+                error: function (xhr, status, error) {
+                    console.error('Ajax error:', error);
+                    console.log(xhr.responseText); // This will help debug the actual server response
+                    showToast('Error processing request. Please try again.', 'error');
+                    
+                    // Remove modal backdrop in case of error
+                    $('.modal-backdrop').remove();
+                    $('body').removeClass('modal-open').css('overflow', '');
+                    $('body').css('padding-right', '');
                 }
             });
         });
@@ -541,9 +620,69 @@ try {
         $('#addInvoiceForm')[0].reset();
     });
 
+    // Toast function implementation
+    function showToast(message, type = 'success') {
+        // Prevent any existing event handlers from interfering
+        if (window.onclick) {
+            window.onclick = null;
+        }
+
+        // Create toast container if it doesn't exist
+        let toastContainer = document.getElementById('toastContainer');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toastContainer';
+            toastContainer.className = 'position-fixed bottom-0 end-0 p-3';
+            toastContainer.style.zIndex = '1055';
+            document.body.appendChild(toastContainer);
+        }
+
+        // Create toast element
+        const toastId = 'toast-' + Date.now();
+        const toastHtml = `
+            <div id="${toastId}" class="toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
+        `;
+        toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+
+        // Initialize and show the toast using a try-catch block
+        try {
+            const toastElement = document.getElementById(toastId);
+            if (toastElement) {
+                const toast = new bootstrap.Toast(toastElement, {
+                    animation: true,
+                    autohide: true,
+                    delay: 5000  // Increased from 3000 to 5000 ms (5 seconds)
+                });
+                
+                // Add event listener for when toast is hidden
+                toastElement.addEventListener('hidden.bs.toast', function () {
+                    if (toastElement && toastElement.parentNode) {
+                        toastElement.parentNode.removeChild(toastElement);
+                    }
+                });
+
+                toast.show();
+            }
+        } catch (error) {
+            console.error('Toast error:', error);
+            // Fallback notification if toast fails
+            alert(message);
+        }
+    }
 </script>
 
 <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js" defer></script>
+
+<!-- Bootstrap JS Bundle with Popper -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 <?php include '../../general/footer.php'; ?>
 </body>
 </html>
