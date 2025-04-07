@@ -435,8 +435,44 @@ if ($canDelete) {
             <?php endforeach; ?>
             </tbody>
         </table>
+        <!-- Pagination Controls -->
+        <div class="container-fluid">
+            <div class="row align-items-center g-3">
+                <div class="col-12 col-sm-auto">
+                    <div class="text-muted">
+                        Showing <span id="currentPage">1</span> to <span
+                                id="rowsPerPage">10</span> of
+                        <span id="totalRows">100</span> entries
+                    </div>
+                </div>
+                <div class="col-12 col-sm-auto ms-sm-auto">
+                    <div class="d-flex align-items-center gap-2">
+                        <button id="prevPage"
+                                class="btn btn-outline-primary d-flex align-items-center gap-1">
+                            <i class="bi bi-chevron-left"></i> Previous
+                        </button>
+                        <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                            <option value="10" selected>10</option>
+                            <option value="20">20</option>
+                            <option value="30">30</option>
+                            <option value="50">50</option>
+                        </select>
+                        <button id="nextPage"
+                                class="btn btn-outline-primary d-flex align-items-center gap-1">
+                            Next <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-12">
+                    <ul class="pagination justify-content-center" id="pagination"></ul>
+                </div>
+            </div>
+        </div>
     </div>
-    <!-- Pagination Controls (omitted for brevity) -->
+    </div>
+
     <div class="mb-3">
         <button type="button" id="delete-selected" class="btn btn-danger" style="display: none;" disabled>
             Delete Selected
