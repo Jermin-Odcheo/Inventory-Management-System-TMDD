@@ -2,7 +2,6 @@
 ob_start();
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
-include '../../general/header.php';
 
 // SQL query remains the same
 $sql = "
@@ -85,13 +84,19 @@ unset($role);
         }
     </style>
 </head>
+
 <body>
+<?php
+include '../../general/header.php';
+include '../../general/sidebar.php';
+include '../../general/footer.php';
+?>
 <div class="wrapper">
-    <div class="sidebar">
-        <?php include '../../general/sidebar.php'; ?>
-    </div>
     <div class="main-content container-fluid">
-        <h1>Role Management</h1>
+        <header class="main-header">
+            <h1> Role Management</h1>
+        </header>
+
         <div class="d-flex justify-content-end mb-3">
             <button type="button" class="btn btn-secondary me-2" id="undoButton">Undo</button>
             <button type="button" class="btn btn-secondary" id="redoButton">Redo</button>
@@ -104,10 +109,10 @@ unset($role);
             <table id="rolesTable" class="table table-striped table-hover align-middle">
                 <thead class="table-dark">
                 <tr>
-                    <th>Role ID</th>
-                    <th>Role Name</th>
+                    <th style="width: 25px;">ID</th>
+                    <th style="width: 250px;">Role Name</th>
                     <th>Modules & Privileges</th>
-                    <th>Actions</th>
+                    <th style="width: 250px;">Actions</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -344,7 +349,5 @@ unset($role);
         });
     });
 </script>
-
-<?php include '../../general/footer.php'; ?>
 </body>
 </html>
