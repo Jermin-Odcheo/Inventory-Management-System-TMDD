@@ -1,112 +1,115 @@
-// Combined filtering function for search, action, and status filters.
+// Global variable to store the original table rows
+let allRows = [];
+
+// On DOMContentLoaded, capture all original table rows
+document.addEventListener('DOMContentLoaded', () => {
+    allRows = Array.from(document.querySelectorAll('#auditTable tr'));
+    updatePagination();
+});
+
+// Rebuild table body with only the rows that match the filters
 function filterTable() {
     const searchFilter = document.getElementById('searchInput').value.toLowerCase();
     const actionFilter = document.getElementById('filterAction').value.toLowerCase();
     const statusFilter = document.getElementById('filterStatus').value.toLowerCase();
-    const rows = document.querySelectorAll('#auditTable tr');
 
-    rows.forEach(row => {
-        const actionText = row.querySelector('[data-label="Action"]').textContent.toLowerCase();
-        const statusText = row.querySelector('[data-label="Status"]').textContent.toLowerCase();
+    // Filter rows from the original set
+    const filteredRows = allRows.filter(row => {
+        const actionCell = row.querySelector('[data-label="Action"]');
+        const statusCell = row.querySelector('[data-label="Status"]');
+        const actionText = actionCell ? actionCell.textContent.toLowerCase() : '';
+        const statusText = statusCell ? statusCell.textContent.toLowerCase() : '';
         const rowText = row.textContent.toLowerCase();
 
         const matchesSearch = rowText.includes(searchFilter);
         const matchesAction = actionFilter === '' || actionText.includes(actionFilter);
         const matchesStatus = statusFilter === '' || statusText.includes(statusFilter);
-
-        if (matchesSearch && matchesAction && matchesStatus) {
-            row.style.display = '';
-            row.style.opacity = '1';
-        } else {
-            row.style.opacity = '0';
-            setTimeout(() => {
-                row.style.display = 'none';
-            }, 50); // Reduced from 300ms for minimal transition.
-        }
+        return matchesSearch && matchesAction && matchesStatus;
     });
 
-    setTimeout(updatePagination, 50); // Minimal delay before paginating.
-}
-
-document.getElementById('searchInput').addEventListener('keyup', filterTable);
-document.getElementById('filterAction').addEventListener('change', filterTable);
-document.getElementById('filterStatus').addEventListener('change', filterTable);
-
-// Sorting functionality with minimal fade-out and fade-in transitions.
-function sortTableByColumn(table, column, asc = true) {
-    const tbody = table.querySelector('tbody');
-    const rows = Array.from(tbody.querySelectorAll('tr'));
-
-    // Fade out rows quickly.
-    rows.forEach(row => {
-        row.style.opacity = '0';
+    // Rebuild the <tbody> with only filtered rows
+    const tbody = document.getElementById('auditTable');
+    tbody.innerHTML = '';
+    filteredRows.forEach(row => {
+        row.style.display = ''; // ensure row is visible
+        tbody.appendChild(row);
     });
 
-    // Wait for the minimal fade-out transition.
-    setTimeout(() => {
-        const dirModifier = asc ? 1 : -1;
-        const sortedRows = rows.sort((a, b) => {
-            const aText = a.querySelector(`td:nth-child(${column + 1})`).textContent.trim();
-            const bText = b.querySelector(`td:nth-child(${column + 1})`).textContent.trim();
-
-            // Check if values are numeric.
-            const aNum = parseFloat(aText.replace(/[^0-9.-]+/g, ""));
-            const bNum = parseFloat(bText.replace(/[^0-9.-]+/g, ""));
-            if (!isNaN(aNum) && !isNaN(bNum)) {
-                return (aNum - bNum) * dirModifier;
-            }
-
-            // Check if values are dates.
-            const aDate = new Date(aText);
-            const bDate = new Date(bText);
-            if (!isNaN(aDate) && !isNaN(bDate)) {
-                return (aDate - bDate) * dirModifier;
-            }
-
-            // Fallback to text comparison.
-            return aText.localeCompare(bText) * dirModifier;
-        });
-
-        // Remove existing rows and re-add sorted rows.
-        while (tbody.firstChild) {
-            tbody.removeChild(tbody.firstChild);
-        }
-        sortedRows.forEach(row => {
-            row.style.opacity = '0';  // Start faded out.
-            tbody.appendChild(row);
-        });
-
-        // Fade in sorted rows quickly.
-        setTimeout(() => {
-            sortedRows.forEach(row => {
-                row.style.opacity = '1';
-            });
-        }, 10); // Minimal fade-in delay.
-
-        // Update header classes for sort indicators.
-        table.querySelectorAll('th').forEach(th => th.classList.remove('th-sort-asc', 'th-sort-desc'));
-        const targetHeader = table.querySelector(`thead th:nth-child(${column + 1})`);
-        targetHeader.classList.toggle('th-sort-asc', asc);
-        targetHeader.classList.toggle('th-sort-desc', !asc);
-    }, 50); // Minimal fade-out delay.
-
+    // Reset current page to 1 after filtering
+    document.getElementById('currentPage').textContent = '1';
     updatePagination();
 }
 
-// Attach click event listeners to each table header.
-// For the Track ID column (index 0) default sort will be descending.
-document.querySelectorAll('thead th').forEach((header, index) => {
-    header.addEventListener('click', () => {
-        const tableElement = header.closest('table');
-        let asc;
-        if (index === 0) {
-            // For Track ID column, default to descending (highest to lowest).
-            // If already sorted descending, then switch to ascending.
-            asc = header.classList.contains('th-sort-desc') ? true : false;
+// Paginate only the rows currently in the table body (the filtered rows)
+function updatePagination() {
+    const tbody = document.getElementById('auditTable');
+    const filteredRows = Array.from(tbody.querySelectorAll('tr'));
+    const totalRows = filteredRows.length;
+    const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value, 10);
+    let currentPage = parseInt(document.getElementById('currentPage').textContent, 10) || 1;
+    const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
+
+    // Ensure currentPage is within bounds
+    if (currentPage > totalPages) {
+        currentPage = totalPages;
+        document.getElementById('currentPage').textContent = currentPage;
+    }
+
+    // Update the "Showing X to Y of Z entries" display:
+    const start = (currentPage - 1) * rowsPerPage + 1;
+    const end = Math.min(currentPage * rowsPerPage, totalRows);
+    document.getElementById('rowsPerPage').textContent = end;
+    document.getElementById('totalRows').textContent = totalRows;
+
+    // Show only the rows on the current page
+    filteredRows.forEach((row, index) => {
+        if (index >= (currentPage - 1) * rowsPerPage && index < currentPage * rowsPerPage) {
+            row.style.display = '';  // Visible row
         } else {
-            // For other columns, toggle normal.
-            asc = header.classList.contains('th-sort-asc') ? false : true;
+            row.style.display = 'none'; // Hide this row
         }
-        sortTableByColumn(tableElement, index, asc);
     });
+
+    // Update the pagination buttons
+    document.getElementById('prevPage').disabled = (currentPage === 1);
+    document.getElementById('nextPage').disabled = (currentPage >= totalPages);
+
+    // Rebuild pagination links (optional)
+    const pagination = document.getElementById('pagination');
+    pagination.innerHTML = '';
+    for (let i = 1; i <= totalPages; i++) {
+        const li = document.createElement('li');
+        li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+        li.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+        li.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.getElementById('currentPage').textContent = i;
+            updatePagination();
+        });
+        pagination.appendChild(li);
+    }
+}
+
+// Attach event listeners to filter inputs and pagination controls
+document.getElementById('searchInput').addEventListener('keyup', filterTable);
+document.getElementById('filterAction').addEventListener('change', filterTable);
+document.getElementById('filterStatus').addEventListener('change', filterTable);
+document.getElementById('rowsPerPageSelect').addEventListener('change', updatePagination);
+
+document.getElementById('prevPage').addEventListener('click', () => {
+    const currentPage = parseInt(document.getElementById('currentPage').textContent, 10);
+    if (currentPage > 1) {
+        document.getElementById('currentPage').textContent = currentPage - 1;
+        updatePagination();
+    }
+});
+
+document.getElementById('nextPage').addEventListener('click', () => {
+    const currentPage = parseInt(document.getElementById('currentPage').textContent, 10);
+    const totalRows = parseInt(document.getElementById('totalRows').textContent, 10);
+    const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value, 10);
+    if (currentPage < Math.ceil(totalRows / rowsPerPage)) {
+        document.getElementById('currentPage').textContent = currentPage + 1;
+        updatePagination();
+    }
 });
