@@ -696,6 +696,100 @@ try {
             alert(message);
         }
     }
+
+    // Date filter functionality
+    $('#dateFilter').on('change', function() {
+        const filterValue = $(this).val();
+        const monthPickerContainer = $('#monthPickerContainer');
+        const dateRangePickers = $('#dateRangePickers');
+        const dateInputsContainer = $('#dateInputsContainer');
+
+        // Reset and hide all date input containers first
+        dateInputsContainer.hide();
+        monthPickerContainer.hide();
+        dateRangePickers.hide();
+
+        switch(filterValue) {
+            case 'desc':
+            case 'asc':
+                filterByOrder(filterValue);
+                break;
+            case 'month':
+                dateInputsContainer.show();
+                monthPickerContainer.show();
+                break;
+            case 'range':
+                dateInputsContainer.show();
+                dateRangePickers.show();
+                break;
+            default:
+                // Show all rows when no filter is selected
+                $('#invoiceTable tbody tr').show();
+        }
+    });
+
+    // Handle month and year selection
+    $('#monthSelect, #yearSelect').on('change', function() {
+        const month = $('#monthSelect').val();
+        const year = $('#yearSelect').val();
+        
+        if (month && year) {
+            filterByMonth(month, year);
+        }
+    });
+
+    // Handle date range selection
+    $('#dateFrom, #dateTo').on('change', function() {
+        const dateFrom = $('#dateFrom').val();
+        const dateTo = $('#dateTo').val();
+        
+        if (dateFrom && dateTo) {
+            filterByDateRange(dateFrom, dateTo);
+        }
+    });
+
+    function filterByOrder(order) {
+        const tbody = $('#invoiceTable tbody');
+        const rows = tbody.find('tr').toArray();
+        
+        rows.sort((a, b) => {
+            const dateA = new Date($(a).find('td:eq(2)').text()); // Index 2 is the date_of_purchase column
+            const dateB = new Date($(b).find('td:eq(2)').text());
+            
+            return order === 'asc' ? dateA - dateB : dateB - dateA;
+        });
+        
+        tbody.empty().append(rows);
+    }
+
+    function filterByMonth(month, year) {
+        $('#invoiceTable tbody tr').each(function() {
+            const purchaseDate = new Date($(this).find('td:eq(2)').text());
+            const rowMonth = purchaseDate.getMonth() + 1; // getMonth() returns 0-11
+            const rowYear = purchaseDate.getFullYear();
+            
+            if (rowMonth == month && rowYear == year) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
+    }
+
+    function filterByDateRange(dateFrom, dateTo) {
+        const fromDate = new Date(dateFrom);
+        const toDate = new Date(dateTo);
+        
+        $('#invoiceTable tbody tr').each(function() {
+            const purchaseDate = new Date($(this).find('td:eq(2)').text());
+            
+            if (purchaseDate >= fromDate && purchaseDate <= toDate) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
+    }
 </script>
 
 <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js" defer></script>
