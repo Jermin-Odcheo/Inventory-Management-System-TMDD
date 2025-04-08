@@ -204,6 +204,26 @@ try {
             width: 100%;
             overflow-x: auto;
         }
+        
+        /* Fix for Save Changes button hover state */
+        .btn-primary:hover {
+            color: #fff !important; /* Ensure text stays white on hover */
+            background-color: #0b5ed7; /* Darker blue on hover */
+            border-color: #0a58ca;
+        }
+        
+        /* Specific styling for the edit form button */
+        #editReportForm .btn-primary {
+            transition: all 0.2s ease-in-out;
+        }
+        
+        #editReportForm .btn-primary:hover {
+            color: #fff !important;
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
     </style>
 </head>
 <body>

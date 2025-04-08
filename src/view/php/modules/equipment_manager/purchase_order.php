@@ -176,6 +176,26 @@ include('../../general/header.php');
             padding: 20px;
             margin-left: 300px;
         }
+        
+        /* Fix for Save Changes button hover state */
+        .btn-primary:hover {
+            color: #fff !important; /* Ensure text stays white on hover */
+            background-color: #0b5ed7; /* Darker blue on hover */
+            border-color: #0a58ca;
+        }
+        
+        /* Specific styling for the edit form button */
+        #editPOForm .btn-primary {
+            transition: all 0.2s ease-in-out;
+        }
+        
+        #editPOForm .btn-primary:hover {
+            color: #fff !important;
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
     </style>
 </head>
 <body>
@@ -429,6 +449,34 @@ include('../../general/header.php');
 
 <!-- JavaScript for functionality -->
 <script>
+    // Utility function to show toast messages
+    function showToast(message, type = 'success') {
+        const toastContainer = document.getElementById('toastContainer');
+        const toastId = 'toast-' + Date.now();
+        const bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+        
+        const toastHTML = `
+            <div id="${toastId}" class="toast align-items-center ${bgClass} text-white" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
+        `;
+        
+        toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+        const toastElement = document.getElementById(toastId);
+        const toast = new bootstrap.Toast(toastElement, { delay: 5000 });
+        toast.show();
+        
+        // Auto-remove the element after hiding
+        toastElement.addEventListener('hidden.bs.toast', function() {
+            toastElement.remove();
+        });
+    }
+
     // Use event delegation so new elements get bound events
     $(document).on('input', '#searchPO', function () {
         var searchText = $(this).val().toLowerCase();
@@ -553,6 +601,27 @@ include('../../general/header.php');
         $('#addPOForm')[0].reset();
     });
 
+    // Date filter handling
+    $('#dateFilter').on('change', function() {
+        const value = $(this).val();
+        
+        // Hide all date input containers first
+        $('#dateInputsContainer').hide();
+        $('#monthPickerContainer').hide();
+        $('#dateRangePickers').hide();
+        
+        // Show appropriate inputs based on selection
+        if (value === 'month') {
+            $('#dateInputsContainer').show();
+            $('#monthPickerContainer').show();
+        } else if (value === 'range') {
+            $('#dateInputsContainer').show();
+            $('#dateRangePickers').show();
+        }
+        
+        // Apply filtering logic here
+        // This would typically involve an AJAX call to the server with filter parameters
+    });
 </script>
 
 <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js" defer></script>
