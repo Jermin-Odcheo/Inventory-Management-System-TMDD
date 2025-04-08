@@ -482,27 +482,26 @@ include '../../general/footer.php';
                             echo "<td>" . htmlspecialchars($row['asset_tag']) . "</td>";
                             echo "<td>" . htmlspecialchars($row['status']) . "</td>";
                             echo "<td>" . htmlspecialchars($row['action']) . "</td>";
-                            // Output Created Date then Remarks to match the header order
                             echo "<td>" . date('Y-m-d H:i', strtotime($row['date_created'])) . "</td>";
                             echo "<td>" . htmlspecialchars($row['remarks']) . "</td>";
                             echo "<td>" . ($row['is_disabled'] ? '<span class=\"badge bg-danger\">Disabled</span>' : '<span class=\"badge bg-success\">Active</span>') . "</td>";
                             echo "<td>
-                              <div class='d-flex justify-content-center gap-2'>
-                                <button class='btn btn-sm btn-outline-info edit-status' 
-                                        data-id='" . htmlspecialchars($row['equipment_status_id']) . "'
-                                        data-asset='" . htmlspecialchars($row['asset_tag']) . "'
-                                        data-status='" . htmlspecialchars($row['status']) . "'
-                                        data-action='" . htmlspecialchars($row['action']) . "'
-                                        data-remarks='" . htmlspecialchars($row['remarks']) . "'
-                                        data-disabled='" . htmlspecialchars($row['is_disabled']) . "'>
-                                  <i class='bi bi-pencil'></i>
-                                </button>
-                                <button class='btn btn-sm btn-outline-danger delete-status' 
-                                        data-id='" . htmlspecialchars($row['equipment_status_id']) . "'>
-                                  <i class='bi bi-trash'></i>
-                                </button>
-                              </div>
-                            </td>";
+                      <div class='d-flex justify-content-center gap-2'>
+                        <button class='btn btn-sm btn-outline-info edit-status' 
+                                data-id='" . htmlspecialchars($row['equipment_status_id']) . "'
+                                data-asset='" . htmlspecialchars($row['asset_tag']) . "'
+                                data-status='" . htmlspecialchars($row['status']) . "'
+                                data-action='" . htmlspecialchars($row['action']) . "'
+                                data-remarks='" . htmlspecialchars($row['remarks']) . "'
+                                data-disabled='" . htmlspecialchars($row['is_disabled']) . "'>
+                          <i class='bi bi-pencil'></i>
+                        </button>
+                        <button class='btn btn-sm btn-outline-danger delete-status' 
+                                data-id='" . htmlspecialchars($row['equipment_status_id']) . "'>
+                          <i class='bi bi-trash'></i>
+                        </button>
+                      </div>
+                    </td>";
                             echo "</tr>";
                         }
                     } catch (PDOException $e) {
@@ -639,9 +638,26 @@ include '../../general/footer.php';
     </div>
 </div>
 
-<!-- JavaScript Dependencies -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!--Delete Confirmation Modal-->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Delete Confirmation</h5>
+                <!-- Using Bootstrap 5 close button -->
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete this status?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDelete">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 <script src="<?php echo BASE_URL; ?>src/control/js/toast.js"></script>
 
@@ -682,6 +698,7 @@ include '../../general/footer.php';
                         showToast(response.message, 'success');
                         $('#addStatusModal').modal('hide');
                         $('#addStatusForm')[0].reset();
+                        $('.modal-backdrop').remove();
                         setTimeout(function() {
                             location.reload();
                         }, 1500);
@@ -716,34 +733,46 @@ include '../../general/footer.php';
             });
         });
 
-        // Delete Status (changed parameter from 'crud_action' to 'action')
+        //Function for delete modal
+        // Global variable to store the status ID to be deleted
+        var deleteStatusId;
+
+        // Initialize the Bootstrap modal (Bootstrap 5 syntax)
+        var deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'), {
+            keyboard: false
+        });
+
+        // When a delete button is clicked, store the status ID and show the modal.
         $('.delete-status').click(function (e) {
             e.preventDefault();
-            var id = $(this).data('id');
+            deleteStatusId = $(this).data('id');
+            deleteModal.show();
+        });
 
-            if (confirm('Are you sure you want to delete this status?')) {
-                $.ajax({
-                    url: 'equipment_status.php',
-                    method: 'POST',
-                    data: {
-                        action: 'delete',
-                        status_id: id
-                    },
-                    success: function (response) {
-                        try {
-                            var result = JSON.parse(response);
-                            if (result.status === 'success') {
-                                location.reload();
-                            } else {
-                                alert(result.message);
-                            }
-                        } catch (e) {
-                            console.error('Parse error:', e);
+        // When the delete confirmation button in the modal is clicked, make the AJAX call.
+        $('#confirmDelete').click(function() {
+            $.ajax({
+                url: 'equipment_status.php',
+                method: 'POST',
+                data: {
+                    action: 'delete',
+                    status_id: deleteStatusId
+                },
+                success: function(response) {
+                    try {
+                        var result = JSON.parse(response);
+                        if (result.status === 'success') {
+                            deleteModal.hide();
                             location.reload();
+                        } else {
+                            alert(result.message);
                         }
+                    } catch (e) {
+                        console.error('Parse error:', e);
+                        location.reload();
                     }
-                });
-            }
+                }
+            });
         });
 
         // Edit Status
