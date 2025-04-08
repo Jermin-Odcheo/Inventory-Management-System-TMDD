@@ -52,8 +52,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <label for="role_name" class="form-label">Role Name</label>
         <input type="text" name="role_name" id="role_name" class="form-control" placeholder="Enter role name" required>
     </div>
-    <button type="submit" class="btn btn-primary">Create Role</button>
-    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+    <div class="d-flex justify-content-end">
+        <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create Role</button>
+    </div>
 </form>
 
 <script>

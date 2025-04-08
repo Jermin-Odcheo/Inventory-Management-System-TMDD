@@ -231,7 +231,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     <!-- Footer with actions -->
     <div class="modal-footer border-top py-3">
-        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
         <button type="submit" form="editRoleForm" class="btn btn-primary">
             <i class="bi bi-check2 me-1"></i>Update Role
         </button>
@@ -294,7 +294,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     });
 
                     submitBtn.blur();
-                    // Hide the modal using Bootstrap’s modal method.
+                    // Hide the modal using Bootstrap's modal method.
                     $('#editRoleModal').modal('hide');
 
                     // Reload roles table and show toast message

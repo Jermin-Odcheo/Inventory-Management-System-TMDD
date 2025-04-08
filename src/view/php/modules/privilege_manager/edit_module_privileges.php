@@ -61,8 +61,8 @@ $currentPrivileges = array_map('intval', $currentPrivileges);
             </div>
         </div>
         <div class="modal-footer">
-            <button type="submit" class="btn btn-primary">Save Changes</button>
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
         </div>
     </form>
     <div id="editModulePrivilegesAlert"></div>
