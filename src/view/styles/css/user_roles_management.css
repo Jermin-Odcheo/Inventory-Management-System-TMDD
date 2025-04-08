@@ -790,3 +790,35 @@ input[type="radio"]:focus {
     outline: 2px solid var(--primary);
     outline-offset: 2px;
 }
+
+/* Icon button styles */
+.btn-icon {
+    width: 32px;
+    height: 32px;
+    padding: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    margin-right: 5px;
+}
+
+.btn-icon i {
+    font-size: 16px;
+}
+
+.btn-edit {
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #212529;
+}
+
+.btn-edit:hover {
+    background-color: #e0a800;
+    border-color: #d39e00;
+}
+
+/* Style for action buttons container */
+td .btn-icon + .btn-icon {
+    margin-left: 5px;
+}

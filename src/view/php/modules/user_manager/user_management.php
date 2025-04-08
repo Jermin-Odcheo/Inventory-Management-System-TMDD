@@ -482,65 +482,75 @@ if ($canDelete) {
 
 <!-- Modal for Creating a new user -->
 <div class="modal fade" id="createUserModal" tabindex="-1" aria-labelledby="createUserModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createUserModalLabel">Create User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
             <div class="modal-body">
                 <form id="createUserForm" method="POST" action="create_user.php">
                     <!-- Form fields for add user -->
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="createUserModalLabel">Create User</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" name="email" id="email" class="form-control shadow-sm" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" name="password" id="password" class="form-control shadow-sm" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="first_name" class="form-label">First Name</label>
+                            <input type="text" name="first_name" id="first_name" class="form-control shadow-sm" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="last_name" class="form-label">Last Name</label>
+                            <input type="text" name="last_name" id="last_name" class="form-control shadow-sm" required>
+                        </div>
+                        <div class="col-12">
+                            <label for="modal_department" class="form-label">Department</label>
+                            <select name="department" id="modal_department" class="form-select shadow-sm" required>
+                                <option value="">Select Department</option>
+                                <?php foreach ($departments as $code => $name): ?>
+                                    <option value="<?php echo htmlspecialchars($code); ?>">
+                                        <?php echo htmlspecialchars($name['name']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                                <option value="custom">Custom Department</option>
+                            </select>
+                            <input type="text" id="modal_custom_department" name="custom_department"
+                                   class="form-control mt-2 shadow-sm" style="display: none;" placeholder="Enter custom department">
+                        </div>
+                        
+                        <!-- Role assignment fields - improved layout -->
+                        <div class="col-12">
+                            <fieldset class="mt-2">
+                                <legend class="fs-5">Assign Roles <span class="text-danger">*</span></legend>
+                                <div class="text-muted mb-2 small">At least one role must be selected</div>
+                                <div class="role-checkbox-container">
+                                    <?php
+                                    $stmt = $pdo->prepare("SELECT * FROM roles WHERE is_disabled = 0 ORDER BY role_name");
+                                    $stmt->execute();
+                                    $modal_roles = $stmt->fetchAll();
+                                    foreach ($modal_roles as $role): ?>
+                                        <div class="form-check form-check-inline mb-2">
+                                            <input type="checkbox" name="roles[]" value="<?php echo $role['id']; ?>"
+                                                   id="modal_role_<?php echo $role['id']; ?>"
+                                                   class="form-check-input modal-role-checkbox">
+                                            <label for="modal_role_<?php echo $role['id']; ?>" class="form-check-label">
+                                                <?php echo htmlspecialchars($role['role_name']); ?>
+                                            </label>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                                <div class="invalid-feedback" id="roles-error">Please select at least one role</div>
+                            </fieldset>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label for="email" class="form-label">Email:</label>
-                        <input type="email" name="email" id="email" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="password" class="form-label">Password:</label>
-                        <input type="password" name="password" id="password" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="first_name" class="form-label">First Name:</label>
-                        <input type="text" name="first_name" id="first_name" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="last_name" class="form-label">Last Name:</label>
-                        <input type="text" name="last_name" id="last_name" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="modal_department" class="form-label">Department:</label>
-                        <select name="department" id="modal_department" class="form-select mb-2" required>
-                            <option value="">Select Department</option>
-                            <?php foreach ($departments as $code => $name): ?>
-                                <option value="<?php echo htmlspecialchars($code); ?>">
-                                    <?php echo htmlspecialchars($name['name']); ?>
-                                </option>
-                            <?php endforeach; ?>
-                            <option value="custom">Custom Department</option>
-                        </select>
-                        <input type="text" id="modal_custom_department" name="custom_department"
-                               class="form-control" style="display: none;" placeholder="Enter custom department">
-                    </div>
-                    <!-- Role assignment fields -->
-                    <fieldset class="mb-3">
-                        <legend>Assign Roles: <span class="text-danger">*</span></legend>
-                        <div class="text-muted mb-2">At least one role must be selected</div>
-                        <?php
-                        $stmt = $pdo->prepare("SELECT * FROM roles");
-                        $stmt->execute();
-                        $modal_roles = $stmt->fetchAll();
-                        foreach ($modal_roles as $role): ?>
-                            <div class="form-check">
-                                <input type="checkbox" name="roles[]" value="<?php echo $role['id']; ?>"
-                                       id="modal_role_<?php echo $role['id']; ?>"
-                                       class="form-check-input modal-role-checkbox">
-                                <label for="modal_role_<?php echo $role['id']; ?>" class="form-check-label">
-                                    <?php echo htmlspecialchars($role['role_name']); ?>
-                                </label>
-                            </div>
-                        <?php endforeach; ?>
-                    </fieldset>
-                    <div class="mb-3">
+                    
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-primary">Create User</button>
                     </div>
                 </form>
@@ -570,9 +580,8 @@ if ($canDelete) {
 </div>
 
 <!-- Modal for editing user -->
-<div class="modal fade" id="editUserModal" tabindex="-1"  aria-labelledby="editUserModalLabel"
-     aria-hidden="true">
-    <div class="modal-dialog">
+<div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Edit User</h5>
@@ -581,55 +590,66 @@ if ($canDelete) {
             <div class="modal-body">
                 <form id="editUserForm" action="update_user.php" method="post">
                     <input type="hidden" id="editUserID" name="user_id">
-                    <div class="mb-3">
-                        <label for="editEmail" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="editEmail" name="email">
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label for="editEmail" class="form-label">Email</label>
+                            <input type="email" class="form-control shadow-sm" id="editEmail" name="email">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="editFirstName" class="form-label">First Name</label>
+                            <input type="text" class="form-control shadow-sm" id="editFirstName" name="first_name">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="editLastName" class="form-label">Last Name</label>
+                            <input type="text" class="form-control shadow-sm" id="editLastName" name="last_name">
+                        </div>
+                        <div class="col-md-12">
+                            <label for="editDepartment" class="form-label">Department</label>
+                            <select class="form-select shadow-sm" id="editDepartment" name="department">
+                                <option value="">Select Department</option>
+                                <?php foreach ($departments as $dept_id => $dept_info): ?>
+                                    <option value="<?php echo htmlspecialchars($dept_id); ?>">
+                                        <?php echo htmlspecialchars($dept_info['name']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        
+                        <!-- Added role checkboxes to edit modal -->
+                        <div class="col-12">
+                            <fieldset class="mt-2">
+                                <legend class="fs-5">Assign Roles <span class="text-danger">*</span></legend>
+                                <div class="text-muted mb-2 small">At least one role must be selected</div>
+                                <div class="role-checkbox-container" id="editRolesContainer">
+                                    <?php
+                                    $stmt = $pdo->prepare("SELECT * FROM roles WHERE is_disabled = 0 ORDER BY role_name");
+                                    $stmt->execute();
+                                    $edit_roles = $stmt->fetchAll();
+                                    foreach ($edit_roles as $role): ?>
+                                        <div class="form-check form-check-inline mb-2">
+                                            <input type="checkbox" name="edit_roles[]" value="<?php echo $role['id']; ?>"
+                                                   id="edit_role_<?php echo $role['id']; ?>"
+                                                   class="form-check-input edit-role-checkbox">
+                                            <label for="edit_role_<?php echo $role['id']; ?>" class="form-check-label">
+                                                <?php echo htmlspecialchars($role['role_name']); ?>
+                                            </label>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                                <div class="invalid-feedback" id="edit-roles-error">Please select at least one role</div>
+                            </fieldset>
+                        </div>
+                        
+                        <div class="col-md-12">
+                            <label for="editPassword" class="form-label">
+                                Change Password <span class="text-muted small">(Leave blank to keep current)</span>
+                            </label>
+                            <input type="password" class="form-control shadow-sm" id="editPassword" name="password">
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label for="editFirstName" class="form-label">First Name</label>
-                        <input type="text" class="form-control" id="editFirstName" name="first_name">
-                    </div>
-                    <div class="mb-3">
-                        <label for="editLastName" class="form-label">Last Name</label>
-                        <input type="text" class="form-control" id="editLastName" name="last_name">
-                    </div>
-                    <div class="mb-3">
-                        <label for="editDepartment" class="form-label">Department</label>
-                        <select class="form-select shadow-sm" id="editDepartment" name="department">
-                            <option value="">Select Department</option>
-                            <?php foreach ($departments as $dept_id => $dept_info): ?>
-                                <option value="<?php echo htmlspecialchars($dept_id); ?>">
-                                    <?php echo htmlspecialchars($dept_info['name']); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <style>
-                        .form-select {
-                            appearance: none;
-                            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-                        }
-
-                        .form-select:focus {
-                            border-color: #86b7fe;
-                            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-                        }
-
-                        .form-select option {
-                            padding: 10px;
-                        }
-
-                        .form-select optgroup {
-                            margin-top: 10px;
-                        }
-                    </style>
-                    <div class="mb-3">
-                        <label for="editPassword" class="form-label">
-                            Change Password (Leave blank to keep current)
-                        </label>
-                        <input type="password" class="form-control" id="editPassword" name="password">
-                    </div>
-                    <div class="mb-3">
+                    
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-primary">Save Changes</button>
                     </div>
                 </form>
