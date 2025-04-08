@@ -41,15 +41,29 @@ $currentPrivileges = array_map('intval', $currentPrivileges);
         <input type="hidden" name="module_id" value="<?php echo $moduleId; ?>">
         <div class="mb-3">
             <label class="form-label">Select Privileges:</label>
-            <?php foreach($allPrivileges as $privilege): ?>
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" name="privileges[]" value="<?php echo $privilege['id']; ?>"
-                        <?php echo in_array($privilege['id'], $currentPrivileges) ? 'checked' : ''; ?>>
-                    <label class="form-check-label"><?php echo htmlspecialchars($privilege['priv_name']); ?></label>
-                </div>
-            <?php endforeach; ?>
+            <div class="row">
+                <?php foreach($allPrivileges as $privilege): ?>
+                    <div class="col-12 col-md-6">
+                        <div class="form-check custom-checkbox">
+                            <input class="form-check-input" 
+                                   type="checkbox" 
+                                   name="privileges[]" 
+                                   value="<?php echo $privilege['id']; ?>"
+                                   id="edit_privilege_<?php echo $privilege['id']; ?>"
+                                   <?php echo in_array($privilege['id'], $currentPrivileges) ? 'checked' : ''; ?>>
+                            <label class="form-check-label" 
+                                   for="edit_privilege_<?php echo $privilege['id']; ?>">
+                                <?php echo htmlspecialchars($privilege['priv_name']); ?>
+                            </label>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
         </div>
-        <button type="submit" class="btn btn-primary">Save Changes</button>
+        <div class="modal-footer">
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
     </form>
     <div id="editModulePrivilegesAlert"></div>
 </div>

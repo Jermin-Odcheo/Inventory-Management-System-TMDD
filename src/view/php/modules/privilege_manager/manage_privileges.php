@@ -64,6 +64,48 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
         .main-content.container-fluid {
             padding: 100px 15px;
         }
+
+        /* Modern checkbox design */
+        .custom-checkbox .form-check-input {
+            border-radius: 0.25rem;
+            border: 2px solid #007bff;
+            width: 20px;
+            height: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .custom-checkbox .form-check-input:checked {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+
+        .custom-checkbox .form-check-label {
+            margin-left: 10px;
+            font-weight: 500;
+            font-size: 0.95rem;
+            color: #333;
+        }
+
+        /* Row layout for checkboxes */
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .col-12.col-md-6 {
+            margin-bottom: 10px;
+        }
+
+        /* Hover effect for checkboxes */
+        .custom-checkbox .form-check-input:hover {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+
+        /* Active state styling for checkboxes */
+        .custom-checkbox .form-check-input:active {
+            box-shadow: 0 0 0 0.2rem rgba(38, 143, 255, 0.5);
+        }
     </style>
 </head>
 <body>
@@ -121,40 +163,6 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <?php endif; ?>
                 </tbody>
             </table>
-            <!-- Pagination Controls (optional) -->
-            <div class="container-fluid">
-                <div class="row align-items-center g-3">
-                    <div class="col-12 col-sm-auto">
-                        <div class="text-muted">
-                            Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
-                                    id="totalRows">100</span> entries
-                        </div>
-                    </div>
-                    <div class="col-12 col-sm-auto ms-sm-auto">
-                        <div class="d-flex align-items-center gap-2">
-                            <button id="prevPage"
-                                    class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                <i class="bi bi-chevron-left"></i> Previous
-                            </button>
-                            <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
-                                <option value="10" selected>10</option>
-                                <option value="20">20</option>
-                                <option value="30">30</option>
-                                <option value="50">50</option>
-                            </select>
-                            <button id="nextPage"
-                                    class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                Next <i class="bi bi-chevron-right"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="row mt-3">
-                    <div class="col-12">
-                        <ul class="pagination justify-content-center" id="pagination"></ul>
-                    </div>
-                </div>
-            </div>
         </div><!-- .table-responsive -->
 
     </div><!-- .main-content -->
@@ -200,26 +208,30 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <!-- Privileges as Checkboxes -->
                     <div class="mb-3">
                         <label class="form-label">Select Privileges (Optional)</label>
-                        <?php if (!empty($privileges)): ?>
-                            <?php foreach ($privileges as $privilege): ?>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="privileges[]"
-                                           value="<?php echo htmlspecialchars($privilege['id']); ?>"
-                                           id="privilege_<?php echo htmlspecialchars($privilege['id']); ?>">
-                                    <label class="form-check-label"
-                                           for="privilege_<?php echo htmlspecialchars($privilege['id']); ?>">
-                                        <?php echo htmlspecialchars($privilege['priv_name']); ?>
-                                    </label>
-                                </div>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <p>No privileges available.</p>
-                        <?php endif; ?>
+                        <div class="row">
+                            <?php if (!empty($privileges)): ?>
+                                <?php foreach ($privileges as $privilege): ?>
+                                    <div class="col-12 col-md-6">
+                                        <div class="form-check custom-checkbox">
+                                            <input class="form-check-input" type="checkbox" name="privileges[]"
+                                                   value="<?php echo htmlspecialchars($privilege['id']); ?>"
+                                                   id="privilege_<?php echo htmlspecialchars($privilege['id']); ?>">
+                                            <label class="form-check-label"
+                                                   for="privilege_<?php echo htmlspecialchars($privilege['id']); ?>">
+                                                <?php echo htmlspecialchars($privilege['priv_name']); ?>
+                                            </label>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <p>No privileges available.</p>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-primary">Create Module</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 </div>
             </form>
         </div>
@@ -242,7 +254,7 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $('#addModuleModal').on('hidden.bs.modal', function () {
             $(this).find('form')[0].reset();
         });
-        // Delegate event binding for edit button to handle dynamically loaded elements.
+
         $(document).on('click', '.edit-module-btn', function () {
             var moduleID = $(this).data('module-id');
             $('#editModuleContent').html("Loading...");
@@ -252,7 +264,6 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 data: {module_id: moduleID},
                 headers: {'X-Requested-With': 'XMLHttpRequest'},
                 success: function (response) {
-
                     $('#editModuleContent').html(response);
                 },
                 error: function (xhr, status, error) {
@@ -261,7 +272,6 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
             });
         });
 
-        // Use delegation for delete button as well.
         var moduleToDelete = null;
         $(document).on('click', '.delete-module-btn', function () {
             var moduleID = $(this).data('module-id');
@@ -271,7 +281,6 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
             $('#confirmDeleteModal').modal('show');
         });
 
-        // Confirm delete button click.
         $('#confirmDeleteButton').on('click', function () {
             if (moduleToDelete === null) {
                 return;
@@ -283,7 +292,6 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 dataType: 'json',
                 success: function (response) {
                     if (response.success) {
-                        // Reload the table after deletion
                         $('#privilegeTable').load(location.href + ' #privilegeTable', function () {
                             updatePagination();
                             showToast(response.message, 'success');
@@ -299,7 +307,6 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
             });
         });
 
-        // Handle Add Module form submission.
         $('#addModuleForm').on('submit', function (e) {
             e.preventDefault();
             $.ajax({
@@ -314,7 +321,6 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             showToast(response.message, 'success');
                         });
                         $('#addModuleModal').modal('hide');
-                        // Remove any leftover modal backdrop
                         $('.modal-backdrop').remove();
                     } else {
                         showToast(response.message, 'error');
@@ -326,9 +332,24 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
             });
         });
 
+        function showToast(message, type) {
+            var toastHTML = '<div class="toast align-items-center text-white bg-' + type + ' border-0" role="alert" aria-live="assertive" aria-atomic="true">'
+                + '<div class="d-flex">'
+                + '<div class="toast-body">' + message + '</div>'
+                + '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>'
+                + '</div>'
+                + '</div>';
+            var toastContainer = $('.toast-container');
+            toastContainer.append(toastHTML);
+            var toastElement = toastContainer.find('.toast:last-child');
+            var toast = new bootstrap.Toast(toastElement[0]);
+            toast.show();
+            toastElement.on('hidden.bs.toast', function () {
+                $(this).remove();
+            });
+        }
     });
 </script>
 
-<?php include '../../general/footer.php'; ?>
 </body>
 </html>
