@@ -134,10 +134,108 @@ try {
     $errors[] = "Error retrieving Purchase Orders: " . $e->getMessage();
 }
 
+// Add the filter code here, BEFORE ob_end_clean()
+if (isset($_GET['action']) && $_GET['action'] === 'filter') {
+    try {
+        $query = "SELECT * FROM purchase_order WHERE is_disabled = 0";
+        $params = [];
+
+        switch ($_GET['type']) {
+            case 'desc':
+                $query .= " ORDER BY date_of_order DESC";
+                break;
+            case 'asc':
+                $query .= " ORDER BY date_of_order ASC";
+                break;
+            case 'month':
+                $query .= " AND MONTH(date_of_order) = ? AND YEAR(date_of_order) = ?";
+                $params[] = $_GET['month'];
+                $params[] = $_GET['year'];
+                break;
+            case 'range':
+                $query .= " AND date_of_order BETWEEN ? AND ?";
+                $params[] = $_GET['dateFrom'];
+                $params[] = $_GET['dateTo'];
+                break;
+        }
+
+        $stmt = $pdo->prepare($query);
+        $stmt->execute($params);
+        $filteredOrders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (is_ajax_request()) {
+            ob_clean();
+            echo json_encode([
+                'status' => 'success',
+                'orders' => $filteredOrders
+            ]);
+            exit;
+        }
+    } catch (PDOException $e) {
+        if (is_ajax_request()) {
+            ob_clean();
+            echo json_encode([
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ]);
+            exit;
+        }
+    }
+}
+
 // Now that AJAX POST has been processed (if any),
 // flush the output buffer and include the header.
 ob_end_clean();
 include('../../general/header.php');
+
+// Add this after the DELETE action handling section
+if (isset($_GET['action']) && $_GET['action'] === 'filter') {
+    try {
+        $query = "SELECT * FROM purchase_order WHERE is_disabled = 0";
+        $params = [];
+
+        switch ($_GET['type']) {
+            case 'desc':
+                $query .= " ORDER BY date_of_order DESC";
+                break;
+            case 'asc':
+                $query .= " ORDER BY date_of_order ASC";
+                break;
+            case 'month':
+                $query .= " AND MONTH(date_of_order) = ? AND YEAR(date_of_order) = ?";
+                $params[] = $_GET['month'];
+                $params[] = $_GET['year'];
+                break;
+            case 'range':
+                $query .= " AND date_of_order BETWEEN ? AND ?";
+                $params[] = $_GET['dateFrom'];
+                $params[] = $_GET['dateTo'];
+                break;
+        }
+
+        $stmt = $pdo->prepare($query);
+        $stmt->execute($params);
+        $filteredOrders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (is_ajax_request()) {
+            ob_clean();
+            echo json_encode([
+                'status' => 'success',
+                'orders' => $filteredOrders
+            ]);
+            exit;
+        }
+    } catch (PDOException $e) {
+        if (is_ajax_request()) {
+            ob_clean();
+            echo json_encode([
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ]);
+            exit;
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -603,24 +701,120 @@ include('../../general/header.php');
 
     // Date filter handling
     $('#dateFilter').on('change', function() {
-        const value = $(this).val();
+        const filterType = $(this).val();
         
-        // Hide all date input containers first
+        // Hide all containers first
         $('#dateInputsContainer').hide();
         $('#monthPickerContainer').hide();
         $('#dateRangePickers').hide();
         
-        // Show appropriate inputs based on selection
-        if (value === 'month') {
+        // Show appropriate containers based on selection
+        if (filterType === 'month') {
             $('#dateInputsContainer').show();
             $('#monthPickerContainer').show();
-        } else if (value === 'range') {
+        } else if (filterType === 'range') {
             $('#dateInputsContainer').show();
             $('#dateRangePickers').show();
+        } else if (filterType === 'desc' || filterType === 'asc') {
+            // Immediately trigger the filter for desc/asc
+            applyFilter(filterType);
         }
-        
-        // Apply filtering logic here
-        // This would typically involve an AJAX call to the server with filter parameters
+    });
+
+    // Handle month/year selection changes
+    $('#monthSelect, #yearSelect').on('change', function() {
+        const month = $('#monthSelect').val();
+        const year = $('#yearSelect').val();
+        if (month && year) {
+            applyFilter('month', { month, year });
+        }
+    });
+
+    // Handle date range changes
+    $('#dateFrom, #dateTo').on('change', function() {
+        const dateFrom = $('#dateFrom').val();
+        const dateTo = $('#dateTo').val();
+        if (dateFrom && dateTo) {
+            applyFilter('range', { dateFrom, dateTo });
+        }
+    });
+
+    // Function to apply the filter
+    function applyFilter(type, params = {}) {
+        let filterData = {
+            action: 'filter',
+            type: type
+        };
+
+        // Add additional parameters based on filter type
+        if (type === 'month') {
+            filterData.month = params.month;
+            filterData.year = params.year;
+        } else if (type === 'range') {
+            filterData.dateFrom = params.dateFrom;
+            filterData.dateTo = params.dateTo;
+        }
+
+        $.ajax({
+            url: 'purchase_order.php',
+            method: 'GET',
+            data: filterData,
+            success: function(response) {
+                try {
+                    const data = JSON.parse(response);
+                    if (data.status === 'success') {
+                        // Update table body with filtered results
+                        let tableBody = '';
+                        data.orders.forEach(po => {
+                            tableBody += `
+                                <tr>
+                                    <td>${po.id}</td>
+                                    <td>${po.po_no}</td>
+                                    <td>${po.date_of_order}</td>
+                                    <td>${po.no_of_units}</td>
+                                    <td>${po.item_specifications}</td>
+                                    <td>${new Date(po.date_created).toLocaleString()}</td>
+                                    <td class="text-center">
+                                        <div class="btn-group" role="group">
+                                            <a class="btn btn-sm btn-outline-primary edit-po"
+                                               data-id="${po.id}"
+                                               data-po="${po.po_no}"
+                                               data-date="${po.date_of_order}"
+                                               data-units="${po.no_of_units}"
+                                               data-item="${po.item_specifications}">
+                                                <i class="bi bi-pencil-square"></i> Edit
+                                            </a>
+                                            <a class="btn btn-sm btn-outline-danger delete-po"
+                                               data-id="${po.id}"
+                                               href="#">
+                                                <i class="bi bi-trash"></i> Delete
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                        $('#purchaseTable tbody').html(tableBody || '<tr><td colspan="7">No Purchase Orders found.</td></tr>');
+                    } else {
+                        showToast('Error filtering data: ' + data.message, 'error');
+                    }
+                } catch (e) {
+                    console.error('Error parsing response:', e);
+                    showToast('Error processing response', 'error');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('AJAX Error:', error);
+                showToast('Error filtering data', 'error');
+            }
+        });
+    }
+
+    // Reset filter when empty option is selected
+    $('#dateFilter').on('change', function() {
+        if (!$(this).val()) {
+            window.location.reload();
+        }
     });
 </script>
 
