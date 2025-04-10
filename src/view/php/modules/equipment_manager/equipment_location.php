@@ -41,13 +41,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAjax) {
         $oldLocation = $stmt->fetch(PDO::FETCH_ASSOC);
 
         // Proceed with the update
+        // Proceed with the update
         $updateStmt = $pdo->prepare("UPDATE equipment_location 
-            SET asset_tag = ?, building_loc = ?, floor_no = ?, specific_area = ?, person_responsible = ?, department_id = ?, remarks = ?
-            WHERE equipment_location_id = ?");
+    SET asset_tag = ?, building_loc = ?, floor_no = ?, specific_area = ?, person_responsible = ?, department_id = ?, remarks = ?
+    WHERE equipment_location_id = ?");
         $updateStmt->execute([$assetTag, $buildingLoc, $floorNo, $specificArea, $personResponsible, $departmentId, $remarks, $id]);
 
+// Instead of treating no changes as an error, commit and notify the user.
         if ($updateStmt->rowCount() > 0) {
-            // Prepare audit log data
+            // Prepare audit log data and insert into audit_log
             $oldValue = json_encode($oldLocation);
             $newValues = json_encode([
                 'asset_tag' => $assetTag,
@@ -58,14 +60,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAjax) {
                 'department_id' => $departmentId,
                 'remarks' => $remarks
             ]);
-
-            // Insert into audit_log
             $auditStmt = $pdo->prepare("
-                INSERT INTO audit_log (
-                    UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ");
-
+        INSERT INTO audit_log (
+            UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ");
             $auditStmt->execute([
                 $_SESSION['user_id'],
                 $id,
@@ -80,10 +79,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAjax) {
             $pdo->commit();
             echo json_encode(['status' => 'success', 'message' => 'Location updated successfully']);
         } else {
-            $pdo->rollBack();
-            echo json_encode(['status' => 'error', 'message' => 'No changes made or invalid ID']);
+            // No changes were made; commit the transaction anyway.
+            $pdo->commit();
+            echo json_encode(['status' => 'success', 'message' => 'No changes were made']);
         }
         exit;
+
     } elseif ($action === 'add') {
         // ADD EQUIPMENT LOCATION
         try {
@@ -352,9 +353,17 @@ include '../../general/footer.php';
                                 <td><?= htmlspecialchars($loc['remarks']) ?></td>
                                 <td><?= date('Y-m-d H:i', strtotime($loc['date_created'])) ?></td>
                                 <td>
-                                    <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal"
+                                    <button class="btn btn-sm btn-outline-info edit-location"
+                                            data-bs-toggle="modal"
                                             data-bs-target="#editLocationModal"
-                                            data-id="<?= $loc['equipment_location_id'] ?>">
+                                            data-id="<?= $loc['equipment_location_id'] ?>"
+                                            data-asset="<?= htmlspecialchars($loc['asset_tag']) ?>"
+                                            data-building="<?= htmlspecialchars($loc['building_loc']) ?>"
+                                            data-floor="<?= htmlspecialchars($loc['floor_no']) ?>"
+                                            data-area="<?= htmlspecialchars($loc['specific_area']) ?>"
+                                            data-person="<?= htmlspecialchars($loc['person_responsible']) ?>"
+                                            data-department="<?= htmlspecialchars($loc['department_id']) ?>"
+                                            data-remarks="<?= htmlspecialchars($loc['remarks']) ?>">
                                         <i class="bi bi-pencil"></i>
                                     </button>
 
@@ -701,6 +710,10 @@ include '../../general/footer.php';
             });
         });
 
+        $('#addLocationModal').on('hidden.bs.modal', function () {
+            $(this).find('form')[0].reset();
+        });
+
         // AJAX submission for Edit Location form using toast notifications
         $('#editLocationForm').on('submit', function (e) {
             e.preventDefault();
@@ -715,6 +728,10 @@ include '../../general/footer.php';
                 dataType: 'json',
                 headers: {'X-Requested-With': 'XMLHttpRequest'},
                 success: function (result) {
+                    // Always re-enable the button
+                    submitBtn.prop('disabled', false).text(originalBtnText);
+
+                    // Regardless of changes, show a success toast.
                     if (result.status === 'success') {
                         $('#editLocationModal').modal('hide');
                         $('#elTable').load(location.href + ' #elTable', function () {
@@ -725,10 +742,12 @@ include '../../general/footer.php';
                     }
                 },
                 error: function (xhr, status, error) {
+                    submitBtn.prop('disabled', false).text(originalBtnText);
                     showToast('Error updating location: ' + error, 'error');
                 }
             });
         });
+
     });
 </script>
 
