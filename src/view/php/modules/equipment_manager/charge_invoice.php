@@ -36,6 +36,12 @@ function is_ajax_request() {
         strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 }
 
+// Add this function to log audit entries
+function logAudit($pdo, $action, $oldVal, $newVal) {
+    $stmt = $pdo->prepare("INSERT INTO audit_log (UserID, Module, Action, OldVal, NewVal, Date_Time) VALUES (?, 'Charge Invoice', ?, ?, ?, NOW())");
+    $stmt->execute([$_SESSION['user_id'], $action, $oldVal, $newVal]);
+}
+
 // ------------------------
 // PROCESS FORM SUBMISSIONS (Add / Update)
 // ------------------------
@@ -75,6 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("INSERT INTO charge_invoice (invoice_no, date_of_purchase, po_no, date_created, is_disabled)
                                VALUES (?, ?, ?, NOW(), 0)");
             $stmt->execute([$invoice_no, $date_of_purchase, $po_no]);
+            logAudit($pdo, 'add', null, json_encode(['invoice_no' => $invoice_no, 'date_of_purchase' => $date_of_purchase, 'po_no' => $po_no]));
             $_SESSION['success'] = "Charge Invoice has been added successfully.";
         } catch (PDOException $e) {
             $_SESSION['errors'] = ["Error adding Charge Invoice: " . $e->getMessage()];
@@ -97,31 +104,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         try {
-            // Validate that the provided PO number exists in the purchase_order table
-            $stmt = $pdo->prepare("SELECT po_no FROM purchase_order WHERE po_no = ?");
-            $stmt->execute([$po_no]);
-            $existingPO = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if (!$existingPO) {
-                header('Content-Type: application/json');
-                echo json_encode(['status' => 'error', 'message' => 'Invalid Purchase Order Number. Please ensure the Purchase Order exists.']);
-                exit;
-            }
+            // Fetch the current values for OldVal
+            $stmt = $pdo->prepare("SELECT * FROM charge_invoice WHERE id = ?");
+            $stmt->execute([$id]);
+            $oldData = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            $stmt = $pdo->prepare("UPDATE charge_invoice 
-                                  SET invoice_no = ?, 
-                                      date_of_purchase = ?, 
-                                      po_no = ? 
-                                  WHERE id = ? AND is_disabled = 0");
-            $stmt->execute([$invoice_no, $date_of_purchase, $po_no, $id]);
-            
-            if ($stmt->rowCount() > 0) {
-                header('Content-Type: application/json');
-                echo json_encode(['status' => 'success', 'message' => 'Charge Invoice updated successfully.']);
-                exit;
+            if ($oldData) {
+                // Validate that the provided PO number exists in the purchase_order table
+                $stmt = $pdo->prepare("SELECT po_no FROM purchase_order WHERE po_no = ?");
+                $stmt->execute([$po_no]);
+                $existingPO = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if (!$existingPO) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['status' => 'error', 'message' => 'Invalid Purchase Order Number. Please ensure the Purchase Order exists.']);
+                    exit;
+                }
+
+                $stmt = $pdo->prepare("UPDATE charge_invoice 
+                                      SET invoice_no = ?, 
+                                          date_of_purchase = ?, 
+                                          po_no = ? 
+                                      WHERE id = ? AND is_disabled = 0");
+                $stmt->execute([$invoice_no, $date_of_purchase, $po_no, $id]);
+                
+                if ($stmt->rowCount() > 0) {
+                    // Log both old and new values
+                    logAudit($pdo, 'modified', json_encode($oldData), json_encode(['invoice_no' => $invoice_no, 'date_of_purchase' => $date_of_purchase, 'po_no' => $po_no]));
+                    header('Content-Type: application/json');
+                    echo json_encode(['status' => 'success', 'message' => 'Charge Invoice updated successfully.']);
+                    exit;
+                } else {
+                    header('Content-Type: application/json');
+                    echo json_encode(['status' => 'error', 'message' => 'No changes were made or record not found.']);
+                    exit;
+                }
             } else {
                 header('Content-Type: application/json');
-                echo json_encode(['status' => 'error', 'message' => 'No changes were made or record not found.']);
+                echo json_encode(['status' => 'error', 'message' => 'Charge Invoice not found.']);
                 exit;
             }
         } catch (PDOException $e) {
@@ -151,9 +171,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
     $id = $_GET['id'];
     try {
-        $stmt = $pdo->prepare("UPDATE charge_invoice SET is_disabled = 1 WHERE id = ?");
+        // Fetch the current values for OldVal before deletion
+        $stmt = $pdo->prepare("SELECT * FROM charge_invoice WHERE id = ?");
         $stmt->execute([$id]);
-        $_SESSION['success'] = "Charge Invoice deleted successfully.";
+        $oldData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($oldData) {
+            $stmt = $pdo->prepare("DELETE FROM charge_invoice WHERE id = ?");
+            $stmt->execute([$id]);
+            $_SESSION['success'] = "Charge Invoice deleted successfully.";
+            // Log the deletion with old values
+            logAudit($pdo, 'delete', json_encode($oldData), null);
+        } else {
+            $_SESSION['errors'] = ["Charge Invoice not found for deletion."];
+        }
     } catch (PDOException $e) {
         $_SESSION['errors'] = ["Error deleting Charge Invoice: " . $e->getMessage()];
     }
@@ -324,17 +355,17 @@ try {
                         <?php foreach ($chargeInvoices as $invoice): ?>
                             <tr>
                                 <td><?php echo htmlspecialchars($invoice['id']); ?></td>
-                                <td><?php echo htmlspecialchars($invoice['invoice_no']); ?></td>
-                                <td><?php echo htmlspecialchars($invoice['date_of_purchase']); ?></td>
-                                <td><?php echo htmlspecialchars($invoice['po_no']); ?></td>
-                                <td><?php echo date('Y-m-d H:i', strtotime($invoice['date_created'])); ?></td>
+                                <td><?php echo htmlspecialchars($invoice['invoice_no'] ?? ''); ?></td>
+                                <td><?php echo htmlspecialchars($invoice['date_of_purchase'] ?? ''); ?></td>
+                                <td><?php echo htmlspecialchars($invoice['po_no'] ?? ''); ?></td>
+                                <td><?php echo date('Y-m-d H:i', strtotime($invoice['date_created'] ?? '')); ?></td>
                                 <td class="text-center">
                                     <div class="btn-group" role="group">
                                         <a class="btn btn-sm btn-outline-primary edit-invoice"
                                            data-id="<?php echo htmlspecialchars($invoice['id']); ?>"
-                                           data-invoice="<?php echo htmlspecialchars($invoice['invoice_no']); ?>"
-                                           data-date="<?php echo htmlspecialchars($invoice['date_of_purchase']); ?>"
-                                           data-po="<?php echo htmlspecialchars($invoice['po_no']); ?>">
+                                           data-invoice="<?php echo htmlspecialchars($invoice['invoice_no'] ?? ''); ?>"
+                                           data-date="<?php echo htmlspecialchars($invoice['date_of_purchase'] ?? ''); ?>"
+                                           data-po="<?php echo htmlspecialchars($invoice['po_no'] ?? ''); ?>">
                                             <i class="bi bi-pencil-square"></i> Edit
                                         </a>
                                         <a class="btn btn-sm btn-outline-danger delete-invoice"

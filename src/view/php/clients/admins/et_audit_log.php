@@ -147,6 +147,8 @@ function getActionIcon($action)
  */
 function getStatusIcon($status)
 {
+    // Ensure $status is a string before calling strtolower
+    $status = $status ?? '';
     return (strtolower($status) === 'successful')
         ? '<i class="fas fa-check-circle"></i>'
         : '<i class="fas fa-times-circle"></i>';
@@ -237,6 +239,12 @@ function getChangedFieldNames(array $oldData, array $newData)
         }
     }
     return $changed;
+}
+
+// Ensure the status is set correctly when logging actions
+function logAudit($pdo, $action, $oldVal, $newVal, $status = 'successful') {
+    $stmt = $pdo->prepare("INSERT INTO audit_log (UserID, Module, Action, OldVal, NewVal, Status, Date_Time) VALUES (?, 'Module Name', ?, ?, ?, ?, NOW())");
+    $stmt->execute([$_SESSION['user_id'], $action, $oldVal, $newVal, $status]);
 }
 
 ?>
@@ -360,8 +368,12 @@ function getChangedFieldNames(array $oldData, array $newData)
                                         <?php echo nl2br($changesHTML); ?>
                                     </td>
                                     <td data-label="Status">
-                                        <span class="badge <?php echo (strtolower($log['Status'] ?? '') === 'successful') ? 'bg-success' : 'bg-danger'; ?>">
-                                            <?php echo getStatusIcon($log['Status']) . ' ' . htmlspecialchars($log['Status']); ?>
+                                        <?php
+                                        // When displaying the status, ensure it defaults to 'successful' if not set
+                                        $status = $log['Status'] ?? 'successful';
+                                        ?>
+                                        <span class="badge <?php echo (strtolower($status) === 'successful') ? 'bg-success' : 'bg-danger'; ?>">
+                                            <?php echo getStatusIcon($status) . ' ' . htmlspecialchars($status); ?>
                                         </span>
                                     </td>
                                     <td data-label="Date & Time">

@@ -37,15 +37,32 @@ function is_ajax_request()
         strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 }
 
+// Add this function to log audit entries
+function logAudit($pdo, $action, $oldVal, $newVal) {
+    $stmt = $pdo->prepare("INSERT INTO audit_log (UserID, Module, Action, OldVal, NewVal, Date_Time) VALUES (?, 'Receiving Report', ?, ?, ?, NOW())");
+    $stmt->execute([$_SESSION['user_id'], $action, $oldVal, $newVal]);
+}
+
 // ------------------------
 // DELETE RECEIVING REPORT
 // ------------------------
 if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
     $id = $_GET['id'];
     try {
-        $stmt = $pdo->prepare("DELETE FROM receive_report WHERE id = ?");
+        // Fetch the current values for OldVal before deletion
+        $stmt = $pdo->prepare("SELECT * FROM receive_report WHERE id = ?");
         $stmt->execute([$id]);
-        $_SESSION['success'] = "Receiving Report deleted successfully.";
+        $oldData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($oldData) {
+            $stmt = $pdo->prepare("DELETE FROM receive_report WHERE id = ?");
+            $stmt->execute([$id]);
+            $_SESSION['success'] = "Receiving Report deleted successfully.";
+            // Log the deletion with old values
+            logAudit($pdo, 'delete', json_encode($oldData), null);
+        } else {
+            $_SESSION['errors'] = ["Receiving Report not found for deletion."];
+        }
     } catch (PDOException $e) {
         $_SESSION['errors'] = ["Error deleting Receiving Report: " . $e->getMessage()];
     }
@@ -106,6 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['success'] = "Receiving Report has been added successfully.";
             $response['status'] = 'success';
             $response['message'] = $_SESSION['success'];
+            logAudit($pdo, 'add', null, json_encode(['rr_no' => $rr_no, 'accountable_individual' => $accountable_individual, 'po_no' => $po_no, 'ai_loc' => $ai_loc, 'date_created' => $date_created]));
         } catch (PDOException $e) {
             $response['status'] = 'error';
             $response['message'] = "Error adding Receiving Report: " . $e->getMessage();
@@ -118,13 +136,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = $_POST['id'];
         $response = ['status' => '', 'message' => ''];
         try {
-            $stmt = $pdo->prepare("UPDATE receive_report 
-                                   SET rr_no = ?, accountable_individual = ?, po_no = ?, ai_loc = ?, date_created = ?, is_disabled = ?
-                                   WHERE id = ?");
-            $stmt->execute([$rr_no, $accountable_individual, $po_no, $ai_loc, $date_created, $is_disabled, $id]);
-            $_SESSION['success'] = "Receiving Report has been updated successfully.";
-            $response['status'] = 'success';
-            $response['message'] = $_SESSION['success'];
+            // Fetch the current values for OldVal
+            $stmt = $pdo->prepare("SELECT * FROM receive_report WHERE id = ?");
+            $stmt->execute([$id]);
+            $oldData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($oldData) {
+                $stmt = $pdo->prepare("UPDATE receive_report 
+                                       SET rr_no = ?, accountable_individual = ?, po_no = ?, ai_loc = ?, date_created = ?, is_disabled = ?
+                                       WHERE id = ?");
+                $stmt->execute([$rr_no, $accountable_individual, $po_no, $ai_loc, $date_created, $is_disabled, $id]);
+                $_SESSION['success'] = "Receiving Report has been updated successfully.";
+                $response['status'] = 'success';
+                $response['message'] = $_SESSION['success'];
+                // Log both old and new values
+                logAudit($pdo, 'modified', json_encode($oldData), json_encode(['rr_no' => $rr_no, 'accountable_individual' => $accountable_individual, 'po_no' => $po_no, 'ai_loc' => $ai_loc, 'date_created' => $date_created]));
+            } else {
+                $response['status'] = 'error';
+                $response['message'] = "Receiving Report not found.";
+            }
         } catch (PDOException $e) {
             $response['status'] = 'error';
             $response['message'] = "Error updating Receiving Report: " . $e->getMessage();

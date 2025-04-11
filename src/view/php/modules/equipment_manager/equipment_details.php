@@ -709,25 +709,7 @@ include '../../general/footer.php';
             new bootstrap.Modal(document.getElementById('deleteEDModal')).show();
         });
 
-        $('#confirmDeleteBtn').on('click', function () {
-            if (deleteId) {
-                $.ajax({
-                    url: window.location.href,
-                    method: 'POST',
-                    data: {action: 'remove', details_id: deleteId},
-                    dataType: 'json',
-                    headers: {'X-Requested-With': 'XMLHttpRequest'},
-                    success: function (response) {
-                        showToast(response.message, response.status === 'success' ? 'success' : 'error');
-                        refreshEquipmentList();
-                        bootstrap.Modal.getInstance(document.getElementById('deleteEDModal')).hide();
-                    },
-                    error: function (xhr, status, error) {
-                        showToast('Error removing equipment: ' + error, 'error');
-                    }
-                });
-            }
-        });
+
 
         function refreshEquipmentList() {
             $.ajax({
@@ -743,11 +725,11 @@ include '../../general/footer.php';
             });
         }
 
-        // AJAX form submissions for Add and Edit
-        $('#addEquipmentForm').on('submit', function (e) {
+        $(document).off('submit', '#addEquipmentForm').on('submit', '#addEquipmentForm', function (e) {
             e.preventDefault();
             const submitBtn = $(this).find('button[type="submit"]');
             submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Adding...');
+
             $.ajax({
                 url: window.location.href,
                 method: 'POST',
@@ -773,7 +755,8 @@ include '../../general/footer.php';
             });
         });
 
-        $('#editEquipmentForm').on('submit', function (e) {
+
+        $('#editEquipmentForm').off('submit').on('submit', function (e) {
             e.preventDefault();
             const submitBtn = $(this).find('button[type="submit"]');
             submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...');
@@ -793,13 +776,21 @@ include '../../general/footer.php';
                     }
                 },
                 error: function (xhr, status, error) {
-                    showToast('Error updating equipment: ' + error, 'error');
+                    let errorMsg = 'Error updating equipment: ';
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        errorMsg += response.message || error;
+                    } catch (e) {
+                        errorMsg += error;
+                    }
+                    showToast(errorMsg, 'error');
                 },
                 complete: function () {
                     submitBtn.prop('disabled', false).html('Save Changes');
                 }
             });
         });
+
     });
 </script>
 </body>
@@ -1076,6 +1067,7 @@ include '../../general/footer.php';
                         showToast(response.message, response.status === 'success' ? 'success' : 'error');
                         refreshEquipmentList();
                         bootstrap.Modal.getInstance(document.getElementById('deleteEDModal')).hide();
+                        $('.modal-backdrop').remove();
                     },
                     error: function (xhr, status, error) {
                         showToast('Error removing equipment: ' + error, 'error');
@@ -1097,80 +1089,14 @@ include '../../general/footer.php';
             });
         }
 
-        // AJAX form submissions for Add and Edit
-        $('#addEquipmentForm').on('submit', function (e) {
-            e.preventDefault();
-            const submitBtn = $(this).find('button[type="submit"]');
-            submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Adding...');
-            $.ajax({
-                url: window.location.href,
-                method: 'POST',
-                data: $(this).serialize(),
-                dataType: 'json',
-                headers: {'X-Requested-With': 'XMLHttpRequest'},
-                success: function (response) {
-                    if (response.status === 'success') {
-                        bootstrap.Modal.getInstance(document.getElementById('addEquipmentModal')).hide();
-                        showToast(response.message, 'success');
-                        $('#addEquipmentForm')[0].reset();
-                        refreshEquipmentList();
-                    } else {
-                        showToast(response.message, 'error');
-                    }
-                },
-                error: function (xhr, status, error) {
-                    let errorMsg = 'Error creating equipment: ';
-                    try {
-                        const response = JSON.parse(xhr.responseText);
-                        errorMsg += response.message || error;
-                    } catch (e) {
-                        errorMsg += error;
-                    }
-                    showToast(errorMsg, 'error');
-                },
-                complete: function () {
-                    submitBtn.prop('disabled', false).html('Create Equipment');
-                }
-            });
+
+
+
+
+        $('#addEquipmentModal').on('hidden.bs.modal', function () {
+            $(this).find('form')[0].reset();
         });
-
-        $('#editEquipmentForm').on('submit', function (e) {
-            e.preventDefault();
-            const submitBtn = $(this).find('button[type="submit"]');
-            submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...');
-            $.ajax({
-                url: window.location.href,
-                method: 'POST',
-                data: $(this).serialize(),
-                dataType: 'json',
-                headers: {'X-Requested-With': 'XMLHttpRequest'},
-                success: function (response) {
-                    if (response.status === 'success') {
-                        bootstrap.Modal.getInstance(document.getElementById('editEquipmentModal')).hide();
-                        showToast(response.message, 'success');
-                        refreshEquipmentList();
-                    } else {
-                        showToast(response.message, 'error');
-                    }
-                },
-                error: function (xhr, status, error) {
-                    let errorMsg = 'Error updating equipment: ';
-                    try {
-                        const response = JSON.parse(xhr.responseText);
-                        errorMsg += response.message || error;
-                    } catch (e) {
-                        errorMsg += error;
-                    }
-                    showToast(errorMsg, 'error');
-                },
-                complete: function () {
-                    submitBtn.prop('disabled', false).html('Save Changes');
-                }
-            });
-        });
-
-
-    $('#addEquipmentModal').on('hidden.bs.modal', function () {
-        $(this).find('form')[0].reset();
     });
+
+
 </script>
