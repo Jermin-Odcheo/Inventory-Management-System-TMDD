@@ -4,8 +4,13 @@ require_once('../../../../../config/ims-tmdd.php');
 
 if (!isset($_SESSION['user_id'])) {
     echo "<p class='text-danger'>Unauthorized access.</p>";
+    $pdo->exec("SET @current_user_id = NULL");
     exit();
+} else {
+    $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
 }
+$ipAddress = $_SERVER['REMOTE_ADDR'];
+$pdo->exec("SET @current_ip = '" . $ipAddress . "'");
 
 // Process form submission via POST and return JSON response.
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

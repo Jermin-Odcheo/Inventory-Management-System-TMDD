@@ -5,14 +5,20 @@ ini_set('display_errors', 1);
 
 require_once('../../../../../config/ims-tmdd.php');
 
+//@current_user_id is For audit logs
 // 1) Check session and role ID.
 if (!isset($_SESSION['user_id'])) {
+    $pdo->exec("SET @current_user_id = NULL");
     die(json_encode(['success' => false, 'message' => 'Unauthorized access.']));
+} else {
+    $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
 }
 if (!isset($_GET['id'])) {
     die(json_encode(['success' => false, 'message' => 'Role ID not provided.']));
 }
 $roleID = $_GET['id'];
+$ipAddress = $_SERVER['REMOTE_ADDR'];
+$pdo->exec("SET @current_ip = '" . $ipAddress . "'");
 
 // 2) Fetch role details.
 $stmt = $pdo->prepare("SELECT * FROM roles WHERE id = ?");

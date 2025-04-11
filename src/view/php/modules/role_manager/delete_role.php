@@ -8,10 +8,14 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit();
 }
 
+//@current_user_id is for the audit log stuff
 // Check if the role ID is provided in the POST data.
 if (!isset($_POST['id']) || empty($_POST['id'])) {
     echo json_encode(['success' => false, 'message' => 'No role ID specified.']);
     exit();
+    $pdo->exec("SET @current_user_id = NULL");
+} else {
+    $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
 }
 
 $role_id = intval($_POST['id']);
