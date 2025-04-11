@@ -149,20 +149,17 @@ DELIMITER ;
 
 DROP TABLE IF EXISTS `audit_log`;
 CREATE TABLE IF NOT EXISTS `audit_log` (
-  `TrackID` int NOT NULL AUTO_INCREMENT,
-  `UserID` int NOT NULL,
-  `EntityID` int DEFAULT NULL,
-  `Action` enum('View','Modified','Delete','Add','Undo','Update','Create','Remove','Restored') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
-  `Details` text,
-  `OldVal` text,
-  `NewVal` text,
-  `Module` varchar(50) NOT NULL,
-  `Status` enum('Successful','Failed') NOT NULL,
-  `Date_Time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`TrackID`),
-  KEY `idx_module` (`Module`),
-  KEY `idx_action` (`Action`)
-) ENGINE=InnoDB AUTO_INCREMENT=537 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+    `TrackID` INT AUTO_INCREMENT PRIMARY KEY,
+    `UserID` INT NOT NULL,
+    `EntityID` INT,
+    `Action` VARCHAR(255) NOT NULL,
+    `Details` TEXT,
+    `OldVal` TEXT,
+    `NewVal` TEXT,
+    `Module` VARCHAR(255) NOT NULL,
+    `Status` VARCHAR(50),
+    `Date_Time` DATETIME NOT NULL
+);
 
 --
 -- Dumping data for table `audit_log`
