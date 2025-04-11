@@ -11,6 +11,12 @@ function is_ajax_request() {
         strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 }
 
+// Add this function to log audit entries
+function logAudit($pdo, $action, $oldVal, $newVal) {
+    $stmt = $pdo->prepare("INSERT INTO audit_log (UserID, Module, Action, OldVal, NewVal, Date_Time) VALUES (?, 'Purchase Order', ?, ?, ?, NOW())");
+    $stmt->execute([$_SESSION['user_id'], $action, $oldVal, $newVal]);
+}
+
 // ------------------------
 // PROCESS FORM SUBMISSIONS (Add / Update)
 // ------------------------
@@ -35,6 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     (po_no, date_of_order, no_of_units, item_specifications, date_created, is_disabled)
                     VALUES (?, ?, ?, ?, NOW(), 0)");
                 $stmt->execute([$po_no, $date_of_order, $no_of_units, $item_specifications]);
+                logAudit($pdo, 'add', null, json_encode(['po_no' => $po_no, 'date_of_order' => $date_of_order, 'no_of_units' => $no_of_units, 'item_specifications' => $item_specifications]));
                 $success = "Purchase Order has been added successfully.";
             } catch (PDOException $e) {
                 $errors[] = "Error adding Purchase Order: " . $e->getMessage();
@@ -45,11 +52,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errors[] = "Invalid Purchase Order ID.";
             } else {
                 try {
-                    $stmt = $pdo->prepare("UPDATE purchase_order SET 
-                        po_no = ?, date_of_order = ?, no_of_units = ?, item_specifications = ? 
-                        WHERE id = ?");
-                    $stmt->execute([$po_no, $date_of_order, $no_of_units, $item_specifications, $id]);
-                    $success = "Purchase Order has been updated successfully.";
+                    // Fetch the current values for OldVal
+                    $stmt = $pdo->prepare("SELECT * FROM purchase_order WHERE id = ?");
+                    $stmt->execute([$id]);
+                    $oldData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                    if ($oldData) {
+                        $stmt = $pdo->prepare("UPDATE purchase_order SET 
+                            po_no = ?, date_of_order = ?, no_of_units = ?, item_specifications = ? 
+                            WHERE id = ?");
+                        $stmt->execute([$po_no, $date_of_order, $no_of_units, $item_specifications, $id]);
+
+                        // Log both old and new values
+                        logAudit($pdo, 'modified', json_encode($oldData), json_encode(['po_no' => $po_no, 'date_of_order' => $date_of_order, 'no_of_units' => $no_of_units, 'item_specifications' => $item_specifications]));
+                        $success = "Purchase Order has been updated successfully.";
+                    } else {
+                        $errors[] = "Purchase Order not found.";
+                    }
                 } catch (PDOException $e) {
                     $errors[] = "Error updating Purchase Order: " . $e->getMessage();
                 }
@@ -83,23 +102,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
     $id = $_GET['id'];
     try {
-        $stmt = $pdo->prepare("UPDATE purchase_order SET is_disabled = 1 WHERE id = ?");
+        // Fetch the current values for OldVal before deletion
+        $stmt = $pdo->prepare("SELECT * FROM purchase_order WHERE id = ?");
         $stmt->execute([$id]);
-        $message = "Purchase Order deleted successfully.";
-    } catch (PDOException $e) {
-        $message = "Error deleting Purchase Order: " . $e->getMessage();
-        if (is_ajax_request()) {
-            ob_clean();
-            echo json_encode(['status' => 'error', 'message' => $message]);
-            exit;
+        $oldData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($oldData) {
+            $stmt = $pdo->prepare("DELETE FROM purchase_order WHERE id = ?");
+            $stmt->execute([$id]);
+            $_SESSION['success'] = "Purchase Order deleted successfully.";
+            // Log the deletion with old values
+            logAudit($pdo, 'delete', json_encode($oldData), null);
+        } else {
+            $_SESSION['errors'] = ["Purchase Order not found for deletion."];
         }
+    } catch (PDOException $e) {
+        $_SESSION['errors'] = ["Error deleting Purchase Order: " . $e->getMessage()];
     }
     if (is_ajax_request()) {
         ob_clean();
-        echo json_encode(['status' => 'success', 'message' => $message]);
+        header('Content-Type: application/json');
+        $response = ['status' => 'success', 'message' => $_SESSION['success'] ?? 'Operation completed successfully'];
+        if (!empty($_SESSION['errors'])) {
+            $response = ['status' => 'error', 'message' => $_SESSION['errors'][0]];
+        }
+        echo json_encode($response);
         exit;
     }
-    $_SESSION['success'] = $message;
     header("Location: purchase_order.php");
     exit;
 }
