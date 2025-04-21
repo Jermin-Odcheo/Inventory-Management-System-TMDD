@@ -297,6 +297,11 @@ if (strlen($q) > 0) {
                 margin-left: 0;
             }
         }
+
+        
+        .main-content h2.mb-4 {
+            margin-top: 4vh; 
+        }
     </style>
 
 </head>

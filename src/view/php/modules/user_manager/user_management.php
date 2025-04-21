@@ -302,6 +302,12 @@ if ($canDelete) {
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/pagination.css">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/user_roles_management.css">
     <title>Manage Users</title>
+    <style>
+        /* Add this rule to adjust the spacing */
+        .main-content header h1 {
+            margin-top: -4vh; /* Adjust this value as needed */
+        }
+    </style>
 </head>
 <body>
 <!-- Main Content Area -->
