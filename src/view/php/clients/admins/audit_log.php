@@ -16,7 +16,7 @@ $query = "SELECT audit_log.*, users.email AS email
           FROM audit_log 
           LEFT JOIN users ON audit_log.UserID = users.id
           WHERE audit_log.Module = 'User Management'
-          ORDER BY audit_log.Date_Time DESC";
+          ORDER BY audit_log.TrackID DESC";
 
 $stmt = $pdo->prepare($query);
 $stmt->execute();
