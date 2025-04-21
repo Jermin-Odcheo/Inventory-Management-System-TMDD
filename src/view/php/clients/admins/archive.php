@@ -34,7 +34,7 @@ SELECT MAX(a2.TrackID)
         FROM audit_log a2
         WHERE a2.EntityID = a.EntityID
     )
-ORDER BY a.Date_Time DESC
+ORDER BY a.TrackID DESC
  
 ";
 
