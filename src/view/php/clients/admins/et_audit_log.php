@@ -307,8 +307,8 @@ function logAudit($pdo, $action, $oldVal, $newVal, $status = 'successful') {
             </div>
 
                 <!-- Table container -->
-                <div class="table-responsive">
-                    <table class="table table-hover" id="table">
+                <div class="table-responsive" id="table">
+                    <table class="table table-hover" >
                         <colgroup>
                             <col class="track">
                             <col class="user">
@@ -397,46 +397,47 @@ function logAudit($pdo, $action, $oldVal, $newVal, $status = 'successful') {
                         <?php endif; ?>
                         </tbody>
                     </table>
-                </div>
-
-
-                <!-- Pagination Controls -->
-                <div class="container-fluid">
-                    <div class="row align-items-center g-3">
-                        <!-- Pagination Info -->
-                        <div class="col-12 col-sm-auto">
-                            <div class="text-muted">
-                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows">100</span> entries
+                    <!-- Pagination Controls -->
+                    <div class="container-fluid">
+                        <div class="row align-items-center g-3">
+                            <!-- Pagination Info -->
+                            <div class="col-12 col-sm-auto">
+                                <div class="text-muted">
+                                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows">100</span> entries
+                                </div>
+                            </div>
+                            <!-- Pagination Navigation -->
+                            <div class="col-12 col-sm-auto ms-sm-auto">
+                                <div class="d-flex align-items-center gap-2">
+                                    <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                        <i class="bi bi-chevron-left"></i> Previous
+                                    </button>
+                                    <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                        <option value="10">10</option>
+                                        <option value="20" selected>20</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                    </select>
+                                    <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                        Next <i class="bi bi-chevron-right"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                        <!-- Pagination Navigation -->
-                        <div class="col-12 col-sm-auto ms-sm-auto">
-                            <div class="d-flex align-items-center gap-2">
-                                <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                    <i class="bi bi-chevron-left"></i> Previous
-                                </button>
-                                <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
-                                    <option value="10">10</option>
-                                    <option value="20" selected>20</option>
-                                    <option value="50">50</option>
-                                    <option value="100">100</option>
-                                </select>
-                                <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                    Next <i class="bi bi-chevron-right"></i>
-                                </button>
+                        <!-- Pagination Numbers Container -->
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <ul id="pagination" class="pagination justify-content-center">
+                                    <!-- Pagination numbers will be rendered here by the script -->
+                                </ul>
                             </div>
                         </div>
                     </div>
-                    <!-- Pagination Numbers Container -->
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <ul id="pagination" class="pagination justify-content-center">
-                                <!-- Pagination numbers will be rendered here by the script -->
-                            </ul>
-                        </div>
-                    </div>
+                    <!-- End Pagination Controls -->
                 </div>
-                <!-- End Pagination Controls -->
+
+
+
             </div>
         </div>
     </div>
