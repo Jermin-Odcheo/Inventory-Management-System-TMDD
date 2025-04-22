@@ -201,7 +201,7 @@ header h1 {
     align-items: flex-end;
 }
 
-#create-btn {
+#create-btn,#delete-selected {
     background-color: var(--primary);
     color: white;
     border: none;
@@ -234,6 +234,21 @@ header h1 {
     transform: translateY(0);
 }
 
+#delete-selected::before{
+    content: "-";
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+#delete-selected:hover{
+    background-color: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+#delete-selected:active{
+    transform: translateY(0);
+}
 /* Table Styles */
 table {
     width: 100%;
