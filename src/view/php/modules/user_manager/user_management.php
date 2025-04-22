@@ -420,20 +420,20 @@ if ($canDelete) {
                     </td>
                     <td>
                         <?php if ($canModify): ?>
-                            <button type="button" class="btn btn-sm btn-warning btn-edit"
+                            <button type="button" class="btn btn-sm edit-btn"
                                     data-bs-toggle="modal" data-bs-target="#editUserModal"
                                     data-id="<?php echo htmlspecialchars($user['id']); ?>"
                                     data-email="<?php echo htmlspecialchars($user['email']); ?>"
                                     data-first-name="<?php echo htmlspecialchars($user['first_name']); ?>"
                                     data-last-name="<?php echo htmlspecialchars($user['last_name']); ?>"
                                     data-department="<?php echo htmlspecialchars($userDeptIds[0] ?? ''); ?>">
-                                Modify User
+                                <i class="bi bi-pencil-square"></i>
                             </button>
                         <?php endif; ?>
                         <?php if ($canDelete): ?>
-                            <button type="button" class="btn btn-sm btn-danger delete-user"
+                            <button type="button" class="btn btn-sm delete-btn delete-user"
                                     data-id="<?php echo htmlspecialchars($user['id']); ?>">
-                                Remove User
+                                <i class="bi bi-trash"></i>
                             </button>
                         <?php endif; ?>
                     </td>

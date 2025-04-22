@@ -91,8 +91,12 @@ document.addEventListener('DOMContentLoaded', function() {
                             <td>${role.role_name}</td>
                             <td>${departmentNames}</td>
                             <td>
-                              <button class="edit-btn" data-user-id="${user.id}" data-role-id="${assignment.roleId}">✏️</button>
-                              <button class="delete-btn" data-user-id="${user.id}" data-role-id="${assignment.roleId}">🗑️</button>
+                              <button class="edit-btn" data-user-id="${user.id}" data-role-id="${assignment.roleId}">
+                                <i class="bi bi-pencil-square"></i>
+                              </button>
+                              <button class="delete-btn" data-user-id="${user.id}" data-role-id="${assignment.roleId}">
+                                <i class="bi bi-trash"></i>
+                              </button>
                             </td>
                           </tr>
                         `);
@@ -102,8 +106,12 @@ document.addEventListener('DOMContentLoaded', function() {
                             <td>${role.role_name}</td>
                             <td>${departmentNames}</td>
                             <td>
-                              <button class="edit-btn" data-user-id="${user.id}" data-role-id="${assignment.roleId}">✏️</button>
-                              <button class="delete-btn" data-user-id="${user.id}" data-role-id="${assignment.roleId}">🗑️</button>
+                              <button class="edit-btn" data-user-id="${user.id}" data-role-id="${assignment.roleId}">
+                                <i class="bi bi-pencil-square"></i>
+                              </button>
+                              <button class="delete-btn" data-user-id="${user.id}" data-role-id="${assignment.roleId}">
+                                <i class="bi bi-trash"></i>
+                              </button>
                             </td>
                           </tr>
                         `);
