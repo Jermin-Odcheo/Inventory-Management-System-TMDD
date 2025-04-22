@@ -222,7 +222,9 @@ foreach ($userRoles as $assignment) {
                         <tr>
                             <td><?php echo htmlspecialchars($dept['department_name']); ?></td>
                             <td>
-                                <button class="delete-btn" data-dept-id="<?php echo $dept['id']; ?>">🗑️</button>
+                                <button class="delete-btn" data-dept-id="<?php echo $dept['id']; ?>">
+                                    <i class="bi bi-trash"></i>
+                                </button>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -238,13 +240,20 @@ foreach ($userRoles as $assignment) {
 </div>
 
 <!-- Delete Confirmation Modal -->
-<div id="delete-confirm-modal" class="modal">
-    <div class="modal-content">
-        <h2>Confirm Deletion</h2>
-        <p>Are you sure you want to delete this role assignment?</p>
-        <div class="modal-footer">
-            <button id="cancel-delete-btn">Cancel</button>
-            <button id="confirm-delete-btn">Delete</button>
+<div class="modal fade" id="delete-confirm-modal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmDeleteModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this role assignment?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="cancel-delete-btn" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirm-delete-btn">Delete</button>
+            </div>
         </div>
     </div>
 </div>
