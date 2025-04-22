@@ -351,16 +351,16 @@ if (strlen($q) > 0) {
                                             <td class="text-center">
                                                 <div class="btn-group" role="group">
                                                     <button type="button"
-                                                            class="btn btn-sm btn-outline-primary edit-department"
+                                                            class="btn btn-sm edit-btn"
                                                             data-id="<?php echo htmlspecialchars($department['id']); ?>"
                                                             data-department-acronym="<?php echo htmlspecialchars($department['abbreviation']); ?>"
                                                             data-department-name="<?php echo htmlspecialchars($department['department_name']); ?>">
-                                                        <i class="bi bi-pencil-square"></i> Modify
+                                                        <i class="bi bi-pencil-square"></i>
                                                     </button>
                                                     <a href="department_management.php?action=delete&id=<?php echo htmlspecialchars($department['id']); ?>"
-                                                       class="btn btn-sm btn-outline-danger delete-department-btn"
+                                                       class="btn btn-sm delete-btn"
                                                        data-dept-name="<?php echo htmlspecialchars($department['department_name']); ?>">
-                                                        <i class="bi bi-trash"></i> Delete
+                                                        <i class="bi bi-trash"></i>
                                                     </a>
                                                 </div>
                                             </td>
@@ -583,7 +583,7 @@ if (strlen($q) > 0) {
         });
 
         // Open Edit Department modal and populate its fields
-        $(document).on('click', '.edit-department', function () {
+        $(document).on('click', '.edit-btn', function () {
             var id = $(this).data('id');
             var deptAcronym = $(this).data('department-acronym');
             var deptName = $(this).data('department-name');
@@ -595,7 +595,7 @@ if (strlen($q) > 0) {
         });
 
         // Open Delete Department modal and populate its fields
-        $(document).on('click', '.delete-department-btn', function (e) {
+        $(document).on('click', '.delete-btn', function (e) {
             e.preventDefault();
             var deleteUrl = $(this).attr('href');
             var deptName = $(this).data('dept-name');
