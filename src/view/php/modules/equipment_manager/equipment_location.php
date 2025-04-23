@@ -275,6 +275,28 @@ function safeHtml($value)
 
     <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        /* Hide number input spinners */
+        input[type="number"].no-spinners::-webkit-outer-spin-button,
+        input[type="number"].no-spinners::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"].no-spinners {
+            -moz-appearance: textfield;
+        }
+
+        /* Modal positioning */
+        .modal-dialog-higher {
+            margin-top: 2.75rem !important;
+            margin-bottom: auto !important;
+        }
+
+        /* Add smooth transition */
+        .modal.fade .modal-dialog {
+            transition: transform 0.2s ease-out, margin-top 0.2s ease-out !important;
+        }
+    </style>
 </head>
 <body>
 <?php
@@ -422,60 +444,61 @@ include '../../general/footer.php';
 
 <!-- Add Location Modal -->
 <div class="modal fade" id="addLocationModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Add New Equipment Location</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <div class="modal-dialog modal-dialog-higher" style="max-width: 700px;">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-bottom-0 bg-light">
+                <h5 class="modal-title fw-bold">Add New Equipment Location</h5>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body px-4 py-4">
                 <form id="addLocationForm">
                     <input type="hidden" name="action" value="add">
-                    <div class="mb-3">
-                        <label for="asset_tag" class="form-label">Asset Tag <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="asset_tag" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="building_loc" class="form-label">Building Location <span
-                                    class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="building_loc" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="floor_no" class="form-label">Floor Number <span class="text-danger">*</span></label>
-                        <input type="number" min="1" class="form-control" name="floor_no" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="specific_area" class="form-label">Specific Area <span
-                                    class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="specific_area" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="person_responsible" class="form-label">Person Responsible <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="person_responsible" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="department_id" class="form-label">Department <span
-                                    class="text-danger">*</span></label>
-                        <select class="form-control" name="department_id" required>
-                            <option value="">Select Department</option>
-                            <?php
-                            try {
-                                $deptStmt = $pdo->query("SELECT id, department_name FROM departments WHERE is_disabled = 0 ORDER BY department_name");
-                                $departments = $deptStmt->fetchAll();
-                                foreach ($departments as $department) {
-                                    echo "<option value='" . htmlspecialchars($department['id']) . "'>" . htmlspecialchars($department['department_name']) . "</option>";
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <label for="asset_tag" class="form-label small fw-medium">Asset Tag <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control shadow-none" name="asset_tag" required>
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="building_loc" class="form-label small fw-medium">Building Location <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control shadow-none" name="building_loc" required>
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="floor_no" class="form-label small fw-medium">Floor Number <span class="text-danger">*</span></label>
+                            <input type="number" min="1" class="form-control shadow-none no-spinners" name="floor_no" required 
+                                   oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="specific_area" class="form-label small fw-medium">Specific Area <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control shadow-none" name="specific_area" required>
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="person_responsible" class="form-label small fw-medium">Person Responsible <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control shadow-none" name="person_responsible" required>
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="department_id" class="form-label small fw-medium">Department <span class="text-danger">*</span></label>
+                            <select class="form-select shadow-none" name="department_id" required>
+                                <option value="">Select Department</option>
+                                <?php
+                                try {
+                                    $deptStmt = $pdo->query("SELECT id, department_name FROM departments WHERE is_disabled = 0 ORDER BY department_name");
+                                    $departments = $deptStmt->fetchAll();
+                                    foreach ($departments as $department) {
+                                        echo "<option value='" . htmlspecialchars($department['id']) . "'>" . htmlspecialchars($department['department_name']) . "</option>";
+                                    }
+                                } catch (PDOException $e) {
+                                    echo "<option value=''>Error loading departments</option>";
                                 }
-                            } catch (PDOException $e) {
-                                echo "<option value=''>Error loading departments</option>";
-                            }
-                            ?>
-                        </select>
+                                ?>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label for="remarks" class="form-label small fw-medium">Remarks</label>
+                            <textarea class="form-control shadow-none" name="remarks" rows="2"></textarea>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label for="remarks" class="form-label">Remarks</label>
-                        <textarea class="form-control" name="remarks" rows="3"></textarea>
-                    </div>
-                    <div class="modal-footer border-0">
+                    <div class="d-flex gap-2 justify-content-end mt-4">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-primary">Add Equipment Location</button>
                     </div>
                 </form>
@@ -486,68 +509,63 @@ include '../../general/footer.php';
 
 <!-- Edit Location Modal -->
 <div class="modal fade" id="editLocationModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Edit Location</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <div class="modal-dialog modal-dialog-higher" style="max-width: 700px;">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-bottom-0 bg-light">
+                <h5 class="modal-title fw-bold">Edit Location</h5>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body px-4 py-4">
                 <form id="editLocationForm" method="post">
                     <input type="hidden" name="action" value="update">
                     <input type="hidden" name="id" id="edit_location_id">
 
-                    <div class="mb-3">
-                        <label for="edit_asset_tag" class="form-label"><i class="bi bi-tag"></i> Asset Tag <span
-                                    class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="asset_tag" id="edit_asset_tag" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="edit_building_loc" class="form-label"><i class="bi bi-building"></i> Building
-                            Location <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="edit_building_loc" name="building_loc" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="edit_floor_no" class="form-label"><i class="bi bi-layers"></i> Floor Number <span
-                                    class="text-danger">*</span></label>
-                        <input type="number" min="1" class="form-control" id="edit_floor_no" name="floor_no" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="edit_specific_area" class="form-label"><i class="bi bi-pin-map"></i> Specific Area
-                            <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="edit_specific_area" name="specific_area" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="edit_person_responsible" class="form-label"><i class="bi bi-person"></i> Person
-                            Responsible <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="edit_person_responsible" name="person_responsible"
-                               required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="edit_department_id" class="form-label"><i class="bi bi-building"></i> Department
-                            <span class="text-danger">*</span></label>
-                        <select class="form-control" id="edit_department_id" name="department_id" required>
-                            <option value="">Select Department</option>
-                            <?php
-                            try {
-                                $deptStmt = $pdo->query("SELECT id, department_name FROM departments WHERE is_disabled = 0 ORDER BY department_name");
-                                $departments = $deptStmt->fetchAll();
-                                foreach ($departments as $department) {
-                                    echo "<option value='" . htmlspecialchars($department['id']) . "'>" . htmlspecialchars($department['department_name']) . "</option>";
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <label for="edit_asset_tag" class="form-label small fw-medium">Asset Tag <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control shadow-none" name="asset_tag" id="edit_asset_tag" required>
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="edit_building_loc" class="form-label small fw-medium">Building Location <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control shadow-none" id="edit_building_loc" name="building_loc" required>
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="edit_floor_no" class="form-label small fw-medium">Floor Number <span class="text-danger">*</span></label>
+                            <input type="number" min="1" class="form-control shadow-none no-spinners" id="edit_floor_no" name="floor_no" required
+                                   oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="edit_specific_area" class="form-label small fw-medium">Specific Area <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control shadow-none" id="edit_specific_area" name="specific_area" required>
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="edit_person_responsible" class="form-label small fw-medium">Person Responsible <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control shadow-none" id="edit_person_responsible" name="person_responsible" required>
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="edit_department_id" class="form-label small fw-medium">Department <span class="text-danger">*</span></label>
+                            <select class="form-select shadow-none" id="edit_department_id" name="department_id" required>
+                                <option value="">Select Department</option>
+                                <?php
+                                try {
+                                    $deptStmt = $pdo->query("SELECT id, department_name FROM departments WHERE is_disabled = 0 ORDER BY department_name");
+                                    $departments = $deptStmt->fetchAll();
+                                    foreach ($departments as $department) {
+                                        echo "<option value='" . htmlspecialchars($department['id']) . "'>" . htmlspecialchars($department['department_name']) . "</option>";
+                                    }
+                                } catch (PDOException $e) {
+                                    // Handle error if needed
                                 }
-                            } catch (PDOException $e) {
-                                // Handle error if needed
-                            }
-                            ?>
-                        </select>
+                                ?>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label for="edit_remarks" class="form-label small fw-medium">Remarks</label>
+                            <textarea class="form-control shadow-none" id="edit_remarks" name="remarks" rows="2"></textarea>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label for="edit_remarks" class="form-label"><i class="bi bi-chat-left-text"></i>
-                            Remarks</label>
-                        <textarea class="form-control" id="edit_remarks" name="remarks" rows="3"></textarea>
-                    </div>
-                    <div class="d-flex justify-content-end">
-                        <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
+                    <div class="d-flex gap-2 justify-content-end mt-4">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-primary">Update Location</button>
                     </div>
                 </form>
@@ -558,17 +576,17 @@ include '../../general/footer.php';
 
 <!-- Delete Equipment Location Modal -->
 <div class="modal fade" id="deleteEDModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Confirm Deletion</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <div class="modal-dialog modal-dialog-higher">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-bottom-0 bg-light">
+                <h5 class="modal-title fw-bold">Confirm Deletion</h5>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                Are you sure you want to delete this Equipment Location?
+            <div class="modal-body px-4 py-4">
+                <p class="mb-0">Are you sure you want to delete this Equipment Location?</p>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <div class="modal-footer border-top-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" id="confirmDeleteBtn" class="btn btn-danger">Delete</button>
             </div>
         </div>
@@ -595,6 +613,58 @@ include '../../general/footer.php';
                 }
             });
         }
+
+        // Function to restrict input to numbers only
+        function restrictToNumbers(event) {
+            // Allow only: backspace, delete, tab, escape, enter, and numbers
+            if (event.key === 'Backspace' || event.key === 'Delete' || 
+                event.key === 'Tab' || event.key === 'Escape' || 
+                event.key === 'Enter' || 
+                (event.key >= '0' && event.key <= '9')) {
+                return true;
+            }
+            event.preventDefault();
+            return false;
+        }
+
+        // Add event listeners to both floor number inputs
+        const floorInputs = document.querySelectorAll('input[name="floor_no"]');
+        floorInputs.forEach(input => {
+            // Prevent keypress of non-numbers
+            input.addEventListener('keypress', restrictToNumbers);
+            
+            // Prevent paste of non-numbers
+            input.addEventListener('paste', function(e) {
+                e.preventDefault();
+                const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+                if (/^\d*$/.test(pastedText)) {
+                    this.value = pastedText;
+                }
+            });
+
+            // Prevent 'e' and '+' and '-' on keydown
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'e' || e.key === '+' || e.key === '-') {
+                    e.preventDefault();
+                }
+            });
+
+            // Validate minimum value only when leaving the field
+            input.addEventListener('blur', function() {
+                // Remove any non-numeric characters
+                this.value = this.value.replace(/[^\d]/g, '');
+                
+                // If empty or less than 1, set to 1
+                if (!this.value || parseInt(this.value) < 1) {
+                    this.value = '1';
+                }
+            });
+
+            // Allow field to be empty during editing
+            input.addEventListener('input', function() {
+                this.value = this.value.replace(/[^\d]/g, '');
+            });
+        });
     });
 
     $(document).ready(function () {
