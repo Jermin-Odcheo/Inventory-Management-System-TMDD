@@ -273,7 +273,12 @@ tbody tr:last-child td {
 }
 
 tbody tr:hover {
-    background-color: var(--primary-light);
+    background-color: var(--primary-light) !important;
+}
+
+/* Override Bootstrap's table-hover background color */
+.table-hover tbody tr:hover {
+    background-color: var(--primary-light) !important;
 }
 
 tr td:first-child {
@@ -305,10 +310,21 @@ tr td:first-child {
 
 .edit-btn:hover {
     background-color: var(--primary-light);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+    color: var(--primary);
 }
 
 .delete-btn:hover {
     background-color: var(--danger-light);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+    color: var(--danger);
+}
+
+.edit-btn:active,
+.delete-btn:active {
+    transform: translateY(0);
 }
 
 /* Modal Styles */
@@ -789,5 +805,19 @@ input[type="radio"]:focus {
 :focus-visible {
     outline: 2px solid var(--primary);
     outline-offset: 2px;
+}
+
+.btn-warning-dark:hover,
+.btn-warning:hover {
+    background-color: #d39e00 !important;
+    border-color: #c69500 !important;
+    color: #212529 !important;
+}
+
+.btn-danger-dark:hover,
+.btn-danger:hover {
+    background-color: #bd2130 !important;
+    border-color: #b21f2d !important;
+    color: #fff !important;
 }
 
