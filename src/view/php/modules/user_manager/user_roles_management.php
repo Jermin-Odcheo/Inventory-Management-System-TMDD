@@ -58,6 +58,11 @@ foreach ($userRoles as $assignment) {
     <!-- BASE_URL is assumed to be defined in your config -->
     <link rel="stylesheet" type="text/css" href="<?php echo BASE_URL; ?>src/view/styles/css/user_roles_management.css?ref=v1">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/pagination.css">
+    <style>
+        .modal.fade .modal-dialog {
+            transition: transform .3s ease-out;
+        }
+    </style>
     <title>User Roles Management</title>
 </head>
 <body>
