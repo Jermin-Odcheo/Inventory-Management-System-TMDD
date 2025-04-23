@@ -19,7 +19,7 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
     // Clear any previous output and set JSON header
     ob_clean();
     header('Content-Type: application/json');
-
+    
     if (!isset($_SESSION['user_id'])) {
         echo json_encode(['status' => 'error', 'message' => 'Not logged in']);
         exit;
@@ -28,19 +28,13 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
     // Handle POST requests
     if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
         $response = array('status' => 'error', 'message' => 'Invalid action');
-
+        
         switch ($_POST['action']) {
             case 'add':
                 try {
                     // Validate required fields
                     if (empty($_POST['asset_tag'])) {
                         throw new Exception('Asset Tag is required');
-                    }
-                    if (empty($_POST['status'])) {
-                        throw new Exception('Status is required');
-                    }
-                    if (empty($_POST['action_description'])) {
-                        throw new Exception('Action is required');
                     }
 
                     $pdo->beginTransaction();
@@ -57,7 +51,7 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
                         date_created,
                         is_disabled
                     ) VALUES (?, ?, ?, ?, NOW(), ?)");
-
+                    
                     $result = $stmt->execute([
                         trim($_POST['asset_tag']),
                         trim($_POST['status']),
@@ -104,17 +98,17 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
                     }
 
                     $pdo->commit();
-
+                    
                     $response = [
                         'status' => 'success',
                         'message' => 'Equipment Status has been added successfully.'
                     ];
-
+                    
                 } catch (Exception $e) {
                     if ($pdo->inTransaction()) {
                         $pdo->rollBack();
                     }
-
+                    
                     $response = [
                         'status' => 'error',
                         'message' => 'Error adding status: ' . $e->getMessage()
@@ -130,12 +124,6 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
                     }
                     if (empty($_POST['asset_tag'])) {
                         throw new Exception('Asset Tag is required');
-                    }
-                    if (empty($_POST['status'])) {
-                        throw new Exception('Status is required');
-                    }
-                    if (empty($_POST['action_description'])) {
-                        throw new Exception('Action is required');
                     }
 
                     $pdo->beginTransaction();
@@ -223,7 +211,7 @@ if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQ
                         'status' => 'success',
                         'message' => 'Status updated successfully'
                     ];
-
+                    
                 } catch (Exception $e) {
                     if ($pdo->inTransaction()) {
                         $pdo->rollBack();
@@ -517,7 +505,8 @@ include '../../general/footer.php';
                     <div class="col-12 col-sm-auto">
                         <div class="text-muted">
                             Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
-                                    id="totalRows">100</span> entries
+                                    id="totalRows">100</span>
+                            entries
                         </div>
                     </div>
                     <div class="col-12 col-sm-auto ms-sm-auto">
@@ -536,10 +525,10 @@ include '../../general/footer.php';
                             </button>
                         </div>
                     </div>
-                </div>
-                <div class="row mt-3">
-                    <div class="col-12">
-                        <ul class="pagination justify-content-center" id="pagination"></ul>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <ul class="pagination justify-content-center" id="pagination"></ul>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -560,11 +549,11 @@ include '../../general/footer.php';
                     <input type="hidden" name="action" value="add">
                     <div class="mb-3">
                         <label for="asset_tag" class="form-label">Asset Tag <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="asset_tag" required>
+                        <input type="text" class="form-control" name="asset_tag">
                     </div>
                     <div class="mb-3">
-                        <label for="status" class="form-label">Status <span class="text-danger">*</span></label>
-                        <select class="form-select" name="status" required>
+                        <label for="status" class="form-label">Status</label>
+                        <select class="form-select" name="status">
                             <option value="">Select Status</option>
                             <option value="Working">Working</option>
                             <option value="For Repair">For Repair</option>
@@ -573,15 +562,15 @@ include '../../general/footer.php';
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label for="action_description" class="form-label">Action <span
-                                    class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="action_description" required>
+                        <label for="action_description" class="form-label">Action</label>
+                        <input type="text" class="form-control" name="action_description">
                     </div>
                     <div class="mb-3">
                         <label for="remarks" class="form-label">Remarks</label>
                         <textarea class="form-control" name="remarks" rows="3"></textarea>
                     </div>
                     <div class="modal-footer border-0">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="margin-right: 4px;">Cancel</button>
                         <button type="submit" class="btn btn-primary">Add Equipment Status</button>
                     </div>
                 </form>
@@ -603,14 +592,12 @@ include '../../general/footer.php';
                     <input type="hidden" name="action" value="update">
                     <input type="hidden" name="status_id" id="edit_status_id">
                     <div class="mb-3">
-                        <label for="edit_asset_tag" class="form-label"><i class="bi bi-tag"></i> Asset Tag <span
-                                    class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="edit_asset_tag" name="asset_tag" required>
+                        <label for="edit_asset_tag" class="form-label"><i class="bi bi-tag"></i> Asset Tag <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="edit_asset_tag" name="asset_tag">
                     </div>
                     <div class="mb-3">
-                        <label for="edit_status" class="form-label"><i class="bi bi-info-circle"></i> Status <span
-                                    class="text-danger">*</span></label>
-                        <select class="form-select" id="edit_status" name="status" required>
+                        <label for="edit_status" class="form-label"><i class="bi bi-info-circle"></i> Status</label>
+                        <select class="form-select" id="edit_status" name="status">
                             <option value="">Select Status</option>
                             <option value="Working">Working</option>
                             <option value="For Repair">For Repair</option>
@@ -619,13 +606,11 @@ include '../../general/footer.php';
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label for="edit_action" class="form-label"><i class="bi bi-gear"></i> Action <span
-                                    class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="edit_action" name="action_description" required>
+                        <label for="edit_action" class="form-label"><i class="bi bi-gear"></i> Action</label>
+                        <input type="text" class="form-control" id="edit_action" name="action_description">
                     </div>
                     <div class="mb-3">
-                        <label for="edit_remarks" class="form-label"><i class="bi bi-chat-left-text"></i>
-                            Remarks</label>
+                        <label for="edit_remarks" class="form-label"><i class="bi bi-chat-left-text"></i> Remarks</label>
                         <textarea class="form-control" id="edit_remarks" name="remarks" rows="3"></textarea>
                     </div>
                     <div class="mb-3 form-check">
@@ -662,8 +647,8 @@ include '../../general/footer.php';
     </div>
 </div>
 
-<script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
-
+<script src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
+<script src="<?php echo BASE_URL; ?>src/control/js/toast.js"></script>
 
 <!-- Main Script -->
 <script>
@@ -703,7 +688,7 @@ include '../../general/footer.php';
                         $('#addStatusModal').modal('hide');
                         $('#addStatusForm')[0].reset();
                         $('.modal-backdrop').remove();
-                        setTimeout(function () {
+                        setTimeout(function() {
                             location.reload();
                         }, 1500);
                     } else {
@@ -717,7 +702,7 @@ include '../../general/footer.php';
                         error: error,
                         responseText: xhr.responseText
                     });
-
+                    
                     let errorMessage = 'Server error occurred';
                     if (xhr.responseText) {
                         try {
@@ -728,7 +713,7 @@ include '../../general/footer.php';
                             errorMessage = 'Invalid server response';
                         }
                     }
-
+                    
                     showToast(errorMessage, 'error');
                 },
                 complete: function () {
@@ -754,7 +739,7 @@ include '../../general/footer.php';
         });
 
         // When the delete confirmation button in the modal is clicked, make the AJAX call.
-        $('#confirmDelete').click(function () {
+        $('#confirmDelete').click(function() {
             $.ajax({
                 url: 'equipment_status.php',
                 method: 'POST',
@@ -762,7 +747,7 @@ include '../../general/footer.php';
                     action: 'delete',
                     status_id: deleteStatusId
                 },
-                success: function (response) {
+                success: function(response) {
                     try {
                         var result = JSON.parse(response);
                         if (result.status === 'success') {
@@ -851,7 +836,7 @@ include '../../general/footer.php';
                     if (response.status === 'success') {
                         showToast(response.message, 'success');
                         $('#editStatusModal').modal('hide');
-                        setTimeout(function () {
+                        setTimeout(function() {
                             location.reload();
                         }, 1500);
                     } else {
@@ -865,7 +850,7 @@ include '../../general/footer.php';
                         error: error,
                         responseText: xhr.responseText
                     });
-
+                    
                     let errorMessage = 'Server error occurred';
                     if (xhr.responseText) {
                         try {
@@ -876,7 +861,7 @@ include '../../general/footer.php';
                             errorMessage = 'Invalid server response';
                         }
                     }
-
+                    
                     showToast(errorMessage, 'error');
                 },
                 complete: function () {
@@ -906,6 +891,21 @@ include '../../general/footer.php';
             });
         }
 
+        // Test toast functionality
+        window.testToast = function() {
+            showToast('Test message', 'success');
+        }
+
+        // Add this after your document.ready function
+        function testToastSystem() {
+            showToast('Testing toast system', 'success');
+            setTimeout(() => showToast('Test error message', 'error'), 1000);
+            setTimeout(() => showToast('Test warning message', 'warning'), 2000);
+            setTimeout(() => showToast('Test info message', 'info'), 3000);
+        }
+
+        // You can test it in the console by calling:
+        // testToastSystem()
 
         // Reset the form when the modal is completely closed
         $('#addStatusModal').on('hidden.bs.modal', function () {
