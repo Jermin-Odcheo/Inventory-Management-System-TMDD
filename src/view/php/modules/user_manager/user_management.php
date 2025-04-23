@@ -17,7 +17,7 @@ if (!is_int($userId) && !ctype_digit((string)$userId)) {
 }
 $userId = (int)$userId;
 
-// 2) Init RBAC & enforce “View”
+// 2) Init RBAC & enforce "View"
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
 $rbac->requirePrivilege('User Management', 'View');
 
@@ -277,17 +277,17 @@ try {
                     </td>
                     <td>
                         <?php if ($canModify): ?>
-                            <button class="btn btn-sm btn-warning btn-edit"
+                            <button class="btn btn-sm btn-outline-primary edit-btn"
                                     data-bs-toggle="modal"
                                     data-bs-target="#editUserModal"
                                     data-id="<?= htmlspecialchars((string)$u['id'], ENT_QUOTES, 'UTF-8'); ?>">
-                                Modify
+                                <i class="bi bi-pencil-square"></i>
                             </button>
                         <?php endif; ?>
                         <?php if ($canDelete): ?>
-                            <button class="btn btn-sm btn-danger delete-user"
+                            <button class="btn btn-sm btn-outline-danger delete-btn"
                                     data-id="<?= htmlspecialchars((string)$u['id'], ENT_QUOTES, 'UTF-8'); ?>">
-                                Remove
+                                <i class="bi bi-trash"></i>
                             </button>
                         <?php endif; ?>
                     </td>

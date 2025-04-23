@@ -1,12 +1,13 @@
 $(document).ready(function () {
-    // 1) Helper: Build a cache‑busted URL for reloads
+
+    // Helper: Build a cache-busted URL for reloading content.
     function getCacheBustedUrl(selector) {
-        var baseUrl   = location.href.split('#')[0];
-        var connector = baseUrl.indexOf('?') > -1 ? '&' : '?';
-        return baseUrl + connector + '_=' + Date.now() + ' ' + selector;
+        var baseUrl = location.href.split('#')[0];
+        var connector = (baseUrl.indexOf('?') > -1) ? '&' : '?';
+        return baseUrl + connector + '_=' + new Date().getTime() + ' ' + selector;
     }
 
-    // 2) Toggle custom department input in Create modal
+    // Toggle custom department input
     $('#modal_department').on('change', function () {
         if ($(this).val() === 'custom') {
             $('#modal_custom_department').show().attr('required', true);
@@ -15,212 +16,416 @@ $(document).ready(function () {
         }
     });
 
-    // 3) Create User via AJAX
+    // Password visibility toggle
+    $('.toggle-password').on('click', function() {
+        const passwordField = $(this).closest('.input-group').find('input');
+        const passwordType = passwordField.attr('type');
+        
+        if (passwordType === 'password') {
+            passwordField.attr('type', 'text');
+            $(this).find('i').removeClass('bi-eye').addClass('bi-eye-slash');
+        } else {
+            passwordField.attr('type', 'password');
+            $(this).find('i').removeClass('bi-eye-slash').addClass('bi-eye');
+        }
+    });
+    
+    // Password strength meter
+    $('#password').on('input', function() {
+        const password = $(this).val();
+        const strengthMeter = $(this).closest('.mb-3').find('.password-strength');
+        
+        if (password.length > 0) {
+            strengthMeter.removeClass('d-none');
+            
+            // Calculate password strength
+            let strength = 0;
+            const progressBar = strengthMeter.find('.progress-bar');
+            
+            // Length check
+            if (password.length >= 8) strength += 1;
+            
+            // Character variety checks
+            if (/[A-Z]/.test(password)) strength += 1; // Uppercase
+            if (/[a-z]/.test(password)) strength += 1; // Lowercase
+            if (/[0-9]/.test(password)) strength += 1; // Numbers
+            if (/[^A-Za-z0-9]/.test(password)) strength += 1; // Special chars
+            
+            // Update UI based on strength
+            progressBar.removeClass('weak medium strong');
+            let strengthText = '';
+            let percentage = 0;
+            
+            if (strength <= 2) {
+                progressBar.addClass('weak');
+                strengthText = 'Weak';
+                percentage = 25;
+            } else if (strength <= 3) {
+                progressBar.addClass('medium');
+                strengthText = 'Medium';
+                percentage = 50;
+            } else {
+                progressBar.addClass('strong');
+                strengthText = 'Strong';
+                percentage = 100;
+            }
+            
+            progressBar.css('width', percentage + '%');
+            strengthMeter.find('.strength-text').text(strengthText);
+        } else {
+            strengthMeter.addClass('d-none');
+        }
+    });
+
+    // Reset password strength when modal is closed
+    $('#createUserModal').on('hidden.bs.modal', function() {
+        const strengthMeter = $(this).find('.password-strength');
+        strengthMeter.addClass('d-none');
+        strengthMeter.find('.progress-bar').css('width', '0%').removeClass('weak medium strong');
+        strengthMeter.find('.strength-text').text('Password strength');
+    });
+
+    // Handle "Create User" form submission via AJAX
     $('#createUserForm').on('submit', function (e) {
         e.preventDefault();
+        
+        // Simple validation
+        let valid = true;
+        $(this).find('[required]').each(function() {
+            if ($(this).val().trim() === '') {
+                $(this).addClass('is-invalid');
+                valid = false;
+            } else {
+                $(this).removeClass('is-invalid');
+            }
+        });
+        
+        // Check if at least one role is selected
+        if ($('.modal-role-checkbox:checked').length === 0) {
+            $('.role-selection').addClass('is-invalid');
+            valid = false;
+        } else {
+            $('.role-selection').removeClass('is-invalid');
+        }
+        
+        if (!valid) {
+            return;
+        }
+        
+        // Show loading state on submit button
+        const submitBtn = $(this).find('button[type="submit"]');
+        const originalBtnText = submitBtn.html();
+        submitBtn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Creating...').prop('disabled', true);
+        
         var actionUrl = $(this).attr('action');
-        $.post(actionUrl, $(this).serialize(), 'json')
-            .done(function (response) {
+        $.ajax({
+            url: actionUrl,
+            type: 'POST',
+            data: $(this).serialize(),
+            dataType: 'json',
+            success: function (response) {
                 if (response.success) {
-                    $('#createUserModal').modal('hide');
-                    $('#umTable tbody').load(
-                        getCacheBustedUrl('#umTable tbody > *'),
-                        () => showToast(response.message, 'success')
-                    );
-                    $('#createUserForm')[0].reset();
+                    $("#createUserModal").modal('hide');  // Hides the modal container
+                    $('#umTable tbody').load(getCacheBustedUrl('#umTable tbody > *'), function () {
+                        showToast(response.message, 'success');
+                    });
+                    $('#createUserForm')[0].reset();  // Resets the form fields
                 } else {
                     showToast(response.message, 'error');
                 }
-            })
-            .fail(function (xhr) {
-                var resp = xhr.responseJSON;
-                showToast((resp && resp.message) || 'Error adding user.', 'error');
-            });
+            },
+            error: function (xhr) {
+                var response = xhr.responseJSON;
+                if (response && response.message) {
+                    showToast(response.message, 'error');
+                } else {
+                    showToast('Error adding user.', 'error');
+                }
+            },
+            complete: function() {
+                // Reset button state
+                submitBtn.html(originalBtnText).prop('disabled', false);
+            }
+        });
     });
 
-    // 4) Track delete action
     var deleteAction = null;
+    // Handle edit button click
+    $(document).on('click', '.edit-btn', function() {
+        const userId = $(this).data('id');
+        $.ajax({
+            url: 'get_user.php',
+            type: 'GET',
+            data: { user_id: userId },
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    const user = response.data;
+                    $('#editUserID').val(user.id);
+                    $('#editEmail').val(user.email);
+                    $('#editFirstName').val(user.first_name);
+                    $('#editLastName').val(user.last_name);
+                    $('#editDepartment').val(user.department_id);
+                    
+                    // Clear previous role selections
+                    $('.edit-role-checkbox').prop('checked', false);
+                    
+                    // Check user's roles
+                    user.roles.forEach(roleId => {
+                        $(`#edit_role_${roleId}`).prop('checked', true);
+                    });
+                    
+                    $('#editUserModal').modal('show');
+                } else {
+                    showToast(response.message, 'error');
+                }
+            },
+            error: function() {
+                showToast('Error loading user data.', 'error');
+            }
+        });
+    });
 
-    // 5) Single-user delete: open confirm modal
-    $(document).on('click', '.delete-user', function () {
-        deleteAction = { type: 'single', userId: $(this).data('id') };
-        $('#confirmDeleteMessage').text("Are you sure you want to archive this user?");
+    // Handle delete button click
+    $(document).on('click', '.delete-btn', function() {
+        const userId = $(this).data('id');
+        deleteAction = {type: 'single', userId: userId};
+        $('#confirmDeleteMessage').text('Are you sure you want to archive this user?');
         $('#confirmDeleteModal').modal('show');
     });
 
-    // 6) Bulk delete: open confirm modal
-    $('#delete-selected').on('click', function () {
-        var ids = $('.select-row:checked').map(function () { return this.value; }).get();
-        if (ids.length < 2) {
-            showToast('Please select at least two users to archive.', 'warning');
+    // Bulk delete
+    $("#delete-selected").click(function () {
+        const selected = $(".select-row:checked").map(function () {
+            return $(this).val();
+        }).get();
+        if (selected.length === 0) {
+            showToast('Please select users to archive.', 'warning');
             return;
         }
-        deleteAction = { type: 'bulk', selected: ids };
-        $('#confirmDeleteMessage').text(`Are you sure you want to archive ${ids.length} users?`);
+        deleteAction = {type: 'bulk', selected: selected};
+        $('#confirmDeleteMessage').text(`Are you sure you want to archive ${selected.length} selected user(s)?`);
         $('#confirmDeleteModal').modal('show');
     });
 
-    // 7) Account delete: open confirm modal
-    $('#confirmDeleteAccount').on('click', function () {
-        deleteAction = { type: 'account' };
+    // Delete account confirmation
+    $("#confirmDeleteAccount").click(function () {
+        deleteAction = {type: 'account'};
         $('#confirmDeleteMessage').text("Are you sure you want to delete your account?");
         $('#confirmDeleteModal').modal('show');
+        $('#delete-selected').modal('hide');
     });
 
-    // 8) Confirm delete (single, bulk, or account)
+    // Confirm delete action
     $('#confirmDeleteButton').on('click', function () {
+        $(this).blur();
         $('#confirmDeleteModal').modal('hide');
-        if (!deleteAction) return;
-
-        var url, data;
-        if (deleteAction.type === 'single') {
-            url  = 'delete_user.php';
-            data = { user_id: deleteAction.userId };
-        } else if (deleteAction.type === 'bulk') {
-            url  = 'delete_user.php';
-            data = { user_ids: deleteAction.selected };
-        } else if (deleteAction.type === 'account') {
-            url  = 'delete_account.php';
-            data = { action: 'delete_account' };
-        } else {
-            deleteAction = null;
-            return;
-        }
-
+        var currentAction = deleteAction;
         deleteAction = null;
-        $.post(url, data, 'json')
-            .done(function (res) {
-                if (res.success) {
-                    $('#umTable tbody').load(
-                        getCacheBustedUrl('#umTable tbody > *'),
-                        function () {
-                            updateBulkDeleteButton();
-                            showToast(res.message, 'success');
+        if (currentAction) {
+            if (currentAction.type === 'single') {
+                $.ajax({
+                    type: "POST",
+                    url: "delete_user.php",
+                    data: {user_id: currentAction.userId},
+                    dataType: 'json',
+                    success: function (response) {
+                        if (response.success) {
+                            $('#umTable tbody').load(getCacheBustedUrl('#umTable tbody > *'), function () {
+                                showToast(response.message, 'success');
+                            });
+                        } else {
+                            showToast(response.message, 'error');
                         }
-                    );
-                } else {
-                    showToast(res.message, 'error');
-                }
-            })
-            .fail(function () {
-                showToast('Error deleting.', 'error');
-            });
+                    },
+                    error: function () {
+                        showToast('Error deleting user.', 'error');
+                    }
+                });
+            } else if (currentAction.type === 'bulk') {
+                $.ajax({
+                    type: "POST",
+                    url: "delete_user.php",
+                    data: {user_ids: currentAction.selected},
+                    dataType: 'json',
+                    success: function (response) {
+                        if (response.success) {
+                            $("#select-all").prop("checked", false);
+                            $(".select-row").prop("checked", false);
+                            $('#umTable tbody').load(getCacheBustedUrl('#umTable tbody > *'), function () {
+                                showToast(response.message, 'success');
+                                toggleBulkDeleteButton();
+                            });
+                        } else {
+                            showToast(response.message, 'error');
+                        }
+                    },
+                    error: function () {
+                        showToast('Error deleting users.', 'error');
+                    }
+                });
+            } else if (currentAction.type === 'account') {
+                $.ajax({
+                    type: "POST",
+                    url: "delete_account.php",
+                    data: {action: "delete_account"},
+                    dataType: 'json',
+                    success: function (response) {
+                        if (response.success) {
+                            $('#umTable tbody').load(getCacheBustedUrl('#umTable tbody > *'), function () {
+                                showToast(response.message, 'success');
+                            });
+                        } else {
+                            showToast(response.message, 'error');
+                        }
+                    },
+                    error: function () {
+                        showToast('Error deleting account.', 'error');
+                    }
+                });
+            }
+        }
     });
 
-    // 9) Clean up modals & reset forms
-    $('#createUserModal, #editUserModal, #confirmDeleteModal, #addUserModal')
-        .on('hidden.bs.modal', function () {
-            $('body').removeClass('modal-open');
-            $('.modal-backdrop').remove();
-            $(this).find('form')[0]?.reset();
-        });
+    //Clears modal input when user closes the modal and removes lingering backdrops
+    $('#createUserModal, #editUserModal,#confirmDeleteModal,#addUserModal' ).on('hidden.bs.modal', function () {
+        $('body').removeClass('modal-open');
+        $('.modal-backdrop').remove();
+        $(this).find('form')[0].reset();
+    });
 
-    // 10) Close alerts
+    // Close alerts when close button is clicked
     $(document).on('click', '.btn-close', function () {
         $(this).closest('.alert').hide();
     });
 
-    // 11) Search & filter
-    var searchInput      = $('#search-filters'),
-        departmentFilter = $('#department-filter'),
-        searchTimeout;
+    // Submit form on department filter change
+    $('.department-filter').on('change', function () {
+        $(this).closest('form').submit();
+    });
+
+    // Search and filter functionality
+    const searchInput = $('#search-filters');
+    const departmentFilter = $('#department-filter');
+    let searchTimeout;
 
     function loadFilteredData() {
-        var params = new URLSearchParams({
-            search:     searchInput.val(),
-            department: departmentFilter.val()
+        const searchQuery = searchInput.val();
+        const selectedDepartment = departmentFilter.val();
+        const queryParams = new URLSearchParams({
+            search: searchQuery,
+            department: selectedDepartment
         });
-        var baseUrl = location.href.split('?')[0],
-            url     = baseUrl + '?' + params.toString();
+        const baseUrl = window.location.href.split('?')[0];
+        const newUrl = `${baseUrl}?${queryParams.toString()}`;
 
-        $('#umTable tbody').load(
-            url + ' #umTable tbody > *',
-            function () {
-                history.pushState(null, '', url);
-                if (!$.trim($('#umTable tbody').text())) {
-                    $('#umTable tbody').html(`
-                <tr><td colspan="100%">
-                  <div class="empty-state text-center py-5">
-                    <div class="empty-state-icon fs-1 mb-2">🔍</div>
-                    <div class="empty-state-message mb-3">
-                      No matching search found
-                    </div>
-                    <button id="clear-filters-btn" class="btn btn-outline-primary">
-                      Clear filters
-                    </button>
-                  </div>
-                </td></tr>
-              `);
-                    $('#clear-filters-btn').click(function(){
-                        searchInput.val('');
-                        departmentFilter.val('all');
-                        loadFilteredData();
-                    });
-                }
+        $('#umTable tbody').load(`${newUrl} #umTable tbody > *`, function () {
+            history.pushState(null, '', newUrl);
+
+            if ($.trim($('#umTable tbody').html()) === '') {
+                const emptyStateHtml = `
+                    <tr>
+                        <td colspan="100%">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">🔍</div>
+                                <div class="empty-state-message">No matching search found</div>
+                                <button class="empty-state-action" id="clear-filters-btn">Clear filters</button>
+                            </div>
+                        </td>
+                    </tr>`;
+                $('#umTable tbody').html(emptyStateHtml);
+                $('#clear-filters-btn').click(function () {
+                    searchInput.val('');
+                    departmentFilter.val('all');
+                    loadFilteredData();
+                });
             }
-        );
+        });
     }
 
+    // Debounce search input
     searchInput.on('input', function () {
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(loadFilteredData, 500);
     });
-    departmentFilter.on('change', loadFilteredData);
 
-    // 12) Edit User modal population
-    $('#editUserModal').on('show.bs.modal', function (ev) {
-        var btn   = $(ev.relatedTarget),
-            modal = $(this);
-        modal.find('#editUserID')      .val(btn.data('id'));
-        modal.find('#editEmail')       .val(btn.data('email'));
-        modal.find('#editFirstName')   .val(btn.data('first-name'));
-        modal.find('#editLastName')    .val(btn.data('last-name'));
-        modal.find('#editDepartment')  .val(btn.data('department'));
+    // Immediate department filter submission
+    departmentFilter.on('change', function () {
+        loadFilteredData();
     });
 
-    // 13) Edit User via AJAX
-    $('#editUserForm').on('submit', function (e) {
+    // Populate Edit Modal with existing data
+    $('#editUserModal').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget);
+        var userId = button.data('id');
+        var email = button.data('email');
+        var firstName = button.data('first-name');
+        var lastName = button.data('last-name');
+        var department = button.data('department');
+        var modal = $(this);
+        modal.find('#editUserID').val(userId);
+        modal.find('#editEmail').val(email);
+        modal.find('#editFirstName').val(firstName);
+        modal.find('#editLastName').val(lastName);
+        modal.find('#editDepartment').val(department);
+    });
+
+    // Handle "Edit User" form submission via AJAX
+    $("#editUserForm").on("submit", function (e) {
         e.preventDefault();
-        var btn = $(this).find('button[type="submit"]');
-        btn.prop('disabled', true).html(
+        var submitButton = $(this).find('button[type="submit"]');
+        submitButton.prop('disabled', true).html(
             '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...'
         );
-
-        $.post('update_user.php', $(this).serialize(), 'json')
-            .done(function (res) {
-                if (res.success) {
-                    $('#editUserModal').modal('hide');
-                    $('#umTable tbody').load(
-                        getCacheBustedUrl('#umTable tbody > *'),
-                        () => showToast(res.message, 'success')
-                    );
+        $.ajax({
+            type: "POST",
+            url: "update_user.php",
+            data: $(this).serialize(),
+            dataType: 'json',
+            success: function (response) {
+                if (response.success) {
+                    $("#editUserModal").modal('hide');
+                    $('#umTable tbody').load(getCacheBustedUrl('#umTable tbody > *'), function () {
+                        showToast(response.message, 'success');
+                    });
                 } else {
-                    showToast(res.message, 'error');
+                    showToast(response.message, 'error');
                 }
-            })
-            .fail(() => showToast('Error updating user.', 'error'))
-            .always(() => btn.prop('disabled', false).text('Save Changes'));
+            },
+            error: function () {
+                showToast('Error updating user.', 'error');
+            },
+            complete: function () {
+                submitButton.prop('disabled', false).text('Save Changes');
+            }
+        });
     });
 
-    // 14) Bulk‑delete button toggle logic
-    const $deleteBtn = $('#delete-selected'),
-        $selectAll= $('#select-all'),
-        $table    = $('#umTable');
+    // "Select All" checkbox functionality
+    $(document).on('click', '#select-all', function () {
+        $(".select-row").prop('checked', $(this).prop('checked'));
+        toggleBulkDeleteButton();
+    });
 
-    if ($deleteBtn.length) {
-        function updateBulkDeleteButton() {
-            var $rows   = $table.find('.select-row'),
-                checked = $rows.filter(':checked').length;
-            $deleteBtn.toggle(checked >= 2).prop('disabled', checked < 2);
-            $selectAll.prop('checked', checked === $rows.length);
-        }
+    $(document).on('change', '.select-row', function () {
+        toggleBulkDeleteButton();
+    });
 
-        // bind and init
-        $table.on('click change', '.select-row', updateBulkDeleteButton);
-        $selectAll.on('change', function(){
-            $table.find('.select-row').prop('checked', this.checked);
-            updateBulkDeleteButton();
-        });
-        updateBulkDeleteButton();
+    function toggleBulkDeleteButton() {
+        const anyChecked = $(".select-row:checked").length > 1;
+        $("#delete-selected").prop('disabled', !anyChecked).toggle(anyChecked);
     }
+
+    // Filter form submission for dynamic URL update
+    $('form.d-flex').on('submit', function (e) {
+        e.preventDefault();
+        var formData = $(this).serialize();
+        var baseUrl = window.location.href.split('?')[0];
+        var newUrl = baseUrl + '?' + formData;
+        $('#umTable tbody').load(newUrl + ' #umTable tbody > *', function () {
+            history.pushState(null, '', newUrl);
+        });
+    });
+
 });
+

@@ -201,7 +201,7 @@ header h1 {
     align-items: flex-end;
 }
 
-#create-btn,#delete-selected {
+#create-btn {
     background-color: var(--primary);
     color: white;
     border: none;
@@ -234,21 +234,6 @@ header h1 {
     transform: translateY(0);
 }
 
-#delete-selected::before{
-    content: "-";
-    font-size: 1rem;
-    font-weight: 600;
-}
-
-#delete-selected:hover{
-    background-color: var(--primary-hover);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-md);
-}
-
-#delete-selected:active{
-    transform: translateY(0);
-}
 /* Table Styles */
 table {
     width: 100%;
@@ -806,34 +791,3 @@ input[type="radio"]:focus {
     outline-offset: 2px;
 }
 
-/* Icon button styles */
-.btn-icon {
-    width: 32px;
-    height: 32px;
-    padding: 6px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-    margin-right: 5px;
-}
-
-.btn-icon i {
-    font-size: 16px;
-}
-
-.btn-edit {
-    background-color: #ffc107;
-    border-color: #ffc107;
-    color: #212529;
-}
-
-.btn-edit:hover {
-    background-color: #e0a800;
-    border-color: #d39e00;
-}
-
-/* Style for action buttons container */
-td .btn-icon + .btn-icon {
-    margin-left: 5px;
-}
