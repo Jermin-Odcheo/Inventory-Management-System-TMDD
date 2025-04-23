@@ -59,18 +59,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_password'])) {
 
     if (password_verify($current_password, $user['password'])) {
         if ($new_password === $confirm_password) {
-            $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
-
-            // Set the @current_user_id variable (e.g., for auditing in a trigger)
-            $pdo->exec("SET @current_user_id = $user_id;");
-
-            // Update the password
-            $update_sql = "UPDATE users SET password = ? WHERE id = ?";
-            $update_stmt = $pdo->prepare($update_sql);
-            if ($update_stmt->execute([$hashed_password, $user_id])) {
-                $success_message = "Password updated successfully.";
+            // Server-side password validation
+            if (strlen($new_password) < 8) {
+                $error_message = "Password must be at least 8 characters long.";
+            } elseif (!preg_match('/[A-Z]/', $new_password)) {
+                $error_message = "Password must contain at least one uppercase letter.";
+            } elseif (!preg_match('/[a-z]/', $new_password)) {
+                $error_message = "Password must contain at least one lowercase letter.";
+            } elseif (!preg_match('/\d/', $new_password)) {
+                $error_message = "Password must contain at least one number.";
+            } elseif (!preg_match('/[@$!%*?&]/', $new_password)) {
+                $error_message = "Password must contain at least one special character (@$!%*?&).";
             } else {
-                $error_message = "Failed to update password.";
+                $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
+
+                // Set the @current_user_id variable (e.g., for auditing in a trigger)
+                $pdo->exec("SET @current_user_id = $user_id;");
+
+                // Update the password
+                $update_sql = "UPDATE users SET password = ? WHERE id = ?";
+                $update_stmt = $pdo->prepare($update_sql);
+                if ($update_stmt->execute([$hashed_password, $user_id])) {
+                    $success_message = "Password updated successfully.";
+                } else {
+                    $error_message = "Failed to update password.";
+                }
             }
         } else {
             $error_message = "New passwords do not match.";
@@ -82,7 +95,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_password'])) {
 
 // Handle account deletion
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
-    // Additional confirmation check could be added here
     $delete_sql = "DELETE FROM users WHERE id = ?";
     $delete_stmt = $pdo->prepare($delete_sql);
     
@@ -109,29 +121,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
     <title>Account Details</title>
     <style>
         html, body {
-            overflow: hidden; /* Prevent scrolling on the root elements */
+            overflow: hidden;
             height: 100%;
             margin: 0;
             padding: 0;
         }
 
-        /* Apply to all potential scrollable containers */
         .main-content, .container, .sidebar {
-            -ms-overflow-style: none;  /* IE and Edge */
-            scrollbar-width: none;  /* Firefox */
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
 
-        /* Chrome, Safari and Opera specific scrollbar hiding */
         .main-content::-webkit-scrollbar,
         .container::-webkit-scrollbar,
         .sidebar::-webkit-scrollbar,
-            body::-webkit-scrollbar,
-            html::-webkit-scrollbar {
+        body::-webkit-scrollbar,
+        html::-webkit-scrollbar {
             display: none;
         }
         
         .main-content {
-            margin-left: 230px; /* Adjusted from 250px for better balance */
+            margin-left: 230px;
             padding: 30px;
             display: flex;
             justify-content: center;
@@ -143,14 +153,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
             background-color: #fff;
             border-radius: 10px;
             box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
-            padding: 25px; /* Reduced from 40px to give more internal space */
-            width: 88%; /* Maintained width percentage */
+            padding: 25px;
+            width: 88%;
             max-width: 1400px;
             margin: 80px auto 15px auto;
         }
         
         h2 {
-            margin-bottom: 20px; /* Reduced from 25px */
+            margin-bottom: 20px;
             color: #333;
             font-weight: 600;
         }
@@ -158,52 +168,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
         h3 {
             font-size: 18px;
             font-weight: 600;
-            margin-bottom: 12px; /* Reduced from 15px */
+            margin-bottom: 12px;
             color: #444;
         }
         
-        /* Two-column layout for forms */
         .account-layout {
             display: grid;
-            grid-template-columns: 1fr 1fr; /* Two equal columns */
-            gap: 30px; /* Reduced from 40px */
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
         }
         
-        /* For smaller screens, stack the columns */
         @media (max-width: 992px) {
             .account-layout {
                 grid-template-columns: 1fr;
             }
             
             .main-content {
-                margin-left: 0; /* Remove margin for small screens */
+                margin-left: 0;
             }
             
             .container {
-                width: 95%; /* Wider container on small screens */
+                width: 95%;
             }
         }
         
         .form-section {
-            margin-bottom: 25px; /* Reduced from 30px */
-            padding-bottom: 15px; /* Reduced from 20px */
+            margin-bottom: 25px;
+            padding-bottom: 15px;
             border-bottom: 1px solid #eee;
         }
         
         .form-group {
-            margin-bottom: 16px; /* Reduced from 20px */
+            margin-bottom: 16px;
         }
         
         label {
             display: block;
-            margin-bottom: 6px; /* Reduced from 8px */
+            margin-bottom: 6px;
             font-weight: 500;
         }
         
         input[type="email"],
         input[type="password"] {
             width: 100%;
-            padding: 10px 12px; /* Reduced from 12px 15px */
+            padding: 10px 12px;
             border: 1px solid #ddd;
             border-radius: 6px;
             font-size: 14px;
@@ -240,15 +248,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
         .form-actions {
             display: flex;
             justify-content: flex-end;
-            gap: 10px; /* Reduced from 12px */
-            margin-top: 20px; /* Reduced from 25px */
+            gap: 10px;
+            margin-top: 20px;
         }
         
         .btn-primary {
             background-color: #007bff;
             color: white;
             border: none;
-            padding: 8px 20px; /* Reduced from 10px 24px */
+            padding: 8px 20px;
             border-radius: 6px;
             cursor: pointer;
             font-weight: 500;
@@ -263,7 +271,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
             background-color: #f8f9fa;
             color: #333;
             border: 1px solid #ddd;
-            padding: 8px 20px; /* Reduced from 10px 24px */
+            padding: 8px 20px;
             border-radius: 6px;
             cursor: pointer;
             font-weight: 500;
@@ -278,7 +286,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
             background-color: #dc3545;
             color: white;
             border: none;
-            padding: 8px 20px; /* Reduced from 10px 24px */
+            padding: 8px 20px;
             border-radius: 6px;
             cursor: pointer;
             font-weight: 500;
@@ -290,8 +298,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
         }
         
         .danger-zone {
-            margin-top: 30px; /* Reduced from 40px */
-            padding-top: 15px; /* Reduced from 20px */
+            margin-top: 30px;
+            padding-top: 15px;
             border-top: 1px solid #eee;
         }
         
@@ -300,8 +308,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
         }
         
         .alert {
-            padding: 12px; /* Reduced from 15px */
-            margin-bottom: 20px; /* Reduced from 25px */
+            padding: 12px;
+            margin-bottom: 20px;
             border-radius: 6px;
         }
         
@@ -318,29 +326,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
         }
         
         .info-section {
-            margin-bottom: 25px; /* Reduced from 35px */
-            padding-bottom: 20px; /* Reduced from 25px */
+            margin-bottom: 25px;
+            padding-bottom: 20px;
             border-bottom: 1px solid #eee;
         }
         
         .info-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr); /* Three equal columns */
-            gap: 20px; /* Reduced from 25px */
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
         }
         
         .info-item {
             display: flex;
             flex-direction: column;
             background-color: #f8f9fa;
-            padding: 12px; /* Reduced from 15px */
+            padding: 12px;
             border-radius: 6px;
         }
         
         .info-label {
             font-size: 13px;
             color: #666;
-            margin-bottom: 5px; /* Reduced from 6px */
+            margin-bottom: 5px;
         }
         
         .info-value {
@@ -355,16 +363,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
         
         .modal-header {
             border-bottom: 1px solid #eee;
-            padding: 18px 22px; /* Reduced from 20px 25px */
+            padding: 18px 22px;
         }
         
         .modal-body {
-            padding: 22px; /* Reduced from 25px */
+            padding: 22px;
         }
         
         .modal-footer {
             border-top: 1px solid #eee;
-            padding: 18px 22px; /* Reduced from 20px 25px */
+            padding: 18px 22px;
+        }
+        
+        /* Password validation styles */
+        #password-requirements {
+            list-style-type: none;
+            padding-left: 0;
+            margin-top: 5px;
+        }
+        
+        #password-requirements li {
+            margin-bottom: 3px;
+            font-size: 13px;
+        }
+        
+        #password-requirements li:before {
+            content: "•";
+            margin-right: 8px;
+        }
+        
+        .text-success {
+            color: #28a745 !important;
+        }
+        
+        .text-danger {
+            color: #dc3545 !important;
+        }
+        
+        .form-text {
+            font-size: 13px;
+            margin-top: 5px;
+        }
+        
+        #password-match {
+            display: none;
         }
     </style>
 </head>
@@ -382,7 +424,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
             <div class="alert alert-error"><?php echo htmlspecialchars($error_message); ?></div>
         <?php endif; ?>
         
-        <!-- User Information (Non-editable) -->
         <div class="info-section">
             <h3>User Information</h3>
             <div class="info-grid">
@@ -401,9 +442,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
             </div>
         </div>
         
-        <!-- Two-column layout for forms -->
         <div class="account-layout">
-            <!-- Email Update Form (Left column) -->
             <div class="form-section">
                 <h3>Email Address</h3>
                 <form method="POST" id="email-form">
@@ -419,7 +458,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
                 </form>
             </div>
             
-            <!-- Password Update Form (Right column) -->
             <div class="form-section">
                 <h3>Change Password</h3>
                 <form method="POST" id="password-form">
@@ -428,10 +466,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
                         <div class="password-field">
                             <input type="password" id="current_password" name="current_password" required>
                             <button type="button" class="toggle-password" onclick="togglePassword('current_password')">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                    <circle cx="12" cy="12" r="3"></circle>
-                                </svg>
+                                <i class="fas fa-eye"></i>
                             </button>
                         </div>
                     </div>
@@ -439,14 +474,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
                     <div class="form-group">
                         <label for="new_password">New Password</label>
                         <div class="password-field">
-                            <input type="password" id="new_password" name="new_password" required>
+                            <input type="password" id="new_password" name="new_password" required 
+                                   pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$"
+                                   title="Must contain at least 8 characters, one uppercase, one lowercase, one number and one special character">
                             <button type="button" class="toggle-password" onclick="togglePassword('new_password')">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                    <circle cx="12" cy="12" r="3"></circle>
-                                </svg>
+                                <i class="fas fa-eye"></i>
                             </button>
                         </div>
+                        <small class="form-text text-muted">
+                            Password must contain:
+                            <ul id="password-requirements" style="margin-top: 5px; padding-left: 20px;">
+                                <li id="req-length" class="text-danger">At least 8 characters</li>
+                                <li id="req-uppercase" class="text-danger">One uppercase letter</li>
+                                <li id="req-lowercase" class="text-danger">One lowercase letter</li>
+                                <li id="req-number" class="text-danger">One number</li>
+                                <li id="req-special" class="text-danger">One special character</li>
+                            </ul>
+                        </small>
                     </div>
                     
                     <div class="form-group">
@@ -454,12 +498,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
                         <div class="password-field">
                             <input type="password" id="confirm_password" name="confirm_password" required>
                             <button type="button" class="toggle-password" onclick="togglePassword('confirm_password')">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                    <circle cx="12" cy="12" r="3"></circle>
-                                </svg>
+                                <i class="fas fa-eye"></i>
                             </button>
                         </div>
+                        <small id="password-match" class="form-text text-danger" style="display: none;">
+                            Passwords do not match
+                        </small>
                     </div>
                     
                     <div class="form-actions">
@@ -470,7 +514,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
             </div>
         </div>
         
-        <!-- Danger Zone Section -->
         <div class="danger-zone">
             <p>Permanently delete your account and all associated data. This action cannot be undone.</p>
             <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
@@ -480,7 +523,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
     </div>
 </div>
 
-<!-- Delete Account Modal -->
 <div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -503,7 +545,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
     </div>
 </div>
 
-<!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
@@ -516,10 +557,75 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
         }
     }
     
-    // Confirm password matching validation
+    // Password validation
+    document.addEventListener('DOMContentLoaded', function() {
+        const newPassword = document.getElementById('new_password');
+        const confirmPassword = document.getElementById('confirm_password');
+        
+        if (newPassword) {
+            newPassword.addEventListener('input', function() {
+                validatePassword(this.value);
+            });
+        }
+        
+        if (confirmPassword) {
+            confirmPassword.addEventListener('input', function() {
+                validatePasswordMatch();
+            });
+        }
+    });
+
+    function validatePassword(password) {
+        // Length requirement
+        document.getElementById('req-length').className = password.length >= 8 ? 'text-success' : 'text-danger';
+        
+        // Uppercase requirement
+        document.getElementById('req-uppercase').className = /[A-Z]/.test(password) ? 'text-success' : 'text-danger';
+        
+        // Lowercase requirement
+        document.getElementById('req-lowercase').className = /[a-z]/.test(password) ? 'text-success' : 'text-danger';
+        
+        // Number requirement
+        document.getElementById('req-number').className = /\d/.test(password) ? 'text-success' : 'text-danger';
+        
+        // Special character requirement
+        document.getElementById('req-special').className = /[@$!%*?&]/.test(password) ? 'text-success' : 'text-danger';
+    }
+
+    function validatePasswordMatch() {
+        const newPassword = document.getElementById('new_password').value;
+        const confirmPassword = document.getElementById('confirm_password').value;
+        const matchElement = document.getElementById('password-match');
+        
+        if (confirmPassword.length > 0) {
+            if (newPassword === confirmPassword) {
+                matchElement.style.display = 'none';
+            } else {
+                matchElement.style.display = 'block';
+            }
+        } else {
+            matchElement.style.display = 'none';
+        }
+    }
+
     document.getElementById('password-form').addEventListener('submit', function(event) {
         const newPassword = document.getElementById('new_password').value;
         const confirmPassword = document.getElementById('confirm_password').value;
+        
+        // Client-side validation
+        const isPasswordValid = (
+            newPassword.length >= 8 &&
+            /[A-Z]/.test(newPassword) &&    
+            /[a-z]/.test(newPassword) &&
+            /\d/.test(newPassword) &&
+            /[@$!%*?&]/.test(newPassword)
+        );
+        
+        if (!isPasswordValid) {
+            event.preventDefault();
+            alert('Password does not meet all requirements.');
+            return;
+        }
         
         if (newPassword !== confirmPassword) {
             event.preventDefault();
