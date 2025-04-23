@@ -302,6 +302,53 @@ if (strlen($q) > 0) {
         .main-content h2.mb-4 {
             margin-top: 4vh; 
         }
+
+            /* Button Styles */
+.edit-btn, .delete-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.375rem;
+    border-radius: 9999px;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+}
+
+.edit-btn {
+    color: #4f46e5;
+}
+
+.delete-btn {
+    color: #ef4444;
+}
+
+/* Edit button hover state */
+.edit-btn:hover {
+    background-color: #eef2ff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Delete button hover state - maintain elevation but override color */
+.delete-btn:hover {
+    background-color: #fee2e2;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    color: #ef4444 !important; /* Force the color to remain red */
+}
+
+/* Explicitly override any hover effects on the icon itself */
+.delete-btn:hover i.bi-trash {
+    color: #ef4444 !important; /* Keep the trash icon red on hover */
+}
+
+.edit-btn:active, .delete-btn:active {
+    transform: translateY(0);
+}
     </style>
 
 </head>
@@ -351,14 +398,14 @@ if (strlen($q) > 0) {
                                             <td class="text-center">
                                                 <div class="btn-group" role="group">
                                                     <button type="button"
-                                                            class="btn btn-sm edit-btn"
+                                                            class="edit-btn"
                                                             data-id="<?php echo htmlspecialchars($department['id']); ?>"
                                                             data-department-acronym="<?php echo htmlspecialchars($department['abbreviation']); ?>"
                                                             data-department-name="<?php echo htmlspecialchars($department['department_name']); ?>">
                                                         <i class="bi bi-pencil-square"></i>
                                                     </button>
                                                     <a href="department_management.php?action=delete&id=<?php echo htmlspecialchars($department['id']); ?>"
-                                                       class="btn btn-sm delete-btn"
+                                                       class="delete-btn"
                                                        data-dept-name="<?php echo htmlspecialchars($department['department_name']); ?>">
                                                         <i class="bi bi-trash"></i>
                                                     </a>

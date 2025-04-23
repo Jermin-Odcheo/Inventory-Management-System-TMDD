@@ -83,6 +83,42 @@ unset($role);
             max-height: 500px;
             overflow-y: auto;
         }
+
+        /* Button Styles */
+        .edit-btn, .delete-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.375rem;
+            border-radius: 9999px;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2rem;
+            height: 2rem;
+        }
+
+        .edit-btn {
+            color: #4f46e5;
+        }
+
+        .delete-btn {
+            color: #ef4444;
+        }
+
+        .edit-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .delete-btn:hover {
+            background-color: #fee2e2;
+        }
+
+        .edit-btn:active {
+            transform: translateY(0);
+        }
     </style>
 </head>
 
@@ -133,16 +169,16 @@ include '../../general/footer.php';
                                 <?php endforeach; ?>
                             </td>
                             <td>
-                                <button type="button" class="btn btn-sm btn-warning edit-role-btn"
+                                <button type="button" class="edit-btn edit-role-btn"
                                         data-role-id="<?php echo $roleID; ?>" data-bs-toggle="modal"
                                         data-bs-target="#editRoleModal">
-                                    Modify Role
+                                    <i class="bi bi-pencil-square"></i>
                                 </button>
-                                <button type="button" class="btn btn-sm btn-danger delete-role-btn"
+                                <button type="button" class="delete-btn delete-role-btn"
                                         data-role-id="<?php echo $roleID; ?>"
                                         data-role-name="<?php echo htmlspecialchars($role['Role_Name']); ?>"
                                         data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
-                                    Remove Role
+                                    <i class="bi bi-trash"></i>
                                 </button>
                             </td>
                         </tr>

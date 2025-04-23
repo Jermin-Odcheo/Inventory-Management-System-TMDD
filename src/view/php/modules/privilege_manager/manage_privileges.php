@@ -65,6 +65,46 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
             padding: 100px 15px;
         }
 
+        /* Button Styles */
+        .edit-btn, .delete-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.375rem;
+            border-radius: 9999px;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2rem;
+            height: 2rem;
+        }
+
+        .edit-btn {
+            color: #4f46e5;
+        }
+
+        .delete-btn {
+            color: #ef4444;
+        }
+
+        .edit-btn:hover {
+            background-color: #eef2ff;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .delete-btn:hover {
+            background-color: #fee2e2;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .edit-btn:active,
+        .delete-btn:active {
+            transform: translateY(0);
+        }
+
         /* Modern checkbox design */
         .custom-checkbox .form-check-input {
             border-radius: 0.25rem;
@@ -144,14 +184,14 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <td><?php echo htmlspecialchars($module['Module_Name']); ?></td>
                             <td><?php echo htmlspecialchars($module['Privileges']); ?></td>
                             <td>
-                                <button type="button" class="btn btn-sm btn-warning edit-module-btn"
+                                <button type="button" class="edit-btn edit-module-btn"
                                         data-module-id="<?php echo $module['Module_ID']; ?>"
                                         data-bs-toggle="modal" data-bs-target="#editModuleModal">
-                                    Edit Privileges
+                                    <i class="bi bi-pencil-square"></i>
                                 </button>
-                                <button type="button" class="btn btn-sm btn-danger delete-module-btn"
+                                <button type="button" class="delete-btn delete-module-btn"
                                         data-module-id="<?php echo $module['Module_ID']; ?>">
-                                    Remove Module
+                                    <i class="bi bi-trash"></i>
                                 </button>
                             </td>
                         </tr>
