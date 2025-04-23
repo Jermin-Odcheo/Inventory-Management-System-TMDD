@@ -422,9 +422,11 @@ try {
                         <input type="datetime-local" class="form-control" name="date_created" id="date_created" required
                                value="<?php echo date('Y-m-d\TH:i'); ?>">
                     </div>
-                    <div class="mb-3">
-                        <button type="submit" class="btn btn-primary">Add Receiving Report</button>
-                    </div>
+                    <div class="text-end">
+                        <button type="button" class="btn btn-secondary" style="margin-right: 4px;"
+                            data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Confirm
+                        </button>
                 </form>
             </div>
         </div>

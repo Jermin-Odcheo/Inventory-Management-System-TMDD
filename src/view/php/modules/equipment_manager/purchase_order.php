@@ -447,12 +447,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                             <div class="row align-items-center g-3">
                                 <div class="col-12 col-sm-auto">
                                     <div class="text-muted">
-                                        Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows">100</span> entries
+                                        Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of
+                                        <span id="totalRows">100</span> entries
                                     </div>
                                 </div>
                                 <div class="col-12 col-sm-auto ms-sm-auto">
                                     <div class="d-flex align-items-center gap-2">
-                                        <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                        <button id="prevPage"
+                                            class="btn btn-outline-primary d-flex align-items-center gap-1">
                                             <i class="bi bi-chevron-left"></i> Previous
                                         </button>
                                         <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
@@ -461,7 +463,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                                             <option value="30">30</option>
                                             <option value="50">50</option>
                                         </select>
-                                        <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                        <button id="nextPage"
+                                            class="btn btn-outline-primary d-flex align-items-center gap-1">
                                             Next <i class="bi bi-chevron-right"></i>
                                         </button>
                                     </div>
@@ -473,69 +476,80 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div> <!-- End main-content -->
-</div> <!-- End wrapper -->
+                        </div>
+                        </div>
+                        </div>
+                        </div>
+                        </div> <!-- End main-content -->
+                        </div> <!-- End wrapper -->
 
-<!-- Delete Purchase Order Modal -->
-<div class="modal fade" id="deletePOModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Confirm Deletion</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                Are you sure you want to delete this purchase order?
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" id="confirmDeleteBtn" class="btn btn-danger">Delete</button>
-            </div>
-        </div>
-    </div>
-</div>
+                        <!-- Delete Purchase Order Modal -->
+                        <div class="modal fade" id="deletePOModal" tabindex="-1">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Confirm Deletion</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                            aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        Are you sure you want to delete this purchase order?
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary"
+                                            data-bs-dismiss="modal">Cancel</button>
+                                        <button type="button" id="confirmDeleteBtn"
+                                            class="btn btn-danger">Delete</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-<div id="toastContainer" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1055;"></div>
+                        <div id="toastContainer" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1055;"></div>
 
-<!-- Add Purchase Order Modal -->
-<div class="modal fade" id="addPOModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Create New Purchase Order</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="addPOForm" method="post">
-                    <input type="hidden" name="action" value="add">
-                    <div class="mb-3">
-                        <label for="po_no" class="form-label">PO Number <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="po_no" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="date_of_order" class="form-label">Date of Order <span class="text-danger">*</span></label>
-                        <input type="date" class="form-control" name="date_of_order" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="no_of_units" class="form-label">No. of Units <span class="text-danger">*</span></label>
-                        <input type="number" class="form-control" name="no_of_units" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="item_specifications" class="form-label">Item Specifications <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="item_specifications" required>
-                    </div>
-                    <div class="mb-3">
-                        <button type="submit" class="btn btn-primary">Add Purchase Order</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+                        <!-- Add Purchase Order Modal -->
+                        <div class="modal fade" id="addPOModal" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Create New Purchase Order</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <form id="addPOForm" method="post">
+                                            <input type="hidden" name="action" value="add">
+                                            <div class="mb-3">
+                                                <label for="po_no" class="form-label">PO Number <span
+                                                        class="text-danger">*</span></label>
+                                                <input type="text" class="form-control" name="po_no" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="date_of_order" class="form-label">Date of Order <span
+                                                        class="text-danger">*</span></label>
+                                                <input type="date" class="form-control" name="date_of_order" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="no_of_units" class="form-label">No. of Units <span
+                                                        class="text-danger">*</span></label>
+                                                <input type="number" class="form-control" name="no_of_units" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="item_specifications" class="form-label">Item Specifications
+                                                    <span class="text-danger">*</span></label>
+                                                <input type="text" class="form-control" name="item_specifications"
+                                                    required>
+                                            </div>
+                                            <div class="text-end">
+                                                <button type="button" class="btn btn-secondary"
+                                                    style="margin-right: 4px;" data-bs-dismiss="modal">Cancel</button>
+                                                <button type="submit" class="btn btn-primary">Confirm
+                                                    </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
 <!-- Edit Purchase Order Modal -->
 <div class="modal fade" id="editPOModal" tabindex="-1">
