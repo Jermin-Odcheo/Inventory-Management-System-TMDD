@@ -26,6 +26,12 @@ try {
     $lastName  = trim($_POST['last_name']);
     $department= filter_var($_POST['department'] ?? '', FILTER_VALIDATE_INT);
     $password  = $_POST['password'] ?? '';
+    $roles     = isset($_POST['edit_roles']) && is_array($_POST['edit_roles']) ? $_POST['edit_roles'] : [];
+    
+    // Validate at least one role is selected
+    if (empty($roles)) {
+        throw new Exception('At least one role must be selected');
+    }
 
     if (!$userId || !$email || !$firstName || !$lastName) {
         throw new Exception('Invalid input data');
@@ -111,6 +117,20 @@ try {
         $_SESSION['user_id'],
         'User Management'
     ]);
+    
+    // Update user roles
+    // First, delete all existing roles for this user
+    $deleteRolesStmt = $pdo->prepare("DELETE FROM user_roles WHERE user_id = ?");
+    $deleteRolesStmt->execute([$userId]);
+    
+    // Then, insert the new roles
+    $insertRoleStmt = $pdo->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)");
+    foreach ($roles as $roleId) {
+        $roleId = filter_var($roleId, FILTER_VALIDATE_INT);
+        if ($roleId) {
+            $insertRoleStmt->execute([$userId, $roleId]);
+        }
+    }
 
     $pdo->commit();
 

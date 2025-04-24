@@ -280,7 +280,11 @@ try {
                             <button class="btn btn-sm btn-outline-primary edit-btn"
                                     data-bs-toggle="modal"
                                     data-bs-target="#editUserModal"
-                                    data-id="<?= htmlspecialchars((string)$u['id'], ENT_QUOTES, 'UTF-8'); ?>">
+                                    data-id="<?= htmlspecialchars((string)$u['id'], ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-email="<?= htmlspecialchars($u['email'], ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-first-name="<?= htmlspecialchars($u['first_name'], ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-last-name="<?= htmlspecialchars($u['last_name'], ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-department="<?= !empty($ids) ? htmlspecialchars((string)$ids[0], ENT_QUOTES, 'UTF-8') : ''; ?>">
                                 <i class="bi bi-pencil-square"></i>
                             </button>
                         <?php endif; ?>
@@ -361,7 +365,7 @@ try {
                         </div>
                         <div class="col-12">
                             <label for="modal_department" class="form-label">Department</label>
-                            <select name="department" id="modal_department" class="form-select" required>
+                            <select name="department" id="modal_department" class="form-select">
                                 <option value="">Select Department</option>
                                 <?php foreach ($departments as $code => $d): ?>
                                     <option value="<?= $code ?>"><?= htmlspecialchars($d['department_name']) ?></option>

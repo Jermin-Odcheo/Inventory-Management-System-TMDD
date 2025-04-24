@@ -69,9 +69,16 @@ document.addEventListener('DOMContentLoaded', function() {
                   <tr>
                     <td><input type="checkbox" class="select-row" value="${user.id}"></td>
                     <td>${user.username}</td>
-                    <td></td>
-                    <td></td>
-                    <td><button class="add-role-btn" data-user-id="${user.id}">Add Role</button></td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>
+                      <button class="edit-btn" data-user-id="${user.id}" data-role-id="0">
+                        <i class="bi bi-pencil-square"></i>
+                      </button>
+                      <button class="delete-btn" data-user-id="${user.id}" data-role-id="0">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </td>
                   </tr>
                 `);
                 tbody.append(tr);
@@ -188,6 +195,25 @@ document.addEventListener('DOMContentLoaded', function() {
             button.addEventListener('click', function() {
                 const userId = parseInt(this.dataset.userId);
                 const roleId = parseInt(this.dataset.roleId);
+                
+                // If roleId is 0, it means user doesn't have a role yet, open the add user roles modal
+                if (roleId === 0) {
+                    selectedRoles = [];
+                    selectedUsers = [];
+                    selectedRolesContainer.innerHTML = '';
+                    selectedUsersContainer.innerHTML = '';
+                    
+                    // Pre-select the current user
+                    const user = getUserById(userId);
+                    if (user) {
+                        addItemToSelection('selected-users-container', user, 'user');
+                    }
+                    
+                    addUserRolesModal.style.display = 'block';
+                    return;
+                }
+                
+                // Regular edit flow for users with roles
                 const assignment = userRoleDepartments.find(a => a.userId === userId && a.roleId === roleId);
                 if (assignment) {
                     currentEditingData = {
@@ -215,15 +241,16 @@ document.addEventListener('DOMContentLoaded', function() {
             button.addEventListener('click', function() {
                 const userId = parseInt(this.dataset.userId);
                 const roleId = parseInt(this.dataset.roleId);
+                
+                // Don't allow deletion if roleId is 0 (user has no roles yet)
+                if (roleId === 0) {
+                    Toast.info('This user has no roles to delete', 5000, 'Info');
+                    return;
+                }
+                
                 // Instead of a simple confirm(), show the custom delete modal.
                 pendingDelete = { userId, roleId };
                 deleteConfirmModal.style.display = 'block';
-            });
-        });
-        document.querySelectorAll('.add-role-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                const userId = parseInt(this.dataset.userId);
-                addUserRolesModal.style.display = 'block';
             });
         });
     }

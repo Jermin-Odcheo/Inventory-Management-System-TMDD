@@ -101,11 +101,11 @@ $(document).ready(function () {
         });
         
         // Check if at least one role is selected
-        if ($('.modal-role-checkbox:checked').length === 0) {
-            $('.role-selection').addClass('is-invalid');
+        if ($('input[name="roles[]"]:checked').length === 0) {
+            $('.invalid-feedback').show();
             valid = false;
         } else {
-            $('.role-selection').removeClass('is-invalid');
+            $('.invalid-feedback').hide();
         }
         
         if (!valid) {
@@ -150,38 +150,38 @@ $(document).ready(function () {
     });
 
     var deleteAction = null;
-    // Handle edit button click
-    $(document).on('click', '.edit-btn', function() {
-        const userId = $(this).data('id');
+    // Handle "Edit User" form submission via AJAX
+    $("#editUserForm").on("submit", function (e) {
+        e.preventDefault();
+        var submitButton = $(this).find('button[type="submit"]');
+        submitButton.prop('disabled', true).html(
+            '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...'
+        );
         $.ajax({
-            url: 'get_user.php',
-            type: 'GET',
-            data: { user_id: userId },
+            type: "POST",
+            url: "update_user.php",
+            data: $(this).serialize(),
             dataType: 'json',
-            success: function(response) {
+            success: function (response) {
                 if (response.success) {
-                    const user = response.data;
-                    $('#editUserID').val(user.id);
-                    $('#editEmail').val(user.email);
-                    $('#editFirstName').val(user.first_name);
-                    $('#editLastName').val(user.last_name);
-                    $('#editDepartment').val(user.department_id);
-                    
-                    // Clear previous role selections
-                    $('.edit-role-checkbox').prop('checked', false);
-                    
-                    // Check user's roles
-                    user.roles.forEach(roleId => {
-                        $(`#edit_role_${roleId}`).prop('checked', true);
+                    $("#editUserModal").modal('hide');
+                    $('#umTable tbody').load(getCacheBustedUrl('#umTable tbody > *'), function () {
+                        showToast(response.message, 'success');
                     });
-                    
-                    $('#editUserModal').modal('show');
                 } else {
                     showToast(response.message, 'error');
                 }
             },
-            error: function() {
-                showToast('Error loading user data.', 'error');
+            error: function (xhr) {
+                var response = xhr.responseJSON;
+                if (response && response.message) {
+                    showToast(response.message, 'error');
+                } else {
+                    showToast('Error updating user.', 'error');
+                }
+            },
+            complete: function () {
+                submitButton.prop('disabled', false).text('Save Changes');
             }
         });
     });
@@ -368,35 +368,27 @@ $(document).ready(function () {
         modal.find('#editFirstName').val(firstName);
         modal.find('#editLastName').val(lastName);
         modal.find('#editDepartment').val(department);
-    });
-
-    // Handle "Edit User" form submission via AJAX
-    $("#editUserForm").on("submit", function (e) {
-        e.preventDefault();
-        var submitButton = $(this).find('button[type="submit"]');
-        submitButton.prop('disabled', true).html(
-            '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...'
-        );
+        
+        // Reset all checkboxes first
+        $('.edit-role-checkbox').prop('checked', false);
+        
+        // Fetch the user's roles
         $.ajax({
-            type: "POST",
-            url: "update_user.php",
-            data: $(this).serialize(),
+            type: "GET",
+            url: "get_user_roles.php",
+            data: { user_id: userId },
             dataType: 'json',
-            success: function (response) {
-                if (response.success) {
-                    $("#editUserModal").modal('hide');
-                    $('#umTable tbody').load(getCacheBustedUrl('#umTable tbody > *'), function () {
-                        showToast(response.message, 'success');
+            success: function(response) {
+                // Check the user's roles
+                if (response.success && response.roles && response.roles.length > 0) {
+                    response.roles.forEach(function(roleId) {
+                        $('#edit_role_' + roleId).prop('checked', true);
                     });
-                } else {
-                    showToast(response.message, 'error');
                 }
             },
-            error: function () {
-                showToast('Error updating user.', 'error');
-            },
-            complete: function () {
-                submitButton.prop('disabled', false).text('Save Changes');
+            error: function (xhr) {
+                console.error("Error fetching roles:", xhr.responseText);
+                // Don't show error toast here as it's disruptive to the user experience
             }
         });
     });

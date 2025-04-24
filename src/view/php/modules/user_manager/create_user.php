@@ -3,6 +3,9 @@
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
 
+// Set header for JSON response
+header('Content-Type: application/json');
+
 // Set audit log variables
 if (isset($_SESSION['user_id'])) {
     $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
@@ -30,6 +33,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $password = $_POST['password'];
         $departmentID = $_POST['department'];
         $customDept = trim($_POST['custom_department'] ?? '');
+        $roles = isset($_POST['roles']) && is_array($_POST['roles']) ? $_POST['roles'] : [];
 
         // Validate required fields
         $errors = [];
@@ -38,6 +42,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if (empty($lastName)) $errors[] = "Last name is required";
         if (empty($password)) $errors[] = "Password is required";
         if (empty($departmentID)) $errors[] = "Department is required";
+        if (empty($roles)) $errors[] = "At least one role must be selected";
 
         // Handle department selection
         $selectedDeptId = null;
@@ -127,6 +132,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // Add department association
         $stmt = $pdo->prepare("INSERT INTO user_departments (user_id, department_id) VALUES (?, ?)");
         $stmt->execute([$userID, $selectedDeptId]);
+        
+        // Add role associations
+        $insertRoleStmt = $pdo->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)");
+        foreach ($roles as $roleId) {
+            $roleId = filter_var($roleId, FILTER_VALIDATE_INT);
+            if ($roleId) {
+                $insertRoleStmt->execute([$userID, $roleId]);
+            }
+        }
 
         $pdo->commit();
 
