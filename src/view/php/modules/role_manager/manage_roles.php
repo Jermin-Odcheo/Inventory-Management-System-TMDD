@@ -1,8 +1,28 @@
 <?php
 ob_start();
-session_start();
 require_once('../../../../../config/ims-tmdd.php');
+session_start();
+include '../../general/header.php';
+include '../../general/sidebar.php';
+include '../../general/footer.php';
+// 1) Auth guard
+$userId = $_SESSION['user_id'] ?? null;
+if (!is_int($userId) && !ctype_digit((string)$userId)) {
+    header('Location: ../../../../../public/index.php');
+    exit();
+}
+$userId = (int)$userId;
 
+// 2) Init RBAC & enforce "View"
+$rbac = new RBACService($pdo, $_SESSION['user_id']);
+$rbac->requirePrivilege('Roles and Privileges', 'View');
+
+// 3) Button flags
+$canCreate = $rbac->hasPrivilege('Roles and Privileges', 'Create');
+$canModify = $rbac->hasPrivilege('Roles and Privileges', 'Modify');
+$canRemove = $rbac->hasPrivilege('Roles and Privileges', 'Remove');
+$canUndo = $rbac->hasPrivilege('Roles and Privileges', 'Undo');
+$canRedo = $rbac->hasPrivilege('Roles and Privileges', 'Redo');
 
 // SQL query remains the same
 $sql = "
@@ -66,16 +86,10 @@ unset($role);
             display: flex;
             min-height: 100vh;
         }
-
-        .sidebar {
-            width: 300px;
-            background-color: #2c3e50;
-            color: #fff;
-        }
-
+ 
         .main-content {
             flex: 1;
-            padding: 20px;
+ 
             margin-left: 300px;
         }
 
@@ -123,11 +137,7 @@ unset($role);
 </head>
 
 <body>
-<?php
-include '../../general/header.php';
-include '../../general/sidebar.php';
-include '../../general/footer.php';
-?>
+ 
 <div class="wrapper">
     <div class="main-content container-fluid">
         <header class="main-header">
@@ -135,11 +145,17 @@ include '../../general/footer.php';
         </header>
 
         <div class="d-flex justify-content-end mb-3">
+            <?php if ($canUndo): ?>
             <button type="button" class="btn btn-secondary me-2" id="undoButton">Undo</button>
+            <?php endif; ?>
+            <?php if ($canRedo): ?>
             <button type="button" class="btn btn-secondary" id="redoButton">Redo</button>
+            <?php endif; ?>
+            <?php if ($canCreate): ?>
             <button type="button" class="btn btn-primary ms-2" data-bs-toggle="modal" data-bs-target="#addRoleModal">
                 Create New Role
             </button>
+            <?php endif; ?>
         </div>
 
         <div class="table-responsive" id="table">
@@ -169,17 +185,21 @@ include '../../general/footer.php';
                                 <?php endforeach; ?>
                             </td>
                             <td>
+                                <?php if ($canModify): ?>
                                 <button type="button" class="edit-btn edit-role-btn"
                                         data-role-id="<?php echo $roleID; ?>" data-bs-toggle="modal"
                                         data-bs-target="#editRoleModal">
                                     <i class="bi bi-pencil-square"></i>
                                 </button>
+                                <?php endif; ?>
+                                <?php if ($canRemove): ?>
                                 <button type="button" class="delete-btn delete-role-btn"
                                         data-role-id="<?php echo $roleID; ?>"
                                         data-role-name="<?php echo htmlspecialchars($role['Role_Name']); ?>"
                                         data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
                                     <i class="bi bi-trash"></i>
                                 </button>
+                                <?php endif; ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -268,9 +288,20 @@ include '../../general/footer.php';
 </div>
 
 <script>
+    // Pass RBAC privileges to JavaScript
+    const userPrivileges = {
+        canCreate: <?php echo json_encode($canCreate); ?>,
+        canModify: <?php echo json_encode($canModify); ?>,
+        canRemove: <?php echo json_encode($canRemove); ?>,
+        canUndo: <?php echo json_encode($canUndo); ?>,
+        canRedo: <?php echo json_encode($canRedo); ?>
+    };
+
     document.addEventListener('DOMContentLoaded', function () {
         // **1. Load edit role modal content via AJAX**
         $(document).on('click', '.edit-role-btn', function () {
+            if (!userPrivileges.canModify) return;
+            
             var roleID = $(this).data('role-id');
             $('#editRoleContent').html("Loading...");
             $.ajax({
@@ -291,6 +322,11 @@ include '../../general/footer.php';
 
         // **2. Handle delete role modal**
         $('#confirmDeleteModal').on('show.bs.modal', function (event) {
+            if (!userPrivileges.canRemove) {
+                event.preventDefault();
+                return false;
+            }
+            
             var button = $(event.relatedTarget);
             var roleID = button.data('role-id');
             var roleName = button.data('role-name');
@@ -300,6 +336,8 @@ include '../../general/footer.php';
 
         // **3. Confirm delete role via AJAX**
         $(document).on('click', '#confirmDeleteButton', function (e) {
+            if (!userPrivileges.canRemove) return;
+            
             e.preventDefault();
             $(this).blur();
             var roleID = $(this).data('role-id');
@@ -327,7 +365,12 @@ include '../../general/footer.php';
         });
 
         // **4. Load add role modal content**
-        $('#addRoleModal').on('show.bs.modal', function () {
+        $('#addRoleModal').on('show.bs.modal', function (event) {
+            if (!userPrivileges.canCreate) {
+                event.preventDefault();
+                return false;
+            }
+            
             $('#addRoleContent').html("Loading...");
             $.ajax({
                 url: 'add_role.php',
@@ -343,6 +386,8 @@ include '../../general/footer.php';
 
         // **7. Undo button via AJAX**
         $(document).on('click', '#undoButton', function () {
+            if (!userPrivileges.canUndo) return;
+            
             $.ajax({
                 url: 'undo.php',
                 type: 'GET',
@@ -365,6 +410,8 @@ include '../../general/footer.php';
 
         // **8. Redo button via AJAX**
         $(document).on('click', '#redoButton', function () {
+            if (!userPrivileges.canRedo) return;
+            
             $.ajax({
                 url: 'redo.php',
                 type: 'GET',
