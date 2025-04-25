@@ -7,6 +7,24 @@ include '../../general/header.php';
 include '../../general/sidebar.php';
 include '../../general/footer.php';
 
+// 1) Auth guard
+$userId = $_SESSION['user_id'] ?? null;
+if (!is_int($userId) && !ctype_digit((string)$userId)) {
+    header('Location: ../../../../../public/index.php');
+    exit();
+}
+$userId = (int)$userId;
+
+// 2) Init RBAC & enforce "View"
+$rbac = new RBACService($pdo, $_SESSION['user_id']);
+$rbac->requirePrivilege('User Management', 'View');
+
+// 3) Button flags
+$canCreate = $rbac->hasPrivilege('User Management', 'Create');
+$canModify = $rbac->hasPrivilege('User Management', 'Modify');
+$canDelete = $rbac->hasPrivilege('User Management', 'Remove');
+$canTrack  = $rbac->hasPrivilege('User Management', 'Track');
+
 // Query active users
 $stmt = $pdo->query("SELECT id, username, email, first_name, last_name, date_created, status FROM users WHERE is_disabled = 0");
 $usersData = $stmt->fetchAll();
@@ -91,7 +109,9 @@ foreach ($userRoles as $assignment) {
             </select>
         </div>
         <div class="action-buttons">
+            <?php if ($canCreate): ?>
             <button id="create-btn">Create user to role</button>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -101,7 +121,7 @@ foreach ($userRoles as $assignment) {
             <thead>
             <tr>
                 <!-- Added checkbox column header with "select all" -->
-                <th><input type="checkbox" id="select-all"></th>
+                <th><?php if ($canDelete): ?><input type="checkbox" id="select-all"><?php endif; ?></th>
                 <th>User</th>
                 <th>Role</th>
                 <th>Departments</th>
@@ -114,11 +134,13 @@ foreach ($userRoles as $assignment) {
         </table>
     </div>
     <!-- Bulk Delete Button (initially hidden) -->
+    <?php if ($canDelete): ?>
     <div class="mb-3">
         <button type="button" id="delete-selected" class="btn btn-danger" style="display: none;" disabled>
             Remove Selected User Roles
         </button>
     </div>
+    <?php endif; ?>
     <!-- Pagination Controls -->
     <div class="container-fluid">
         <div class="row align-items-center g-3">
@@ -269,6 +291,14 @@ foreach ($userRoles as $assignment) {
     let rolesData = <?php echo json_encode($rolesData); ?>;
     let departmentsData = <?php echo json_encode($departmentsData); ?>;
     let userRoleDepartments = <?php echo json_encode($userRoleDepartments); ?>;
+    
+    // Pass RBAC privileges to JavaScript
+    const userPrivileges = {
+        canCreate: <?php echo json_encode($canCreate); ?>,
+        canModify: <?php echo json_encode($canModify); ?>,
+        canDelete: <?php echo json_encode($canDelete); ?>,
+        canTrack: <?php echo json_encode($canTrack); ?>
+    };
 </script>
 
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/user_roles_management.js" defer></script>

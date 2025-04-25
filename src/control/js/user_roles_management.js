@@ -67,17 +67,17 @@ document.addEventListener('DOMContentLoaded', function() {
             if (assignments.length === 0) {
                 const tr = $(`
                   <tr>
-                    <td><input type="checkbox" class="select-row" value="${user.id}"></td>
+                    <td>${userPrivileges.canDelete ? '<input type="checkbox" class="select-row" value="' + user.id + '">' : ''}</td>
                     <td>${user.username}</td>
                     <td>-</td>
                     <td>-</td>
                     <td>
-                      <button class="edit-btn" data-user-id="${user.id}" data-role-id="0">
+                      ${userPrivileges.canModify ? `<button class="edit-btn" data-user-id="${user.id}" data-role-id="0">
                         <i class="bi bi-pencil-square"></i>
-                      </button>
-                      <button class="delete-btn" data-user-id="${user.id}" data-role-id="0">
+                      </button>` : ''}
+                      ${userPrivileges.canDelete ? `<button class="delete-btn" data-user-id="${user.id}" data-role-id="0">
                         <i class="bi bi-trash"></i>
-                      </button>
+                      </button>` : ''}
                     </td>
                   </tr>
                 `);
@@ -93,17 +93,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (index === 0) {
                         tr = $(`
                           <tr>
-                            <td rowspan="${assignments.length}"><input type="checkbox" class="select-row" value="${user.id}"></td>
+                            <td rowspan="${assignments.length}">${userPrivileges.canDelete ? '<input type="checkbox" class="select-row" value="' + user.id + '">' : ''}</td>
                             <td rowspan="${assignments.length}">${user.username}</td>
                             <td>${role.role_name}</td>
                             <td>${departmentNames}</td>
                             <td>
-                              <button class="edit-btn" data-user-id="${user.id}" data-role-id="${assignment.roleId}">
+                              ${userPrivileges.canModify ? `<button class="edit-btn" data-user-id="${user.id}" data-role-id="${assignment.roleId}">
                                 <i class="bi bi-pencil-square"></i>
-                              </button>
-                              <button class="delete-btn" data-user-id="${user.id}" data-role-id="${assignment.roleId}">
+                              </button>` : ''}
+                              ${userPrivileges.canDelete ? `<button class="delete-btn" data-user-id="${user.id}" data-role-id="${assignment.roleId}">
                                 <i class="bi bi-trash"></i>
-                              </button>
+                              </button>` : ''}
                             </td>
                           </tr>
                         `);
@@ -113,12 +113,12 @@ document.addEventListener('DOMContentLoaded', function() {
                             <td>${role.role_name}</td>
                             <td>${departmentNames}</td>
                             <td>
-                              <button class="edit-btn" data-user-id="${user.id}" data-role-id="${assignment.roleId}">
+                              ${userPrivileges.canModify ? `<button class="edit-btn" data-user-id="${user.id}" data-role-id="${assignment.roleId}">
                                 <i class="bi bi-pencil-square"></i>
-                              </button>
-                              <button class="delete-btn" data-user-id="${user.id}" data-role-id="${assignment.roleId}">
+                              </button>` : ''}
+                              ${userPrivileges.canDelete ? `<button class="delete-btn" data-user-id="${user.id}" data-role-id="${assignment.roleId}">
                                 <i class="bi bi-trash"></i>
-                              </button>
+                              </button>` : ''}
                             </td>
                           </tr>
                         `);
@@ -149,7 +149,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         addEventListenersToButtons();
         // Update the bulk delete button visibility whenever table is rendered.
-        toggleBulkDeleteButton();
+        if (userPrivileges.canDelete) {
+            toggleBulkDeleteButton();
+        }
     }
 
     // Utility functions remain unchanged
@@ -191,171 +193,199 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Event listeners for dynamically added buttons
     function addEventListenersToButtons() {
-        document.querySelectorAll('.edit-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                const userId = parseInt(this.dataset.userId);
-                const roleId = parseInt(this.dataset.roleId);
-                
-                // If roleId is 0, it means user doesn't have a role yet, open the add user roles modal
-                if (roleId === 0) {
-                    selectedRoles = [];
-                    selectedUsers = [];
-                    selectedRolesContainer.innerHTML = '';
-                    selectedUsersContainer.innerHTML = '';
+        if (userPrivileges.canModify) {
+            document.querySelectorAll('.edit-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const userId = parseInt(this.dataset.userId);
+                    const roleId = parseInt(this.dataset.roleId);
                     
-                    // Pre-select the current user
-                    const user = getUserById(userId);
-                    if (user) {
-                        addItemToSelection('selected-users-container', user, 'user');
+                    // If roleId is 0, it means user doesn't have a role yet, open the add user roles modal
+                    if (roleId === 0) {
+                        selectedRoles = [];
+                        selectedUsers = [];
+                        selectedRolesContainer.innerHTML = '';
+                        selectedUsersContainer.innerHTML = '';
+                        
+                        // Pre-select the current user
+                        const user = getUserById(userId);
+                        if (user) {
+                            addItemToSelection('selected-users-container', user, 'user');
+                        }
+                        
+                        addUserRolesModal.style.display = 'block';
+                        return;
                     }
                     
-                    addUserRolesModal.style.display = 'block';
-                    return;
-                }
-                
-                // Regular edit flow for users with roles
-                const assignment = userRoleDepartments.find(a => a.userId === userId && a.roleId === roleId);
-                if (assignment) {
-                    currentEditingData = {
-                        userId: assignment.userId,
-                        roleId: assignment.roleId,
-                        originalDeptIds: [...assignment.departmentIds]
-                    };
-                    const modalTitle = addDepartmentRoleModal.querySelector('h2');
-                    const roleTitle = addDepartmentRoleModal.querySelector('h3');
-                    const user = getUserById(userId);
-                    const role = getRoleById(roleId);
-                    modalTitle.textContent = `Edit departments for ${user.username}`;
-                    roleTitle.textContent = role.role_name.toUpperCase();
-                    addedDepartmentsContainer.innerHTML = '';
-                    selectedDepartments = [];
-                    assignment.departmentIds.forEach(deptId => {
-                        const dept = getDepartmentById(deptId);
-                        addItemToSelection('added-departments-container', dept, 'department');
-                    });
-                    addDepartmentRoleModal.style.display = 'block';
-                }
+                    // Regular edit flow for users with roles
+                    const assignment = userRoleDepartments.find(a => a.userId === userId && a.roleId === roleId);
+                    if (assignment) {
+                        currentEditingData = {
+                            userId: assignment.userId,
+                            roleId: assignment.roleId,
+                            originalDeptIds: [...assignment.departmentIds]
+                        };
+                        const modalTitle = addDepartmentRoleModal.querySelector('h2');
+                        const roleTitle = addDepartmentRoleModal.querySelector('h3');
+                        const user = getUserById(userId);
+                        const role = getRoleById(roleId);
+                        modalTitle.textContent = `Edit departments for ${user.username}`;
+                        roleTitle.textContent = role.role_name.toUpperCase();
+                        addedDepartmentsContainer.innerHTML = '';
+                        selectedDepartments = [];
+                        assignment.departmentIds.forEach(deptId => {
+                            const dept = getDepartmentById(deptId);
+                            addItemToSelection('added-departments-container', dept, 'department');
+                        });
+                        addDepartmentRoleModal.style.display = 'block';
+                    }
+                });
             });
-        });
-        document.querySelectorAll('.delete-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                const userId = parseInt(this.dataset.userId);
-                const roleId = parseInt(this.dataset.roleId);
-                
-                // Don't allow deletion if roleId is 0 (user has no roles yet)
-                if (roleId === 0) {
-                    Toast.info('This user has no roles to delete', 5000, 'Info');
-                    return;
-                }
-                
-                // Instead of a simple confirm(), show the custom delete modal.
-                pendingDelete = { userId, roleId };
-                deleteConfirmModal.style.display = 'block';
+        }
+        
+        if (userPrivileges.canDelete) {
+            document.querySelectorAll('.delete-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const userId = parseInt(this.dataset.userId);
+                    const roleId = parseInt(this.dataset.roleId);
+                    
+                    // Don't allow deletion if roleId is 0 (user has no roles yet)
+                    if (roleId === 0) {
+                        Toast.info('This user has no roles to delete', 5000, 'Info');
+                        return;
+                    }
+                    
+                    // Instead of a simple confirm(), show the custom delete modal.
+                    pendingDelete = { userId, roleId };
+                    deleteConfirmModal.style.display = 'block';
+                });
             });
-        });
+        }
     }
 
     // Modal selection handlers
-    searchRoleDropdown.addEventListener('change', function() {
-        const roleId = parseInt(this.value);
-        if (roleId) {
-            const role = getRoleById(roleId);
-            addItemToSelection('selected-roles-container', role, 'role');
-            this.value = '';
-        }
-    });
+    if (searchRoleDropdown) {
+        searchRoleDropdown.addEventListener('change', function() {
+            const roleId = parseInt(this.value);
+            if (roleId) {
+                const role = getRoleById(roleId);
+                addItemToSelection('selected-roles-container', role, 'role');
+                this.value = '';
+            }
+        });
+    }
 
-    searchUsersDropdown.addEventListener('change', function() {
-        const userId = parseInt(this.value);
-        if (userId) {
-            const user = getUserById(userId);
-            addItemToSelection('selected-users-container', user, 'user');
-            this.value = '';
-        }
-    });
+    if (searchUsersDropdown) {
+        searchUsersDropdown.addEventListener('change', function() {
+            const userId = parseInt(this.value);
+            if (userId) {
+                const user = getUserById(userId);
+                addItemToSelection('selected-users-container', user, 'user');
+                this.value = '';
+            }
+        });
+    }
 
-    departmentDropdown.addEventListener('change', function() {
-        const deptId = parseInt(this.value);
-        if (deptId) {
-            const dept = getDepartmentById(deptId);
-            addItemToSelection('added-departments-container', dept, 'department');
-            this.value = '';
-        }
-    });
+    if (departmentDropdown) {
+        departmentDropdown.addEventListener('change', function() {
+            const deptId = parseInt(this.value);
+            if (deptId) {
+                const dept = getDepartmentById(deptId);
+                addItemToSelection('added-departments-container', dept, 'department');
+                this.value = '';
+            }
+        });
+    }
 
     // Filter handlers
-    searchUsersInput.addEventListener('input', function() {
-        const filterUserId = this.value;
-        const filterRoleName = searchRolesInput.value;
-        const filterDepartmentId = filterDropdown.value;
-        renderUserRolesTable(filterUserId, filterRoleName, filterDepartmentId);
-    });
+    if (searchUsersInput) {
+        searchUsersInput.addEventListener('input', function() {
+            const filterUserId = this.value;
+            const filterRoleName = searchRolesInput.value;
+            const filterDepartmentId = filterDropdown.value;
+            renderUserRolesTable(filterUserId, filterRoleName, filterDepartmentId);
+        });
+    }
 
-    searchRolesInput.addEventListener('input', function() {
-        const filterUserId = searchUsersInput.value;
-        const filterRoleName = this.value;
-        const filterDepartmentId = filterDropdown.value;
-        renderUserRolesTable(filterUserId, filterRoleName, filterDepartmentId);
-    });
+    if (searchRolesInput) {
+        searchRolesInput.addEventListener('input', function() {
+            const filterUserId = searchUsersInput.value;
+            const filterRoleName = this.value;
+            const filterDepartmentId = filterDropdown.value;
+            renderUserRolesTable(filterUserId, filterRoleName, filterDepartmentId);
+        });
+    }
 
-    filterDropdown.addEventListener('change', function() {
-        const filterUserId = searchUsersInput.value;
-        const filterRoleName = searchRolesInput.value;
-        const filterDepartmentId = this.value;
-        renderUserRolesTable(filterUserId, filterRoleName, filterDepartmentId);
-    });
+    if (filterDropdown) {
+        filterDropdown.addEventListener('change', function() {
+            const filterUserId = searchUsersInput.value;
+            const filterRoleName = searchRolesInput.value;
+            const filterDepartmentId = this.value;
+            renderUserRolesTable(filterUserId, filterRoleName, filterDepartmentId);
+        });
+    }
 
     // Modal open/close handlers
-    addUserRoleBtn.addEventListener('click', function() {
-        selectedRoles = [];
-        selectedUsers = [];
-        selectedRolesContainer.innerHTML = '';
-        selectedUsersContainer.innerHTML = '';
-        addUserRolesModal.style.display = 'block';
-    });
+    if (addUserRoleBtn && userPrivileges.canCreate) {
+        addUserRoleBtn.addEventListener('click', function() {
+            selectedRoles = [];
+            selectedUsers = [];
+            selectedRolesContainer.innerHTML = '';
+            selectedUsersContainer.innerHTML = '';
+            addUserRolesModal.style.display = 'block';
+        });
+    }
 
-    closeUserRolesModal.addEventListener('click', function() {
-        addUserRolesModal.style.display = 'none';
-    });
+    if (closeUserRolesModal) {
+        closeUserRolesModal.addEventListener('click', function() {
+            addUserRolesModal.style.display = 'none';
+        });
+    }
 
-    closeDepartmentRoleModal.addEventListener('click', function() {
-        addDepartmentRoleModal.style.display = 'none';
-    });
+    if (closeDepartmentRoleModal) {
+        closeDepartmentRoleModal.addEventListener('click', function() {
+            addDepartmentRoleModal.style.display = 'none';
+        });
+    }
 
     // Delete confirmation modal handlers
-    document.getElementById('cancel-delete-btn').addEventListener('click', function() {
-        pendingDelete = null;
-        deleteConfirmModal.style.display = 'none';
-    });
-    document.getElementById('confirm-delete-btn').addEventListener('click', function() {
-        if (pendingDelete) {
-            const { userId, roleId } = pendingDelete;
-            // Send AJAX request to delete assignment from the database
-            fetch('delete_user_role.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId, roleId })
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        userRoleDepartments = userRoleDepartments.filter(a => !(a.userId === userId && a.roleId === roleId));
-                        renderUserRolesTable();
-                        Toast.success('Role assignment has been removed successfully', 5000, 'Deleted');
-                    } else {
-                        Toast.error('Failed to delete assignment', 5000, 'Error');
-                    }
+    if (cancelDeleteBtn) {
+        cancelDeleteBtn.addEventListener('click', function() {
+            pendingDelete = null;
+            deleteConfirmModal.style.display = 'none';
+        });
+    }
+    
+    if (confirmDeleteBtn && userPrivileges.canDelete) {
+        confirmDeleteBtn.addEventListener('click', function() {
+            if (pendingDelete) {
+                const { userId, roleId } = pendingDelete;
+                // Send AJAX request to delete assignment from the database
+                fetch('delete_user_role.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId, roleId })
                 })
-                .catch(error => {
-                    console.error(error);
-                    Toast.error('Error deleting assignment', 5000, 'Error');
-                })
-                .finally(() => {
-                    pendingDelete = null;
-                    deleteConfirmModal.style.display = 'none';
-                });
-        }
-    });
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            userRoleDepartments = userRoleDepartments.filter(a => !(a.userId === userId && a.roleId === roleId));
+                            renderUserRolesTable();
+                            Toast.success('Role assignment has been removed successfully', 5000, 'Deleted');
+                        } else {
+                            Toast.error('Failed to delete assignment', 5000, 'Error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error(error);
+                        Toast.error('Error deleting assignment', 5000, 'Error');
+                    })
+                    .finally(() => {
+                        pendingDelete = null;
+                        deleteConfirmModal.style.display = 'none';
+                    });
+            }
+        });
+    }
 
     // Close delete modal when clicking outside
     window.addEventListener('click', function(event) {
@@ -365,87 +395,90 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Save handlers
-    saveUserRolesBtn.addEventListener('click', function() {
-        if (selectedUsers.length === 0 || selectedRoles.length === 0) {
-            Toast.error('Please select at least one user and one role', 5000, 'Validation Error');
-            return;
-        }
-        let newAssignments = [];
-        selectedUsers.forEach(user => {
-            selectedRoles.forEach(role => {
-                const exists = userRoleDepartments.find(a => a.userId === user.id && a.roleId === role.id);
-                if (!exists) {
-                    newAssignments.push({
-                        userId: user.id,
-                        roleId: role.id,
-                        departmentIds: []
-                    });
-                }
-            });
-        });
-
-        // Pre-check for empty newAssignments
-        if (newAssignments.length === 0) {
-            Toast.error('User already has that role.', 5000, 'Error');
-            return;
-        }
-
-        fetch('save_user_role.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newAssignments)
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    userRoleDepartments = [...userRoleDepartments, ...newAssignments];
-                    addUserRolesModal.style.display = 'none';
-                    renderUserRolesTable();
-                    Toast.success(`${newAssignments.length} new role assignments added`, 5000, 'Success');
-                } else {
-                    // Display the error message from the server
-                    Toast.error(data.error || 'Failed to save assignments', 5000, 'Error');
-                }
-            })
-            .catch(error => {
-                console.error(error);
-                Toast.error('Error saving assignments', 5000, 'Error');
-            });
-    });
-
-    saveDepartmentRoleBtn.addEventListener('click', function() {
-
-        if (currentEditingData) {
-            const index = userRoleDepartments.findIndex(a => a.userId === currentEditingData.userId && a.roleId === currentEditingData.roleId);
-            if (index !== -1) {
-                let updatedDepartments = selectedDepartments.map(dept => dept.id);
-                fetch('update_user_department.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        userId: currentEditingData.userId,
-                        roleId: currentEditingData.roleId,
-                        departmentIds: updatedDepartments
-                    })
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            userRoleDepartments[index].departmentIds = updatedDepartments;
-                            addDepartmentRoleModal.style.display = 'none';
-                            renderUserRolesTable();
-                            Toast.success('Departments updated successfully', 5000, 'Success');
-                        } else {
-                            Toast.error('Failed to update departments', 5000, 'Error');
-                        }
-                    })
-                    .catch(error => {
-                        console.error(error);
-                        Toast.error('Error updating departments', 5000, 'Error');
-                    });
+    if (saveUserRolesBtn && userPrivileges.canCreate) {
+        saveUserRolesBtn.addEventListener('click', function() {
+            if (selectedUsers.length === 0 || selectedRoles.length === 0) {
+                Toast.error('Please select at least one user and one role', 5000, 'Validation Error');
+                return;
             }
-        }
-    });
+            let newAssignments = [];
+            selectedUsers.forEach(user => {
+                selectedRoles.forEach(role => {
+                    const exists = userRoleDepartments.find(a => a.userId === user.id && a.roleId === role.id);
+                    if (!exists) {
+                        newAssignments.push({
+                            userId: user.id,
+                            roleId: role.id,
+                            departmentIds: []
+                        });
+                    }
+                });
+            });
+
+            // Pre-check for empty newAssignments
+            if (newAssignments.length === 0) {
+                Toast.error('User already has that role.', 5000, 'Error');
+                return;
+            }
+
+            fetch('save_user_role.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newAssignments)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        userRoleDepartments = [...userRoleDepartments, ...newAssignments];
+                        addUserRolesModal.style.display = 'none';
+                        renderUserRolesTable();
+                        Toast.success(`${newAssignments.length} new role assignments added`, 5000, 'Success');
+                    } else {
+                        // Display the error message from the server
+                        Toast.error(data.error || 'Failed to save assignments', 5000, 'Error');
+                    }
+                })
+                .catch(error => {
+                    console.error(error);
+                    Toast.error('Error saving assignments', 5000, 'Error');
+                });
+        });
+    }
+
+    if (saveDepartmentRoleBtn && userPrivileges.canModify) {
+        saveDepartmentRoleBtn.addEventListener('click', function() {
+            if (currentEditingData) {
+                const index = userRoleDepartments.findIndex(a => a.userId === currentEditingData.userId && a.roleId === currentEditingData.roleId);
+                if (index !== -1) {
+                    let updatedDepartments = selectedDepartments.map(dept => dept.id);
+                    fetch('update_user_department.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            userId: currentEditingData.userId,
+                            roleId: currentEditingData.roleId,
+                            departmentIds: updatedDepartments
+                        })
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                userRoleDepartments[index].departmentIds = updatedDepartments;
+                                addDepartmentRoleModal.style.display = 'none';
+                                renderUserRolesTable();
+                                Toast.success('Departments updated successfully', 5000, 'Success');
+                            } else {
+                                Toast.error('Failed to update departments', 5000, 'Error');
+                            }
+                        })
+                        .catch(error => {
+                            console.error(error);
+                            Toast.error('Error updating departments', 5000, 'Error');
+                        });
+                }
+            }
+        });
+    }
 
     // Close modals when clicking outside
     window.addEventListener('click', function(event) {
@@ -468,13 +501,15 @@ document.addEventListener('DOMContentLoaded', function() {
             event.preventDefault();
             searchUsersInput.focus();
         }
-        if (event.ctrlKey && event.key === 'n') {
+        if (userPrivileges.canCreate && event.ctrlKey && event.key === 'n') {
             event.preventDefault();
             addUserRoleBtn.click();
         }
     });
 
     function toggleBulkDeleteButton() {
+        if (!userPrivileges.canDelete) return;
+        
         const selectedCount = $('.select-row:checked').length;
         if (selectedCount >= 2) {
             $("#delete-selected").show().prop("disabled", false);
@@ -484,51 +519,57 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Listen for changes on any checkbox in the table
-    $(document).on('change', '.select-row', function () {
-        toggleBulkDeleteButton();
-    });
+    if (userPrivileges.canDelete) {
+        $(document).on('change', '.select-row', function () {
+            toggleBulkDeleteButton();
+        });
+    }
 
     // Bulk delete event handler
-    $("#delete-selected").click(function () {
-        const selected = $(".select-row:checked").map(function () {
-            return $(this).val();
-        }).get();
-        if (selected.length === 0) {
-            showToast('Please select user roles to remove.', 'warning');
-            return;
-        }
-        // Confirm bulk deletion
-        if (confirm(`Are you sure you want to remove ${selected.length} selected user role(s)?`)) {
-            $.ajax({
-                type: "POST",
-                url: "delete_user_role.php", // Adjust endpoint as needed
-                data: { user_ids: selected },
-                dataType: "json",
-                success: function (response) {
-                    if (response.success) {
-                        // Uncheck all checkboxes
-                        $("#select-all").prop("checked", false);
-                        $(".select-row").prop("checked", false);
-                        toggleBulkDeleteButton();
-                        // Reload or re-render table
-                        renderUserRolesTable();
-                        showToast(response.message, 'success');
-                    } else {
-                        showToast(response.message, 'error');
+    if ($("#delete-selected").length && userPrivileges.canDelete) {
+        $("#delete-selected").click(function () {
+            const selected = $(".select-row:checked").map(function () {
+                return $(this).val();
+            }).get();
+            if (selected.length === 0) {
+                showToast('Please select user roles to remove.', 'warning');
+                return;
+            }
+            // Confirm bulk deletion
+            if (confirm(`Are you sure you want to remove ${selected.length} selected user role(s)?`)) {
+                $.ajax({
+                    type: "POST",
+                    url: "delete_user_role.php", // Adjust endpoint as needed
+                    data: { user_ids: selected },
+                    dataType: "json",
+                    success: function (response) {
+                        if (response.success) {
+                            // Uncheck all checkboxes
+                            $("#select-all").prop("checked", false);
+                            $(".select-row").prop("checked", false);
+                            toggleBulkDeleteButton();
+                            // Reload or re-render table
+                            renderUserRolesTable();
+                            showToast(response.message, 'success');
+                        } else {
+                            showToast(response.message, 'error');
+                        }
+                    },
+                    error: function () {
+                        showToast('Error removing selected user roles.', 'error');
                     }
-                },
-                error: function () {
-                    showToast('Error removing selected user roles.', 'error');
-                }
-            });
-        }
-    });
+                });
+            }
+        });
+    }
 
     // "Select All" checkbox functionality (placed after table render)
-    $("#select-all").on("change", function () {
-        $(".select-row").prop("checked", this.checked);
-        toggleBulkDeleteButton();
-    });
+    if ($("#select-all").length && userPrivileges.canDelete) {
+        $("#select-all").on("change", function () {
+            $(".select-row").prop("checked", this.checked);
+            toggleBulkDeleteButton();
+        });
+    }
 
     // Initial render of the table
     renderUserRolesTable();
