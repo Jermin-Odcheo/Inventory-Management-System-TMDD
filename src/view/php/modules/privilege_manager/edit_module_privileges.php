@@ -1,11 +1,16 @@
 <?php
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
+require_once('../../clients/admins/RBACService.php');
 
-if (!isset($_SESSION['user_id'])) {
+// Auth guard
+$userId = $_SESSION['user_id'] ?? null;
+if (!is_int($userId) && !ctype_digit((string)$userId)) {
     echo 'Unauthorized';
     exit;
 }
+$userId = (int)$userId;
+ 
 
 $moduleId = isset($_GET['module_id']) ? (int)$_GET['module_id'] : 0;
 if ($moduleId <= 0) {
@@ -42,17 +47,17 @@ $currentPrivileges = array_map('intval', $currentPrivileges);
         <div class="mb-3">
             <label class="form-label">Select Privileges:</label>
             <div class="row">
-                <?php foreach($allPrivileges as $privilege): ?>
+                <?php foreach ($allPrivileges as $privilege): ?>
                     <div class="col-12 col-md-6">
                         <div class="form-check custom-checkbox">
-                            <input class="form-check-input" 
-                                   type="checkbox" 
-                                   name="privileges[]" 
-                                   value="<?php echo $privilege['id']; ?>"
-                                   id="edit_privilege_<?php echo $privilege['id']; ?>"
-                                   <?php echo in_array($privilege['id'], $currentPrivileges) ? 'checked' : ''; ?>>
-                            <label class="form-check-label" 
-                                   for="edit_privilege_<?php echo $privilege['id']; ?>">
+                            <input class="form-check-input"
+                                type="checkbox"
+                                name="privileges[]"
+                                value="<?php echo $privilege['id']; ?>"
+                                id="edit_privilege_<?php echo $privilege['id']; ?>"
+                                <?php echo in_array((int)$privilege['id'], $currentPrivileges) ? 'checked' : ''; ?>>
+                            <label class="form-check-label"
+                                for="edit_privilege_<?php echo $privilege['id']; ?>">
                                 <?php echo htmlspecialchars($privilege['priv_name']); ?>
                             </label>
                         </div>
@@ -69,33 +74,47 @@ $currentPrivileges = array_map('intval', $currentPrivileges);
 </div>
 
 <script>
-
-
-    $('#editModulePrivilegesForm').on('submit', function(e){
+    $('#editModulePrivilegesForm').on('submit', function(e) {
         e.preventDefault();
         $.ajax({
             url: 'update_privileges.php',
             type: 'POST',
             data: $(this).serialize(),
             dataType: 'json',
-            success: function(response){
-                if(response.success){
+            success: function(response) {
+                if (response.success) {
                     $('#privilegeTable').load(location.href + ' #privilegeTable', function() {
                         updatePagination();
-                        showToast(response.message, 'success');
+                        showToast(response.message, 'success', 5000);
                     });
-
                     $('#editModuleModal').modal('hide');
-                    // Remove any leftover modal backdrop
                     $('.modal-backdrop').remove();
                 } else {
-                    showToast(response.message, 'error');
+                    showToast(response.message || 'An error occurred', 'error', 5000);
                 }
             },
-            error: function(){
-                showToast('Error updating privileges.', 'error');
+            error: function(xhr, status, error) {
+                console.error('Update Privileges AJAX Error:', {
+                    status: status,
+                    error: error,
+                    responseText: xhr.responseText
+                });
+                
+                let errorMessage = 'Error updating privileges';
+                try {
+                    // Try to parse the response as JSON
+                    const response = JSON.parse(xhr.responseText);
+                    if (response && response.message) {
+                        errorMessage = response.message;
+                    }
+                } catch (e) {
+                    // If parsing fails, use the raw error
+                    console.error('JSON Parse Error:', e);
+                    errorMessage += ': ' + error;
+                }
+                
+                showToast(errorMessage, 'error', 5000);
             }
         });
     });
-
 </script>

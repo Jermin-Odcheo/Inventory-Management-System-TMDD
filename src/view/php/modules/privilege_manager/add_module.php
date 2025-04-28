@@ -1,9 +1,30 @@
 <?php
+// First line: Start output buffering
+ob_start();
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
+require_once('../../clients/admins/RBACService.php');
 
 // Set JSON header
 header('Content-Type: application/json');
+
+// Clean any buffered output before sending JSON
+ob_clean();
+
+// Auth guard
+$userId = $_SESSION['user_id'] ?? null;
+if (!is_int($userId) && !ctype_digit((string)$userId)) {
+    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+    exit;
+}
+$userId = (int)$userId;
+
+// Init RBAC & enforce "Create" privilege
+$rbac = new RBACService($pdo, $_SESSION['user_id']);
+if (!$rbac->hasPrivilege('Roles and Privileges', 'Create')) {
+    echo json_encode(['success' => false, 'message' => 'Unauthorized - Insufficient privileges']);
+    exit;
+}
 
 // Ensure the request is POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
