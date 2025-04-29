@@ -1,4 +1,3 @@
-
 let currentPage = 1;
 let rowsPerPage;
 let prevButton, nextButton, rowsSelect, currentPageSpan, rowsPerPageSpan, totalRowsSpan;
@@ -59,7 +58,7 @@ function updatePagination() {
     const displayStart = totalRows === 0 ? 0 : startIndex + 1;
     const displayEnd = totalRows === 0 ? 0 : endIndex;
 
-// Ensure correct text when table is empty
+    // Ensure correct text when table is empty
     if (totalRows === 0) {
         currentPageSpan.textContent = '0';
         rowsPerPageSpan.textContent = '0';

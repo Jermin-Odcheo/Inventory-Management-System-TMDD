@@ -4,6 +4,9 @@ ob_start();
 session_start();
 require_once('../../../../../config/ims-tmdd.php'); // Adjust the path as needed
 include '../../general/header.php';
+include '../../general/footer.php';
+include '../../general/sidebar.php';
+
 // Determine if this is an AJAX request.
 $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 
@@ -401,7 +404,7 @@ if (isset($_GET["q"])) {
 </head>
 
 <body>
-    <?php include '../../general/sidebar.php'; ?>
+
 
     <div class="main-content">
         <div class="container-fluid">
@@ -751,7 +754,7 @@ if (isset($_GET["q"])) {
 
         });
     </script>
-    <?php include '../../general/footer.php'; ?>
+
 </body>
 
 </html>
