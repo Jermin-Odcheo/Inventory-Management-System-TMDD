@@ -110,8 +110,7 @@ body {
 }
 
 .table th {
-    background-color: var(--primary-color);
-    color: #fff;
+ 
 }
 
 .table tbody tr:hover {

@@ -1,70 +1,101 @@
 <?php
+require_once '../../../../../config/ims-tmdd.php';
 session_start();
-require_once('../../../../../config/ims-tmdd.php'); // Adjust the path as needed
+
+// start buffering all output (header/sidebar/footer HTML will be captured)
+ob_start();
+
+// include these up top so showToast() and related functions are defined for normal page loads
+include '../../general/header.php';
+include '../../general/sidebar.php';
+include '../../general/footer.php';
+
+// detect AJAX
+$isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH'])
+    && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+
+// 1) Auth guard (always run, AJAX or not)
+$userId = $_SESSION['user_id'] ?? null;
+if (!is_int($userId) && !ctype_digit((string)$userId)) {
+    header('Location: ../../../../../public/index.php');
+    exit();
+}
+$userId = (int)$userId;
+
+// 2) Init RBAC & enforce "View"
+$rbac = new RBACService($pdo, $_SESSION['user_id']);
+$rbac->requirePrivilege('Equipment Management', 'View');
+
+// 3) Button flags
+$canCreate = $rbac->hasPrivilege('Equipment Management', 'Create');
+$canModify = $rbac->hasPrivilege('Equipment Management', 'Modify');
+$canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
 
 // ------------------------
 // AJAX Handling Section
 // ------------------------
-// Check if the request is AJAX
-$isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
-    strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAjax) {
+    // discard any buffered HTML
+    ob_end_clean();
     header('Content-Type: application/json');
 
     $action = $_POST['action'] ?? '';
     if ($action === 'update') {
-        // UPDATE EQUIPMENT LOCATION
-        $id = $_POST['id'];
-        $assetTag = $_POST['asset_tag'];
-        $buildingLoc = $_POST['building_loc'];
-        $floorNo = $_POST['floor_no'];
-        $specificArea = $_POST['specific_area'];
-        $personResponsible = $_POST['person_responsible'];
-        $departmentId = $_POST['department_id'];
-        $remarks = $_POST['remarks'];
-
-        // Validate department ID
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM departments WHERE id = ?");
-        $stmt->execute([$departmentId]);
-        if ($stmt->fetchColumn() == 0) {
-            echo json_encode(['status' => 'error', 'message' => 'Invalid department ID']);
+        if (!$canModify) {
+            echo json_encode(['status' => 'error', 'message' => 'You do not have permission to modify equipment locations']);
             exit;
         }
 
-        // Begin transaction
-        $pdo->beginTransaction();
+        // gather inputs
+        $id                = $_POST['id'];
+        $assetTag          = $_POST['asset_tag'];
+        $buildingLoc       = $_POST['building_loc'];
+        $floorNo           = $_POST['floor_no'];
+        $specificArea      = $_POST['specific_area'];
+        $personResponsible = $_POST['person_responsible'];
+        // make department_id nullable
+        $departmentId      = !empty($_POST['department_id']) ? $_POST['department_id'] : null;
+        $remarks           = $_POST['remarks'];
 
-        // Get old location details for audit log
+        // transaction & audit
+        $pdo->beginTransaction();
         $stmt = $pdo->prepare("SELECT * FROM equipment_location WHERE equipment_location_id = ?");
         $stmt->execute([$id]);
         $oldLocation = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        // Proceed with the update
-        // Proceed with the update
-        $updateStmt = $pdo->prepare("UPDATE equipment_location 
-    SET asset_tag = ?, building_loc = ?, floor_no = ?, specific_area = ?, person_responsible = ?, department_id = ?, remarks = ?
-    WHERE equipment_location_id = ?");
-        $updateStmt->execute([$assetTag, $buildingLoc, $floorNo, $specificArea, $personResponsible, $departmentId, $remarks, $id]);
+        $updateStmt = $pdo->prepare("
+        UPDATE equipment_location
+        SET asset_tag = ?, building_loc = ?, floor_no = ?, specific_area = ?, person_responsible = ?, department_id = ?, remarks = ?
+        WHERE equipment_location_id = ?
+    ");
+        $updateStmt->execute([
+            $assetTag,
+            $buildingLoc,
+            $floorNo,
+            $specificArea,
+            $personResponsible,
+            $departmentId,    // will be NULL if user left it blank
+            $remarks,
+            $id
+        ]);
 
-        // Instead of treating no changes as an error, commit and notify the user.
         if ($updateStmt->rowCount() > 0) {
-            // Prepare audit log data and insert into audit_log
-            $oldValue = json_encode($oldLocation);
+            $oldValue  = json_encode($oldLocation);
             $newValues = json_encode([
-                'asset_tag' => $assetTag,
-                'building_loc' => $buildingLoc,
-                'floor_no' => $floorNo,
-                'specific_area' => $specificArea,
+                'asset_tag'          => $assetTag,
+                'building_loc'       => $buildingLoc,
+                'floor_no'           => $floorNo,
+                'specific_area'      => $specificArea,
                 'person_responsible' => $personResponsible,
-                'department_id' => $departmentId,
-                'remarks' => $remarks
+                'department_id'      => $departmentId,
+                'remarks'            => $remarks
             ]);
             $auditStmt = $pdo->prepare("
-        INSERT INTO audit_log (
-            UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ");
+            INSERT INTO audit_log
+            (UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ");
             $auditStmt->execute([
                 $_SESSION['user_id'],
                 $id,
@@ -75,45 +106,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAjax) {
                 $newValues,
                 'Successful'
             ]);
-
-            $pdo->commit();
-            echo json_encode(['status' => 'success', 'message' => 'Location updated successfully']);
-        } else {
-            // No changes were made; commit the transaction anyway.
-            $pdo->commit();
-            echo json_encode(['status' => 'success', 'message' => 'No changes were made']);
         }
+
+        $pdo->commit();
+
+        $message = $updateStmt->rowCount() > 0
+            ? 'Location updated successfully'
+            : 'No changes were made';
+        echo json_encode(['status' => 'success', 'message' => $message]);
         exit;
     } elseif ($action === 'add') {
-        // ADD EQUIPMENT LOCATION
+        if (!$canCreate) {
+            echo json_encode(['status' => 'error', 'message' => 'You do not have permission to create equipment locations']);
+            exit;
+        }
         try {
-            // Get form data
-            $assetTag = trim($_POST['asset_tag']);
-            $buildingLoc = trim($_POST['building_loc']);
-            $floorNo = trim($_POST['floor_no']);
-            $specificArea = trim($_POST['specific_area']);
+            $assetTag          = trim($_POST['asset_tag']);
+            $buildingLoc       = trim($_POST['building_loc']);
+            $floorNo           = trim($_POST['floor_no']);
+            $specificArea      = trim($_POST['specific_area']);
             $personResponsible = trim($_POST['person_responsible']);
-            $departmentId = !empty($_POST['department_id']) ? $_POST['department_id'] : null;
-            $remarks = trim($_POST['remarks']);
+            $departmentId      = !empty($_POST['department_id']) ? $_POST['department_id'] : null;
+            $remarks           = trim($_POST['remarks']);
 
-            // Debug: Log incoming POST data
             error_log(print_r($_POST, true));
-
-            // Start transaction
             $pdo->beginTransaction();
 
-            // Insert into equipment_location table
-            $sql = "INSERT INTO equipment_location (
-                asset_tag, 
-                building_loc, 
-                floor_no, 
-                specific_area, 
-                person_responsible, 
-                department_id, 
-                remarks
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)";
-
-            $stmt = $pdo->prepare($sql);
+            $stmt = $pdo->prepare("
+                INSERT INTO equipment_location
+                (asset_tag, building_loc, floor_no, specific_area, person_responsible, department_id, remarks)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ");
             $stmt->execute([
                 $assetTag,
                 $buildingLoc,
@@ -142,38 +165,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAjax) {
     }
 }
 
-// Handle AJAX delete requests via GET
-if ($_SERVER['REQUEST_METHOD'] === 'GET' && $isAjax && isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
+if (
+    $_SERVER['REQUEST_METHOD'] === 'GET' && $isAjax
+    && isset($_GET['action'], $_GET['id'])
+    && $_GET['action'] === 'delete'
+) {
+    ob_end_clean();
     header('Content-Type: application/json');
+
+    if (!$canDelete) {
+        echo json_encode(['status' => 'error', 'message' => 'You do not have permission to delete equipment locations']);
+        exit;
+    }
     $id = $_GET['id'];
     try {
         $pdo->beginTransaction();
-
-        // Get location details before deletion
         $stmt = $pdo->prepare("SELECT * FROM equipment_location WHERE equipment_location_id = ?");
         $stmt->execute([$id]);
         $locationData = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($locationData) {
             $oldValues = json_encode([
-                'asset_tag' => $locationData['asset_tag'],
-                'building_loc' => $locationData['building_loc'],
-                'floor_no' => $locationData['floor_no'],
-                'specific_area' => $locationData['specific_area'],
+                'asset_tag'          => $locationData['asset_tag'],
+                'building_loc'       => $locationData['building_loc'],
+                'floor_no'           => $locationData['floor_no'],
+                'specific_area'      => $locationData['specific_area'],
                 'person_responsible' => $locationData['person_responsible'],
-                'department_id' => $locationData['department_id'],
-                'remarks' => $locationData['remarks']
+                'department_id'      => $locationData['department_id'],
+                'remarks'            => $locationData['remarks']
             ]);
-
             $stmt = $pdo->prepare("DELETE FROM equipment_location WHERE equipment_location_id = ?");
             $stmt->execute([$id]);
 
             $auditStmt = $pdo->prepare("
-                INSERT INTO audit_log (
-                    UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO audit_log
+                (UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ");
-
             $auditStmt->execute([
                 $_SESSION['user_id'],
                 $id,
@@ -184,7 +212,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && $isAjax && isset($_GET['action']) &&
                 null,
                 'Successful'
             ]);
-
             $pdo->commit();
             echo json_encode(['status' => 'success', 'message' => 'Equipment Location deleted successfully']);
         } else {
@@ -199,11 +226,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && $isAjax && isset($_GET['action']) &&
     exit;
 }
 
-
-// (Now your normal non-AJAX HTML output begins)
+// ------------------------
+// Normal (non-AJAX) Page Logic
+// ------------------------
 
 $errors = [];
-$success = "";
+$success = '';
 if (isset($_SESSION['success'])) {
     $success = $_SESSION['success'];
     unset($_SESSION['success']);
@@ -213,45 +241,40 @@ if (isset($_SESSION['errors'])) {
     unset($_SESSION['errors']);
 }
 
-
-// ------------------------
-// LIVE SEARCH DEPARTMENTS
-// ------------------------
-$q = isset($_GET["q"]) ? $conn->real_escape_string($_GET["q"]) : '';
+// Live search
+$q = $_GET['q'] ?? '';
 if (strlen($q) > 0) {
-    $sql = "SELECT asset_tag, building_loc, floor_no, specific_area, person_responsible, remarks 
-                FROM equipment_location 
-                WHERE asset_tag LIKE '%$q%' 
-                OR building_loc LIKE '%$q%' 
-                OR specific_area LIKE '%$q%' 
-                OR person_responsible LIKE '%$q%' 
-                OR remarks LIKE '%$q%'
-                LIMIT 10";
+    $safeQ = $conn->real_escape_string($q);
+    $sql = "
+        SELECT asset_tag, building_loc, floor_no, specific_area, person_responsible, remarks
+        FROM equipment_location
+        WHERE asset_tag LIKE '%{$safeQ}%'
+          OR building_loc LIKE '%{$safeQ}%'
+          OR specific_area LIKE '%{$safeQ}%'
+          OR person_responsible LIKE '%{$safeQ}%'
+          OR remarks LIKE '%{$safeQ}%'
+        LIMIT 10
+    ";
     $result = $conn->query($sql);
-    if ($result->num_rows > 0) {
-        while ($row = $result->fetch_assoc()) {
-            echo "<div class='result-item'>"
-                . "<strong>Asset Tag:</strong> " . htmlspecialchars($row['asset_tag']) . " - "
-                . "<strong>Building:</strong> " . htmlspecialchars($row['building_loc']) . " - "
-                . "<strong>Area:</strong> " . htmlspecialchars($row['specific_area']) . " - "
-                . "<strong>Person:</strong> " . htmlspecialchars($row['person_responsible']) . " - "
-                . "<strong>Remarks:</strong> " . htmlspecialchars($row['remarks']) .
-                "</div>";
-        }
-    } else {
-        echo "<div class='result-item'>No results found</div>";
+    while ($row = $result->fetch_assoc()) {
+        echo "<div class='result-item'>"
+            . "<strong>Asset Tag:</strong> " . htmlspecialchars($row['asset_tag']) . " - "
+            . "<strong>Building:</strong> " . htmlspecialchars($row['building_loc']) . " - "
+            . "<strong>Area:</strong> " . htmlspecialchars($row['specific_area']) . " - "
+            . "<strong>Person:</strong> " . htmlspecialchars($row['person_responsible']) . " - "
+            . "<strong>Remarks:</strong> " . htmlspecialchars($row['remarks'])
+            . "</div>";
     }
     exit;
 }
 
-// Retrieve all equipment locations...
+// Fetch all equipment locations
 try {
     $stmt = $pdo->query("
-        SELECT el.*, 
-               d.department_name 
-        FROM equipment_location el 
-        LEFT JOIN departments d ON el.department_id = d.id 
-        WHERE el.is_disabled = 0 
+        SELECT el.*, d.department_name
+        FROM equipment_location el
+        LEFT JOIN departments d ON el.department_id = d.id
+        WHERE el.is_disabled = 0
         ORDER BY el.date_created DESC
     ");
     $equipmentLocations = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -272,17 +295,11 @@ function safeHtml($value)
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Equipment Location Management</title>
-
     <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.min.css" rel="stylesheet">
 </head>
 
 <body>
-    <?php
-    include '../../general/header.php';
-    include '../../general/sidebar.php';
-    include '../../general/footer.php';
-    ?>
 
     <div class="main-container">
         <header class="main-header">
@@ -298,9 +315,11 @@ function safeHtml($value)
                 <div class="container-fluid px-0">
                     <div class="row align-items-center g-2">
                         <div class="col-auto">
-                            <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#addLocationModal">
-                                <i class="bi bi-plus-lg"></i> Create Location
-                            </button>
+                            <?php if ($canCreate): ?>
+                                <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#addLocationModal">
+                                    <i class="bi bi-plus-lg"></i> Create Location
+                                </button>
+                            <?php endif; ?>
                         </div>
                         <div class="col-md-4">
                             <select class="form-select" id="filterBuilding">
@@ -354,24 +373,28 @@ function safeHtml($value)
                                         <td><?= htmlspecialchars($loc['remarks']) ?></td>
                                         <td><?= date('Y-m-d H:i', strtotime($loc['date_created'])) ?></td>
                                         <td>
-                                            <button class="btn btn-sm btn-outline-info edit-location"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#editLocationModal"
-                                                data-id="<?= $loc['equipment_location_id'] ?>"
-                                                data-asset="<?= htmlspecialchars($loc['asset_tag']) ?>"
-                                                data-building="<?= htmlspecialchars($loc['building_loc']) ?>"
-                                                data-floor="<?= htmlspecialchars($loc['floor_no']) ?>"
-                                                data-area="<?= htmlspecialchars($loc['specific_area']) ?>"
-                                                data-person="<?= htmlspecialchars($loc['person_responsible']) ?>"
-                                                data-department="<?= htmlspecialchars($loc['department_id']) ?>"
-                                                data-remarks="<?= htmlspecialchars($loc['remarks']) ?>">
-                                                <i class="bi bi-pencil"></i>
-                                            </button>
+                                            <?php if ($canModify): ?>
+                                                <button class="btn btn-sm btn-outline-info edit-location"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#editLocationModal"
+                                                    data-id="<?= $loc['equipment_location_id'] ?>"
+                                                    data-asset="<?= htmlspecialchars($loc['asset_tag']) ?>"
+                                                    data-building="<?= htmlspecialchars($loc['building_loc']) ?>"
+                                                    data-floor="<?= htmlspecialchars($loc['floor_no']) ?>"
+                                                    data-area="<?= htmlspecialchars($loc['specific_area']) ?>"
+                                                    data-person="<?= htmlspecialchars($loc['person_responsible']) ?>"
+                                                    data-department="<?= htmlspecialchars($loc['department_id']) ?>"
+                                                    data-remarks="<?= htmlspecialchars($loc['remarks']) ?>">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                            <?php endif; ?>
 
-                                            <button class="btn btn-sm btn-outline-danger delete-location"
-                                                data-id="<?= $loc['equipment_location_id'] ?>">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
+                                            <?php if ($canDelete): ?>
+                                                <button class="btn btn-sm btn-outline-danger delete-location"
+                                                    data-id="<?= $loc['equipment_location_id'] ?>">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            <?php endif; ?>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -720,7 +743,7 @@ function safeHtml($value)
                 submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Updating...');
 
                 $.ajax({
-                    url: 'equipment_location.php',
+                    url: window.location.href,
                     method: 'POST',
                     data: $(this).serialize(),
                     dataType: 'json',
