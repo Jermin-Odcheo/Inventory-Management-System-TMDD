@@ -4,8 +4,7 @@ session_start();
 
 // start buffering all output (header/sidebar/footer HTML will be captured)
 ob_start();
-
-// include these up top so showToast() and related functions are defined for normal page loads
+ 
 include '../../general/header.php';
 include '../../general/sidebar.php';
 include '../../general/footer.php';

@@ -2,15 +2,33 @@
 session_start();
 ob_start();
 require_once('../../../../../config/ims-tmdd.php'); // Adjust path as needed
+include '../../general/header.php';
+// -------------------------
+// Auth and RBAC Setup
+// -------------------------
+$userId = $_SESSION['user_id'] ?? null;
+if (!is_int($userId) && !ctype_digit((string)$userId)) {
+    header("Location: /public/index.php");
+    exit();
+}
+$userId = (int)$userId;
+
+// Initialize RBAC & enforce "View" privilege
+$rbac = new RBACService($pdo, $_SESSION['user_id']);
+$rbac->requirePrivilege('Equipment Management', 'View');
+
+// Set button flags based on privileges
+$canCreate = $rbac->hasPrivilege('Equipment Management', 'Create');
+$canModify = $rbac->hasPrivilege('Equipment Management', 'Modify');
+$canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
 
 // -------------------------
 // AJAX Request Handling
 // -------------------------
-if (
-    !empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
-    strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest' &&
-    $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])
-) {
+$isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
+          strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
+
+if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
     header('Content-Type: application/json');
     $response = ['status' => '', 'message' => ''];
 
@@ -26,6 +44,13 @@ if (
 
     switch ($_POST['action']) {
         case 'create':
+            if (!$canCreate) {
+                $response['status'] = 'error';
+                $response['message'] = 'You do not have permission to create equipment details';
+                echo json_encode($response);
+                exit;
+            }
+            
             try {
                 $pdo->beginTransaction();
                 $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
@@ -101,6 +126,13 @@ if (
             echo json_encode($response);
             exit;
         case 'update':
+            if (!$canModify) {
+                $response['status'] = 'error';
+                $response['message'] = 'You do not have permission to modify equipment details';
+                echo json_encode($response);
+                exit;
+            }
+            
             header('Content-Type: application/json');
             $response = ['status' => '', 'message' => ''];
             try {
@@ -175,6 +207,13 @@ if (
             echo json_encode($response);
             exit;
         case 'remove':
+            if (!$canDelete) {
+                $response['status'] = 'error';
+                $response['message'] = 'You do not have permission to remove equipment details';
+                echo json_encode($response);
+                exit;
+            }
+            
             try {
                 if (!isset($_POST['details_id'])) {
                     throw new Exception('Details ID is required');
@@ -227,10 +266,6 @@ if (
 // -------------------------
 // Non-AJAX: Page Setup
 // -------------------------
-if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
-    header("Location: /public/index.php");
-    exit();
-}
 $errors = $_SESSION['errors'] ?? [];
 $success = $_SESSION['success'] ?? '';
 unset($_SESSION['errors'], $_SESSION['success']);
@@ -303,9 +338,11 @@ ob_end_clean();
                     <!-- Toolbar Row -->
                     <div class="row align-items-lg-center g-2">
                         <div class="col-auto">
+                            <?php if ($canCreate): ?>
                             <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#addEquipmentModal">
                                 <i class="bi bi-plus-lg"></i> Create Equipment
                             </button>
+                            <?php endif; ?>
                         </div>
                         <div class="col-md-3">
                             <select class="form-select" id="filterEquipment">
@@ -414,6 +451,7 @@ ob_end_clean();
                                         <td><?= safeHtml($equipment['remarks']); ?></td>
                                         <td>
                                             <div class="btn-group">
+                                                <?php if ($canModify): ?>
                                                 <button class="btn btn-outline-info btn-sm edit-equipment"
                                                     data-id="<?= safeHtml($equipment['id']); ?>"
                                                     data-asset="<?= safeHtml($equipment['asset_tag']); ?>"
@@ -430,11 +468,14 @@ ob_end_clean();
                                                     data-remarks="<?= safeHtml($equipment['remarks']); ?>">
                                                     <i class="bi bi-pencil-square"></i>
                                                 </button>
+                                                <?php endif; ?>
 
+                                                <?php if ($canDelete): ?>
                                                 <button class="btn btn-outline-danger btn-sm remove-equipment"
                                                     data-id="<?= safeHtml($equipment['id']); ?>">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
+                                                <?php endif; ?>
                                             </div>
                                         </td>
                                     </tr>
