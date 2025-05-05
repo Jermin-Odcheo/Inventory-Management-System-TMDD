@@ -133,6 +133,151 @@ foreach ($userRoles as $assignment) {
         .search-container::after {
             content: none !important;
         }
+        
+        /* User List Modal Styling */
+        #current-users-table,
+        #departments-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        
+        #current-users-table tbody,
+        #departments-table tbody {
+            display: block;
+            max-height: 250px;
+            overflow-y: auto;
+            width: 100%;
+        }
+        
+        #current-users-table tr,
+        #departments-table tr {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+        }
+        
+        #current-users-table td,
+        #departments-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 14px;
+        }
+        
+        #current-users-table tr:last-child td,
+        #departments-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        #current-users-table td:last-child,
+        #departments-table td:last-child {
+            text-align: right;
+            width: 60px;
+            padding-right: 25px;
+            position: relative;
+        }
+        
+        #current-users-table tr:nth-child(even),
+        #departments-table tr:nth-child(even) {
+            background-color: #f9fafb;
+        }
+        
+        /* Remove hover effect */
+        #current-users-table tr:hover,
+        #departments-table tr:hover {
+            background-color: transparent;
+        }
+        
+        /* Button styling */
+        #current-users-table .delete-btn,
+        #departments-table .delete-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        /* Selection containers */
+        #selected-users-container, 
+        #selected-roles-container,
+        #added-departments-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 10px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            min-height: 42px;
+            background-color: #f9fafb;
+            margin-top: 8px;
+            margin-bottom: 15px;
+        }
+        
+        /* Selected items */
+        .selected-item {
+            background-color: #eef2ff;
+            border: 1px solid #e0e7ff;
+            color: #4f46e5;
+            padding: 5px 10px;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .selected-item .remove-btn {
+            background: none;
+            border: none;
+            color: #4f46e5;
+            margin-left: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 0;
+            line-height: 1;
+        }
+        
+        .selected-item .remove-btn:hover {
+            color: #6366f1;
+        }
+        
+        /* Modal styling */
+        .modal-content {
+            max-width: 600px;
+            width: 95%;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        
+        .modal-content h2 {
+            margin-top: 0;
+            text-transform: capitalize;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            text-transform: capitalize;
+        }
+        
+        .form-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 14px;
+        }
     </style>
     <title>User Roles Management</title>
 </head>
