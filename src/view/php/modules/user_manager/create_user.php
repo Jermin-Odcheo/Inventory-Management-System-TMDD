@@ -33,6 +33,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $password = $_POST['password'];
         $departmentID = $_POST['department'];
         $customDept = trim($_POST['custom_department'] ?? '');
+        $departments = isset($_POST['departments']) && is_array($_POST['departments']) ? $_POST['departments'] : [];
         $roles = isset($_POST['roles']) && is_array($_POST['roles']) ? $_POST['roles'] : [];
 
         // Validate required fields
@@ -41,13 +42,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if (empty($firstName)) $errors[] = "First name is required";
         if (empty($lastName)) $errors[] = "Last name is required";
         if (empty($password)) $errors[] = "Password is required";
-        if (empty($departmentID)) $errors[] = "Department is required";
+        if (empty($departments) && empty($departmentID)) $errors[] = "At least one department is required";
         if (empty($roles)) $errors[] = "At least one role must be selected";
 
-        // Handle department selection
-        $selectedDeptId = null;
-
-        if (!empty($departmentID)) {  // Only process department if provided
+        // Handle single department selection (for backward compatibility)
+        if (!empty($departmentID) && empty($departments)) {
             if ($departmentID === 'custom' && !empty($customDept)) {
                 // Check if custom department exists
                 $stmt = $pdo->prepare("SELECT id FROM departments WHERE department_name = ?");
@@ -55,15 +54,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $existingDept = $stmt->fetch();
 
                 if ($existingDept) {
-                    $selectedDeptId = $existingDept['id'];
+                    $departments[] = $existingDept['id'];
                 } else {
                     // Insert new department
                     $stmt = $pdo->prepare("INSERT INTO departments (department_name) VALUES (?)");
                     $stmt->execute([$customDept]);
-                    $selectedDeptId = $pdo->lastInsertId();
+                    $departments[] = $pdo->lastInsertId();
                 }
             } else {
-                $selectedDeptId = $departmentID;
+                $departments[] = $departmentID;
             }
         }
 
@@ -129,9 +128,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         ]);
         $userID = $pdo->lastInsertId();
 
-        // Add department association
+        // Add department associations
         $stmt = $pdo->prepare("INSERT INTO user_departments (user_id, department_id) VALUES (?, ?)");
-        $stmt->execute([$userID, $selectedDeptId]);
+        foreach ($departments as $deptId) {
+            $deptId = filter_var($deptId, FILTER_VALIDATE_INT);
+            if ($deptId) {
+                $stmt->execute([$userID, $deptId]);
+            }
+        }
         
         // Add role associations
         $insertRoleStmt = $pdo->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)");
