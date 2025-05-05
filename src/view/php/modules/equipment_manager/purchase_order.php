@@ -481,7 +481,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                                                             <a class="btn btn-sm btn-outline-danger delete-po"
                                                                 data-id="<?php echo htmlspecialchars($po['id']); ?>"
                                                                 href="#">
-                                                                <i class="bi bi-trash"></i> Delete
+                                                                <i class="bi bi-trash"></i> Remove
                                                             </a>
                                                         <?php endif; ?>
                                                     </div>

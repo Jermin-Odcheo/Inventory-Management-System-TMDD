@@ -412,7 +412,7 @@ try {
                                                     <a class="btn btn-sm btn-outline-danger delete-invoice"
                                                         data-id="<?php echo htmlspecialchars($invoice['id']); ?>"
                                                         href="#">
-                                                        <i class="bi bi-trash"></i> Delete
+                                                        <i class="bi bi-trash"></i> Remove
                                                     </a>
                                                 <?php endif; ?>
                                             </div>
