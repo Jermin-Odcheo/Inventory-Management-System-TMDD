@@ -350,6 +350,12 @@ $(document).ready(function () {
             $('#createAssignedDepartmentsList').empty();
             $('#createAssignedDepartmentsTable tbody').empty();
         }
+        
+        // Clear department lists and tables for edit modal
+        if ($(this).attr('id') === 'editUserModal') {
+            $('#assignedDepartmentsList').empty();
+            $('#assignedDepartmentsTable tbody').empty();
+        }
     });
 
     // Close alerts when close button is clicked
