@@ -1,4 +1,4 @@
-<?php
+<b?php
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -29,9 +29,10 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                 </button>
                 <!-- Add .tree and aria-expanded to the <ul> -->
                 <ul class="dropdown tree" aria-expanded="false">
+                    <ul><b> Audit Logs </b><br><hr>
                     <li>
                         <a href="<?php echo BASE_URL; ?>src/view/php/clients/admins/audit_log.php">
-                            Audit Logs
+                            User Management Audit Logs
                         </a>
                     </li>
                     <li>
@@ -44,11 +45,24 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                             Equipment Transaction Audit Logs
                         </a>
                     </li>
+                    </ul>
+                    <ul><b> Archives </b><br><hr>
                     <li>
                         <a href="<?php echo BASE_URL; ?>src/view/php/clients/admins/archive.php">
-                            Archives
+                            User Management Archives
                         </a>
                     </li>
+                    <li>
+                        <a href="<#">
+                            Equipment Management Archives
+                        </a>
+                    </li>
+                    <li>
+                        <a href="<#">
+                            Equipment Transactions Archives
+                        </a>
+                    </li>
+                    </ul>
                 </ul>
             </li>
             <!-- User Management Dropdown -->
@@ -91,7 +105,7 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                     <li class="nav-item">
                         <a href="<?php echo BASE_URL; ?>src/view/php/modules/privilege_manager/manage_privileges.php"
                            class="nav-link">
-                            <span class="submenu-text">Privilege Management</span>
+                            <span class="submenu-text">Privilege Management <br> 🆕💻 (Prototype)</span>
                         </a>
                     </li>
                     <li class="nav-item">
@@ -164,12 +178,12 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                 </li>
                 <li>
                     <a href="#">
-                        Equipment Status Reports
+                        Equipment Status Reports <br> 🔜 (Under Development)
                     </a>
                 </li>
                 <li>
                     <a href="#">
-                        Equipment Transaction Reports
+                        Equipment Transaction Reports <br> 🔜 (Under Development)
                     </a>
                 </li>
         </li>
