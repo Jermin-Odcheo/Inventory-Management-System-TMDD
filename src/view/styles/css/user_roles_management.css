@@ -13,16 +13,29 @@
  }
 
  .search-container {
+     position: relative;
      width: 250px;
+     margin-bottom: var(--spacing-md);
  }
 
  .search-container input {
-     padding-right: 30px;
+     width: 100%;
+     padding: 0.625rem 1rem;
+     border: 1px solid var(--border);
+     border-radius: var(--radius-md);
+     background-color: var(--background-alt);
+     transition: var(--transition);
+     font-size: 0.875rem;
  }
 
- .search-container i {
-     color: #6c757d;
-     pointer-events: none;
+ .search-container::after {
+     content: none; /* Remove the search icon */
+ }
+
+ .search-container input:focus {
+     outline: none;
+     border-color: var(--border-focus);
+     box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
  }
 
  .main-content.container-fluid {
@@ -116,64 +129,13 @@ header h1 {
     letter-spacing: -0.025em;
 }
 
-.search-container {
-    position: relative;
-    width: 320px;
-}
-
-.search-container input {
-    width: 100%;
-    padding: 0.625rem 2.5rem 0.625rem 1rem;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-full);
-    background-color: var(--background-alt);
-    transition: var(--transition);
-    font-size: 0.875rem;
-}
-
-.search-container::after {
-    content: "🔍";
-    position: absolute;
-    right: 0.75rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--text-tertiary);
-    font-size: 0.875rem;
-    pointer-events: none;
-}
-
-.search-container input:focus {
-    outline: none;
-    border-color: var(--border-focus);
-    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
-}
- th a {
-     text-decoration: none;  /* no underline */
-     color: black;
- }
- th a:focus,
- th a:active {
-     outline: none;          /* no focus ring */
-     box-shadow: none;       /* in case Bootstrap adds one */
- }
-
-/* Filters Container */
-.filters-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    margin-bottom: var(--spacing-xl);
-    flex-wrap: wrap;
-    gap: var(--spacing-md);
-}
-
-.search-filter, .filter-container {
+.search-filter, .filter-container, .search-container {
     display: flex;
     flex-direction: column;
     min-width: 220px;
 }
 
-.search-filter label, .filter-container label, .search-container {
+.search-filter label, .filter-container label, .search-container label {
     font-size: 0.75rem;
     text-transform: uppercase;
     color: var(--text-tertiary);
@@ -836,5 +798,25 @@ input[type="radio"]:focus {
     background-color: #bd2130 !important;
     border-color: #b21f2d !important;
     color: #fff !important;
+}
+
+th a {
+    text-decoration: none;  /* no underline */
+    color: black;
+}
+th a:focus,
+th a:active {
+    outline: none;          /* no focus ring */
+    box-shadow: none;       /* in case Bootstrap adds one */
+}
+
+/* Filters Container */
+.filters-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: var(--spacing-xl);
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
 }
 
