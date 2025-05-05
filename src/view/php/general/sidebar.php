@@ -53,12 +53,12 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                         </a>
                     </li>
                     <li>
-                        <a href="<#">
+                    <a href="<?php echo BASE_URL; ?>src/view/php/clients/admins/em_archive.php">
                             Equipment Management Archives
                         </a>
                     </li>
                     <li>
-                        <a href="<#">
+                    <a href="<?php echo BASE_URL; ?>src/view/php/clients/admins/et_archive.php">
                             Equipment Transactions Archives
                         </a>
                     </li>

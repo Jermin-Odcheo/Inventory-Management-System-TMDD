@@ -71,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $date_of_purchase = trim($_POST['date_of_purchase'] ?? '');
     $po_no = trim($_POST['po_no'] ?? '');
 
-    if (empty($invoice_no) || empty($date_of_purchase) || empty($po_no)) {
+    if (empty($invoice_no) || empty($date_of_purchase)) {
         $_SESSION['errors'] = ["Please fill in all required fields."];
         if (is_ajax_request()) {
             header('Content-Type: application/json');
@@ -87,14 +87,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Check if user has Create privilege
             if (!$rbac->hasPrivilege('Equipment Management', 'Create')) {
                 throw new Exception('You do not have permission to add charge invoices');
-            }
-
-            // Validate that the provided PO number exists in the purchase_order table
-            $stmt = $pdo->prepare("SELECT po_no FROM purchase_order WHERE po_no = ?");
-            $stmt->execute([$po_no]);
-            $existingPO = $stmt->fetch(PDO::FETCH_ASSOC);
-            if (!$existingPO) {
-                throw new Exception("Invalid Purchase Order Number. Please ensure the Purchase Order exists.");
             }
 
             $stmt = $pdo->prepare("INSERT INTO charge_invoice (invoice_no, date_of_purchase, po_no, date_created, is_disabled)
@@ -512,8 +504,7 @@ try {
                                 <input type="date" class="form-control" name="date_of_purchase" required>
                             </div>
                             <div class="mb-3">
-                                <label for="po_no" class="form-label">Purchase Order Number <span
-                                        class="text-danger">*</span></label>
+                                <label for="po_no" class="form-label">Purchase Order Number</label>
                                 <input type="text" class="form-control" name="po_no" required>
                             </div>
                             <div class="text-end">
@@ -646,12 +637,17 @@ try {
                             $('#invoiceTable').load(location.href + ' #invoiceTable', function() {
                                 showToast(response.message, 'success');
                             });
+                            // Close the modal after successful submission
                             var addModalEl = document.getElementById('addInvoiceModal');
                             var addModal = bootstrap.Modal.getInstance(addModalEl);
                             if (addModal) {
                                 addModal.hide();
                             }
-                            // Remove modal backdrop
+
+                            // Reset form fields to be blank when reopening the modal
+                            $('#addInvoiceForm')[0].reset();
+
+                            // Ensure modal backdrop is removed and body class is reset after closing the modal
                             $('.modal-backdrop').remove();
                             $('body').removeClass('modal-open').css('overflow', '');
                             $('body').css('padding-right', '');
@@ -692,7 +688,7 @@ try {
                                 editModal.hide();
                             }
 
-                            // Remove modal backdrop
+                            // Ensure modal backdrop is removed and body class is reset after closing the modal
                             $('.modal-backdrop').remove();
                             $('body').removeClass('modal-open').css('overflow', '');
                             $('body').css('padding-right', '');

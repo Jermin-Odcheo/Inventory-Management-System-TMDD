@@ -33,8 +33,8 @@ $usersData = $stmt->fetchAll();
 $stmt = $pdo->query("SELECT id, role_name FROM roles WHERE is_disabled = 0");
 $rolesData = $stmt->fetchAll();
 
-// Query active departments
-$stmt = $pdo->query("SELECT id, department_name, abbreviation FROM departments WHERE is_disabled = 0");
+// Query all departments (show all regardless of is_disabled)
+$stmt = $pdo->query("SELECT id, department_name, abbreviation FROM departments ORDER BY department_name");
 $departmentsData = $stmt->fetchAll();
 
 // Query user_roles assignments
@@ -76,6 +76,8 @@ foreach ($userRoles as $assignment) {
     <!-- BASE_URL is assumed to be defined in your config -->
     <link rel="stylesheet" type="text/css" href="<?php echo BASE_URL; ?>src/view/styles/css/user_roles_management.css?ref=v1">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/pagination.css">
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <style>
         .modal.fade .modal-dialog {
             transition: transform .3s ease-out;
@@ -303,11 +305,11 @@ foreach ($userRoles as $assignment) {
             </select>
         </div>
         <div class="filter-container">
-            <label for="dept-filter">filter by department</label>
+            <label for="dept-filter">Filter by Department</label>
             <select id="dept-filter">
-                <option value="">All</option>
+                <option value="" selected>All Departments</option>
                 <?php foreach ($departmentsData as $dept): ?>
-                    <option value="<?php echo $dept['id']; ?>">
+                    <option value="<?php echo htmlspecialchars($dept['department_name']); ?>">
                         <?php echo htmlspecialchars($dept['department_name']); ?>
                     </option>
                 <?php endforeach; ?>
@@ -521,5 +523,32 @@ foreach ($userRoles as $assignment) {
 
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/user_roles_management.js" defer></script>
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+    $(document).ready(function() {
+        // Initialize Select2 for department filter
+        $('#dept-filter').select2({
+            placeholder: 'All Departments',
+            allowClear: true,
+            width: '100%'
+        });
+        // Always show the placeholder as an option
+        $('#dept-filter').val('').trigger('change');
+        // Ensure filter triggers on Select2 change and clear
+        $('#dept-filter').on('change', function() {
+            const filterUserId = $('#search-users').val();
+            const filterRoleId = $('#role-filter').val();
+            const filterDeptId = $(this).val();
+            if (typeof renderUserRolesTable === 'function') {
+                renderUserRolesTable(filterUserId, filterRoleId, filterDeptId, window.userSortDirection || 'asc');
+            }
+        });
+        // Also clear Select2 when Clear Filters is clicked
+        $('#clear-filters-btn').on('click', function() {
+            $('#dept-filter').val('').trigger('change');
+        });
+    });
+</script>
 </body>
 </html>

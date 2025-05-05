@@ -70,7 +70,7 @@ if (clearFiltersBtn) {
 }
 
     // Render user roles table using all active users
-    function renderUserRolesTable(filterUserId = null, filterRoleId = null, filterDeptId = null, sortDirection = null) {
+    function renderUserRolesTable(filterUserId = null, filterRoleId = null, filterDeptName = null, sortDirection = null) {
         const tbody = $('#urTable tbody');
         tbody.empty();
         let filteredUsers = usersData.filter(user => {
@@ -96,13 +96,16 @@ if (clearFiltersBtn) {
                 );
             }
             
-            if (filterDeptId) {
+            if (filterDeptName) {
                 assignments = assignments.filter(assignment => 
-                    assignment.departmentIds.includes(parseInt(filterDeptId))
+                    assignment.departmentIds.some(function(deptId) {
+                        const dept = getDepartmentById(deptId);
+                        return dept && dept.department_name === filterDeptName;
+                    })
                 );
             }
             
-            if ((filterRoleId || filterDeptId) && assignments.length === 0) {
+            if ((filterRoleId || filterDeptName) && assignments.length === 0) {
                 return;
             }
             
@@ -343,9 +346,9 @@ if (clearFiltersBtn) {
 
     if (searchDepartmentDropdown) {
         searchDepartmentDropdown.addEventListener('change', function() {
-            const deptId = parseInt(this.value);
-            if (deptId) {
-                const dept = getDepartmentById(deptId);
+            const deptName = this.value;
+            if (deptName) {
+                const dept = getDepartmentById(deptName);
                 addItemToSelection('selected-department-container', dept, 'department');
                 this.value = '';
             }
@@ -368,8 +371,8 @@ if (clearFiltersBtn) {
         searchUsersInput.addEventListener('input', function() {
             const filterUserId = this.value;
             const filterRoleId = roleFilterDropdown ? roleFilterDropdown.value : null;
-            const filterDeptId = deptFilterDropdown ? deptFilterDropdown.value : null;
-            renderUserRolesTable(filterUserId, filterRoleId, filterDeptId, userSortDirection);
+            const filterDeptName = deptFilterDropdown ? deptFilterDropdown.value : null;
+            renderUserRolesTable(filterUserId, filterRoleId, filterDeptName, userSortDirection);
         });
     }
 
@@ -377,8 +380,8 @@ if (clearFiltersBtn) {
         roleFilterDropdown.addEventListener('change', function() {
             const filterUserId = searchUsersInput ? searchUsersInput.value : null;
             const filterRoleId = this.value;
-            const filterDeptId = deptFilterDropdown ? deptFilterDropdown.value : null;
-            renderUserRolesTable(filterUserId, filterRoleId, filterDeptId, userSortDirection);
+            const filterDeptName = deptFilterDropdown ? deptFilterDropdown.value : null;
+            renderUserRolesTable(filterUserId, filterRoleId, filterDeptName, userSortDirection);
         });
     }
 
@@ -386,8 +389,8 @@ if (clearFiltersBtn) {
         deptFilterDropdown.addEventListener('change', function() {
             const filterUserId = searchUsersInput ? searchUsersInput.value : null;
             const filterRoleId = roleFilterDropdown ? roleFilterDropdown.value : null;
-            const filterDeptId = this.value;
-            renderUserRolesTable(filterUserId, filterRoleId, filterDeptId, userSortDirection);
+            const filterDeptName = this.value;
+            renderUserRolesTable(filterUserId, filterRoleId, filterDeptName, userSortDirection);
         });
     }
     
@@ -400,8 +403,8 @@ if (clearFiltersBtn) {
             
             const filterUserId = searchUsersInput ? searchUsersInput.value : null;
             const filterRoleId = roleFilterDropdown ? roleFilterDropdown.value : null;
-            const filterDeptId = deptFilterDropdown ? deptFilterDropdown.value : null;
-            renderUserRolesTable(filterUserId, filterRoleId, filterDeptId, userSortDirection);
+            const filterDeptName = deptFilterDropdown ? deptFilterDropdown.value : null;
+            renderUserRolesTable(filterUserId, filterRoleId, filterDeptName, userSortDirection);
         });
     }
 

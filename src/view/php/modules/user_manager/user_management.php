@@ -37,7 +37,7 @@ try {
          ORDER BY department_name
     ");
     while ($d = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        $departments[(int)$d['id']] = $d;
+        $departments[] = $d;
     }
 } catch (PDOException $e) {
     error_log('Error fetching departments: ' . $e->getMessage());
@@ -156,6 +156,8 @@ try {
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/pagination.css">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/user_roles_management.css">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/user_management.css">
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <title>Manage Users</title>
 </head>
 <body>
@@ -172,12 +174,22 @@ try {
             <label for="department-filter" class="form-label">Filter by Department</label>
             <select id="department-filter" name="department" class="form-select">
                 <option value="all">All Departments</option>
-                <?php foreach ($departments as $id => $d): ?>
-                    <option value="<?= $id ?>"
-                        <?= (($_GET['department'] ?? '') === (string)$id) ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($d['department_name'], ENT_QUOTES, 'UTF-8') ?>
-                    </option>
-                <?php endforeach; ?>
+                <?php
+                // Fetch all departments directly for the filter dropdown, show ALL regardless of is_disabled
+                try {
+                    $deptStmt = $pdo->query("SELECT department_name FROM departments ORDER BY department_name");
+                    $allDepartments = $deptStmt->fetchAll(PDO::FETCH_COLUMN);
+                    foreach ($allDepartments as $deptName) {
+                        echo '<option value="' . htmlspecialchars($deptName) . '"';
+                        if ((isset($_GET['department']) && $_GET['department'] === $deptName)) {
+                            echo ' selected';
+                        }
+                        echo '>' . htmlspecialchars($deptName) . '</option>';
+                    }
+                } catch (PDOException $e) {
+                    // fallback: empty
+                }
+                ?>
             </select>
         </div>
 
@@ -503,5 +515,17 @@ try {
 
 <script src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 <script src="<?php echo BASE_URL; ?>src/control/js/user_management.js" defer></script>
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Select2 for department filter
+        $('#department-filter').select2({
+            placeholder: 'All Departments',
+            allowClear: true,
+            width: '100%'
+        });
+    });
+</script>
 </body>
 </html>
