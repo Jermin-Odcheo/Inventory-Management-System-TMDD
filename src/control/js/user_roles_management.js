@@ -20,6 +20,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const deleteConfirmModal = document.getElementById('delete-confirm-modal');
     const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
     const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+    // Initialize the delete confirmation modal
+    let deleteModal = null;
+    if (deleteConfirmModal) {
+        deleteModal = new bootstrap.Modal(deleteConfirmModal);
+    }
     // Variable to store assignment info pending deletion.
     let pendingDelete = null;
 
@@ -285,7 +290,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     // Instead of a simple confirm(), show the custom delete modal.
                     pendingDelete = { userId, roleId };
-                    deleteConfirmModal.style.display = 'block';
+                    // Show the pre-initialized modal
+                    if (deleteModal) {
+                        deleteModal.show();
+                    }
                 });
             });
         }
@@ -407,7 +415,10 @@ document.addEventListener('DOMContentLoaded', function() {
     if (cancelDeleteBtn) {
         cancelDeleteBtn.addEventListener('click', function() {
             pendingDelete = null;
-            deleteConfirmModal.style.display = 'none';
+            // Use our pre-initialized modal
+            if (deleteModal) {
+                deleteModal.hide();
+            }
         });
     }
     
@@ -437,18 +448,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     })
                     .finally(() => {
                         pendingDelete = null;
-                        deleteConfirmModal.style.display = 'none';
+                        // Use our pre-initialized modal
+                        if (deleteModal) {
+                            deleteModal.hide();
+                        }
                     });
             }
         });
     }
-
-    // Close delete modal when clicking outside
-    window.addEventListener('click', function(event) {
-        if (event.target === deleteConfirmModal) {
-            deleteConfirmModal.style.display = 'none';
-        }
-    });
 
     // Save handlers
     if (saveUserRolesBtn && userPrivileges.canCreate) {
@@ -573,7 +580,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (event.key === 'Escape') {
             addUserRolesModal.style.display = 'none';
             addDepartmentRoleModal.style.display = 'none';
-            deleteConfirmModal.style.display = 'none';
+            // Use our pre-initialized modal
+            if (deleteModal) {
+                deleteModal.hide();
+            }
         }
         if (event.ctrlKey && event.key === 'k') {
             event.preventDefault();
