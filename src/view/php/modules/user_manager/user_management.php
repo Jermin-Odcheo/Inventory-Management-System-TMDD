@@ -339,7 +339,7 @@ try {
 
 <!-- Create User Modal -->
 <div class="modal fade" id="createUserModal" tabindex="-1" aria-labelledby="createUserModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="createUserModalLabel">Create User</h5>
@@ -364,7 +364,7 @@ try {
                             <label for="last_name" class="form-label">Last Name</label>
                             <input type="text" name="last_name" id="last_name" class="form-control" required>
                         </div>
-                        <div class="col-12">
+                        <div class="col-md-12">
                             <label for="modal_department" class="form-label">Department</label>
                             <select name="department" id="modal_department" class="form-select">
                                 <option value="">Select Department</option>
@@ -373,27 +373,31 @@ try {
                                 <?php endforeach; ?>
                                 <option value="custom">Custom Department</option>
                             </select>
+                            <small class="form-text text-muted">Select one or more departments</small>
                             <input type="text" id="modal_custom_department" name="custom_department"
                                    class="form-control mt-2" style="display:none;" placeholder="Enter custom department">
                         </div>
                         <div class="col-12">
-                            <fieldset>
-                                <legend class="fs-5">Assign Roles *</legend>
-                                <div class="small text-muted mb-2">At least one role must be selected</div>
-                                <?php
-                                $rStmt = $pdo->query("SELECT id, role_name FROM roles WHERE is_disabled=0 ORDER BY role_name");
-                                while ($role = $rStmt->fetch(PDO::FETCH_ASSOC)):
-                                    ?>
-                                    <div class="form-check form-check-inline">
-                                        <input type="checkbox" name="roles[]" value="<?= $role['id'] ?>"
-                                               id="modal_role_<?= $role['id'] ?>" class="form-check-input">
-                                        <label for="modal_role_<?= $role['id'] ?>" class="form-check-label">
-                                            <?= htmlspecialchars($role['role_name']) ?>
-                                        </label>
-                                    </div>
-                                <?php endwhile; ?>
-                                <div class="invalid-feedback">Please select at least one role</div>
-                            </fieldset>
+                            <label class="form-label">Currently Assigned Departments</label>
+                            <div id="createAssignedDepartmentsList" class="border rounded p-2 mb-2">
+                                <!-- Department badges will be added here dynamically -->
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Assigned Departments Table</label>
+                            <div class="table-responsive department-table-container">
+                                <table class="table table-striped table-hover" id="createAssignedDepartmentsTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Department Name</th>
+                                            <th class="text-end" style="width: 60px;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Department rows will be added here dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                     <div class="mt-4 text-end">
@@ -408,7 +412,7 @@ try {
 
 <!-- Edit User Modal -->
 <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="editUserModalLabel">Edit User</h5>
@@ -459,10 +463,27 @@ try {
                             </fieldset>
                         </div>
                         <div class="col-md-12">
+<<<<<<< Updated upstream
                             <label for="editPassword" class="form-label">
                                 Change Password <span class="small text-muted">(Leave blank to keep current)</span>
                             </label>
                             <input type="password" name="password" id="editPassword" class="form-control">
+=======
+                            <label class="form-label">Assigned Departments Table</label>
+                            <div class="table-responsive department-table-container">
+                                <table class="table table-striped table-hover" id="assignedDepartmentsTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Department Name</th>
+                                            <th class="text-end" style="width: 60px;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Department rows will be added here dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+>>>>>>> Stashed changes
                         </div>
                     </div>
                     <div class="mt-4 text-end">
