@@ -323,41 +323,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
-
-        .action-buttons {
-            display: flex;
-            gap: 8px;
-            justify-content: center;
-        }
-
-        .action-btn {
-            background: transparent;
-            border: none;
-            padding: 6px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .edit-po:hover {
-            color: #0d6efd;
-            background-color: rgba(13, 110, 253, 0.1);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            transform: translateY(-2px);
-        }
-
-        .delete-po:hover {
-            color: #dc3545;
-            background-color: rgba(220, 53, 69, 0.1);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            transform: translateY(-2px);
-        }
-
-        .bi-pencil-square,
-        .bi-trash {
-            font-size: 1rem;
-            vertical-align: middle;
-        }
     </style>
 </head>
 <body>
@@ -452,19 +417,20 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                                         <td><?php echo htmlspecialchars($po['item_specifications']); ?></td>
                                         <td><?php echo date('Y-m-d H:i', strtotime($po['date_created'])); ?></td>
                                         <td class="text-center">
-                                            <div class="action-buttons">
-                                                <button class="action-btn edit-po"
-                                                    data-id="<?php echo htmlspecialchars($po['id']); ?>"
-                                                    data-po="<?php echo htmlspecialchars($po['po_no']); ?>"
-                                                    data-date="<?php echo htmlspecialchars($po['date_of_order']); ?>"
-                                                    data-units="<?php echo htmlspecialchars($po['no_of_units']); ?>"
-                                                    data-item="<?php echo htmlspecialchars($po['item_specifications']); ?>">
-                                                    <i class="bi bi-pencil-square"></i>
-                                                </button>
-                                                <button class="action-btn delete-po"
-                                                    data-id="<?php echo htmlspecialchars($po['id']); ?>">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
+                                            <div class="btn-group" role="group">
+                                                <a class="btn btn-sm btn-outline-primary edit-po"
+                                                   data-id="<?php echo htmlspecialchars($po['id']); ?>"
+                                                   data-po="<?php echo htmlspecialchars($po['po_no']); ?>"
+                                                   data-date="<?php echo htmlspecialchars($po['date_of_order']); ?>"
+                                                   data-units="<?php echo htmlspecialchars($po['no_of_units']); ?>"
+                                                   data-item="<?php echo htmlspecialchars($po['item_specifications']); ?>">
+                                                    <i class="bi bi-pencil-square"></i> Edit
+                                                </a>
+                                                <a class="btn btn-sm btn-outline-danger delete-po"
+                                                   data-id="<?php echo htmlspecialchars($po['id']); ?>"
+                                                   href="#">
+                                                    <i class="bi bi-trash"></i> Delete
+                                                </a>
                                             </div>
                                         </td>
                                     </tr>
@@ -844,26 +810,31 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                         let tableBody = '';
                         data.orders.forEach(po => {
                             tableBody += `
-                            <tr>
-                                <td>${po.id}</td>
-                                <td>${po.po_no}</td>
-                                <td>${po.date_of_order}</td>
-                                <td>${po.no_of_units}</td>
-                                <td>${po.item_specifications}</td>
-                                <td>${new Date(po.date_created).toLocaleString()}</td>
-                                <td class="text-center">
-                                    <div class="action-buttons">
-                                        <button class="action-btn edit-po" data-id="${po.id}" data-po="${po.po_no}"
-                                            data-date="${po.date_of_order}" data-units="${po.no_of_units}"
-                                            data-item="${po.item_specifications}">
-                                            <i class="bi bi-pencil-square"></i>
-                                        </button>
-                                        <button class="action-btn delete-po" data-id="${po.id}">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
+                                <tr>
+                                    <td>${po.id}</td>
+                                    <td>${po.po_no}</td>
+                                    <td>${po.date_of_order}</td>
+                                    <td>${po.no_of_units}</td>
+                                    <td>${po.item_specifications}</td>
+                                    <td>${new Date(po.date_created).toLocaleString()}</td>
+                                    <td class="text-center">
+                                        <div class="btn-group" role="group">
+                                            <a class="btn btn-sm btn-outline-primary edit-po"
+                                               data-id="${po.id}"
+                                               data-po="${po.po_no}"
+                                               data-date="${po.date_of_order}"
+                                               data-units="${po.no_of_units}"
+                                               data-item="${po.item_specifications}">
+                                                <i class="bi bi-pencil-square"></i> Edit
+                                            </a>
+                                            <a class="btn btn-sm btn-outline-danger delete-po"
+                                               data-id="${po.id}"
+                                               href="#">
+                                                <i class="bi bi-trash"></i> Delete
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
                             `;
                         });
                         $('#purchaseTable tbody').html(tableBody || '<tr><td colspan="7">No Purchase Orders found.</td></tr>');

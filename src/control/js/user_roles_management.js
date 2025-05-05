@@ -4,10 +4,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const addUserRoleBtn = document.getElementById('create-btn');
     const userRolesTable = document.getElementById('urTable');
     const searchUsersInput = document.getElementById('search-users');
-    const filterRoleDropdown = document.getElementById('filter-dropdown');
-    const filterDepartmentDropdown = document.getElementById('department-filter-dropdown');
-    const clearFiltersBtn = document.getElementById('clear-filters');
-    const sortUserBtn = document.getElementById('sort-user');
+    const searchRolesInput = document.getElementById('search-filters');
+    const filterDropdown = document.getElementById('filter-dropdown');
 
     // Modal elements
     const addUserRolesModal = document.getElementById('add-user-roles-modal');
@@ -32,19 +30,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Selected containers
     const selectedRolesContainer = document.getElementById('selected-roles-container');
     const selectedUsersContainer = document.getElementById('selected-users-container');
-    const addedRolesContainer = document.getElementById('added-departments-container');
+    const addedDepartmentsContainer = document.getElementById('added-departments-container');
 
     // State management
     let selectedRoles = [];
     let selectedUsers = [];
-    let selectedRolesForDepartment = [];
+    let selectedDepartments = [];
     let currentEditingData = null;
 
-    // Sorting state
-    let userSortDirection = 'asc'; // 'asc' or 'desc'
-
     // Render user roles table using all active users.
-    function renderUserRolesTable(filterUserId = null, filterRoleId = null, filterDepartmentId = null, sortUsers = null) {
+    function renderUserRolesTable(filterUserId = null, filterRoleName = null, filterDepartmentId = null) {
         const tbody = $('#urTable tbody');
         tbody.empty();
         let filteredUsers = usersData.filter(user => {
@@ -53,33 +48,22 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             return true;
         });
-        
-        // Sort users if requested
-        if (sortUsers === 'asc') {
-            filteredUsers.sort((a, b) => a.username.localeCompare(b.username));
-        } else if (sortUsers === 'desc') {
-            filteredUsers.sort((a, b) => b.username.localeCompare(a.username));
-        }
-        
         filteredUsers.forEach(user => {
             let assignments = userRoleDepartments.filter(assignment => assignment.userId === user.id);
-            
-            if (filterRoleId) {
-                assignments = assignments.filter(assignment =>
-                    assignment.roleId === parseInt(filterRoleId)
-                );
+            if (filterRoleName) {
+                assignments = assignments.filter(assignment => {
+                    const role = getRoleById(assignment.roleId);
+                    return role && role.role_name.toLowerCase().includes(filterRoleName.toLowerCase());
+                });
             }
-            
             if (filterDepartmentId) {
                 assignments = assignments.filter(assignment =>
                     assignment.departmentIds.includes(parseInt(filterDepartmentId))
                 );
             }
-            
-            if ((filterRoleId || filterDepartmentId) && assignments.length === 0) {
+            if ((filterRoleName || filterDepartmentId) && assignments.length === 0) {
                 return;
             }
-            
             if (assignments.length === 0) {
                 const tr = $(`
                   <tr>
@@ -111,8 +95,8 @@ document.addEventListener('DOMContentLoaded', function() {
                           <tr>
                             <td rowspan="${assignments.length}">${userPrivileges.canDelete ? '<input type="checkbox" class="select-row" value="' + user.id + '">' : ''}</td>
                             <td rowspan="${assignments.length}">${user.username}</td>
-                            <td>${departmentNames}</td>
                             <td>${role.role_name}</td>
+                            <td>${departmentNames}</td>
                             <td>
                               ${userPrivileges.canModify ? `<button class="edit-btn" data-user-id="${user.id}" data-role-id="${assignment.roleId}">
                                 <i class="bi bi-pencil-square"></i>
@@ -126,8 +110,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     } else {
                         tr = $(`
                           <tr>
-                            <td>${departmentNames}</td>
                             <td>${role.role_name}</td>
+                            <td>${departmentNames}</td>
                             <td>
                               ${userPrivileges.canModify ? `<button class="edit-btn" data-user-id="${user.id}" data-role-id="${assignment.roleId}">
                                 <i class="bi bi-pencil-square"></i>
@@ -158,9 +142,9 @@ document.addEventListener('DOMContentLoaded', function() {
             tbody.append(tr);
             $('#clear-filters-btn').click(function() {
                 $('#search-users').val('');
+                $('#search-filters').val('');
                 $('#filter-dropdown').val('');
-                $('#department-filter-dropdown').val('');
-                renderUserRolesTable(null, null, null, userSortDirection);
+                renderUserRolesTable();
             });
         }
         addEventListenersToButtons();
@@ -187,12 +171,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const container = document.getElementById(containerId);
         if (containerId === 'selected-roles-container' && selectedRoles.some(r => r.id === item.id)) return;
         if (containerId === 'selected-users-container' && selectedUsers.some(u => u.id === item.id)) return;
-        if (containerId === 'added-departments-container' && selectedRolesForDepartment.some(r => r.id === item.id)) return;
-        
+        if (containerId === 'added-departments-container' && selectedDepartments.some(d => d.id === item.id)) return;
         if (type === 'role') selectedRoles.push(item);
         if (type === 'user') selectedUsers.push(item);
-        if (type === 'role_for_dept') selectedRolesForDepartment.push(item);
-        
+        if (type === 'department') selectedDepartments.push(item);
         const selectedItem = document.createElement('span');
         selectedItem.className = 'selected-item';
         selectedItem.dataset.id = item.id;
@@ -204,14 +186,13 @@ document.addEventListener('DOMContentLoaded', function() {
         selectedItem.querySelector('.remove-btn').addEventListener('click', function() {
             if (type === 'role') selectedRoles = selectedRoles.filter(r => r.id !== item.id);
             if (type === 'user') selectedUsers = selectedUsers.filter(u => u.id !== item.id);
-            if (type === 'role_for_dept') selectedRolesForDepartment = selectedRolesForDepartment.filter(r => r.id !== item.id);
+            if (type === 'department') selectedDepartments = selectedDepartments.filter(d => d.id !== item.id);
             selectedItem.remove();
         });
     }
 
     // Event listeners for dynamically added buttons
     function addEventListenersToButtons() {
-<<<<<<< Updated upstream
         if (userPrivileges.canModify) {
             document.querySelectorAll('.edit-btn').forEach(button => {
                 button.addEventListener('click', function() {
@@ -258,34 +239,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         addDepartmentRoleModal.style.display = 'block';
                     }
                 });
-=======
-        document.querySelectorAll('.edit-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                const userId = parseInt(this.dataset.userId);
-                const roleId = parseInt(this.dataset.roleId);
-                const assignment = userRoleDepartments.find(a => a.userId === userId && a.roleId === roleId);
-                if (assignment) {
-                    currentEditingData = {
-                        userId: assignment.userId,
-                        roleId: assignment.roleId,
-                        originalDeptIds: [...assignment.departmentIds]
-                    };
-                    const modalTitle = addDepartmentRoleModal.querySelector('h2');
-                    const deptTitle = addDepartmentRoleModal.querySelector('h3');
-                    const user = getUserById(userId);
-                    const department = assignment.departmentIds.length > 0 ? 
-                        getDepartmentById(assignment.departmentIds[0]) : 
-                        { department_name: "No Department" };
-                    modalTitle.textContent = `Edit roles for ${user.username}`;
-                    deptTitle.textContent = department.department_name.toUpperCase();
-                    addedRolesContainer.innerHTML = '';
-                    selectedRolesForDepartment = [];
-                    // Display the role for this assignment
-                    const role = getRoleById(roleId);
-                    addItemToSelection('added-departments-container', role, 'role_for_dept');
-                    addDepartmentRoleModal.style.display = 'block';
-                }
->>>>>>> Stashed changes
             });
         }
         
@@ -332,7 +285,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-<<<<<<< Updated upstream
     if (departmentDropdown) {
         departmentDropdown.addEventListener('change', function() {
             const deptId = parseInt(this.value);
@@ -371,72 +323,6 @@ document.addEventListener('DOMContentLoaded', function() {
             renderUserRolesTable(filterUserId, filterRoleName, filterDepartmentId);
         });
     }
-=======
-    departmentDropdown.addEventListener('change', function() {
-        const roleId = parseInt(this.value);
-        if (roleId) {
-            const role = getRoleById(roleId);
-            addItemToSelection('added-departments-container', role, 'role_for_dept');
-            this.value = '';
-        }
-    });
-
-    // Filter handlers
-    searchUsersInput.addEventListener('input', function() {
-        const filterUserId = this.value;
-        const filterRoleId = filterRoleDropdown.value;
-        const filterDepartmentId = filterDepartmentDropdown.value;
-        renderUserRolesTable(filterUserId, filterRoleId, filterDepartmentId, userSortDirection);
-        toggleClearFiltersButton();
-    });
-
-    filterRoleDropdown.addEventListener('change', function() {
-        const filterUserId = searchUsersInput.value;
-        const filterRoleId = this.value;
-        const filterDepartmentId = filterDepartmentDropdown.value;
-        renderUserRolesTable(filterUserId, filterRoleId, filterDepartmentId, userSortDirection);
-        toggleClearFiltersButton();
-    });
-
-    filterDepartmentDropdown.addEventListener('change', function() {
-        const filterUserId = searchUsersInput.value;
-        const filterRoleId = filterRoleDropdown.value;
-        const filterDepartmentId = this.value;
-        renderUserRolesTable(filterUserId, filterRoleId, filterDepartmentId, userSortDirection);
-        toggleClearFiltersButton();
-    });
-    
-    // Clear filters button handler
-    clearFiltersBtn.addEventListener('click', function() {
-        searchUsersInput.value = '';
-        filterRoleDropdown.value = '';
-        filterDepartmentDropdown.value = '';
-        renderUserRolesTable(null, null, null, userSortDirection);
-        toggleClearFiltersButton();
-    });
-    
-    // Function to show/hide clear filters button based on filter state
-    function toggleClearFiltersButton() {
-        const hasFilters = searchUsersInput.value !== '' || 
-                          filterRoleDropdown.value !== '' || 
-                          filterDepartmentDropdown.value !== '';
-        
-        clearFiltersBtn.style.display = hasFilters ? 'block' : 'none';
-    }
-    
-    // Sort users handler
-    sortUserBtn.addEventListener('click', function() {
-        userSortDirection = userSortDirection === 'asc' ? 'desc' : 'asc';
-        // Update the sort icon
-        this.classList.add('active');
-        this.innerHTML = userSortDirection === 'asc' ? 'A→Z' : 'Z→A';
-        
-        const filterUserId = searchUsersInput.value;
-        const filterRoleId = filterRoleDropdown.value;
-        const filterDepartmentId = filterDepartmentDropdown.value;
-        renderUserRolesTable(filterUserId, filterRoleId, filterDepartmentId, userSortDirection);
-    });
->>>>>>> Stashed changes
 
     // Modal open/close handlers
     if (addUserRoleBtn && userPrivileges.canCreate) {
@@ -509,93 +395,11 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Save handlers
-<<<<<<< Updated upstream
     if (saveUserRolesBtn && userPrivileges.canCreate) {
         saveUserRolesBtn.addEventListener('click', function() {
             if (selectedUsers.length === 0 || selectedRoles.length === 0) {
                 Toast.error('Please select at least one user and one role', 5000, 'Validation Error');
                 return;
-=======
-    saveUserRolesBtn.addEventListener('click', function() {
-        if (selectedUsers.length === 0 || selectedRoles.length === 0) {
-            Toast.error('Please select at least one user and one role', 5000, 'Validation Error');
-            return;
-        }
-        let newAssignments = [];
-        selectedUsers.forEach(user => {
-            selectedRoles.forEach(role => {
-                const exists = userRoleDepartments.find(a => a.userId === user.id && a.roleId === role.id);
-                if (!exists) {
-                    newAssignments.push({
-                        userId: user.id,
-                        roleId: role.id,
-                        departmentIds: []
-                    });
-                }
-            });
-        });
-
-        // Pre-check for empty newAssignments
-        if (newAssignments.length === 0) {
-            Toast.error('User already has that role.', 5000, 'Error');
-            return;
-        }
-
-        fetch('save_user_role.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newAssignments)
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    userRoleDepartments = [...userRoleDepartments, ...newAssignments];
-                    addUserRolesModal.style.display = 'none';
-                    renderUserRolesTable();
-                    Toast.success(`${newAssignments.length} new role assignments added`, 5000, 'Success');
-                } else {
-                    // Display the error message from the server
-                    Toast.error(data.error || 'Failed to save assignments', 5000, 'Error');
-                }
-            })
-            .catch(error => {
-                console.error(error);
-                Toast.error('Error saving assignments', 5000, 'Error');
-            });
-    });
-
-    saveDepartmentRoleBtn.addEventListener('click', function() {
-
-        if (currentEditingData) {
-            const index = userRoleDepartments.findIndex(a => a.userId === currentEditingData.userId && a.roleId === currentEditingData.roleId);
-            if (index !== -1) {
-                let updatedRoles = selectedRolesForDepartment.map(role => role.id);
-                fetch('update_user_department.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        userId: currentEditingData.userId,
-                        roleId: currentEditingData.roleId,
-                        roleIds: updatedRoles
-                    })
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            // Update the current role
-                            userRoleDepartments[index].roleId = updatedRoles.length > 0 ? updatedRoles[0] : currentEditingData.roleId;
-                            addDepartmentRoleModal.style.display = 'none';
-                            renderUserRolesTable();
-                            Toast.success('Roles updated successfully', 5000, 'Success');
-                        } else {
-                            Toast.error('Failed to update roles', 5000, 'Error');
-                        }
-                    })
-                    .catch(error => {
-                        console.error(error);
-                        Toast.error('Error updating roles', 5000, 'Error');
-                    });
->>>>>>> Stashed changes
             }
             let newAssignments = [];
             selectedUsers.forEach(user => {
@@ -768,7 +572,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Initial render of the table
-    renderUserRolesTable(null, null, null, userSortDirection);
-    toggleClearFiltersButton(); // Initial check for button visibility
+    renderUserRolesTable();
 
 });
