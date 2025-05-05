@@ -898,3 +898,40 @@ select[multiple] option:checked {
     font-size: 0.875rem;
 }
 
+/* Clear Filters Button */
+.clear-filters-btn {
+    background-color: var(--background);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    text-transform: capitalize;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    margin-right: var(--spacing-sm);
+}
+
+.clear-filters-btn:hover {
+    background-color: var(--background-alt);
+    color: var(--text-primary);
+    border-color: var(--border-focus);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.clear-filters-btn:active {
+    transform: translateY(0);
+}
+
+.clear-filters-btn::before {
+    content: "✕";
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+
