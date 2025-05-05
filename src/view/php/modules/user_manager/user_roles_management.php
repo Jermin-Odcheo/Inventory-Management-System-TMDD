@@ -80,6 +80,59 @@ foreach ($userRoles as $assignment) {
         .modal.fade .modal-dialog {
             transition: transform .3s ease-out;
         }
+        
+        /* Sort icon styling */
+        .sort-icon {
+            cursor: pointer;
+            margin-left: 5px;
+            font-size: 12px;
+            background-color: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            padding: 2px 6px;
+            display: inline-block;
+        }
+        
+        /* Modern input styling */
+        .search-container input,
+        .filter-container select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            background-color: white;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+        
+        .search-container input:focus,
+        .filter-container select:focus {
+            outline: none;
+            border-color: #a5b4fc;
+            box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15);
+        }
+        
+        .search-container,
+        .filter-container {
+            margin-right: 15px;
+            margin-bottom: 10px;
+        }
+        
+        .search-container label,
+        .filter-container label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #4b5563;
+            text-transform: uppercase;
+        }
+        
+        /* Remove search icon */
+        .search-container::after {
+            content: none !important;
+        }
     </style>
     <title>User Roles Management</title>
 </head>
@@ -89,17 +142,24 @@ foreach ($userRoles as $assignment) {
         <h1>USER ROLES MANAGER</h1>
     </header>
     <div class="filters-container">
-        <div class="search-filter">
-            <label for="search-filters">search for role</label>
-            <input type="text" id="search-filters">
-        </div>
         <div class="search-container">
-            <label for="search-filters">search for users</label>
-            <input type="text" id="search-users" placeholder="search user">
+            <label for="search-users">search for users</label>
+            <input type="text" id="search-users" placeholder="Search user...">
         </div>
         <div class="filter-container">
-            <label for="filter-dropdown">filter</label>
-            <select id="filter-dropdown">
+            <label for="role-filter">filter by role</label>
+            <select id="role-filter">
+                <option value="">All</option>
+                <?php foreach ($rolesData as $role): ?>
+                    <option value="<?php echo $role['id']; ?>">
+                        <?php echo htmlspecialchars($role['role_name']); ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="filter-container">
+            <label for="dept-filter">filter by department</label>
+            <select id="dept-filter">
                 <option value="">All</option>
                 <?php foreach ($departmentsData as $dept): ?>
                     <option value="<?php echo $dept['id']; ?>">
@@ -122,9 +182,9 @@ foreach ($userRoles as $assignment) {
             <tr>
                 <!-- Added checkbox column header with "select all" -->
                 <th><?php if ($canDelete): ?><input type="checkbox" id="select-all"><?php endif; ?></th>
-                <th>User</th>
-                <th>Role</th>
+                <th>User <span class="sort-icon" id="sort-user">A→Z</span></th>
                 <th>Departments</th>
+                <th>Role</th>
                 <th>Actions</th>
             </tr>
             </thead>
@@ -225,31 +285,31 @@ foreach ($userRoles as $assignment) {
 <!-- Add Department to Role Modal -->
 <div id="add-department-role-modal" class="modal">
     <div class="modal-content">
-        <h2>Add department to role modal</h2>
+        <h2>Add role to department modal</h2>
         <div class="modal-body">
-            <h3>ROLE TITLE</h3>
+            <h3>DEPARTMENT TITLE</h3>
             <div class="form-group">
-                <label>Add department to role</label>
+                <label>Add role to department</label>
                 <select id="department-dropdown">
-                    <option value="">Select department</option>
-                    <?php foreach ($departmentsData as $dept): ?>
-                        <option value="<?php echo $dept['id']; ?>"><?php echo htmlspecialchars($dept['department_name']); ?></option>
+                    <option value="">Select role</option>
+                    <?php foreach ($rolesData as $role): ?>
+                        <option value="<?php echo $role['id']; ?>"><?php echo htmlspecialchars($role['role_name']); ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
             <div class="form-group">
-                <label>ADDED DEPARTMENTS</label>
+                <label>ADDED ROLES</label>
                 <div id="added-departments-container"></div>
             </div>
             <div class="form-group">
-                <label>List of Departments</label>
+                <label>List of Roles</label>
                 <table id="departments-table">
                     <tbody>
-                    <?php foreach ($departmentsData as $dept): ?>
+                    <?php foreach ($rolesData as $role): ?>
                         <tr>
-                            <td><?php echo htmlspecialchars($dept['department_name']); ?></td>
+                            <td><?php echo htmlspecialchars($role['role_name']); ?></td>
                             <td>
-                                <button class="delete-btn" data-dept-id="<?php echo $dept['id']; ?>">
+                                <button class="delete-btn" data-role-id="<?php echo $role['id']; ?>">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </td>
