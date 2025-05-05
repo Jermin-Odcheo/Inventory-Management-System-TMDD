@@ -160,7 +160,7 @@ if (
                         trim($_POST['status']),
                         trim($_POST['action_description']),
                         trim($_POST['remarks'] ?? ''),
-                        isset($_POST['is_disabled']) && $_POST['is_disabled'] === '1' ? 1 : 0,
+                        isset($_POST['is_disabled']) ? 1 : 0,
                         $_POST['status_id']
                     ]);
 
@@ -183,7 +183,7 @@ if (
                         'status' => $_POST['status'],
                         'action' => $_POST['action_description'],
                         'remarks' => $_POST['remarks'],
-                        'is_disabled' => isset($_POST['is_disabled']) && $_POST['is_disabled'] === '1' ? 1 : 0
+                        'is_disabled' => isset($_POST['is_disabled']) ? 1 : 0
                     ]);
 
                     // Insert audit log
