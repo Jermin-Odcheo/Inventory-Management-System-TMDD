@@ -313,10 +313,11 @@ foreach ($userRoles as $assignment) {
                 <?php endforeach; ?>
             </select>
         </div>
-        <div class="action-buttons">
+         <div class="action-buttons">
+            <button id="clear-filters-btn" class="clear-filters-btn">Clear Filters</button>
             <?php if ($canCreate): ?>
             <button id="create-btn">Create user to role</button>
-            <?php endif; ?>
+        <?php endif; ?>
         </div>
     </div>
 
