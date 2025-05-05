@@ -479,21 +479,10 @@ function safeHtml($value)
                             <input type="text" class="form-control" name="person_responsible">
                         </div>
                         <div class="mb-3">
-                            <label for="department_id" class="form-label">Department</label>
-                            <select class="form-control" name="department_id">
-                                <option value="">Select Department</option>
-                                <?php
-                                try {
-                                    $deptStmt = $pdo->query("SELECT id, department_name FROM departments WHERE is_disabled = 0 ORDER BY department_name");
-                                    $departments = $deptStmt->fetchAll();
-                                    foreach ($departments as $department) {
-                                        echo "<option value='" . htmlspecialchars($department['id']) . "'>" . htmlspecialchars($department['department_name']) . "</option>";
-                                    }
-                                } catch (PDOException $e) {
-                                    echo "<option value=''>Error loading departments</option>";
-                                }
-                                ?>
-                            </select>
+                            <label for="department_search" class="form-label">Department</label>
+                            <input type="text" class="form-control" id="department_search" placeholder="Type to search department..." autocomplete="off">
+                            <input type="hidden" name="department_id" id="department_id">
+                            <div id="department_search_results" class="list-group position-absolute w-100" style="z-index: 1000;"></div>
                         </div>
                         <div class="mb-3">
                             <label for="remarks" class="form-label">Remarks</label>
@@ -768,6 +757,55 @@ function safeHtml($value)
                         showToast('Error updating location: ' + error, 'error');
                     }
                 });
+            });
+
+            // Department search (Add Location Modal)
+            const departments = [
+                <?php
+                try {
+                    $deptStmt = $pdo->query("SELECT id, department_name, abbreviation FROM departments WHERE is_disabled = 0 ORDER BY department_name");
+                    $departments = $deptStmt->fetchAll();
+                    $jsArray = [];
+                    foreach ($departments as $department) {
+                        $jsArray[] = '{"id":' . json_encode($department['id']) . ',"name":' . json_encode($department['department_name']) . ',"abbr":' . json_encode($department['abbreviation']) . '}';
+                    }
+                    echo implode(",\n", $jsArray);
+                } catch (PDOException $e) {
+                    // fallback: empty
+                }
+                ?>
+            ];
+
+            $('#department_search').on('input', function() {
+                const query = $(this).val().toLowerCase();
+                let results = '';
+                if (query.length > 0) {
+                    const matches = departments.filter(d => d.name.toLowerCase().includes(query));
+                    if (matches.length > 0) {
+                        matches.slice(0, 10).forEach(function(dept) {
+                            results += `<button type=\"button\" class=\"list-group-item list-group-item-action\" data-id=\"${dept.id}\" data-name=\"${dept.name}\">${dept.name} (${dept.abbr})</button>`;
+                        });
+                    } else {
+                        results = '<div class="list-group-item">No results found</div>';
+                    }
+                }
+                $('#department_search_results').html(results).toggle(results.length > 0);
+            });
+
+            // Select department from search results
+            $(document).on('click', '#department_search_results .list-group-item-action', function() {
+                const deptId = $(this).data('id');
+                const deptName = $(this).data('name');
+                $('#department_search').val(deptName);
+                $('#department_id').val(deptId);
+                $('#department_search_results').empty().hide();
+            });
+
+            // Hide results when clicking outside
+            $(document).on('click', function(e) {
+                if (!$(e.target).closest('#department_search, #department_search_results').length) {
+                    $('#department_search_results').empty().hide();
+                }
             });
 
         });
