@@ -121,24 +121,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
     <title>Account Details</title>
     <style>
         html, body {
-            overflow: hidden;
-            height: 100%;
-            margin: 0;
-            padding: 0;
-        }
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto; /* Add this to enable vertical scrolling */
+}
 
-        .main-content, .container, .sidebar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
+.main-content, .container, .sidebar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
 
-        .main-content::-webkit-scrollbar,
-        .container::-webkit-scrollbar,
-        .sidebar::-webkit-scrollbar,
-        body::-webkit-scrollbar,
-        html::-webkit-scrollbar {
-            display: none;
-        }
+.main-content::-webkit-scrollbar,
+.container::-webkit-scrollbar,
+.sidebar::-webkit-scrollbar,
+body::-webkit-scrollbar,
+html::-webkit-scrollbar {
+    display: none;
+}
         
         .main-content {
             margin-left: 230px;
@@ -515,11 +515,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
         </div>
         
         <div class="danger-zone">
-            <p>Permanently delete your account and all associated data. This action cannot be undone.</p>
-            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
-                Delete My Account
-            </button>
-        </div>
+    <h3>Danger Zone</h3>
+    <p>Permanently delete your account and all associated data. This action cannot be undone.</p>
+    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+        Delete My Account
+    </button>
+</div>
     </div>
 </div>
 
