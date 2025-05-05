@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const roleFilterDropdown = document.getElementById('role-filter');
     const deptFilterDropdown = document.getElementById('dept-filter');
     const sortUserBtn = document.getElementById('sort-user');
+    const clearFiltersBtn = document.getElementById('clear-filters-btn');
 
     // Modal elements
     const addUserRolesModal = document.getElementById('add-user-roles-modal');
@@ -43,6 +44,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Sorting state
     let userSortDirection = 'asc'; // 'asc' or 'desc'
+    // Clear Filters Button Handler
+if (clearFiltersBtn) {
+    clearFiltersBtn.addEventListener('click', function() {
+        // Clear all filter inputs
+        if (searchUsersInput) searchUsersInput.value = '';
+        if (roleFilterDropdown) roleFilterDropdown.value = '';
+        if (deptFilterDropdown) deptFilterDropdown.value = '';
+        
+        // Reset sort direction to default
+        userSortDirection = 'asc';
+        if (sortUserBtn) sortUserBtn.innerHTML = 'A→Z';
+        
+        // Re-render table with no filters
+        renderUserRolesTable(null, null, null, userSortDirection);
+        
+        // Show confirmation toast
+        Toast.success('All filters cleared', 3000, 'Success');
+    });
+}
 
     // Render user roles table using all active users
     function renderUserRolesTable(filterUserId = null, filterRoleId = null, filterDeptId = null, sortDirection = null) {
