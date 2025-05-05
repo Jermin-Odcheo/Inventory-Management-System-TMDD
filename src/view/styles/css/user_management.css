@@ -1,7 +1,8 @@
 /* Styles for department selection in edit modal */
 
 /* Assigned departments list */
-#assignedDepartmentsList {
+#assignedDepartmentsList,
+#createAssignedDepartmentsList {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
@@ -40,34 +41,34 @@
     color: #6366f1;
 }
 
-/* Table delete button */
-.table-remove-btn {
-    padding: 0.25rem 0.5rem;
-    border: 1px solid rgba(220, 38, 38, 0.2);
-    background-color: rgba(254, 226, 226, 0.4);
+/* Department table container */
+.department-table-container {
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    margin-top: 10px;
 }
 
-.table-remove-btn:hover {
-    background-color: rgba(254, 226, 226, 0.8);
-    border-color: rgba(220, 38, 38, 0.4);
-}
-
-/* Assigned Departments Table */
-#assignedDepartmentsTable {
-    margin-top: 0.5rem;
+/* Table styling */
+#assignedDepartmentsTable,
+#createAssignedDepartmentsTable {
     width: 100%;
     border-collapse: collapse;
-    border: 1px solid #e5e7eb;
-    border-radius: 0.375rem;
-    overflow: hidden;
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    overflow: visible;
+    box-shadow: none;
 }
 
-#assignedDepartmentsTable thead {
+#assignedDepartmentsTable thead,
+#createAssignedDepartmentsTable thead {
     background-color: #f9fafb;
 }
 
-#assignedDepartmentsTable th {
+#assignedDepartmentsTable th,
+#createAssignedDepartmentsTable th {
     padding: 0.75rem 1rem;
     font-size: 0.75rem;
     text-transform: uppercase;
@@ -78,39 +79,47 @@
     text-align: left;
 }
 
-#assignedDepartmentsTable td {
+#assignedDepartmentsTable td,
+#createAssignedDepartmentsTable td {
     padding: 0.75rem 1rem;
     font-size: 0.875rem;
     border-bottom: 1px solid #e5e7eb;
     color: #111827;
 }
 
-#assignedDepartmentsTable tbody tr:last-child td {
+#assignedDepartmentsTable tbody tr:last-child td,
+#createAssignedDepartmentsTable tbody tr:last-child td {
     border-bottom: none;
 }
 
-#assignedDepartmentsTable tbody tr:nth-child(even) {
+#assignedDepartmentsTable tbody tr:nth-child(even),
+#createAssignedDepartmentsTable tbody tr:nth-child(even) {
     background-color: #f9fafb;
 }
 
-#assignedDepartmentsTable tbody tr:hover {
+#assignedDepartmentsTable tbody tr:hover,
+#createAssignedDepartmentsTable tbody tr:hover {
     background-color: #f3f4f6;
 }
 
-#assignedDepartmentsTable tbody {
+/* Scrollable table body */
+#assignedDepartmentsTable tbody,
+#createAssignedDepartmentsTable tbody {
     display: block;
-    max-height: 250px;
+    max-height: 150px;
     overflow-y: auto;
     width: 100%;
 }
 
-#assignedDepartmentsTable tr {
+#assignedDepartmentsTable tr,
+#createAssignedDepartmentsTable tr {
     display: table;
     width: 100%;
     table-layout: fixed;
 }
 
-#assignedDepartmentsTable td:last-child {
+#assignedDepartmentsTable td:last-child,
+#createAssignedDepartmentsTable td:last-child {
     text-align: right;
     width: 60px;
     padding-right: 25px;
@@ -165,4 +174,42 @@
 .empty-state-action:hover {
     background-color: #e5e7eb;
     color: #374151;
+}
+
+/* Remove modal scrolling settings */
+.modal-dialog {
+    display: block;
+}
+
+.modal-content {
+    overflow: visible;
+}
+
+.modal-body {
+    overflow: visible;
+    padding-right: 1rem;
+}
+
+/* Custom scrollbar styling only for tables */
+#assignedDepartmentsTable tbody::-webkit-scrollbar,
+#createAssignedDepartmentsTable tbody::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+#assignedDepartmentsTable tbody::-webkit-scrollbar-track,
+#createAssignedDepartmentsTable tbody::-webkit-scrollbar-track {
+    background-color: #f1f1f1;
+    border-radius: 10px;
+}
+
+#assignedDepartmentsTable tbody::-webkit-scrollbar-thumb,
+#createAssignedDepartmentsTable tbody::-webkit-scrollbar-thumb {
+    background-color: #c1c1c1;
+    border-radius: 10px;
+}
+
+#assignedDepartmentsTable tbody::-webkit-scrollbar-thumb:hover,
+#createAssignedDepartmentsTable tbody::-webkit-scrollbar-thumb:hover {
+    background-color: #a8a8a8;
 } 

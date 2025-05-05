@@ -33,6 +33,7 @@ try {
     $stmt = $pdo->query("
         SELECT id, department_name, abbreviation
           FROM departments
+         WHERE is_disabled = 0
          ORDER BY department_name
     ");
     while ($d = $stmt->fetch(PDO::FETCH_ASSOC)) {
@@ -154,8 +155,7 @@ try {
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/pagination.css">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/user_roles_management.css">
-    <!-- Select2 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/user_management.css">
     <title>Manage Users</title>
 </head>
 <body>
@@ -284,8 +284,7 @@ try {
                                     data-id="<?= htmlspecialchars((string)$u['id'], ENT_QUOTES, 'UTF-8'); ?>"
                                     data-email="<?= htmlspecialchars($u['email'], ENT_QUOTES, 'UTF-8'); ?>"
                                     data-first-name="<?= htmlspecialchars($u['first_name'], ENT_QUOTES, 'UTF-8'); ?>"
-                                    data-last-name="<?= htmlspecialchars($u['last_name'], ENT_QUOTES, 'UTF-8'); ?>"
-                                    data-department="<?= !empty($ids) ? htmlspecialchars((string)$ids[0], ENT_QUOTES, 'UTF-8') : ''; ?>">
+                                    data-last-name="<?= htmlspecialchars($u['last_name'], ENT_QUOTES, 'UTF-8'); ?>">
                                 <i class="bi bi-pencil-square"></i>
                             </button>
                         <?php endif; ?>
@@ -364,7 +363,7 @@ try {
                             <label for="last_name" class="form-label">Last Name</label>
                             <input type="text" name="last_name" id="last_name" class="form-control" required>
                         </div>
-                        <div class="col-12">
+                        <div class="col-md-12">
                             <label for="modal_department" class="form-label">Department</label>
                             <select name="department" id="modal_department" class="form-select">
                                 <option value="">Select Department</option>
@@ -373,27 +372,31 @@ try {
                                 <?php endforeach; ?>
                                 <option value="custom">Custom Department</option>
                             </select>
+                            <small class="form-text text-muted">Select one or more departments</small>
                             <input type="text" id="modal_custom_department" name="custom_department"
                                    class="form-control mt-2" style="display:none;" placeholder="Enter custom department">
                         </div>
                         <div class="col-12">
-                            <fieldset>
-                                <legend class="fs-5">Assign Roles *</legend>
-                                <div class="small text-muted mb-2">At least one role must be selected</div>
-                                <?php
-                                $rStmt = $pdo->query("SELECT id, role_name FROM roles WHERE is_disabled=0 ORDER BY role_name");
-                                while ($role = $rStmt->fetch(PDO::FETCH_ASSOC)):
-                                    ?>
-                                    <div class="form-check form-check-inline">
-                                        <input type="checkbox" name="roles[]" value="<?= $role['id'] ?>"
-                                               id="modal_role_<?= $role['id'] ?>" class="form-check-input">
-                                        <label for="modal_role_<?= $role['id'] ?>" class="form-check-label">
-                                            <?= htmlspecialchars($role['role_name']) ?>
-                                        </label>
-                                    </div>
-                                <?php endwhile; ?>
-                                <div class="invalid-feedback">Please select at least one role</div>
-                            </fieldset>
+                            <label class="form-label">Currently Assigned Departments</label>
+                            <div id="createAssignedDepartmentsList" class="border rounded p-2 mb-2">
+                                <!-- Department badges will be added here dynamically -->
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Assigned Departments Table</label>
+                            <div class="table-responsive department-table-container">
+                                <table class="table table-striped table-hover" id="createAssignedDepartmentsTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Department Name</th>
+                                            <th class="text-end" style="width: 60px;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Department rows will be added here dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                     <div class="mt-4 text-end">
@@ -431,38 +434,42 @@ try {
                             <input type="text" name="last_name" id="editLastName" class="form-control">
                         </div>
                         <div class="col-md-12">
-                            <label for="editDepartment" class="form-label">Department</label>
-                            <select name="department" id="editDepartment" class="form-select">
-                                <option value="">Select Department</option>
-                                <?php foreach ($departments as $dept_id => $d): ?>
-                                    <option value="<?= $dept_id ?>"><?= htmlspecialchars($d['department_name']) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-12">
-                            <fieldset>
-                                <legend class="fs-5">Assign Roles *</legend>
-                                <div class="small text-muted mb-2">At least one role must be selected</div>
-                                <?php
-                                $rStmt = $pdo->query("SELECT id, role_name FROM roles WHERE is_disabled=0 ORDER BY role_name");
-                                while ($role = $rStmt->fetch(PDO::FETCH_ASSOC)):
-                                    ?>
-                                    <div class="form-check form-check-inline">
-                                        <input type="checkbox" name="edit_roles[]" value="<?= $role['id'] ?>"
-                                               id="edit_role_<?= $role['id'] ?>" class="form-check-input edit-role-checkbox">
-                                        <label for="edit_role_<?= $role['id'] ?>" class="form-check-label">
-                                            <?= htmlspecialchars($role['role_name']) ?>
-                                        </label>
-                                    </div>
-                                <?php endwhile; ?>
-                                <div class="invalid-feedback">Please select at least one role</div>
-                            </fieldset>
-                        </div>
-                        <div class="col-md-12">
                             <label for="editPassword" class="form-label">
                                 Change Password <span class="small text-muted">(Leave blank to keep current)</span>
                             </label>
                             <input type="password" name="password" id="editPassword" class="form-control">
+                        </div>
+                        <div class="col-md-12">
+                            <label for="editDepartments" class="form-label">Departments</label>
+                            <select name="departments[]" id="editDepartments" class="form-select">
+                                <option value="">Select departments</option>
+                                <?php foreach ($departments as $dept_id => $d): ?>
+                                    <option value="<?= $dept_id ?>"><?= htmlspecialchars($d['department_name']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <small class="form-text text-muted">Select one or more departments</small>
+                        </div>
+                        <div class="col-md-12 mt-2">
+                            <label class="form-label">Currently Assigned Departments</label>
+                            <div id="assignedDepartmentsList" class="border rounded p-2 mb-2">
+                                <!-- Department badges will be added here dynamically -->
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Assigned Departments Table</label>
+                            <div class="table-responsive department-table-container">
+                                <table class="table table-striped table-hover" id="assignedDepartmentsTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Department Name</th>
+                                            <th class="text-end" style="width: 60px;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Department rows will be added here dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                     <div class="mt-4 text-end">
@@ -496,17 +503,5 @@ try {
 
 <script src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 <script src="<?php echo BASE_URL; ?>src/control/js/user_management.js" defer></script>
-<!-- Select2 JS -->
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Initialize Select2 for department filter
-        $('#department-filter').select2({
-            width: '100%',
-            placeholder: 'All Departments',
-            allowClear: true
-        });
-    });
-</script>
 </body>
 </html>
