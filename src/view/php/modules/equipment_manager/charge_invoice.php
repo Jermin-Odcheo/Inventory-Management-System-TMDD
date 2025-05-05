@@ -1,10 +1,29 @@
 <?php
+require_once '../../../../../config/ims-tmdd.php';
 session_start();
-ob_start();
-require_once('../../../../../config/ims-tmdd.php'); // Adjust the path as needed
 
-// Include the header (this should load common assets)
-include('../../general/header.php');
+// start buffering all output (header/sidebar/footer HTML will be captured)
+ob_start();
+
+include '../../general/header.php';
+
+// 1) Auth guard
+$userId = $_SESSION['user_id'] ?? null;
+if (!is_int($userId) && !ctype_digit((string)$userId)) {
+    header('Location: ../../../../../public/index.php');
+    exit();
+}
+$userId = (int)$userId;
+
+// 2) Init RBAC & enforce "View"
+$rbac = new RBACService($pdo, $_SESSION['user_id']);
+$rbac->requirePrivilege('Equipment Management', 'View');
+
+// 3) Button flags
+$canCreate = $rbac->hasPrivilege('Equipment Management', 'Create');
+$canModify = $rbac->hasPrivilege('Equipment Management', 'Modify');
+$canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
+
 
 // Set audit log session variables for MySQL triggers.
 if (isset($_SESSION['user_id'])) {
@@ -31,13 +50,15 @@ if (isset($_SESSION['success'])) {
     unset($_SESSION['success']);
 }
 
-function is_ajax_request() {
+function is_ajax_request()
+{
     return isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&
         strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 }
 
 // Add this function to log audit entries
-function logAudit($pdo, $action, $oldVal, $newVal) {
+function logAudit($pdo, $action, $oldVal, $newVal)
+{
     $stmt = $pdo->prepare("INSERT INTO audit_log (UserID, Module, Action, OldVal, NewVal, Date_Time) VALUES (?, 'Charge Invoice', ?, ?, ?, NOW())");
     $stmt->execute([$_SESSION['user_id'], $action, $oldVal, $newVal]);
 }
@@ -62,22 +83,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (isset($_POST['action']) && $_POST['action'] === 'add') {
-        // Validate that the provided PO number exists in the purchase_order table
-        $stmt = $pdo->prepare("SELECT po_no FROM purchase_order WHERE po_no = ?");
-        $stmt->execute([$po_no]);
-        $existingPO = $stmt->fetch(PDO::FETCH_ASSOC);
-        if (!$existingPO) {
-            $_SESSION['errors'] = ["Invalid Purchase Order Number. Please ensure the Purchase Order exists."];
-            if (is_ajax_request()) {
-                ob_clean();
-                header('Content-Type: application/json');
-                echo json_encode(['status' => 'error', 'message' => $_SESSION['errors'][0]]);
-                exit;
-            }
-            header("Location: charge_invoice.php");
-            exit;
-        }
         try {
+            // Check if user has Create privilege
+            if (!$rbac->hasPrivilege('Equipment Management', 'Create')) {
+                throw new Exception('You do not have permission to add charge invoices');
+            }
+
+            // Validate that the provided PO number exists in the purchase_order table
+            $stmt = $pdo->prepare("SELECT po_no FROM purchase_order WHERE po_no = ?");
+            $stmt->execute([$po_no]);
+            $existingPO = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$existingPO) {
+                throw new Exception("Invalid Purchase Order Number. Please ensure the Purchase Order exists.");
+            }
+
             $stmt = $pdo->prepare("INSERT INTO charge_invoice (invoice_no, date_of_purchase, po_no, date_created, is_disabled)
                                VALUES (?, ?, ?, NOW(), 0)");
             $stmt->execute([$invoice_no, $date_of_purchase, $po_no]);
@@ -85,25 +104,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['success'] = "Charge Invoice has been added successfully.";
         } catch (PDOException $e) {
             $_SESSION['errors'] = ["Error adding Charge Invoice: " . $e->getMessage()];
+        } catch (Exception $e) {
+            $_SESSION['errors'] = [$e->getMessage()];
         }
     }
 
     if (isset($_POST['action']) && $_POST['action'] === 'update') {
         // Clear any previous output
         ob_clean();
-        
-        $id = $_POST['id'];
-        $invoice_no = trim($_POST['invoice_no']);
-        $date_of_purchase = trim($_POST['date_of_purchase']);
-        $po_no = trim($_POST['po_no']);
-
-        if (empty($invoice_no) || empty($date_of_purchase) || empty($po_no)) {
-            header('Content-Type: application/json');
-            echo json_encode(['status' => 'error', 'message' => 'Please fill in all required fields.']);
-            exit;
-        }
 
         try {
+            // Check if user has Modify privilege
+            if (!$rbac->hasPrivilege('Equipment Management', 'Modify')) {
+                throw new Exception('You do not have permission to modify charge invoices');
+            }
+
+            $id = $_POST['id'];
+            $invoice_no = trim($_POST['invoice_no']);
+            $date_of_purchase = trim($_POST['date_of_purchase']);
+            $po_no = trim($_POST['po_no']);
+
+            if (empty($invoice_no) || empty($date_of_purchase) || empty($po_no)) {
+                throw new Exception('Please fill in all required fields.');
+            }
+
             // Fetch the current values for OldVal
             $stmt = $pdo->prepare("SELECT * FROM charge_invoice WHERE id = ?");
             $stmt->execute([$id]);
@@ -114,20 +138,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt = $pdo->prepare("SELECT po_no FROM purchase_order WHERE po_no = ?");
                 $stmt->execute([$po_no]);
                 $existingPO = $stmt->fetch(PDO::FETCH_ASSOC);
-                
+
                 if (!$existingPO) {
-                    header('Content-Type: application/json');
-                    echo json_encode(['status' => 'error', 'message' => 'Invalid Purchase Order Number. Please ensure the Purchase Order exists.']);
-                    exit;
+                    throw new Exception('Invalid Purchase Order Number. Please ensure the Purchase Order exists.');
                 }
 
                 $stmt = $pdo->prepare("UPDATE charge_invoice 
-                                      SET invoice_no = ?, 
-                                          date_of_purchase = ?, 
-                                          po_no = ? 
-                                      WHERE id = ? AND is_disabled = 0");
+                                  SET invoice_no = ?, 
+                                      date_of_purchase = ?, 
+                                      po_no = ? 
+                                  WHERE id = ? AND is_disabled = 0");
                 $stmt->execute([$invoice_no, $date_of_purchase, $po_no, $id]);
-                
+
                 if ($stmt->rowCount() > 0) {
                     // Log both old and new values
                     logAudit($pdo, 'modified', json_encode($oldData), json_encode(['invoice_no' => $invoice_no, 'date_of_purchase' => $date_of_purchase, 'po_no' => $po_no]));
@@ -135,18 +157,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     echo json_encode(['status' => 'success', 'message' => 'Charge Invoice updated successfully.']);
                     exit;
                 } else {
-                    header('Content-Type: application/json');
-                    echo json_encode(['status' => 'error', 'message' => 'No changes were made or record not found.']);
-                    exit;
+                    throw new Exception('No changes were made or record not found.');
                 }
             } else {
-                header('Content-Type: application/json');
-                echo json_encode(['status' => 'error', 'message' => 'Charge Invoice not found.']);
-                exit;
+                throw new Exception('Charge Invoice not found.');
             }
         } catch (PDOException $e) {
             header('Content-Type: application/json');
             echo json_encode(['status' => 'error', 'message' => 'Error updating Charge Invoice: ' . $e->getMessage()]);
+            exit;
+        } catch (Exception $e) {
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
             exit;
         }
     }
@@ -171,6 +193,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
     $id = $_GET['id'];
     try {
+        // Check if user has Remove privilege
+        if (!$rbac->hasPrivilege('Equipment Management', 'Remove')) {
+            throw new Exception('You do not have permission to delete charge invoices');
+        }
+
         // Fetch the current values for OldVal before deletion
         $stmt = $pdo->prepare("SELECT * FROM charge_invoice WHERE id = ?");
         $stmt->execute([$id]);
@@ -187,6 +214,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
         }
     } catch (PDOException $e) {
         $_SESSION['errors'] = ["Error deleting Charge Invoice: " . $e->getMessage()];
+    } catch (Exception $e) {
+        $_SESSION['errors'] = [$e->getMessage()];
     }
     if (is_ajax_request()) {
         ob_clean();
@@ -234,6 +263,7 @@ try {
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -255,23 +285,26 @@ try {
             min-height: 100vh;
             padding-top: 80px;
         }
+
         .main-content {
             margin-left: 300px;
             padding: 20px;
         }
-        
+
         /* Fix for Save Changes button hover state */
         .btn-primary:hover {
-            color: #fff !important; /* Ensure text stays white on hover */
-            background-color: #0b5ed7; /* Darker blue on hover */
+            color: #fff !important;
+            /* Ensure text stays white on hover */
+            background-color: #0b5ed7;
+            /* Darker blue on hover */
             border-color: #0a58ca;
         }
-        
+
         /* Specific styling for the edit form button */
         #editInvoiceForm .btn-primary {
             transition: all 0.2s ease-in-out;
         }
-        
+
         #editInvoiceForm .btn-primary:hover {
             color: #fff !important;
             background-color: #0d6efd;
@@ -281,566 +314,507 @@ try {
         }
     </style>
 </head>
+
 <body>
-<?php include('../../general/sidebar.php'); ?>
-<div class="container-fluid" style="margin-left: 320px; padding: 20px; width: calc(100vw - 340px);">
-    <!-- The page now displays notifications only via toast messages -->
+    <?php include('../../general/sidebar.php'); ?>
+    <div class="container-fluid" style="margin-left: 320px; padding: 20px; width: calc(100vw - 340px);">
+        <!-- The page now displays notifications only via toast messages -->
 
-    <h2 class="mb-4">Charge Invoice Management</h2>
+        <h2 class="mb-4">Charge Invoice Management</h2>
 
-    <div class="card shadow">
-        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-            <span><i class="bi bi-list-ul"></i> List of Charge Invoices</span>
-            <div class="input-group w-auto">
-                <span class="input-group-text"><i class="bi bi-search"></i></span>
-                <input type="text" id="searchInvoice" class="form-control" placeholder="Search invoice...">
+        <div class="card shadow">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-list-ul"></i> List of Charge Invoices</span>
+                <div class="input-group w-auto">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" id="searchInvoice" class="form-control" placeholder="Search invoice...">
+                </div>
+            </div>
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <?php if ($canCreate): ?>
+                        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal"
+                            data-bs-target="#addInvoiceModal">
+                            <i class="bi bi-plus-circle"></i> Add Charge Invoice
+                        </button>
+                    <?php else: ?>
+                        <div></div>
+                    <?php endif; ?>
+                    <!-- Optionally add date filters -->
+                    <select class="form-select form-select-sm" id="dateFilter" style="width: auto;">
+                        <option value="">Filter by Date</option>
+                        <option value="desc">Newest to Oldest</option>
+                        <option value="asc">Oldest to Newest</option>
+                        <option value="month">Specific Month</option>
+                        <option value="range">Custom Date Range</option>
+                    </select>
+                    <div id="dateInputsContainer" style="display: none;">
+                        <div class="d-flex gap-2" id="monthPickerContainer" style="display: none;">
+                            <select class="form-select form-select-sm" id="monthSelect" style="min-width: 130px;">
+                                <option value="">Select Month</option>
+                                <?php
+                                $months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                                foreach ($months as $index => $month) {
+                                    echo "<option value='" . ($index + 1) . "'>" . $month . "</option>";
+                                }
+                                ?>
+                            </select>
+                            <select class="form-select form-select-sm" id="yearSelect" style="min-width: 110px;">
+                                <option value="">Select Year</option>
+                                <?php
+                                $currentYear = date('Y');
+                                for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
+                                    echo "<option value='" . $year . "'>" . $year . "</option>";
+                                }
+                                ?>
+                            </select>
+                        </div>
+                        <div class="d-flex gap-2" id="dateRangePickers" style="display: none;">
+                            <input type="date" class="form-control form-control-sm" id="dateFrom" placeholder="From">
+                            <input type="date" class="form-control form-control-sm" id="dateTo" placeholder="To">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-responsive" id="table">
+                    <table id="invoiceTable" class="table table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>#</th>
+                                <th>Invoice Number</th>
+                                <th>Purchase Date</th>
+                                <th>PO Number</th>
+                                <th>Created Date</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (!empty($chargeInvoices)): ?>
+                                <?php foreach ($chargeInvoices as $invoice): ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($invoice['id']); ?></td>
+                                        <td><?php echo htmlspecialchars($invoice['invoice_no'] ?? ''); ?></td>
+                                        <td><?php echo htmlspecialchars($invoice['date_of_purchase'] ?? ''); ?></td>
+                                        <td><?php echo htmlspecialchars($invoice['po_no'] ?? ''); ?></td>
+                                        <td><?php echo date('Y-m-d H:i', strtotime($invoice['date_created'] ?? '')); ?></td>
+                                        <td class="text-center">
+                                            <div class="btn-group" role="group">
+                                                <?php if ($canModify): ?>
+                                                    <a class="btn btn-sm btn-outline-primary edit-invoice"
+                                                        data-id="<?php echo htmlspecialchars($invoice['id']); ?>"
+                                                        data-invoice="<?php echo htmlspecialchars($invoice['invoice_no'] ?? ''); ?>"
+                                                        data-date="<?php echo htmlspecialchars($invoice['date_of_purchase'] ?? ''); ?>"
+                                                        data-po="<?php echo htmlspecialchars($invoice['po_no'] ?? ''); ?>">
+                                                        <i class="bi bi-pencil-square"></i> Edit
+                                                    </a>
+                                                <?php endif; ?>
+                                                <?php if ($canDelete): ?>
+                                                    <a class="btn btn-sm btn-outline-danger delete-invoice"
+                                                        data-id="<?php echo htmlspecialchars($invoice['id']); ?>"
+                                                        href="#">
+                                                        <i class="bi bi-trash"></i> Delete
+                                                    </a>
+                                                <?php endif; ?>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td colspan="6">No Charge Invoices found.</td>
+                                </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                    <!-- Pagination Controls (optional) -->
+                    <div class="container-fluid">
+                        <div class="row align-items-center g-3">
+                            <div class="col-12 col-sm-auto">
+                                <div class="text-muted">
+                                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
+                                        id="totalRows">100</span> entries
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-auto ms-sm-auto">
+                                <div class="d-flex align-items-center gap-2">
+                                    <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                        <i class="bi bi-chevron-left"></i> Previous
+                                    </button>
+                                    <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                        <option value="10" selected>10</option>
+                                        <option value="20">20</option>
+                                        <option value="30">30</option>
+                                        <option value="50">50</option>
+                                    </select>
+                                    <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                        Next <i class="bi bi-chevron-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Pagination numbers (if using pagination.js) -->
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <ul class="pagination justify-content-center" id="pagination"></ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="card-body p-3">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal"
-                        data-bs-target="#addInvoiceModal">
-                    <i class="bi bi-plus-circle"></i> Add Charge Invoice
-                </button>
-                <!-- Optionally add date filters -->
-                <select class="form-select form-select-sm" id="dateFilter" style="width: auto;">
-                    <option value="">Filter by Date</option>
-                    <option value="desc">Newest to Oldest</option>
-                    <option value="asc">Oldest to Newest</option>
-                    <option value="month">Specific Month</option>
-                    <option value="range">Custom Date Range</option>
-                </select>
-                <div id="dateInputsContainer" style="display: none;">
-                    <div class="d-flex gap-2" id="monthPickerContainer" style="display: none;">
-                        <select class="form-select form-select-sm" id="monthSelect" style="min-width: 130px;">
-                            <option value="">Select Month</option>
-                            <?php
-                            $months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-                            foreach ($months as $index => $month) {
-                                echo "<option value='" . ($index + 1) . "'>" . $month . "</option>";
-                            }
-                            ?>
-                        </select>
-                        <select class="form-select form-select-sm" id="yearSelect" style="min-width: 110px;">
-                            <option value="">Select Year</option>
-                            <?php
-                            $currentYear = date('Y');
-                            for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
-                                echo "<option value='" . $year . "'>" . $year . "</option>";
-                            }
-                            ?>
-                        </select>
+    </div>
+
+    <?php if ($canDelete): ?>
+        <!-- Delete Invoice Modal -->
+        <div class="modal fade" id="deleteInvoiceModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Confirm Invoice Deletion</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                            aria-label="Close"></button>
                     </div>
-                    <div class="d-flex gap-2" id="dateRangePickers" style="display: none;">
-                        <input type="date" class="form-control form-control-sm" id="dateFrom" placeholder="From">
-                        <input type="date" class="form-control form-control-sm" id="dateTo" placeholder="To">
+                    <div class="modal-body">
+                        Are you sure you want to delete this charge invoice?
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" id="confirmDeleteInvoiceBtn"
+                            class="btn btn-danger">Delete</button>
                     </div>
                 </div>
             </div>
+        </div>
+    <?php endif; ?>
 
-            <div class="table-responsive" id="table">
-                <table id="invoiceTable" class="table table-hover">
-                    <thead class="table-dark">
-                    <tr>
-                        <th>#</th>
-                        <th>Invoice Number</th>
-                        <th>Purchase Date</th>
-                        <th>PO Number</th>
-                        <th>Created Date</th>
-                        <th class="text-center">Actions</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <?php if (!empty($chargeInvoices)): ?>
-                        <?php foreach ($chargeInvoices as $invoice): ?>
-                            <tr>
-                                <td><?php echo htmlspecialchars($invoice['id']); ?></td>
-                                <td><?php echo htmlspecialchars($invoice['invoice_no'] ?? ''); ?></td>
-                                <td><?php echo htmlspecialchars($invoice['date_of_purchase'] ?? ''); ?></td>
-                                <td><?php echo htmlspecialchars($invoice['po_no'] ?? ''); ?></td>
-                                <td><?php echo date('Y-m-d H:i', strtotime($invoice['date_created'] ?? '')); ?></td>
-                                <td class="text-center">
-                                    <div class="btn-group" role="group">
-                                        <a class="btn btn-sm btn-outline-primary edit-invoice"
-                                           data-id="<?php echo htmlspecialchars($invoice['id']); ?>"
-                                           data-invoice="<?php echo htmlspecialchars($invoice['invoice_no'] ?? ''); ?>"
-                                           data-date="<?php echo htmlspecialchars($invoice['date_of_purchase'] ?? ''); ?>"
-                                           data-po="<?php echo htmlspecialchars($invoice['po_no'] ?? ''); ?>">
-                                            <i class="bi bi-pencil-square"></i> Edit
-                                        </a>
-                                        <a class="btn btn-sm btn-outline-danger delete-invoice"
-                                           data-id="<?php echo htmlspecialchars($invoice['id']); ?>"
-                                           href="#">
-                                            <i class="bi bi-trash"></i> Delete
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr>
-                            <td colspan="6">No Charge Invoices found.</td>
-                        </tr>
-                    <?php endif; ?>
-                    </tbody>
-                </table>
-                <!-- Pagination Controls (optional) -->
-                <div class="container-fluid">
-                    <div class="row align-items-center g-3">
-                        <div class="col-12 col-sm-auto">
-                            <div class="text-muted">
-                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
-                                    id="totalRows">100</span> entries
-                            </div>
-                        </div>
-                        <div class="col-12 col-sm-auto ms-sm-auto">
-                            <div class="d-flex align-items-center gap-2">
-                                <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                    <i class="bi bi-chevron-left"></i> Previous
-                                </button>
-                                <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
-                                    <option value="10" selected>10</option>
-                                    <option value="20">20</option>
-                                    <option value="30">30</option>
-                                    <option value="50">50</option>
-                                </select>
-                                <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                    Next <i class="bi bi-chevron-right"></i>
-                                </button>
-                            </div>
-                        </div>
+    <div id="toastContainer" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1055;"></div>
+
+    <?php if ($canCreate): ?>
+        <!-- Add Invoice Modal -->
+        <div class="modal fade" id="addInvoiceModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add New Charge Invoice</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
-                    <!-- Pagination numbers (if using pagination.js) -->
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <ul class="pagination justify-content-center" id="pagination"></ul>
-                        </div>
+                    <div class="modal-body">
+                        <form id="addInvoiceForm" method="post">
+                            <input type="hidden" name="action" value="add">
+                            <div class="mb-3">
+                                <label for="invoice_no" class="form-label">Invoice Number <span
+                                        class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="invoice_no" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="date_of_purchase" class="form-label">Date of Purchase <span
+                                        class="text-danger">*</span></label>
+                                <input type="date" class="form-control" name="date_of_purchase" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="po_no" class="form-label">Purchase Order Number <span
+                                        class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="po_no" required>
+                            </div>
+                            <div class="text-end">
+                                <button type="button" class="btn btn-secondary" style="margin-right: 4px;"
+                                    data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-primary">Confirm</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
-                </div>
-                </div>
-                </div>
-                </div>
+            </div>
+        </div>
+    <?php endif; ?>
 
-                <!-- Delete Invoice Modal -->
-                <div class="modal fade" id="deleteInvoiceModal" tabindex="-1">
-                    <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title">Confirm Invoice Deletion</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                    aria-label="Close"></button>
+    <?php if ($canModify): ?>
+        <!-- Edit Invoice Modal -->
+        <div class="modal fade" id="editInvoiceModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Edit Charge Invoice</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="editInvoiceForm" method="post">
+                            <input type="hidden" name="action" value="update">
+                            <input type="hidden" name="id" id="edit_invoice_id">
+                            <div class="mb-3">
+                                <label for="edit_invoice_no" class="form-label">Invoice Number <span
+                                        class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="invoice_no" id="edit_invoice_no"
+                                    required>
                             </div>
-                            <div class="modal-body">
-                                Are you sure you want to delete this charge invoice?
+                            <div class="mb-3">
+                                <label for="edit_date_of_purchase" class="form-label">Date of Purchase <span
+                                        class="text-danger">*</span></label>
+                                <input type="date" class="form-control" name="date_of_purchase"
+                                    id="edit_date_of_purchase" required>
                             </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                <button type="button" id="confirmDeleteInvoiceBtn"
-                                    class="btn btn-danger">Delete</button>
+                            <div class="mb-3">
+                                <label for="edit_po_no" class="form-label">Purchase Order Number <span
+                                        class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="po_no" id="edit_po_no" required>
                             </div>
-                        </div>
+                            <div class="mb-3">
+                                <button type="submit" class="btn btn-primary">Save Changes</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
+            </div>
+        </div>
+    <?php endif; ?>
 
-                <div id="toastContainer" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1055;"></div>
+    <!-- JavaScript for functionality -->
+    <script>
+        var deleteInvoiceId = null;
 
-                <!-- Add Invoice Modal -->
-                <div class="modal fade" id="addInvoiceModal" tabindex="-1">
-                    <div class="modal-dialog">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title">Add New Charge Invoice</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body">
-                                <form id="addInvoiceForm" method="post">
-                                    <input type="hidden" name="action" value="add">
-                                    <div class="mb-3">
-                                        <label for="invoice_no" class="form-label">Invoice Number <span
-                                                class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" name="invoice_no" required>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="date_of_purchase" class="form-label">Date of Purchase <span
-                                                class="text-danger">*</span></label>
-                                        <input type="date" class="form-control" name="date_of_purchase" required>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="po_no" class="form-label">Purchase Order Number <span
-                                                class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" name="po_no" required>
-                                    </div>
-                                    <div class="text-end">
-                                        <button type="button" class="btn btn-secondary" style="margin-right: 4px;"
-                                            data-bs-dismiss="modal">Cancel</button>
-                                        <button type="submit" class="btn btn-primary">Confirm</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Edit Invoice Modal -->
-                <div class="modal fade" id="editInvoiceModal" tabindex="-1">
-                    <div class="modal-dialog">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title">Edit Charge Invoice</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body">
-                                <form id="editInvoiceForm" method="post">
-                                    <input type="hidden" name="action" value="update">
-                                    <input type="hidden" name="id" id="edit_invoice_id">
-                                    <div class="mb-3">
-                                        <label for="edit_invoice_no" class="form-label">Invoice Number <span
-                                                class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" name="invoice_no" id="edit_invoice_no"
-                                            required>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="edit_date_of_purchase" class="form-label">Date of Purchase <span
-                                                class="text-danger">*</span></label>
-                                        <input type="date" class="form-control" name="date_of_purchase"
-                                            id="edit_date_of_purchase" required>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="edit_po_no" class="form-label">Purchase Order Number <span
-                                                class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" name="po_no" id="edit_po_no" required>
-                                    </div>
-                                    <div class="mb-3">
-                                        <button type="submit" class="btn btn-primary">Save Changes</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-<!-- JavaScript for functionality -->
-<script>
-    var deleteInvoiceId = null;
-
-    $(document).ready(function () {
-        // Search filter for invoices
-        $('#searchInvoice').on('input', function () {
-            var searchText = $(this).val().toLowerCase();
-            $("#table tbody tr").filter(function () {
-                $(this).toggle($(this).text().toLowerCase().indexOf(searchText) > -1);
+        $(document).ready(function() {
+            // Search filter for invoices
+            $('#searchInvoice').on('input', function() {
+                var searchText = $(this).val().toLowerCase();
+                $("#table tbody tr").filter(function() {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(searchText) > -1);
+                });
             });
-        });
 
-        // Trigger Edit Invoice Modal using Bootstrap 5 Modal API
-        $(document).on('click', '.edit-invoice', function () {
-            var id = $(this).data('id');
-            var invoice = $(this).data('invoice');
-            var date = $(this).data('date');
-            var po = $(this).data('po');
-            $('#edit_invoice_id').val(id);
-            $('#edit_invoice_no').val(invoice);
-            $('#edit_date_of_purchase').val(date);
-            $('#edit_po_no').val(po);
-            var editModal = new bootstrap.Modal(document.getElementById('editInvoiceModal'));
-            editModal.show();
-        });
+            // Trigger Edit Invoice Modal using Bootstrap 5 Modal API
+            $(document).on('click', '.edit-invoice', function() {
+                var id = $(this).data('id');
+                var invoice = $(this).data('invoice');
+                var date = $(this).data('date');
+                var po = $(this).data('po');
+                $('#edit_invoice_id').val(id);
+                $('#edit_invoice_no').val(invoice);
+                $('#edit_date_of_purchase').val(date);
+                $('#edit_po_no').val(po);
+                var editModal = new bootstrap.Modal(document.getElementById('editInvoiceModal'));
+                editModal.show();
+            });
 
-        // Trigger Delete Invoice Modal
-        $(document).on('click', '.delete-invoice', function (e) {
-            e.preventDefault();
-            deleteInvoiceId = $(this).data('id');
-            var deleteModal = new bootstrap.Modal(document.getElementById('deleteInvoiceModal'));
-            deleteModal.show();
-        });
+            // Trigger Delete Invoice Modal
+            $(document).on('click', '.delete-invoice', function(e) {
+                e.preventDefault();
+                deleteInvoiceId = $(this).data('id');
+                var deleteModal = new bootstrap.Modal(document.getElementById('deleteInvoiceModal'));
+                deleteModal.show();
+            });
 
-        // Confirm Delete Invoice via AJAX
-        $('#confirmDeleteInvoiceBtn').on('click', function () {
-            if (deleteInvoiceId) {
+            // Confirm Delete Invoice via AJAX
+            $('#confirmDeleteInvoiceBtn').on('click', function() {
+                if (deleteInvoiceId) {
+                    $.ajax({
+                        url: 'charge_invoice.php',
+                        method: 'GET',
+                        data: {
+                            action: 'delete',
+                            id: deleteInvoiceId
+                        },
+                        dataType: 'json',
+                        success: function(response) {
+                            if (response.status === 'success') {
+                                $('#invoiceTable').load(location.href + ' #invoiceTable', function() {
+                                    showToast(response.message, 'success');
+                                });
+                            } else {
+                                showToast(response.message, 'error');
+                            }
+                            var deleteModalEl = document.getElementById('deleteInvoiceModal');
+                            var deleteModalInstance = bootstrap.Modal.getInstance(deleteModalEl);
+                            deleteModalInstance.hide();
+                        },
+                        error: function() {
+                            showToast('Error processing request.', 'error');
+                        }
+                    });
+                }
+            });
+
+            // Add Invoice AJAX submission
+            $('#addInvoiceForm').on('submit', function(e) {
+                e.preventDefault();
                 $.ajax({
                     url: 'charge_invoice.php',
-                    method: 'GET',
-                    data: { action: 'delete', id: deleteInvoiceId },
+                    method: 'POST',
+                    data: $(this).serialize(),
                     dataType: 'json',
-                    success: function (response) {
+                    success: function(response) {
                         if (response.status === 'success') {
                             $('#invoiceTable').load(location.href + ' #invoiceTable', function() {
                                 showToast(response.message, 'success');
                             });
+                            var addModalEl = document.getElementById('addInvoiceModal');
+                            var addModal = bootstrap.Modal.getInstance(addModalEl);
+                            if (addModal) {
+                                addModal.hide();
+                            }
+                            // Remove modal backdrop
+                            $('.modal-backdrop').remove();
+                            $('body').removeClass('modal-open').css('overflow', '');
+                            $('body').css('padding-right', '');
                         } else {
                             showToast(response.message, 'error');
                         }
-                        var deleteModalEl = document.getElementById('deleteInvoiceModal');
-                        var deleteModalInstance = bootstrap.Modal.getInstance(deleteModalEl);
-                        deleteModalInstance.hide();
                     },
-                    error: function () {
+                    error: function() {
                         showToast('Error processing request.', 'error');
-                    }
-                });
-            }
-        });
-
-        // Add Invoice AJAX submission
-        $('#addInvoiceForm').on('submit', function (e) {
-            e.preventDefault();
-            $.ajax({
-                url: 'charge_invoice.php',
-                method: 'POST',
-                data: $(this).serialize(),
-                dataType: 'json',
-                success: function (response) {
-                    if (response.status === 'success') {
-                        $('#invoiceTable').load(location.href + ' #invoiceTable', function() {
-                            showToast(response.message, 'success');
-                        });
-                        var addModalEl = document.getElementById('addInvoiceModal');
-                        var addModal = bootstrap.Modal.getInstance(addModalEl);
-                        if (addModal) {
-                            addModal.hide();
-                        }
-                        // Remove modal backdrop
+                        // Also remove modal backdrop in case of error
                         $('.modal-backdrop').remove();
                         $('body').removeClass('modal-open').css('overflow', '');
                         $('body').css('padding-right', '');
-                    } else {
-                        showToast(response.message, 'error');
                     }
-                },
-                error: function () {
-                    showToast('Error processing request.', 'error');
-                    // Also remove modal backdrop in case of error
-                    $('.modal-backdrop').remove();
-                    $('body').removeClass('modal-open').css('overflow', '');
-                    $('body').css('padding-right', '');
-                }
+                });
             });
-        });
 
-        // Edit Invoice AJAX submission
-        $('#editInvoiceForm').on('submit', function (e) {
-            e.preventDefault();
-            $.ajax({
-                url: 'charge_invoice.php',
-                method: 'POST',
-                data: $(this).serialize(),
-                dataType: 'json',
-                beforeSend: function() {
-                    // Optionally add loading state
-                },
-                success: function (response) {
-                    if (response.status === 'success') {
-                        // Close the modal first
-                        var editModalEl = document.getElementById('editInvoiceModal');
-                        var editModal = bootstrap.Modal.getInstance(editModalEl);
-                        if (editModal) {
-                            editModal.hide();
+            // Edit Invoice AJAX submission
+            $('#editInvoiceForm').on('submit', function(e) {
+                e.preventDefault();
+                $.ajax({
+                    url: 'charge_invoice.php',
+                    method: 'POST',
+                    data: $(this).serialize(),
+                    dataType: 'json',
+                    beforeSend: function() {
+                        // Optionally add loading state
+                    },
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            $('#invoiceTable').load(location.href + ' #invoiceTable', function() {
+                                    showToast(response.message, 'success');
+                                });
+                           
+                            var editModalEl = document.getElementById('editInvoiceModal');
+                            var editModal = bootstrap.Modal.getInstance(editModalEl);
+                            if (editModal) {
+                                editModal.hide();
+                            }
+
+                            // Remove modal backdrop
+                            $('.modal-backdrop').remove();
+                            $('body').removeClass('modal-open').css('overflow', '');
+                            $('body').css('padding-right', '');
+                        } else {
+                            showToast(response.message || 'Error updating invoice', 'error');
                         }
-                        
-                        // Remove modal backdrop
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Ajax error:', error);
+                        console.log(xhr.responseText); // This will help debug the actual server response
+                        showToast('Error processing request. Please try again.', 'error');
+
+                        // Remove modal backdrop in case of error
                         $('.modal-backdrop').remove();
                         $('body').removeClass('modal-open').css('overflow', '');
                         $('body').css('padding-right', '');
-                        
-                        // Show success message
-                        showToast(response.message, 'success');
-                        
-                        // Delay the page reload to allow reading the toast message
-                        setTimeout(function() {
-                            location.reload();
-                        }, 2000); // 2 seconds delay
-                    } else {
-                        showToast(response.message || 'Error updating invoice', 'error');
                     }
-                },
-                error: function (xhr, status, error) {
-                    console.error('Ajax error:', error);
-                    console.log(xhr.responseText); // This will help debug the actual server response
-                    showToast('Error processing request. Please try again.', 'error');
-                    
-                    // Remove modal backdrop in case of error
-                    $('.modal-backdrop').remove();
-                    $('body').removeClass('modal-open').css('overflow', '');
-                    $('body').css('padding-right', '');
-                }
+                });
             });
         });
-    });
 
-    // On page load, display any PHP messages as toast notifications
-    $(document).ready(function() {
-        <?php if(!empty($success)): ?>
-        showToast("<?php echo addslashes($success); ?>", "success");
-        <?php endif; ?>
-        <?php if(!empty($errors)): ?>
-        <?php foreach($errors as $err): ?>
-        showToast("<?php echo addslashes($err); ?>", "error");
-        <?php endforeach; ?>
-        <?php endif; ?>
-    });
+        // Date filter functionality
+        $('#dateFilter').on('change', function() {
+            const filterValue = $(this).val();
+            const monthPickerContainer = $('#monthPickerContainer');
+            const dateRangePickers = $('#dateRangePickers');
+            const dateInputsContainer = $('#dateInputsContainer');
 
-        $('#addInvoiceModal').on('hidden.bs.modal', function () {
-        $('#addInvoiceForm')[0].reset();
-    });
+            // Reset and hide all date input containers first
+            dateInputsContainer.hide();
+            monthPickerContainer.hide();
+            dateRangePickers.hide();
 
-    // Toast function implementation
-    function showToast(message, type = 'success') {
-        // Prevent any existing event handlers from interfering
-        if (window.onclick) {
-            window.onclick = null;
-        }
-
-        // Create toast container if it doesn't exist
-        let toastContainer = document.getElementById('toastContainer');
-        if (!toastContainer) {
-            toastContainer = document.createElement('div');
-            toastContainer.id = 'toastContainer';
-            toastContainer.className = 'position-fixed bottom-0 end-0 p-3';
-            toastContainer.style.zIndex = '1055';
-            document.body.appendChild(toastContainer);
-        }
-
-        // Create toast element
-        const toastId = 'toast-' + Date.now();
-        const toastHtml = `
-            <div id="${toastId}" class="toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0" role="alert" aria-live="assertive" aria-atomic="true">
-                <div class="d-flex">
-                    <div class="toast-body">
-                        ${message}
-                    </div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                </div>
-            </div>
-        `;
-        toastContainer.insertAdjacentHTML('beforeend', toastHtml);
-
-        // Initialize and show the toast using a try-catch block
-        try {
-            const toastElement = document.getElementById(toastId);
-            if (toastElement) {
-                const toast = new bootstrap.Toast(toastElement, {
-                    animation: true,
-                    autohide: true,
-                    delay: 5000  // Increased from 3000 to 5000 ms (5 seconds)
-                });
-                
-                // Add event listener for when toast is hidden
-                toastElement.addEventListener('hidden.bs.toast', function () {
-                    if (toastElement && toastElement.parentNode) {
-                        toastElement.parentNode.removeChild(toastElement);
-                    }
-                });
-
-                toast.show();
-            }
-        } catch (error) {
-            console.error('Toast error:', error);
-            // Fallback notification if toast fails
-            alert(message);
-        }
-    }
-
-    // Date filter functionality
-    $('#dateFilter').on('change', function() {
-        const filterValue = $(this).val();
-        const monthPickerContainer = $('#monthPickerContainer');
-        const dateRangePickers = $('#dateRangePickers');
-        const dateInputsContainer = $('#dateInputsContainer');
-
-        // Reset and hide all date input containers first
-        dateInputsContainer.hide();
-        monthPickerContainer.hide();
-        dateRangePickers.hide();
-
-        switch(filterValue) {
-            case 'desc':
-            case 'asc':
-                filterByOrder(filterValue);
-                break;
-            case 'month':
-                dateInputsContainer.show();
-                monthPickerContainer.show();
-                break;
-            case 'range':
-                dateInputsContainer.show();
-                dateRangePickers.show();
-                break;
-            default:
-                // Show all rows when no filter is selected
-                $('#invoiceTable tbody tr').show();
-        }
-    });
-
-    // Handle month and year selection
-    $('#monthSelect, #yearSelect').on('change', function() {
-        const month = $('#monthSelect').val();
-        const year = $('#yearSelect').val();
-        
-        if (month && year) {
-            filterByMonth(month, year);
-        }
-    });
-
-    // Handle date range selection
-    $('#dateFrom, #dateTo').on('change', function() {
-        const dateFrom = $('#dateFrom').val();
-        const dateTo = $('#dateTo').val();
-        
-        if (dateFrom && dateTo) {
-            filterByDateRange(dateFrom, dateTo);
-        }
-    });
-
-    function filterByOrder(order) {
-        const tbody = $('#invoiceTable tbody');
-        const rows = tbody.find('tr').toArray();
-        
-        rows.sort((a, b) => {
-            const dateA = new Date($(a).find('td:eq(2)').text()); // Index 2 is the date_of_purchase column
-            const dateB = new Date($(b).find('td:eq(2)').text());
-            
-            return order === 'asc' ? dateA - dateB : dateB - dateA;
-        });
-        
-        tbody.empty().append(rows);
-    }
-
-    function filterByMonth(month, year) {
-        $('#invoiceTable tbody tr').each(function() {
-            const purchaseDate = new Date($(this).find('td:eq(2)').text());
-            const rowMonth = purchaseDate.getMonth() + 1; // getMonth() returns 0-11
-            const rowYear = purchaseDate.getFullYear();
-            
-            if (rowMonth == month && rowYear == year) {
-                $(this).show();
-            } else {
-                $(this).hide();
+            switch (filterValue) {
+                case 'desc':
+                case 'asc':
+                    filterByOrder(filterValue);
+                    break;
+                case 'month':
+                    dateInputsContainer.show();
+                    monthPickerContainer.show();
+                    break;
+                case 'range':
+                    dateInputsContainer.show();
+                    dateRangePickers.show();
+                    break;
+                default:
+                    // Show all rows when no filter is selected
+                    $('#invoiceTable tbody tr').show();
             }
         });
-    }
 
-    function filterByDateRange(dateFrom, dateTo) {
-        const fromDate = new Date(dateFrom);
-        const toDate = new Date(dateTo);
-        
-        $('#invoiceTable tbody tr').each(function() {
-            const purchaseDate = new Date($(this).find('td:eq(2)').text());
-            
-            if (purchaseDate >= fromDate && purchaseDate <= toDate) {
-                $(this).show();
-            } else {
-                $(this).hide();
+        // Handle month and year selection
+        $('#monthSelect, #yearSelect').on('change', function() {
+            const month = $('#monthSelect').val();
+            const year = $('#yearSelect').val();
+
+            if (month && year) {
+                filterByMonth(month, year);
             }
         });
-    }
-</script>
 
-<script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js" defer></script>
+        // Handle date range selection
+        $('#dateFrom, #dateTo').on('change', function() {
+            const dateFrom = $('#dateFrom').val();
+            const dateTo = $('#dateTo').val();
 
-<!-- Bootstrap JS Bundle with Popper -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+            if (dateFrom && dateTo) {
+                filterByDateRange(dateFrom, dateTo);
+            }
+        });
 
-<?php include '../../general/footer.php'; ?>
+        function filterByOrder(order) {
+            const tbody = $('#invoiceTable tbody');
+            const rows = tbody.find('tr').toArray();
+
+            rows.sort((a, b) => {
+                const dateA = new Date($(a).find('td:eq(2)').text()); // Index 2 is the date_of_purchase column
+                const dateB = new Date($(b).find('td:eq(2)').text());
+
+                return order === 'asc' ? dateA - dateB : dateB - dateA;
+            });
+
+            tbody.empty().append(rows);
+        }
+
+        function filterByMonth(month, year) {
+            $('#invoiceTable tbody tr').each(function() {
+                const purchaseDate = new Date($(this).find('td:eq(2)').text());
+                const rowMonth = purchaseDate.getMonth() + 1; // getMonth() returns 0-11
+                const rowYear = purchaseDate.getFullYear();
+
+                if (rowMonth == month && rowYear == year) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        }
+
+        function filterByDateRange(dateFrom, dateTo) {
+            const fromDate = new Date(dateFrom);
+            const toDate = new Date(dateTo);
+
+            $('#invoiceTable tbody tr').each(function() {
+                const purchaseDate = new Date($(this).find('td:eq(2)').text());
+
+                if (purchaseDate >= fromDate && purchaseDate <= toDate) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        }
+    </script>
+
+    <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js" defer></script>
+
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <?php include '../../general/footer.php'; ?>
 </body>
+
 </html>
