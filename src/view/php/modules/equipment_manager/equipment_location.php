@@ -296,6 +296,18 @@ function safeHtml($value)
     <title>Equipment Location Management</title>
     <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <style>
+        /* Ensure Select2 dropdown appears above modal content and below the select field */
+        .select2-container--open {
+            z-index: 9999 !important;
+        }
+        /* Fix for Select2 dropdown inside Bootstrap modal */
+        .modal-body, .modal-dialog, .modal-content {
+            overflow: visible !important;
+        }
+    </style>
 </head>
 
 <body>
@@ -479,10 +491,21 @@ function safeHtml($value)
                             <input type="text" class="form-control" name="person_responsible">
                         </div>
                         <div class="mb-3">
-                            <label for="department_search" class="form-label">Department</label>
-                            <input type="text" class="form-control" id="department_search" placeholder="Type to search department..." autocomplete="off">
-                            <input type="hidden" name="department_id" id="department_id">
-                            <div id="department_search_results" class="list-group position-absolute w-100" style="z-index: 1000;"></div>
+                            <label for="add_department_id" class="form-label">Department</label>
+                            <select class="form-control" id="add_department_id" name="department_id">
+                                <option value="">Select Department</option>
+                                <?php
+                                try {
+                                    $deptStmt = $pdo->query("SELECT id, department_name, abbreviation FROM departments ORDER BY department_name");
+                                    $departments = $deptStmt->fetchAll();
+                                    foreach ($departments as $department) {
+                                        echo "<option value='" . htmlspecialchars($department['id']) . "'>" . htmlspecialchars($department['department_name']) . " (" . htmlspecialchars($department['abbreviation']) . ")</option>";
+                                    }
+                                } catch (PDOException $e) {
+                                    // fallback: empty
+                                }
+                                ?>
+                            </select>
                         </div>
                         <div class="mb-3">
                             <label for="remarks" class="form-label">Remarks</label>
@@ -537,7 +560,7 @@ function safeHtml($value)
                                 <option value="">Select Department</option>
                                 <?php
                                 try {
-                                    $deptStmt = $pdo->query("SELECT id, department_name FROM departments WHERE is_disabled = 0 ORDER BY department_name");
+                                    $deptStmt = $pdo->query("SELECT id, department_name FROM departments ORDER BY department_name");
                                     $departments = $deptStmt->fetchAll();
                                     foreach ($departments as $department) {
                                         echo "<option value='" . htmlspecialchars($department['id']) . "'>" . htmlspecialchars($department['department_name']) . "</option>";
@@ -582,6 +605,7 @@ function safeHtml($value)
         </div>
     </div>
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const searchInput = document.getElementById('eqSearch');
@@ -719,7 +743,19 @@ function safeHtml($value)
                 });
             });
 
-            $('#addLocationModal').on('hidden.bs.modal', function() {
+            // Department searchable dropdown (Add Location Modal)
+            $('#addLocationModal').on('shown.bs.modal', function () {
+                $('#add_department_id').select2({
+                    dropdownParent: $('#addLocationModal'),
+                    width: '100%',
+                    placeholder: 'Select Department',
+                    allowClear: true
+                });
+            });
+            $('#addLocationModal').on('hidden.bs.modal', function () {
+                if ($('#add_department_id').hasClass('select2-hidden-accessible')) {
+                    $('#add_department_id').select2('destroy');
+                }
                 $(this).find('form')[0].reset();
             });
 
@@ -757,55 +793,6 @@ function safeHtml($value)
                         showToast('Error updating location: ' + error, 'error');
                     }
                 });
-            });
-
-            // Department search (Add Location Modal)
-            const departments = [
-                <?php
-                try {
-                    $deptStmt = $pdo->query("SELECT id, department_name, abbreviation FROM departments ORDER BY department_name");
-                    $departments = $deptStmt->fetchAll();
-                    $jsArray = [];
-                    foreach ($departments as $department) {
-                        $jsArray[] = '{"id":' . json_encode($department['id']) . ',"name":' . json_encode($department['department_name']) . ',"abbr":' . json_encode($department['abbreviation']) . '}';
-                    }
-                    echo implode(",\n", $jsArray);
-                } catch (PDOException $e) {
-                    // fallback: empty
-                }
-                ?>
-            ];
-
-            $('#department_search').on('input', function() {
-                const query = $(this).val().toLowerCase();
-                let results = '';
-                if (query.length > 0) {
-                    const matches = departments.filter(d => d.name.toLowerCase().includes(query));
-                    if (matches.length > 0) {
-                        matches.slice(0, 10).forEach(function(dept) {
-                            results += `<button type=\"button\" class=\"list-group-item list-group-item-action\" data-id=\"${dept.id}\" data-name=\"${dept.name}\">${dept.name} (${dept.abbr})</button>`;
-                        });
-                    } else {
-                        results = '<div class="list-group-item">No results found</div>';
-                    }
-                }
-                $('#department_search_results').html(results).toggle(results.length > 0);
-            });
-
-            // Select department from search results
-            $(document).on('click', '#department_search_results .list-group-item-action', function() {
-                const deptId = $(this).data('id');
-                const deptName = $(this).data('name');
-                $('#department_search').val(deptName);
-                $('#department_id').val(deptId);
-                $('#department_search_results').empty().hide();
-            });
-
-            // Hide results when clicking outside
-            $(document).on('click', function(e) {
-                if (!$(e.target).closest('#department_search, #department_search_results').length) {
-                    $('#department_search_results').empty().hide();
-                }
             });
 
         });
