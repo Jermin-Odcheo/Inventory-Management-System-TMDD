@@ -171,7 +171,6 @@ if (clearFiltersBtn) {
                   <div class="empty-state">
                     <div class="empty-state-icon">🔍</div>
                     <div class="empty-state-message">No matching user roles found</div>
-                    <button class="empty-state-action" id="clear-filters-btn">Clear filters</button>
                   </div>
                 </td>
               </tr>
