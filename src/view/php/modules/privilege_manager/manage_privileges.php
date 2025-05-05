@@ -154,14 +154,15 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <!-- Main Content Area -->
         <div class="main-content container-fluid">
             <header class="main-header">
-                <h1>Module Privilege Management</h1>
+                <h1>Privilege Management</h1>
             </header>
+            <h4>Create your own Crud functionality based on the current base crud functionalities</h4>
 
             <!-- Add Module Button -->
             <div class="d-flex justify-content-end mb-3">
                 <?php if ($canCreate): ?>
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModuleModal">
-                    Create Module
+                    Create Privilege
                 </button>
                 <?php endif; ?>
             </div>
@@ -170,43 +171,10 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <table id="privilegeTable" class="table table-striped table-hover align-middle">
                     <thead class="table-dark">
                         <tr>
-                            <th style="width: 25px;">ID</th>
-                            <th style="width: 250px;">Module Name</th>
                             <th>Privileges</th>
                             <th style="width: 250px;">Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <?php if (!empty($modules)): ?>
-                            <?php foreach ($modules as $module): ?>
-                                <tr data-module-id="<?php echo $module['Module_ID']; ?>">
-                                    <td><?php echo htmlspecialchars($module['Module_ID']); ?></td>       
-                                    <td><?php echo htmlspecialchars($module['Module_Name']); ?></td>     
-                                    <td><?php echo htmlspecialchars($module['Privileges']); ?></td>      
-                                    <td>
-                                        <?php if ($canModify): ?>
-                                        <button type="button" class="edit-btn edit-module-btn"
-                                            data-module-id="<?php echo $module['Module_ID']; ?>"
-                                            data-bs-toggle="modal" data-bs-target="#editModuleModal">    
-                                            <i class="bi bi-pencil-square"></i>
-                                        </button>
-                                        <?php endif; ?>
-                                        <?php if ($canRemove): ?>
-                                        <button type="button" class="delete-btn delete-module-btn"       
-                                            data-module-id="<?php echo $module['Module_ID']; ?>"
-                                            data-module-name="<?php echo htmlspecialchars($module['Module_Name']); ?>">        
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                        <?php endif; ?>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <tr>
-                                <td colspan="4">No modules found.</td>
-                            </tr>
-                        <?php endif; ?>
-                    </tbody>
                 </table>
                 <div class="container-fluid">
                     <div class="row align-items-center g-3">
@@ -239,8 +207,8 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         </div>
                     </div>
                 </div>
-            </div><!-- .table-responsive -->
-
+            </div>
+                <!--//add table parentPrivilege for basis-->
         </div><!-- .main-content -->
     </div><!-- .wrapper -->
 
