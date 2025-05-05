@@ -386,6 +386,19 @@ foreach ($userRoles as $assignment) {
         <h2>add user to roles modal</h2>
         <div class="modal-body">
             <div class="form-group">
+                <label for="search-department-dropdown">select department</label>
+                <select id="search-department-dropdown">
+                    <option value="">Select one department</option>
+                    <?php foreach ($departmentsData as $dept): ?>
+                        <option value="<?php echo $dept['id']; ?>"><?php echo htmlspecialchars($dept['department_name']); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>selected department</label>
+                <div id="selected-department-container"></div>
+            </div>
+            <div class="form-group">
                 <label for="search-role-dropdown">search role/s</label>
                 <select id="search-role-dropdown">
                     <option value="">Select roles</option>
@@ -432,7 +445,6 @@ foreach ($userRoles as $assignment) {
     <div class="modal-content">
         <h2>Add role to department modal</h2>
         <div class="modal-body">
-            <h3>DEPARTMENT TITLE</h3>
             <div class="form-group">
                 <label>Add role to department</label>
                 <select id="department-dropdown">

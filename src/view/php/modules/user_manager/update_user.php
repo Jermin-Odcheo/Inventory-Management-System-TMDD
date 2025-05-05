@@ -24,28 +24,27 @@ try {
     $email     = filter_var($_POST['email'], FILTER_VALIDATE_EMAIL);
     $firstName = trim($_POST['first_name']);
     $lastName  = trim($_POST['last_name']);
-    $department= filter_var($_POST['department'] ?? '', FILTER_VALIDATE_INT);
+    $departments = isset($_POST['departments']) && is_array($_POST['departments']) ? $_POST['departments'] : [];
     $password  = $_POST['password'] ?? '';
-    $roles     = isset($_POST['edit_roles']) && is_array($_POST['edit_roles']) ? $_POST['edit_roles'] : [];
     
-    // Validate at least one role is selected
-    if (empty($roles)) {
-        throw new Exception('At least one role must be selected');
-    }
-
     if (!$userId || !$email || !$firstName || !$lastName) {
         throw new Exception('Invalid input data');
     }
 
-    // Optional: Check if provided department ID exists
-    if ($department) {
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM departments WHERE id = ?");
-        $stmt->execute([$department]);
-        if ($stmt->fetchColumn() == 0) {
-            throw new Exception('Invalid department ID');
+    // Validate departments
+    $validDepartments = [];
+    if (!empty($departments)) {
+        foreach ($departments as $deptId) {
+            $deptId = filter_var($deptId, FILTER_VALIDATE_INT);
+            if ($deptId) {
+                // Verify department exists
+                $stmt = $pdo->prepare("SELECT COUNT(*) FROM departments WHERE id = ? AND is_disabled = 0");
+                $stmt->execute([$deptId]);
+                if ($stmt->fetchColumn() > 0) {
+                    $validDepartments[] = $deptId;
+                }
+            }
         }
-    } else {
-        throw new Exception('Department ID is required.');
     }
 
     // Hash the password only if provided
@@ -104,33 +103,64 @@ try {
     $pdo->exec("SET @current_user_id = " . intval($_SESSION['user_id']));
     $pdo->exec("SET @current_module = 'User Management'");
 
-    // Execute Stored Procedure to update user and department
-    $stmt = $pdo->prepare("CALL UpdateUserAndDepartment(?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    $stmt->execute([
-        $userId,
+    // Update the user basic information
+    $updateUserStmt = $pdo->prepare("
+        UPDATE users 
+        SET email = ?, 
+            first_name = ?, 
+            last_name = ?, 
+            status = ?
+        WHERE id = ?
+    ");
+    $updateUserStmt->execute([
         $email,
         $firstName,
         $lastName,
-        $hashedPassword,
         'active', // Adjust based on your status logic
-        $department,
-        $_SESSION['user_id'],
-        'User Management'
+        $userId
     ]);
     
-    // Update user roles
-    // First, delete all existing roles for this user
-    $deleteRolesStmt = $pdo->prepare("DELETE FROM user_roles WHERE user_id = ?");
-    $deleteRolesStmt->execute([$userId]);
+    // Update password if provided
+    if (!empty($hashedPassword)) {
+        $updatePasswordStmt = $pdo->prepare("
+            UPDATE users 
+            SET password = ? 
+            WHERE id = ?
+        ");
+        $updatePasswordStmt->execute([$hashedPassword, $userId]);
+    }
     
-    // Then, insert the new roles
-    $insertRoleStmt = $pdo->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)");
-    foreach ($roles as $roleId) {
-        $roleId = filter_var($roleId, FILTER_VALIDATE_INT);
-        if ($roleId) {
-            $insertRoleStmt->execute([$userId, $roleId]);
+    // Update departments (remove all existing and add new ones)
+    $deleteDepartmentsStmt = $pdo->prepare("DELETE FROM user_departments WHERE user_id = ?");
+    $deleteDepartmentsStmt->execute([$userId]);
+    
+    // Add new departments
+    if (!empty($validDepartments)) {
+        $insertDepartmentStmt = $pdo->prepare("INSERT INTO user_departments (user_id, department_id) VALUES (?, ?)");
+        foreach ($validDepartments as $deptId) {
+            $insertDepartmentStmt->execute([$userId, $deptId]);
         }
     }
+    
+    // Create audit log entry for the update
+    $auditStmt = $pdo->prepare("
+        INSERT INTO audit_log (
+            UserID,
+            EntityID,
+            Action,
+            Details,
+            Module,
+            `Status`,
+            Date_Time
+        )
+        VALUES (?, ?, 'modified', ?, 'User Management', 'Success', NOW())
+    ");
+    $details = "Updated user information: " . $email;
+    $auditStmt->execute([
+        $_SESSION['user_id'],
+        $userId,
+        $details
+    ]);
 
     $pdo->commit();
 
@@ -142,7 +172,7 @@ try {
             'email'      => $email,
             'first_name' => $firstName,
             'last_name'  => $lastName,
-            'department' => $department
+            'departments' => $validDepartments
         ]
     ]);
 
