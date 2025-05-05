@@ -763,7 +763,7 @@ function safeHtml($value)
             const departments = [
                 <?php
                 try {
-                    $deptStmt = $pdo->query("SELECT id, department_name, abbreviation FROM departments WHERE is_disabled = 0 ORDER BY department_name");
+                    $deptStmt = $pdo->query("SELECT id, department_name, abbreviation FROM departments ORDER BY department_name");
                     $departments = $deptStmt->fetchAll();
                     $jsArray = [];
                     foreach ($departments as $department) {
