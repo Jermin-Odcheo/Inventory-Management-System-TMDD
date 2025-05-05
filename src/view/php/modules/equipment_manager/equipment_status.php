@@ -1,19 +1,13 @@
 <?php
-// Start output buffering at the very beginning
+require_once '../../../../../config/ims-tmdd.php';
+session_start();
+
+// start buffering all output (header/sidebar/footer HTML will be captured)
 ob_start();
 
-ini_set('display_errors', 0); // Disable error display for production
-ini_set('display_startup_errors', 0);
-error_reporting(E_ALL);
-
-// Add this at the very top of your file
-error_log('Request Method: ' . $_SERVER['REQUEST_METHOD']);
-error_log('Is AJAX: ' . (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest'));
-error_log('POST Data: ' . print_r($_POST, true));
-
-session_start();
-require_once('../../../../../config/ims-tmdd.php');
-
+include '../../general/header.php';
+include '../../general/sidebar.php';
+include '../../general/footer.php';
 // For AJAX requests, we want to handle them separately
 if (
     $_SERVER['REQUEST_METHOD'] === 'POST'
@@ -28,6 +22,9 @@ if (
         exit;
     }
     
+    // Initialize RBAC
+    $rbac = new RBACService($pdo, $_SESSION['user_id']);
+    
     // Handle POST requests
     if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
         $response = array('status' => 'error', 'message' => 'Invalid action');
@@ -35,6 +32,11 @@ if (
         switch ($_POST['action']) {
             case 'add':
                 try {
+                    // Check if user has Create privilege
+                    if (!$rbac->hasPrivilege('Equipment Management', 'Create')) {
+                        throw new Exception('You do not have permission to add equipment status');
+                    }
+                    
                     // Validate required fields
                     if (empty($_POST['asset_tag'])) {
                         throw new Exception('Asset Tag is required');
@@ -120,6 +122,11 @@ if (
 
             case 'update':
                 try {
+                    // Check if user has Modify privilege
+                    if (!$rbac->hasPrivilege('Equipment Management', 'Modify')) {
+                        throw new Exception('You do not have permission to modify equipment status');
+                    }
+                    
                     // Validate required fields
                     if (empty($_POST['status_id'])) {
                         throw new Exception('Status ID is required');
@@ -226,6 +233,11 @@ if (
 
             case 'delete':
                 try {
+                    // Check if user has Remove privilege
+                    if (!$rbac->hasPrivilege('Equipment Management', 'Remove')) {
+                        throw new Exception('You do not have permission to delete equipment status');
+                    }
+                    
                     if (!isset($_POST['status_id'])) {
                         throw new Exception('Status ID is required');
                     }
@@ -309,6 +321,23 @@ if (
 // Regular page load continues here...
 include('../../general/header.php');
 
+// Initialize RBAC
+$userId = $_SESSION['user_id'] ?? null;
+if (!is_int($userId) && !ctype_digit((string)$userId)) {
+    header('Location: ../../../../../public/index.php');
+    exit();
+}
+$userId = (int)$userId;
+
+// Init RBAC & enforce "View"
+$rbac = new RBACService($pdo, $_SESSION['user_id']);
+$rbac->requirePrivilege('Equipment Management', 'View');
+
+// Button flags
+$canCreate = $rbac->hasPrivilege('Equipment Management', 'Create');
+$canModify = $rbac->hasPrivilege('Equipment Management', 'Modify');
+$canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
+
 // Initialize response array
 $response = array('status' => '', 'message' => '');
 
@@ -328,6 +357,13 @@ if (isset($_SESSION['success'])) {
 
 // GET deletion (if applicable)
 if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
+    // Check if user has Remove privilege
+    if (!$rbac->hasPrivilege('Equipment Management', 'Remove')) {
+        $_SESSION['errors'] = ["You do not have permission to delete equipment status"];
+        header("Location: equipment_status.php");
+        exit;
+    }
+    
     $id = $_GET['id'];
     try {
         // Get status details before deletion for audit log
@@ -407,11 +443,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 </head>
 
 <body>
-    <?php
-    include '../../general/header.php';
-    include '../../general/sidebar.php';
-    include '../../general/footer.php';
-    ?>
+ 
 
     <div class="main-container">
         <header class="main-header">
@@ -427,9 +459,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                 <div class="container-fluid px-0">
                     <div class="row align-items-center g-2">
                         <div class="col-auto">
+                            <?php if ($canCreate): ?>
                             <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#addStatusModal">
                                 <i class="bi bi-plus-lg"></i> Add New Status
                             </button>
+                            <?php endif; ?>
                         </div>
                         <div class="col-md-4">
                             <select class="form-select" id="filterStatus">
@@ -477,21 +511,28 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                     echo "<td>" . htmlspecialchars($row['remarks']) . "</td>";
                                     echo "<td>" . ($row['is_disabled'] ? '<span class=\"badge bg-danger\">Disabled</span>' : '<span class=\"badge bg-success\">Active</span>') . "</td>";
                                     echo "<td>
-                      <div class='d-flex justify-content-center gap-2'>
-                        <button class='btn btn-sm btn-outline-info edit-status' 
-                                data-id='" . htmlspecialchars($row['equipment_status_id']) . "'
-                                data-asset='" . htmlspecialchars($row['asset_tag']) . "'
-                                data-status='" . htmlspecialchars($row['status']) . "'
-                                data-action='" . htmlspecialchars($row['action']) . "'
-                                data-remarks='" . htmlspecialchars($row['remarks']) . "'
-                                data-disabled='" . htmlspecialchars($row['is_disabled']) . "'>
-                          <i class='bi bi-pencil'></i>
-                        </button>
-                        <button class='btn btn-sm btn-outline-danger delete-status' 
-                                data-id='" . htmlspecialchars($row['equipment_status_id']) . "'>
-                          <i class='bi bi-trash'></i>
-                        </button>
-                      </div>
+                      <div class='d-flex justify-content-center gap-2'>";
+                                    
+                                    if ($canModify) {
+                                        echo "<button class='btn btn-sm btn-outline-info edit-status' 
+                                                data-id='" . htmlspecialchars($row['equipment_status_id']) . "'
+                                                data-asset='" . htmlspecialchars($row['asset_tag']) . "'
+                                                data-status='" . htmlspecialchars($row['status']) . "'
+                                                data-action='" . htmlspecialchars($row['action']) . "'
+                                                data-remarks='" . htmlspecialchars($row['remarks']) . "'
+                                                data-disabled='" . htmlspecialchars($row['is_disabled']) . "'>
+                                              <i class='bi bi-pencil'></i>
+                                            </button>";
+                                    }
+                                    
+                                    if ($canDelete) {
+                                        echo "<button class='btn btn-sm btn-outline-danger delete-status' 
+                                                data-id='" . htmlspecialchars($row['equipment_status_id']) . "'>
+                                              <i class='bi bi-trash'></i>
+                                            </button>";
+                                    }
+                                    
+                                    echo "</div>
                     </td>";
                                     echo "</tr>";
                                 }
@@ -539,6 +580,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
         </section>
     </div>
 
+    <?php if ($canCreate): ?>
     <!-- Add Status Modal -->
     <div class="modal fade" id="addStatusModal" tabindex="-1">
         <div class="modal-dialog">
@@ -581,7 +623,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             </div>
         </div>
     </div>
+    <?php endif; ?>
 
+    <?php if ($canModify): ?>
     <!-- Edit Status Modal -->
     <div class="modal fade" id="editStatusModal" tabindex="-1">
         <div class="modal-dialog">
@@ -629,7 +673,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             </div>
         </div>
     </div>
+    <?php endif; ?>
 
+    <?php if ($canDelete): ?>
     <!--Delete Confirmation Modal-->
     <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
         <div class="modal-dialog">
@@ -649,8 +695,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             </div>
         </div>
     </div>
+    <?php endif; ?>
 
     <script src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
+    
     <script>
         $(document).ready(function() {
             // Real-time search & filter
