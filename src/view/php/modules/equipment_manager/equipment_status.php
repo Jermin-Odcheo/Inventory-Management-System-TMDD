@@ -439,8 +439,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
     <title>Equipment Status Management</title>
 
     <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.min.css" rel="stylesheet">
-</head>
+    </head>
 
 <body>
  

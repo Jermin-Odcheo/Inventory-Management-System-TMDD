@@ -346,9 +346,9 @@ if (clearFiltersBtn) {
 
     if (searchDepartmentDropdown) {
         searchDepartmentDropdown.addEventListener('change', function() {
-            const deptName = this.value;
-            if (deptName) {
-                const dept = getDepartmentById(deptName);
+            const deptId = parseInt(this.value);
+            if (deptId) {
+                const dept = getDepartmentById(deptId);
                 addItemToSelection('selected-department-container', dept, 'department');
                 this.value = '';
             }
@@ -513,21 +513,58 @@ if (clearFiltersBtn) {
                     if (data.success) {
                         // Update the local data
                         if (data.assignments) {
-                            // Use server response if available
-                            userRoleDepartments = data.assignments;
+                            // Merge the server response with existing data rather than replacing
+                            const newAssignmentsFromServer = data.assignments;
+                            
+                            // For each new assignment from server, update or add to userRoleDepartments
+                            newAssignmentsFromServer.forEach(newAssignment => {
+                                const existingIndex = userRoleDepartments.findIndex(
+                                    a => a.userId === newAssignment.userId && a.roleId === newAssignment.roleId
+                                );
+                                
+                                if (existingIndex !== -1) {
+                                    // Update existing assignment
+                                    userRoleDepartments[existingIndex] = newAssignment;
+                                } else {
+                                    // Add new assignment
+                                    userRoleDepartments.push(newAssignment);
+                                }
+                            });
                         } else {
                             // Otherwise create local entries for each role
                             newAssignments.forEach(assignment => {
                                 assignment.roleIds.forEach(roleId => {
-                                    userRoleDepartments.push({
-                                        userId: assignment.userId,
-                                        roleId: roleId,
-                                        departmentIds: [assignment.departmentId]
-                                    });
+                                    // Check if this assignment already exists
+                                    const existingIndex = userRoleDepartments.findIndex(
+                                        a => a.userId === assignment.userId && a.roleId === roleId
+                                    );
+                                    
+                                    if (existingIndex !== -1) {
+                                        // Update existing assignment
+                                        if (!userRoleDepartments[existingIndex].departmentIds.includes(assignment.departmentId)) {
+                                            userRoleDepartments[existingIndex].departmentIds.push(assignment.departmentId);
+                                        }
+                                    } else {
+                                        // Create new assignment
+                                        userRoleDepartments.push({
+                                            userId: assignment.userId,
+                                            roleId: roleId,
+                                            departmentIds: [assignment.departmentId]
+                                        });
+                                    }
                                 });
                             });
                         }
                         
+                        // Reset selections for next time
+                        selectedUsers = [];
+                        selectedRoles = [];
+                        selectedDepartment = null;
+                        selectedUsersContainer.innerHTML = '';
+                        selectedRolesContainer.innerHTML = '';
+                        selectedDepartmentContainer.innerHTML = '';
+                        
+                        // Close modal and refresh table
                         addUserRolesModal.style.display = 'none';
                         renderUserRolesTable(null, null, null, userSortDirection);
                         Toast.success('New roles assigned successfully', 5000, 'Success');
@@ -564,7 +601,23 @@ if (clearFiltersBtn) {
                             if (data.success) {
                                 // Update local data with server response
                                 if (data.assignments) {
-                                    userRoleDepartments = data.assignments;
+                                    // Merge the server response with existing data rather than replacing
+                                    const newAssignmentsFromServer = data.assignments;
+                                    
+                                    // For each new assignment from server, update or add to userRoleDepartments
+                                    newAssignmentsFromServer.forEach(newAssignment => {
+                                        const existingIndex = userRoleDepartments.findIndex(
+                                            a => a.userId === newAssignment.userId && a.roleId === newAssignment.roleId
+                                        );
+                                        
+                                        if (existingIndex !== -1) {
+                                            // Update existing assignment
+                                            userRoleDepartments[existingIndex] = newAssignment;
+                                        } else {
+                                            // Add new assignment
+                                            userRoleDepartments.push(newAssignment);
+                                        }
+                                    });
                                 } else {
                                     // Update the role ID if no server response
                                     if (updatedRoles.length > 0) {
