@@ -288,7 +288,7 @@ if (
                     ]);
 
                     // Now perform the delete
-                    $stmt = $pdo->prepare("DELETE FROM equipment_status WHERE equipment_status_id = ?");
+                    $stmt = $pdo->prepare("UPDATE equipment_status SET is_disabled = 1 WHERE equipment_status_id = ?");
                     $stmt->execute([$_POST['status_id']]);
 
                     // Commit transaction
@@ -412,7 +412,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             ]);
 
             // Now perform the delete
-            $stmt = $pdo->prepare("DELETE FROM equipment_status WHERE equipment_status_id = ?");
+            $stmt = $pdo->prepare("UPDATE equipment_status SET is_disabled = 1 WHERE equipment_status_id = ?");
             $stmt->execute([$id]);
 
             // Commit transaction
@@ -500,7 +500,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                         <tbody>
                             <?php
                             try {
-                                $stmt = $pdo->query("SELECT * FROM equipment_status ORDER BY date_created DESC");
+                                $stmt = $pdo->query("SELECT * FROM equipment_status WHERE is_disabled = 0 ORDER BY date_created DESC");
                                 while ($row = $stmt->fetch()) {
                                     echo "<tr>";
                                     echo "<td>" . htmlspecialchars($row['equipment_status_id']) . "</td>";

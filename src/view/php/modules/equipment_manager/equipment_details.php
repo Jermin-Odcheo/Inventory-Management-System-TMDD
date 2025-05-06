@@ -94,8 +94,8 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) 
                     'remarks' => $_POST['remarks'] ?? null
                 ]);
                 $auditStmt = $pdo->prepare("INSERT INTO audit_log (
-            UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status, Date_Time
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())");
                 $auditStmt->execute([
                     $_SESSION['user_id'],
                     $newEquipmentId,
@@ -181,8 +181,8 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) 
                     'remarks' => $_POST['remarks']
                 ]);
                 $auditStmt = $pdo->prepare("INSERT INTO audit_log (
-            UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status, Date_Time
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())");
                 $auditStmt->execute([
                     $_SESSION['user_id'],
                     $_POST['equipment_id'],
@@ -233,13 +233,13 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) 
                 $newValue = json_encode($detailsData);
 
                 $auditStmt = $pdo->prepare("INSERT INTO audit_log (
-            UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status, Date_Time
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())");
                 $auditStmt->execute([
                     $_SESSION['user_id'],
                     $detailsData['id'],
                     'Equipment Details',
-                    'Remove',
+                    'Delete',
                     'Equipment details have been removed (soft delete)',
                     $oldValue,
                     $newValue,

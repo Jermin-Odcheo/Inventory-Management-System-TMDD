@@ -34,10 +34,10 @@ function is_ajax_request()
 }
 
 // Add this function to log audit entries
-function logAudit($pdo, $action, $oldVal, $newVal)
+function logAudit($pdo, $action, $oldVal, $newVal, $entityId = null)
 {
-    $stmt = $pdo->prepare("INSERT INTO audit_log (UserID, Module, Action, OldVal, NewVal, Date_Time) VALUES (?, 'Purchase Order', ?, ?, ?, NOW())");
-    $stmt->execute([$_SESSION['user_id'], $action, $oldVal, $newVal]);
+    $stmt = $pdo->prepare("INSERT INTO audit_log (UserID, EntityID, Module, Action, OldVal, NewVal, Date_Time) VALUES (?, ?, 'Purchase Order', ?, ?, ?, NOW())");
+    $stmt->execute([$_SESSION['user_id'], $entityId, $action, $oldVal, $newVal]);
 }
 
 // ------------------------
@@ -99,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $stmt->execute([$po_no, $date_of_order, $no_of_units, $item_specifications, $id]);
 
                         // Log both old and new values
-                        logAudit($pdo, 'modified', json_encode($oldData), json_encode(['po_no' => $po_no, 'date_of_order' => $date_of_order, 'no_of_units' => $no_of_units, 'item_specifications' => $item_specifications]));
+                        logAudit($pdo, 'modified', json_encode($oldData), json_encode(['po_no' => $po_no, 'date_of_order' => $date_of_order, 'no_of_units' => $no_of_units, 'item_specifications' => $item_specifications]), $id);
                         $success = "Purchase Order has been updated successfully.";
                     } else {
                         $errors[] = "Purchase Order not found.";
@@ -150,11 +150,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
         $oldData = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($oldData) {
-            $stmt = $pdo->prepare("DELETE FROM purchase_order WHERE id = ?");
+            $stmt = $pdo->prepare("UPDATE purchase_order SET is_disabled = 1 WHERE id = ?");
             $stmt->execute([$id]);
             $_SESSION['success'] = "Purchase Order deleted successfully.";
-            // Log the deletion with old values
-            logAudit($pdo, 'delete', json_encode($oldData), null);
+            // Log the deletion with old values and entity id
+            logAudit($pdo, 'delete', json_encode($oldData), null, $id);
         } else {
             $_SESSION['errors'] = ["Purchase Order not found for deletion."];
         }

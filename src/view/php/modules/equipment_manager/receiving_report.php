@@ -56,14 +56,10 @@ function is_ajax_request()
 }
 
 // Audit helper
-function logAudit($pdo, $action, $oldVal, $newVal)
+function logAudit($pdo, $action, $oldVal, $newVal, $entityId = null)
 {
-    $stmt = $pdo->prepare("
-        INSERT INTO audit_log
-            (UserID, Module, Action, OldVal, NewVal, Date_Time)
-        VALUES (?, 'Receiving Report', ?, ?, ?, NOW())
-    ");
-    $stmt->execute([$_SESSION['user_id'], $action, $oldVal, $newVal]);
+    $stmt = $pdo->prepare("INSERT INTO audit_log (UserID, EntityID, Module, Action, OldVal, NewVal, Date_Time) VALUES (?, ?, 'Receiving Report', ?, ?, ?, NOW())");
+    $stmt->execute([$_SESSION['user_id'], $entityId, $action, $oldVal, $newVal]);
 }
 
 // DELETE
@@ -80,10 +76,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
         $oldData = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($oldData) {
-            $stmt = $pdo->prepare("DELETE FROM receive_report WHERE id = ?");
+            $stmt = $pdo->prepare("UPDATE receive_report SET is_disabled = 1 WHERE id = ?");
             $stmt->execute([$id]);
             $_SESSION['success'] = "Receiving Report deleted successfully.";
-            logAudit($pdo, 'delete', json_encode($oldData), null);
+            logAudit($pdo, 'delete', json_encode($oldData), null, $id);
         } else {
             $_SESSION['errors'] = ["Receiving Report not found for deletion."];
         }

@@ -193,13 +193,13 @@ if (
                 'department_id'      => $locationData['department_id'],
                 'remarks'            => $locationData['remarks']
             ]);
-            $stmt = $pdo->prepare("DELETE FROM equipment_location WHERE equipment_location_id = ?");
+            $stmt = $pdo->prepare("UPDATE equipment_location SET is_disabled = 1 WHERE equipment_location_id = ?");
             $stmt->execute([$id]);
 
             $auditStmt = $pdo->prepare("
                 INSERT INTO audit_log
-                (UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                (UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status, Date_Time)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
             ");
             $auditStmt->execute([
                 $_SESSION['user_id'],

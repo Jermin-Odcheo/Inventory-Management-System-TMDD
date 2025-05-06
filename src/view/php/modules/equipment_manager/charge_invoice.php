@@ -57,10 +57,10 @@ function is_ajax_request()
 }
 
 // Add this function to log audit entries
-function logAudit($pdo, $action, $oldVal, $newVal)
+function logAudit($pdo, $action, $oldVal, $newVal, $entityId = null)
 {
-    $stmt = $pdo->prepare("INSERT INTO audit_log (UserID, Module, Action, OldVal, NewVal, Date_Time) VALUES (?, 'Charge Invoice', ?, ?, ?, NOW())");
-    $stmt->execute([$_SESSION['user_id'], $action, $oldVal, $newVal]);
+    $stmt = $pdo->prepare("INSERT INTO audit_log (UserID, EntityID, Module, Action, OldVal, NewVal, Date_Time) VALUES (?, ?, 'Charge Invoice', ?, ?, ?, NOW())");
+    $stmt->execute([$_SESSION['user_id'], $entityId, $action, $oldVal, $newVal]);
 }
 
 // ------------------------
@@ -196,11 +196,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
         $oldData = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($oldData) {
-            $stmt = $pdo->prepare("DELETE FROM charge_invoice WHERE id = ?");
+            $stmt = $pdo->prepare("UPDATE charge_invoice SET is_disabled = 1 WHERE id = ?");
             $stmt->execute([$id]);
             $_SESSION['success'] = "Charge Invoice deleted successfully.";
-            // Log the deletion with old values
-            logAudit($pdo, 'delete', json_encode($oldData), null);
+            // Log the deletion with old values and entity id
+            logAudit($pdo, 'delete', json_encode($oldData), null, $id);
         } else {
             $_SESSION['errors'] = ["Charge Invoice not found for deletion."];
         }
