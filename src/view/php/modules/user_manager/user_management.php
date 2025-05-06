@@ -24,7 +24,7 @@ $rbac->requirePrivilege('User Management', 'View');
 // 3) Button flags
 $canCreate = $rbac->hasPrivilege('User Management', 'Create');
 $canModify = $rbac->hasPrivilege('User Management', 'Modify');
-$canRemove = $rbac->hasPrivilege('User Management', 'Remove');
+$canDelete = $rbac->hasPrivilege('User Management', 'Remove');
 $canTrack  = $rbac->hasPrivilege('User Management', 'Track');
 
 // 4) Fetch departments
@@ -201,7 +201,7 @@ try {
         <?php endif; ?>
 
 
-        <?php if ($canRemove): ?>
+        <?php if ($canDelete): ?>
             <!-- Bulk remove button, hidden until >=2 checked -->
             <button id="delete-selected"
                     class="btn btn-danger me-2"
@@ -300,7 +300,7 @@ try {
                                 <i class="bi bi-pencil-square"></i>
                             </button>
                         <?php endif; ?>
-                        <?php if ($canRemove): ?>
+                        <?php if ($canDelete): ?>
                             <button class="btn btn-sm btn-outline-danger delete-btn"
                                     data-id="<?= htmlspecialchars((string)$u['id'], ENT_QUOTES, 'UTF-8'); ?>">
                                 <i class="bi bi-trash"></i>
