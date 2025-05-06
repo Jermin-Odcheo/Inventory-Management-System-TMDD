@@ -16,7 +16,6 @@ body, html {
 /* Header fix */
 header {
     position: fixed;
-    width: 100%;
     height: 60px;
     background-color: white;
     z-index: 1000;
