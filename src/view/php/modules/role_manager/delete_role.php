@@ -40,9 +40,38 @@ try {
         exit();
     }
 
-    // Store role data for audit log
-    $oldValue = json_encode($role);
-
+    // Get comprehensive role data with modules and privileges for audit
+    $modulePrivilegesSql = "
+        SELECT 
+            m.module_name,
+            GROUP_CONCAT(p.priv_name ORDER BY p.priv_name SEPARATOR ', ') AS privileges
+        FROM role_module_privileges rmp
+        JOIN modules m ON m.id = rmp.module_id
+        JOIN privileges p ON p.id = rmp.privilege_id
+        WHERE rmp.role_id = ?
+        GROUP BY m.module_name
+        ORDER BY m.module_name
+    ";
+    
+    $stmtModules = $pdo->prepare($modulePrivilegesSql);
+    $stmtModules->execute([$role_id]);
+    $modulePrivileges = $stmtModules->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Format module privileges for better readability in logs
+    $formattedModulePrivileges = [];
+    foreach ($modulePrivileges as $mp) {
+        $formattedModulePrivileges[$mp['module_name']] = $mp['privileges'];
+    }
+    
+    // Create a comprehensive audit record
+    $auditInfo = [
+        'role_id' => $role['id'],
+        'role_name' => $role['role_name'],
+        'modules_and_privileges' => $formattedModulePrivileges
+    ];
+    
+    $oldValue = json_encode($auditInfo, JSON_PRETTY_PRINT);
+    $details = "Role '{$role['role_name']}' has been archived";
     // Soft delete - update is_disabled flag instead of deleting
     $stmt = $pdo->prepare("UPDATE roles SET is_disabled = 1 WHERE id = ?");
     if ($stmt->execute([$role_id])) {
@@ -52,24 +81,26 @@ try {
         $updatedRole = $stmt->fetch(PDO::FETCH_ASSOC);
         $newValue = json_encode($updatedRole);
 
-        // Log the action in the audit_log table
+        // Log the action in the audit_log table with comprehensive details
         $stmt = $pdo->prepare("INSERT INTO audit_log 
             (UserID, EntityID, Action, Details, OldVal, NewVal, Module, Date_Time, Status) 
             VALUES (?, ?, 'Remove', ?, ?, ?, 'Roles and Privileges', NOW(), 'Successful')");
         $stmt->execute([
             $userId,
             $role_id,
-            "Role '{$role['role_name']}' has been soft deleted",
+            $details,
             $oldValue,
             $newValue
         ]);
 
         // Log the deletion action in the role_changes table (keep for compatibility)
-        $stmt = $pdo->prepare("INSERT INTO role_changes (UserID, RoleID, Action, OldRoleName) VALUES (?, ?, 'Delete', ?)");
+        $stmt = $pdo->prepare("INSERT INTO role_changes (UserID, RoleID, Action, OldRoleName, OldPrivileges) 
+                               VALUES (?, ?, 'Delete', ?, ?)");
         $stmt->execute([
             $userId,
             $role_id,
-            $role['role_name']
+            $role['role_name'],
+            $oldValue
         ]);
 
         $pdo->commit();

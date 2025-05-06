@@ -46,6 +46,11 @@
                                     Equipment Transaction Audit Logs
                                 </a>
                             </li>
+                            <li>
+                                <a href="<?php echo BASE_URL; ?>src/view/php/modules/audit_manager/rm_audit_log.php">
+                                    Role Management Audit Logs
+                                </a>
+                            </li>
                         </ul>
                         <ul><b> Archives </b><br>
                             <hr>

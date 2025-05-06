@@ -74,38 +74,46 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             $oldValues = json_encode([
                 'id' => $departmentData['id'],
                 'abbreviation' => $departmentData['abbreviation'],
-                'department_name' => $departmentData['department_name']
+                'department_name' => $departmentData['department_name'],
+                'is_disabled' => 0
             ]);
 
-            // Delete the department
-            $stmt = $pdo->prepare("DELETE FROM departments WHERE id = ?");
+            $newValues = json_encode([
+                'id' => $departmentData['id'],
+                'abbreviation' => $departmentData['abbreviation'],
+                'department_name' => $departmentData['department_name'],
+                'is_disabled' => 1
+            ]);
+
+            // Soft delete - update is_disabled to 1 instead of DELETE
+            $stmt = $pdo->prepare("UPDATE departments SET is_disabled = 1 WHERE id = ?");
             $stmt->execute([$id]);
 
             // Insert audit log
             $auditStmt = $pdo->prepare("
                 INSERT INTO audit_log (
-                    UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status, Date_Time
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
             ");
             $auditStmt->execute([
                 $_SESSION['user_id'],
                 $id,
-                'Departments',
-                'Delete',
-                'Department deleted',
+                'Department Management',
+                'Remove',
+                "Department '{$departmentData['department_name']}' has been moved to archive",
                 $oldValues,
-                null,
+                $newValues,
                 'Successful'
             ]);
 
             $pdo->commit();
-            $_SESSION['success'] = "Department deleted successfully.";
+            $_SESSION['success'] = "Department moved to archive successfully.";
         }
     } catch (PDOException $e) {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
-        $_SESSION['errors'] = ["Error deleting Department: " . $e->getMessage()];
+        $_SESSION['errors'] = ["Error archiving Department: " . $e->getMessage()];
     }
     header("Location: department_management.php");
     exit;
@@ -149,27 +157,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->beginTransaction();
 
             // Insert department without specifying an ID
-            $stmt = $pdo->prepare("INSERT INTO departments (abbreviation, department_name) VALUES (?, ?)");
+            $stmt = $pdo->prepare("INSERT INTO departments (abbreviation, department_name, is_disabled) VALUES (?, ?, 0)");
             $stmt->execute([$DepartmentAcronym, $DepartmentName]);
             $newDepartmentId = $pdo->lastInsertId();
 
             $newValues = json_encode([
                 'id' => $newDepartmentId,
                 'abbreviation' => $DepartmentAcronym,
-                'department_name' => $DepartmentName
+                'department_name' => $DepartmentName,
+                'is_disabled' => 0
             ]);
 
             $auditStmt = $pdo->prepare("
                 INSERT INTO audit_log (
-                    UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status, Date_Time
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
             ");
             $auditStmt->execute([
                 $_SESSION['user_id'],
                 $newDepartmentId,
                 'Department Management',
                 'Add',
-                'New department added',
+                "Department '{$DepartmentName}' has been added",
                 null,
                 $newValues,
                 'Successful'
@@ -227,24 +236,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
 
             $oldValues = json_encode([
+                'id' => $oldDepartment['id'],
                 'abbreviation' => $oldDepartment['abbreviation'],
-                'department_name' => $oldDepartment['department_name']
+                'department_name' => $oldDepartment['department_name'],
+                'is_disabled' => $oldDepartment['is_disabled'] ?? 0
             ]);
             $newValues = json_encode([
+                'id' => $id,
                 'abbreviation' => $DepartmentAcronym,
-                'department_name' => $DepartmentName
+                'department_name' => $DepartmentName,
+                'is_disabled' => $oldDepartment['is_disabled'] ?? 0
             ]);
 
             $auditStmt = $pdo->prepare("
-                INSERT INTO audit_log (UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO audit_log (UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status, Date_Time)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
             ");
             $auditStmt->execute([
                 $_SESSION['user_id'],
                 $id,
-                'Departments',
+                'Department Management',
                 'Modified',
-                'Department details modified',
+                "Department '{$DepartmentName}' details modified",
                 $oldValues,
                 $newValues,
                 'Successful'
@@ -273,7 +286,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // RETRIEVE ALL DEPARTMENTS
 // ------------------------
 try {
-    $stmt = $pdo->query("SELECT * FROM departments ORDER BY id");
+    $stmt = $pdo->query("SELECT * FROM departments WHERE is_disabled = 0 ORDER BY id");
     $departments = $stmt->fetchAll();
 } catch (PDOException $e) {
     $errors[] = "Error retrieving departments: " . $e->getMessage();
@@ -460,6 +473,16 @@ if (isset($_GET["q"])) {
                                                 <i class="bi bi-plus-circle"></i> Create Department
                                             </button>
                                         <?php endif; ?>
+                                        
+                                        <!-- Added Audit Log and Archive Links -->
+                                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/audit_manager/department_audit_log.php" class="btn btn-info btn-sm">
+                                            <i class="bi bi-clock-history"></i> View Audit Logs
+                                        </a>
+                                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/audit_manager/department_archive.php" class="btn btn-secondary btn-sm">
+                                            <i class="bi bi-archive"></i> View Archive
+                                        </a>
+                                        <!-- End of Added Links -->
+                                        
                                         <!-- Sorting Filter UI -->
                                         <div class="d-flex align-items-center gap-2" id="sortFilter">
                                             <label class="mb-0">Sort by:</label>
@@ -700,7 +723,7 @@ if (isset($_GET["q"])) {
 
                             });
                             // Close modal first to prevent backdrop issues
-                            $('#editDepartmentModal').modal('hide');
+                            $('#addDepartmentModal').modal('hide');
                             showToast(response.message, 'success', 5000);
                         } else {
                             showToast(response.message || 'An error occurred', 'error', 5000);
