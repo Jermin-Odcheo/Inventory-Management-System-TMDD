@@ -399,6 +399,34 @@ if (isset($_GET["q"])) {
         .delete-btn:active {
             transform: translateY(0);
         }
+
+        /* Ensure the sort filter button stays black and text visible on hover */
+        #sortFilter .btn.dropdown-toggle,
+        #sortFilter .btn.dropdown-toggle:focus,
+        #sortFilter .btn.dropdown-toggle:hover,
+        #sortFilter .btn.dropdown-toggle:active {
+            background-color: #fff !important;
+            color: #212529 !important;
+            border-color: #212529 !important;
+            box-shadow: none !important;
+        }
+        #sortFilter .dropdown-menu.sort-dropdown-menu {
+            background: #fff !important;
+            color: #212529 !important;
+            min-width: 220px;
+            z-index: 1055;
+            box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15);
+        }
+        #sortFilter .dropdown-menu.sort-dropdown-menu .dropdown-item,
+        #sortFilter .dropdown-menu.sort-dropdown-menu .dropdown-item:active,
+        #sortFilter .dropdown-menu.sort-dropdown-menu .dropdown-item.active,
+        #sortFilter .dropdown-menu.sort-dropdown-menu .dropdown-item:focus,
+        #sortFilter .dropdown-menu.sort-dropdown-menu .dropdown-item:hover {
+            color: #212529 !important;
+            background: #fff !important;
+        }
+        /* Prevent clipping by making .table-responsive position: static */
+        .table-responsive { position: static !important; }
     </style>
 
 </head>
@@ -425,13 +453,26 @@ if (isset($_GET["q"])) {
 
 
                                 <div class="table-responsive" id="table">
-                                    <div class="d-flex justify-content-start mb-3 gap-2">
+                                    <div class="d-flex justify-content-start mb-3 gap-2 align-items-center">
                                         <?php if ($canCreate): ?>
                                             <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal"
                                                 data-bs-target="#addDepartmentModal">
                                                 <i class="bi bi-plus-circle"></i> Create Department
                                             </button>
                                         <?php endif; ?>
+                                        <!-- Sorting Filter UI -->
+                                        <div class="d-flex align-items-center gap-2" id="sortFilter">
+                                            <label class="mb-0">Sort by:</label>
+                                            <div class="dropdown" data-bs-popper="static">
+                                                <button class="btn btn-dark btn-sm dropdown-toggle" type="button" id="sortNameBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    Department Name (A–Z) ▼
+                                                </button>
+                                                <ul class="dropdown-menu sort-dropdown-menu" aria-labelledby="sortNameBtn">
+                                                    <li><a class="dropdown-item sort-dropdown" href="#" data-sort-col="name" data-sort-order="asc">Department Name (A–Z)</a></li>
+                                                    <li><a class="dropdown-item sort-dropdown" href="#" data-sort-col="name" data-sort-order="desc">Department Name (Z–A)</a></li>
+                                                </ul>
+                                            </div>
+                                        </div>
                                     </div>
                                     <table id="departmentTable" class="table table-striped table-hover align-middle">
                                         <thead class="table-dark">
@@ -750,6 +791,29 @@ if (isset($_GET["q"])) {
  
             $('#addDepartmentModal').on('hidden.bs.modal', function() {
                 $(this).find('form')[0].reset();
+            });
+
+            // Sorting functionality for Department Name (dropdown version)
+            $(document).on('click', '.sort-dropdown', function(e) {
+                e.preventDefault();
+                var sortCol = $(this).data('sort-col');
+                var sortOrder = $(this).data('sort-order');
+                var rows = $('#departmentTable tbody tr').get();
+                var colIndex = 2; // 2: Department Name
+                rows.sort(function(a, b) {
+                    var A = $(a).children('td').eq(colIndex).text().toUpperCase();
+                    var B = $(b).children('td').eq(colIndex).text().toUpperCase();
+                    if (A < B) return sortOrder === 'asc' ? -1 : 1;
+                    if (A > B) return sortOrder === 'asc' ? 1 : -1;
+                    return 0;
+                });
+                $.each(rows, function(index, row) {
+                    $('#departmentTable tbody').append(row);
+                });
+                // Update button label
+                var label = sortOrder === 'asc' ? 'Department Name (A–Z) ▼' : 'Department Name (Z–A) ▼';
+                $('#sortNameBtn').text(label);
+                updatePagination();
             });
 
         });
