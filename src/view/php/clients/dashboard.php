@@ -1,15 +1,15 @@
 <?php
 session_start();
-require '../../../../../config/ims-tmdd.php';
+require '../../../../config/ims-tmdd.php';
 // If not logged in, redirect to the LOGIN PAGE
 if (!isset($_SESSION['user_id'])) {
     header("Location: " . BASE_URL . "public/index.php");
     exit();
 }
 
-include '../../general/header.php';
-include '../../general/sidebar.php';
-include '../../general/footer.php';
+include '../general/header.php';
+include '../general/sidebar.php';
+include '../general/footer.php';
 
 $role = $_SESSION['role'];
 $email = $_SESSION['email']; // Assuming you stored email in session

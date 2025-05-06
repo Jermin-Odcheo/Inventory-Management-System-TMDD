@@ -1,8 +1,8 @@
 <?php
 session_start();
-require '../../../../../config/ims-tmdd.php'; // This defines $pdo (PDO connection)
+require '../../../../config/ims-tmdd.php'; // This defines $pdo (PDO connection)
 
-include '../../general/header.php';
+include '../general/header.php';
 
 // If not logged in, redirect to login page
 if (!isset($_SESSION['user_id'])) {
@@ -411,7 +411,7 @@ html::-webkit-scrollbar {
     </style>
 </head>
 <body>
-<?php include '../../general/sidebar.php'; ?>
+<?php include '../general/sidebar.php'; ?>
 <div class="main-content">
     <div class="container">
         <h2>Account Details</h2>

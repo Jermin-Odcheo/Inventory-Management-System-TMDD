@@ -461,7 +461,7 @@ $email = $_SESSION['email'];
                         Settings <span class="submenu-arrow">▸</span>
                     </div>
                     <ul class="subdropdown-menu">
-                        <li><a href="<?php echo BASE_URL; ?>src/view/php/clients/admins/account_details.php">Account
+                        <li><a href="<?php echo BASE_URL; ?>src/view/php/clients/account_details.php">Account
                                 Details</a></li>
                         <li><a href="#">Personalization</a></li>
                     </ul>

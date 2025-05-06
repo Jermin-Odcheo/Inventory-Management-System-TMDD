@@ -31,35 +31,35 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
                 <ul class="dropdown tree" aria-expanded="false">
                     <ul><b> Audit Logs </b><br><hr>
                     <li>
-                        <a href="<?php echo BASE_URL; ?>src/view/php/clients/admins/audit_log.php">
+                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/audit_manager/audit_log.php">
                             User Management Audit Logs
                         </a>
                     </li>
                     <li>
-                        <a href="<?php echo BASE_URL; ?>src/view/php/clients/admins/em_audit_log.php">
+                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/audit_manager/em_audit_log.php">
                             Equipment Management Audit Logs
                         </a>
                     </li>
                     <li>
-                        <a href="<?php echo BASE_URL; ?>src/view/php/clients/admins/et_audit_log.php">
+                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/audit_manager/et_audit_log.php">
                             Equipment Transaction Audit Logs
                         </a>
                     </li>
                     </ul>
                     <ul><b> Archives </b><br><hr>
                     <li>
-                        <a href="<?php echo BASE_URL; ?>src/view/php/clients/admins/archive.php">
+                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/audit_manager/archive.php">
                             User Management Archives
                         </a>
                     </li>
                     <li>
-                    <a href="<?php echo BASE_URL; ?>src/view/php/clients/admins/em_archive.php">
-                            Equipment Management Archives
+                    <a href="<?php echo BASE_URL; ?>src/view/php/modules/audit_manager/em_archive.php">
+                    Equipment Management Archives
                         </a>
                     </li>
                     <li>
-                    <a href="<?php echo BASE_URL; ?>src/view/php/clients/admins/et_archive.php">
-                            Equipment Transactions Archives
+                    <a href="<?php echo BASE_URL; ?>src/view/php/modules/audit_manager/et_archive.php">
+                    Equipment Transactions Archives
                         </a>
                     </li>
                     </ul>

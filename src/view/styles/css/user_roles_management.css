@@ -180,7 +180,7 @@ header h1 {
     margin-bottom: var(--spacing-xs);
     font-weight: 600;
     letter-spacing: 0.05em;
-}
+}z
 
 .search-filter input, .filter-container select {
     padding: 0.625rem 0.75rem;
