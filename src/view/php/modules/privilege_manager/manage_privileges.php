@@ -26,13 +26,11 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/pagination.css">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/manage_privileges.css">
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <title>Manage Users</title>
 </head>
 
 <body>
-    <div class="main-content container-fluid">
+    <div class="main-content">
         <div class="card shadow-sm">
             <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Privilege Management</h5>
@@ -44,7 +42,7 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-striped table-hover align-middle">
+                    <table class="table table-striped table-hover">
                         <thead class="table-dark">
                             <tr>
                                 <th>#</th>
@@ -139,58 +137,58 @@ $privileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 </form>
             </div>
         </div>
+    </div>
 
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            function closeModal(modalId) {
+                const modalElement = document.getElementById(modalId);
+                const modalInstance = bootstrap.Modal.getInstance(modalElement);
+                if (modalInstance) modalInstance.hide();
 
-        <script>
-            document.addEventListener('DOMContentLoaded', () => {
-                document.getElementById('createPrivilegeForm').addEventListener('submit', e => {
-                    e.preventDefault();
-                    fetch('create_privilege.php', {
-                        method: 'POST',
-                        body: new FormData(e.target)
-                    }).then(res => res.json()).then(data => {
-                        if (data.success) location.reload();
-                        else alert(data.message);
-                    });
-                });
+                // Remove lingering backdrop
+                const backdrop = document.querySelector('.modal-backdrop');
+                if (backdrop) backdrop.remove();
+            }
 
-                document.querySelectorAll('.edit-btn').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        document.getElementById('editPrivilegeId').value = btn.dataset.id;
-                        document.getElementById('editPrivilegeName').value = btn.dataset.name;
-                    });
-                });
+            // Simulate "Add Privilege"
+            document.getElementById('createPrivilegeForm').addEventListener('submit', e => {
+                e.preventDefault();
+                alert('Privilege created (simulated).');
+                closeModal('createPrivilegeModal');
+            });
 
-                document.getElementById('editPrivilegeForm').addEventListener('submit', e => {
-                    e.preventDefault();
-                    fetch('edit_privilege.php', {
-                        method: 'POST',
-                        body: new FormData(e.target)
-                    }).then(res => res.json()).then(data => {
-                        if (data.success) location.reload();
-                        else alert(data.message);
-                    });
-                });
-
-                document.querySelectorAll('.delete-btn').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        document.getElementById('deletePrivilegeId').value = btn.dataset.id;
-                    });
-                });
-
-                document.getElementById('deletePrivilegeForm').addEventListener('submit', e => {
-                    e.preventDefault();
-                    fetch('delete_privilege.php', {
-                        method: 'POST',
-                        body: new FormData(e.target)
-                    }).then(res => res.json()).then(data => {
-                        if (data.success) location.reload();
-                        else alert(data.message);
-                    });
+            // Fill Edit Modal with clicked data
+            document.querySelectorAll('.edit-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.getElementById('editPrivilegeId').value = btn.dataset.id;
+                    document.getElementById('editPrivilegeName').value = btn.dataset.name;
                 });
             });
-        </script>
+
+            // Simulate "Edit Privilege"
+            document.getElementById('editPrivilegeForm').addEventListener('submit', e => {
+                e.preventDefault();
+                alert('Privilege edited (simulated).');
+                closeModal('editPrivilegeModal');
+            });
+
+            // Fill Delete Modal with clicked data
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.getElementById('deletePrivilegeId').value = btn.dataset.id;
+                });
+            });
+
+            // Simulate "Delete Privilege"
+            document.getElementById('deletePrivilegeForm').addEventListener('submit', e => {
+                e.preventDefault();
+                alert('Privilege deleted (simulated).');
+                closeModal('deletePrivilegeModal');
+            });
+        });
+    </script>
+
 </body>
 
 </html>

@@ -49,7 +49,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $update_status = $pdo->prepare("UPDATE users SET status = 'Online' WHERE id = ?");
             $update_status->execute([$user["id"]]);
 
-            header("Location: ../src/view/php/clients/admins/dashboard.php");
+            header("Location: ../src/view/php/clients/dashboard.php");
             exit();
         } else {
             $_SESSION['error'] = "Invalid email or password.";
