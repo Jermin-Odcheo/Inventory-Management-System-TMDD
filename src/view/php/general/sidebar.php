@@ -167,13 +167,13 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
         <!--Reports Dropdown-->
         <li class="dropdown-item">
             <button class="dropdown-toggle" aria-expanded="false">
-                <i class="fas fa-flag"></i>Reports
+                <i class="fas fa-flag"></i>Reports 🔜 (Under Development)
                 <i class="fas fa-chevron-down dropdown-icon"></i>
             </button>
             <ul class="dropdown tree" aria-expanded="false">
                 <li>
                     <a href="#">
-                        User Management Reports
+                        User Management Reports 🔜 (Under Development)
                     </a>
                 </li>
                 <li>
