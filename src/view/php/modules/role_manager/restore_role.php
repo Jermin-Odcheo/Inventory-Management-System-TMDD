@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once('../../../../../config/ims-tmdd.php'); // Adjust path as needed
+require_once('../../../../../config/ims-tmdd.php');
 
 // Ensure the request method is POST.
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -30,21 +30,21 @@ try {
     // Start transaction
     $pdo->beginTransaction();
 
-    // Verify that the role exists.
-    $stmt = $pdo->prepare("SELECT * FROM roles WHERE id = ? AND is_disabled = 0");
+    // Verify that the role exists and is currently disabled.
+    $stmt = $pdo->prepare("SELECT * FROM roles WHERE id = ? AND is_disabled = 1");
     $stmt->execute([$role_id]);
     $role = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$role) {
-        echo json_encode(['success' => false, 'message' => 'Role not found or already deleted.']);
+        echo json_encode(['success' => false, 'message' => 'Role not found or is not archived.']);
         exit();
     }
 
     // Store role data for audit log
     $oldValue = json_encode($role);
 
-    // Soft delete - update is_disabled flag instead of deleting
-    $stmt = $pdo->prepare("UPDATE roles SET is_disabled = 1 WHERE id = ?");
+    // Restore the role by setting is_disabled to 0
+    $stmt = $pdo->prepare("UPDATE roles SET is_disabled = 0 WHERE id = ?");
     if ($stmt->execute([$role_id])) {
         // Get updated role data for audit log
         $stmt = $pdo->prepare("SELECT * FROM roles WHERE id = ?");
@@ -55,28 +55,29 @@ try {
         // Log the action in the audit_log table
         $stmt = $pdo->prepare("INSERT INTO audit_log 
             (UserID, EntityID, Action, Details, OldVal, NewVal, Module, Date_Time, Status) 
-            VALUES (?, ?, 'Remove', ?, ?, ?, 'Roles and Privileges', NOW(), 'Successful')");
+            VALUES (?, ?, 'Restore', ?, ?, ?, 'Roles and Privileges', NOW(), 'Successful')");
         $stmt->execute([
             $userId,
             $role_id,
-            "Role '{$role['role_name']}' has been soft deleted",
+            "Role '{$role['role_name']}' has been restored",
             $oldValue,
             $newValue
         ]);
 
-        // Log the deletion action in the role_changes table (keep for compatibility)
-        $stmt = $pdo->prepare("INSERT INTO role_changes (UserID, RoleID, Action, OldRoleName) VALUES (?, ?, 'Delete', ?)");
+        // Log the restoration action in the role_changes table (keep for compatibility)
+        $stmt = $pdo->prepare("INSERT INTO role_changes (UserID, RoleID, Action, OldRoleName, NewRoleName) VALUES (?, ?, 'Restore', ?, ?)");
         $stmt->execute([
             $userId,
             $role_id,
+            $role['role_name'],
             $role['role_name']
         ]);
 
         $pdo->commit();
-        echo json_encode(['success' => true, 'message' => 'Role deleted successfully.']);
+        echo json_encode(['success' => true, 'message' => 'Role restored successfully.']);
     } else {
         $pdo->rollBack();
-        echo json_encode(['success' => false, 'message' => 'Failed to delete the role. Please try again.']);
+        echo json_encode(['success' => false, 'message' => 'Failed to restore the role. Please try again.']);
     }
 } catch (PDOException $e) {
     if ($pdo->inTransaction()) {
@@ -86,4 +87,4 @@ try {
 }
 
 exit();
-?>
+?> 

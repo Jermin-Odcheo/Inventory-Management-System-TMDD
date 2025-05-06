@@ -2,12 +2,14 @@
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
 
-if (!isset($_SESSION['user_id'])) {
+$userId = $_SESSION['user_id'] ?? null;
+
+if (!$userId) {
     echo "<p class='text-danger'>Unauthorized access.</p>";
     $pdo->exec("SET @current_user_id = NULL");
     exit();
 } else {
-    $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
+    $pdo->exec("SET @current_user_id = " . (int)$userId);
 }
 $ipAddress = $_SERVER['REMOTE_ADDR'];
 $pdo->exec("SET @current_ip = '" . $ipAddress . "'");
@@ -22,28 +24,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     } else {
         try {
-            $stmt = $pdo->prepare("SELECT COUNT(*) FROM roles WHERE Role_Name = ?");
+            // Start transaction
+            $pdo->beginTransaction();
+            
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM roles WHERE Role_Name = ? AND is_disabled = 0");
             $stmt->execute([$role_name]);
             if ($stmt->fetchColumn() > 0) {
                 echo json_encode(['success' => false, 'message' => 'Role already exists.']);
                 exit();
             } else {
-                $stmt = $pdo->prepare("INSERT INTO roles (Role_Name) VALUES (?)");
+                $stmt = $pdo->prepare("INSERT INTO roles (Role_Name, is_disabled) VALUES (?, 0)");
                 if ($stmt->execute([$role_name])) {
                     $roleID = $pdo->lastInsertId();
 
-                    // Log the action in the role_changes table.
-                    $stmt = $pdo->prepare("INSERT INTO role_changes (UserID, RoleID, Action, NewRoleName) VALUES (?, ?, 'Add', ?)");
-                    $stmt->execute([$_SESSION['user_id'], $roleID, $role_name]);
+                    // Get the new role data for audit log
+                    $stmt = $pdo->prepare("SELECT * FROM roles WHERE id = ?");
+                    $stmt->execute([$roleID]);
+                    $newRole = $stmt->fetch(PDO::FETCH_ASSOC);
+                    $newValue = json_encode($newRole);
 
+                    // Log to audit_log table
+                    $stmt = $pdo->prepare("INSERT INTO audit_log 
+                        (UserID, EntityID, Action, Details, OldVal, NewVal, Module, Date_Time, Status) 
+                        VALUES (?, ?, 'Create', ?, NULL, ?, 'Roles and Privileges', NOW(), 'Successful')");
+                    $stmt->execute([
+                        $userId,
+                        $roleID,
+                        "Role '{$role_name}' has been created",
+                        $newValue
+                    ]);
+
+                    // Log the action in the role_changes table (keep for compatibility)
+                    $stmt = $pdo->prepare("INSERT INTO role_changes (UserID, RoleID, Action, NewRoleName) VALUES (?, ?, 'Add', ?)");
+                    $stmt->execute([$userId, $roleID, $role_name]);
+
+                    $pdo->commit();
                     echo json_encode(['success' => true, 'message' => 'Role created successfully.']);
                     exit();
                 } else {
+                    $pdo->rollBack();
                     echo json_encode(['success' => false, 'message' => 'Error inserting role. Please try again.']);
                     exit();
                 }
             }
         } catch (PDOException $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
             exit();
         }
@@ -87,7 +114,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             error: function() {
                 showToast('System error occurred. Please try again.', 'error');
             },
-
         });
     });
 </script>

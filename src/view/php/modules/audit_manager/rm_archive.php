@@ -5,6 +5,7 @@ session_start();
 include '../../general/header.php';
 include '../../general/sidebar.php';
 include '../../general/footer.php';
+
 // 1) Auth guard
 $userId = $_SESSION['user_id'] ?? null;
 if (!is_int($userId) && !ctype_digit((string)$userId)) {
@@ -17,15 +18,11 @@ $userId = (int)$userId;
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
 $rbac->requirePrivilege('Roles and Privileges', 'View');
 
-// 3) Button flagsStatus
-$canCreate = $rbac->hasPrivilege('Roles and Privileges', 'Create');
-$canModify = $rbac->hasPrivilege('Roles and Privileges', 'Modify');
-$canRemove = $rbac->hasPrivilege('Roles and Privileges', 'Remove');
-$canUndo = $rbac->hasPrivilege('Roles and Privileges', 'Undo');
-$canRedo = $rbac->hasPrivilege('Roles and Privileges', 'Redo');
-$canViewArchive = $rbac->hasPrivilege('Roles and Privileges', 'View');
+// 3) Button flags
+$canRestore = $rbac->hasPrivilege('Roles and Privileges', 'Modify');
+$canPermanentDelete = $rbac->hasPrivilege('Roles and Privileges', 'Remove');
 
-// SQL query updated to only show active roles
+// SQL query for archived roles
 $sql = "
 SELECT 
     r.id AS Role_ID,
@@ -41,7 +38,7 @@ SELECT
     ), 'No privileges') AS Privileges
 FROM roles r
 CROSS JOIN modules m
-WHERE r.is_disabled = 0
+WHERE r.is_disabled = 1
 ORDER BY r.id, m.id;
 ";
 
@@ -49,7 +46,7 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute();
 $roleData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Group data by role and module (unchanged)
+// Group data by role and module
 $roles = [];
 foreach ($roleData as $row) {
     $roleID = $row['Role_ID'];
@@ -80,7 +77,7 @@ unset($role);
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Role Management</title>
+    <title>Archived Roles</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <style>
@@ -91,7 +88,6 @@ unset($role);
  
         .main-content {
             flex: 1;
- 
             margin-left: 300px;
         }
 
@@ -101,7 +97,7 @@ unset($role);
         }
 
         /* Button Styles */
-        .edit-btn, .delete-btn {
+        .restore-btn, .delete-btn {
             background: none;
             border: none;
             cursor: pointer;
@@ -115,7 +111,7 @@ unset($role);
             height: 2rem;
         }
 
-        .edit-btn {
+        .restore-btn {
             color: #4f46e5;
         }
 
@@ -123,7 +119,7 @@ unset($role);
             color: #ef4444;
         }
 
-        .edit-btn:hover {
+        .restore-btn:hover {
             transform: translateY(-1px);
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
@@ -132,41 +128,20 @@ unset($role);
             background-color: #fee2e2;
         }
 
-        .edit-btn:active {
+        .restore-btn:active {
             transform: translateY(0);
         }
     </style>
 </head>
 
 <body>
- 
 <div class="wrapper">
     <div class="main-content container-fluid">
         <header class="main-header">
-            <h1> Role Management</h1>
+            <h1>Archived Roles</h1>
         </header>
-
-        <div class="d-flex justify-content-end mb-3">
-            <!-- <?php if ($canViewArchive): ?>
-            <a href="archived_roles.php" class="btn btn-outline-secondary me-2">
-                <i class="bi bi-archive"></i> View Archived Roles
-            </a> -->
-            <?php endif; ?>
-            <?php if ($canUndo): ?>
-            <button type="button" class="btn btn-secondary me-2" id="undoButton">Undo</button>
-            <?php endif; ?>
-            <?php if ($canRedo): ?>
-            <button type="button" class="btn btn-secondary" id="redoButton">Redo</button>
-            <?php endif; ?>
-            <?php if ($canCreate): ?>
-            <button type="button" class="btn btn-primary ms-2" data-bs-toggle="modal" data-bs-target="#addRoleModal">
-                Create New Role
-            </button>
-            <?php endif; ?>
-        </div>
-
         <div class="table-responsive" id="table">
-            <table id="rolesTable" class="table table-striped table-hover align-middle">
+            <table id="archivedRolesTable" class="table table-striped table-hover align-middle">
                 <thead class="table-dark">
                 <tr>
                     <th style="width: 25px;">ID</th>
@@ -192,14 +167,15 @@ unset($role);
                                 <?php endforeach; ?>
                             </td>
                             <td>
-                                <?php if ($canModify): ?>
-                                <button type="button" class="edit-btn edit-role-btn"
-                                        data-role-id="<?php echo $roleID; ?>" data-bs-toggle="modal"
-                                        data-bs-target="#editRoleModal">
-                                    <i class="bi bi-pencil-square"></i>
+                                <?php if ($canRestore): ?>
+                                <button type="button" class="restore-btn restore-role-btn"
+                                        data-role-id="<?php echo $roleID; ?>"
+                                        data-role-name="<?php echo htmlspecialchars($role['Role_Name']); ?>"
+                                        data-bs-toggle="modal" data-bs-target="#confirmRestoreModal">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
                                 </button>
                                 <?php endif; ?>
-                                <?php if ($canRemove): ?>
+                                <?php if ($canPermanentDelete): ?>
                                 <button type="button" class="delete-btn delete-role-btn"
                                         data-role-id="<?php echo $roleID; ?>"
                                         data-role-name="<?php echo htmlspecialchars($role['Role_Name']); ?>"
@@ -212,7 +188,7 @@ unset($role);
                     <?php endforeach; ?>
                 <?php else: ?>
                     <tr>
-                        <td colspan="4">No roles found.</td>
+                        <td colspan="4">No archived roles found.</td>
                     </tr>
                 <?php endif; ?>
                 </tbody>
@@ -254,11 +230,22 @@ unset($role);
 
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 
-<!-- Modals (unchanged) -->
-<div class="modal fade" id="editRoleModal" tabindex="-1" aria-labelledby="editRoleModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+<!-- Modals -->
+<div class="modal fade" id="confirmRestoreModal" tabindex="-1" aria-labelledby="confirmRestoreModalLabel"
+     aria-hidden="true">
+    <div class="modal-dialog">
         <div class="modal-content">
-            <div id="editRoleContent">Loading...</div>
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Restore</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to restore the role "<span id="restoreRoleNamePlaceholder"></span>"?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <a id="confirmRestoreButton" href="#" class="btn btn-primary">Restore</a>
+            </div>
         </div>
     </div>
 </div>
@@ -268,28 +255,17 @@ unset($role);
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Confirm Delete</h5>
+                <h5 class="modal-title">Confirm Permanent Delete</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                Are you sure you want to delete the role "<span id="roleNamePlaceholder"></span>"?
+                <p class="text-danger fw-bold">Warning: This action cannot be undone!</p>
+                Are you sure you want to permanently delete the role "<span id="roleNamePlaceholder"></span>"?
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <a id="confirmDeleteButton" href="#" class="btn btn-danger">Delete</a>
+                <a id="confirmDeleteButton" href="#" class="btn btn-danger">Delete Permanently</a>
             </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="addRoleModal" tabindex="-1" aria-labelledby="addRoleModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Create New Role</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" id="addRoleContent">Loading...</div>
         </div>
     </div>
 </div>
@@ -297,40 +273,58 @@ unset($role);
 <script>
     // Pass RBAC privileges to JavaScript
     const userPrivileges = {
-        canCreate: <?php echo json_encode($canCreate); ?>,
-        canModify: <?php echo json_encode($canModify); ?>,
-        canRemove: <?php echo json_encode($canRemove); ?>,
-        canUndo: <?php echo json_encode($canUndo); ?>,
-        canRedo: <?php echo json_encode($canRedo); ?>,
-        canViewArchive: <?php echo json_encode($canViewArchive); ?>
+        canRestore: <?php echo json_encode($canRestore); ?>,
+        canPermanentDelete: <?php echo json_encode($canPermanentDelete); ?>
     };
 
     document.addEventListener('DOMContentLoaded', function () {
-        // **1. Load edit role modal content via AJAX**
-        $(document).on('click', '.edit-role-btn', function () {
-            if (!userPrivileges.canModify) return;
+        // Handle restore role modal
+        $('#confirmRestoreModal').on('show.bs.modal', function (event) {
+            if (!userPrivileges.canRestore) {
+                event.preventDefault();
+                return false;
+            }
             
+            var button = $(event.relatedTarget);
+            var roleID = button.data('role-id');
+            var roleName = button.data('role-name');
+            $('#restoreRoleNamePlaceholder').text(roleName);
+            $('#confirmRestoreButton').data('role-id', roleID);
+        });
+
+        // Confirm restore role via AJAX
+        $(document).on('click', '#confirmRestoreButton', function (e) {
+            if (!userPrivileges.canRestore) return;
+            
+            e.preventDefault();
+            $(this).blur();
             var roleID = $(this).data('role-id');
-            $('#editRoleContent').html("Loading...");
             $.ajax({
-                url: 'edit_roles.php',
-                type: 'GET',
+                type: 'POST',
+                url: 'restore_role.php',
                 data: {id: roleID},
-                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                dataType: 'json',
                 success: function (response) {
-                    $('#editRoleContent').html(response);
-                    $('#roleID').val(roleID);
+                    if (response.success) {
+                        $('#archivedRolesTable').load(location.href + ' #archivedRolesTable', function () {
+                            updatePagination();
+                            showToast(response.message, 'success', 5000);
+                        });
+                        $('#confirmRestoreModal').modal('hide');
+                        $('.modal-backdrop').remove();
+                    } else {
+                        showToast(response.message || 'An error occurred', 'error', 5000);
+                    }
                 },
                 error: function (xhr, status, error) {
-                    console.error('AJAX Error:', status, error);
-                    $('#editRoleContent').html('<p class="text-danger">Error loading role data. Please try again.</p>');
+                    showToast('Error restoring role: ' + error, 'error', 5000);
                 }
             });
         });
 
-        // **2. Handle delete role modal**
+        // Handle permanent delete role modal
         $('#confirmDeleteModal').on('show.bs.modal', function (event) {
-            if (!userPrivileges.canRemove) {
+            if (!userPrivileges.canPermanentDelete) {
                 event.preventDefault();
                 return false;
             }
@@ -342,21 +336,21 @@ unset($role);
             $('#confirmDeleteButton').data('role-id', roleID);
         });
 
-        // **3. Confirm delete role via AJAX**
+        // Confirm permanent delete role via AJAX
         $(document).on('click', '#confirmDeleteButton', function (e) {
-            if (!userPrivileges.canRemove) return;
+            if (!userPrivileges.canPermanentDelete) return;
             
             e.preventDefault();
             $(this).blur();
             var roleID = $(this).data('role-id');
             $.ajax({
                 type: 'POST',
-                url: 'delete_role.php',
+                url: 'permanent_delete_role.php',
                 data: {id: roleID},
                 dataType: 'json',
                 success: function (response) {
                     if (response.success) {
-                        $('#rolesTable').load(location.href + ' #rolesTable', function () {
+                        $('#archivedRolesTable').load(location.href + ' #archivedRolesTable', function () {
                             updatePagination();
                             showToast(response.message, 'success', 5000);
                         });
@@ -367,79 +361,11 @@ unset($role);
                     }
                 },
                 error: function (xhr, status, error) {
-                    showToast('Error deleting role: ' + error, 'error', 5000);
-                }
-            });
-        });
-
-        // **4. Load add role modal content**
-        $('#addRoleModal').on('show.bs.modal', function (event) {
-            if (!userPrivileges.canCreate) {
-                event.preventDefault();
-                return false;
-            }
-            
-            $('#addRoleContent').html("Loading...");
-            $.ajax({
-                url: 'add_role.php',
-                type: 'GET',
-                success: function (response) {
-                    $('#addRoleContent').html(response);
-                },
-                error: function () {
-                    $('#addRoleContent').html('<p class="text-danger">Error loading form.</p>');
-                }
-            });
-        });
-
-        // **7. Undo button via AJAX**
-        $(document).on('click', '#undoButton', function () {
-            if (!userPrivileges.canUndo) return;
-            
-            $.ajax({
-                url: 'undo.php',
-                type: 'GET',
-                dataType: 'json',
-                success: function (response) {
-                    if (response.success) {
-                        $('#rolesTable').load(location.href + ' #rolesTable', function () {
-                            updatePagination();
-                            showToast(response.message, 'success', 5000);
-                        });
-                    } else {
-                        showToast(response.message || 'An error occurred', 'error', 5000);
-                    }
-                },
-                error: function (xhr, status, error) {
-                    showToast('Error processing undo request: ' + error, 'error', 5000);
-                }
-            });
-        });
-
-        // **8. Redo button via AJAX**
-        $(document).on('click', '#redoButton', function () {
-            if (!userPrivileges.canRedo) return;
-            
-            $.ajax({
-                url: 'redo.php',
-                type: 'GET',
-                dataType: 'json',
-                success: function (response) {
-                    if (response.success) {
-                        $('#rolesTable').load(location.href + ' #rolesTable', function () {
-                            updatePagination();
-                            showToast(response.message, 'success', 5000);
-                        });
-                    } else {
-                        showToast(response.message || 'An error occurred', 'error', 5000);
-                    }
-                },
-                error: function (xhr, status, error) {
-                    showToast('Error processing redo request: ' + error, 'error', 5000);
+                    showToast('Error permanently deleting role: ' + error, 'error', 5000);
                 }
             });
         });
     });
 </script>
 </body>
-</html>
+</html> 

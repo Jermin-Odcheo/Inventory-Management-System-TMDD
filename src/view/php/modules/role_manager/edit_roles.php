@@ -5,13 +5,13 @@ ini_set('display_errors', 1);
 
 require_once('../../../../../config/ims-tmdd.php');
 
-//@current_user_id is For audit logs
+$userId = $_SESSION['user_id'] ?? null;
 // 1) Check session and role ID.
-if (!isset($_SESSION['user_id'])) {
+if (!$userId) {
     $pdo->exec("SET @current_user_id = NULL");
     die(json_encode(['success' => false, 'message' => 'Unauthorized access.']));
 } else {
-    $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
+    $pdo->exec("SET @current_user_id = " . (int)$userId);
 }
 if (!isset($_GET['id'])) {
     die(json_encode(['success' => false, 'message' => 'Role ID not provided.']));
@@ -21,11 +21,11 @@ $ipAddress = $_SERVER['REMOTE_ADDR'];
 $pdo->exec("SET @current_ip = '" . $ipAddress . "'");
 
 // 2) Fetch role details.
-$stmt = $pdo->prepare("SELECT * FROM roles WHERE id = ?");
+$stmt = $pdo->prepare("SELECT * FROM roles WHERE id = ? AND is_disabled = 0");
 $stmt->execute([$roleID]);
 $role = $stmt->fetch();
 if (!$role) {
-    die(json_encode(['success' => false, 'message' => 'Role not found.']));
+    die(json_encode(['success' => false, 'message' => 'Role not found or has been deleted.']));
 }
 
 // 3) Fetch current role privileges (only the ones assigned to this role).
@@ -56,7 +56,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 
     // Check if the new role name already exists for a different role.
-    $stmtDuplicate = $pdo->prepare("SELECT id FROM roles WHERE role_name = ? AND id != ?");
+    $stmtDuplicate = $pdo->prepare("SELECT id FROM roles WHERE role_name = ? AND id != ? AND is_disabled = 0");
     $stmtDuplicate->execute([$roleName, $roleID]);
     if ($stmtDuplicate->fetch(PDO::FETCH_ASSOC)) {
         echo json_encode(['success' => false, 'message' => 'Role name already exists.']);
@@ -65,6 +65,27 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     try {
         $pdo->beginTransaction();
+
+        // Store original role data for audit
+        $stmtOldRole = $pdo->prepare("SELECT * FROM roles WHERE id = ?");
+        $stmtOldRole->execute([$roleID]);
+        $oldRole = $stmtOldRole->fetch(PDO::FETCH_ASSOC);
+        
+        // Fetch old privileges for audit log
+        $stmtOldPrivs = $pdo->prepare("
+            SELECT module_id, privilege_id 
+            FROM role_module_privileges 
+            WHERE role_id = ?
+        ");
+        $stmtOldPrivs->execute([$roleID]);
+        $oldPrivileges = $stmtOldPrivs->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Combine role and privileges for old value
+        $oldRoleData = [
+            'role' => $oldRole,
+            'privileges' => $oldPrivileges
+        ];
+        $oldValue = json_encode($oldRoleData);
 
         // Update role name.
         $stmtUpdate = $pdo->prepare("UPDATE roles SET role_name = ? WHERE id = ?");
@@ -85,13 +106,46 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $stmtInsert->execute([$roleID, $moduleID, $privilegeID]);
         }
 
+        // Get updated role data for audit log
+        $stmtNewRole = $pdo->prepare("SELECT * FROM roles WHERE id = ?");
+        $stmtNewRole->execute([$roleID]);
+        $newRole = $stmtNewRole->fetch(PDO::FETCH_ASSOC);
+        
+        // Fetch new privileges for audit log
+        $stmtNewPrivs = $pdo->prepare("
+            SELECT module_id, privilege_id 
+            FROM role_module_privileges 
+            WHERE role_id = ?
+        ");
+        $stmtNewPrivs->execute([$roleID]);
+        $newPrivileges = $stmtNewPrivs->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Combine role and privileges for new value
+        $newRoleData = [
+            'role' => $newRole,
+            'privileges' => $newPrivileges
+        ];
+        $newValue = json_encode($newRoleData);
+        
+        // Log to audit_log table
+        $stmtAuditLog = $pdo->prepare("INSERT INTO audit_log 
+            (UserID, EntityID, Action, Details, OldVal, NewVal, Module, Date_Time, Status) 
+            VALUES (?, ?, 'Modify', ?, ?, ?, 'Roles and Privileges', NOW(), 'Successful')");
+        $stmtAuditLog->execute([
+            $userId,
+            $roleID,
+            "Role '{$oldRole['role_name']}' has been modified to '{$roleName}'",
+            $oldValue,
+            $newValue
+        ]);
+
         // Log changes in role_changes table.
         $stmtLog = $pdo->prepare("
             INSERT INTO role_changes (UserID, RoleID, Action, OldRoleName, NewRoleName, OldPrivileges, NewPrivileges)
             VALUES (?, ?, 'Modified', ?, ?, ?, ?)
         ");
         $stmtLog->execute([
-            $_SESSION['user_id'],
+            $userId,
             $roleID,
             $role['role_name'],
             $roleName,
