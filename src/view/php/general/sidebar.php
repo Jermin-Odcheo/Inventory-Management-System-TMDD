@@ -13,7 +13,7 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
     <nav>
         <ul>
             <li>
-                <a href="<?php echo BASE_URL; ?>src/view/php/clients/admins/dashboard.php">
+                <a href="<?php echo BASE_URL; ?>src/view/php/clients/dashboard.php">
                     <i class="fas fa-tachometer-alt"></i> Dashboard
                 </a>
             </li>
