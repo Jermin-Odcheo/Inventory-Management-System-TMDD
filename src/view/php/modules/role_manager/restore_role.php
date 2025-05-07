@@ -41,7 +41,31 @@ try {
     }
 
     // Store role data for audit log
-    $oldValue = json_encode($role);
+    $stmtOldPrivs = $pdo->prepare("
+        SELECT m.module_name, p.priv_name 
+        FROM role_module_privileges rmp
+        JOIN modules m ON m.id = rmp.module_id
+        JOIN privileges p ON p.id = rmp.privilege_id
+        WHERE rmp.role_id = ?
+        ORDER BY m.module_name, p.priv_name
+    ");
+    $stmtOldPrivs->execute([$role_id]);
+    $oldPrivilegesData = $stmtOldPrivs->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Format old privileges by module for better readability
+    $formattedOldPrivileges = [];
+    foreach ($oldPrivilegesData as $priv) {
+        if (!isset($formattedOldPrivileges[$priv['module_name']])) {
+            $formattedOldPrivileges[$priv['module_name']] = [];
+        }
+        $formattedOldPrivileges[$priv['module_name']][] = $priv['priv_name'];
+    }
+    
+    $oldValue = json_encode([
+        'role_id' => $role['id'],
+        'role_name' => $role['role_name'],
+        'modules_and_privileges' => $formattedOldPrivileges
+    ]);
 
     // Restore the role by setting is_disabled to 0
     $stmt = $pdo->prepare("UPDATE roles SET is_disabled = 0 WHERE id = ?");
@@ -50,7 +74,33 @@ try {
         $stmt = $pdo->prepare("SELECT * FROM roles WHERE id = ?");
         $stmt->execute([$role_id]);
         $updatedRole = $stmt->fetch(PDO::FETCH_ASSOC);
-        $newValue = json_encode($updatedRole);
+
+        // Get updated privileges
+        $stmtNewPrivs = $pdo->prepare("
+            SELECT m.module_name, p.priv_name 
+            FROM role_module_privileges rmp
+            JOIN modules m ON m.id = rmp.module_id
+            JOIN privileges p ON p.id = rmp.privilege_id
+            WHERE rmp.role_id = ?
+            ORDER BY m.module_name, p.priv_name
+        ");
+        $stmtNewPrivs->execute([$role_id]);
+        $newPrivilegesData = $stmtNewPrivs->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Format new privileges by module for better readability
+        $formattedNewPrivileges = [];
+        foreach ($newPrivilegesData as $priv) {
+            if (!isset($formattedNewPrivileges[$priv['module_name']])) {
+                $formattedNewPrivileges[$priv['module_name']] = [];
+            }
+            $formattedNewPrivileges[$priv['module_name']][] = $priv['priv_name'];
+        }
+
+        $newValue = json_encode([
+            'role_id' => $updatedRole['id'],
+            'role_name' => $updatedRole['role_name'],
+            'modules_and_privileges' => $formattedNewPrivileges
+        ]);
 
         // Log the action in the audit_log table
         $stmt = $pdo->prepare("INSERT INTO audit_log 

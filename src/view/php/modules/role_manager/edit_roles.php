@@ -67,7 +67,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $pdo->beginTransaction();
 
         // Store original role data for audit
-        $stmtOldRole = $pdo->prepare("SELECT * FROM roles WHERE id = ?");
+        $stmtOldRole = $pdo->prepare("SELECT id, role_name FROM roles WHERE id = ?");
         $stmtOldRole->execute([$roleID]);
         $oldRole = $stmtOldRole->fetch(PDO::FETCH_ASSOC);
         
@@ -120,7 +120,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
 
         // Get updated role data for audit log
-        $stmtNewRole = $pdo->prepare("SELECT * FROM roles WHERE id = ?");
+        $stmtNewRole = $pdo->prepare("SELECT id, role_name FROM roles WHERE id = ?");
         $stmtNewRole->execute([$roleID]);
         $newRole = $stmtNewRole->fetch(PDO::FETCH_ASSOC);
         
@@ -196,9 +196,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         
         // Create concise new value data that focuses on what changed
         $newValue = json_encode([
+            'role_id' => $newRole['id'],
             'role_name' => $newRole['role_name'],
-            'privilege_changes' => $privilegeChanges,
-            'summary' => $changesSummary
+            'modules_and_privileges' => $formattedNewPrivileges
         ], JSON_PRETTY_PRINT);
 
         // Log to audit_log table

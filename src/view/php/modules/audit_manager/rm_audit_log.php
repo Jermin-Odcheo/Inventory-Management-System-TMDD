@@ -37,35 +37,40 @@ function formatNewValue($jsonStr)
     }
 
     $html = '<ul class="list-group">';
-    foreach ($data as $key => $value) {
-        // Special handling for modules_and_privileges which is a nested array
-        if ($key === 'modules_and_privileges' && is_array($value)) {
-            $html .= '<li class="list-group-item">
-                        <strong>' . ucwords(str_replace('_', ' ', $key)) . ':</strong>
-                        <ul class="list-group mt-2">';
-            
-            foreach ($value as $module => $privileges) {
-                $html .= '<li class="list-group-item d-flex justify-content-between align-items-center">
-                            <strong>' . htmlspecialchars($module) . ':</strong>
-                            <span>' . htmlspecialchars(is_array($privileges) ? json_encode($privileges) : (string)$privileges) . '</span>
-                          </li>';
-            }
-            
-            $html .= '</ul></li>';
-        } else {
-            // Ensure value is a string before passing to htmlspecialchars
-            if (is_array($value)) {
-                $displayValue = '<pre>' . htmlspecialchars(json_encode($value, JSON_PRETTY_PRINT)) . '</pre>';
-            } else {
-                $displayValue = is_null($value) ? '<em>null</em>' : htmlspecialchars((string)$value);
-            }
-            
-            $friendlyKey = ucwords(str_replace('_', ' ', $key));
-            $html .= '<li class="list-group-item d-flex justify-content-between align-items-center">
-                        <strong>' . $friendlyKey . ':</strong> <span>' . $displayValue . '</span>
-                      </li>';
-        }
+    
+    // Display role name if present
+    if (isset($data['role_name'])) {
+        $html .= '<li class="list-group-item d-flex justify-content-between align-items-center">
+                    <strong>Role Name:</strong>
+                    <span>' . htmlspecialchars($data['role_name']) . '</span>
+                 </li>';
     }
+    
+    // Display role ID if present
+    if (isset($data['role_id'])) {
+        $html .= '<li class="list-group-item d-flex justify-content-between align-items-center">
+                    <strong>Role ID:</strong>
+                    <span>' . htmlspecialchars($data['role_id']) . '</span>
+                 </li>';
+    }
+    
+    // Special handling for modules_and_privileges
+    if (isset($data['modules_and_privileges']) && is_array($data['modules_and_privileges'])) {
+        $html .= '<li class="list-group-item">
+                    <strong>Modules and Privileges:</strong>
+                    <ul class="list-group mt-2">';
+        
+        foreach ($data['modules_and_privileges'] as $module => $privileges) {
+            $privilegeStr = is_array($privileges) ? implode(', ', $privileges) : (string)$privileges;
+            $html .= '<li class="list-group-item d-flex justify-content-between align-items-center">
+                        <strong>' . htmlspecialchars($module) . ':</strong>
+                        <span>' . htmlspecialchars($privilegeStr) . '</span>
+                     </li>';
+        }
+        
+        $html .= '</ul></li>';
+    }
+    
     $html .= '</ul>';
     return $html;
 }
@@ -89,10 +94,16 @@ function formatAuditDiff($oldJson, $newJson, $status = null)
         return '<span>' . htmlspecialchars((string)$newJson) . '</span>';
     }
 
-    $keys = array_unique(array_merge(array_keys($oldData), array_keys($newData)));
     $descriptions = [];
     
-    // Special handling for roles with modules_and_privileges
+    // Compare role name if it exists in both old and new data
+    if (isset($oldData['role_name'], $newData['role_name']) && 
+        $oldData['role_name'] !== $newData['role_name']) {
+        $descriptions[] = "Role name was changed from '<em>" . htmlspecialchars($oldData['role_name']) . 
+                         "</em>' to '<strong>" . htmlspecialchars($newData['role_name']) . "</strong>'.";
+    }
+    
+    // Special handling for modules_and_privileges
     if (isset($oldData['modules_and_privileges']) && isset($newData['modules_and_privileges'])) {
         $allModules = array_unique(array_merge(
             array_keys($oldData['modules_and_privileges']), 
@@ -100,26 +111,24 @@ function formatAuditDiff($oldJson, $newJson, $status = null)
         ));
         
         foreach ($allModules as $module) {
-            $oldPrivs = $oldData['modules_and_privileges'][$module] ?? 'None';
-            $newPrivs = $newData['modules_and_privileges'][$module] ?? 'None';
+            $oldPrivs = isset($oldData['modules_and_privileges'][$module]) ? 
+                       $oldData['modules_and_privileges'][$module] : [];
+            $newPrivs = isset($newData['modules_and_privileges'][$module]) ? 
+                       $newData['modules_and_privileges'][$module] : [];
             
-            if ($oldPrivs !== $newPrivs) {
-                $descriptions[] = "Module <strong>{$module}</strong> privileges changed from '<em>{$oldPrivs}</em>' to '<strong>{$newPrivs}</strong>'.";
+            // Added privileges
+            $added = array_diff($newPrivs, $oldPrivs);
+            // Removed privileges
+            $removed = array_diff($oldPrivs, $newPrivs);
+            
+            if (!empty($added)) {
+                $descriptions[] = "Module <strong>" . htmlspecialchars($module) . "</strong>: Added privileges: " . 
+                                "<strong>" . htmlspecialchars(implode(', ', $added)) . "</strong>";
             }
-        }
-    }
-    
-    // Process other fields
-    foreach ($keys as $key) {
-        if ($key === 'modules_and_privileges') {
-            continue; // Already handled above
-        }
-        
-        if (isset($oldData[$key], $newData[$key]) && $oldData[$key] !== $newData[$key]) {
-            $friendlyField = ucwords(str_replace('_', ' ', $key));
-            $oldVal = is_array($oldData[$key]) ? json_encode($oldData[$key]) : $oldData[$key];
-            $newVal = is_array($newData[$key]) ? json_encode($newData[$key]) : $newData[$key];
-            $descriptions[] = "The {$friendlyField} was changed from '<em>{$oldVal}</em>' to '<strong>{$newVal}</strong>'.";
+            if (!empty($removed)) {
+                $descriptions[] = "Module <strong>" . htmlspecialchars($module) . "</strong>: Removed privileges: " . 
+                                "<em>" . htmlspecialchars(implode(', ', $removed)) . "</em>";
+            }
         }
     }
 
@@ -211,7 +220,7 @@ function formatDetailsAndChanges($log)
             });
             break;
 
-        case 'Modified':
+        case 'modified':
             $defaultMessage = htmlspecialchars("Role '$roleName' has been modified");
             list($details, $changes) = processStatusMessage($defaultMessage, $log, function () use ($log) {
                 return formatAuditDiff($log['OldVal'], $log['NewVal'], $log['Status']);
@@ -229,6 +238,7 @@ function formatDetailsAndChanges($log)
         case 'restored':
             $defaultMessage = htmlspecialchars("Role '$roleName' has been restored");
             list($details, $changes) = processStatusMessage($defaultMessage, $log, function () use ($log) {
+                // Use the same format as remove action
                 return formatNewValue($log['NewVal']);
             });
             break;
@@ -265,12 +275,17 @@ function getNormalizedAction($log)
 {
     $action = strtolower($log['Action'] ?? '');
     
-    // Check for restore action based on the details
-    if ($action === 'modified' && strpos(strtolower($log['Details'] ?? ''), 'restored') !== false) {
-        return 'restored';
-    }
+    // Map actions to their display names
+    $actionMap = [
+        'create' => 'create',
+        'modified' => 'modified',
+        'remove' => 'remove',
+        'restore' => 'restored',
+        'restored' => 'restored',
+        'delete' => 'delete'
+    ];
     
-    return $action;
+    return $actionMap[$action] ?? $action;
 }
 ?>
 
