@@ -2,6 +2,7 @@
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
 
+//@current_user_id is For audit logs
 if (!isset($_SESSION['user_id'])) {
     echo "<p class='text-danger'>Unauthorized access.</p>";
     $pdo->exec("SET @current_user_id = NULL");

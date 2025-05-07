@@ -348,7 +348,7 @@ function getChangedFieldNames(array $oldData, array $newData)
                                     </td>
 
                                     <!-- ACTION -->
-                                    <td data-label="Action">
+                                    <td data-label="Action"> 
                                         <?php
                                         $actionText = !empty($log['Action']) ? $log['Action'] : 'Unknown';
                                         echo "<span class='action-badge action-" . strtolower($actionText) . "'>";
@@ -375,7 +375,7 @@ function getChangedFieldNames(array $oldData, array $newData)
                                     <td data-label="Status">
                                         <span class="badge <?php echo (strtolower($log['Status'] ?? '') === 'successful') ? 'bg-success' : 'bg-danger'; ?>">
                                             <?php echo getStatusIcon($log['Status']) . ' ' . htmlspecialchars($log['Status']); ?>
-                                        </span>
+                                        </span>                 
                                     </td>
 
                                     <!-- DATE & TIME -->
