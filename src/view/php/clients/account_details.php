@@ -1,8 +1,8 @@
 <?php
 session_start();
-require '../../../../../config/ims-tmdd.php'; // This defines $pdo (PDO connection)
+require '../../../../config/ims-tmdd.php'; // This defines $pdo (PDO connection)
 
-include '../../general/header.php';
+include '../general/header.php';
 
 // If not logged in, redirect to login page
 if (!isset($_SESSION['user_id'])) {
@@ -169,24 +169,24 @@ if ($user_id !== null) {
     <title>Account Details</title>
     <style>
         html, body {
-            overflow: hidden;
-            height: 100%;
-            margin: 0;
-            padding: 0;
-        }
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto; /* Add this to enable vertical scrolling */
+}
 
-        .main-content, .container, .sidebar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
+.main-content, .container, .sidebar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
 
-        .main-content::-webkit-scrollbar,
-        .container::-webkit-scrollbar,
-        .sidebar::-webkit-scrollbar,
-        body::-webkit-scrollbar,
-        html::-webkit-scrollbar {
-            display: none;
-        }
+.main-content::-webkit-scrollbar,
+.container::-webkit-scrollbar,
+.sidebar::-webkit-scrollbar,
+body::-webkit-scrollbar,
+html::-webkit-scrollbar {
+    display: none;
+}
         
         .main-content {
             margin-left: 230px;
@@ -459,7 +459,7 @@ if ($user_id !== null) {
     </style>
 </head>
 <body>
-<?php include '../../general/sidebar.php'; ?>
+<?php include '../general/sidebar.php'; ?>
 <div class="main-content">
 <div style="max-height: 100vh; overflow-y: auto;">
     <div class="container">
@@ -592,11 +592,12 @@ if ($user_id !== null) {
         </div>
 
         <div class="danger-zone">
-            <p>Permanently delete your account and all associated data. This action cannot be undone.</p>
-            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
-                Delete My Account
-            </button>
-        </div>
+    <h3>Danger Zone</h3>
+    <p>Permanently delete your account and all associated data. This action cannot be undone.</p>
+    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+        Delete My Account
+    </button>
+</div>
     </div>
     </div>
 </div>

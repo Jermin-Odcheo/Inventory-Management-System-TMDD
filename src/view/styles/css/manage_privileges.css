@@ -1,0 +1,51 @@
+       /* General page layout */
+body, html {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    overflow-x: hidden;
+}
+
+/* Proper spacing for fixed header */
+.main-content {
+    margin-left: 300px; /* Matches .sidebar width */
+    padding: 80px 1rem 2rem; /* Top padding for header space */
+    min-height: 100vh;
+}
+
+/* Header fix */
+header {
+    position: fixed;
+    height: 60px;
+    background-color: white;
+    z-index: 1000;
+    top: 0;
+    left: 0;
+    border-bottom: 1px solid #ccc;
+}
+
+.sidebar {
+    width: 300px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    padding-top: 20px;
+    z-index: 999;
+    box-shadow: none !important;
+}
+
+@media (max-width: 768px) {
+    .main-content {
+        margin-left: 0;
+        padding-top: 100px;
+    }
+
+    .sidebar {
+        position: relative;
+        width: 100%;
+        top: 0;
+        height: auto;
+    }
+}
+

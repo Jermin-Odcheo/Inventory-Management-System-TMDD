@@ -1,11 +1,29 @@
 <?php
+require_once '../../../../../config/ims-tmdd.php';
 session_start();
-ob_start(); // Start buffering to ensure clean JSON responses
-require_once('../../../../../config/ims-tmdd.php'); // Adjust the path as needed
 
-// Include the header (loads common assets)
-include('../../general/header.php');
+// start buffering all output (header/sidebar/footer HTML will be captured)
+ob_start();
 
+include '../../general/header.php';
+
+// 1) Auth guard
+$userId = $_SESSION['user_id'] ?? null;
+if (!is_int($userId) && !ctype_digit((string)$userId)) {
+    header('Location: ../../../../../public/index.php');
+    exit();
+}
+$userId = (int)$userId;
+
+// 2) Init RBAC & enforce "View"
+$rbac = new RBACService($pdo, $_SESSION['user_id']);
+$rbac->requirePrivilege('Equipment Management', 'View');
+
+// 3) Button flags
+$canCreate = $rbac->hasPrivilege('Equipment Management', 'Create');
+$canModify = $rbac->hasPrivilege('Equipment Management', 'Modify');
+$canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
+ 
 // Set audit log session variables for MySQL triggers.
 if (isset($_SESSION['user_id'])) {
     $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
@@ -15,7 +33,7 @@ if (isset($_SESSION['user_id'])) {
     $pdo->exec("SET @current_module = NULL");
 }
 
-// Set client IP address (adjust if using a proxy)
+// Set client IP address
 $ipAddress = $_SERVER['REMOTE_ADDR'];
 $pdo->exec("SET @current_ip = '" . $ipAddress . "'");
 
@@ -37,63 +55,62 @@ function is_ajax_request()
         strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 }
 
-// Add this function to log audit entries
-function logAudit($pdo, $action, $oldVal, $newVal) {
-    $stmt = $pdo->prepare("INSERT INTO audit_log (UserID, Module, Action, OldVal, NewVal, Date_Time) VALUES (?, 'Receiving Report', ?, ?, ?, NOW())");
-    $stmt->execute([$_SESSION['user_id'], $action, $oldVal, $newVal]);
+// Audit helper
+function logAudit($pdo, $action, $oldVal, $newVal, $entityId = null)
+{
+    $stmt = $pdo->prepare("INSERT INTO audit_log (UserID, EntityID, Module, Action, OldVal, NewVal, Date_Time) VALUES (?, ?, 'Receiving Report', ?, ?, ?, NOW())");
+    $stmt->execute([$_SESSION['user_id'], $entityId, $action, $oldVal, $newVal]);
 }
 
-// ------------------------
-// DELETE RECEIVING REPORT
-// ------------------------
+// DELETE
 if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
     $id = $_GET['id'];
     try {
-        // Fetch the current values for OldVal before deletion
+        // Check if user has Remove privilege
+        if (!$rbac->hasPrivilege('Equipment Management', 'Remove')) {
+            throw new Exception('You do not have permission to delete receiving reports');
+        }
+        
         $stmt = $pdo->prepare("SELECT * FROM receive_report WHERE id = ?");
         $stmt->execute([$id]);
         $oldData = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($oldData) {
-            $stmt = $pdo->prepare("DELETE FROM receive_report WHERE id = ?");
+            $stmt = $pdo->prepare("UPDATE receive_report SET is_disabled = 1 WHERE id = ?");
             $stmt->execute([$id]);
             $_SESSION['success'] = "Receiving Report deleted successfully.";
-            // Log the deletion with old values
-            logAudit($pdo, 'delete', json_encode($oldData), null);
+            logAudit($pdo, 'delete', json_encode($oldData), null, $id);
         } else {
             $_SESSION['errors'] = ["Receiving Report not found for deletion."];
         }
     } catch (PDOException $e) {
         $_SESSION['errors'] = ["Error deleting Receiving Report: " . $e->getMessage()];
+    } catch (Exception $e) {
+        $_SESSION['errors'] = [$e->getMessage()];
     }
+
     if (is_ajax_request()) {
         ob_clean();
         header('Content-Type: application/json');
-        $response = ['status' => 'success', 'message' => $_SESSION['success'] ?? 'Operation completed successfully'];
         if (!empty($_SESSION['errors'])) {
-            $response = ['status' => 'error', 'message' => $_SESSION['errors'][0]];
+            echo json_encode(['status' => 'error', 'message' => $_SESSION['errors'][0]]);
+        } else {
+            echo json_encode(['status' => 'success', 'message' => $_SESSION['success']]);
         }
-        echo json_encode($response);
         exit;
     }
+
     header("Location: receiving_report.php");
     exit;
 }
 
-// ------------------------
-// PROCESS FORM SUBMISSIONS (Add / Update)
-// ------------------------
+// ADD / UPDATE
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Retrieve and sanitize form input
     $rr_no = trim($_POST['rr_no'] ?? '');
     $accountable_individual = trim($_POST['accountable_individual'] ?? '');
     $po_no = trim($_POST['po_no'] ?? '');
     $ai_loc = trim($_POST['ai_loc'] ?? '');
-
-    // Always set is_disabled to 0 (active)
     $is_disabled = 0;
-
-    // Retrieve the date_created value (from a datetime-local input)
     $date_created = trim($_POST['date_created'] ?? '');
     if (empty($date_created)) {
         $date_created = date('Y-m-d H:i:s');
@@ -101,7 +118,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $date_created = date('Y-m-d H:i:s', strtotime($date_created));
     }
 
-    // Validate required fields
     if (empty($rr_no) || empty($accountable_individual) || empty($po_no) || empty($ai_loc) || empty($date_created)) {
         $_SESSION['errors'] = ["Please fill in all required fields."];
         if (is_ajax_request()) {
@@ -117,16 +133,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action']) && $_POST['action'] === 'add') {
         $response = ['status' => '', 'message' => ''];
         try {
-            $stmt = $pdo->prepare("INSERT INTO receive_report (rr_no, accountable_individual, po_no, ai_loc, date_created, is_disabled)
-                                   VALUES (?, ?, ?, ?, ?, ?)");
+            // Check if user has Create privilege
+            if (!$rbac->hasPrivilege('Equipment Management', 'Create')) {
+                throw new Exception('You do not have permission to add receiving reports');
+            }
+            
+            $stmt = $pdo->prepare("
+                INSERT INTO receive_report
+                    (rr_no, accountable_individual, po_no, ai_loc, date_created, is_disabled)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ");
             $stmt->execute([$rr_no, $accountable_individual, $po_no, $ai_loc, $date_created, $is_disabled]);
             $_SESSION['success'] = "Receiving Report has been added successfully.";
             $response['status'] = 'success';
             $response['message'] = $_SESSION['success'];
-            logAudit($pdo, 'add', null, json_encode(['rr_no' => $rr_no, 'accountable_individual' => $accountable_individual, 'po_no' => $po_no, 'ai_loc' => $ai_loc, 'date_created' => $date_created]));
+            logAudit($pdo, 'add', null, json_encode([
+                'rr_no' => $rr_no,
+                'accountable_individual' => $accountable_individual,
+                'po_no' => $po_no,
+                'ai_loc' => $ai_loc,
+                'date_created' => $date_created
+            ]));
         } catch (PDOException $e) {
             $response['status'] = 'error';
             $response['message'] = "Error adding Receiving Report: " . $e->getMessage();
+        } catch (Exception $e) {
+            $response['status'] = 'error';
+            $response['message'] = $e->getMessage();
         }
         ob_clean();
         header('Content-Type: application/json');
@@ -136,21 +169,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = $_POST['id'];
         $response = ['status' => '', 'message' => ''];
         try {
-            // Fetch the current values for OldVal
+            // Check if user has Modify privilege
+            if (!$rbac->hasPrivilege('Equipment Management', 'Modify')) {
+                throw new Exception('You do not have permission to modify receiving reports');
+            }
+            
             $stmt = $pdo->prepare("SELECT * FROM receive_report WHERE id = ?");
             $stmt->execute([$id]);
             $oldData = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($oldData) {
-                $stmt = $pdo->prepare("UPDATE receive_report 
-                                       SET rr_no = ?, accountable_individual = ?, po_no = ?, ai_loc = ?, date_created = ?, is_disabled = ?
-                                       WHERE id = ?");
+                $stmt = $pdo->prepare("
+                    UPDATE receive_report
+                    SET rr_no = ?, accountable_individual = ?, po_no = ?, ai_loc = ?, date_created = ?, is_disabled = ?
+                    WHERE id = ?
+                ");
                 $stmt->execute([$rr_no, $accountable_individual, $po_no, $ai_loc, $date_created, $is_disabled, $id]);
                 $_SESSION['success'] = "Receiving Report has been updated successfully.";
                 $response['status'] = 'success';
                 $response['message'] = $_SESSION['success'];
-                // Log both old and new values
-                logAudit($pdo, 'modified', json_encode($oldData), json_encode(['rr_no' => $rr_no, 'accountable_individual' => $accountable_individual, 'po_no' => $po_no, 'ai_loc' => $ai_loc, 'date_created' => $date_created]));
+                logAudit(
+                    $pdo,
+                    'modified',
+                    json_encode($oldData),
+                    json_encode([
+                        'rr_no' => $rr_no,
+                        'accountable_individual' => $accountable_individual,
+                        'po_no' => $po_no,
+                        'ai_loc' => $ai_loc,
+                        'date_created' => $date_created
+                    ])
+                );
             } else {
                 $response['status'] = 'error';
                 $response['message'] = "Receiving Report not found.";
@@ -158,6 +207,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (PDOException $e) {
             $response['status'] = 'error';
             $response['message'] = "Error updating Receiving Report: " . $e->getMessage();
+        } catch (Exception $e) {
+            $response['status'] = 'error';
+            $response['message'] = $e->getMessage();
         }
         ob_clean();
         header('Content-Type: application/json');
@@ -166,9 +218,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// ------------------------
-// LOAD RECEIVING REPORT DATA FOR EDITING (if applicable)
-// ------------------------
+// LOAD for edit
 $editReceivingReport = null;
 if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) {
     $id = $_GET['id'];
@@ -186,9 +236,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) 
     }
 }
 
-// ------------------------
-// RETRIEVE ALL RECEIVING REPORTS
-// ------------------------
+// FETCH ALL
 try {
     $stmt = $pdo->query("SELECT * FROM receive_report ORDER BY id DESC");
     $receivingReports = $stmt->fetchAll();
@@ -198,6 +246,7 @@ try {
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Receiving Report Management</title>
@@ -207,8 +256,6 @@ try {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
     <!-- Custom Styles -->
     <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
-    <!-- jQuery -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -217,10 +264,10 @@ try {
         }
 
         .main-content {
-            margin-left: 300px; /* Adjust if you have a sidebar */
+            margin-left: 300px;
+            /* Adjust if you have a sidebar */
             padding: 20px;
             margin-bottom: 20px;
-            width: auto;
         }
 
         @media (max-width: 768px) {
@@ -229,24 +276,21 @@ try {
             }
         }
 
-        /* Ensure table responsiveness */
         .table-responsive {
             width: 100%;
             overflow-x: auto;
         }
-        
-        /* Fix for Save Changes button hover state */
+
         .btn-primary:hover {
-            color: #fff !important; /* Ensure text stays white on hover */
-            background-color: #0b5ed7; /* Darker blue on hover */
+            color: #fff !important;
+            background-color: #0b5ed7;
             border-color: #0a58ca;
         }
-        
-        /* Specific styling for the edit form button */
+
         #editReportForm .btn-primary {
             transition: all 0.2s ease-in-out;
         }
-        
+
         #editReportForm .btn-primary:hover {
             color: #fff !important;
             background-color: #0d6efd;
@@ -256,389 +300,364 @@ try {
         }
     </style>
 </head>
-<body>
-<?php include('../../general/sidebar.php'); ?>
 
-<div class="main-content">
-    <div class="container-fluid">
-        <!-- Title -->
-        <h2 class="mb-4">Receiving Report Management</h2>
-        <div class="card shadow">
-            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-list-ul"></i> List of Receiving Reports</span>
-                <div class="input-group w-auto">
-                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="text" id="searchReport" class="form-control" placeholder="Search report...">
-                </div>
-            </div>
-            <div class="card-body p-3">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal"
-                                data-bs-target="#addReportModal">
-                            <i class="bi bi-plus-circle"></i> Add Receiving Report
-                        </button>
-                        <select class="form-select form-select-sm" id="filterLocation" style="width: auto;">
-                            <option value="">Filter Location</option>
-                            <?php
-                            $locations = array_unique(array_column($receivingReports, 'ai_loc'));
-                            foreach ($locations as $location) {
-                                if (!empty($location)) {
-                                    echo "<option value='" . htmlspecialchars($location) . "'>" . htmlspecialchars($location) . "</option>";
-                                }
-                            }
-                            ?>
-                        </select>
+<body>
+    <?php include('../../general/sidebar.php'); ?>
+
+    <div class="main-content">
+        <div class="container-fluid">
+            <h2 class="mb-4">Receiving Report Management</h2>
+            <div class="card shadow">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-list-ul"></i> List of Receiving Reports</span>
+                    <div class="input-group w-auto">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" id="searchReport" class="form-control" placeholder="Search report...">
                     </div>
                 </div>
-
-                <div class="table-responsive" id="table">
-                    <table id="rrTable" class="table table-striped table-bordered table-sm mb-0">
-                        <thead class="table-dark">
-                        <tr>
-                            <th>#</th>
-                            <th>RR Number</th>
-                            <th>Accountable Individual</th>
-                            <th>PO Number</th>
-                            <th>Location</th>
-                            <th>Created Date</th>
-                            <th>Status</th>
-                            <th class="text-center">Actions</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <?php if (!empty($receivingReports)): ?>
-                            <?php foreach ($receivingReports as $rr): ?>
-                                <tr>
-                                    <td><?php echo htmlspecialchars($rr['id']); ?></td>
-                                    <td><?php echo htmlspecialchars($rr['rr_no']); ?></td>
-                                    <td><?php echo htmlspecialchars($rr['accountable_individual']); ?></td>
-                                    <td><?php echo htmlspecialchars($rr['po_no']); ?></td>
-                                    <td><?php echo htmlspecialchars($rr['ai_loc']); ?></td>
-                                    <td><?php echo date('Y-m-d H:i', strtotime($rr['date_created'])); ?></td>
-                                    <td>
-                                        <?php echo $rr['is_disabled'] == 1
-                                            ? '<span class="badge bg-danger">Disabled</span>'
-                                            : '<span class="badge bg-success">Active</span>';
-                                        ?>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="btn-group" role="group">
-                                            <a class="btn btn-sm btn-outline-primary edit-report"
-                                               data-id="<?php echo htmlspecialchars($rr['id']); ?>"
-                                               data-rr="<?php echo htmlspecialchars($rr['rr_no']); ?>"
-                                               data-individual="<?php echo htmlspecialchars($rr['accountable_individual']); ?>"
-                                               data-po="<?php echo htmlspecialchars($rr['po_no']); ?>"
-                                               data-location="<?php echo htmlspecialchars($rr['ai_loc']); ?>"
-                                               data-date_created="<?php echo htmlspecialchars($rr['date_created']); ?>">
-                                                <i class="bi bi-pencil-square"></i> Edit
-                                            </a>
-                                            <a class="btn btn-sm btn-outline-danger delete-report"
-                                               data-id="<?php echo htmlspecialchars($rr['id']); ?>" href="#">
-                                                <i class="bi bi-trash"></i> Delete
-                                            </a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <tr>
-                                <td colspan="8">No Receiving Reports found.</td>
-                            </tr>
-                        <?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
-                <!-- Pagination Controls (if needed) -->
-                <div class="container-fluid mt-3">
-                    <div class="row align-items-center g-3">
-                        <div class="col-12 col-sm-auto">
-                            <div class="text-muted">
-                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">0</span> of <span
-                                        id="totalRows">0</span> entries
-                            </div>
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="d-flex gap-2">
+                            <?php if ($canCreate): ?>
+                            <button type="button" class="btn btn-success btn-sm" id="openAddBtn">
+                                <i class="bi bi-plus-circle"></i> Add Receiving Report
+                            </button>
+                            <?php endif; ?>
+                            <select class="form-select form-select-sm" id="filterLocation" style="width: auto;">
+                                <option value="">Filter Location</option>
+                                <?php
+                                $locations = array_unique(array_column($receivingReports, 'ai_loc'));
+                                foreach ($locations as $location) {
+                                    if (!empty($location)) {
+                                        echo "<option value='" . htmlspecialchars($location) . "'>" . htmlspecialchars($location) . "</option>";
+                                    }
+                                }
+                                ?>
+                            </select>
                         </div>
-                        <div class="col-12 col-sm-auto ms-sm-auto">
-                            <div class="d-flex align-items-center gap-2">
-                                <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                    <i class="bi bi-chevron-left"></i> Previous
-                                </button>
+                    </div>
+
+                    <div class="table-responsive" id="table">
+                        <table id="rrTable" class="table table-striped table-bordered table-sm mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>#</th>
+                                    <th>RR Number</th>
+                                    <th>Accountable Individual</th>
+                                    <th>PO Number</th>
+                                    <th>Location</th>
+                                    <th>Created Date</th>
+                                    <th>Status</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if (!empty($receivingReports)): ?>
+                                    <?php foreach ($receivingReports as $rr): ?>
+                                        <tr>
+                                            <td><?= htmlspecialchars($rr['id']) ?></td>
+                                            <td><?= htmlspecialchars($rr['rr_no']) ?></td>
+                                            <td><?= htmlspecialchars($rr['accountable_individual']) ?></td>
+                                            <td><?= htmlspecialchars($rr['po_no']) ?></td>
+                                            <td><?= htmlspecialchars($rr['ai_loc']) ?></td>
+                                            <td><?= date('Y-m-d H:i', strtotime($rr['date_created'])) ?></td>
+                                            <td>
+                                                <?= $rr['is_disabled'] == 1
+                                                    ? '<span class="badge bg-danger">Disabled</span>'
+                                                    : '<span class="badge bg-success">Active</span>'
+                                                ?>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="btn-group" role="group">
+                                                    <?php if ($canModify): ?>
+                                                    <button
+                                                        class="btn btn-sm btn-outline-primary edit-report"
+                                                        data-id="<?= htmlspecialchars($rr['id']) ?>"
+                                                        data-rr="<?= htmlspecialchars($rr['rr_no']) ?>"
+                                                        data-individual="<?= htmlspecialchars($rr['accountable_individual']) ?>"
+                                                        data-po="<?= htmlspecialchars($rr['po_no']) ?>"
+                                                        data-location="<?= htmlspecialchars($rr['ai_loc']) ?>"
+                                                        data-date_created="<?= htmlspecialchars($rr['date_created']) ?>">
+                                                        <i class="bi bi-pencil-square"></i> Edit
+                                                    </button>
+                                                    <?php endif; ?>
+                                                    <?php if ($canDelete): ?>
+                                                    <button
+                                                        class="btn btn-sm btn-outline-danger delete-report"
+                                                        data-id="<?= htmlspecialchars($rr['id']) ?>">
+                                                        <i class="bi bi-trash"></i> Remove
+                                                    </button>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="8">No Receiving Reports found.</td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination Controls -->
+                    <div class="container-fluid mt-3">
+                        <div class="row align-items-center g-3">
+                            <div class="col-auto text-muted">
+                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">0</span> of <span id="totalRows">0</span> entries
+                            </div>
+                            <div class="col-auto ms-auto d-flex gap-2 align-items-center">
+                                <button id="prevPage" class="btn btn-outline-primary"><i class="bi bi-chevron-left"></i> Previous</button>
                                 <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
                                     <option value="10">10</option>
                                     <option value="20" selected>20</option>
                                     <option value="50">50</option>
                                     <option value="100">100</option>
                                 </select>
-                                <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                    Next <i class="bi bi-chevron-right"></i>
-                                </button>
+                                <button id="nextPage" class="btn btn-outline-primary">Next <i class="bi bi-chevron-right"></i></button>
                             </div>
                         </div>
-                    </div>
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <ul class="pagination justify-content-center" id="pagination"></ul>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <ul class="pagination justify-content-center" id="pagination"></ul>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Add Report Modal (without disabled field) -->
-<div class="modal fade" id="addReportModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Add New Receiving Report</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="addReportForm" method="post">
-                    <input type="hidden" name="action" value="add">
-                    <div class="mb-3">
-                        <label for="rr_no" class="form-label">Receiving Report Number <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="rr_no" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="accountable_individual" class="form-label">Accountable Individual <span
-                                    class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="accountable_individual" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="po_no" class="form-label">Purchase Order Number <span
-                                    class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="po_no" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="ai_loc" class="form-label">Location <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="ai_loc" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="date_created" class="form-label">Date Created <span
-                                    class="text-danger">*</span></label>
-                        <!-- Pre-fill with current date/time in the correct format for datetime-local -->
-                        <input type="datetime-local" class="form-control" name="date_created" id="date_created" required
-                               value="<?php echo date('Y-m-d\TH:i'); ?>">
-                    </div>
-                    <div class="text-end">
-                        <button type="button" class="btn btn-secondary" style="margin-right: 4px;"
-                            data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Confirm
-                        </button>
-                </form>
+    <?php if ($canCreate): ?>
+    <!-- Add Report Modal -->
+    <div class="modal fade" id="addReportModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add New Receiving Report</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addReportForm" method="post">
+                        <input type="hidden" name="action" value="add">
+                        <div class="mb-3">
+                            <label class="form-label">RR Number <span class="text-danger">*</span></label>
+                            <input type="text" name="rr_no" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Accountable Individual <span class="text-danger">*</span></label>
+                            <input type="text" name="accountable_individual" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">PO Number <span class="text-danger">*</span></label>
+                            <input type="text" name="po_no" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Location <span class="text-danger">*</span></label>
+                            <input type="text" name="ai_loc" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Date Created <span class="text-danger">*</span></label>
+                            <input
+                                type="datetime-local"
+                                name="date_created"
+                                class="form-control"
+                                id="date_created"
+                                required
+                                value="<?= date('Y-m-d\TH:i') ?>">
+                        </div>
+                        <div class="text-end">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Confirm</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
-</div>
+    <?php endif; ?>
 
-<!-- Edit Report Modal (without disabled field) -->
-<div class="modal fade" id="editReportModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Edit Receiving Report</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="editReportForm" method="post">
-                    <input type="hidden" name="action" value="update">
-                    <input type="hidden" name="id" id="edit_report_id">
-                    <div class="mb-3">
-                        <label for="edit_rr_no" class="form-label">Receiving Report Number <span
-                                    class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="rr_no" id="edit_rr_no" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="edit_accountable_individual" class="form-label">Accountable Individual <span
-                                    class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="accountable_individual"
-                               id="edit_accountable_individual" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="edit_po_no" class="form-label">Purchase Order Number <span
-                                    class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="po_no" id="edit_po_no" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="edit_ai_loc" class="form-label">Location <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="ai_loc" id="edit_ai_loc" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="edit_date_created" class="form-label">Date Created <span
-                                    class="text-danger">*</span></label>
-                        <input type="datetime-local" class="form-control" name="date_created" id="edit_date_created"
-                               required>
-                    </div>
-                    <div class="mb-3">
-                        <button type="submit" class="btn btn-primary">Save Changes</button>
-                    </div>
-                </form>
+    <?php if ($canModify): ?>
+    <!-- Edit Report Modal -->
+    <div class="modal fade" id="editReportModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Receiving Report</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editReportForm" method="post">
+                        <input type="hidden" name="action" value="update">
+                        <input type="hidden" name="id" id="edit_report_id">
+                        <div class="mb-3">
+                            <label class="form-label">RR Number <span class="text-danger">*</span></label>
+                            <input type="text" name="rr_no" id="edit_rr_no" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Accountable Individual <span class="text-danger">*</span></label>
+                            <input type="text" name="accountable_individual" id="edit_accountable_individual" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">PO Number <span class="text-danger">*</span></label>
+                            <input type="text" name="po_no" id="edit_po_no" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Location <span class="text-danger">*</span></label>
+                            <input type="text" name="ai_loc" id="edit_ai_loc" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Date Created <span class="text-danger">*</span></label>
+                            <input type="datetime-local" name="date_created" id="edit_date_created" class="form-control" required>
+                        </div>
+                        <div class="mb-3 text-end">
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
-</div>
+    <?php endif; ?>
 
-
-<!-- Delete Recieving Report Order Modal -->
-<div class="modal fade" id="deleteRRModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Confirm Deletion</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                Are you sure you want to delete this Receiving Report order?
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" id="confirmDeleteBtn" class="btn btn-danger">Delete</button>
+    <?php if ($canDelete): ?>
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteRRModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Deletion</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to delete this Receiving Report?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" id="confirmDeleteBtn" class="btn btn-danger">Delete</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
+    <?php endif; ?>
+    <script>
+        // Instantiate modals
+        const addModal = new bootstrap.Modal(document.getElementById('addReportModal'));
+        const editModal = new bootstrap.Modal(document.getElementById('editReportModal'));
+        const deleteModal = new bootstrap.Modal(document.getElementById('deleteRRModal'));
 
-<!-- JavaScript for functionality -->
-<script>
-    $(document).ready(function () {
-        // Filter table by search text and location
-        $('#searchReport, #filterLocation').on('input change', function () {
-            const searchText = $('#searchReport').val().toLowerCase();
-            const filterLocation = $('#filterLocation').val().toLowerCase();
-            $("#table tbody tr").each(function () {
-                const row = $(this);
-                const rowText = row.text().toLowerCase();
-                // Assuming the Location is in the 5th column
-                const locationCell = row.find('td:nth-child(5)').text().toLowerCase();
-                const searchMatch = rowText.indexOf(searchText) > -1;
-                const locationMatch = !filterLocation || locationCell === filterLocation;
-                row.toggle(searchMatch && locationMatch);
+        $(function() {
+            // Filter table
+            $('#searchReport, #filterLocation').on('input change', function() {
+                const searchText = $('#searchReport').val().toLowerCase();
+                const filterLoc = $('#filterLocation').val().toLowerCase();
+                $('#table tbody tr').each(function() {
+                    const row = $(this);
+                    const textMatched = row.text().toLowerCase().includes(searchText);
+                    const locMatched = !filterLoc || row.find('td:nth-child(5)').text().toLowerCase() === filterLoc;
+                    row.toggle(textMatched && locMatched);
+                });
             });
-        });
 
-        // Open Edit Report Modal and populate fields
-        $(document).on('click', '.edit-report', function () {
-            var id = $(this).data('id');
-            var rr = $(this).data('rr');
-            var individual = $(this).data('individual');
-            var po = $(this).data('po');
-            var location = $(this).data('location');
-            var dateCreated = $(this).data('date_created');
+            // Open Add modal
+            $('#openAddBtn').on('click', () => addModal.show());
+            $('#addReportModal').on('hidden.bs.modal', () => $('#addReportForm')[0].reset());
 
-            $('#edit_report_id').val(id);
-            $('#edit_rr_no').val(rr);
-            $('#edit_accountable_individual').val(individual);
-            $('#edit_po_no').val(po);
-            $('#edit_ai_loc').val(location);
-            // Convert dateCreated from "YYYY-MM-DD HH:MM:SS" to "YYYY-MM-DDTHH:MM" for datetime-local input
-            var formattedDate = dateCreated.replace(' ', 'T').substring(0, 16);
-            $('#edit_date_created').val(formattedDate);
+            // Edit button
+            $(document).on('click', '.edit-report', function() {
+                const btnData = $(this).data();
+                $('#edit_report_id').val(btnData.id);
+                $('#edit_rr_no').val(btnData.rr);
+                $('#edit_accountable_individual').val(btnData.individual);
+                $('#edit_po_no').val(btnData.po);
+                $('#edit_ai_loc').val(btnData.location);
+                $('#edit_date_created').val(btnData.date_created.replace(' ', 'T').substring(0, 16));
+                editModal.show();
+            });
 
-            $('#editReportModal').modal('show');
-        });
+            // Delete button
+            let deleteId = null;
+            $(document).on('click', '.delete-report', function() {
+                deleteId = $(this).data('id');
+                deleteModal.show();
+            });
 
-
-
-        // Global variable to store the ID for deletion
-        var deleteId = null;
-
-    // When a delete-report link is clicked, show the delete modal
-        $(document).on('click', '.delete-report', function (e) {
-            e.preventDefault();
-            deleteId = $(this).data('id');
-            var deleteModal = new bootstrap.Modal(document.getElementById('deleteRRModal'));
-            deleteModal.show();
-        });
-
-    // When the confirm delete button is clicked, process deletion via AJAX
-        $('#confirmDeleteBtn').on('click', function () {
-            if (deleteId) {
+            // Confirm delete
+            $('#confirmDeleteBtn').on('click', function() {
+                if (!deleteId) return;
                 $.ajax({
                     url: 'receiving_report.php',
                     method: 'GET',
-                    data: { action: 'delete', id: deleteId },
+                    data: {
+                        action: 'delete',
+                        id: deleteId
+                    },
                     dataType: 'json',
-                    success: function (response) {
+                    success(response) {
+                        deleteModal.hide();
+                        $('#rrTable').load(location.href + ' #rrTable', function() {
+                            showToast(response.message, response.status);
+                        });
+                    },
+                    error() {
+                        showToast('Error processing request.', 'error');
+                    }
+                });
+            });
+
+            // Add form
+            $('#addReportForm').on('submit', function(e) {
+                e.preventDefault();
+                $.ajax({
+                    url: 'receiving_report.php',
+                    method: 'POST',
+                    data: $(this).serialize(),
+                    dataType: 'json',
+                    success(response) {
                         if (response.status === 'success') {
-                            $('#rrTable').load(location.href + ' #rrTable', function () {
+                            addModal.hide();
+                            $('#rrTable').load(location.href + ' #rrTable', () => {
                                 showToast(response.message, 'success');
                             });
                         } else {
                             showToast(response.message, 'error');
                         }
-                        // Hide the modal after processing
-                        var deleteModalInstance = bootstrap.Modal.getInstance(document.getElementById('deleteRRModal'));
-                        deleteModalInstance.hide();
                     },
-                    error: function () {
+                    error(xhr, status, err) {
+                        showToast('Error submitting form: ' + err, 'error');
+                    }
+                });
+            });
+
+            // Edit form
+            $('#editReportForm').on('submit', function(e) {
+                e.preventDefault();
+                $.ajax({
+                    url: 'receiving_report.php',
+                    method: 'POST',
+                    data: $(this).serialize(),
+                    dataType: 'json',
+                    success(response) {
+                        if (response.status === 'success') {
+                            editModal.hide();
+                            $('#rrTable').load(location.href + ' #rrTable', () => {
+                                showToast(response.message, 'success');
+                            });
+                        } else {
+                            showToast(response.message, 'error');
+                        }
+                    },
+                    error() {
                         showToast('Error processing request.', 'error');
                     }
                 });
-            }
-        });
-
-
-        // AJAX submission for Add Report form using toast notifications
-        $('#addReportForm').on('submit', function (e) {
-            e.preventDefault();
-            $.ajax({
-                url: 'receiving_report.php',
-                method: 'POST',
-                data: $(this).serialize(),
-                dataType: 'json', // ensures jQuery parses the JSON response automatically
-                success: function (response) {
-                    if (response.status === 'success') {
-                        $('#addReportModal').modal('hide');
-                        $('#rrTable').load(location.href + ' #rrTable', function () {
-                            showToast(response.message, 'success');
-                        });
-                    } else {
-                        showToast(response.message || 'An error occurred', 'error');
-                    }
-                },
-                error: function (xhr, status, error) {
-                    showToast('Error submitting form: ' + error, 'error');
-                }
             });
         });
+    </script>
 
-
-        // AJAX submission for Edit Report form using toast notifications
-        $('#editReportForm').on('submit', function (e) {
-            e.preventDefault();
-            $.ajax({
-                url: 'receiving_report.php',
-                method: 'POST',
-                data: $(this).serialize(),
-                dataType: 'json',
-                success: function (response) {
-                    if (response.status === 'success') {
-                        $('#editReportModal').modal('hide');
-                        $('#rrTable').load(location.href + ' #rrTable', function () {
-                            showToast(response.message, 'success');
-                        });
-                    } else {
-                        showToast(response.message, 'error');
-                    }
-                },
-                error: function () {
-                    showToast('Error processing request.', 'error');
-                }
-            });
-        });
-    });
-
-    $('#addReportModal').on('hidden.bs.modal', function () {
-        $('#addReportForm')[0].reset();
-    });
-
-</script>
-
-<script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js"
-        defer></script>
-
-<?php include '../../general/footer.php'; ?>
+    <script src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js" defer></script>
+    <?php include('../../general/footer.php'); ?>
 </body>
+
 </html>

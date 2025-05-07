@@ -8,4 +8,4 @@ define('BASE_URL', '/');
 define('ROOT_PATH', realpath(__DIR__ . '/..') . '/');
 
 // Autoload RBACService (and any other classes you drop under clients/admins)
-require_once ROOT_PATH . 'src/view/php/clients/admins/RBACService.php';
+require_once ROOT_PATH . 'src/control/RBACService.php';

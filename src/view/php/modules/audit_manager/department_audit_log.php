@@ -5,35 +5,25 @@ require '../../../../../config/ims-tmdd.php';
 // Include Header
 include '../../general/header.php';
 
-//If not logged in redirect to the LOGIN PAGE
+// Redirect if not logged in
 if (!isset($_SESSION['user_id'])) {
-    header("Location: " . BASE_URL . "public/index.php"); // Redirect to login page
+    header("Location: " . BASE_URL . "public/index.php");
     exit();
 }
 
-// Fetch only equipment transaction related audit logs
-$query = "SELECT audit_log.*, users.email AS user_email 
+// Fetch all audit logs related to departments
+$query = "SELECT audit_log.*, users.email AS email 
           FROM audit_log 
           LEFT JOIN users ON audit_log.UserID = users.id
-          WHERE audit_log.Module IN ('Purchase Order', 'Charge Invoice', 'Receiving Report')
-          ORDER BY audit_log.Date_Time DESC";
+          WHERE audit_log.Module = 'Department Management'
+          ORDER BY audit_log.TrackID DESC";
+
 $stmt = $pdo->prepare($query);
 $stmt->execute();
 $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 /**
- * Helper function to display JSON data with <br> for new lines.
- */
-function formatJsonData($jsonStr)
-{
-    if (!$jsonStr) {
-        return '<em class="text-muted">N/A</em>';
-    }
-    return nl2br(htmlspecialchars($jsonStr));
-}
-
-/**
- * New helper function to format a JSON string into a visually appealing list.
+ * Formats a JSON string into an HTML list.
  */
 function formatNewValue($jsonStr)
 {
@@ -48,7 +38,6 @@ function formatNewValue($jsonStr)
 
     $html = '<ul class="list-group">';
     foreach ($data as $key => $value) {
-        // Convert null to a display string
         $displayValue = is_null($value) ? '<em>null</em>' : htmlspecialchars($value);
         $friendlyKey = ucwords(str_replace('_', ' ', $key));
         $html .= '<li class="list-group-item d-flex justify-content-between align-items-center">
@@ -60,11 +49,13 @@ function formatNewValue($jsonStr)
 }
 
 /**
- * Helper function to compare old/new JSON data for modifications.
- * Special handling for the "is_deleted" field is included.
+ * Compares two JSON strings and shows a diff of changes.
  */
-function formatAuditDiff($oldJson, $newJson)
+function formatAuditDiff($oldJson, $newJson, $status = null)
 {
+    if ($status !== null && strtolower($status) === 'failed') {
+        return '';
+    }
     if ($oldJson === null || $newJson === null) {
         return '<em class="text-muted">No comparison data available</em>';
     }
@@ -78,26 +69,9 @@ function formatAuditDiff($oldJson, $newJson)
 
     $keys = array_unique(array_merge(array_keys($oldData), array_keys($newData)));
     $descriptions = [];
-
     foreach ($keys as $key) {
-        $lcKey = strtolower($key);
-
-        // Exclude is_deleted differences entirely.
-        if ($lcKey === 'is_deleted') {
-            continue;
-        }
-
-        // Handle password changes
-        if ($lcKey === 'password') {
-            if (isset($oldData[$key], $newData[$key]) && $oldData[$key] !== $newData[$key]) {
-                $descriptions[] = "The password has been changed.";
-            }
-            continue;
-        }
-
-        // Generic handling for other fields
-        $oldVal = isset($oldData[$key]) ? $oldData[$key] : '';
-        $newVal = isset($newData[$key]) ? $newData[$key] : '';
+        $oldVal = $oldData[$key] ?? '';
+        $newVal = $newData[$key] ?? '';
         if ($oldVal !== $newVal) {
             $friendlyField = ucwords(str_replace('_', ' ', $key));
             $descriptions[] = "The {$friendlyField} was changed from '<em>{$oldVal}</em>' to '<strong>{$newVal}</strong>'.";
@@ -109,114 +83,94 @@ function formatAuditDiff($oldJson, $newJson)
     }
 
     $html = '<ul class="list-unstyled mb-0">';
-    $count = count($descriptions);
-    $index = 0;
+    $total = count($descriptions);
+    $i = 0;
     foreach ($descriptions as $desc) {
         $html .= "<li>{$desc}";
-        $index++;
-        if ($index < $count) {
+        if (++$i < $total) {
             $html .= "<hr class='my-1'>";
         }
         $html .= "</li>";
     }
     $html .= "</ul>";
-
     return $html;
 }
 
-
 /**
- * Helper function to return an icon based on action.
+ * Returns an icon based on the given action.
  */
 function getActionIcon($action)
 {
     $action = strtolower($action);
-    if ($action === 'modified') {
-        return '<i class="fas fa-user-edit"></i>';
-    } elseif ($action === 'add') {
-        return '<i class="fas fa-user-plus"></i>';
-    } elseif ($action === 'soft delete' || $action === 'permanent delete') {
-        return '<i class="fas fa-user-slash"></i>';
-    } else {
-        return '<i class="fas fa-info-circle"></i>';
-    }
+    $icons = [
+        'modified' => '<i class="fas fa-edit"></i>',
+        'add'      => '<i class="fas fa-plus-circle"></i>',
+        'create'   => '<i class="fas fa-plus-circle"></i>',
+        'remove'   => '<i class="fas fa-trash"></i>',
+        'delete'   => '<i class="fas fa-trash"></i>',
+        'restored' => '<i class="fas fa-undo"></i>'
+    ];
+    return $icons[$action] ?? '<i class="fas fa-info-circle"></i>';
 }
 
 /**
- * Helper function to return a status icon.
+ * Returns a status icon based on the log status.
  */
 function getStatusIcon($status)
 {
-    // Ensure $status is a string before calling strtolower
-    $status = $status ?? '';
     return (strtolower($status) === 'successful')
         ? '<i class="fas fa-check-circle"></i>'
         : '<i class="fas fa-times-circle"></i>';
 }
 
 /**
- * Format the "Details" and "Changes" columns based on the action.
- * Returns an array: [ $detailsHTML, $changesHTML ]
+ * Returns an array with formatted Details and Changes columns.
  */
 function formatDetailsAndChanges($log)
 {
-    // Normalize action to lowercase
     $action = strtolower($log['Action'] ?? '');
+    $oldData = ($log['OldVal'] !== null) ? json_decode($log['OldVal'], true) : [];
+    $newData = ($log['NewVal'] !== null) ? json_decode($log['NewVal'], true) : [];
 
-    // Parse JSON fields for old/new data with null checks
-    $oldData = !is_null($log['OldVal']) ? json_decode($log['OldVal'], true) : [];
-    $newData = !is_null($log['NewVal']) ? json_decode($log['NewVal'], true) : [];
-
-    // Use user_email from the log if available, or fallback to newData email
-    $userEmail = $log['user_email'] ?? ($newData['Email'] ?? 'User');
-
-    // For soft delete, try to use the target's name (if available)
-    $targetName = $userEmail;
-    if ($action === 'soft delete') {
-        if (isset($newData['First_Name'], $newData['Last_Name'])) {
-            $targetName = $newData['First_Name'] . ' ' . $newData['Last_Name'];
-        }
-    }
-
-    // Prepare default strings
+    $departmentName = $newData['department_name'] ?? $oldData['department_name'] ?? 'Unknown Department';
+    
     $details = '';
     $changes = '';
 
     switch ($action) {
         case 'add':
-            $details = htmlspecialchars("$userEmail has been created");
+        case 'create':
+            $details = htmlspecialchars("Department '{$departmentName}' has been created");
             $changes = formatNewValue($log['NewVal']);
             break;
 
         case 'modified':
+        case 'update':
             $changedFields = getChangedFieldNames($oldData, $newData);
-            if (!empty($changedFields)) {
-                $details = "Updated Fields: " . htmlspecialchars(implode(', ', $changedFields));
-            } else {
-                $details = "Updated Fields: None";
-            }
-            $changes = formatAuditDiff($log['OldVal'], $log['NewVal']);
+            $details = !empty($changedFields)
+                ? "Modified Fields: " . htmlspecialchars(implode(', ', $changedFields))
+                : "Modified department: " . htmlspecialchars($departmentName);
+            $changes = formatAuditDiff($log['OldVal'], $log['NewVal'], $log['Status']);
             break;
 
-        case 'restored':
-            $details = htmlspecialchars("$userEmail has been restored");
-            $changes = "is_deleted 1 -> 0";
-            break;
-
-        case 'soft delete':
-            // Use the target's name instead of a generic message
-            $details = htmlspecialchars("$userEmail has been soft deleted");
-            $changes = "is_deleted 0 -> 1";
-            break;
-
-        case 'permanent delete':
-            $details = htmlspecialchars("$userEmail has been deleted from the database");
-            $changes = formatNewValue($log['NewVal']);
+        case 'delete':
+        case 'remove':
+            $details = htmlspecialchars("Department '{$departmentName}' has been deleted");
+            $changes = formatNewValue($log['OldVal']);
             break;
 
         default:
             $details = htmlspecialchars($log['Details'] ?? '');
-            $changes = formatNewValue($log['OldVal']);
+            $oldFormatted = isset($log['OldVal']) ? formatNewValue($log['OldVal']) : '';
+            $newFormatted = isset($log['NewVal']) ? formatNewValue($log['NewVal']) : '';
+
+            if (!empty($newFormatted)) {
+                $changes = $newFormatted;
+            } elseif (!empty($oldFormatted)) {
+                $changes = $oldFormatted;
+            } else {
+                $changes = 'No changes';
+            }
             break;
     }
 
@@ -224,41 +178,31 @@ function formatDetailsAndChanges($log)
 }
 
 /**
- * Helper function to find which fields changed (just the field names).
+ * Returns a list of changed field names.
  */
 function getChangedFieldNames(array $oldData, array $newData)
 {
     $changed = [];
-    // We combine the keys
     $allKeys = array_unique(array_merge(array_keys($oldData), array_keys($newData)));
     foreach ($allKeys as $key) {
-        $oldVal = $oldData[$key] ?? null;
-        $newVal = $newData[$key] ?? null;
-        if ($oldVal !== $newVal) {
+        if (($oldData[$key] ?? null) !== ($newData[$key] ?? null)) {
             $changed[] = ucwords(str_replace('_', ' ', $key));
         }
     }
     return $changed;
 }
-
-// Ensure the status is set correctly when logging actions
-function logAudit($pdo, $action, $oldVal, $newVal, $status = 'successful') {
-    $stmt = $pdo->prepare("INSERT INTO audit_log (UserID, Module, Action, OldVal, NewVal, Status, Date_Time) VALUES (?, 'Module Name', ?, ?, ?, ?, NOW())");
-    $stmt->execute([$_SESSION['user_id'], $action, $oldVal, $newVal, $status]);
-}
-
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <link rel="preload" href="<?php echo BASE_URL; ?>src/view/styles/css/audit_log.css" as="style"
+          onload="this.onload=null;this.rel='stylesheet'">
+    <noscript>
+        <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/audit_log.css">
+    </noscript>
     <meta charset="UTF-8">
-    <title>Equipment Management Audit Logs</title>
-    <link rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    <link rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/Inventory-Managment-System-TMDD/src/view/styles/css/audit_log.css">
+    <title>Department Audit Logs</title>
 </head>
 <body>
 <?php include '../../general/sidebar.php'; ?>
@@ -269,50 +213,45 @@ function logAudit($pdo, $action, $oldVal, $newVal, $status = 'successful') {
             <div class="card-header d-flex justify-content-between align-items-center bg-dark">
                 <h3 class="text-white">
                     <i class="fas fa-history me-2"></i>
-                    Equipment Management Audit Logs
+                    Department Audit Logs
                 </h3>
             </div>
 
             <div class="card-body">
                 <!-- Filter Section -->
                 <div class="row mb-4">
-                    <!-- Search Filter -->
                     <div class="col-md-4 mb-2">
                         <div class="input-group">
                             <span class="input-group-text"><i class="fas fa-search"></i></span>
                             <input type="text" id="searchInput" class="form-control" placeholder="Search audit logs...">
                         </div>
                     </div>
-
-                    <!-- Action Filter -->
                     <div class="col-md-4 mb-2">
                         <select id="filterAction" class="form-select">
                             <option value="">All Actions</option>
                             <option value="add">Add</option>
+                            <option value="create">Create</option>
                             <option value="modified">Modified</option>
+                            <option value="update">Update</option>
                             <option value="delete">Delete</option>
+                            <option value="remove">Remove</option>
                         </select>
                     </div>
-
-                    <!-- Status Filter (New) -->
                     <div class="col-md-4 mb-2">
                         <select id="filterStatus" class="form-select">
-                            <option value="">All Statuses</option>
+                            <option value="">All Status</option>
                             <option value="successful">Successful</option>
                             <option value="failed">Failed</option>
                         </select>
                     </div>
                 </div>
 
-            </div>
-
                 <!-- Table container -->
                 <div class="table-responsive" id="table">
-                    <table class="table table-hover" >
+                    <table class="table table-hover">
                         <colgroup>
                             <col class="track">
                             <col class="user">
-                            <col class="module">
                             <col class="action">
                             <col class="details">
                             <col class="changes">
@@ -321,9 +260,8 @@ function logAudit($pdo, $action, $oldVal, $newVal, $status = 'successful') {
                         </colgroup>
                         <thead class="table-light">
                         <tr>
-                            <th>#</th>
+                            <th>Track ID</th>
                             <th>User</th>
-                            <th>Module</th>
                             <th>Action</th>
                             <th>Details</th>
                             <th>Changes</th>
@@ -333,90 +271,106 @@ function logAudit($pdo, $action, $oldVal, $newVal, $status = 'successful') {
                         </thead>
                         <tbody id="auditTable">
                         <?php if (!empty($auditLogs)): ?>
-                            <?php foreach ($auditLogs as $log): ?>
+                            <?php foreach ($auditLogs as $log):
+                                list($detailsHTML, $changesHTML) = formatDetailsAndChanges($log);
+                                ?>
                                 <tr>
-                                    <!-- Keep the same row structure but data will be equipment-specific -->
+                                    <!-- TRACK ID -->
                                     <td data-label="Track ID">
                                         <span class="badge bg-secondary">
                                             <?php echo htmlspecialchars($log['TrackID']); ?>
                                         </span>
                                     </td>
+
+                                    <!-- USER -->
                                     <td data-label="User">
                                         <div class="d-flex align-items-center">
                                             <i class="fas fa-user-circle me-2"></i>
-                                            <?php echo htmlspecialchars($log['user_email'] ?? 'N/A'); ?>
+                                            <?php echo htmlspecialchars($log['email'] ?? 'N/A'); ?>
                                         </div>
                                     </td>
-                                    <td data-label="Module">
-                                        <?php echo !empty($log['Module']) ? htmlspecialchars(trim($log['Module'])) : '<em class="text-muted">N/A</em>'; ?>
-                                    </td>
+
+                                    <!-- ACTION -->
                                     <td data-label="Action">
                                         <?php
-                                        $actionText = !empty($log['Action']) ? $log['Action'] : 'Unknown';
+                                        $actionText = ucfirst($log['Action'] ?? 'Unknown');
                                         echo "<span class='action-badge action-" . strtolower($actionText) . "'>";
                                         echo getActionIcon($actionText) . ' ' . htmlspecialchars($actionText);
                                         echo "</span>";
                                         ?>
                                     </td>
-                                    <?php
-                                    list($detailsHTML, $changesHTML) = formatDetailsAndChanges($log);
-                                    ?>
+
+                                    <!-- DETAILS -->
                                     <td data-label="Details" class="data-container">
                                         <?php echo nl2br($detailsHTML); ?>
                                     </td>
+
+                                    <!-- CHANGES -->
                                     <td data-label="Changes" class="data-container">
-                                        <?php echo nl2br($changesHTML); ?>
+                                        <?php echo $changesHTML; ?>
                                     </td>
+
+                                    <!-- STATUS -->
                                     <td data-label="Status">
-                                        <?php
-                                        // When displaying the status, ensure it defaults to 'successful' if not set
-                                        $status = $log['Status'] ?? 'successful';
-                                        ?>
-                                        <span class="badge <?php echo (strtolower($status) === 'successful') ? 'bg-success' : 'bg-danger'; ?>">
-                                            <?php echo getStatusIcon($status) . ' ' . htmlspecialchars($status); ?>
+                                        <span class="badge <?php echo (strtolower($log['Status'] ?? '') === 'successful') ? 'bg-success' : 'bg-danger'; ?>">
+                                            <?php echo getStatusIcon($log['Status']) . ' ' . htmlspecialchars($log['Status']); ?>
                                         </span>
                                     </td>
+
+                                    <!-- DATE & TIME -->
                                     <td data-label="Date & Time">
                                         <div class="d-flex align-items-center">
                                             <i class="far fa-clock me-2"></i>
-                                            <?php echo htmlspecialchars($log['Date_Time'] ?? ''); ?>
+                                            <?php 
+                                            // Format date_time properly with error handling
+                                            if (!empty($log['Date_Time']) && $log['Date_Time'] !== '0000-00-00 00:00:00') {
+                                                try {
+                                                    $dateTime = new DateTime($log['Date_Time']); 
+                                                    echo $dateTime->format('Y-m-d H:i:s');
+                                                } catch (Exception $e) {
+                                                    // Fallback if date is invalid
+                                                    echo htmlspecialchars($log['Date_Time']);
+                                                }
+                                            } else {
+                                                echo '<em class="text-muted">Date not available</em>';
+                                            }
+                                            ?>
                                         </div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="8">
+                                <td colspan="7">
                                     <div class="empty-state text-center py-4">
                                         <i class="fas fa-inbox fa-3x mb-3"></i>
-                                        <h4>No Equipment Audit Logs Found</h4>
-                                        <p class="text-muted">There are no equipment management audit log entries to display.</p>
+                                        <h4>No Department Audit Logs Found</h4>
+                                        <p class="text-muted">There are no department audit log entries to display.</p>
                                     </div>
                                 </td>
                             </tr>
                         <?php endif; ?>
                         </tbody>
                     </table>
+
                     <!-- Pagination Controls -->
                     <div class="container-fluid">
                         <div class="row align-items-center g-3">
-                            <!-- Pagination Info -->
                             <div class="col-12 col-sm-auto">
                                 <div class="text-muted">
                                     Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows">100</span> entries
                                 </div>
                             </div>
-                            <!-- Pagination Navigation -->
                             <div class="col-12 col-sm-auto ms-sm-auto">
                                 <div class="d-flex align-items-center gap-2">
                                     <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
                                         <i class="bi bi-chevron-left"></i> Previous
                                     </button>
                                     <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
-                                        <option value="10">10</option>
-                                        <option value="20" selected>20</option>
+                                        <option value="10" selected>10</option>
+                                        <option value="20">20</option>
+                                        <option value="30">30</option>
                                         <option value="50">50</option>
-                                        <option value="100">100</option>
                                     </select>
                                     <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
                                         Next <i class="bi bi-chevron-right"></i>
@@ -424,57 +378,19 @@ function logAudit($pdo, $action, $oldVal, $newVal, $status = 'successful') {
                                 </div>
                             </div>
                         </div>
-                        <!-- Pagination Numbers Container -->
                         <div class="row mt-3">
                             <div class="col-12">
-                                <ul id="pagination" class="pagination justify-content-center">
-                                    <!-- Pagination numbers will be rendered here by the script -->
-                                </ul>
+                                <ul class="pagination justify-content-center" id="pagination"></ul>
                             </div>
                         </div>
-                    </div>
-                    <!-- End Pagination Controls -->
-                </div>
+                    </div> <!-- /.Pagination -->
+                </div><!-- /.table-responsive -->
+            </div><!-- /.card-body -->
+        </div><!-- /.card -->
+    </div><!-- /.container-fluid -->
+</div><!-- /.main-content -->
 
-
-
-            </div>
-        </div>
-    </div>
-</div>
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/logs.js" defer></script>
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const searchInput = document.getElementById('searchInput');
-    const filterAction = document.getElementById('filterAction');
-    const filterModule = document.getElementById('filterModule');
-    const rows = document.querySelectorAll('#auditTable tr');
-
-    function filterTable() {
-        const searchText = searchInput.value.toLowerCase();
-        const actionFilter = filterAction.value.toLowerCase();
-        const moduleFilter = filterModule.value;
-
-        rows.forEach(row => {
-            const rowData = row.textContent.toLowerCase();
-            const actionCell = row.querySelector('[data-label="Action"]')?.textContent.toLowerCase() || '';
-            const moduleCell = row.querySelector('[data-label="Module"]')?.textContent.trim() || '';
-
-            const searchMatch = rowData.includes(searchText);
-            const actionMatch = !actionFilter || actionCell.includes(actionFilter);
-            const moduleMatch = !moduleFilter || moduleCell === moduleFilter;
-
-            row.style.display = searchMatch && actionMatch && moduleMatch ? '' : 'none';
-        });
-    }
-
-    // Add event listeners
-    if (searchInput) searchInput.addEventListener('input', filterTable);
-    if (filterAction) filterAction.addEventListener('change', filterTable);
-    if (filterModule) filterModule.addEventListener('change', filterTable);
-});
-</script>
 </body>
-</html>
-
+</html> 

@@ -1,212 +1,248 @@
-<?php
-if (session_status() === PHP_SESSION_NONE) {
+<b?php
+    if (session_status()===PHP_SESSION_NONE) {
     session_start();
-}
-require_once(__DIR__ . '/../../../../config/config.php');
-$role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
-?>
-<!-- Sidebar -->
-<div class="sidebar">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
-    <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/sidebar.css">
-    <h3>Menu</h3>
-    <nav>
-        <ul>
-            <li>
-                <a href="<?php echo BASE_URL; ?>src/view/php/clients/admins/dashboard.php">
-                    <i class="fas fa-tachometer-alt"></i> Dashboard
-                </a>
-            </li>
-            <!-- Example: Only show certain links for specific roles -->
-            <?php if ($role === 'Super Admin' || $role === 'Admin'): ?>
-                <!-- Admin-specific links here -->
-            <?php endif; ?>
-            <!-- Logs Dropdown -->
-            <li class="dropdown-item">
-                <button class="dropdown-toggle" aria-expanded="false">
-                    <i class="fas fa-history"></i> Logs
-                    <i class="fas fa-chevron-down dropdown-icon"></i>
-                </button>
-                <!-- Add .tree and aria-expanded to the <ul> -->
-                <ul class="dropdown tree" aria-expanded="false">
-                    <li>
-                        <a href="<?php echo BASE_URL; ?>src/view/php/clients/admins/audit_log.php">
-                            Audit Logs
-                        </a>
-                    </li>
-                    <li>
-                        <a href="<?php echo BASE_URL; ?>src/view/php/clients/admins/em_audit_log.php">
-                            Equipment Management Audit Logs
-                        </a>
-                    </li>
-                    <li>
-                        <a href="<?php echo BASE_URL; ?>src/view/php/clients/admins/et_audit_log.php">
-                            Equipment Transaction Audit Logs
-                        </a>
-                    </li>
-                    <li>
-                        <a href="<?php echo BASE_URL; ?>src/view/php/clients/admins/archive.php">
-                            Archives
-                        </a>
-                    </li>
-                </ul>
-            </li>
-            <!-- User Management Dropdown -->
-            <li class="dropdown-item">
-                <button class="dropdown-toggle" aria-expanded="false">
-                    <i class="fa-solid fa-user"></i>
-                    <span class="menu-text">User Management</span>
-                    <i class="fas fa-chevron-down dropdown-icon"></i>
-                </button>
-                <ul class="dropdown tree" aria-expanded="false">
-                    <li class="nav-item">
-                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/user_manager/user_management.php"
-                           class="nav-link">
-                            <span class="submenu-text">Manage Accounts</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/user_manager/user_roles_management.php"
-                           class="nav-link">
-                            <span class="submenu-text">User Roles Management</span>
-                        </a>
-                    </li>
-                </ul>
-            </li>
-
-             <!-- Roles and Privileges -->
-            <li class="dropdown-item">
-                <button class="dropdown-toggle" aria-expanded="false">
-                    <i class="fa-solid fa-user"></i>
-                    <span class="menu-text">Roles and Privileges</span>
-                    <i class="fas fa-chevron-down dropdown-icon"></i>
-                </button>
-                <ul class="dropdown tree" aria-expanded="false">
-                    <li class="nav-item">
-                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/role_manager/manage_roles.php"
-                           class="nav-link">
-                            <span class="submenu-text">Role Management</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/privilege_manager/manage_privileges.php"
-                           class="nav-link">
-                            <span class="submenu-text">Privilege Management</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/role_manager/department_management.php" class="nav-link">
-                            <span class="submenu-text">Department Management</span>
-                        </a>
-                    </li>
-                </ul>
-            </li>
-
-            <!-- Equipment Management Dropdown -->
-            <li class="dropdown-item">
-                <button class="dropdown-toggle" aria-expanded="false">
-                    <i class="fa-solid fa-wrench"></i> Equipment Management
-                    <i class="fas fa-chevron-down dropdown-icon"></i>
-                </button>
-                <ul class="dropdown tree" aria-expanded="false">
-                    <li>
-                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_manager/equipment_details.php">
-                            Equipment Details
-                        </a>
-                    </li>
-                    <li>
-                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_manager/equipment_location.php">
-                            Equipment Location
-                        </a>
-                    </li>
-                    <li>
-                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_manager/equipment_status.php">
-                            Equipment Status for PMS
-                        </a>
-                    </li>
-                </ul>
-            </li>
-            <!-- Equipment Transaction Dropdown -->
-            <li class="dropdown-item">
-                <button class="dropdown-toggle" aria-expanded="false">
-                    <i class="fa-solid fa-arrow-right-arrow-left"></i>Equipment Transaction
-                    <i class="fas fa-chevron-down dropdown-icon"></i>
-                </button>
-                <ul class="dropdown tree" aria-expanded="false">
-                    <li>
-                        <a href="../../modules/equipment_manager/purchase_order.php">
-                            Purchase Order
-                        </a>
-                    </li>
-                    <li>
-                        <a href="../../modules/equipment_manager/charge_invoice.php">
-                            Charge Invoice
-                        </a>
-                    </li>
-                    <li>
-                        <a href="../../modules/equipment_manager/receiving_report.php">
-                            Receiving Report
-                        </a>
-                    </li>
-            </li>
-        </ul>
-        <!--Reports Dropdown-->
-        <li class="dropdown-item">
-            <button class="dropdown-toggle" aria-expanded="false">
-                <i class="fas fa-flag"></i>Reports
-                <i class="fas fa-chevron-down dropdown-icon"></i>
-            </button>
-            <ul class="dropdown tree" aria-expanded="false">
+    }
+    require_once(__DIR__ . '/../../../../config/config.php' );
+    $role=isset($_SESSION['role']) ? $_SESSION['role'] : '' ;
+    ?>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+        <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/sidebar.css">
+        <h3>Menu</h3>
+        <nav>
+            <ul>
                 <li>
-                    <a href="#">
-                        User Management Reports
+                    <a href="<?php echo BASE_URL; ?>src/view/php/clients/dashboard.php">
+                        <i class="fas fa-tachometer-alt"></i> Dashboard
                     </a>
                 </li>
-                <li>
-                    <a href="#">
-                        Equipment Status Reports
-                    </a>
+                <!-- Example: Only show certain links for specific roles -->
+                <?php if ($role === 'Super Admin' || $role === 'Admin'): ?>
+                    <!-- Admin-specific links here -->
+                <?php endif; ?>
+                <!-- Logs Dropdown -->
+                <li class="dropdown-item">
+                    <button class="dropdown-toggle" aria-expanded="false">
+                        <i class="fas fa-history"></i> Logs
+                        <i class="fas fa-chevron-down dropdown-icon"></i>
+                    </button>
+                    <!-- Add .tree and aria-expanded to the <ul> -->
+                    <ul class="dropdown tree" aria-expanded="false">
+                        <ul><b> Audit Logs </b><br>
+                            <hr>
+                            <li>
+                                <a href="<?php echo BASE_URL; ?>src/view/php/modules/audit_manager/audit_log.php">
+                                    User Management Audit Logs
+                                </a>
+                            </li>
+                            <li>
+                                <a href="<?php echo BASE_URL; ?>src/view/php/modules/audit_manager/em_audit_log.php">
+                                    Equipment Management Audit Logs
+                                </a>
+                            </li>
+                            <li>
+                                <a href="<?php echo BASE_URL; ?>src/view/php/modules/audit_manager/et_audit_log.php">
+                                    Equipment Transaction Audit Logs
+                                </a>
+                            </li>
+                            <li>
+                                <a href="<?php echo BASE_URL; ?>src/view/php/modules/audit_manager/rm_audit_log.php">
+                                    Role Management Audit Logs
+                                </a>
+                            </li>
+                            <li>
+                                <a href="<?php echo BASE_URL; ?>src/view/php/modules/audit_manager/department_audit_log.php">
+                                    Department Management Audit Logs
+                                </a>
+                            </li>
+                        </ul>
+                        <ul><b> Archives </b><br>
+                            <hr>
+                            <li>
+                                <a href="<?php echo BASE_URL; ?>src/view/php/modules/audit_manager/archive.php">
+                                    User Management Archives
+                                </a>
+                            </li>
+                            <li>
+                                <a href="<?php echo BASE_URL; ?>src/view/php/modules/audit_manager/em_archive.php">
+                                    Equipment Management Archives
+                                </a>
+                            </li>
+                            <li>
+                                <a href="<?php echo BASE_URL; ?>src/view/php/modules/audit_manager/et_archive.php">
+                                    Equipment Transactions Archives
+                                </a>
+                            </li>
+                            <li>
+                                <a href="<?php echo BASE_URL; ?>src/view/php/modules/audit_manager/rm_archive.php">
+                                    Role Management Archives
+                                </a>
+                            </li>
+                            <li>
+                                <a href="<?php echo BASE_URL; ?>src/view/php/modules/audit_manager/department_archive.php">
+                                    Department Management Archives
+                                </a>
+                            </li>
+                        </ul>
+                    </ul>
                 </li>
-                <li>
-                    <a href="#">
-                        Equipment Transaction Reports
-                    </a>
+                <!-- User Management Dropdown -->
+                <li class="dropdown-item">
+                    <button class="dropdown-toggle" aria-expanded="false">
+                        <i class="fa-solid fa-user"></i>
+                        <span class="menu-text">User Management</span>
+                        <i class="fas fa-chevron-down dropdown-icon"></i>
+                    </button>
+                    <ul class="dropdown tree" aria-expanded="false">
+                        <li class="nav-item">
+                            <a href="<?php echo BASE_URL; ?>src/view/php/modules/user_manager/user_management.php"
+                                class="nav-link">
+                                <span class="submenu-text">Manage Accounts</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="<?php echo BASE_URL; ?>src/view/php/modules/user_manager/user_roles_management.php"
+                                class="nav-link">
+                                <span class="submenu-text">User Roles Management</span>
+                            </a>
+                        </li>
+                    </ul>
                 </li>
-        </li>
-        </ul>
-    </nav>
-</div>
 
-<!-- Include a small script to toggle aria-expanded on click -->
-<script>
-    // Query all toggles
-    document.querySelectorAll('.dropdown-toggle').forEach((btn) => {
-        btn.addEventListener('click', () => {
-            const currentState = btn.getAttribute('aria-expanded') === 'true';
-            // Flip the button's aria-expanded
-            btn.setAttribute('aria-expanded', !currentState);
+                <!-- Roles and Privileges -->
+                <li class="dropdown-item">
+                    <button class="dropdown-toggle" aria-expanded="false">
+                        <i class="fa-solid fa-user"></i>
+                        <span class="menu-text">Roles and Privileges</span>
+                        <i class="fas fa-chevron-down dropdown-icon"></i>
+                    </button>
+                    <ul class="dropdown tree" aria-expanded="false">
+                        <li class="nav-item">
+                            <a href="<?php echo BASE_URL; ?>src/view/php/modules/role_manager/manage_roles.php"
+                                class="nav-link">
+                                <span class="submenu-text">Role Management</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="<?php echo BASE_URL; ?>src/view/php/modules/privilege_manager/manage_privileges.php"
+                                class="nav-link">
+                                <span class="submenu-text">Privilege Management <br> 🆕💻 (Prototype)</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="<?php echo BASE_URL; ?>src/view/php/modules/role_manager/department_management.php" class="nav-link">
+                                <span class="submenu-text">Department Management</span>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
 
-            // The next sibling should be the corresponding <ul class='dropdown tree'>
-            const dropdownMenu = btn.nextElementSibling;
-            if (dropdownMenu && dropdownMenu.classList.contains('dropdown')) {
-                // Flip the <ul>'s aria-expanded as well
-                dropdownMenu.setAttribute('aria-expanded', !currentState);
-            }
+                <!-- Equipment Management Dropdown -->
+                <li class="dropdown-item">
+                    <button class="dropdown-toggle" aria-expanded="false">
+                        <i class="fa-solid fa-wrench"></i> Equipment Management
+                        <i class="fas fa-chevron-down dropdown-icon"></i>
+                    </button>
+                    <ul class="dropdown tree" aria-expanded="false">
+                        <li>
+                            <a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_manager/equipment_details.php">
+                                Equipment Details
+                            </a>
+                        </li>
+                        <li>
+                            <a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_manager/equipment_location.php">
+                                Equipment Location
+                            </a>
+                        </li>
+                        <li>
+                            <a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_manager/equipment_status.php">
+                                Equipment Status for PMS
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+                <!-- Equipment Transaction Dropdown -->
+                <li class="dropdown-item">
+                    <button class="dropdown-toggle" aria-expanded="false">
+                        <i class="fa-solid fa-arrow-right-arrow-left"></i>Equipment Transaction
+                        <i class="fas fa-chevron-down dropdown-icon"></i>
+                    </button>
+                    <ul class="dropdown tree" aria-expanded="false">
+                        <li>
+                            <a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_manager/purchase_order.php">
+                                Purchase Order
+                            </a>
+                        </li>
+                        <li>
+                            <a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_manager/charge_invoice.php">
+                                Charge Invoice
+                            </a>
+                        </li>
+                        <li>
+                            <a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_manager/receiving_report.php">
+                                Receiving Report
+                            </a>
+                        </li>
+                </li>
+            </ul>
+            <!--Reports Dropdown-->
+            <li class="dropdown-item">
+                <button class="dropdown-toggle" aria-expanded="false">
+                    <i class="fas fa-flag"></i>Reports 🔜 (Under Development)
+                    <i class="fas fa-chevron-down dropdown-icon"></i>
+                </button>
+                <ul class="dropdown tree" aria-expanded="false">
+                    <li>
+                        <a href="#">
+                            User Management Reports 🔜 (Under Development)
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#">
+                            Equipment Status Reports <br> 🔜 (Under Development)
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#">
+                            Equipment Transaction Reports <br> 🔜 (Under Development)
+                        </a>
+                    </li>
+            </li>
+            </ul>
+        </nav>
+    </div>
+
+    <!-- Include a small script to toggle aria-expanded on click -->
+    <script>
+        // Query all toggles
+        document.querySelectorAll('.dropdown-toggle').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const currentState = btn.getAttribute('aria-expanded') === 'true';
+                // Flip the button's aria-expanded
+                btn.setAttribute('aria-expanded', !currentState);
+
+                // The next sibling should be the corresponding <ul class='dropdown tree'>
+                const dropdownMenu = btn.nextElementSibling;
+                if (dropdownMenu && dropdownMenu.classList.contains('dropdown')) {
+                    // Flip the <ul>'s aria-expanded as well
+                    dropdownMenu.setAttribute('aria-expanded', !currentState);
+                }
+            });
         });
-    });
 
-    /* Add some JavaScript to handle click state */
-document.addEventListener('DOMContentLoaded', function() {
-    var dropdownToggles = document.querySelectorAll('.dropdown-toggle');
-    
-    dropdownToggles.forEach(function(toggle) {
-        toggle.addEventListener('click', function() {
-            // Remove any leftover hover styles
-            this.style.background = 'transparent';
-            this.style.transform = 'none';
-            this.style.textShadow = 'none';
-            this.style.boxShadow = 'none';
+        /* Add some JavaScript to handle click state */
+        document.addEventListener('DOMContentLoaded', function() {
+            var dropdownToggles = document.querySelectorAll('.dropdown-toggle');
+
+            dropdownToggles.forEach(function(toggle) {
+                toggle.addEventListener('click', function() {
+                    // Remove any leftover hover styles
+                    this.style.background = 'transparent';
+                    this.style.transform = 'none';
+                    this.style.textShadow = 'none';
+                    this.style.boxShadow = 'none';
+                });
+            });
         });
-    });
-});
-</script>
+    </script>

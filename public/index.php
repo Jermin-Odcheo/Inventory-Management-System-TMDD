@@ -40,14 +40,11 @@
                     <input type="checkbox" id="showPassword" class="form-check-input">
                     <label for="showPassword">Show Password</label>
                 </div>
-                <a href="forgot_password.php" class="forgot-link">Forgot password?</a>
             </div>
 
             <button type="submit" name="submit">Log In</button>
 
             <div class="signup-container">
-                <span>Don't have an account?</span>
-                <a href="registration.php">Create an Account</a>
             </div>
         </form>
     </div>

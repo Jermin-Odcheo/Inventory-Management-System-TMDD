@@ -33,8 +33,8 @@ $usersData = $stmt->fetchAll();
 $stmt = $pdo->query("SELECT id, role_name FROM roles WHERE is_disabled = 0");
 $rolesData = $stmt->fetchAll();
 
-// Query active departments
-$stmt = $pdo->query("SELECT id, department_name, abbreviation FROM departments WHERE is_disabled = 0");
+// Query all departments (show all regardless of is_disabled)
+$stmt = $pdo->query("SELECT id, department_name, abbreviation FROM departments ORDER BY department_name");
 $departmentsData = $stmt->fetchAll();
 
 // Query user_roles assignments
@@ -76,9 +76,209 @@ foreach ($userRoles as $assignment) {
     <!-- BASE_URL is assumed to be defined in your config -->
     <link rel="stylesheet" type="text/css" href="<?php echo BASE_URL; ?>src/view/styles/css/user_roles_management.css?ref=v1">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/pagination.css">
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <style>
         .modal.fade .modal-dialog {
             transition: transform .3s ease-out;
+        }
+        
+        /* Sort icon styling */
+        .sort-icon {
+            cursor: pointer;
+            margin-left: 5px;
+            font-size: 12px;
+            background-color: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            padding: 2px 6px;
+            display: inline-block;
+        }
+        
+        /* Modern input styling */
+        .search-container input,
+        .filter-container select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            background-color: white;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+        
+        .search-container input:focus,
+        .filter-container select:focus {
+            outline: none;
+            border-color: #a5b4fc;
+            box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15);
+        }
+        
+        .search-container,
+        .filter-container {
+            margin-right: 15px;
+            margin-bottom: 10px;
+        }
+        
+        .search-container label,
+        .filter-container label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #4b5563;
+            text-transform: uppercase;
+        }
+        
+        /* Remove search icon */
+        .search-container::after {
+            content: none !important;
+        }
+        
+        /* User List Modal Styling */
+        #current-users-table,
+        #departments-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        
+        #current-users-table tbody,
+        #departments-table tbody {
+            display: block;
+            max-height: 250px;
+            overflow-y: auto;
+            width: 100%;
+        }
+        
+        #current-users-table tr,
+        #departments-table tr {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+        }
+        
+        #current-users-table td,
+        #departments-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 14px;
+        }
+        
+        #current-users-table tr:last-child td,
+        #departments-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        #current-users-table td:last-child,
+        #departments-table td:last-child {
+            text-align: right;
+            width: 60px;
+            padding-right: 25px;
+            position: relative;
+        }
+        
+        #current-users-table tr:nth-child(even),
+        #departments-table tr:nth-child(even) {
+            background-color: #f9fafb;
+        }
+        
+        /* Remove hover effect */
+        #current-users-table tr:hover,
+        #departments-table tr:hover {
+            background-color: transparent;
+        }
+        
+        /* Button styling */
+        #current-users-table .delete-btn,
+        #departments-table .delete-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        /* Selection containers */
+        #selected-users-container, 
+        #selected-roles-container,
+        #added-departments-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 10px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            min-height: 42px;
+            background-color: #f9fafb;
+            margin-top: 8px;
+            margin-bottom: 15px;
+        }
+        
+        /* Selected items */
+        .selected-item {
+            background-color: #eef2ff;
+            border: 1px solid #e0e7ff;
+            color: #4f46e5;
+            padding: 5px 10px;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .selected-item .remove-btn {
+            background: none;
+            border: none;
+            color: #4f46e5;
+            margin-left: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 0;
+            line-height: 1;
+        }
+        
+        .selected-item .remove-btn:hover {
+            color: #6366f1;
+        }
+        
+        /* Modal styling */
+        .modal-content {
+            max-width: 600px;
+            width: 95%;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        
+        .modal-content h2 {
+            margin-top: 0;
+            text-transform: capitalize;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            text-transform: capitalize;
+        }
+        
+        .form-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 14px;
         }
     </style>
     <title>User Roles Management</title>
@@ -89,29 +289,37 @@ foreach ($userRoles as $assignment) {
         <h1>USER ROLES MANAGER</h1>
     </header>
     <div class="filters-container">
-        <div class="search-filter">
-            <label for="search-filters">search for role</label>
-            <input type="text" id="search-filters">
-        </div>
         <div class="search-container">
-            <label for="search-filters">search for users</label>
-            <input type="text" id="search-users" placeholder="search user">
+            <label for="search-users">search for users</label>
+            <input type="text" id="search-users" placeholder="Search user...">
         </div>
         <div class="filter-container">
-            <label for="filter-dropdown">filter</label>
-            <select id="filter-dropdown">
+            <label for="role-filter">filter by role</label>
+            <select id="role-filter">
                 <option value="">All</option>
+                <?php foreach ($rolesData as $role): ?>
+                    <option value="<?php echo $role['id']; ?>">
+                        <?php echo htmlspecialchars($role['role_name']); ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="filter-container">
+            <label for="dept-filter">Filter by Department</label>
+            <select id="dept-filter">
+                <option value="" selected>All Departments</option>
                 <?php foreach ($departmentsData as $dept): ?>
-                    <option value="<?php echo $dept['id']; ?>">
+                    <option value="<?php echo htmlspecialchars($dept['department_name']); ?>">
                         <?php echo htmlspecialchars($dept['department_name']); ?>
                     </option>
                 <?php endforeach; ?>
             </select>
         </div>
-        <div class="action-buttons">
+         <div class="action-buttons">
+            <button id="clear-filters-btn" class="clear-filters-btn">Clear Filters</button>
             <?php if ($canCreate): ?>
             <button id="create-btn">Create user to role</button>
-            <?php endif; ?>
+        <?php endif; ?>
         </div>
     </div>
 
@@ -122,9 +330,9 @@ foreach ($userRoles as $assignment) {
             <tr>
                 <!-- Added checkbox column header with "select all" -->
                 <th><?php if ($canDelete): ?><input type="checkbox" id="select-all"><?php endif; ?></th>
-                <th>User</th>
-                <th>Role</th>
+                <th>User <span class="sort-icon" id="sort-user">A→Z</span></th>
                 <th>Departments</th>
+                <th>Roles</th>
                 <th>Actions</th>
             </tr>
             </thead>
@@ -181,6 +389,19 @@ foreach ($userRoles as $assignment) {
         <h2>add user to roles modal</h2>
         <div class="modal-body">
             <div class="form-group">
+                <label for="search-department-dropdown">select department</label>
+                <select id="search-department-dropdown">
+                    <option value="">Select one department</option>
+                    <?php foreach ($departmentsData as $dept): ?>
+                        <option value="<?php echo $dept['id']; ?>"><?php echo htmlspecialchars($dept['department_name']); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>selected department</label>
+                <div id="selected-department-container"></div>
+            </div>
+            <div class="form-group">
                 <label for="search-role-dropdown">search role/s</label>
                 <select id="search-role-dropdown">
                     <option value="">Select roles</option>
@@ -225,31 +446,30 @@ foreach ($userRoles as $assignment) {
 <!-- Add Department to Role Modal -->
 <div id="add-department-role-modal" class="modal">
     <div class="modal-content">
-        <h2>Add department to role modal</h2>
+        <h2>Add role to department modal</h2>
         <div class="modal-body">
-            <h3>ROLE TITLE</h3>
             <div class="form-group">
-                <label>Add department to role</label>
+                <label>Add role to department</label>
                 <select id="department-dropdown">
-                    <option value="">Select department</option>
-                    <?php foreach ($departmentsData as $dept): ?>
-                        <option value="<?php echo $dept['id']; ?>"><?php echo htmlspecialchars($dept['department_name']); ?></option>
+                    <option value="">Select role</option>
+                    <?php foreach ($rolesData as $role): ?>
+                        <option value="<?php echo $role['id']; ?>"><?php echo htmlspecialchars($role['role_name']); ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
             <div class="form-group">
-                <label>ADDED DEPARTMENTS</label>
+                <label>ADDED ROLES</label>
                 <div id="added-departments-container"></div>
             </div>
             <div class="form-group">
-                <label>List of Departments</label>
+                <label>List of Roles</label>
                 <table id="departments-table">
                     <tbody>
-                    <?php foreach ($departmentsData as $dept): ?>
+                    <?php foreach ($rolesData as $role): ?>
                         <tr>
-                            <td><?php echo htmlspecialchars($dept['department_name']); ?></td>
+                            <td><?php echo htmlspecialchars($role['role_name']); ?></td>
                             <td>
-                                <button class="delete-btn" data-dept-id="<?php echo $dept['id']; ?>">
+                                <button class="delete-btn" data-role-id="<?php echo $role['id']; ?>">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </td>
@@ -303,5 +523,32 @@ foreach ($userRoles as $assignment) {
 
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/user_roles_management.js" defer></script>
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+    $(document).ready(function() {
+        // Initialize Select2 for department filter
+        $('#dept-filter').select2({
+            placeholder: 'All Departments',
+            allowClear: true,
+            width: '100%'
+        });
+        // Always show the placeholder as an option
+        $('#dept-filter').val('').trigger('change');
+        // Ensure filter triggers on Select2 change and clear
+        $('#dept-filter').on('change', function() {
+            const filterUserId = $('#search-users').val();
+            const filterRoleId = $('#role-filter').val();
+            const filterDeptId = $(this).val();
+            if (typeof renderUserRolesTable === 'function') {
+                renderUserRolesTable(filterUserId, filterRoleId, filterDeptId, window.userSortDirection || 'asc');
+            }
+        });
+        // Also clear Select2 when Clear Filters is clicked
+        $('#clear-filters-btn').on('click', function() {
+            $('#dept-filter').val('').trigger('change');
+        });
+    });
+</script>
 </body>
 </html>

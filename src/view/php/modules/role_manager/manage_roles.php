@@ -17,14 +17,15 @@ $userId = (int)$userId;
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
 $rbac->requirePrivilege('Roles and Privileges', 'View');
 
-// 3) Button flags
+// 3) Button flagsStatus
 $canCreate = $rbac->hasPrivilege('Roles and Privileges', 'Create');
 $canModify = $rbac->hasPrivilege('Roles and Privileges', 'Modify');
 $canRemove = $rbac->hasPrivilege('Roles and Privileges', 'Remove');
 $canUndo = $rbac->hasPrivilege('Roles and Privileges', 'Undo');
 $canRedo = $rbac->hasPrivilege('Roles and Privileges', 'Redo');
+$canViewArchive = $rbac->hasPrivilege('Roles and Privileges', 'View');
 
-// SQL query remains the same
+// SQL query updated to only show active roles
 $sql = "
 SELECT 
     r.id AS Role_ID,
@@ -40,6 +41,7 @@ SELECT
     ), 'No privileges') AS Privileges
 FROM roles r
 CROSS JOIN modules m
+WHERE r.is_disabled = 0
 ORDER BY r.id, m.id;
 ";
 
@@ -145,6 +147,11 @@ unset($role);
         </header>
 
         <div class="d-flex justify-content-end mb-3">
+            <!-- <?php if ($canViewArchive): ?>
+            <a href="archived_roles.php" class="btn btn-outline-secondary me-2">
+                <i class="bi bi-archive"></i> View Archived Roles
+            </a> -->
+            <?php endif; ?>
             <?php if ($canUndo): ?>
             <button type="button" class="btn btn-secondary me-2" id="undoButton">Undo</button>
             <?php endif; ?>
@@ -294,7 +301,8 @@ unset($role);
         canModify: <?php echo json_encode($canModify); ?>,
         canRemove: <?php echo json_encode($canRemove); ?>,
         canUndo: <?php echo json_encode($canUndo); ?>,
-        canRedo: <?php echo json_encode($canRedo); ?>
+        canRedo: <?php echo json_encode($canRedo); ?>,
+        canViewArchive: <?php echo json_encode($canViewArchive); ?>
     };
 
     document.addEventListener('DOMContentLoaded', function () {
