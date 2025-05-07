@@ -51,6 +51,11 @@
                                     Role Management Audit Logs
                                 </a>
                             </li>
+                            <li>
+                                <a href="<?php echo BASE_URL; ?>src/view/php/modules/audit_manager/department_audit_log.php">
+                                    Department Management Audit Logs
+                                </a>
+                            </li>
                         </ul>
                         <ul><b> Archives </b><br>
                             <hr>
@@ -72,6 +77,11 @@
                             <li>
                                 <a href="<?php echo BASE_URL; ?>src/view/php/modules/audit_manager/rm_archive.php">
                                     Role Management Archives
+                                </a>
+                            </li>
+                            <li>
+                                <a href="<?php echo BASE_URL; ?>src/view/php/modules/audit_manager/department_archive.php">
+                                    Department Management Archives
                                 </a>
                             </li>
                         </ul>

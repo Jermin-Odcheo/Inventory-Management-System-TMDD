@@ -74,15 +74,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             $oldValues = json_encode([
                 'id' => $departmentData['id'],
                 'abbreviation' => $departmentData['abbreviation'],
-                'department_name' => $departmentData['department_name'],
-                'is_disabled' => 0
+                'department_name' => $departmentData['department_name']
             ]);
 
             $newValues = json_encode([
                 'id' => $departmentData['id'],
                 'abbreviation' => $departmentData['abbreviation'],
-                'department_name' => $departmentData['department_name'],
-                'is_disabled' => 1
+                'department_name' => $departmentData['department_name']
             ]);
 
             // Soft delete - update is_disabled to 1 instead of DELETE
@@ -120,7 +118,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 }
 
 // ------------------------
-// PROCESS FORM SUBMISSIONS (Add / Update)
+// PROCESS FORM SUBMISSIONS (Create / Update)
 // ------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // For AJAX requests, ensure we only output JSON
@@ -144,7 +142,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    if (isset($_POST['action']) && $_POST['action'] === 'add') {
+    if (isset($_POST['action']) && $_POST['action'] === 'create') {
         // Check RBAC permission for create
         if (!$canCreate) {
             $response['status'] = 'error';
@@ -164,8 +162,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $newValues = json_encode([
                 'id' => $newDepartmentId,
                 'abbreviation' => $DepartmentAcronym,
-                'department_name' => $DepartmentName,
-                'is_disabled' => 0
+                'department_name' => $DepartmentName
             ]);
 
             $auditStmt = $pdo->prepare("
@@ -177,8 +174,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['user_id'],
                 $newDepartmentId,
                 'Department Management',
-                'Add',
-                "Department '{$DepartmentName}' has been added",
+                'Create',
+                "Department '{$DepartmentName}' has been Created",
                 null,
                 $newValues,
                 'Successful'
@@ -186,15 +183,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $pdo->commit();
             $response['status'] = 'success';
-            $response['message'] = 'Department has been added successfully.';
-            $_SESSION['success'] = "Department has been added successfully.";
+            $response['message'] = 'Department has been Created successfully.';
+            $_SESSION['success'] = "Department has been Created successfully.";
         } catch (PDOException $e) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
             }
             $response['status'] = 'error';
-            $response['message'] = 'Error adding Department: ' . $e->getMessage();
-            $_SESSION['errors'] = ["Error adding Department: " . $e->getMessage()];
+            $response['message'] = 'Error Created Department: ' . $e->getMessage();
+            $_SESSION['errors'] = ["Error Created Department: " . $e->getMessage()];
         }
         echo json_encode($response);
         exit;
@@ -238,14 +235,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $oldValues = json_encode([
                 'id' => $oldDepartment['id'],
                 'abbreviation' => $oldDepartment['abbreviation'],
-                'department_name' => $oldDepartment['department_name'],
-                'is_disabled' => $oldDepartment['is_disabled'] ?? 0
+                'department_name' => $oldDepartment['department_name']
             ]);
             $newValues = json_encode([
                 'id' => $id,
                 'abbreviation' => $DepartmentAcronym,
-                'department_name' => $DepartmentName,
-                'is_disabled' => $oldDepartment['is_disabled'] ?? 0
+                'department_name' => $DepartmentName
             ]);
 
             $auditStmt = $pdo->prepare("
@@ -473,16 +468,6 @@ if (isset($_GET["q"])) {
                                                 <i class="bi bi-plus-circle"></i> Create Department
                                             </button>
                                         <?php endif; ?>
-                                        
-                                        <!-- Added Audit Log and Archive Links -->
-                                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/audit_manager/department_audit_log.php" class="btn btn-info btn-sm">
-                                            <i class="bi bi-clock-history"></i> View Audit Logs
-                                        </a>
-                                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/audit_manager/department_archive.php" class="btn btn-secondary btn-sm">
-                                            <i class="bi bi-archive"></i> View Archive
-                                        </a>
-                                        <!-- End of Added Links -->
-                                        
                                         <!-- Sorting Filter UI -->
                                         <div class="d-flex align-items-center gap-2" id="sortFilter">
                                             <label class="mb-0">Sort by:</label>
@@ -595,7 +580,7 @@ if (isset($_GET["q"])) {
                 </div>
                 <div class="modal-body">
                     <form id="addDepartmentForm" method="post">
-                        <input type="hidden" name="action" value="add">
+                        <input type="hidden" name="action" value="create">
                         <div class="mb-3">
                             <label for="DepartmentAcronym" class="form-label">
                                 <i class="bi bi-building"></i> Department Acronym <span class="text-danger">*</span>

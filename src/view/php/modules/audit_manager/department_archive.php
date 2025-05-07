@@ -35,6 +35,13 @@ AND a.Action = 'Remove'
 AND EXISTS (
     SELECT 1 FROM departments WHERE id = a.EntityID AND is_disabled = 1
 )
+AND a.TrackID = (
+    SELECT MAX(a2.TrackID)
+    FROM audit_log a2
+    WHERE a2.EntityID = a.EntityID
+    AND a2.Module = 'Department Management'
+    AND a2.Action = 'Remove'
+)
 ORDER BY a.TrackID DESC
 ";
 

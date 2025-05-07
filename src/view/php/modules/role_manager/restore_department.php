@@ -75,15 +75,13 @@ try {
             $oldValues = json_encode([
                 'id' => $dept['id'],
                 'abbreviation' => $dept['abbreviation'],
-                'department_name' => $dept['department_name'],
-                'is_disabled' => 1 // Old value (was disabled)
+                'department_name' => $dept['department_name']
             ]);
             
             $newValues = json_encode([
                 'id' => $dept['id'],
                 'abbreviation' => $dept['abbreviation'],
-                'department_name' => $dept['department_name'],
-                'is_disabled' => 0 // New value (now enabled)
+                'department_name' => $dept['department_name']
             ]);
 
             $auditStmt->execute([
@@ -125,15 +123,13 @@ try {
         $oldValues = json_encode([
             'id' => $department['id'],
             'abbreviation' => $department['abbreviation'],
-            'department_name' => $department['department_name'],
-            'is_disabled' => 1 // Old value (was disabled)
+            'department_name' => $department['department_name']
         ]);
         
         $newValues = json_encode([
             'id' => $department['id'],
             'abbreviation' => $department['abbreviation'],
-            'department_name' => $department['department_name'],
-            'is_disabled' => 0 // New value (now enabled)
+            'department_name' => $department['department_name']
         ]);
 
         $auditStmt = $pdo->prepare("

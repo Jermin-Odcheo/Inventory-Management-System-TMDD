@@ -2,11 +2,8 @@
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
 
-// Define the root path to make includes more reliable
-define('ROOT_PATH', realpath(dirname(__FILE__) . '/../../../../../'));
-
 // Add the RBAC service include with a more reliable path
-require_once(ROOT_PATH . '/src/control/RBACService.php');
+require_once(BASE_URL . '/src/control/RBACService.php');
 
 header('Content-Type: application/json');
 
@@ -111,15 +108,13 @@ try {
                 $oldValues = json_encode([
                     'id' => $dept['id'],
                     'abbreviation' => $dept['abbreviation'],
-                    'department_name' => $dept['department_name'],
-                    'is_disabled' => 0
+                    'department_name' => $dept['department_name']
                 ]);
                 
                 $newValues = json_encode([
                     'id' => $dept['id'],
                     'abbreviation' => $dept['abbreviation'],
-                    'department_name' => $dept['department_name'],
-                    'is_disabled' => 1
+                    'department_name' => $dept['department_name']
                 ]);
 
                 $auditStmt->execute([
@@ -194,15 +189,13 @@ try {
             $oldValues = json_encode([
                 'id' => $department['id'],
                 'abbreviation' => $department['abbreviation'],
-                'department_name' => $department['department_name'],
-                'is_disabled' => 0
+                'department_name' => $department['department_name']
             ]);
             
             $newValues = json_encode([
                 'id' => $department['id'],
                 'abbreviation' => $department['abbreviation'],
-                'department_name' => $department['department_name'],
-                'is_disabled' => 1
+                'department_name' => $department['department_name']
             ]);
 
             $auditStmt = $pdo->prepare("
