@@ -128,48 +128,97 @@ if (clearFiltersBtn) {
                 `);
                 tbody.append(tr);
             } else {
-                assignments.forEach((assignment, index) => {
+                // Consolidate assignments by department
+                const deptMap = new Map(); // Map of departmentName => array of roles
+                
+                assignments.forEach(assignment => {
                     const role = getRoleById(assignment.roleId);
-                    const departmentNames = assignment.departmentIds.map(deptId => {
+                    
+                    assignment.departmentIds.forEach(deptId => {
                         const dept = getDepartmentById(deptId);
-                        return dept ? dept.department_name : 'Unknown';
-                    }).join(', ');
-                    let tr;
-                    if (index === 0) {
-                        tr = $(`
-                          <tr>
-                            <td rowspan="${assignments.length}">${userPrivileges.canDelete ? '<input type="checkbox" class="select-row" value="' + user.id + '">' : ''}</td>
-                            <td rowspan="${assignments.length}">${user.username}</td>
-                            <td>${departmentNames}</td>
-                            <td>${role.role_name}</td>
-                            <td>
-                              ${userPrivileges.canModify ? `<button class="edit-btn" data-user-id="${user.id}" data-role-id="${assignment.roleId}">
-                                <i class="bi bi-pencil-square"></i>
-                              </button>` : ''}
-                              ${userPrivileges.canDelete ? `<button class="delete-btn" data-user-id="${user.id}" data-role-id="${assignment.roleId}">
-                                <i class="bi bi-trash"></i>
-                              </button>` : ''}
-                            </td>
-                          </tr>
-                        `);
-                    } else {
-                        tr = $(`
-                          <tr>
-                            <td>${departmentNames}</td>
-                            <td>${role.role_name}</td>
-                            <td>
-                              ${userPrivileges.canModify ? `<button class="edit-btn" data-user-id="${user.id}" data-role-id="${assignment.roleId}">
-                                <i class="bi bi-pencil-square"></i>
-                              </button>` : ''}
-                              ${userPrivileges.canDelete ? `<button class="delete-btn" data-user-id="${user.id}" data-role-id="${assignment.roleId}">
-                                <i class="bi bi-trash"></i>
-                              </button>` : ''}
-                            </td>
-                          </tr>
-                        `);
-                    }
-                    tbody.append(tr);
+                        if (!dept) return;
+                        
+                        const deptName = dept.department_name;
+                        if (!deptMap.has(deptName)) {
+                            deptMap.set(deptName, []);
+                        }
+                        
+                        deptMap.get(deptName).push({
+                            roleName: role.role_name,
+                            roleId: assignment.roleId,
+                            userId: assignment.userId
+                        });
+                    });
                 });
+                
+                // Convert the map to array for easier rendering
+                const consolidatedDepts = Array.from(deptMap).map(([deptName, roles]) => ({
+                    departmentName: deptName,
+                    roles: roles
+                }));
+                
+                // Render the consolidated data
+                if (consolidatedDepts.length === 0) {
+                    const tr = $(`
+                      <tr>
+                        <td>${userPrivileges.canDelete ? '<input type="checkbox" class="select-row" value="' + user.id + '">' : ''}</td>
+                        <td>${user.username}</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>
+                          ${userPrivileges.canModify ? `<button class="edit-btn" data-user-id="${user.id}" data-role-id="0">
+                            <i class="bi bi-pencil-square"></i>
+                          </button>` : ''}
+                          ${userPrivileges.canDelete ? `<button class="delete-btn" data-user-id="${user.id}" data-role-id="0">
+                            <i class="bi bi-trash"></i>
+                          </button>` : ''}
+                        </td>
+                      </tr>
+                    `);
+                    tbody.append(tr);
+                } else {
+                    consolidatedDepts.forEach((dept, deptIndex) => {
+                        const roleNames = dept.roles.map(r => r.roleName).join(', ');
+                        // Get the first role for the action buttons
+                        const firstRole = dept.roles[0];
+                        
+                        let tr;
+                        if (deptIndex === 0) {
+                            tr = $(`
+                              <tr>
+                                <td rowspan="${consolidatedDepts.length}">${userPrivileges.canDelete ? '<input type="checkbox" class="select-row" value="' + user.id + '">' : ''}</td>
+                                <td rowspan="${consolidatedDepts.length}">${user.username}</td>
+                                <td>${dept.departmentName}</td>
+                                <td>${roleNames}</td>
+                                <td>
+                                  ${userPrivileges.canModify ? `<button class="edit-btn" data-user-id="${firstRole.userId}" data-role-id="${firstRole.roleId}">
+                                    <i class="bi bi-pencil-square"></i>
+                                  </button>` : ''}
+                                  ${userPrivileges.canDelete ? `<button class="delete-btn" data-user-id="${firstRole.userId}" data-role-id="${firstRole.roleId}">
+                                    <i class="bi bi-trash"></i>
+                                  </button>` : ''}
+                                </td>
+                              </tr>
+                            `);
+                        } else {
+                            tr = $(`
+                              <tr>
+                                <td>${dept.departmentName}</td>
+                                <td>${roleNames}</td>
+                                <td>
+                                  ${userPrivileges.canModify ? `<button class="edit-btn" data-user-id="${firstRole.userId}" data-role-id="${firstRole.roleId}">
+                                    <i class="bi bi-pencil-square"></i>
+                                  </button>` : ''}
+                                  ${userPrivileges.canDelete ? `<button class="delete-btn" data-user-id="${firstRole.userId}" data-role-id="${firstRole.roleId}">
+                                    <i class="bi bi-trash"></i>
+                                  </button>` : ''}
+                                </td>
+                              </tr>
+                            `);
+                        }
+                        tbody.append(tr);
+                    });
+                }
             }
         });
         if ($.trim(tbody.html()) === '') {

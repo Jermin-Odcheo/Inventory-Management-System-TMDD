@@ -332,7 +332,7 @@ foreach ($userRoles as $assignment) {
                 <th><?php if ($canDelete): ?><input type="checkbox" id="select-all"><?php endif; ?></th>
                 <th>User <span class="sort-icon" id="sort-user">A→Z</span></th>
                 <th>Departments</th>
-                <th>Role</th>
+                <th>Roles</th>
                 <th>Actions</th>
             </tr>
             </thead>
