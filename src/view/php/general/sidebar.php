@@ -170,17 +170,17 @@
                     </button>
                     <ul class="dropdown tree" aria-expanded="false">
                         <li>
-                            <a href="../../modules/equipment_manager/purchase_order.php">
+                            <a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_manager/purchase_order.php">
                                 Purchase Order
                             </a>
                         </li>
                         <li>
-                            <a href="../../modules/equipment_manager/charge_invoice.php">
+                            <a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_manager/charge_invoice.php">
                                 Charge Invoice
                             </a>
                         </li>
                         <li>
-                            <a href="../../modules/equipment_manager/receiving_report.php">
+                            <a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_manager/receiving_report.php">
                                 Receiving Report
                             </a>
                         </li>
