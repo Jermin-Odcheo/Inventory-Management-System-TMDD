@@ -529,105 +529,188 @@ if (clearFiltersBtn) {
     }
 
     // Save handlers
-    if (saveUserRolesBtn && userPrivileges.canCreate) {
-        saveUserRolesBtn.addEventListener('click', function() {
-            if (selectedUsers.length === 0 || selectedRoles.length === 0 || !selectedDepartment) {
-                Toast.error('Please select at least one user, one role, and a department', 5000, 'Validation Error');
-                return;
-            }
-            
-            let newAssignments = [];
-            selectedUsers.forEach(user => {
-                // Create entries with multiple roles but single department
-                newAssignments.push({
-                    userId: user.id,
-                    roleIds: selectedRoles.map(role => role.id), // Send all role IDs as an array
-                    departmentId: selectedDepartment.id // Single department ID
-                });
+
+// Save handler for adding users to roles
+if (saveUserRolesBtn && userPrivileges.canCreate) {
+    saveUserRolesBtn.addEventListener('click', function() {
+        if (selectedUsers.length === 0 || selectedRoles.length === 0 || !selectedDepartment) {
+            Toast.error('Please select at least one user, one role, and a department', 5000, 'Validation Error');
+            return;
+        }
+        
+        let newAssignments = [];
+        selectedUsers.forEach(user => {
+            // Create entries with multiple roles but single department
+            // Each user can have multiple roles in the selected department
+            newAssignments.push({
+                userId: user.id,
+                roleIds: selectedRoles.map(role => role.id), // Send all role IDs as an array
+                departmentId: selectedDepartment.id // Single department ID
             });
+        });
 
-            // Pre-check for empty newAssignments
-            if (newAssignments.length === 0) {
-                Toast.error('No valid assignments to create', 5000, 'Error');
-                return;
-            }
+        // Pre-check for empty newAssignments
+        if (newAssignments.length === 0) {
+            Toast.error('No valid assignments to create', 5000, 'Error');
+            return;
+        }
 
-            fetch('save_user_role.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newAssignments)
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Update the local data
-                        if (data.assignments) {
-                            // Merge the server response with existing data rather than replacing
-                            const newAssignmentsFromServer = data.assignments;
+        fetch('save_user_role.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newAssignments)
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update the local data
+                    if (data.assignments) {
+                        // Merge the server response with existing data rather than replacing
+                        const newAssignmentsFromServer = data.assignments;
+                        
+                        // For each new assignment from server, update or add to userRoleDepartments
+                        newAssignmentsFromServer.forEach(newAssignment => {
+                            const existingIndex = userRoleDepartments.findIndex(
+                                a => a.userId === newAssignment.userId && a.roleId === newAssignment.roleId
+                            );
                             
-                            // For each new assignment from server, update or add to userRoleDepartments
-                            newAssignmentsFromServer.forEach(newAssignment => {
+                            if (existingIndex !== -1) {
+                                // CRITICAL CHANGE: Don't replace department IDs, merge them
+                                // Check if department already exists to avoid duplicates
+                                newAssignment.departmentIds.forEach(deptId => {
+                                    if (!userRoleDepartments[existingIndex].departmentIds.includes(deptId)) {
+                                        userRoleDepartments[existingIndex].departmentIds.push(deptId);
+                                    }
+                                });
+                            } else {
+                                // Add new assignment
+                                userRoleDepartments.push(newAssignment);
+                            }
+                        });
+                    } else {
+                        // Client-side creation for each role (if no server response)
+                        newAssignments.forEach(assignment => {
+                            assignment.roleIds.forEach(roleId => {
+                                // Check if this assignment already exists
                                 const existingIndex = userRoleDepartments.findIndex(
-                                    a => a.userId === newAssignment.userId && a.roleId === newAssignment.roleId
+                                    a => a.userId === assignment.userId && a.roleId === roleId
                                 );
                                 
                                 if (existingIndex !== -1) {
-                                    // Update existing assignment
-                                    userRoleDepartments[existingIndex] = newAssignment;
+                                    // CRITICAL CHANGE: Don't replace, add if not present
+                                    if (!userRoleDepartments[existingIndex].departmentIds.includes(assignment.departmentId)) {
+                                        userRoleDepartments[existingIndex].departmentIds.push(assignment.departmentId);
+                                    }
                                 } else {
-                                    // Add new assignment
-                                    userRoleDepartments.push(newAssignment);
+                                    // Create new assignment
+                                    userRoleDepartments.push({
+                                        userId: assignment.userId,
+                                        roleId: roleId,
+                                        departmentIds: [assignment.departmentId]
+                                    });
                                 }
                             });
-                        } else {
-                            // Otherwise create local entries for each role
-                            newAssignments.forEach(assignment => {
-                                assignment.roleIds.forEach(roleId => {
-                                    // Check if this assignment already exists
+                        });
+                    }
+                    
+                    // Reset selections for next time
+                    selectedUsers = [];
+                    selectedRoles = [];
+                    selectedDepartment = null;
+                    selectedUsersContainer.innerHTML = '';
+                    selectedRolesContainer.innerHTML = '';
+                    selectedDepartmentContainer.innerHTML = '';
+                    
+                    // Close modal and refresh table
+                    addUserRolesModal.style.display = 'none';
+                    renderUserRolesTable(null, null, null, userSortDirection);
+                    Toast.success('New roles assigned successfully', 5000, 'Success');
+                } else {
+                    // Display the error message from the server
+                    Toast.error(data.error || 'Failed to save assignments', 5000, 'Error');
+                }
+            })
+            .catch(error => {
+                console.error(error);
+                Toast.error('Error saving assignments', 5000, 'Error');
+            });
+    });
+}
+
+// Update function for modifying departments
+if (saveDepartmentRoleBtn && userPrivileges.canModify) {
+    saveDepartmentRoleBtn.addEventListener('click', function() {
+        if (currentEditingData) {
+            const index = userRoleDepartments.findIndex(a => a.userId === currentEditingData.userId && a.roleId === currentEditingData.roleId);
+            if (index !== -1) {
+                let updatedRoles = selectedRoles.map(role => role.id);
+                fetch('update_user_department.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: currentEditingData.userId,
+                        oldRoleId: currentEditingData.roleId,
+                        roleIds: updatedRoles,
+                        departmentId: currentEditingData.originalDeptIds[0], // Keep existing department(s)
+                        // IMPORTANT: Flag to indicate we want to preserve existing departments
+                        preserveExistingDepartments: true
+                    })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Update local data with server response
+                            if (data.assignments) {
+                                // Merge the server response with existing data rather than replacing
+                                const newAssignmentsFromServer = data.assignments;
+                                
+                                // For each new assignment from server, update or add to userRoleDepartments
+                                newAssignmentsFromServer.forEach(newAssignment => {
                                     const existingIndex = userRoleDepartments.findIndex(
-                                        a => a.userId === assignment.userId && a.roleId === roleId
+                                        a => a.userId === newAssignment.userId && a.roleId === newAssignment.roleId
                                     );
                                     
                                     if (existingIndex !== -1) {
-                                        // Update existing assignment
-                                        if (!userRoleDepartments[existingIndex].departmentIds.includes(assignment.departmentId)) {
-                                            userRoleDepartments[existingIndex].departmentIds.push(assignment.departmentId);
-                                        }
-                                    } else {
-                                        // Create new assignment
-                                        userRoleDepartments.push({
-                                            userId: assignment.userId,
-                                            roleId: roleId,
-                                            departmentIds: [assignment.departmentId]
+                                        // CRITICAL CHANGE: Merge departments rather than replace
+                                        // First, preserve existing departments
+                                        const existingDepts = [...userRoleDepartments[existingIndex].departmentIds];
+                                        
+                                        // Then add any new departments from the server response
+                                        newAssignment.departmentIds.forEach(deptId => {
+                                            if (!existingDepts.includes(deptId)) {
+                                                existingDepts.push(deptId);
+                                            }
                                         });
+                                        
+                                        // Update with merged list
+                                        userRoleDepartments[existingIndex].departmentIds = existingDepts;
+                                    } else {
+                                        // Add new assignment
+                                        userRoleDepartments.push(newAssignment);
                                     }
                                 });
-                            });
+                            } else {
+                                // Update the role ID if no server response
+                                if (updatedRoles.length > 0) {
+                                    userRoleDepartments[index].roleId = updatedRoles[0];
+                                    // Keep existing departments (don't modify departmentIds)
+                                }
+                            }
+                            addDepartmentRoleModal.style.display = 'none';
+                            renderUserRolesTable(null, null, null, userSortDirection);
+                            Toast.success('Roles updated successfully', 5000, 'Success');
+                        } else {
+                            Toast.error('Failed to update roles', 5000, 'Error');
                         }
-                        
-                        // Reset selections for next time
-                        selectedUsers = [];
-                        selectedRoles = [];
-                        selectedDepartment = null;
-                        selectedUsersContainer.innerHTML = '';
-                        selectedRolesContainer.innerHTML = '';
-                        selectedDepartmentContainer.innerHTML = '';
-                        
-                        // Close modal and refresh table
-                        addUserRolesModal.style.display = 'none';
-                        renderUserRolesTable(null, null, null, userSortDirection);
-                        Toast.success('New roles assigned successfully', 5000, 'Success');
-                    } else {
-                        // Display the error message from the server
-                        Toast.error(data.error || 'Failed to save assignments', 5000, 'Error');
-                    }
-                })
-                .catch(error => {
-                    console.error(error);
-                    Toast.error('Error saving assignments', 5000, 'Error');
-                });
-        });
-    }
+                    })
+                    .catch(error => {
+                        console.error(error);
+                        Toast.error('Error updating roles', 5000, 'Error');
+                    });
+            }
+        }
+    });
+}
 
     if (saveDepartmentRoleBtn && userPrivileges.canModify) {
         saveDepartmentRoleBtn.addEventListener('click', function() {
