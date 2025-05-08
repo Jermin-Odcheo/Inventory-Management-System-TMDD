@@ -111,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
 
 //for profile pic uploading
 if (isset($_POST['update_profile_pic']) && isset($_FILES['profile_picture'])) {
-    $upload_dir = __DIR__ . '/../../../../../public/assets/img/user_images/'; // adjust path as needed
+    $upload_dir = __DIR__ . '/../../../../public/assets/img/user_images/'; // adjust path as needed
     $relative_dir = 'assets/img/user_images/';
     $uploaded_file = $_FILES['profile_picture'];
     
