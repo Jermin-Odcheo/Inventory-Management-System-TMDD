@@ -377,13 +377,12 @@ try {
                         </div>
                         <div class="col-md-12">
                             <label for="modal_department" class="form-label">Department</label>
-                            <select name="department" id="modal_department" class="form-select">
-                                <option value="">Select Department</option>
-                                <?php foreach ($departments as $code => $d): ?>
-                                    <option value="<?= $code ?>"><?= htmlspecialchars($d['department_name']) ?></option>
-                                <?php endforeach; ?>
-                                <option value="custom">Custom Department</option>
-                            </select>
+                            <select name="department" id="modal_department" class="form-select" style="width: 100%;">
+    <option value="">Select Department</option>
+    <?php foreach ($departments as $code => $d): ?>
+        <option value="<?= $code ?>"><?= htmlspecialchars($d['department_name']) ?></option>
+    <?php endforeach; ?>
+</select> <!-- No 'All Departments' and no 'Custom Department' -->
                             <small class="form-text text-muted">Select one or more departments</small>
                             <input type="text" id="modal_custom_department" name="custom_department"
                                    class="form-control mt-2" style="display:none;" placeholder="Enter custom department">
@@ -522,6 +521,13 @@ try {
         // Initialize Select2 for department filter
         $('#department-filter').select2({
             placeholder: 'All Departments',
+            allowClear: true,
+            width: '100%'
+        });
+        // Initialize Select2 for Create User modal department dropdown
+        $('#modal_department').select2({
+            dropdownParent: $('#createUserModal'),
+            placeholder: 'Select Department',
             allowClear: true,
             width: '100%'
         });
