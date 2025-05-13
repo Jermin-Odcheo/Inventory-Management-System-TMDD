@@ -17,3 +17,6 @@ try {
 } catch (\PDOException $e) {
     throw new \PDOException($e->getMessage(), (int)$e->getCode());
 }
+
+// Include the RBACService class
+require_once __DIR__ . '/../src/control/RBACService.php';

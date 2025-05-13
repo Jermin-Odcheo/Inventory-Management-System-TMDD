@@ -7,9 +7,16 @@ function updatePagination() {
     // Get all data rows
     const allRows = document.querySelectorAll('#table table tbody tr');
     console.log("Total rows in table:", allRows.length);
-
-    // Get the total number of valid rows
-    const totalRows = allRows.length;
+    
+    // Get the total rows from the hidden input if it exists
+    const totalRowsInput = document.getElementById('total-users');
+    let totalRows = allRows.length;
+    
+    if (totalRowsInput) {
+        totalRows = parseInt(totalRowsInput.value, 10);
+        console.log("Total rows from input:", totalRows);
+    }
+    
     totalRowsSpan.textContent = totalRows;
 
     if (totalRows === 0) {
@@ -31,7 +38,6 @@ function updatePagination() {
         return; // Exit the function early
     }
 
-
     // Calculate page information
     const maxPages = Math.ceil(totalRows / rowsPerPage);
     currentPage = Math.max(1, Math.min(currentPage, maxPages)); // Make sure current page is valid
@@ -48,7 +54,7 @@ function updatePagination() {
     });
 
     // Then only show the rows for current page
-    for (let i = startIndex; i < endIndex; i++) {
+    for (let i = startIndex; i < Math.min(endIndex, allRows.length); i++) {
         if (allRows[i]) {
             allRows[i].style.display = ''; // Show row (using empty string reverts to default display value)
         }
@@ -56,7 +62,7 @@ function updatePagination() {
 
     // Update pagination info text
     const displayStart = totalRows === 0 ? 0 : startIndex + 1;
-    const displayEnd = totalRows === 0 ? 0 : endIndex;
+    const displayEnd = Math.min(endIndex, totalRows);
 
     // Ensure correct text when table is empty
     if (totalRows === 0) {
@@ -69,18 +75,23 @@ function updatePagination() {
         totalRowsSpan.textContent = totalRows;
     }
 
-
-    // Show or hide the Previous and Next buttons using the important flag
-    if (currentPage === 1) {
+    // Hide both navigation buttons if all data fits on one page
+    if (maxPages <= 1) {
         prevButton.style.setProperty('display', 'none', 'important');
-    } else {
-        prevButton.style.setProperty('display', 'inline-block', 'important');
-    }
-
-    if (currentPage >= maxPages) {
         nextButton.style.setProperty('display', 'none', 'important');
     } else {
-        nextButton.style.setProperty('display', 'inline-block', 'important');
+        // Otherwise show/hide based on current page position
+        if (currentPage <= 1) {
+            prevButton.style.setProperty('display', 'none', 'important');
+        } else {
+            prevButton.style.setProperty('display', 'inline-block', 'important');
+        }
+        
+        if (currentPage >= maxPages) {
+            nextButton.style.setProperty('display', 'none', 'important');
+        } else {
+            nextButton.style.setProperty('display', 'inline-block', 'important');
+        }
     }
 
     // Scroll to top of table
@@ -92,8 +103,6 @@ function updatePagination() {
     // Update pagination numbers
     renderPagination();
 }
-
-
 
 // Event Listener for DOMContentLoaded
 document.addEventListener('DOMContentLoaded', function () {
@@ -119,8 +128,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
     nextButton.addEventListener('click', function (e) {
         e.preventDefault();
-        const allRows = document.querySelectorAll('#table tbody tr');
-        const maxPages = Math.ceil(allRows.length / rowsPerPage);
+        // Get actual total rows, either from hidden input or table rows
+        const totalRowsInput = document.getElementById('total-users');
+        let totalRows = document.querySelectorAll('#table tbody tr').length;
+        
+        if (totalRowsInput) {
+            totalRows = parseInt(totalRowsInput.value, 10);
+        }
+        
+        const maxPages = Math.ceil(totalRows / rowsPerPage);
 
         console.log("Next button clicked. Current page:", currentPage, "Max pages:", maxPages);
 
@@ -149,11 +165,40 @@ function renderPagination() {
     const paginationContainer = document.getElementById('pagination');
     paginationContainer.innerHTML = '';
 
-    const allRows = document.querySelectorAll('#table tbody tr');
-    const totalRows = allRows.length;
+    // Get actual total rows, either from hidden input or table rows
+    const totalRowsInput = document.getElementById('total-users');
+    let totalRows = document.querySelectorAll('#table tbody tr').length;
+    
+    if (totalRowsInput) {
+        totalRows = parseInt(totalRowsInput.value, 10);
+    }
+    
     const maxPages = Math.ceil(totalRows / rowsPerPage);
-    if (totalRows === 0) return;
-    if (maxPages <= 1) return;
+    
+    // Don't show pagination controls if no data or all fits on one page
+    if (totalRows === 0 || maxPages <= 1) {
+        // Hide both navigation buttons when all data fits on one page
+        if (prevButton) prevButton.style.setProperty('display', 'none', 'important');
+        if (nextButton) nextButton.style.setProperty('display', 'none', 'important');
+        return;
+    }
+
+    // Otherwise, manage button visibility based on current page
+    if (prevButton) {
+        if (currentPage <= 1) {
+            prevButton.style.setProperty('display', 'none', 'important');
+        } else {
+            prevButton.style.setProperty('display', 'inline-block', 'important');
+        }
+    }
+    
+    if (nextButton) {
+        if (currentPage >= maxPages) {
+            nextButton.style.setProperty('display', 'none', 'important');
+        } else {
+            nextButton.style.setProperty('display', 'inline-block', 'important');
+        }
+    }
 
     // Calculate range of pages to show
     let startPage, endPage;

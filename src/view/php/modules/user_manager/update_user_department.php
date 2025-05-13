@@ -12,63 +12,77 @@ if (!isset($data['userId']) || !isset($data['oldRoleId']) || !isset($data['roleI
 
 $userId = (int)$data['userId'];
 $oldRoleId = (int)$data['oldRoleId'];
-$roleIds = $data['roleIds']; // Expecting an array of role IDs
-$departmentId = $data['departmentId']; // Single department ID
+$roleIds = array_map('intval', $data['roleIds']); // Ensure all role IDs are integers
+$departmentId = (int)$data['departmentId']; // Single department ID
+$preserveExistingDepartments = isset($data['preserveExistingDepartments']) && $data['preserveExistingDepartments'];
 
 try {
     $pdo->beginTransaction();
     
-    // Update the department for this user (single department per user)
-    $stmtDept = $pdo->prepare("UPDATE user_departments SET department_id = ? WHERE user_id = ?");
-    $stmtDept->execute([$departmentId, $userId]);
-    
-    if ($stmtDept->rowCount() === 0) {
-        // If no rows were updated, insert the department
-        $stmtInsertDept = $pdo->prepare("INSERT INTO user_departments (user_id, department_id) VALUES (?, ?)");
-        $stmtInsertDept->execute([$userId, $departmentId]);
-    }
-    
-    // Remove the old role if it's not in the new roles list
+    // If the old role is not in the new roles list, remove it
     if (!in_array($oldRoleId, $roleIds)) {
-        $stmtDeleteRole = $pdo->prepare("DELETE FROM user_roles WHERE user_id = ? AND role_id = ?");
-        $stmtDeleteRole->execute([$userId, $oldRoleId]);
+        $stmtDeleteRole = $pdo->prepare("
+            DELETE FROM user_department_roles 
+            WHERE user_id = ? AND role_id = ? AND department_id = ?
+        ");
+        $stmtDeleteRole->execute([$userId, $oldRoleId, $departmentId]);
     }
     
-    // Insert new roles
-    $stmtInsertRole = $pdo->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)");
+    // Insert new roles for the department
+    $stmtInsertRole = $pdo->prepare("
+        INSERT INTO user_department_roles (user_id, department_id, role_id) 
+        VALUES (?, ?, ?)
+        ON DUPLICATE KEY UPDATE user_id = VALUES(user_id)
+    ");
+    
     foreach ($roleIds as $roleId) {
-        // Skip the old role as it's already in the database
+        // Skip the old role if it's already in the database
         if ($roleId == $oldRoleId) continue;
         
-        // Check if the role already exists
-        $stmtCheckRole = $pdo->prepare("SELECT COUNT(*) FROM user_roles WHERE user_id = ? AND role_id = ?");
-        $stmtCheckRole->execute([$userId, $roleId]);
+        // Check if this user-role-department combination already exists
+        $stmtCheckRole = $pdo->prepare("
+            SELECT COUNT(*) FROM user_department_roles 
+            WHERE user_id = ? AND role_id = ? AND department_id = ?
+        ");
+        $stmtCheckRole->execute([$userId, $roleId, $departmentId]);
         
         if ((int)$stmtCheckRole->fetchColumn() === 0) {
-            // Insert the new role
-            $stmtInsertRole->execute([$userId, $roleId]);
+            // Insert the new role for this department
+            $stmtInsertRole->execute([$userId, $departmentId, $roleId]);
         }
     }
     
-    // Query all updated role-department relationships for this user
+    // Get all role-department combinations for this user
+    $stmtGetAll = $pdo->prepare("
+        SELECT role_id, department_id
+        FROM user_department_roles
+        WHERE user_id = ?
+    ");
+    $stmtGetAll->execute([$userId]);
+    $combinations = $stmtGetAll->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Group by role_id
+    $roleMap = [];
+    foreach ($combinations as $combo) {
+        $roleId = (int)$combo['role_id'];
+        $deptId = (int)$combo['department_id'];
+        
+        if (!isset($roleMap[$roleId])) {
+            $roleMap[$roleId] = [];
+        }
+        
+        if (!in_array($deptId, $roleMap[$roleId])) {
+            $roleMap[$roleId][] = $deptId;
+        }
+    }
+    
+    // Build assignments for the response
     $allAssignments = [];
-    
-    // Get all roles for this user
-    $rolesStmt = $pdo->prepare("SELECT role_id FROM user_roles WHERE user_id = ?");
-    $rolesStmt->execute([$userId]);
-    $roles = $rolesStmt->fetchAll(PDO::FETCH_COLUMN);
-    
-    // Get department for this user
-    $deptStmt = $pdo->prepare("SELECT department_id FROM user_departments WHERE user_id = ?");
-    $deptStmt->execute([$userId]);
-    $deptId = $deptStmt->fetchColumn();
-    
-    // Create an assignment entry for each role with the same department
-    foreach ($roles as $roleId) {
+    foreach ($roleMap as $roleId => $deptIds) {
         $allAssignments[] = [
             'userId' => $userId,
             'roleId' => $roleId,
-            'departmentIds' => $deptId ? [$deptId] : []
+            'departmentIds' => $deptIds
         ];
     }
     
@@ -80,6 +94,9 @@ try {
     ]);
 } catch (Exception $e) {
     $pdo->rollBack();
-    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    echo json_encode([
+        'success' => false, 
+        'error' => $e->getMessage()
+    ]);
 }
 ?>

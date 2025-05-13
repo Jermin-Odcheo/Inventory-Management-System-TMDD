@@ -38,7 +38,7 @@ function getUserDetails($pdo, $userId) {
     $roleQuery = $pdo->prepare("
         SELECT DISTINCT r.role_name
         FROM roles r
-        JOIN user_roles ur ON r.id = ur.role_id
+        JOIN user_department_roles ur ON r.id = ur.role_id
         WHERE ur.user_id = ?
     ");
 
@@ -50,7 +50,7 @@ function getUserDetails($pdo, $userId) {
         FROM role_module_privileges rmp
         JOIN modules m ON rmp.module_id = m.id
         JOIN privileges p ON rmp.privilege_id = p.id
-        JOIN user_roles ur ON rmp.role_id = ur.role_id
+        JOIN user_department_roles ur ON rmp.role_id = ur.role_id
         WHERE ur.user_id = ?
         ORDER BY m.module_name, p.priv_name
     ");
@@ -80,7 +80,7 @@ $selectedDeptId = isset($_POST['DepartmentID']) ? $_POST['DepartmentID'] : '';
 
 try {
     // RETRIEVE ALL DEPARTMENT IDs FOR THE USER
-    $stmt = $pdo->prepare("SELECT department_id FROM user_departments WHERE User_ID = ?");
+    $stmt = $pdo->prepare("SELECT department_id FROM user_department_roles WHERE User_ID = ?");
     $stmt->execute([$_SESSION['user_id']]);
     $departmentIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
 

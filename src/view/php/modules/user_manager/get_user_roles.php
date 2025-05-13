@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once '../../../../../config/ims-tmdd.php';
-require_once '../../clients/admins/RBACService.php';
+// RBACService.php is already required in config.php - no need to include it again
 session_start();
 
 // Enable error reporting for debugging (disable in production)
@@ -39,7 +39,7 @@ if (!$rbac->hasPrivilege('User Management', 'View')) {
 try {
     $stmt = $pdo->prepare("
         SELECT role_id 
-        FROM user_roles 
+        FROM user_department_roles 
         WHERE user_id = ?
     ");
     $stmt->execute([(int)$targetUserId]);

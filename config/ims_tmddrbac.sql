@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: May 07, 2025 at 09:08 AM
+-- Generation Time: May 13, 2025 at 02:15 PM
 -- Server version: 9.1.0
 -- PHP Version: 8.3.14
 
@@ -160,7 +160,7 @@ CREATE TABLE IF NOT EXISTS `audit_log` (
   `Status` varchar(50) DEFAULT NULL,
   `Date_Time` datetime NOT NULL,
   PRIMARY KEY (`TrackID`)
-) ENGINE=MyISAM AUTO_INCREMENT=539 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=565 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `audit_log`
@@ -478,8 +478,35 @@ INSERT INTO `audit_log` (`TrackID`, `UserID`, `EntityID`, `Action`, `Details`, `
 (534, 1, 107, 'Create', 'New user added: ttest2', NULL, '{\"id\": 107, \"email\": \"test2@example.com\", \"status\": \"Offline\", \"username\": \"ttest2\", \"last_name\": \"test2\", \"department\": \"Unknown\", \"first_name\": \"test2\", \"date_created\": \"2025-03-21 16:31:14.000000\"}', 'User Management', 'Successful', '2025-03-21 16:31:14'),
 (535, 1, 106, 'Remove', 'User has been removed', '{\"id\": 106, \"email\": \"test1@example.com\", \"status\": \"Offline\", \"username\": \"ttest1\", \"last_name\": \"test1\", \"first_name\": \"test1\", \"is_disabled\": 0, \"date_created\": \"2025-03-21 16:30:58.000000\"}', '', 'User Management', 'Successful', '2025-03-21 16:31:21'),
 (536, 1, 107, 'Remove', 'User has been removed', '{\"id\": 107, \"email\": \"test2@example.com\", \"status\": \"Offline\", \"username\": \"ttest2\", \"last_name\": \"test2\", \"first_name\": \"test2\", \"is_disabled\": 0, \"date_created\": \"2025-03-21 16:31:14.000000\"}', '', 'User Management', 'Successful', '2025-03-21 16:31:21'),
-(537, 1, 1, 'Modify', 'Role updated', '{\"id\": 1, \"role_name\": \"TMDD-Dev\", \"is_disabled\": 0}', '{\"id\": 1, \"role_name\": \"TMDD-Devv\", \"is_disabled\": 0}', 'Role Management', 'Successful', '2025-05-06 10:21:16'),
-(538, 1, 1, 'Modify', 'Role updated', '{\"id\": 1, \"role_name\": \"TMDD-Devv\", \"is_disabled\": 0}', '{\"id\": 1, \"role_name\": \"TMDD-Dev\", \"is_disabled\": 0}', 'Role Management', 'Successful', '2025-05-06 10:21:22');
+(537, 1, 4, 'Remove', 'User has been removed', '{\"id\": 4, \"email\": \"rp@example.com\", \"status\": \"\", \"username\": \"rpman\", \"last_name\": \"manager\", \"first_name\": \"ropriv\", \"is_disabled\": 0, \"date_created\": \"2025-02-19 13:41:59.000000\"}', '', 'User Management', 'Successful', '2025-05-09 11:15:29'),
+(538, 1, 1, 'Logout', 'navithebear is now offline.', '{\"status\": \"Online\"}', '{\"status\": \"Offline\"}', 'User Management', 'Successful', '2025-05-09 14:28:25'),
+(539, 1, 1, 'Login', 'navithebear is now online.', '{\"status\": \"Offline\"}', '{\"status\": \"Online\"}', 'User Management', 'Successful', '2025-05-09 14:28:28'),
+(540, 1, 1, 'Modified', 'Modified Fields: Audit: Removed Track', '{\n    \"role_id\": 1,\n    \"role_name\": \"TMDD-Dev\",\n    \"privileges\": {\n        \"Audit\": [\n            \"Track\"\n        ],\n        \"Equipment Management\": [\n            \"Add\",\n            \"Approve\",\n            \"Assign\",\n            \"Create\",\n            \"Delete\",\n            \"Modify\",\n            \"Reject\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"Undo\",\n            \"View\"\n        ],\n        \"Roles and Privileges\": [\n            \"Add\",\n            \"Approve\",\n            \"Assign\",\n            \"Create\",\n            \"Delete\",\n            \"Modify\",\n            \"Reject\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"Undo\",\n            \"View\"\n        ],\n        \"User Management\": [\n            \"Add\",\n            \"Approve\",\n            \"Assign\",\n            \"Create\",\n            \"Delete\",\n            \"Modify\",\n            \"Reject\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"Undo\",\n            \"View\"\n        ]\n    }\n}', '{\n    \"role_id\": 1,\n    \"role_name\": \"TMDD-Dev\",\n    \"privileges\": {\n        \"Equipment Management\": [\n            \"Add\",\n            \"Approve\",\n            \"Assign\",\n            \"Create\",\n            \"Delete\",\n            \"Modify\",\n            \"Reject\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"Undo\",\n            \"View\"\n        ],\n        \"Roles and Privileges\": [\n            \"Add\",\n            \"Approve\",\n            \"Assign\",\n            \"Create\",\n            \"Delete\",\n            \"Modify\",\n            \"Reject\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"Undo\",\n            \"View\"\n        ],\n        \"User Management\": [\n            \"Add\",\n            \"Approve\",\n            \"Assign\",\n            \"Create\",\n            \"Delete\",\n            \"Modify\",\n            \"Reject\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"Undo\",\n            \"View\"\n        ]\n    }\n}', 'Roles and Privileges', 'Successful', '2025-05-09 14:28:34');
+INSERT INTO `audit_log` (`TrackID`, `UserID`, `EntityID`, `Action`, `Details`, `OldVal`, `NewVal`, `Module`, `Status`, `Date_Time`) VALUES
+(541, 1, 1, 'Modified', 'Modified Fields: Audit: Added View', '{\n    \"role_id\": 1,\n    \"role_name\": \"TMDD-Dev\",\n    \"privileges\": {\n        \"Equipment Management\": [\n            \"Add\",\n            \"Approve\",\n            \"Assign\",\n            \"Create\",\n            \"Delete\",\n            \"Modify\",\n            \"Reject\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"Undo\",\n            \"View\"\n        ],\n        \"Roles and Privileges\": [\n            \"Add\",\n            \"Approve\",\n            \"Assign\",\n            \"Create\",\n            \"Delete\",\n            \"Modify\",\n            \"Reject\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"Undo\",\n            \"View\"\n        ],\n        \"User Management\": [\n            \"Add\",\n            \"Approve\",\n            \"Assign\",\n            \"Create\",\n            \"Delete\",\n            \"Modify\",\n            \"Reject\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"Undo\",\n            \"View\"\n        ]\n    }\n}', '{\n    \"role_id\": 1,\n    \"role_name\": \"TMDD-Dev\",\n    \"privileges\": {\n        \"Audit\": [\n            \"View\"\n        ],\n        \"Equipment Management\": [\n            \"Add\",\n            \"Approve\",\n            \"Assign\",\n            \"Create\",\n            \"Delete\",\n            \"Modify\",\n            \"Reject\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"Undo\",\n            \"View\"\n        ],\n        \"Roles and Privileges\": [\n            \"Add\",\n            \"Approve\",\n            \"Assign\",\n            \"Create\",\n            \"Delete\",\n            \"Modify\",\n            \"Reject\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"Undo\",\n            \"View\"\n        ],\n        \"User Management\": [\n            \"Add\",\n            \"Approve\",\n            \"Assign\",\n            \"Create\",\n            \"Delete\",\n            \"Modify\",\n            \"Reject\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"Undo\",\n            \"View\"\n        ]\n    }\n}', 'Roles and Privileges', 'Successful', '2025-05-09 14:28:39'),
+(542, 1, 32, 'Create', 'Role \'testsetes\' has been created', NULL, '{\"id\":32,\"role_name\":\"testsetes\",\"is_disabled\":0}', 'Roles and Privileges', 'Successful', '2025-05-09 15:23:21'),
+(543, 1, 46, 'Create', 'Department \'57877\' has been Created', NULL, '{\"id\":\"46\",\"abbreviation\":\"9876\",\"department_name\":\"57877\"}', 'Department Management', 'Successful', '2025-05-09 15:23:30'),
+(544, 1, 1, 'Logout', 'navithebear is now offline.', '{\"status\": \"Online\"}', '{\"status\": \"Offline\"}', 'User Management', 'Successful', '2025-05-13 17:55:39'),
+(545, 1, 1, 'Login', 'navithebear is now online.', '{\"status\": \"Offline\"}', '{\"status\": \"Online\"}', 'User Management', 'Successful', '2025-05-13 17:55:41'),
+(546, 1, 3, 'modified', 'Updated user information: em@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-13 20:28:51'),
+(547, 1, 3, 'modified', 'Updated user information: em@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-13 20:29:04'),
+(548, 1, 3, 'modified', 'Updated user information: em@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-13 20:29:13'),
+(549, 1, 3, 'modified', 'Updated user information: em@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-13 20:40:25'),
+(550, 1, 3, 'modified', 'Updated user information: em@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-13 20:41:03'),
+(551, 1, 3, 'modified', 'Updated user information: em@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-13 20:52:00'),
+(552, 1, 3, 'modified', 'Updated user information: em@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-13 20:54:14'),
+(553, 1, 3, 'modified', 'Updated user information: em@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-13 20:56:52'),
+(554, 1, 3, 'modified', 'Updated user information: em@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-13 20:57:03'),
+(555, 1, 3, 'modified', 'Updated user information: em@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-13 20:58:08'),
+(556, 1, 134, 'Create', 'New user added: 1123', NULL, '{\"id\": 134, \"email\": \"Testertesting123@example.com\", \"status\": \"Offline\", \"username\": \"1123\", \"last_name\": \"123\", \"department\": \"Unknown\", \"first_name\": \"123\", \"date_created\": \"2025-05-13 21:28:15.000000\"}', 'User Management', 'Successful', '2025-05-13 21:28:15'),
+(557, 1, 134, 'Remove', 'User has been removed', '{\"id\": 134, \"email\": \"Testertesting123@example.com\", \"status\": \"Offline\", \"username\": \"1123\", \"last_name\": \"123\", \"first_name\": \"123\", \"is_disabled\": 0, \"date_created\": \"2025-05-13 21:28:15.000000\"}', '', 'User Management', 'Successful', '2025-05-13 21:48:51'),
+(558, 1, 134, 'Restored', 'User has been restored', '{\"id\": 134, \"email\": \"Testertesting123@example.com\", \"status\": \"\", \"username\": \"1123\", \"last_name\": \"123\", \"first_name\": \"123\", \"is_disabled\": 1, \"date_created\": \"2025-05-13 21:28:15.000000\"}', '', 'User Management', 'Successful', '2025-05-13 22:09:13'),
+(559, 1, 4, 'Restored', 'User has been restored', '{\"id\": 4, \"email\": \"rp@example.com\", \"status\": \"\", \"username\": \"rpman\", \"last_name\": \"manager\", \"first_name\": \"ropriv\", \"is_disabled\": 1, \"date_created\": \"2025-02-19 13:41:59.000000\"}', '', 'User Management', 'Successful', '2025-05-13 22:09:15'),
+(560, 1, 134, 'Remove', 'User has been removed', '{\"id\": 134, \"email\": \"Testertesting123@example.com\", \"status\": \"\", \"username\": \"1123\", \"last_name\": \"123\", \"first_name\": \"123\", \"is_disabled\": 0, \"date_created\": \"2025-05-13 21:28:15.000000\"}', '', 'User Management', 'Successful', '2025-05-13 22:09:24'),
+(561, 1, 4, 'Remove', 'User has been removed', '{\"id\": 4, \"email\": \"rp@example.com\", \"status\": \"\", \"username\": \"rpman\", \"last_name\": \"manager\", \"first_name\": \"ropriv\", \"is_disabled\": 0, \"date_created\": \"2025-02-19 13:41:59.000000\"}', '', 'User Management', 'Successful', '2025-05-13 22:14:15'),
+(562, 1, 3, 'modified', 'Updated user information: em@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-13 22:14:19'),
+(563, 1, 3, 'modified', 'Updated user information: em@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-13 22:14:24'),
+(564, 1, 3, 'modified', 'Updated user information: em@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-13 22:14:32');
 
 -- --------------------------------------------------------
 
@@ -522,7 +549,7 @@ CREATE TABLE IF NOT EXISTS `departments` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `department_name` (`department_name`),
   UNIQUE KEY `abbreviation` (`abbreviation`)
-) ENGINE=InnoDB AUTO_INCREMENT=46 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=47 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `departments`
@@ -564,7 +591,8 @@ INSERT INTO `departments` (`id`, `department_name`, `abbreviation`, `is_disabled
 (33, 'Human Resource Department', 'HRD', 1),
 (34, 'Students\' Residence Hall', 'SRH', 1),
 (35, 'Medical Clinic', 'MC', 1),
-(36, 'Office for Legal Affairs', 'OLA', 1);
+(36, 'Office for Legal Affairs', 'OLA', 1),
+(46, '57877', '9876', 0);
 
 -- --------------------------------------------------------
 
@@ -777,7 +805,7 @@ CREATE TABLE IF NOT EXISTS `roles` (
   `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `role_name` (`role_name`)
-) ENGINE=InnoDB AUTO_INCREMENT=32 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `roles`
@@ -789,108 +817,8 @@ INSERT INTO `roles` (`id`, `role_name`, `is_disabled`) VALUES
 (3, 'Equipment Manager', 0),
 (4, 'User Manager', 0),
 (5, 'RP Manager', 0),
-(6, 'Auditor', 0);
-
---
--- Triggers `roles`
---
-DROP TRIGGER IF EXISTS `on_role_create`;
-DELIMITER $$
-CREATE TRIGGER `on_role_create` AFTER INSERT ON `roles` FOR EACH ROW BEGIN
-    INSERT INTO audit_log (
-        `UserID`,              -- The user who performed the action
-        `EntityID`,            -- The ID of the added role
-        `Action`,              -- Action type
-        `Details`,             -- Description of the action
-        `OldVal`,              -- Old values before insert (none for new records)
-        `NewVal`,              -- New values after insert
-        `Module`,              -- Module where the action occurred
-        `Status`,              -- Status of the action
-        `Date_Time`            -- Timestamp of the action
-    ) VALUES (
-        @current_user_id,      -- From PHP (must be set before the query)
-        NEW.id,                -- The new role's ID
-        'Add',                 -- Action type
-        'Role added',          -- Description
-        NULL,                  -- No old value for insert
-        JSON_OBJECT(
-            'id', NEW.id,
-            'role_name', NEW.role_name,
-            'is_disabled', NEW.is_disabled
-        ),
-        IFNULL(@current_module, 'Role Management'), -- Default module name
-        'Successful',
-        NOW()
-    );
-END
-$$
-DELIMITER ;
-DROP TRIGGER IF EXISTS `on_role_delete`;
-DELIMITER $$
-CREATE TRIGGER `on_role_delete` BEFORE DELETE ON `roles` FOR EACH ROW BEGIN
-    INSERT INTO audit_log (
-        UserID,              -- The user who performed the action
-        EntityID,            -- The ID of the deleted role
-        Action,              -- Action type
-        Details,             -- Description of the action
-        OldVal,              -- Old values before deletion
-        NewVal,              -- New values after deletion (NULL for DELETE)
-        Module,              -- Module where the action occurred
-        Status,              -- Status of the action
-        Date_Time            -- Timestamp of the action
-    ) VALUES (
-        @current_user_id,      -- The user performing the delete
-        OLD.id,                -- The ID of the deleted role
-        'Remove',              -- Action type
-        CONCAT('Role deleted: ', OLD.role_name),  -- Details
-        JSON_OBJECT(           -- Old values in JSON format
-            'id', OLD.id,
-            'role_name', OLD.role_name,
-            'is_disabled', OLD.is_disabled
-        ),
-        NULL,                  -- No new values for DELETE
-        IFNULL(@current_module, 'Role Management'), -- Default to 'Role Management'
-        'Successful',
-        NOW()
-    );
-END
-$$
-DELIMITER ;
-DROP TRIGGER IF EXISTS `on_role_update`;
-DELIMITER $$
-CREATE TRIGGER `on_role_update` AFTER UPDATE ON `roles` FOR EACH ROW BEGIN
-    INSERT INTO audit_log (
-        `UserID`,              -- The user who performed the action
-        `EntityID`,            -- The ID of the updated role
-        `Action`,              -- Action type
-        `Details`,             -- Description of the action
-        `OldVal`,              -- Old values before update
-        `NewVal`,              -- New values after update
-        `Module`,              -- Module where the action occurred
-        `Status`,              -- Status of the action
-        `Date_Time`            -- Timestamp of the action
-    ) VALUES (
-        @current_user_id,      -- From PHP (must be set before the query)
-        NEW.id,                -- The role's ID
-        'Modify',              -- Action type
-        'Role updated',        -- Description
-        JSON_OBJECT(
-            'id', OLD.id,
-            'role_name', OLD.role_name,
-            'is_disabled', OLD.is_disabled
-        ),
-        JSON_OBJECT(
-            'id', NEW.id,
-            'role_name', NEW.role_name,
-            'is_disabled', NEW.is_disabled
-        ),
-        IFNULL(@current_module, 'Role Management'), -- Default module name
-        'Successful',
-        NOW()
-    );
-END
-$$
-DELIMITER ;
+(6, 'Auditor', 0),
+(32, 'testsetes', 0);
 
 -- --------------------------------------------------------
 
@@ -913,7 +841,7 @@ CREATE TABLE IF NOT EXISTS `role_changes` (
   PRIMARY KEY (`ChangeID`),
   KEY `UserID` (`UserID`),
   KEY `RoleID` (`RoleID`)
-) ENGINE=MyISAM AUTO_INCREMENT=278 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=279 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `role_changes`
@@ -1140,8 +1068,9 @@ INSERT INTO `role_changes` (`ChangeID`, `UserID`, `RoleID`, `Action`, `OldRoleNa
 (228, 1, 27, 'Modified', 'testtest', 'testtest', '2025-03-13 09:44:21', '[]', '[]', 0),
 (229, 1, 27, 'Modified', 'testtest', 'testtest', '2025-03-13 09:44:21', '[]', '[]', 0),
 (230, 1, 26, 'Modified', 'test', 'test', '2025-03-13 09:44:23', '[]', '[]', 0),
-(276, 1, 1, 'Modified', 'TMDD-Dev', 'TMDD-Devv', '2025-05-06 10:21:17', '[\"1|1\",\"2|3\",\"2|11\",\"2|10\",\"2|2\",\"2|5\",\"2|6\",\"2|12\",\"2|4\",\"2|8\",\"2|1\",\"2|9\",\"2|7\",\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\",\"4|3\",\"4|11\",\"4|10\",\"4|2\",\"4|5\",\"4|6\",\"4|12\",\"4|4\",\"4|8\",\"4|1\",\"4|9\",\"4|7\"]', '[\"1|1\",\"2|1\",\"2|2\",\"2|3\",\"2|4\",\"2|5\",\"2|6\",\"2|7\",\"2|8\",\"2|9\",\"2|10\",\"2|11\",\"2|12\",\"4|1\",\"4|2\",\"4|3\",\"4|4\",\"4|5\",\"4|6\",\"4|7\",\"4|8\",\"4|9\",\"4|10\",\"4|11\",\"4|12\"]', 0),
-(277, 1, 1, 'Modified', 'TMDD-Devv', 'TMDD-Dev', '2025-05-06 10:21:22', '[\"1|1\",\"2|1\",\"2|2\",\"2|3\",\"2|4\",\"2|5\",\"2|6\",\"2|7\",\"2|8\",\"2|9\",\"2|10\",\"2|11\",\"2|12\",\"4|1\",\"4|2\",\"4|3\",\"4|4\",\"4|5\",\"4|6\",\"4|7\",\"4|8\",\"4|9\",\"4|10\",\"4|11\",\"4|12\"]', '[\"1|1\",\"2|1\",\"2|2\",\"2|3\",\"2|4\",\"2|5\",\"2|6\",\"2|7\",\"2|8\",\"2|9\",\"2|10\",\"2|11\",\"2|12\",\"4|1\",\"4|2\",\"4|3\",\"4|4\",\"4|5\",\"4|6\",\"4|7\",\"4|8\",\"4|9\",\"4|10\",\"4|11\",\"4|12\"]', 0);
+(276, 1, 1, 'Modified', 'TMDD-Dev', 'TMDD-Dev', '2025-05-09 14:28:34', '[\"1|1\",\"4|3\",\"4|11\",\"4|10\",\"4|2\",\"4|5\",\"4|6\",\"4|12\",\"4|4\",\"4|8\",\"4|1\",\"4|9\",\"4|7\",\"2|3\",\"2|11\",\"2|10\",\"2|2\",\"2|5\",\"2|6\",\"2|12\",\"2|4\",\"2|8\",\"2|1\",\"2|9\",\"2|7\",\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\"]', '[\"2|3\",\"2|11\",\"2|10\",\"2|2\",\"2|5\",\"2|6\",\"2|12\",\"2|4\",\"2|8\",\"2|1\",\"2|9\",\"2|7\",\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\",\"4|3\",\"4|11\",\"4|10\",\"4|2\",\"4|5\",\"4|6\",\"4|12\",\"4|4\",\"4|8\",\"4|1\",\"4|9\",\"4|7\"]', 0),
+(277, 1, 1, 'Modified', 'TMDD-Dev', 'TMDD-Dev', '2025-05-09 14:28:39', '[\"4|3\",\"4|11\",\"4|10\",\"4|2\",\"4|5\",\"4|6\",\"4|12\",\"4|4\",\"4|8\",\"4|1\",\"4|9\",\"4|7\",\"2|3\",\"2|11\",\"2|10\",\"2|2\",\"2|5\",\"2|6\",\"2|12\",\"2|4\",\"2|8\",\"2|1\",\"2|9\",\"2|7\",\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\"]', '[\"1|7\",\"2|3\",\"2|11\",\"2|10\",\"2|2\",\"2|5\",\"2|6\",\"2|12\",\"2|4\",\"2|8\",\"2|1\",\"2|9\",\"2|7\",\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\",\"4|3\",\"4|11\",\"4|10\",\"4|2\",\"4|5\",\"4|6\",\"4|12\",\"4|4\",\"4|8\",\"4|1\",\"4|9\",\"4|7\"]', 0),
+(278, 1, 32, 'Add', NULL, 'testsetes', '2025-05-09 15:23:21', NULL, NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -1159,7 +1088,7 @@ CREATE TABLE IF NOT EXISTS `role_module_privileges` (
   KEY `role_id` (`role_id`),
   KEY `module_id` (`module_id`),
   KEY `fk_rmp_privilege` (`privilege_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1301 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1324 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `role_module_privileges`
@@ -1194,31 +1123,43 @@ INSERT INTO `role_module_privileges` (`id`, `role_id`, `module_id`, `privilege_i
 (1225, 0, 4, 11),
 (1226, 0, 4, 12),
 (1250, 6, 1, 1),
-(1276, 1, 1, 1),
-(1277, 1, 2, 1),
-(1278, 1, 2, 2),
-(1279, 1, 2, 3),
-(1280, 1, 2, 4),
-(1281, 1, 2, 5),
-(1282, 1, 2, 6),
-(1283, 1, 2, 7),
-(1284, 1, 2, 8),
-(1285, 1, 2, 9),
-(1286, 1, 2, 10),
-(1287, 1, 2, 11),
-(1288, 1, 2, 12),
-(1289, 1, 4, 1),
-(1290, 1, 4, 2),
-(1291, 1, 4, 3),
-(1292, 1, 4, 4),
-(1293, 1, 4, 5),
-(1294, 1, 4, 6),
-(1295, 1, 4, 7),
-(1296, 1, 4, 8),
-(1297, 1, 4, 9),
-(1298, 1, 4, 10),
-(1299, 1, 4, 11),
-(1300, 1, 4, 12);
+(1287, 1, 1, 7),
+(1288, 1, 2, 3),
+(1289, 1, 2, 11),
+(1290, 1, 2, 10),
+(1291, 1, 2, 2),
+(1292, 1, 2, 5),
+(1293, 1, 2, 6),
+(1294, 1, 2, 12),
+(1295, 1, 2, 4),
+(1296, 1, 2, 8),
+(1297, 1, 2, 1),
+(1298, 1, 2, 9),
+(1299, 1, 2, 7),
+(1300, 1, 3, 3),
+(1301, 1, 3, 11),
+(1302, 1, 3, 10),
+(1303, 1, 3, 2),
+(1304, 1, 3, 5),
+(1305, 1, 3, 6),
+(1306, 1, 3, 12),
+(1307, 1, 3, 4),
+(1308, 1, 3, 8),
+(1309, 1, 3, 1),
+(1310, 1, 3, 9),
+(1311, 1, 3, 7),
+(1312, 1, 4, 3),
+(1313, 1, 4, 11),
+(1314, 1, 4, 10),
+(1315, 1, 4, 2),
+(1316, 1, 4, 5),
+(1317, 1, 4, 6),
+(1318, 1, 4, 12),
+(1319, 1, 4, 4),
+(1320, 1, 4, 8),
+(1321, 1, 4, 1),
+(1322, 1, 4, 9),
+(1323, 1, 4, 7);
 
 -- --------------------------------------------------------
 
@@ -1237,23 +1178,23 @@ CREATE TABLE IF NOT EXISTS `users` (
   `date_created` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `status` enum('Offline','Online') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
-  `profile_pic_path` varchar(2048) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `username` (`username`),
   UNIQUE KEY `email` (`email`)
-) ENGINE=InnoDB AUTO_INCREMENT=108 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=135 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `username`, `email`, `password`, `first_name`, `last_name`, `date_created`, `status`, `is_disabled`, `profile_pic_path`) VALUES
-(1, 'navithebear', 'navi@example.com', '$2y$12$2esj1uaDmbD3K6Fi.C0CiuOye96x8OjARwTc82ViEAPvmx4b1cL0S', 'navi', 'slu', '2025-02-19 01:19:52', 'Online', 0, 'assets/img/user_images/user_1.gif'),
-(2, 'userman', 'um@example.com', '$2y$12$wE3B0Dq4z0Bd1AHXf4gumexeObTqWXm7aASm7PnkCrtiL.iIfObS.', 'user', 'manager', '2025-02-19 05:40:35', 'Offline', 0, NULL),
-(3, 'equipman', 'em@example.com', '$2y$12$J0iy9bwoalbG2/NkqDZchuLU4sWramGpsw1EsSZ6se0CefM/sqpZq', 'equipment', 'manager', '2025-02-19 05:40:35', 'Offline', 0, NULL),
-(4, 'rpman', 'rp@example.com', '$2y$12$dWnJinU4uO7ETYIKi9cL0uN4wJgjACaF.q0Pbkr5yNUK2q1HUQk8G', 'ropriv', 'manager', '2025-02-19 05:41:59', '', 0, NULL),
-(106, 'ttest1', 'test1@example.com', '$2y$10$2bz/ybJjCzyFYEd26NEZr.tsuqUZTpSwQtSTU1IQ8fVHyD2dzjTkO', 'test1', 'test1', '2025-03-21 08:30:58', '', 1, NULL),
-(107, 'ttest2', 'test2@example.com', '$2y$10$9uEUFx90zNh3wJmh8deSXenpr6PVopkRfkkzq4PtPAwPFRCx4cecW', 'test2', 'test2', '2025-03-21 08:31:14', '', 1, NULL);
+INSERT INTO `users` (`id`, `username`, `email`, `password`, `first_name`, `last_name`, `date_created`, `status`, `is_disabled`) VALUES
+(1, 'navithebear', 'navi@example.com', '$2y$12$2esj1uaDmbD3K6Fi.C0CiuOye96x8OjARwTc82ViEAPvmx4b1cL0S', 'navi', 'slu', '2025-02-19 01:19:52', 'Online', 0),
+(2, 'userman', 'um@example.com', '$2y$12$wE3B0Dq4z0Bd1AHXf4gumexeObTqWXm7aASm7PnkCrtiL.iIfObS.', 'user', 'manager', '2025-02-19 05:40:35', 'Offline', 0),
+(3, 'equipman', 'em@example.com', '$2y$12$J0iy9bwoalbG2/NkqDZchuLU4sWramGpsw1EsSZ6se0CefM/sqpZq', '123', '123', '2025-02-19 05:40:35', '', 0),
+(4, 'rpman', 'rp@example.com', '$2y$12$dWnJinU4uO7ETYIKi9cL0uN4wJgjACaF.q0Pbkr5yNUK2q1HUQk8G', 'ropriv', 'manager', '2025-02-19 05:41:59', '', 1),
+(106, 'ttest1', 'test1@example.com', '$2y$10$2bz/ybJjCzyFYEd26NEZr.tsuqUZTpSwQtSTU1IQ8fVHyD2dzjTkO', 'test1', 'test1', '2025-03-21 08:30:58', '', 1),
+(107, 'ttest2', 'test2@example.com', '$2y$10$9uEUFx90zNh3wJmh8deSXenpr6PVopkRfkkzq4PtPAwPFRCx4cecW', 'test2', 'test2', '2025-03-21 08:31:14', '', 1),
+(134, '1123', 'Testertesting123@example.com', '$2y$12$xFf4FmS./UoBc..wijJsUuk8on6EcSeIWiThkd5p5sMdFtoBs23pa', '123', '123', '2025-05-13 13:28:15', '', 1);
 
 --
 -- Triggers `users`
@@ -1438,12 +1379,12 @@ CREATE TRIGGER `users_after_create` AFTER INSERT ON `users` FOR EACH ROW BEGIN
     -- Set default value in case the query doesn't return results
     SET dept_name = 'Unknown';
 
-    -- Attempt to get department name for the user
-    -- This might not work if the department assignment happens after user creation
+    -- Attempt to get department name for the user using the correct table
+    -- This uses user_department_roles (udr) instead of user_departments (ud)
     SELECT d.department_name INTO dept_name
     FROM departments d
-             JOIN user_departments ud ON d.id = ud.department_id
-    WHERE ud.user_id = NEW.id
+    JOIN user_department_roles udr ON d.id = udr.department_id
+    WHERE udr.user_id = NEW.id
     LIMIT 1;
 
     INSERT INTO audit_log (
@@ -1457,25 +1398,25 @@ CREATE TRIGGER `users_after_create` AFTER INSERT ON `users` FOR EACH ROW BEGIN
         Status,
         Date_Time
     ) VALUES (
-                 @current_user_id,
-                 NEW.id,
-                 'Create',
-                 CONCAT('New user added: ', NEW.username),
-                 NULL,
-                 JSON_OBJECT(
-                         'id', NEW.id,
-                         'username', NEW.username,
-                         'email', NEW.email,
-                         'first_name', NEW.first_name,
-                         'last_name', NEW.last_name,
-                         'department', dept_name,
-                         'status', NEW.status,
-                         'date_created', NEW.date_created
-                 ),
-                 IFNULL(@current_module, 'User Management'),
-                 'Successful',
-                 NOW()
-             );
+        @current_user_id,
+        NEW.id,
+        'Create',
+        CONCAT('New user added: ', NEW.username),
+        NULL,
+        JSON_OBJECT(
+            'id', NEW.id,
+            'username', NEW.username,
+            'email', NEW.email,
+            'first_name', NEW.first_name,
+            'last_name', NEW.last_name,
+            'department', dept_name,
+            'status', NEW.status,
+            'date_created', NEW.date_created
+        ),
+        IFNULL(@current_module, 'User Management'),
+        'Successful',
+        NOW()
+    );
 END
 $$
 DELIMITER ;
@@ -1483,95 +1424,37 @@ DELIMITER ;
 -- --------------------------------------------------------
 
 --
--- Table structure for table `user_departments`
+-- Table structure for table `user_department_roles`
 --
 
-DROP TABLE IF EXISTS `user_departments`;
-CREATE TABLE IF NOT EXISTS `user_departments` (
+DROP TABLE IF EXISTS `user_department_roles`;
+CREATE TABLE IF NOT EXISTS `user_department_roles` (
   `user_id` int NOT NULL,
   `department_id` int NOT NULL,
-  PRIMARY KEY (`user_id`,`department_id`),
-  KEY `department_id` (`department_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
---
--- Dumping data for table `user_departments`
---
-
-INSERT INTO `user_departments` (`user_id`, `department_id`) VALUES
-(1, 1),
-(12, 1),
-(37, 1),
-(49, 1),
-(50, 1),
-(75, 1),
-(104, 1),
-(106, 1),
-(5, 2),
-(83, 2),
-(96, 2),
-(97, 2),
-(103, 2),
-(105, 2),
-(48, 3),
-(69, 3),
-(84, 3),
-(87, 3),
-(93, 3),
-(94, 3),
-(95, 3),
-(107, 3),
-(11, 4),
-(92, 4),
-(12, 5),
-(82, 5),
-(85, 5),
-(86, 5),
-(101, 5),
-(74, 40),
-(13, 42);
-
--- --------------------------------------------------------
-
---
--- Table structure for table `user_roles`
---
-
-DROP TABLE IF EXISTS `user_roles`;
-CREATE TABLE IF NOT EXISTS `user_roles` (
-  `user_id` int NOT NULL,
   `role_id` int NOT NULL,
-  PRIMARY KEY (`user_id`,`role_id`),
+  PRIMARY KEY (`user_id`,`department_id`,`role_id`),
+  KEY `department_id` (`department_id`),
   KEY `role_id` (`role_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
--- Dumping data for table `user_roles`
+-- Dumping data for table `user_department_roles`
 --
 
-INSERT INTO `user_roles` (`user_id`, `role_id`) VALUES
-(1, 1),
-(12, 1),
-(12, 2),
-(83, 2),
-(3, 3),
-(12, 3),
-(37, 3),
-(48, 3),
-(84, 3),
-(2, 4),
-(13, 4),
-(49, 4),
-(50, 4),
-(4, 5),
-(69, 5),
-(5, 6),
-(11, 6),
-(74, 6),
-(75, 6),
-(82, 6),
-(85, 6),
-(86, 6);
+INSERT INTO `user_department_roles` (`user_id`, `department_id`, `role_id`) VALUES
+(1, 1, 1),
+(2, 12, 3),
+(2, 12, 4),
+(2, 12, 5),
+(2, 12, 6),
+(2, 12, 32),
+(2, 24, 4),
+(2, 24, 32),
+(3, 1, 3),
+(3, 3, 3),
+(3, 5, 3),
+(3, 46, 3),
+(134, 5, 3);
 
 --
 -- Constraints for dumped tables

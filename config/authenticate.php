@@ -36,7 +36,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             // In authenticate.php
             $role_stmt = $pdo->prepare("
             SELECT GROUP_CONCAT(r.role_name SEPARATOR ', ') as roles
-            FROM user_roles ur
+            FROM user_department_roles ur
             JOIN roles r ON ur.role_id = r.id
             WHERE ur.user_id = ?
         ");
