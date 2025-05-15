@@ -51,7 +51,7 @@ function getUserDepartments(PDO $pdo, int $userId): array
         'SELECT udr.department_id, d.department_name, d.abbreviation 
          FROM user_department_roles udr
          JOIN departments d ON udr.department_id = d.id
-         WHERE udr.user_id = ? AND d.is_disabled = 0'
+         WHERE udr.user_id = ?'
     );
     $stmt->execute([$userId]);
     return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
@@ -173,8 +173,12 @@ try {
     <!-- Bootstrap 5 bundle (includes Popper & the native Modal/Data API) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="<?php echo BASE_URL; ?>src/control/js/user_management.js" defer></script>
+    <!-- Select2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
     <title>Manage Users</title>
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 </head>
 
 <body>
@@ -192,12 +196,12 @@ try {
             </div>
             <div class="filter-container me-auto">
                 <label for="department-filter" class="form-label">Filter by Department</label>
-                <select id="department-filter" name="department" class="form-select">
+                <select id="department-filter" name="department" class="form-select" style="width: 250px;">
                     <option value="all">All Departments</option>
                     <?php
                     // Fetch all departments directly for the filter dropdown, show ALL regardless of is_disabled
                     try {
-                        $deptStmt = $pdo->query("SELECT department_name FROM departments WHERE is_disabled = 0 ORDER BY department_name ");
+                        $deptStmt = $pdo->query("SELECT department_name FROM departments ORDER BY department_name");
                         $allDepartments = $deptStmt->fetchAll(PDO::FETCH_COLUMN);
                         foreach ($allDepartments as $deptName) {
                             echo '<option value="' . htmlspecialchars($deptName) . '"';
@@ -300,7 +304,6 @@ try {
                     SELECT r.role_name
                       FROM user_department_roles ur
                       JOIN roles r ON r.id=ur.role_id AND r.is_disabled=0
-                      JOIN departments d ON d.id=ur.department_id AND d.is_disabled=0
                      WHERE ur.user_id=?
                   ");
                                     $rS->execute([(int)$u['id']]);
@@ -556,6 +559,42 @@ try {
             </div>
         </div>
     </div>
+<script>
+$(document).ready(function() {
+    // Initialize Select2 for department filter
+    $('#department-filter').select2({
+        placeholder: 'All Departments',
+        allowClear: true,
+        width: 'resolve'
+    });
+    // Preserve selection on reload
+    var selectedDept = '<?php echo isset($_GET['department']) ? htmlspecialchars($_GET['department'], ENT_QUOTES, 'UTF-8') : 'all'; ?>';
+    if (selectedDept) {
+        $('#department-filter').val(selectedDept).trigger('change');
+    }
+});
+</script>
+<script>
+$(document).ready(function() {
+    // Initialize Select2 for department filter (already present)
+    $('#department-filter').select2({
+        placeholder: 'All Departments',
+        allowClear: true,
+        width: 'resolve'
+    });
+    var selectedDept = '<?php echo isset($_GET['department']) ? htmlspecialchars($_GET['department'], ENT_QUOTES, 'UTF-8') : 'all'; ?>';
+    if (selectedDept) {
+        $('#department-filter').val(selectedDept).trigger('change');
+    }
+    // Initialize Select2 for modal department dropdown
+    $('#modal_department').select2({
+        dropdownParent: $('#createUserModal'),
+        placeholder: 'Select Department',
+        allowClear: true,
+        width: '100%'
+    });
+});
+</script>
 </body>
 
 </html>
