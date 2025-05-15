@@ -51,7 +51,7 @@ function getUserDepartments(PDO $pdo, int $userId): array
         'SELECT udr.department_id, d.department_name, d.abbreviation 
          FROM user_department_roles udr
          JOIN departments d ON udr.department_id = d.id
-         WHERE udr.user_id = ?'
+         WHERE udr.user_id = ? AND d.is_disabled = 0'
     );
     $stmt->execute([$userId]);
     return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
@@ -300,6 +300,7 @@ try {
                     SELECT r.role_name
                       FROM user_department_roles ur
                       JOIN roles r ON r.id=ur.role_id AND r.is_disabled=0
+                      JOIN departments d ON d.id=ur.department_id AND d.is_disabled=0
                      WHERE ur.user_id=?
                   ");
                                     $rS->execute([(int)$u['id']]);
