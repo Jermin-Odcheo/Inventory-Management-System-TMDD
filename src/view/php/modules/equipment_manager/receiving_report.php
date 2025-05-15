@@ -285,11 +285,13 @@ try {
             /* Adjust if you have a sidebar */
             padding: 20px;
             margin-bottom: 20px;
+            margin-top: 70px; /* Ensure content is visible below navbar */
         }
 
         @media (max-width: 768px) {
             .main-content {
                 margin-left: 0;
+                margin-top: 70px; /* Also apply for mobile */
             }
         }
 
@@ -323,8 +325,10 @@ try {
 
     <div class="main-content">
         <div class="container-fluid">
+            <!-- Management Title -->
             <h2 class="mb-4">Receiving Report Management</h2>
-            <div class="card shadow">
+            <!-- End Management Title -->
+            <div class="card shadow" style="margin-top: 20px;">
                 <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
                     <span><i class="bi bi-list-ul"></i> List of Receiving Reports</span>
                     <div class="input-group w-auto">
