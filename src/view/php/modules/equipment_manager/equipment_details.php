@@ -3,6 +3,7 @@ session_start();
 ob_start();
 require_once('../../../../../config/ims-tmdd.php'); // Adjust path as needed
 include '../../general/header.php';
+
 // -------------------------
 // Auth and RBAC Setup
 // -------------------------
@@ -25,14 +26,12 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
 // -------------------------
 // AJAX Request Handling
 // -------------------------
-$isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
+$isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
           strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
-
 if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
     header('Content-Type: application/json');
     $response = ['status' => '', 'message' => ''];
 
-    // Helper: Validate required fields
     function validateRequiredFields(array $fields)
     {
         foreach ($fields as $field) {
@@ -50,13 +49,11 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) 
                 echo json_encode($response);
                 exit;
             }
-            
             try {
                 $pdo->beginTransaction();
                 $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
                 validateRequiredFields(['asset_tag', 'asset_description_1', 'asset_description_2', 'specifications', 'serial_number']);
 
-                $date_created = date('Y-m-d H:i:s');
                 $values = [
                     $_POST['asset_tag'],
                     $_POST['asset_description_1'],
@@ -68,15 +65,15 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) 
                     $_POST['location'] ?? null,
                     $_POST['accountable_individual'] ?? null,
                     $_POST['rr_no'] ?? null,
-                    $date_created,
                     $_POST['remarks'] ?? null
                 ];
 
                 $stmt = $pdo->prepare("INSERT INTO equipment_details (
-            asset_tag, asset_description_1, asset_description_2, specifications, 
-            brand, model, serial_number, location, accountable_individual, rr_no, date_created, remarks
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                    asset_tag, asset_description_1, asset_description_2, specifications, 
+                    brand, model, serial_number, location, accountable_individual, rr_no, remarks
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 $stmt->execute($values);
+
                 $newEquipmentId = $pdo->lastInsertId();
 
                 $newValues = json_encode([
@@ -90,12 +87,13 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) 
                     'location' => $_POST['location'] ?? null,
                     'accountable_individual' => $_POST['accountable_individual'] ?? null,
                     'rr_no' => $_POST['rr_no'] ?? null,
-                    'date_created' => $date_created,
                     'remarks' => $_POST['remarks'] ?? null
                 ]);
+
                 $auditStmt = $pdo->prepare("INSERT INTO audit_log (
-            UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status, Date_Time
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+                    UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status, Date_Time
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+
                 $auditStmt->execute([
                     $_SESSION['user_id'],
                     $newEquipmentId,
@@ -125,6 +123,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) 
             ob_clean();
             echo json_encode($response);
             exit;
+
         case 'update':
             if (!$canModify) {
                 $response['status'] = 'error';
@@ -132,9 +131,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) 
                 echo json_encode($response);
                 exit;
             }
-            
-            header('Content-Type: application/json');
-            $response = ['status' => '', 'message' => ''];
+
             try {
                 $pdo->beginTransaction();
                 $stmt = $pdo->prepare("SELECT * FROM equipment_details WHERE id = ?");
@@ -155,18 +152,20 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) 
                     $_POST['location'],
                     $_POST['accountable_individual'],
                     $_POST['rr_no'],
-                    $_POST['date_created'],
                     $_POST['remarks'],
                     $_POST['equipment_id']
                 ];
+
                 $stmt = $pdo->prepare("UPDATE equipment_details SET 
-            asset_tag = ?, asset_description_1 = ?, asset_description_2 = ?, specifications = ?, 
-            brand = ?, model = ?, serial_number = ?, location = ?, accountable_individual = ?, 
-            rr_no = ?, date_created = ?, remarks = ? WHERE id = ?");
+                    asset_tag = ?, asset_description_1 = ?, asset_description_2 = ?, specifications = ?, 
+                    brand = ?, model = ?, serial_number = ?, location = ?, accountable_individual = ?, 
+                    rr_no = ?, remarks = ? WHERE id = ?");
                 $stmt->execute($values);
 
-                unset($oldEquipment['id'], $oldEquipment['is_disabled'], $oldEquipment['date_created']);
+                // Remove system-managed fields before logging
+                unset($oldEquipment['id'], $oldEquipment['is_disabled']);
                 $oldValue = json_encode($oldEquipment);
+
                 $newValues = json_encode([
                     'asset_tag' => $_POST['asset_tag'],
                     'asset_description_1' => $_POST['asset_description_1'],
@@ -180,9 +179,11 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) 
                     'rr_no' => $_POST['rr_no'],
                     'remarks' => $_POST['remarks']
                 ]);
+
                 $auditStmt = $pdo->prepare("INSERT INTO audit_log (
-            UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status, Date_Time
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+                    UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status, Date_Time
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+
                 $auditStmt->execute([
                     $_SESSION['user_id'],
                     $_POST['equipment_id'],
@@ -193,6 +194,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) 
                     $newValues,
                     'Successful'
                 ]);
+
                 $pdo->commit();
                 $response['status'] = 'success';
                 $response['message'] = 'Equipment updated successfully';
@@ -203,9 +205,11 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) 
                 $response['status'] = 'error';
                 $response['message'] = $e->getMessage();
             }
-            ob_clean(); // Clear any prior output
+
+            ob_clean();
             echo json_encode($response);
             exit;
+
         case 'remove':
             if (!$canDelete) {
                 $response['status'] = 'error';
@@ -213,17 +217,19 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) 
                 echo json_encode($response);
                 exit;
             }
-            
+
             try {
                 if (!isset($_POST['details_id'])) {
                     throw new Exception('Details ID is required');
                 }
+
                 $stmt = $pdo->prepare("SELECT * FROM equipment_details WHERE id = ?");
                 $stmt->execute([$_POST['details_id']]);
                 $detailsData = $stmt->fetch(PDO::FETCH_ASSOC);
                 if (!$detailsData) {
                     throw new Exception('Details not found');
                 }
+
                 $pdo->beginTransaction();
 
                 $oldValue = json_encode($detailsData);
@@ -233,8 +239,9 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) 
                 $newValue = json_encode($detailsData);
 
                 $auditStmt = $pdo->prepare("INSERT INTO audit_log (
-            UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status, Date_Time
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+                    UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status, Date_Time
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+
                 $auditStmt->execute([
                     $_SESSION['user_id'],
                     $detailsData['id'],
@@ -256,6 +263,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) 
                 $response['status'] = 'error';
                 $response['message'] = 'Error removing details: ' . $e->getMessage();
             }
+
             ob_clean();
             echo json_encode($response);
             exit;
@@ -273,7 +281,7 @@ unset($_SESSION['errors'], $_SESSION['success']);
 try {
     $stmt = $pdo->query("SELECT id, asset_tag, asset_description_1, asset_description_2,
                          specifications, brand, model, serial_number, location, accountable_individual, rr_no,
-                         remarks, date_created FROM equipment_details WHERE is_disabled = 0 ORDER BY id DESC");
+                         remarks, date_acquired, date_created, date_modified FROM equipment_details WHERE is_disabled = 0 ORDER BY id DESC");
     $equipmentDetails = $stmt->fetchAll();
 } catch (PDOException $e) {
     $errors[] = "Error retrieving Equipment Details: " . $e->getMessage();
@@ -283,12 +291,12 @@ function safeHtml($value)
 {
     return htmlspecialchars($value ?? 'N/A');
 }
+
 ob_end_clean();
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -300,7 +308,6 @@ ob_end_clean();
         .table tbody:empty ~ .container-fluid #nextPage {
             display: none !important;
         }
-        
         /* Hide pagination info when table is empty */
         .table tbody:empty ~ .container-fluid .text-muted #currentPage,
         .table tbody:empty ~ .container-fluid .text-muted #rowsPerPage,
@@ -308,7 +315,6 @@ ob_end_clean();
             display: inline-block;
             min-width: 10px;
         }
-        
         /* Ensure empty tbody has some height for CSS selectors to work */
         .table tbody:empty {
             display: block;
@@ -316,19 +322,16 @@ ob_end_clean();
         }
     </style>
 </head>
-
 <body>
     <?php
     include '../../general/header.php';
     include '../../general/sidebar.php';
     include '../../general/footer.php';
     ?>
-
     <div class="main-container">
         <header class="main-header">
-            <h1> Equipment Details Management</h1>
+            <h1>Equipment Details Management</h1>
         </header>
-
         <section class="card">
             <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
                 <h2><i class="bi bi-list-task"></i> List of Equipment Details</h2>
@@ -339,9 +342,9 @@ ob_end_clean();
                     <div class="row align-items-lg-center g-2">
                         <div class="col-auto">
                             <?php if ($canCreate): ?>
-                            <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#addEquipmentModal">
-                                <i class="bi bi-plus-lg"></i> Create Equipment
-                            </button>
+                                <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#addEquipmentModal">
+                                    <i class="bi bi-plus-lg"></i> Create Equipment
+                                </button>
                             <?php endif; ?>
                         </div>
                         <div class="col-md-3">
@@ -357,7 +360,6 @@ ob_end_clean();
                                 ?>
                             </select>
                         </div>
-
                         <div class="col-md-3">
                             <select class="form-select" id="dateFilter">
                                 <option value="">Filter by Date</option>
@@ -370,7 +372,7 @@ ob_end_clean();
                         <div class="col-md-3">
                             <div class="input-group">
                                 <input type="text" id="searchEquipment" class="form-control"
-                                    placeholder="Search equipment...">
+                                       placeholder="Search equipment...">
                                 <span class="input-group-text"><i class="bi bi-search"></i></span>
                             </div>
                         </div>
@@ -385,7 +387,7 @@ ob_end_clean();
                                     <?php
                                     $months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
                                     foreach ($months as $index => $month) {
-                                        echo "<option value='" . ($index + 1) . "'>" . $month . "</option>";
+                                        echo "<option value='" . ($index + 1) . "'>$month</option>";
                                     }
                                     ?>
                                 </select>
@@ -394,7 +396,7 @@ ob_end_clean();
                                     <?php
                                     $currentYear = date('Y');
                                     for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
-                                        echo "<option value='" . $year . "'>" . $year . "</option>";
+                                        echo "<option value='$year'>$year</option>";
                                     }
                                     ?>
                                 </select>
@@ -442,9 +444,9 @@ ob_end_clean();
                                         <td><?= safeHtml($equipment['brand']); ?></td>
                                         <td><?= safeHtml($equipment['model']); ?></td>
                                         <td><?= safeHtml($equipment['serial_number']); ?></td>
-                                        <td><?= safeHtml($equipment['date_created']); ?></td>
-                                        <td><?= !empty($equipment['date_created']) ? date('Y-m-d H:i', strtotime($equipment['date_created'])) : ''; ?></td>
-                                        <td><?= !empty($equipment['date_created']) ? date('Y-m-d H:i', strtotime($equipment['date_created'])) : ''; ?></td>
+                                        <td><?= !empty($equipment['date_acquired']) ? date('Y-m-d H:i', strtotime($equipment['date_acquired'])) : 'N/A'; ?></td>
+                                        <td><?= date('Y-m-d H:i', strtotime($equipment['date_created'])); ?></td>
+                                        <td><?= date('Y-m-d H:i', strtotime($equipment['date_modified'])); ?></td>
                                         <td><?= safeHtml($equipment['rr_no']); ?></td>
                                         <td><?= safeHtml($equipment['location']); ?></td>
                                         <td><?= safeHtml($equipment['accountable_individual']); ?></td>
@@ -452,35 +454,32 @@ ob_end_clean();
                                         <td>
                                             <div class="btn-group">
                                                 <?php if ($canModify): ?>
-                                                <button class="btn btn-outline-info btn-sm edit-equipment"
-                                                    data-id="<?= safeHtml($equipment['id']); ?>"
-                                                    data-asset="<?= safeHtml($equipment['asset_tag']); ?>"
-                                                    data-desc1="<?= safeHtml($equipment['asset_description_1']); ?>"
-                                                    data-desc2="<?= safeHtml($equipment['asset_description_2']); ?>"
-                                                    data-spec="<?= safeHtml($equipment['specifications']); ?>"
-                                                    data-brand="<?= safeHtml($equipment['brand']); ?>"
-                                                    data-model="<?= safeHtml($equipment['model']); ?>"
-                                                    data-serial="<?= safeHtml($equipment['serial_number']); ?>"
-                                                    data-location="<?= safeHtml($equipment['location']); ?>"
-                                                    data-accountable="<?= safeHtml($equipment['accountable_individual']); ?>"
-                                                    data-rr="<?= safeHtml($equipment['rr_no']); ?>"
-                                                    data-date="<?= safeHtml($equipment['date_created']); ?>"
-                                                    data-remarks="<?= safeHtml($equipment['remarks']); ?>">
-                                                    <i class="bi bi-pencil-square"></i>
-                                                </button>
+                                                    <button class="btn btn-outline-info btn-sm edit-equipment"
+                                                        data-id="<?= safeHtml($equipment['id']); ?>"
+                                                        data-asset="<?= safeHtml($equipment['asset_tag']); ?>"
+                                                        data-desc1="<?= safeHtml($equipment['asset_description_1']); ?>"
+                                                        data-desc2="<?= safeHtml($equipment['asset_description_2']); ?>"
+                                                        data-spec="<?= safeHtml($equipment['specifications']); ?>"
+                                                        data-brand="<?= safeHtml($equipment['brand']); ?>"
+                                                        data-model="<?= safeHtml($equipment['model']); ?>"
+                                                        data-serial="<?= safeHtml($equipment['serial_number']); ?>"
+                                                        data-location="<?= safeHtml($equipment['location']); ?>"
+                                                        data-accountable="<?= safeHtml($equipment['accountable_individual']); ?>"
+                                                        data-rr="<?= safeHtml($equipment['rr_no']); ?>"
+                                                        data-remarks="<?= safeHtml($equipment['remarks']); ?>">
+                                                        <i class="bi bi-pencil-square"></i>
+                                                    </button>
                                                 <?php endif; ?>
-
                                                 <?php if ($canDelete): ?>
-                                                <button class="btn btn-outline-danger btn-sm remove-equipment"
-                                                    data-id="<?= safeHtml($equipment['id']); ?>">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
+                                                    <button class="btn btn-outline-danger btn-sm remove-equipment"
+                                                        data-id="<?= safeHtml($equipment['id']); ?>">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
                                                 <?php endif; ?>
                                             </div>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
-
                             <?php else: ?>
                                 <tr>
                                     <td colspan="16" class="text-center py-4">
@@ -499,9 +498,7 @@ ob_end_clean();
                     <div class="row align-items-center g-3">
                         <div class="col-12 col-sm-auto">
                             <div class="text-muted">
-                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
-                                    id="totalRows">100</span>
-                                entries
+                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows"><?= count($equipmentDetails); ?></span> entries
                             </div>
                         </div>
                         <div class="col-12 col-sm-auto ms-sm-auto">
@@ -520,24 +517,17 @@ ob_end_clean();
                                 </button>
                             </div>
                         </div>
-                        <div class="row mt-3">
-                            <div class="col-12">
-                                <ul class="pagination justify-content-center" id="pagination"></ul>
-                            </div>
-                        </div>
                     </div>
                 </div>
-                <!-- End of Pagination Controls -->
-
-
             </div>
         </section>
     </div>
 
     <!-- Modals -->
+
     <!-- Add Equipment Modal -->
     <div class="modal fade" id="addEquipmentModal" tabindex="-1" aria-labelledby="addEquipmentLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Add New Equipment</h5>
@@ -551,63 +541,47 @@ ob_end_clean();
                             <input type="text" class="form-control" name="asset_tag" required>
                         </div>
                         <div class="mb-3">
-                            <div class="row">
-                                <div class="mb-3 col-md-6">
-                                    <label for="asset_description_1" class="form-label">Description 1</label>
-                                    <input type="text" class="form-control" name="asset_description_1" required>
-                                </div>
-                                <div class="mb-3 col-md-6">
-                                    <label for="asset_description_2" class="form-label">Description 2</label>
-                                    <input type="text" class="form-control" name="asset_description_2" required>
-                                </div>
-                            </div>
+                            <label for="asset_description_1" class="form-label">Description 1</label>
+                            <input type="text" class="form-control" name="asset_description_1" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="asset_description_2" class="form-label">Description 2</label>
+                            <input type="text" class="form-control" name="asset_description_2" required>
                         </div>
                         <div class="mb-3">
                             <label for="specifications" class="form-label">Specification</label>
                             <textarea class="form-control" name="specifications" rows="3" required></textarea>
                         </div>
                         <div class="mb-3">
-                            <div class="row">
-                                <div class="mb-3 col-md-6">
-                                    <label for="brand" class="form-label">Brand</label>
-                                    <input type="text" class="form-control" name="brand" required>
-                                </div>
-                                <div class="mb-3 col-md-6">
-                                    <label for="model" class="form-label">Model</label>
-                                    <input type="text" class="form-control" name="model" required>
-                                </div>
-                            </div>
+                            <label for="brand" class="form-label">Brand</label>
+                            <input type="text" class="form-control" name="brand">
                         </div>
                         <div class="mb-3">
-                            <div class="row">
-                                <div class="mb-3 col-md-6">
-                                    <label for="serial_number" class="form-label">Serial Number <span style="color: red;">*</span></label>
-                                    <input type="text" class="form-control" name="serial_number" required>
-                                </div>
-                                <div class="mb-3 col-md-6">
-                                    <label for="rr_no" class="form-label">RR#</label>
-                                    <input type="text" class="form-control" name="rr_no">
-                                </div>
-                            </div>
+                            <label for="model" class="form-label">Model</label>
+                            <input type="text" class="form-control" name="model">
                         </div>
                         <div class="mb-3">
-                            <div class="row">
-                                <div class="mb-3 col-md-6">
-                                    <label for="location" class="form-label">Location</label>
-                                    <input type="text" class="form-control" name="location">
-                                </div>
-                                <div class="mb-3 col-md-6">
-                                    <label for="accountable_individual" class="form-label">Accountable Individual</label>
-                                    <input type="text" class="form-control" name="accountable_individual">
-                                </div>
-                            </div>
+                            <label for="serial_number" class="form-label">Serial Number <span style="color: red;">*</span></label>
+                            <input type="text" class="form-control" name="serial_number" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="rr_no" class="form-label">RR#</label>
+                            <input type="text" class="form-control" name="rr_no">
+                        </div>
+                        <div class="mb-3">
+                            <label for="location" class="form-label">Location</label>
+                            <input type="text" class="form-control" name="location">
+                        </div>
+                        <div class="mb-3">
+                            <label for="accountable_individual" class="form-label">Accountable Individual</label>
+                            <input type="text" class="form-control" name="accountable_individual">
                         </div>
                         <div class="mb-3">
                             <label for="remarks" class="form-label">Remarks</label>
                             <textarea class="form-control" name="remarks" rows="3"></textarea>
                         </div>
                         <div class="mb-3 text-end">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="margin-right: 4px;">Cancel</button>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                             <button type="submit" class="btn btn-primary">Create Equipment</button>
                         </div>
                     </form>
@@ -618,7 +592,7 @@ ob_end_clean();
 
     <!-- Edit Equipment Modal -->
     <div class="modal fade" id="editEquipmentModal" tabindex="-1" data-bs-backdrop="true">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Edit Equipment</h5>
@@ -633,56 +607,44 @@ ob_end_clean();
                             <input type="text" class="form-control" name="asset_tag" id="edit_asset_tag" required>
                         </div>
                         <div class="mb-3">
-                            <div class="row">
-                                <div class="mb-3 col-md-6">
-                                    <label for="edit_asset_description_1" class="form-label">Description 1</label>
-                                    <input type="text" class="form-control" name="asset_description_1" id="edit_asset_description_1">
-                                </div>
-                                <div class="mb-3 col-md-6">
-                                    <label for="edit_asset_description_2" class="form-label">Description 2</label>
-                                    <input type="text" class="form-control" name="asset_description_2" id="edit_asset_description_2">
-                                </div>
-                            </div>
+                            <label for="edit_asset_description_1" class="form-label">Description 1</label>
+                            <input type="text" class="form-control" name="asset_description_1"
+                                   id="edit_asset_description_1">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_asset_description_2" class="form-label">Description 2</label>
+                            <input type="text" class="form-control" name="asset_description_2"
+                                   id="edit_asset_description_2">
                         </div>
                         <div class="mb-3">
                             <label for="edit_specifications" class="form-label">Specification</label>
-                            <textarea class="form-control" name="specifications" id="edit_specifications" rows="3"></textarea>
+                            <textarea class="form-control" name="specifications" id="edit_specifications"
+                                      rows="3"></textarea>
                         </div>
                         <div class="mb-3">
-                            <div class="row">
-                                <div class="mb-3 col-md-6">
-                                    <label for="edit_brand" class="form-label">Brand</label>
-                                    <input type="text" class="form-control" name="brand" id="edit_brand">
-                                </div>
-                                <div class="mb-3 col-md-6">
-                                    <label for="edit_model" class="form-label">Model</label>
-                                    <input type="text" class="form-control" name="model" id="edit_model">
-                                </div>
-                            </div>
+                            <label for="edit_brand" class="form-label">Brand</label>
+                            <input type="text" class="form-control" name="brand" id="edit_brand">
                         </div>
                         <div class="mb-3">
-                            <div class="row">
-                                <div class="mb-3 col-md-6">
-                                    <label for="edit_serial_number" class="form-label">Serial Number <span style="color: red;">*</span></label>
-                                    <input type="text" class="form-control" name="serial_number" id="edit_serial_number" required>
-                                </div>
-                                <div class="mb-3 col-md-6">
-                                    <label for="edit_rr_no" class="form-label">RR#</label>
-                                    <input type="text" class="form-control" name="rr_no" id="edit_rr_no">
-                                </div>
-                            </div>
+                            <label for="edit_model" class="form-label">Model</label>
+                            <input type="text" class="form-control" name="model" id="edit_model">
                         </div>
                         <div class="mb-3">
-                            <div class="row">
-                                <div class="mb-3 col-md-6">
-                                    <label for="edit_location" class="form-label">Location</label>
-                                    <input type="text" class="form-control" name="location" id="edit_location">
-                                </div>
-                                <div class="mb-3 col-md-6">
-                                    <label for="edit_accountable_individual" class="form-label">Accountable Individual</label>
-                                    <input type="text" class="form-control" name="accountable_individual" id="edit_accountable_individual">
-                                </div>
-                            </div>
+                            <label for="edit_serial_number" class="form-label">Serial Number <span style="color: red;">*</span></label>
+                            <input type="text" class="form-control" name="serial_number" id="edit_serial_number" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_rr_no" class="form-label">RR#</label>
+                            <input type="text" class="form-control" name="rr_no" id="edit_rr_no">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_location" class="form-label">Location</label>
+                            <input type="text" class="form-control" name="location" id="edit_location">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_accountable_individual" class="form-label">Accountable Individual</label>
+                            <input type="text" class="form-control" name="accountable_individual"
+                                   id="edit_accountable_individual">
                         </div>
                         <div class="mb-3">
                             <label for="edit_remarks" class="form-label">Remarks</label>
@@ -719,65 +681,34 @@ ob_end_clean();
     <!-- Scripts -->
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
     <script>
-        // Override updatePagination function to properly handle empty tables
         document.addEventListener('DOMContentLoaded', function() {
-            // Keep reference to original function
             const originalUpdatePagination = window.updatePagination;
-            
-            // Override with custom implementation that ensures empty tables have no pagination
             window.updatePagination = function() {
-                // Get row count directly from table
                 const rowCount = document.querySelectorAll('#edTable tbody tr').length;
-                console.log('Override updatePagination called, row count:', rowCount);
-                
-                // If table is empty, hide pagination elements
                 if (rowCount === 0) {
-                    console.log('Table is empty, hiding pagination');
-                    document.getElementById('currentPage').textContent = '0';
-                    document.getElementById('rowsPerPage').textContent = '0';
-                    document.getElementById('totalRows').textContent = '0';
-                    document.getElementById('prevPage').style.display = 'none';
-                    document.getElementById('nextPage').style.display = 'none';
-                    document.getElementById('pagination').innerHTML = '';
-                    return;
-                }
-                
-                // Otherwise call original function
-                if (originalUpdatePagination) {
-                    originalUpdatePagination();
+                    $('#currentPage, #rowsPerPage, #totalRows').text('0');
+                    $('#prevPage, #nextPage').css({'display': 'none'});
+                    $('#pagination').empty();
+                } else {
+                    $('#totalRows').text(rowCount);
+                    if (originalUpdatePagination) {
+                        originalUpdatePagination();
+                    }
                 }
             };
-            
-            // Initial check - directly hide pagination if table is empty
-            if (document.querySelectorAll('#edTable tbody tr').length === 0) {
-                document.getElementById('currentPage').textContent = '0';
-                document.getElementById('rowsPerPage').textContent = '0';
-                document.getElementById('totalRows').textContent = '0';
-                document.getElementById('prevPage').style.display = 'none';
-                document.getElementById('nextPage').style.display = 'none';
-                document.getElementById('pagination').innerHTML = '';
-            }
-        });
-        
-        $(document).ready(function() {
-            // Track if rows are being filtered
-            let isFiltering = false;
-            let filteredRowCount = 0;
-            
-            // Direct approach to check for empty table
             if ($('#edTable tbody tr').length === 0) {
-                console.log('Table is empty - hiding pagination');
-                $('#prevPage, #nextPage').css({'display': 'none', 'visibility': 'hidden'});
                 $('#currentPage, #rowsPerPage, #totalRows').text('0');
+                $('#prevPage, #nextPage').hide();
                 $('#pagination').empty();
             }
-            
-            // Check if table is empty on page load and hide pagination if needed
-            const tableRows = $('.table tbody tr').length;
-            
-            // Bind search/filter events
+        });
+
+        $(document).ready(function () {
+            let isFiltering = false;
+            let filteredRowCount = 0;
+
             $('#searchEquipment, #filterEquipment').on('input change', filterTable);
-            $('#dateFilter').on('change', function() {
+            $('#dateFilter').on('change', function () {
                 const value = $(this).val();
                 $('#dateInputsContainer, #monthPickerContainer, #dateRangePickers, #dateFrom, #dateTo').hide();
                 if (value === 'month') {
@@ -791,7 +722,7 @@ ob_end_clean();
                     filterTable();
                 }
             });
-            $('#monthSelect, #yearSelect, #dateFrom, #dateTo').on('change', function() {
+            $('#monthSelect, #yearSelect, #dateFrom, #dateTo').on('change', function () {
                 if (($('#monthSelect').val() && $('#yearSelect').val()) || ($('#dateFrom').val() && $('#dateTo').val())) {
                     filterTable();
                 }
@@ -806,44 +737,12 @@ ob_end_clean();
                 const dateFrom = $('#dateFrom').val();
                 const dateTo = $('#dateTo').val();
 
-                // Determine if any filter is active
-                const hasTextFilter = !!searchText;
-                const hasTypeFilter = !!filterType;
-                const hasDateFilter = (dateFilterType === 'month' && selectedMonth && selectedYear) ||
-                    (dateFilterType === 'range' && dateFrom && dateTo) ||
-                    dateFilterType === 'asc' || dateFilterType === 'desc';
-
-                isFiltering = hasTextFilter || hasTypeFilter || hasDateFilter;
-
-                // Reset visibility first if sorting
-                if (dateFilterType === 'asc' || dateFilterType === 'desc') {
-                    $('.table tbody tr').show();
-                    const tbody = $('.table tbody');
-                    const rows = tbody.find('tr').toArray();
-                    rows.sort((a, b) => {
-                        const dateA = new Date($(a).find('td:eq(8)').text());
-                        const dateB = new Date($(b).find('td:eq(8)').text());
-                        return dateFilterType === 'asc' ? dateA - dateB : dateB - dateA;
-                    });
-                    tbody.append(rows);
-
-                    // Update pagination after sort
-                    if (typeof updatePagination === 'function') {
-                        updatePagination();
-                    }
-                    return;
-                }
-
-                // Count rows that match filter
-                filteredRowCount = 0;
-
-                $('.table tbody tr').each(function() {
+                $('.table tbody tr').each(function () {
                     const $row = $(this);
                     const rowText = $row.text().toLowerCase();
                     const typeCell = $row.find('td:eq(2)').text().trim();
                     const dateCell = $row.find('td:eq(8)').text();
                     const date = new Date(dateCell);
-
                     const searchMatch = !searchText || rowText.includes(searchText);
                     const typeMatch = !filterType || typeCell === filterType;
                     let dateMatch = true;
@@ -857,24 +756,15 @@ ob_end_clean();
                     }
 
                     const matches = searchMatch && typeMatch && dateMatch;
-                    if (isFiltering) {
-                        // When filtering, show only matching rows
-                        $row.toggle(matches);
-                        if (matches) filteredRowCount++;
-                    } else {
-                        // When not filtering, show all rows
-                        $row.show();
-                    }
+                    $row.toggle(matches);
                 });
 
-                // Update pagination information manually if filtering shows no results
-                if (isFiltering && filteredRowCount === 0) {
-                    // Hide pagination controls immediately for empty result set
+                filteredRowCount = $('.table tbody tr:visible').length;
+                $('#totalRows').text(filteredRowCount);
+                if (filteredRowCount === 0) {
                     $('#currentPage, #rowsPerPage, #totalRows').text('0');
-                    $('#prevPage, #nextPage').css('display', 'none');
+                    $('#prevPage, #nextPage').hide();
                     $('#pagination').empty();
-                    
-                    // Show "No results" message if not already present
                     if ($('.table tbody tr.no-results').length === 0) {
                         $('.table tbody').append(`
                             <tr class="no-results">
@@ -887,26 +777,16 @@ ob_end_clean();
                         `);
                     }
                 } else {
-                    // Remove "No results" message if it exists
                     $('.table tbody tr.no-results').remove();
-                    
-                    // Show pagination controls (updatePagination will properly set their visibility)
-                    $('#prevPage, #nextPage').css('display', '');
-
-                    // Reset to page 1 when filtering changes results
-                    if (typeof currentPage !== 'undefined') {
-                        currentPage = 1;
-                    }
-
-                    // Update pagination
+                    $('#prevPage, #nextPage').show();
+                    $('#currentPage').text('1');
                     if (typeof updatePagination === 'function') {
-                        updatePagination();
+                        setTimeout(updatePagination, 50);
                     }
                 }
             }
 
-            // Edit Equipment event
-            $(document).on('click', '.edit-equipment', function() {
+            $(document).on('click', '.edit-equipment', function () {
                 const data = $(this).data();
                 $('#edit_equipment_id').val(data.id);
                 $('#edit_asset_tag').val(data.asset);
@@ -923,7 +803,6 @@ ob_end_clean();
                 $('#editEquipmentModal').modal('show');
             });
 
-            // Remove Equipment event
             var deleteId = null;
             $(document).on('click', '.remove-equipment', function(e) {
                 e.preventDefault();
@@ -931,24 +810,18 @@ ob_end_clean();
                 new bootstrap.Modal(document.getElementById('deleteEDModal')).show();
             });
 
-            $('#confirmDeleteBtn').on('click', function() {
+            $('#confirmDeleteBtn').on('click', function () {
                 if (deleteId) {
                     $.ajax({
                         url: window.location.href,
                         method: 'POST',
-                        data: {
-                            action: 'remove',
-                            details_id: deleteId
-                        },
+                        data: { action: 'remove', details_id: deleteId },
                         dataType: 'json',
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        },
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
                         success: function(response) {
                             showToast(response.message, response.status === 'success' ? 'success' : 'error');
                             refreshEquipmentList();
                             bootstrap.Modal.getInstance(document.getElementById('deleteEDModal')).hide();
-                            $('.modal-backdrop').remove();
                         },
                         error: function(xhr, status, error) {
                             showToast('Error removing equipment: ' + error, 'error');
@@ -962,40 +835,24 @@ ob_end_clean();
                     url: window.location.href,
                     method: 'GET',
                     success: function(response) {
-                        // Extract just the table body content from the response
                         const $responseHtml = $(response);
                         const newTbodyContent = $responseHtml.find('.table tbody').html();
-                        
-                        // Update the table with new content
                         $('.table tbody').html(newTbodyContent);
-                        
-                        // Remove any lingering no-results messages
                         $('.table tbody tr.no-results').remove();
-
-                        // Reset filtering state
                         isFiltering = false;
                         filteredRowCount = 0;
-
-                        // Check if there are any rows after refresh
                         const rowCount = $('.table tbody tr').length;
-
                         if (rowCount === 0) {
-                            // If no rows, hide pagination elements
                             $('#currentPage, #rowsPerPage, #totalRows').text('0');
-                            $('#prevPage, #nextPage').css('display', 'none');
+                            $('#prevPage, #nextPage').hide();
                             $('#pagination').empty();
                         } else {
-                            // Show pagination controls (updatePagination will set proper visibility)
-                            $('#prevPage, #nextPage').css('display', '');
-
-                            // Reset to page 1 when refreshing
+                            $('#prevPage, #nextPage').show();
+                            $('#currentPage').text('1');
                             if (typeof currentPage !== 'undefined') {
                                 currentPage = 1;
                             }
-
-                            // Update pagination
                             if (typeof updatePagination === 'function') {
-                                // Small delay to ensure DOM is fully updated
                                 setTimeout(updatePagination, 50);
                             }
                         }
@@ -1006,19 +863,16 @@ ob_end_clean();
                 });
             }
 
-            $(document).off('submit', '#addEquipmentForm').on('submit', '#addEquipmentForm', function(e) {
+            $('#addEquipmentForm').off('submit').on('submit', function(e) {
                 e.preventDefault();
                 const submitBtn = $(this).find('button[type="submit"]');
                 submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Adding...');
-
                 $.ajax({
                     url: window.location.href,
                     method: 'POST',
                     data: $(this).serialize(),
                     dataType: 'json',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
                     success: function(response) {
                         if (response.status === 'success') {
                             bootstrap.Modal.getInstance(document.getElementById('addEquipmentModal')).hide();
@@ -1047,9 +901,7 @@ ob_end_clean();
                     method: 'POST',
                     data: $(this).serialize(),
                     dataType: 'json',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
                     success: function(response) {
                         if (response.status === 'success') {
                             bootstrap.Modal.getInstance(document.getElementById('editEquipmentModal')).hide();
@@ -1074,9 +926,7 @@ ob_end_clean();
                     }
                 });
             });
-
         });
     </script>
 </body>
-
 </html>
