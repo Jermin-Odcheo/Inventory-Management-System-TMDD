@@ -19,7 +19,8 @@ $rbac = new RBACService($pdo, $_SESSION['user_id']);
 $rbac->requirePrivilege('Roles and Privileges', 'View');
 
 // 3) Button flags
-$canRestore = $rbac->hasPrivilege('Roles and Privileges', 'Modify');
+$canRestore = $rbac->hasPrivilege('Roles and Privileges', 'Restore');
+$canRemove = $rbac->hasPrivilege('Roles and Privileges', 'Remove');
 $canPermanentDelete = $rbac->hasPrivilege('Roles and Privileges', 'Delete');
 
 // SQL query for archived roles with audit information
