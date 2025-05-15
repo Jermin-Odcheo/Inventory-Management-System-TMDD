@@ -175,6 +175,16 @@ $(document).ready(function() {
             '&department=' + encodeURIComponent($('#department-filter').val());
     }
     
+    // when the modal hides, reset everything
+    $('#createUserModal').on('hidden.bs.modal', function(){
+    // 1) reset the HTML form fields
+    $('#createUserForm')[0].reset();
+
+    // 2) clear your department selection state
+    selectedDepartments = [];
+    updateDepartmentsDisplay();
+    });
+
     // ===== CREATE USER FUNCTIONALITY =====
     $('#createUserForm').on('submit', function(e) {
         e.preventDefault();
