@@ -418,14 +418,14 @@ try {
                                 <input type="text" name="last_name" id="last_name" class="form-control" required>
                             </div>
                             <div class="col-md-12">
-                                <label for="modal_department" class="form-label">Department</label>
+                                <label for="modal_department" class="form-label">Department <span class="text-danger">*</span></label>
                                 <select name="department" id="modal_department" class="form-select" style="width: 100%;">
                                     <option value="">Select Department</option>
                                     <?php foreach ($departments as $code => $d): ?>
                                         <option value="<?= $code ?>"><?= htmlspecialchars($d['department_name']) ?></option>
                                     <?php endforeach; ?>
                                 </select> <!-- No 'All Departments' and no 'Custom Department' -->
-                                <small class="form-text text-muted">Select one or more departments</small>
+                                <small class="form-text text-muted">Select one or more departments (required)</small>
                                 <input type="text" id="modal_custom_department" name="custom_department"
                                     class="form-control mt-2" style="display:none;"
                                     placeholder="Enter custom department">
@@ -498,14 +498,14 @@ try {
                                 <input type="password" name="password" id="editPassword" class="form-control">
                             </div>
                             <div class="col-md-12">
-                                <label for="editDepartments" class="form-label">Departments</label>
+                                <label for="editDepartments" class="form-label">Departments <span class="text-danger">*</span></label>
                                 <select name="departments[]" id="editDepartments" class="form-select">
                                     <option value="">Select departments</option>
                                     <?php foreach ($departments as $dept_id => $d): ?>
                                         <option value="<?= $dept_id ?>"><?= htmlspecialchars($d['department_name']) ?></option>
                                     <?php endforeach; ?>
                                 </select>
-                                <small class="form-text text-muted">Select one or more departments</small>
+                                <small class="form-text text-muted">Select one or more departments (required)</small>
                             </div>
                             <div class="col-md-12 mt-2">
                                 <label class="form-label">Currently Assigned Departments</label>
@@ -589,6 +589,14 @@ $(document).ready(function() {
     // Initialize Select2 for modal department dropdown
     $('#modal_department').select2({
         dropdownParent: $('#createUserModal'),
+        placeholder: 'Select Department',
+        allowClear: true,
+        width: '100%'
+    });
+    
+    // Initialize Select2 for edit department dropdown
+    $('#editDepartments').select2({
+        dropdownParent: $('#editUserModal'),
         placeholder: 'Select Department',
         allowClear: true,
         width: '100%'

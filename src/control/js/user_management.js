@@ -93,7 +93,12 @@ $(document).ready(function() {
             dataType: 'json',
             success: function(response) {
                 if (response.success) {
-                    selectedDepartments = response.departments;
+                    // Ensure department ids are treated as integers
+                    selectedDepartments = response.departments.map(dept => ({
+                        id: parseInt(dept.id),
+                        name: dept.name
+                    }));
+                    console.log("Departments loaded:", selectedDepartments);
                     updateEditDepartmentsDisplay();
                 } else {
                     console.error("Failed to load departments:", response.message);
@@ -192,13 +197,17 @@ $(document).ready(function() {
         // Create a form data object
         const formData = new FormData(this);
         
-        // Add department IDs
+        // Add department IDs - departments are required
+        if (selectedDepartments.length === 0) {
+            showToast('At least one department is required', 'error', 3000);
+            return; // Prevent form submission
+        }
+        
         selectedDepartments.forEach((dept, index) => {
             formData.append(`departments[${index}]`, dept.id);
         });
         
-        // Default role if needed (assuming user role is ID 3)
-        formData.append('roles[0]', '3');
+        // Roles are now optional - removed default role assignment
         
         $.ajax({
             url: 'create_user.php',
@@ -264,9 +273,6 @@ $(document).ready(function() {
             formData.append(`departments[${index}]`, dept.id);
         });
         
-        // Default role if needed (assuming user role is ID 3)
-        formData.append('roles[0]', '3');
-        
         $.ajax({
             url: 'update_user.php',
             type: 'POST',
@@ -321,11 +327,13 @@ $(document).ready(function() {
     });
     
     $('#editDepartments').on('change', function() {
-        const deptId = $(this).val();
+        const deptId = parseInt($(this).val());
         const deptName = $(this).find('option:selected').text();
         
-        if (deptId && !selectedDepartments.some(d => d.id == deptId)) {
+        if (deptId && !selectedDepartments.some(d => parseInt(d.id) === deptId)) {
             selectedDepartments.push({ id: deptId, name: deptName });
+            console.log("Department added:", { id: deptId, name: deptName });
+            console.log("Current departments:", selectedDepartments);
             updateEditDepartmentsDisplay();
         }
         
@@ -484,6 +492,8 @@ $(document).ready(function() {
         $list.empty();
         $table.empty();
         
+        console.log("Displaying departments:", selectedDepartments);
+        
         selectedDepartments.forEach(function(dept) {
             // Add badge to list
             $list.append(`
@@ -505,8 +515,9 @@ $(document).ready(function() {
         
         // Add event handlers for removal buttons
         $('.remove-edit-dept').on('click', function() {
-            const deptId = $(this).data('dept-id');
-            selectedDepartments = selectedDepartments.filter(d => d.id !== deptId);
+            const deptId = parseInt($(this).data('dept-id'));
+            selectedDepartments = selectedDepartments.filter(d => parseInt(d.id) !== deptId);
+            console.log("Department removed, remaining:", selectedDepartments);
             updateEditDepartmentsDisplay();
         });
     }
