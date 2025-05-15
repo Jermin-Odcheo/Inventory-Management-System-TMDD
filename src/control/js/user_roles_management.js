@@ -114,13 +114,13 @@ if (clearFiltersBtn) {
                   <tr>
                     <td>${userPrivileges.canDelete ? '<input type="checkbox" class="select-row" value="' + user.id + '">' : ''}</td>
                     <td>${user.username}</td>
-                    <td>-</td>
-                    <td>-</td>
+                    <td>No Department</td>
+                    <td>No Role Assigned</td>
                     <td>
-                      ${userPrivileges.canModify ? `<button class="edit-btn" data-user-id="${user.id}" data-role-id="0">
+                      ${userPrivileges.canModify ? `<button class="edit-btn" data-user-id="${user.id}" data-role-id="null">
                         <i class="bi bi-pencil-square"></i>
                       </button>` : ''}
-                      ${userPrivileges.canDelete ? `<button class="delete-btn" data-user-id="${user.id}" data-role-id="0">
+                      ${userPrivileges.canDelete ? `<button class="delete-btn" data-user-id="${user.id}" data-role-id="null">
                         <i class="bi bi-trash"></i>
                       </button>` : ''}
                     </td>
@@ -138,15 +138,20 @@ if (clearFiltersBtn) {
                         const dept = getDepartmentById(deptId);
                         if (!dept) return;
                         
+                        // Skip if department name is empty
                         const deptName = dept.department_name;
+                        if (!deptName) return;
+                        
                         if (!deptMap.has(deptName)) {
                             deptMap.set(deptName, []);
                         }
                         
+                        // Include roles even if null (now displays as "No Role Assigned")
                         deptMap.get(deptName).push({
-                            roleName: role.role_name,
+                            roleName: role ? role.role_name : 'No Role Assigned',
                             roleId: assignment.roleId,
-                            userId: assignment.userId
+                            userId: assignment.userId,
+                            departmentId: deptId // Add departmentId to the role info
                         });
                     });
                 });
@@ -163,13 +168,13 @@ if (clearFiltersBtn) {
                       <tr>
                         <td>${userPrivileges.canDelete ? '<input type="checkbox" class="select-row" value="' + user.id + '">' : ''}</td>
                         <td>${user.username}</td>
-                        <td>-</td>
-                        <td>-</td>
+                        <td>No Department</td>
+                        <td>No Role Assigned</td>
                         <td>
-                          ${userPrivileges.canModify ? `<button class="edit-btn" data-user-id="${user.id}" data-role-id="0">
+                          ${userPrivileges.canModify ? `<button class="edit-btn" data-user-id="${user.id}" data-role-id="null">
                             <i class="bi bi-pencil-square"></i>
                           </button>` : ''}
-                          ${userPrivileges.canDelete ? `<button class="delete-btn" data-user-id="${user.id}" data-role-id="0">
+                          ${userPrivileges.canDelete ? `<button class="delete-btn" data-user-id="${user.id}" data-role-id="null">
                             <i class="bi bi-trash"></i>
                           </button>` : ''}
                         </td>
@@ -178,13 +183,32 @@ if (clearFiltersBtn) {
                     tbody.append(tr);
                 } else {
                     consolidatedDepts.forEach((dept, deptIndex) => {
-                        const roleNames = dept.roles.map(r => r.roleName).join(', ');
+                        // Filter out empty role names before joining with comma
+                        const roleNames = dept.roles
+                            .map(r => r.roleName)
+                            .filter(name => name.trim() !== '')
+                            .join(', ');
+                            
+                        // Use "No Role Assigned" when there are no roles
+                        const displayRoleNames = roleNames || 'No Role Assigned';
+                        
                         // Get the first role for the action buttons
                         const firstRole = dept.roles[0];
                         
-                        // Get department ID from department name
-                        const deptObj = departmentsData.find(d => d.department_name === dept.departmentName);
-                        const deptId = deptObj ? deptObj.id : null;
+                        // Get department ID from:
+                        // 1. directly from the role object if available (preferred)
+                        // 2. try to find it from department name as fallback
+                        let deptId = firstRole.departmentId || null;
+                        if (!deptId) {
+                            const deptObj = departmentsData.find(d => d.department_name === dept.departmentName);
+                            deptId = deptObj ? deptObj.id : null;
+                        }
+                        
+                        // Set role ID for the button: use "null" for null roles
+                        const roleIdAttr = firstRole.roleId === null ? "null" : firstRole.roleId;
+                        
+                        // Use "No Department" when department name is empty
+                        const displayDeptName = dept.departmentName || 'No Department';
                         
                         let tr;
                         if (deptIndex === 0) {
@@ -192,13 +216,13 @@ if (clearFiltersBtn) {
                               <tr>
                                 <td rowspan="${consolidatedDepts.length}">${userPrivileges.canDelete ? '<input type="checkbox" class="select-row" value="' + user.id + '">' : ''}</td>
                                 <td rowspan="${consolidatedDepts.length}">${user.username}</td>
-                                <td>${dept.departmentName}</td>
-                                <td>${roleNames}</td>
+                                <td>${displayDeptName}</td>
+                                <td>${displayRoleNames}</td>
                                 <td>
-                                  ${userPrivileges.canModify ? `<button class="edit-btn" data-user-id="${firstRole.userId}" data-role-id="${firstRole.roleId}" data-dept-id="${deptId}">
+                                  ${userPrivileges.canModify ? `<button class="edit-btn" data-user-id="${firstRole.userId}" data-role-id="${roleIdAttr}" data-dept-id="${deptId}">
                                     <i class="bi bi-pencil-square"></i>
                                   </button>` : ''}
-                                  ${userPrivileges.canDelete ? `<button class="delete-btn" data-user-id="${firstRole.userId}" data-role-id="${firstRole.roleId}" data-dept-id="${deptId}">
+                                  ${userPrivileges.canDelete ? `<button class="delete-btn" data-user-id="${firstRole.userId}" data-role-id="${roleIdAttr}" data-dept-id="${deptId}">
                                     <i class="bi bi-trash"></i>
                                   </button>` : ''}
                                 </td>
@@ -207,13 +231,13 @@ if (clearFiltersBtn) {
                         } else {
                             tr = $(`
                               <tr>
-                                <td>${dept.departmentName}</td>
-                                <td>${roleNames}</td>
+                                <td>${displayDeptName}</td>
+                                <td>${displayRoleNames}</td>
                                 <td>
-                                  ${userPrivileges.canModify ? `<button class="edit-btn" data-user-id="${firstRole.userId}" data-role-id="${firstRole.roleId}" data-dept-id="${deptId}">
+                                  ${userPrivileges.canModify ? `<button class="edit-btn" data-user-id="${firstRole.userId}" data-role-id="${roleIdAttr}" data-dept-id="${deptId}">
                                     <i class="bi bi-pencil-square"></i>
                                   </button>` : ''}
-                                  ${userPrivileges.canDelete ? `<button class="delete-btn" data-user-id="${firstRole.userId}" data-role-id="${firstRole.roleId}" data-dept-id="${deptId}">
+                                  ${userPrivileges.canDelete ? `<button class="delete-btn" data-user-id="${firstRole.userId}" data-role-id="${roleIdAttr}" data-dept-id="${deptId}">
                                     <i class="bi bi-trash"></i>
                                   </button>` : ''}
                                 </td>
@@ -253,13 +277,16 @@ if (clearFiltersBtn) {
 
     // Utility functions remain unchanged
     function getUserById(id) {
-        return usersData.find(user => user.id === id) || { username: 'Unknown User' };
+        return usersData.find(user => user.id === id);
     }
     function getRoleById(id) {
-        return rolesData.find(role => role.id === id) || { role_name: 'Unknown Role' };
+        if (id === null) {
+            return { id: null, role_name: 'No Role Assigned' };
+        }
+        return rolesData.find(role => role.id === id) || { id: id, role_name: `Role #${id}` };
     }
     function getDepartmentById(id) {
-        return departmentsData.find(dept => dept.id === id) || { department_name: 'Unknown Dept' };
+        return departmentsData.find(dept => dept.id === id) || { department_name: '' };
     }
 
 
@@ -306,27 +333,88 @@ if (clearFiltersBtn) {
             document.querySelectorAll('.edit-btn').forEach(button => {
                 button.addEventListener('click', function() {
                     const userId = parseInt(this.dataset.userId);
-                    const roleId = parseInt(this.dataset.roleId);
+                    const roleIdStr = this.dataset.roleId;
+                    // Handle roleId properly: "null" or "0" means null role
+                    const roleId = (roleIdStr === "null" || roleIdStr === "0") ? null : parseInt(roleIdStr);
                     
-                    // If roleId is 0, it means user doesn't have a role yet, open the add user roles modal
-                    if (roleId === 0) {
-                        selectedRoles = [];
-                        selectedUsers = [];
-                        selectedRolesContainer.innerHTML = '';
-                        selectedUsersContainer.innerHTML = '';
+                    // For debugging
+                    console.log("Edit clicked for userId:", userId, "roleId:", roleId, "original:", roleIdStr);
+                    console.log("Available assignments:", userRoleDepartments);
+                    
+                    // If roleId is null, it means user doesn't have a role yet, but may have a department
+                    // We should still open the edit modal with the current department information
+                    if (roleId === null) {
+                        // Try to find any assignment for this user
+                        let userAssignment = userRoleDepartments.find(a => a.userId === userId);
                         
-                        // Pre-select the current user
-                        const user = getUserById(userId);
-                        if (user) {
-                            addItemToSelection('selected-users-container', user, 'user');
+                        // If we found an assignment, use it to get department info
+                        if (userAssignment) {
+                            currentEditingData = {
+                                userId: userId,
+                                roleId: null,
+                                originalDeptIds: [...userAssignment.departmentIds]
+                            };
+                            
+                            const modalTitle = addDepartmentRoleModal.querySelector('h2');
+                            const user = getUserById(userId);
+                            
+                            // Get department information from the data-dept-id attribute or the assignment
+                            const departmentId = parseInt(this.dataset.deptId) || userAssignment.departmentIds[0];
+                            const department = getDepartmentById(departmentId);
+                            
+                            // Update DOM elements with user and department info
+                            const userInfoElement = document.getElementById('edit-user-info');
+                            const departmentInfoElement = document.getElementById('edit-department-info');
+                            
+                            if (userInfoElement) {
+                                userInfoElement.textContent = user && user.username ? user.username : '';
+                            }
+                            
+                            if (departmentInfoElement) {
+                                departmentInfoElement.textContent = department && department.department_name ? department.department_name : '';
+                            }
+                            
+                            // Update the currentEditingData with the department
+                            currentEditingData.departmentId = departmentId;
+                            
+                            modalTitle.textContent = `Edit roles for ${user.username}`;
+                            
+                            // Clear the roles container and reset selected roles
+                            document.getElementById('added-departments-container').innerHTML = '';
+                            selectedRoles = [];
+                            
+                            // Show the modal
+                            addDepartmentRoleModal.style.display = 'block';
+                            return;
+                        } else {
+                            // If no assignment exists yet, open the add user roles modal
+                            selectedRoles = [];
+                            selectedUsers = [];
+                            selectedRolesContainer.innerHTML = '';
+                            selectedUsersContainer.innerHTML = '';
+                            
+                            // Pre-select the current user
+                            const user = getUserById(userId);
+                            if (user) {
+                                addItemToSelection('selected-users-container', user, 'user');
+                            }
+                            
+                            addUserRolesModal.style.display = 'block';
+                            return;
                         }
-                        
-                        addUserRolesModal.style.display = 'block';
-                        return;
                     }
                     
-                    // Regular edit flow for users with roles
-                    const assignment = userRoleDepartments.find(a => a.userId === userId && a.roleId === roleId);
+                    // Regular edit flow for users with roles - find the assignment
+                    let assignment = null;
+                    
+                    // Find the assignment matching userId and roleId
+                    for (const a of userRoleDepartments) {
+                        if (a.userId === userId && a.roleId === roleId) {
+                            assignment = a;
+                            break;
+                        }
+                    }
+                    
                     if (assignment) {
                         currentEditingData = {
                             userId: assignment.userId,
@@ -346,11 +434,11 @@ if (clearFiltersBtn) {
                         
                         // Add user and department details to the modal
                         if (userInfoElement) {
-                            userInfoElement.textContent = user.username || 'Unknown User';
+                            userInfoElement.textContent = user && user.username ? user.username : '';
                         }
                         
                         if (departmentInfoElement) {
-                            departmentInfoElement.textContent = department ? department.department_name : 'Unknown Department';
+                            departmentInfoElement.textContent = department && department.department_name ? department.department_name : '';
                         }
                         
                         // Update the currentEditingData to include the specific department
@@ -366,6 +454,9 @@ if (clearFiltersBtn) {
                         addItemToSelection('added-departments-container', role, 'role_for_dept');
                         
                         addDepartmentRoleModal.style.display = 'block';
+                    } else {
+                        console.error("Could not find assignment for userId", userId, "roleId", roleId);
+                        Toast.error('Could not find assignment data', 5000, 'Error');
                     }
                 });
             });
@@ -375,11 +466,19 @@ if (clearFiltersBtn) {
             document.querySelectorAll('.delete-btn').forEach(button => {
                 button.addEventListener('click', function() {
                     const userId = parseInt(this.dataset.userId);
-                    const roleId = parseInt(this.dataset.roleId);
+                    const roleIdStr = this.dataset.roleId;
+                    // Handle roleId properly: "null" or "0" means null role
+                    const roleId = (roleIdStr === "null" || roleIdStr === "0") ? null : parseInt(roleIdStr);
                     const departmentId = parseInt(this.dataset.deptId) || null;
                     
-                    // Don't allow deletion if roleId is 0 (user has no roles yet)
-                    if (roleId === 0) {
+                    // For debugging
+                    console.log("Delete clicked for userId:", userId, "roleId:", roleId, "original:", roleIdStr);
+                    
+                    // Check if the user has actual roles or departments
+                    const hasAssignments = userRoleDepartments.some(a => a.userId === userId);
+                    
+                    // Don't allow deletion if user has no assignments
+                    if (!hasAssignments) {
                         Toast.info('This user has no roles to delete', 5000, 'Info');
                         return;
                     }
@@ -595,20 +694,29 @@ if (clearFiltersBtn) {
 // Save handler for adding users to roles
 if (saveUserRolesBtn && userPrivileges.canCreate) {
     saveUserRolesBtn.addEventListener('click', function() {
-        if (selectedUsers.length === 0 || selectedRoles.length === 0 || !selectedDepartment) {
-            Toast.error('Please select at least one user, one role, and a department', 5000, 'Validation Error');
+        // Changed validation: only users and department are required, roles are optional
+        if (selectedUsers.length === 0 || !selectedDepartment) {
+            Toast.error('Please select at least one user and a department', 5000, 'Validation Error');
             return;
         }
         
         let newAssignments = [];
         selectedUsers.forEach(user => {
-            // Create entries with multiple roles but single department
-            // Each user can have multiple roles in the selected department
-            newAssignments.push({
-                userId: user.id,
-                roleIds: selectedRoles.map(role => role.id), // Send all role IDs as an array
-                departmentId: selectedDepartment.id // Single department ID
-            });
+            // If no roles are selected, create an assignment with null role
+            if (selectedRoles.length === 0) {
+                newAssignments.push({
+                    userId: user.id,
+                    roleIds: [null], // Null role ID for no role
+                    departmentId: selectedDepartment.id
+                });
+            } else {
+                // Otherwise create entries with the selected roles
+                newAssignments.push({
+                    userId: user.id,
+                    roleIds: selectedRoles.map(role => role.id),
+                    departmentId: selectedDepartment.id
+                });
+            }
         });
 
         // Pre-check for empty newAssignments
@@ -703,72 +811,96 @@ if (saveUserRolesBtn && userPrivileges.canCreate) {
 if (saveDepartmentRoleBtn && userPrivileges.canModify) {
     saveDepartmentRoleBtn.addEventListener('click', function() {
         if (currentEditingData) {
-            const index = userRoleDepartments.findIndex(a => a.userId === currentEditingData.userId && a.roleId === currentEditingData.roleId);
-            if (index !== -1) {
-                let updatedRoles = selectedRoles.map(role => role.id);
-                fetch('update_user_department.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        userId: currentEditingData.userId,
-                        oldRoleId: currentEditingData.roleId,
-                        roleIds: updatedRoles,
-                        departmentId: currentEditingData.departmentId || currentEditingData.originalDeptIds[0], // Use the specific department
-                        preserveExistingDepartments: true
-                    })
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            // Update local data with server response
-                            if (data.assignments) {
-                                // Merge the server response with existing data rather than replacing
-                                const newAssignmentsFromServer = data.assignments;
-                                
-                                // For each new assignment from server, update or add to userRoleDepartments
-                                newAssignmentsFromServer.forEach(newAssignment => {
-                                    const existingIndex = userRoleDepartments.findIndex(
-                                        a => a.userId === newAssignment.userId && a.roleId === newAssignment.roleId
-                                    );
-                                    
-                                    if (existingIndex !== -1) {
-                                        // CRITICAL CHANGE: Merge departments rather than replace
-                                        // First, preserve existing departments
-                                        const existingDepts = [...userRoleDepartments[existingIndex].departmentIds];
-                                        
-                                        // Then add any new departments from the server response
-                                        newAssignment.departmentIds.forEach(deptId => {
-                                            if (!existingDepts.includes(deptId)) {
-                                                existingDepts.push(deptId);
-                                            }
-                                        });
-                                        
-                                        // Update with merged list
-                                        userRoleDepartments[existingIndex].departmentIds = existingDepts;
-                                    } else {
-                                        // Add new assignment
-                                        userRoleDepartments.push(newAssignment);
-                                    }
-                                });
-                            } else {
-                                // Update the role ID if no server response
-                                if (updatedRoles.length > 0) {
-                                    userRoleDepartments[index].roleId = updatedRoles[0];
-                                    // Keep existing departments (don't modify departmentIds)
-                                }
-                            }
-                            addDepartmentRoleModal.style.display = 'none';
-                            renderUserRolesTable(null, null, null, userSortDirection);
-                            Toast.success('Roles updated successfully', 5000, 'Success');
-                        } else {
-                            Toast.error('Failed to update roles', 5000, 'Error');
-                        }
-                    })
-                    .catch(error => {
-                        console.error(error);
-                        Toast.error('Error updating roles', 5000, 'Error');
-                    });
+            // When editing a user with no roles, we need to handle the case where roleId is null
+            // Log full data for debugging
+            console.log("Saving with currentEditingData:", currentEditingData);
+            console.log("Selected roles:", selectedRoles);
+            
+            // Map selected roles to their IDs
+            let updatedRoles = selectedRoles.map(role => role.id);
+            
+            // If no roles are selected, explicitly set to empty array
+            // This will trigger the backend to assign null role
+            if (selectedRoles.length === 0) {
+                updatedRoles = [];
             }
+            
+            // Convert oldRoleId to null for send to the server if it's null in our data
+            const oldRoleId = currentEditingData.roleId === null ? null : currentEditingData.roleId;
+            
+            // Ensure the department ID is properly set
+            const departmentId = currentEditingData.departmentId || 
+                                (currentEditingData.originalDeptIds && currentEditingData.originalDeptIds.length > 0 
+                                    ? currentEditingData.originalDeptIds[0] 
+                                    : null);
+            
+            if (!departmentId) {
+                Toast.error('No department ID found for this assignment', 5000, 'Error');
+                return;
+            }
+            
+            fetch('update_user_department.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: currentEditingData.userId,
+                    oldRoleId: oldRoleId,
+                    roleIds: updatedRoles,
+                    departmentId: departmentId,
+                    preserveExistingDepartments: true
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update local data with server response
+                        if (data.assignments) {
+                            // Merge the server response with existing data rather than replacing
+                            const newAssignmentsFromServer = data.assignments;
+                            
+                            // For each new assignment from server, update or add to userRoleDepartments
+                            newAssignmentsFromServer.forEach(newAssignment => {
+                                const existingIndex = userRoleDepartments.findIndex(
+                                    a => a.userId === newAssignment.userId && a.roleId === newAssignment.roleId
+                                );
+                                
+                                if (existingIndex !== -1) {
+                                    // CRITICAL CHANGE: Merge departments rather than replace
+                                    // First, preserve existing departments
+                                    const existingDepts = [...userRoleDepartments[existingIndex].departmentIds];
+                                    
+                                    // Then add any new departments from the server response
+                                    newAssignment.departmentIds.forEach(deptId => {
+                                        if (!existingDepts.includes(deptId)) {
+                                            existingDepts.push(deptId);
+                                        }
+                                    });
+                                    
+                                    // Update with merged list
+                                    userRoleDepartments[existingIndex].departmentIds = existingDepts;
+                                } else {
+                                    // Add new assignment
+                                    userRoleDepartments.push(newAssignment);
+                                }
+                            });
+                        } else {
+                            // Update the role ID if no server response
+                            if (updatedRoles.length > 0) {
+                                userRoleDepartments[index].roleId = updatedRoles[0];
+                                // Keep existing departments (don't modify departmentIds)
+                            }
+                        }
+                        addDepartmentRoleModal.style.display = 'none';
+                        renderUserRolesTable(null, null, null, userSortDirection);
+                        Toast.success('Roles updated successfully', 5000, 'Success');
+                    } else {
+                        Toast.error('Failed to update roles', 5000, 'Error');
+                    }
+                })
+                .catch(error => {
+                    console.error(error);
+                    Toast.error('Error updating roles', 5000, 'Error');
+                });
         }
     });
 }

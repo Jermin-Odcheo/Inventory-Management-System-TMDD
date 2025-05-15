@@ -192,13 +192,17 @@ $(document).ready(function() {
         // Create a form data object
         const formData = new FormData(this);
         
-        // Add department IDs
+        // Add department IDs - departments are required
+        if (selectedDepartments.length === 0) {
+            showToast('At least one department is required', 'error', 3000);
+            return; // Prevent form submission
+        }
+        
         selectedDepartments.forEach((dept, index) => {
             formData.append(`departments[${index}]`, dept.id);
         });
         
-        // Default role if needed (assuming user role is ID 3)
-        formData.append('roles[0]', '3');
+        // Roles are now optional - removed default role assignment
         
         $.ajax({
             url: 'create_user.php',
@@ -263,9 +267,6 @@ $(document).ready(function() {
         selectedDepartments.forEach((dept, index) => {
             formData.append(`departments[${index}]`, dept.id);
         });
-        
-        // Default role if needed (assuming user role is ID 3)
-        formData.append('roles[0]', '3');
         
         $.ajax({
             url: 'update_user.php',

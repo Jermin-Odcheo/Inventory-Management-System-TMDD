@@ -44,11 +44,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if (empty($password)) $errors[] = "Password is required";
         if (empty($departments) && empty($departmentID)) $errors[] = "At least one department is required";
 
-        // Set default role if no roles provided (user role ID 3)
-        if (empty($roles)) {
-            $roles = [3]; // Default to user role
-        }
-
         // Handle single department selection (for backward compatibility)
         if (!empty($departmentID) && empty($departments)) {
             if ($departmentID === 'custom' && !empty($customDept)) {
@@ -139,22 +134,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             // If no departments were selected, set a default department
             if (empty($departments)) {
                 // Use a default department (e.g., ID 1)
-                $stmt->execute([$userID, 1, 3]); // Default department and User role
+                $stmt->execute([$userID, 1, null]); // Default department with null role
             } else {
                 // Add each department with each role
                 foreach ($departments as $deptId) {
                     $deptId = filter_var($deptId, FILTER_VALIDATE_INT);
                     if ($deptId) {
-                        // Check if roles is empty, default to user role (3)
-                        if (empty($roles)) {
-                            $roles = [3]; // Default to user role if no roles provided
-                        }
-                        
-                        foreach ($roles as $roleId) {
-                            $roleId = filter_var($roleId, FILTER_VALIDATE_INT);
-                            if ($roleId) {
-                                $stmt->execute([$userID, $deptId, $roleId]);
+                        // Check if roles are provided
+                        if (!empty($roles)) {
+                            foreach ($roles as $roleId) {
+                                $roleId = filter_var($roleId, FILTER_VALIDATE_INT);
+                                if ($roleId) {
+                                    $stmt->execute([$userID, $deptId, $roleId]);
+                                }
                             }
+                        } else {
+                            // No roles provided, assign department with null role
+                            $stmt->execute([$userID, $deptId, null]);
                         }
                     }
                 }

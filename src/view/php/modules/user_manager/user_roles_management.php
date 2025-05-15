@@ -48,9 +48,11 @@ $triples = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $userRoleMap = [];
 foreach ($triples as $t) {
     $userId = (int)$t['user_id'];
-    $roleId = (int)$t['role_id'];
+    $roleId = $t['role_id'] !== null ? (int)$t['role_id'] : null;
     $deptId = (int)$t['department_id'];
-    $key = "{$userId}-{$roleId}";
+    
+    // Use a special key format for null roles
+    $key = $roleId !== null ? "{$userId}-{$roleId}" : "{$userId}-null";
 
     if (!isset($userRoleMap[$key])) {
         $userRoleMap[$key] = [
@@ -400,26 +402,28 @@ $userRoleDepartments = array_values($userRoleMap);
         <h2>add user to roles modal</h2>
         <div class="modal-body">
             <div class="form-group">
-                <label for="search-department-dropdown">select department</label>
+                <label for="search-department-dropdown">select department <span class="text-danger">*</span></label>
                 <select id="search-department-dropdown">
                     <option value="">Select one department</option>
                     <?php foreach ($departmentsData as $dept): ?>
                         <option value="<?php echo $dept['id']; ?>"><?php echo htmlspecialchars($dept['department_name']); ?></option>
                     <?php endforeach; ?>
                 </select>
+                <small class="text-muted">Department is required</small>
             </div>
             <div class="form-group">
                 <label>selected department</label>
                 <div id="selected-department-container"></div>
             </div>
             <div class="form-group">
-                <label for="search-role-dropdown">search role/s</label>
+                <label for="search-role-dropdown">search role/s (optional)</label>
                 <select id="search-role-dropdown">
                     <option value="">Select roles</option>
                     <?php foreach ($rolesData as $role): ?>
                         <option value="<?php echo $role['id']; ?>"><?php echo htmlspecialchars($role['role_name']); ?></option>
                     <?php endforeach; ?>
                 </select>
+                <small class="text-muted">Leave empty for assignments without roles</small>
             </div>
             <div class="form-group">
                 <label>current role selection</label>
@@ -469,13 +473,14 @@ $userRoleDepartments = array_values($userRoleMap);
                 <div id="edit-department-info" class="info-field"></div>
             </div>
             <div class="form-group">
-                <label>Add role to department</label>
+                <label>Add role to department (optional)</label>
                 <select id="department-dropdown">
                     <option value="">Select role</option>
                     <?php foreach ($rolesData as $role): ?>
                         <option value="<?php echo $role['id']; ?>"><?php echo htmlspecialchars($role['role_name']); ?></option>
                     <?php endforeach; ?>
                 </select>
+                <small class="text-muted">You can save without adding any roles</small>
             </div>
             <div class="form-group">
                 <label>ADDED ROLES</label>

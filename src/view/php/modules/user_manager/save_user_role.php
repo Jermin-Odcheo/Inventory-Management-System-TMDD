@@ -5,21 +5,44 @@ require_once('../../../../../config/ims-tmdd.php');
 header('Content-Type: application/json');
 
 // Insert a user–department–role triple if it doesn't already exist
-function addUserDepartmentRole(int $userId, int $departmentId, int $roleId): bool {
+// Modified to handle null role IDs
+function addUserDepartmentRole(int $userId, int $departmentId, $roleId = null): bool {
     global $pdo;
-    $check = $pdo->prepare("
-        SELECT COUNT(*) 
-          FROM user_department_roles 
-         WHERE user_id = ? AND department_id = ? AND role_id = ?
-    ");
-    $check->execute([$userId, $departmentId, $roleId]);
-    if ((int)$check->fetchColumn() === 0) {
-        $insert = $pdo->prepare("
-            INSERT INTO user_department_roles (user_id, department_id, role_id)
-            VALUES (?, ?, ?)
+    
+    // Different query for null role
+    if ($roleId === null) {
+        $check = $pdo->prepare("
+            SELECT COUNT(*) 
+              FROM user_department_roles 
+             WHERE user_id = ? AND department_id = ? AND role_id IS NULL
         ");
-        return $insert->execute([$userId, $departmentId, $roleId]);
+        $check->execute([$userId, $departmentId]);
+        
+        if ((int)$check->fetchColumn() === 0) {
+            $insert = $pdo->prepare("
+                INSERT INTO user_department_roles (user_id, department_id, role_id)
+                VALUES (?, ?, NULL)
+            ");
+            return $insert->execute([$userId, $departmentId]);
+        }
+    } else {
+        $roleId = (int)$roleId; // Ensure integer for non-null roles
+        $check = $pdo->prepare("
+            SELECT COUNT(*) 
+              FROM user_department_roles 
+             WHERE user_id = ? AND department_id = ? AND role_id = ?
+        ");
+        $check->execute([$userId, $departmentId, $roleId]);
+        
+        if ((int)$check->fetchColumn() === 0) {
+            $insert = $pdo->prepare("
+                INSERT INTO user_department_roles (user_id, department_id, role_id)
+                VALUES (?, ?, ?)
+            ");
+            return $insert->execute([$userId, $departmentId, $roleId]);
+        }
     }
+    
     return true;
 }
 
@@ -41,7 +64,9 @@ try {
         $roleIds      = is_array($assignment['roleIds']) ? $assignment['roleIds'] : [];
 
         foreach ($roleIds as $rawRoleId) {
-            $roleId = (int)$rawRoleId;
+            // Handle null roles explicitly
+            $roleId = $rawRoleId === null ? null : (int)$rawRoleId;
+            
             if (addUserDepartmentRole($userId, $departmentId, $roleId)) {
                 $created[] = [
                     'userId'        => $userId,
@@ -71,9 +96,15 @@ try {
         // group department_ids by role_id
         $byRole = [];
         foreach ($rows as $r) {
-            $rid = (int)$r['role_id'];
+            // Handle null role_id
+            $rid = $r['role_id'] !== null ? (int)$r['role_id'] : null;
             $did = (int)$r['department_id'];
-            $byRole[$rid] ??= [];
+            
+            // Initialize array if needed
+            if (!isset($byRole[$rid])) {
+                $byRole[$rid] = [];
+            }
+            
             if (!in_array($did, $byRole[$rid], true)) {
                 $byRole[$rid][] = $did;
             }

@@ -49,7 +49,12 @@ try {
         }
     }
     
-    // Validate roles
+    // If no valid departments, throw an error (departments are required)
+    if (empty($validDepartments)) {
+        throw new Exception('At least one valid department is required');
+    }
+    
+    // Validate roles (now optional)
     $validRoles = [];
     if (!empty($roles)) {
         foreach ($roles as $roleId) {
@@ -64,10 +69,7 @@ try {
             }
         }
     }
-    // Default to User role (ID: 3) if no valid roles
-    if (empty($validRoles)) {
-        $validRoles[] = 3; // User role
-    }
+    // Roles are now optional - removed default role assignment
 
     // Hash the password only if provided
     $hashedPassword = !empty($password) ? password_hash($password, PASSWORD_DEFAULT) : '';
@@ -159,12 +161,17 @@ try {
     $deleteDepartmentsStmt->execute([$userId]);
     
     // Add new department-role associations
-    if (!empty($validDepartments) && !empty($validRoles)) {
+    if (!empty($validDepartments)) {
         $insertStmt = $pdo->prepare("INSERT INTO user_department_roles (user_id, department_id, role_id) VALUES (?, ?, ?)");
         
         foreach ($validDepartments as $deptId) {
-            foreach ($validRoles as $roleId) {
-                $insertStmt->execute([$userId, $deptId, $roleId]);
+            if (!empty($validRoles)) {
+                foreach ($validRoles as $roleId) {
+                    $insertStmt->execute([$userId, $deptId, $roleId]);
+                }
+            } else {
+                // No roles provided, assign department with null role
+                $insertStmt->execute([$userId, $deptId, null]);
             }
         }
     }
