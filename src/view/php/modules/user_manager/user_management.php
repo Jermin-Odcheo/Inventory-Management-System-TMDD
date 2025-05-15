@@ -593,6 +593,14 @@ $(document).ready(function() {
         allowClear: true,
         width: '100%'
     });
+    
+    // Initialize Select2 for edit department dropdown
+    $('#editDepartments').select2({
+        dropdownParent: $('#editUserModal'),
+        placeholder: 'Select Department',
+        allowClear: true,
+        width: '100%'
+    });
 });
 </script>
 </body>
