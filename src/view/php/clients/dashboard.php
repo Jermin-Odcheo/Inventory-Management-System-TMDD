@@ -111,6 +111,7 @@ try {
         
         .main-content {
             background-color: #f4f7fc;
+            padding-left: 60px;
         }
         
         table {
