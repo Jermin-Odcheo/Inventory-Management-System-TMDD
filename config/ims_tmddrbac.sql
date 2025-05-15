@@ -610,17 +610,19 @@ CREATE TABLE IF NOT EXISTS `equipment_details` (
   `brand` varchar(100) DEFAULT NULL,
   `model` varchar(100) DEFAULT NULL,
   `serial_number` varchar(100) DEFAULT NULL,
+  `date_acquired` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `invoice_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
   `rr_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
   `location` varchar(255) DEFAULT NULL,
   `accountable_individual` varchar(255) DEFAULT NULL,
   `remarks` text,
-  `date_created` datetime DEFAULT CURRENT_TIMESTAMP,
+  `date_created` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
+  `date_modified` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `asset_tag` (`asset_tag`),
   KEY `invoice_no` (`invoice_no`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `equipment_details`
