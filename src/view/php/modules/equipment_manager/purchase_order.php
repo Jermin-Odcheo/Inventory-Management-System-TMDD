@@ -49,12 +49,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $success = "";
 
     $po_no             = trim($_POST['po_no'] ?? '');
+    // Enforce PO prefix before validation
+    if ($po_no !== '' && strpos($po_no, 'PO') !== 0) {
+        $po_no = 'PO' . $po_no;
+    }
     $date_of_order     = trim($_POST['date_of_order'] ?? '');
     $no_of_units       = trim($_POST['no_of_units'] ?? '');
     $item_specifications = trim($_POST['item_specifications'] ?? '');
 
     if (empty($po_no) || empty($date_of_order) || empty($no_of_units) || empty($item_specifications)) {
         $errors[] = "Please fill in all required fields.";
+    } elseif (!preg_match('/^PO\d+$/', $po_no)) {
+        $errors[] = "PO Number must be in the format PO followed by numbers (e.g., PO123).";
     }
 
     if (empty($errors)) {
@@ -576,7 +582,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                             <div class="mb-3">
                                 <label for="po_no" class="form-label">PO Number <span
                                         class="text-danger">*</span></label>
-                                <input type="text" class="form-control" name="po_no" required>
+                                <input type="number" class="form-control" name="po_no" min="0" step="1" required pattern="\d*" inputmode="numeric">
                             </div>
                             <div class="mb-3">
                                 <label for="date_of_order" class="form-label">Date of Order <span
@@ -622,7 +628,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                             <input type="hidden" name="id" id="edit_po_id">
                             <div class="mb-3">
                                 <label for="edit_po_no" class="form-label">PO Number <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" name="po_no" id="edit_po_no" required>
+                                <input type="number" class="form-control" name="po_no" id="edit_po_no" min="0" step="1" required pattern="\d*" inputmode="numeric">
                             </div>
                             <div class="mb-3">
                                 <label for="edit_date_of_order" class="form-label">Date of Order <span class="text-danger">*</span></label>
@@ -717,10 +723,21 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
         // Add Purchase Order AJAX submission
         $('#addPOForm').on('submit', function(e) {
             e.preventDefault();
+            // Add PO prefix before sending
+            let poNo = $('input[name="po_no"]', this).val();
+            let formData = $(this).serializeArray();
+            let dataObj = {};
+            formData.forEach(function(item) {
+                if (item.name === 'po_no') {
+                    dataObj['po_no'] = 'PO' + poNo;
+                } else {
+                    dataObj[item.name] = item.value;
+                }
+            });
             $.ajax({
                 url: 'purchase_order.php',
                 method: 'POST',
-                data: $(this).serialize(),
+                data: dataObj,
                 dataType: 'json',
                 success: function(response) {
                     if (response.status === 'success') {
@@ -746,10 +763,21 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
         // Edit Purchase Order AJAX submission
         $('#editPOForm').on('submit', function(e) {
             e.preventDefault();
+            // Add PO prefix before sending
+            let poNo = $('#edit_po_no').val();
+            let formData = $(this).serializeArray();
+            let dataObj = {};
+            formData.forEach(function(item) {
+                if (item.name === 'po_no') {
+                    dataObj['po_no'] = 'PO' + poNo;
+                } else {
+                    dataObj[item.name] = item.value;
+                }
+            });
             $.ajax({
                 url: 'purchase_order.php',
                 method: 'POST',
-                data: $(this).serialize(),
+                data: dataObj,
                 dataType: 'json',
                 success: function(response) {
                     if (response.status === 'success') {

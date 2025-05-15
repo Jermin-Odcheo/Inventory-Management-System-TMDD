@@ -22,7 +22,7 @@ $rbac->requirePrivilege('User Management', 'View');
 // 3) Button flags
 $canCreate = $rbac->hasPrivilege('User Management', 'Create');
 $canModify = $rbac->hasPrivilege('User Management', 'Modify');
-$canDelete = $rbac->hasPrivilege('User Management', 'Remove');
+$canRemove = $rbac->hasPrivilege('User Management', 'Remove');
 $canTrack  = $rbac->hasPrivilege('User Management', 'Track');
 
 // Query active users
@@ -36,44 +36,44 @@ $rolesData = $stmt->fetchAll();
 // Query all departments (show all regardless of is_disabled)
 $stmt = $pdo->query("SELECT id, department_name, abbreviation FROM departments ORDER BY department_name");
 $departmentsData = $stmt->fetchAll();
+// Fetch all user–department–role triples
+$stmt = $pdo->query(
+    "SELECT user_id, role_id, department_id
+     FROM user_department_roles
+     WHERE 1"
+);
+$triples = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Query user_roles assignments
-$stmt = $pdo->query("SELECT user_id, role_id FROM user_roles");
-$userRoles = $stmt->fetchAll();
+// Build a map keyed by "userId–roleId" to collect department IDs
+$userRoleMap = [];
+foreach ($triples as $t) {
+    $userId = (int)$t['user_id'];
+    $roleId = (int)$t['role_id'];
+    $deptId = (int)$t['department_id'];
+    $key = "{$userId}-{$roleId}";
 
-// Query user_departments assignments
-$stmt = $pdo->query("SELECT user_id, department_id FROM user_departments");
-$userDepartmentsRaw = $stmt->fetchAll();
-
-// Build a map: user_id => array of department_ids
-$userDepartmentsMap = [];
-foreach ($userDepartmentsRaw as $ud) {
-    $userId = (int)$ud['user_id'];
-    $deptId = (int)$ud['department_id'];
-    if (!isset($userDepartmentsMap[$userId])) {
-        $userDepartmentsMap[$userId] = [];
+    if (!isset($userRoleMap[$key])) {
+        $userRoleMap[$key] = [
+            'userId'        => $userId,
+            'roleId'        => $roleId,
+            'departmentIds' => [],
+        ];
     }
-    $userDepartmentsMap[$userId][] = $deptId;
+
+    // avoid dupes if you need:
+    if (!in_array($deptId, $userRoleMap[$key]['departmentIds'], true)) {
+        $userRoleMap[$key]['departmentIds'][] = $deptId;
+    }
 }
 
-// Build userRoleDepartments array: for each user_role assignment, attach the user's department IDs.
-$userRoleDepartments = [];
-foreach ($userRoles as $assignment) {
-    $userId = (int)$assignment['user_id'];
-    $roleId = (int)$assignment['role_id'];
-    $departments = isset($userDepartmentsMap[$userId]) ? $userDepartmentsMap[$userId] : [];
-    $userRoleDepartments[] = [
-        'userId' => $userId,
-        'roleId' => $roleId,
-        'departmentIds' => $departments
-    ];
-}
+// Re-index for numeric array
+$userRoleDepartments = array_values($userRoleMap);
+
 ?><!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- BASE_URL is assumed to be defined in your config -->
     <link rel="stylesheet" type="text/css" href="<?php echo BASE_URL; ?>src/view/styles/css/user_roles_management.css?ref=v1">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/pagination.css">
     <!-- Select2 CSS -->
@@ -93,6 +93,17 @@ foreach ($userRoles as $assignment) {
             border-radius: 4px;
             padding: 2px 6px;
             display: inline-block;
+        }
+        
+        /* Info field styling */
+        .info-field {
+            padding: 8px 12px;
+            background-color: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-weight: 500;
+            color: #4f46e5;
         }
         
         /* Modern input styling */
@@ -329,7 +340,7 @@ foreach ($userRoles as $assignment) {
             <thead>
             <tr>
                 <!-- Added checkbox column header with "select all" -->
-                <th><?php if ($canDelete): ?><input type="checkbox" id="select-all"><?php endif; ?></th>
+                <th><?php if ($canRemove): ?><input type="checkbox" id="select-all"><?php endif; ?></th>
                 <th>User <span class="sort-icon" id="sort-user">A→Z</span></th>
                 <th>Departments</th>
                 <th>Roles</th>
@@ -342,7 +353,7 @@ foreach ($userRoles as $assignment) {
         </table>
     </div>
     <!-- Bulk Delete Button (initially hidden) -->
-    <?php if ($canDelete): ?>
+    <?php if ($canRemove): ?>
     <div class="mb-3">
         <button type="button" id="delete-selected" class="btn btn-danger" style="display: none;" disabled>
             Remove Selected User Roles
@@ -448,6 +459,15 @@ foreach ($userRoles as $assignment) {
     <div class="modal-content">
         <h2>Add role to department modal</h2>
         <div class="modal-body">
+            <!-- Add user and department info sections at the top -->
+            <div class="form-group">
+                <label>User</label>
+                <div id="edit-user-info" class="info-field"></div>
+            </div>
+            <div class="form-group">
+                <label>Department</label>
+                <div id="edit-department-info" class="info-field"></div>
+            </div>
             <div class="form-group">
                 <label>Add role to department</label>
                 <select id="department-dropdown">
@@ -516,7 +536,7 @@ foreach ($userRoles as $assignment) {
     const userPrivileges = {
         canCreate: <?php echo json_encode($canCreate); ?>,
         canModify: <?php echo json_encode($canModify); ?>,
-        canDelete: <?php echo json_encode($canDelete); ?>,
+        canDelete: <?php echo json_encode($canRemove); ?>,
         canTrack: <?php echo json_encode($canTrack); ?>
     };
 </script>

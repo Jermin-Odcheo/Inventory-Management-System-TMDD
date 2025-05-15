@@ -10,14 +10,7 @@ $email = $_SESSION['email'];
 
 $user_id = $_SESSION['user_id'] ?? null;
 
-if ($user_id !== null) {
-    $stmt = $pdo->prepare("SELECT profile_pic_path FROM users WHERE id = ?");
-    $stmt->execute([$user_id]);
-    $user = $stmt->fetch(PDO::FETCH_ASSOC);
-    print($user['profile_pic_path']);
-} else {
-    die("User not logged in."); // or redirect
-}
+ 
 ?>
 
 <!DOCTYPE html>

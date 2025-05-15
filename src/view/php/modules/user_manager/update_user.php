@@ -1,7 +1,7 @@
 <?php
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
-require_once('../../clients/admins/RBACService.php');
+// RBACService.php is already required in config.php - no need to include it again
 
 ob_start();
 
@@ -22,9 +22,11 @@ try {
 
     $userId    = filter_var($_POST['user_id'], FILTER_VALIDATE_INT);
     $email     = filter_var($_POST['email'], FILTER_VALIDATE_EMAIL);
+    $username  = trim($_POST['username'] ?? '');
     $firstName = trim($_POST['first_name']);
     $lastName  = trim($_POST['last_name']);
     $departments = isset($_POST['departments']) && is_array($_POST['departments']) ? $_POST['departments'] : [];
+    $roles = isset($_POST['roles']) && is_array($_POST['roles']) ? $_POST['roles'] : [];
     $password  = $_POST['password'] ?? '';
     
     if (!$userId || !$email || !$firstName || !$lastName) {
@@ -45,6 +47,26 @@ try {
                 }
             }
         }
+    }
+    
+    // Validate roles
+    $validRoles = [];
+    if (!empty($roles)) {
+        foreach ($roles as $roleId) {
+            $roleId = filter_var($roleId, FILTER_VALIDATE_INT);
+            if ($roleId) {
+                // Verify role exists
+                $stmt = $pdo->prepare("SELECT COUNT(*) FROM roles WHERE id = ? AND is_disabled = 0");
+                $stmt->execute([$roleId]);
+                if ($stmt->fetchColumn() > 0) {
+                    $validRoles[] = $roleId;
+                }
+            }
+        }
+    }
+    // Default to User role (ID: 3) if no valid roles
+    if (empty($validRoles)) {
+        $validRoles[] = 3; // User role
     }
 
     // Hash the password only if provided
@@ -107,6 +129,7 @@ try {
     $updateUserStmt = $pdo->prepare("
         UPDATE users 
         SET email = ?, 
+            username = ?,
             first_name = ?, 
             last_name = ?, 
             status = ?
@@ -114,6 +137,7 @@ try {
     ");
     $updateUserStmt->execute([
         $email,
+        $username,
         $firstName,
         $lastName,
         'active', // Adjust based on your status logic
@@ -130,15 +154,18 @@ try {
         $updatePasswordStmt->execute([$hashedPassword, $userId]);
     }
     
-    // Update departments (remove all existing and add new ones)
-    $deleteDepartmentsStmt = $pdo->prepare("DELETE FROM user_departments WHERE user_id = ?");
+    // Update departments and roles (remove all existing and add new ones)
+    $deleteDepartmentsStmt = $pdo->prepare("DELETE FROM user_department_roles WHERE user_id = ?");
     $deleteDepartmentsStmt->execute([$userId]);
     
-    // Add new departments
-    if (!empty($validDepartments)) {
-        $insertDepartmentStmt = $pdo->prepare("INSERT INTO user_departments (user_id, department_id) VALUES (?, ?)");
+    // Add new department-role associations
+    if (!empty($validDepartments) && !empty($validRoles)) {
+        $insertStmt = $pdo->prepare("INSERT INTO user_department_roles (user_id, department_id, role_id) VALUES (?, ?, ?)");
+        
         foreach ($validDepartments as $deptId) {
-            $insertDepartmentStmt->execute([$userId, $deptId]);
+            foreach ($validRoles as $roleId) {
+                $insertStmt->execute([$userId, $deptId, $roleId]);
+            }
         }
     }
     

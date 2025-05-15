@@ -43,7 +43,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if (empty($lastName)) $errors[] = "Last name is required";
         if (empty($password)) $errors[] = "Password is required";
         if (empty($departments) && empty($departmentID)) $errors[] = "At least one department is required";
-        if (empty($roles)) $errors[] = "At least one role must be selected";
+
+        // Set default role if no roles provided (user role ID 3)
+        if (empty($roles)) {
+            $roles = [3]; // Default to user role
+        }
 
         // Handle single department selection (for backward compatibility)
         if (!empty($departmentID) && empty($departments)) {
@@ -129,21 +133,40 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $userID = $pdo->lastInsertId();
 
         // Add department associations
-        $stmt = $pdo->prepare("INSERT INTO user_departments (user_id, department_id) VALUES (?, ?)");
-        foreach ($departments as $deptId) {
-            $deptId = filter_var($deptId, FILTER_VALIDATE_INT);
-            if ($deptId) {
-                $stmt->execute([$userID, $deptId]);
+        try {
+            $stmt = $pdo->prepare("INSERT INTO user_department_roles (user_id, department_id, role_id) VALUES (?, ?, ?)");
+            
+            // If no departments were selected, set a default department
+            if (empty($departments)) {
+                // Use a default department (e.g., ID 1)
+                $stmt->execute([$userID, 1, 3]); // Default department and User role
+            } else {
+                // Add each department with each role
+                foreach ($departments as $deptId) {
+                    $deptId = filter_var($deptId, FILTER_VALIDATE_INT);
+                    if ($deptId) {
+                        // Check if roles is empty, default to user role (3)
+                        if (empty($roles)) {
+                            $roles = [3]; // Default to user role if no roles provided
+                        }
+                        
+                        foreach ($roles as $roleId) {
+                            $roleId = filter_var($roleId, FILTER_VALIDATE_INT);
+                            if ($roleId) {
+                                $stmt->execute([$userID, $deptId, $roleId]);
+                            }
+                        }
+                    }
+                }
             }
-        }
-        
-        // Add role associations
-        $insertRoleStmt = $pdo->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)");
-        foreach ($roles as $roleId) {
-            $roleId = filter_var($roleId, FILTER_VALIDATE_INT);
-            if ($roleId) {
-                $insertRoleStmt->execute([$userID, $roleId]);
-            }
+        } catch (PDOException $e) {
+            // Log the specific SQL error for debugging
+            error_log("SQL Error in create_user.php: " . $e->getMessage());
+            error_log("SQL State: " . $e->errorInfo[0]);
+            error_log("SQL Code: " . $e->errorInfo[1]);
+            error_log("SQL Message: " . $e->errorInfo[2]);
+            
+            throw new Exception("Database error: " . $e->getMessage());
         }
 
         $pdo->commit();
