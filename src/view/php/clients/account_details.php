@@ -574,8 +574,8 @@ html::-webkit-scrollbar {
                             <p>Current Picture:</p>
                             <img 
                                 src="<?php echo !empty($user['profile_pic_path']) 
-                                    ? '../../../../../public/' . htmlspecialchars($user['profile_pic_path']) 
-                                    : '../../../../../public/assets/img/default_profile.jpg'; ?>" 
+                                    ? '/public/' . htmlspecialchars($user['profile_pic_path']) 
+                                    : '/public/assets/img/default_profile.jpg'; ?>" 
                                 style="max-width: 150px; height: auto;"
                             >
                         </div>
