@@ -162,7 +162,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) 
                     rr_no = ?, remarks = ? WHERE id = ?");
                 $stmt->execute($values);
 
-                // Remove system-managed fields before logging
+                // Remove unneeded fields before logging
                 unset($oldEquipment['id'], $oldEquipment['is_disabled']);
                 $oldValue = json_encode($oldEquipment);
 
@@ -444,7 +444,7 @@ ob_end_clean();
                                         <td><?= safeHtml($equipment['brand']); ?></td>
                                         <td><?= safeHtml($equipment['model']); ?></td>
                                         <td><?= safeHtml($equipment['serial_number']); ?></td>
-                                        <td><?= !empty($equipment['date_acquired']) ? date('Y-m-d H:i', strtotime($equipment['date_acquired'])) : 'N/A'; ?></td>
+                                        <td><?= date('Y-m-d H:i', strtotime($equipment['date_acquired'])); ?></td>
                                         <td><?= date('Y-m-d H:i', strtotime($equipment['date_created'])); ?></td>
                                         <td><?= date('Y-m-d H:i', strtotime($equipment['date_modified'])); ?></td>
                                         <td><?= safeHtml($equipment['rr_no']); ?></td>
@@ -685,21 +685,26 @@ ob_end_clean();
             const originalUpdatePagination = window.updatePagination;
             window.updatePagination = function() {
                 const rowCount = document.querySelectorAll('#edTable tbody tr').length;
+                document.getElementById('totalRows').textContent = rowCount;
                 if (rowCount === 0) {
-                    $('#currentPage, #rowsPerPage, #totalRows').text('0');
-                    $('#prevPage, #nextPage').css({'display': 'none'});
-                    $('#pagination').empty();
-                } else {
-                    $('#totalRows').text(rowCount);
-                    if (originalUpdatePagination) {
-                        originalUpdatePagination();
-                    }
+                    document.getElementById('currentPage').textContent = '0';
+                    document.getElementById('rowsPerPage').textContent = '0';
+                    document.getElementById('prevPage').style.display = 'none';
+                    document.getElementById('nextPage').style.display = 'none';
+                    document.getElementById('pagination').innerHTML = '';
+                    return;
+                }
+                if (originalUpdatePagination) {
+                    originalUpdatePagination();
                 }
             };
-            if ($('#edTable tbody tr').length === 0) {
-                $('#currentPage, #rowsPerPage, #totalRows').text('0');
-                $('#prevPage, #nextPage').hide();
-                $('#pagination').empty();
+            if (document.querySelectorAll('#edTable tbody tr').length === 0) {
+                document.getElementById('currentPage').textContent = '0';
+                document.getElementById('rowsPerPage').textContent = '0';
+                document.getElementById('totalRows').textContent = '0';
+                document.getElementById('prevPage').style.display = 'none';
+                document.getElementById('nextPage').style.display = 'none';
+                document.getElementById('pagination').innerHTML = '';
             }
         });
 
@@ -737,6 +742,13 @@ ob_end_clean();
                 const dateFrom = $('#dateFrom').val();
                 const dateTo = $('#dateTo').val();
 
+                const hasTextFilter = !!searchText;
+                const hasTypeFilter = !!filterType;
+                const hasDateFilter = (dateFilterType === 'month' && selectedMonth && selectedYear) ||
+                    (dateFilterType === 'range' && dateFrom && dateTo) ||
+                    dateFilterType === 'asc' || dateFilterType === 'desc';
+                isFiltering = hasTextFilter || hasTypeFilter || hasDateFilter;
+
                 $('.table tbody tr').each(function () {
                     const $row = $(this);
                     const rowText = $row.text().toLowerCase();
@@ -754,16 +766,15 @@ ob_end_clean();
                         to.setHours(23, 59, 59);
                         dateMatch = date >= from && date <= to;
                     }
-
                     const matches = searchMatch && typeMatch && dateMatch;
                     $row.toggle(matches);
                 });
 
                 filteredRowCount = $('.table tbody tr:visible').length;
                 $('#totalRows').text(filteredRowCount);
-                if (filteredRowCount === 0) {
+                if (isFiltering && filteredRowCount === 0) {
                     $('#currentPage, #rowsPerPage, #totalRows').text('0');
-                    $('#prevPage, #nextPage').hide();
+                    $('#prevPage, #nextPage').css('display', 'none');
                     $('#pagination').empty();
                     if ($('.table tbody tr.no-results').length === 0) {
                         $('.table tbody').append(`
@@ -778,7 +789,7 @@ ob_end_clean();
                     }
                 } else {
                     $('.table tbody tr.no-results').remove();
-                    $('#prevPage, #nextPage').show();
+                    $('#prevPage, #nextPage').css('display', '');
                     $('#currentPage').text('1');
                     if (typeof updatePagination === 'function') {
                         setTimeout(updatePagination, 50);
@@ -844,11 +855,10 @@ ob_end_clean();
                         const rowCount = $('.table tbody tr').length;
                         if (rowCount === 0) {
                             $('#currentPage, #rowsPerPage, #totalRows').text('0');
-                            $('#prevPage, #nextPage').hide();
+                            $('#prevPage, #nextPage').css('display', 'none');
                             $('#pagination').empty();
                         } else {
-                            $('#prevPage, #nextPage').show();
-                            $('#currentPage').text('1');
+                            $('#prevPage, #nextPage').css('display', '');
                             if (typeof currentPage !== 'undefined') {
                                 currentPage = 1;
                             }
@@ -912,14 +922,7 @@ ob_end_clean();
                         }
                     },
                     error: function(xhr, status, error) {
-                        let errorMsg = 'Error updating equipment: ';
-                        try {
-                            const response = JSON.parse(xhr.responseText);
-                            errorMsg += response.message || error;
-                        } catch (e) {
-                            errorMsg += error;
-                        }
-                        showToast(errorMsg, 'error');
+                        showToast('Error updating equipment: ' + error, 'error');
                     },
                     complete: function() {
                         submitBtn.prop('disabled', false).html('Save Changes');
