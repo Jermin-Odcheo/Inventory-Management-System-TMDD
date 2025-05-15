@@ -197,7 +197,7 @@ try {
                     <?php
                     // Fetch all departments directly for the filter dropdown, show ALL regardless of is_disabled
                     try {
-                        $deptStmt = $pdo->query("SELECT department_name FROM departments ORDER BY department_name");
+                        $deptStmt = $pdo->query("SELECT department_name FROM departments WHERE is_disabled = 0 ORDER BY department_name ");
                         $allDepartments = $deptStmt->fetchAll(PDO::FETCH_COLUMN);
                         foreach ($allDepartments as $deptName) {
                             echo '<option value="' . htmlspecialchars($deptName) . '"';
