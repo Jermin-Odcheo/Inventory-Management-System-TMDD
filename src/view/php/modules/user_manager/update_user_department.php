@@ -76,6 +76,16 @@ try {
         ");
         $stmtInsertNullRole->execute([$userId, $departmentId]);
     } else {
+        // We have non-null roles to add
+        
+        // First, delete any existing null role for this user-department
+        // This ensures we don't end up with both null and non-null roles
+        $stmtDeleteNullRole = $pdo->prepare("
+            DELETE FROM user_department_roles 
+            WHERE user_id = ? AND role_id IS NULL AND department_id = ?
+        ");
+        $stmtDeleteNullRole->execute([$userId, $departmentId]);
+        
         // Insert new roles for the department
         $stmtInsertRole = $pdo->prepare("
             INSERT INTO user_department_roles (user_id, department_id, role_id) 

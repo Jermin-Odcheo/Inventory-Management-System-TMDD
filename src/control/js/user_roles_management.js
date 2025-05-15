@@ -184,10 +184,21 @@ if (clearFiltersBtn) {
                 } else {
                     consolidatedDepts.forEach((dept, deptIndex) => {
                         // Filter out empty role names before joining with comma
-                        const roleNames = dept.roles
-                            .map(r => r.roleName)
-                            .filter(name => name.trim() !== '')
-                            .join(', ');
+                        // Also filter out "No Role Assigned" if there are other roles
+                        let rolesList = dept.roles.map(r => r.roleName);
+                        
+                        // Check if we have real roles (not "No Role Assigned")
+                        const hasRegularRoles = rolesList.some(name => 
+                            name !== 'No Role Assigned' && name.trim() !== '');
+                        
+                        // If we have regular roles, filter out the "No Role Assigned" placeholders
+                        if (hasRegularRoles) {
+                            rolesList = rolesList.filter(name => 
+                                name !== 'No Role Assigned' && name.trim() !== '');
+                        }
+                        
+                        // Join the role names with commas
+                        const roleNames = rolesList.join(', ');
                             
                         // Use "No Role Assigned" when there are no roles
                         const displayRoleNames = roleNames || 'No Role Assigned';
@@ -280,10 +291,27 @@ if (clearFiltersBtn) {
         return usersData.find(user => user.id === id);
     }
     function getRoleById(id) {
+        // Handle null roles
         if (id === null) {
             return { id: null, role_name: 'No Role Assigned' };
         }
-        return rolesData.find(role => role.id === id) || { id: id, role_name: `Role #${id}` };
+        
+        // Try to find the role in our data
+        const role = rolesData.find(role => role.id === id);
+        if (role) {
+            return role;
+        }
+        
+        // For unknown roles, check if it's a valid integer
+        if (Number.isInteger(id) && id > 0) {
+            // Log the missing role for debugging
+            console.warn(`Role ID ${id} not found in available roles data`);
+            return { id: id, role_name: `Unknown Role` };
+        }
+        
+        // For invalid IDs
+        console.error(`Invalid role ID: ${id}`);
+        return { id: id, role_name: '' };
     }
     function getDepartmentById(id) {
         return departmentsData.find(dept => dept.id === id) || { department_name: '' };
@@ -853,45 +881,29 @@ if (saveDepartmentRoleBtn && userPrivileges.canModify) {
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
+                        // Log the server response for debugging
+                        console.log("Server response:", data);
+                        
                         // Update local data with server response
                         if (data.assignments) {
-                            // Merge the server response with existing data rather than replacing
-                            const newAssignmentsFromServer = data.assignments;
+                            // Properly replace user's assignments with server response
+                            // First, remove all existing assignments for this user
+                            userRoleDepartments = userRoleDepartments.filter(
+                                a => a.userId !== currentEditingData.userId
+                            );
                             
-                            // For each new assignment from server, update or add to userRoleDepartments
-                            newAssignmentsFromServer.forEach(newAssignment => {
-                                const existingIndex = userRoleDepartments.findIndex(
-                                    a => a.userId === newAssignment.userId && a.roleId === newAssignment.roleId
-                                );
-                                
-                                if (existingIndex !== -1) {
-                                    // CRITICAL CHANGE: Merge departments rather than replace
-                                    // First, preserve existing departments
-                                    const existingDepts = [...userRoleDepartments[existingIndex].departmentIds];
-                                    
-                                    // Then add any new departments from the server response
-                                    newAssignment.departmentIds.forEach(deptId => {
-                                        if (!existingDepts.includes(deptId)) {
-                                            existingDepts.push(deptId);
-                                        }
-                                    });
-                                    
-                                    // Update with merged list
-                                    userRoleDepartments[existingIndex].departmentIds = existingDepts;
-                                } else {
-                                    // Add new assignment
-                                    userRoleDepartments.push(newAssignment);
-                                }
-                            });
-                        } else {
-                            // Update the role ID if no server response
-                            if (updatedRoles.length > 0) {
-                                userRoleDepartments[index].roleId = updatedRoles[0];
-                                // Keep existing departments (don't modify departmentIds)
-                            }
+                            // Then add the new assignments from the server
+                            userRoleDepartments = [...userRoleDepartments, ...data.assignments];
+                            
+                            console.log("Updated userRoleDepartments:", userRoleDepartments);
                         }
+                        
+                        // Close the modal
                         addDepartmentRoleModal.style.display = 'none';
+                        
+                        // Completely re-render the table with fresh data
                         renderUserRolesTable(null, null, null, userSortDirection);
+                        
                         Toast.success('Roles updated successfully', 5000, 'Success');
                     } else {
                         Toast.error('Failed to update roles', 5000, 'Error');
