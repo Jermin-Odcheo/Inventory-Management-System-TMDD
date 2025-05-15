@@ -33,6 +33,50 @@ try {
         throw new Exception('Invalid input data');
     }
 
+    // Get the current user data to check for changes
+    $currentUserStmt = $pdo->prepare("
+        SELECT email, username, first_name, last_name
+        FROM users
+        WHERE id = ?
+    ");
+    $currentUserStmt->execute([$userId]);
+    $currentUser = $currentUserStmt->fetch(PDO::FETCH_ASSOC);
+    
+    // Get current department assignments
+    $currentDeptsStmt = $pdo->prepare("
+        SELECT department_id
+        FROM user_department_roles
+        WHERE user_id = ?
+    ");
+    $currentDeptsStmt->execute([$userId]);
+    $currentDepartments = $currentDeptsStmt->fetchAll(PDO::FETCH_COLUMN);
+    
+    // Sort arrays for comparison
+    sort($currentDepartments);
+    $deptIdsToCompare = array_map('intval', $departments);
+    sort($deptIdsToCompare);
+    
+    // Check if any data has changed
+    $hasChanges = false;
+    
+    if ($currentUser['email'] !== $email || 
+        $currentUser['username'] !== $username || 
+        $currentUser['first_name'] !== $firstName || 
+        $currentUser['last_name'] !== $lastName || 
+        !empty($password) ||
+        $currentDepartments !== $deptIdsToCompare) {
+        $hasChanges = true;
+    }
+    
+    // If no changes, return an error
+    if (!$hasChanges) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'No changes detected to save'
+        ]);
+        exit();
+    }
+
     // Validate departments
     $validDepartments = [];
     if (!empty($departments)) {
@@ -189,7 +233,29 @@ try {
         )
         VALUES (?, ?, 'modified', ?, 'User Management', 'Success', NOW())
     ");
-    $details = "Updated user information: " . $email;
+    
+    // Generate details of what changed
+    $changes = [];
+    if ($currentUser['email'] !== $email) {
+        $changes[] = "email: {$currentUser['email']} → {$email}";
+    }
+    if ($currentUser['username'] !== $username) {
+        $changes[] = "username: {$currentUser['username']} → {$username}";
+    }
+    if ($currentUser['first_name'] !== $firstName) {
+        $changes[] = "first name: {$currentUser['first_name']} → {$firstName}";
+    }
+    if ($currentUser['last_name'] !== $lastName) {
+        $changes[] = "last name: {$currentUser['last_name']} → {$lastName}";
+    }
+    if (!empty($password)) {
+        $changes[] = "password updated";
+    }
+    if ($currentDepartments !== $deptIdsToCompare) {
+        $changes[] = "department assignments updated";
+    }
+    
+    $details = "Updated user information: " . implode(", ", $changes);
     $auditStmt->execute([
         $_SESSION['user_id'],
         $userId,
