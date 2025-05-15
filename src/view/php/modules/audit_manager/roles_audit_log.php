@@ -10,6 +10,20 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: " . BASE_URL . "public/index.php"); // Redirect to login page
     exit();
 }
+
+// Initialize RBAC and check permissions
+$rbac = new RBACService($pdo, $_SESSION['user_id']);
+
+// Check for required privilege
+$hasRolesPrivPermission = $rbac->hasPrivilege('Roles and Privileges', 'Track');
+
+// If user doesn't have permission, redirect them
+if (!$hasRolesPrivPermission) {
+    // Redirect to an unauthorized page
+    header("Location: " . BASE_URL . "src/view/php/general/auth.php");
+    exit();
+}
+
 // Fetch all audit logs (including permanent deletes)
 $query = "SELECT * FROM `audit_log`
         WHERE audit_log.Module IN ('Role Management')
@@ -266,6 +280,12 @@ function getChangedFieldNames(array $oldData, array $newData)
             </div>
 
             <div class="card-body">
+                <!-- Permission Info Banner -->
+                <div class="alert alert-info mb-4">
+                    <i class="fas fa-shield-alt me-2"></i>
+                    You have permission to view Role Management audit logs.
+                </div>
+                
                 <!-- Filter Section -->
                 <div class="row mb-4">
                     <div class="col-md-4 mb-2">

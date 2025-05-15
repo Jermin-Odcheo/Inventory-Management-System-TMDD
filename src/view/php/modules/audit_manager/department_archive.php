@@ -11,6 +11,15 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
+// Initialize RBAC for Roles and Privileges
+$rbac = new RBACService($pdo, $_SESSION['user_id']);
+$rbac->requirePrivilege('Roles and Privileges', 'View');
+
+// Check for additional privileges
+$canRestore = $rbac->hasPrivilege('Roles and Privileges', 'Restore');
+$canRemove = $rbac->hasPrivilege('Roles and Privileges', 'Remove');
+$canDelete = $rbac->hasPrivilege('Roles and Privileges', 'Delete');
+
 // Fetch archived departments (is_disabled = 1)
 $query = "
 SELECT
@@ -233,8 +242,12 @@ function formatChanges($oldJsonStr)
                     <div class="col-md-12">
                         <div class="bulk-actions mb-3">
                             <!-- Bulk actions only show if 2 or more are selected -->
+                            <?php if ($canRestore): ?>
                             <button type="button" id="restore-selected" class="btn btn-success" disabled style="display: none;">Restore Selected</button>
+                            <?php endif; ?>
+                            <?php if ($canDelete): ?>
                             <button type="button" id="delete-selected-permanently" class="btn btn-danger" disabled style="display: none;">Delete Selected Permanently</button>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -323,12 +336,16 @@ function formatChanges($oldJsonStr)
                                     <td data-label="Actions">
                                         <div class="btn-group-vertical gap-1">
                                             <!-- Individual restore now triggers a confirmation modal -->
+                                            <?php if ($canRestore): ?>
                                             <button type="button" class="btn btn-success restore-btn" data-id="<?php echo $log['deleted_dept_id']; ?>">
                                                 <i class="fas fa-undo me-1"></i> Restore
                                             </button>
+                                            <?php endif; ?>
+                                            <?php if ($canDelete): ?>
                                             <button type="button" class="btn btn-danger delete-permanent-btn" data-id="<?php echo $log['deleted_dept_id']; ?>">
                                                 <i class="fas fa-trash me-1"></i> Delete
                                             </button>
+                                            <?php endif; ?>
                                         </div>
                                     </td>
                                 </tr>
@@ -464,6 +481,13 @@ function formatChanges($oldJsonStr)
 <!-- Add Bootstrap 5 JavaScript -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    // Pass RBAC permissions to JavaScript
+    var userPrivileges = {
+        canRestore: <?php echo json_encode($canRestore); ?>,
+        canRemove: <?php echo json_encode($canRemove); ?>,
+        canDelete: <?php echo json_encode($canDelete); ?>
+    };
+    
     var deleteId = null;
     var restoreId = null;
     var bulkDeleteIds = [];
@@ -478,7 +502,12 @@ function formatChanges($oldJsonStr)
         var count = $('.select-row:checked').length;
         // Show bulk actions only if 2 or more are selected
         if (count >= 2) {
-            $('#restore-selected, #delete-selected-permanently').prop('disabled', false).show();
+            if (userPrivileges.canRestore) {
+                $('#restore-selected').prop('disabled', false).show();
+            }
+            if (userPrivileges.canDelete) {
+                $('#delete-selected-permanently').prop('disabled', false).show();
+            }
         } else {
             $('#restore-selected, #delete-selected-permanently').prop('disabled', true).hide();
         }
@@ -486,6 +515,8 @@ function formatChanges($oldJsonStr)
 
     // --- Individual Restore (with modal) ---
     $(document).on('click', '.restore-btn', function (e) {
+        if (!userPrivileges.canRestore) return;
+        
         e.preventDefault();
         restoreId = $(this).data('id');
         var restoreModal = new bootstrap.Modal(document.getElementById('restoreArchiveModal'));
@@ -519,41 +550,43 @@ function formatChanges($oldJsonStr)
 
     // --- Individual Restore AJAX Call ---
     $(document).on('click', '#confirmRestoreBtn', function () {
-        if (restoreId) {
-            console.log('Sending restore request for department ID:', restoreId);
-            
-            $.ajax({
-                url: '../../modules/role_manager/restore_department.php',
-                method: 'POST',
-                data: { id: restoreId },
-                dataType: 'json',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                success: function(response) {
-                    console.log('Restore response:', response);
-                    
-                    // Hide restore modal immediately
-                    var modalInstance = bootstrap.Modal.getInstance(document.getElementById('restoreArchiveModal'));
-                    modalInstance.hide();
+        if (!userPrivileges.canRestore || !restoreId) return;
+        
+        console.log('Sending restore request for department ID:', restoreId);
+        
+        $.ajax({
+            url: '../../modules/role_manager/restore_department.php',
+            method: 'POST',
+            data: { id: restoreId },
+            dataType: 'json',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            success: function(response) {
+                console.log('Restore response:', response);
+                
+                // Hide restore modal immediately
+                var modalInstance = bootstrap.Modal.getInstance(document.getElementById('restoreArchiveModal'));
+                modalInstance.hide();
 
-                    // Check for success status in a case-insensitive manner
-                    if (response.status && response.status.toLowerCase() === 'success') {
-                        $('#archiveTable').load(location.href + ' #archiveTable', function () {
-                            updateBulkButtons();
-                            showToast(response.message, 'success');
-                        });
-                    } else {
-                        showToast(response.message || 'Unknown error occurred', 'error');
-                    }
-                },
-                error: function(xhr, status, error) {
-                    handleAjaxError(xhr, status, error, 'restore');
+                // Check for success status in a case-insensitive manner
+                if (response.status && response.status.toLowerCase() === 'success') {
+                    $('#archiveTable').load(location.href + ' #archiveTable', function () {
+                        updateBulkButtons();
+                        showToast(response.message, 'success');
+                    });
+                } else {
+                    showToast(response.message || 'Unknown error occurred', 'error');
                 }
-            });
-        }
+            },
+            error: function(xhr, status, error) {
+                handleAjaxError(xhr, status, error, 'restore');
+            }
+        });
     });
 
     // --- Individual Permanent Delete ---
     $(document).on('click', '.delete-permanent-btn', function(e) {
+        if (!userPrivileges.canDelete) return;
+        
         e.preventDefault();
         deleteId = $(this).data('id');
         var deleteModal = new bootstrap.Modal(document.getElementById('deleteArchiveModal'));
@@ -562,43 +595,45 @@ function formatChanges($oldJsonStr)
 
     // --- Individual Permanent Delete AJAX Call ---
     $(document).on('click', '#confirmDeleteBtn', function () {
-        if (deleteId) {
-            console.log('Sending delete request for department ID:', deleteId);
-            
-            $.ajax({
-                url: '../../modules/role_manager/delete_department.php',
-                method: 'POST',
-                data: { dept_id: deleteId, permanent: 1 },
-                dataType: 'json',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                success: function(response) {
-                    console.log('Delete response:', response);
-                    
-                    // Hide delete modal immediately
-                    var modalInstance = bootstrap.Modal.getInstance(document.getElementById('deleteArchiveModal'));
-                    modalInstance.hide();
+        if (!userPrivileges.canDelete || !deleteId) return;
+        
+        console.log('Sending delete request for department ID:', deleteId);
+        
+        $.ajax({
+            url: '../../modules/role_manager/delete_department.php',
+            method: 'POST',
+            data: { dept_id: deleteId, permanent: 1 },
+            dataType: 'json',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            success: function(response) {
+                console.log('Delete response:', response);
+                
+                // Hide delete modal immediately
+                var modalInstance = bootstrap.Modal.getInstance(document.getElementById('deleteArchiveModal'));
+                modalInstance.hide();
 
-                    // Use case-insensitive check for "success"
-                    if (response.status && response.status.toLowerCase() === 'success') {
-                        $('#archiveTable').load(location.href + ' #archiveTable', function () {
-                            updateBulkButtons();
-                            showToast(response.message, 'success');
-                        });
-                    } else {
-                        showToast(response.message || 'Unknown error occurred', 'error');
-                    }
-                },
-                error: function(xhr, status, error) {
-                    handleAjaxError(xhr, status, error, 'delete');
+                // Use case-insensitive check for "success"
+                if (response.status && response.status.toLowerCase() === 'success') {
+                    $('#archiveTable').load(location.href + ' #archiveTable', function () {
+                        updateBulkButtons();
+                        showToast(response.message, 'success');
+                    });
+                } else {
+                    showToast(response.message || 'Unknown error occurred', 'error');
                 }
-            });
-        }
+            },
+            error: function(xhr, status, error) {
+                handleAjaxError(xhr, status, error, 'delete');
+            }
+        });
     });
 
     var bulkRestoreIds = [];
 
     // When bulk restore button is clicked, gather selected IDs and show modal
     $(document).on('click', '#restore-selected', function () {
+        if (!userPrivileges.canRestore) return;
+        
         var selected = $('.select-row:checked');
         bulkRestoreIds = [];
         selected.each(function () {
@@ -610,39 +645,41 @@ function formatChanges($oldJsonStr)
 
     // When confirming bulk restore in the modal, perform the AJAX call
     $(document).on('click', '#confirmBulkRestoreBtn', function () {
-        if (bulkRestoreIds.length > 0) {
-            console.log('Sending bulk restore request for department IDs:', bulkRestoreIds);
-            
-            $.ajax({
-                url: '../../modules/role_manager/restore_department.php',
-                method: 'POST',
-                data: { dept_ids: bulkRestoreIds },
-                dataType: 'json',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                success: function(response) {
-                    console.log('Bulk restore response:', response);
-                    
-                    // Hide the bulk restore modal
-                    var modalInstance = bootstrap.Modal.getInstance(document.getElementById('bulkRestoreModal'));
-                    modalInstance.hide();
-                    if (response.status === 'success') {
-                        $('#archiveTable').load(location.href + ' #archiveTable', function () {
-                            updateBulkButtons();
-                            showToast(response.message, 'success');
-                        });
-                    } else {
-                        showToast(response.message || 'Unknown error occurred', 'error');
-                    }
-                },
-                error: function(xhr, status, error) {
-                    handleAjaxError(xhr, status, error, 'bulk restore');
+        if (!userPrivileges.canRestore || bulkRestoreIds.length === 0) return;
+        
+        console.log('Sending bulk restore request for department IDs:', bulkRestoreIds);
+        
+        $.ajax({
+            url: '../../modules/role_manager/restore_department.php',
+            method: 'POST',
+            data: { dept_ids: bulkRestoreIds },
+            dataType: 'json',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            success: function(response) {
+                console.log('Bulk restore response:', response);
+                
+                // Hide the bulk restore modal
+                var modalInstance = bootstrap.Modal.getInstance(document.getElementById('bulkRestoreModal'));
+                modalInstance.hide();
+                if (response.status === 'success') {
+                    $('#archiveTable').load(location.href + ' #archiveTable', function () {
+                        updateBulkButtons();
+                        showToast(response.message, 'success');
+                    });
+                } else {
+                    showToast(response.message || 'Unknown error occurred', 'error');
                 }
-            });
-        }
+            },
+            error: function(xhr, status, error) {
+                handleAjaxError(xhr, status, error, 'bulk restore');
+            }
+        });
     });
 
     // --- Bulk Delete ---
     $(document).on('click', '#delete-selected-permanently', function () {
+        if (!userPrivileges.canDelete) return;
+        
         var selected = $('.select-row:checked');
         bulkDeleteIds = [];
         selected.each(function () {
@@ -652,36 +689,36 @@ function formatChanges($oldJsonStr)
         bulkModal.show();
     });
     $(document).on('click', '#confirmBulkDeleteBtn', function () {
-        if (bulkDeleteIds.length > 0) {
-            console.log('Sending bulk delete request for department IDs:', bulkDeleteIds);
-            
-            $.ajax({
-                url: '../../modules/role_manager/delete_department.php',
-                method: 'POST',
-                data: { dept_ids: bulkDeleteIds, permanent: 1 },
-                dataType: 'json',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                success: function(response) {
-                    console.log('Bulk delete response:', response);
-                    
-                    // Hide bulk delete modal immediately
-                    var bulkModalInstance = bootstrap.Modal.getInstance(document.getElementById('bulkDeleteModal'));
-                    bulkModalInstance.hide();
+        if (!userPrivileges.canDelete || bulkDeleteIds.length === 0) return;
+        
+        console.log('Sending bulk delete request for department IDs:', bulkDeleteIds);
+        
+        $.ajax({
+            url: '../../modules/role_manager/delete_department.php',
+            method: 'POST',
+            data: { dept_ids: bulkDeleteIds, permanent: 1 },
+            dataType: 'json',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            success: function(response) {
+                console.log('Bulk delete response:', response);
+                
+                // Hide bulk delete modal immediately
+                var bulkModalInstance = bootstrap.Modal.getInstance(document.getElementById('bulkDeleteModal'));
+                bulkModalInstance.hide();
 
-                    if (response.status === 'success') {
-                        $('#archiveTable').load(location.href + ' #archiveTable', function () {
-                            updateBulkButtons();
-                            showToast(response.message, 'success');
-                        });
-                    } else {
-                        showToast(response.message || 'Unknown error occurred', 'error');
-                    }
-                },
-                error: function(xhr, status, error) {
-                    handleAjaxError(xhr, status, error, 'bulk delete');
+                if (response.status === 'success') {
+                    $('#archiveTable').load(location.href + ' #archiveTable', function () {
+                        updateBulkButtons();
+                        showToast(response.message, 'success');
+                    });
+                } else {
+                    showToast(response.message || 'Unknown error occurred', 'error');
                 }
-            });
-        }
+            },
+            error: function(xhr, status, error) {
+                handleAjaxError(xhr, status, error, 'bulk delete');
+            }
+        });
     });
 </script>
 <?php include '../../general/footer.php'; ?>
