@@ -11,7 +11,23 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Fetch all audit logs (including permanent deletes)
+// Initialize RBAC and check permissions
+$rbac = new RBACService($pdo, $_SESSION['user_id']);
+
+// Check if user has either privilege: 
+// 1. "Audit" module with "Track" privilege, or 
+// 2. "User Management" module with "Track" privilege
+$hasAuditPermission = $rbac->hasPrivilege('Audit', 'Track');
+$hasUserMgmtPermission = $rbac->hasPrivilege('User Management', 'Track');
+
+// If user doesn't have either permission, redirect them
+if (!$hasAuditPermission && !$hasUserMgmtPermission) {
+    // Redirect to an unauthorized page or dashboard
+    header("Location: " . BASE_URL . "src/view/php/unauthorized.php");
+    exit();
+}
+
+// Fetch all audit logs - only showing User Management logs
 $query = "SELECT audit_log.*, users.email AS email 
           FROM audit_log 
           LEFT JOIN users ON audit_log.UserID = users.id
@@ -267,7 +283,7 @@ function getNormalizedAction($log)
         <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/audit_log.css">
     </noscript>
     <meta charset="UTF-8">
-    <title>Audit Logs Dashboard</title>
+    <title>User Management Audit Logs</title>
 
 </head>
 <body>
@@ -279,11 +295,21 @@ function getNormalizedAction($log)
             <div class="card-header d-flex justify-content-between align-items-center bg-dark">
                 <h3 class="text-white">
                     <i class="fas fa-history me-2"></i>
-                    Audit Logs Dashboard
+                    User Management Audit Logs
                 </h3>
             </div>
 
             <div class="card-body">
+                <!-- Permission Info Banner -->
+                <div class="alert alert-info mb-4">
+                    <i class="fas fa-shield-alt me-2"></i>
+                    <?php if (!$hasAuditPermission && $hasUserMgmtPermission): ?>
+                        You have User Management tracking permissions.
+                    <?php else: ?>
+                        You have access to User Management audit logs.
+                    <?php endif; ?>
+                </div>
+
                 <!-- Filter Section -->
                 <div class="row mb-4">
                     <div class="col-md-4 mb-2">

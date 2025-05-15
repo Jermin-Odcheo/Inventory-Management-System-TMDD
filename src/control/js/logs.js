@@ -4,6 +4,13 @@ let allRows = [];
 // On DOMContentLoaded, capture all original table rows
 document.addEventListener('DOMContentLoaded', () => {
     allRows = Array.from(document.querySelectorAll('#auditTable tr'));
+    
+    // Set up module filter if it exists
+    const moduleFilter = document.getElementById('filterModule');
+    if (moduleFilter) {
+        moduleFilter.addEventListener('change', filterTable);
+    }
+    
     updatePagination();
 });
 
@@ -11,20 +18,26 @@ document.addEventListener('DOMContentLoaded', () => {
 function filterTable() {
     const searchFilter = document.getElementById('searchInput').value.toLowerCase();
     const actionFilter = document.getElementById('filterAction').value.toLowerCase();
-    const statusFilter = document.getElementById('filterStatus').value.toLowerCase();
+    const statusFilter = document.getElementById('filterStatus') ? document.getElementById('filterStatus').value.toLowerCase() : '';
+    const moduleFilter = document.getElementById('filterModule') ? document.getElementById('filterModule').value.toLowerCase() : '';
 
     // Filter rows from the original set
     const filteredRows = allRows.filter(row => {
         const actionCell = row.querySelector('[data-label="Action"]');
         const statusCell = row.querySelector('[data-label="Status"]');
+        const moduleCell = row.querySelector('[data-label="Module"]');
+        
         const actionText = actionCell ? actionCell.textContent.toLowerCase() : '';
         const statusText = statusCell ? statusCell.textContent.toLowerCase() : '';
+        const moduleText = moduleCell ? moduleCell.textContent.toLowerCase() : '';
         const rowText = row.textContent.toLowerCase();
 
         const matchesSearch = rowText.includes(searchFilter);
         const matchesAction = actionFilter === '' || actionText.includes(actionFilter);
         const matchesStatus = statusFilter === '' || statusText.includes(statusFilter);
-        return matchesSearch && matchesAction && matchesStatus;
+        const matchesModule = moduleFilter === '' || moduleText.includes(moduleFilter);
+        
+        return matchesSearch && matchesAction && matchesStatus && matchesModule;
     });
 
     // Rebuild the <tbody> with only filtered rows
@@ -93,7 +106,12 @@ function updatePagination() {
 // Attach event listeners to filter inputs and pagination controls
 document.getElementById('searchInput').addEventListener('keyup', filterTable);
 document.getElementById('filterAction').addEventListener('change', filterTable);
-document.getElementById('filterStatus').addEventListener('change', filterTable);
+
+// Only attach event listener if the element exists
+if (document.getElementById('filterStatus')) {
+    document.getElementById('filterStatus').addEventListener('change', filterTable);
+}
+
 document.getElementById('rowsPerPageSelect').addEventListener('change', updatePagination);
 
 document.getElementById('prevPage').addEventListener('click', () => {
