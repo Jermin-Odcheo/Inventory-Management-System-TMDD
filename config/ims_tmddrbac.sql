@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 16, 2025 at 08:00 AM
+-- Generation Time: May 16, 2025 at 09:33 AM
 -- Server version: 9.1.0
 -- PHP Version: 8.0.30
 
@@ -510,7 +510,24 @@ INSERT INTO `audit_log` (`TrackID`, `UserID`, `EntityID`, `Action`, `Details`, `
 (568, 1, 1, 'Logout', 'navithebear is now offline.', '{\"status\": \"Online\"}', '{\"status\": \"Offline\"}', 'User Management', 'Successful', '2025-05-16 10:11:47'),
 (569, 1, 1, 'Login', 'navithebear is now online.', '{\"status\": \"Offline\"}', '{\"status\": \"Online\"}', 'User Management', 'Successful', '2025-05-16 10:12:15'),
 (570, 1, 1, 'Logout', 'navithebear is now offline.', '{\"status\": \"Online\"}', '{\"status\": \"Offline\"}', 'User Management', 'Successful', '2025-05-16 10:12:17'),
-(571, 1, 1, 'Login', 'navithebear is now online.', '{\"status\": \"Offline\"}', '{\"status\": \"Online\"}', 'User Management', 'Successful', '2025-05-16 13:46:41');
+(571, 1, 1, 'Login', 'navithebear is now online.', '{\"status\": \"Offline\"}', '{\"status\": \"Online\"}', 'User Management', 'Successful', '2025-05-16 13:46:41'),
+(572, 1, 1, 'Logout', 'navithebear is now offline.', '{\"status\": \"Online\"}', '{\"status\": \"Offline\"}', 'User Management', 'Successful', '2025-05-16 14:32:57'),
+(573, 1, 1, 'Login', 'navithebear is now online.', '{\"status\": \"Offline\"}', '{\"status\": \"Online\"}', 'User Management', 'Successful', '2025-05-16 14:33:45'),
+(574, 4, 4, 'Logout', 'rpman is now offline.', '{\"status\": \"Online\"}', '{\"status\": \"Offline\"}', 'User Management', 'Successful', '2025-05-16 14:57:40'),
+(575, 1, 1, 'Logout', 'navithebear is now offline.', '{\"status\": \"Online\"}', '{\"status\": \"Offline\"}', 'User Management', 'Successful', '2025-05-16 15:08:04'),
+(576, 4, 4, 'Login', 'rpman is now online.', '{\"status\": \"Offline\"}', '{\"status\": \"Online\"}', 'User Management', 'Successful', '2025-05-16 15:08:10'),
+(577, 1, 2, 'Modified', 'Modified Fields: User Management: Added Restore, View', '{\n    \"role_id\": 2,\n    \"role_name\": \"Super Admin\",\n    \"privileges\": []\n}', '{\n    \"role_id\": 2,\n    \"role_name\": \"Super Admin\",\n    \"privileges\": {\n        \"User Management\": [\n            \"Restore\",\n            \"View\"\n        ]\n    }\n}', 'Roles and Privileges', 'Successful', '2025-05-16 15:08:39'),
+(578, 2, 2, 'Login', 'userman is now online.', '{\"status\": \"Offline\"}', '{\"status\": \"Online\"}', 'User Management', 'Successful', '2025-05-16 15:09:43'),
+(579, 2, 2, 'Logout', 'userman is now offline.', '{\"status\": \"Online\"}', '{\"status\": \"Offline\"}', 'User Management', 'Successful', '2025-05-16 15:11:58'),
+(580, 4, 4, 'Logout', 'rpman is now offline.', '{\"status\": \"Online\"}', '{\"status\": \"Offline\"}', 'User Management', 'Successful', '2025-05-16 15:13:02'),
+(581, 1, 1, 'Login', 'navithebear is now online.', '{\"status\": \"Offline\"}', '{\"status\": \"Online\"}', 'User Management', 'Successful', '2025-05-16 15:17:09'),
+(582, 1, 135, 'Create', 'New user added: toff', NULL, '{\"id\": 135, \"email\": \"tmdd@slu.edu.ph\", \"status\": \"Offline\", \"username\": \"toff\", \"last_name\": \"OFF\", \"department\": \"Unknown\", \"first_name\": \"TMDD\", \"date_created\": \"2025-05-16 15:19:31.000000\"}', 'User Management', 'Successful', '2025-05-16 15:19:31'),
+(583, 1, 1, 'Modified', 'Modified Fields: Equipment Transactions: Added Create, Modify, Permanently Delete, Remove, Restore, Track, View, Management: Added Create, Modify, Permanently Delete, Remove, Restore, Track, View, Reports: Added Create, Modify, Permanently Delete, Remove, Restore, Track, View', '{\n    \"role_id\": 1,\n    \"role_name\": \"TMDD-Dev\",\n    \"privileges\": {\n        \"Roles and Privileges\": [\n            \"Track\",\n            \"Create\",\n            \"Remove\",\n            \"Permanently Delete\",\n            \"Modify\",\n            \"View\",\n            \"Restore\"\n        ],\n        \"User Management\": [\n            \"Track\",\n            \"Create\",\n            \"Remove\",\n            \"Permanently Delete\",\n            \"Modify\",\n            \"View\",\n            \"Restore\"\n        ],\n        \"Equipment Management\": [\n            \"Track\",\n            \"Create\",\n            \"Remove\",\n            \"Permanently Delete\",\n            \"Modify\",\n            \"View\",\n            \"Restore\"\n        ],\n        \"Audit\": [\n            \"View\"\n        ]\n    }\n}', '{\n    \"role_id\": 1,\n    \"role_name\": \"TMDD-Dev\",\n    \"privileges\": {\n        \"Audit\": [\n            \"View\"\n        ],\n        \"Equipment Management\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ],\n        \"Equipment Transactions\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ],\n        \"Management\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ],\n        \"Reports\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ],\n        \"Roles and Privileges\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ],\n        \"User Management\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ]\n    }\n}', 'Roles and Privileges', 'Successful', '2025-05-16 15:30:04'),
+(584, 1, 1, 'Logout', 'navithebear is now offline.', '{\"status\": \"Online\"}', '{\"status\": \"Offline\"}', 'User Management', 'Successful', '2025-05-16 15:31:14'),
+(585, 2, 2, 'Login', 'userman is now online.', '{\"status\": \"Offline\"}', '{\"status\": \"Online\"}', 'User Management', 'Successful', '2025-05-16 15:31:27'),
+(586, 1, 4, 'Modified', 'Modified Fields: User Management: Added Create, Modify, Permanently Delete, Remove, Restore, Track, View', '{\n    \"role_id\": 4,\n    \"role_name\": \"User Manager\",\n    \"privileges\": []\n}', '{\n    \"role_id\": 4,\n    \"role_name\": \"User Manager\",\n    \"privileges\": {\n        \"User Management\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ]\n    }\n}', 'Roles and Privileges', 'Successful', '2025-05-16 15:31:51'),
+(587, 1, 4, 'Modified', 'Modified Fields: User Management: Removed View', '{\n    \"role_id\": 4,\n    \"role_name\": \"User Manager\",\n    \"privileges\": {\n        \"User Management\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ]\n    }\n}', '{\n    \"role_id\": 4,\n    \"role_name\": \"User Manager\",\n    \"privileges\": {\n        \"User Management\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\"\n        ]\n    }\n}', 'Roles and Privileges', 'Successful', '2025-05-16 15:32:07'),
+(588, 1, 4, 'Modified', 'Modified Fields: User Management: Added View, Management: Added View, Reports: Added View', '{\n    \"role_id\": 4,\n    \"role_name\": \"User Manager\",\n    \"privileges\": {\n        \"User Management\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\"\n        ]\n    }\n}', '{\n    \"role_id\": 4,\n    \"role_name\": \"User Manager\",\n    \"privileges\": {\n        \"Management\": [\n            \"View\"\n        ],\n        \"Reports\": [\n            \"View\"\n        ],\n        \"User Management\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ]\n    }\n}', 'Roles and Privileges', 'Successful', '2025-05-16 15:32:23');
 
 -- --------------------------------------------------------
 
@@ -557,37 +574,37 @@ INSERT INTO `departments` (`id`, `department_name`, `abbreviation`, `is_disabled
 (3, 'Office of the Internal Auditor', 'OIA', 0),
 (4, 'Office of the Vice President for Mission and Identity', 'OVPMI', 0),
 (5, 'Center for Campus Ministry', 'CCM', 0),
-(6, 'Community Extension and Outreach Programs Office', 'CEOP', 1),
-(7, 'St. Aloysius Gonzaga Parish Office', 'SAGPO', 1),
-(8, 'Sunflower Child and Youth Wellness Center', 'SCYWC', 1),
-(9, 'Office of the Vice President for Academic Affairs', 'OVPAA', 1),
-(10, 'School of Accountancy, Management, Computing and Information Studies', 'SAMCIS', 1),
-(11, 'School of Advanced Studies', 'SAS', 1),
-(12, 'School of Engineering and Architecture', 'SEA', 1),
-(13, 'School of Law', 'SOL', 1),
-(14, 'School of Medicine', 'SOM', 1),
-(15, 'School of Nursing, Allied Health, and Biological Sciences Natural Sciences', 'SONAHBS', 1),
-(16, 'School of Teacher Education and Liberal Arts', 'STELA', 1),
-(17, 'Basic Education School', 'SLU BEdS', 1),
-(18, 'Office of Institutional Development and Quality Assurance', 'OIDQA', 1),
-(19, 'University Libraries', 'UL', 1),
-(20, 'University Registrar\'s Office', 'URO', 1),
-(21, 'University Research and Innovation Center', 'URIC', 1),
-(22, 'Office of the Vice President for Finance', 'OVPF', 1),
-(23, 'Asset Management and Inventory Control Office', 'AMICO', 1),
-(24, 'Finance Office', 'FO', 1),
-(25, 'Printing Operations Office', 'POO', 1),
-(26, 'Technology Management and Development Department', 'TMDD', 1),
-(27, 'Office of the Vice President for Administration', 'OVPA', 1),
-(28, 'Athletics and Fitness Center', 'AFC', 1),
-(29, 'Campus Planning, Maintenance, and Security Department', 'CPMSD', 1),
-(30, 'Center for Culture and the Arts', 'CCA', 1),
-(31, 'Dental Clinic', 'DC', 1),
-(32, 'Guidance Center', 'GC', 1),
-(33, 'Human Resource Department', 'HRD', 1),
-(34, 'Students\' Residence Hall', 'SRH', 1),
-(35, 'Medical Clinic', 'MC', 1),
-(36, 'Office for Legal Affairs', 'OLA', 1),
+(6, 'Community Extension and Outreach Programs Office', 'CEOP', 0),
+(7, 'St. Aloysius Gonzaga Parish Office', 'SAGPO', 0),
+(8, 'Sunflower Child and Youth Wellness Center', 'SCYWC', 0),
+(9, 'Office of the Vice President for Academic Affairs', 'OVPAA', 0),
+(10, 'School of Accountancy, Management, Computing and Information Studies', 'SAMCIS', 0),
+(11, 'School of Advanced Studies', 'SAS', 0),
+(12, 'School of Engineering and Architecture', 'SEA', 0),
+(13, 'School of Law', 'SOL', 0),
+(14, 'School of Medicine', 'SOM', 0),
+(15, 'School of Nursing, Allied Health, and Biological Sciences Natural Sciences', 'SONAHBS', 0),
+(16, 'School of Teacher Education and Liberal Arts', 'STELA', 0),
+(17, 'Basic Education School', 'SLU BEdS', 0),
+(18, 'Office of Institutional Development and Quality Assurance', 'OIDQA', 0),
+(19, 'University Libraries', 'UL', 0),
+(20, 'University Registrar\'s Office', 'URO', 0),
+(21, 'University Research and Innovation Center', 'URIC', 0),
+(22, 'Office of the Vice President for Finance', 'OVPF', 0),
+(23, 'Asset Management and Inventory Control Office', 'AMICO', 0),
+(24, 'Finance Office', 'FO', 0),
+(25, 'Printing Operations Office', 'POO', 0),
+(26, 'Technology Management and Development Department', 'TMDD', 0),
+(27, 'Office of the Vice President for Administration', 'OVPA', 0),
+(28, 'Athletics and Fitness Center', 'AFC', 0),
+(29, 'Campus Planning, Maintenance, and Security Department', 'CPMSD', 0),
+(30, 'Center for Culture and the Arts', 'CCA', 0),
+(31, 'Dental Clinic', 'DC', 0),
+(32, 'Guidance Center', 'GC', 0),
+(33, 'Human Resource Department', 'HRD', 0),
+(34, 'Students\' Residence Hall', 'SRH', 0),
+(35, 'Medical Clinic', 'MC', 0),
+(36, 'Office for Legal Affairs', 'OLA', 0),
 (46, '57877', '9876', 0);
 
 -- --------------------------------------------------------
@@ -684,6 +701,7 @@ INSERT INTO `modules` (`id`, `module_name`) VALUES
 (1, 'Audit'),
 (4, 'Equipment Management'),
 (15, 'Equipment Transactions'),
+(17, 'Management'),
 (16, 'Reports'),
 (2, 'Roles and Privileges'),
 (3, 'User Management');
@@ -1036,7 +1054,12 @@ INSERT INTO `role_changes` (`ChangeID`, `UserID`, `RoleID`, `Action`, `OldRoleNa
 (230, 1, 26, 'Modified', 'test', 'test', '2025-03-13 09:44:23', '[]', '[]', 0),
 (276, 1, 1, 'Modified', 'TMDD-Dev', 'TMDD-Dev', '2025-05-09 14:28:34', '[\"1|1\",\"4|3\",\"4|11\",\"4|10\",\"4|2\",\"4|5\",\"4|6\",\"4|12\",\"4|4\",\"4|8\",\"4|1\",\"4|9\",\"4|7\",\"2|3\",\"2|11\",\"2|10\",\"2|2\",\"2|5\",\"2|6\",\"2|12\",\"2|4\",\"2|8\",\"2|1\",\"2|9\",\"2|7\",\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\"]', '[\"2|3\",\"2|11\",\"2|10\",\"2|2\",\"2|5\",\"2|6\",\"2|12\",\"2|4\",\"2|8\",\"2|1\",\"2|9\",\"2|7\",\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\",\"4|3\",\"4|11\",\"4|10\",\"4|2\",\"4|5\",\"4|6\",\"4|12\",\"4|4\",\"4|8\",\"4|1\",\"4|9\",\"4|7\"]', 0),
 (277, 1, 1, 'Modified', 'TMDD-Dev', 'TMDD-Dev', '2025-05-09 14:28:39', '[\"4|3\",\"4|11\",\"4|10\",\"4|2\",\"4|5\",\"4|6\",\"4|12\",\"4|4\",\"4|8\",\"4|1\",\"4|9\",\"4|7\",\"2|3\",\"2|11\",\"2|10\",\"2|2\",\"2|5\",\"2|6\",\"2|12\",\"2|4\",\"2|8\",\"2|1\",\"2|9\",\"2|7\",\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\"]', '[\"1|7\",\"2|3\",\"2|11\",\"2|10\",\"2|2\",\"2|5\",\"2|6\",\"2|12\",\"2|4\",\"2|8\",\"2|1\",\"2|9\",\"2|7\",\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\",\"4|3\",\"4|11\",\"4|10\",\"4|2\",\"4|5\",\"4|6\",\"4|12\",\"4|4\",\"4|8\",\"4|1\",\"4|9\",\"4|7\"]', 0),
-(278, 1, 32, 'Add', NULL, 'testsetes', '2025-05-09 15:23:21', NULL, NULL, 0);
+(278, 1, 32, 'Add', NULL, 'testsetes', '2025-05-09 15:23:21', NULL, NULL, 0),
+(279, 1, 2, 'Modified', 'Super Admin', 'Super Admin', '2025-05-16 15:08:39', '[]', '[\"3|8\",\"3|7\"]', 0),
+(280, 1, 1, 'Modified', 'TMDD-Dev', 'TMDD-Dev', '2025-05-16 15:30:04', '[\"2|1\",\"3|1\",\"4|1\",\"2|2\",\"3|2\",\"4|2\",\"2|4\",\"3|4\",\"4|4\",\"2|5\",\"3|5\",\"4|5\",\"2|6\",\"3|6\",\"4|6\",\"1|7\",\"2|7\",\"3|7\",\"4|7\",\"2|8\",\"3|8\",\"4|8\"]', '[\"1|7\",\"2|2\",\"2|6\",\"2|5\",\"2|4\",\"2|8\",\"2|1\",\"2|7\",\"3|2\",\"3|6\",\"3|5\",\"3|4\",\"3|8\",\"3|1\",\"3|7\",\"4|2\",\"4|6\",\"4|5\",\"4|4\",\"4|8\",\"4|1\",\"4|7\",\"15|2\",\"15|6\",\"15|5\",\"15|4\",\"15|8\",\"15|1\",\"15|7\",\"16|2\",\"16|6\",\"16|5\",\"16|4\",\"16|8\",\"16|1\",\"16|7\",\"17|2\",\"17|6\",\"17|5\",\"17|4\",\"17|8\",\"17|1\",\"17|7\"]', 0),
+(281, 1, 4, 'Modified', 'User Manager', 'User Manager', '2025-05-16 15:31:51', '[]', '[\"3|2\",\"3|6\",\"3|5\",\"3|4\",\"3|8\",\"3|1\",\"3|7\"]', 0),
+(282, 1, 4, 'Modified', 'User Manager', 'User Manager', '2025-05-16 15:32:07', '[\"3|2\",\"3|6\",\"3|5\",\"3|4\",\"3|8\",\"3|1\",\"3|7\"]', '[\"3|2\",\"3|6\",\"3|5\",\"3|4\",\"3|8\",\"3|1\"]', 0),
+(283, 1, 4, 'Modified', 'User Manager', 'User Manager', '2025-05-16 15:32:23', '[\"3|2\",\"3|6\",\"3|5\",\"3|4\",\"3|8\",\"3|1\"]', '[\"3|2\",\"3|6\",\"3|5\",\"3|4\",\"3|8\",\"3|1\",\"3|7\",\"16|7\",\"17|7\"]', 0);
 
 -- --------------------------------------------------------
 
@@ -1084,43 +1107,60 @@ INSERT INTO `role_module_privileges` (`id`, `role_id`, `module_id`, `privilege_i
 (1225, 0, 4, 11),
 (1226, 0, 4, 12),
 (1250, 6, 1, 1),
-(1287, 1, 1, 7),
-(1288, 1, 2, 3),
-(1289, 1, 2, 11),
-(1290, 1, 2, 10),
-(1291, 1, 2, 2),
-(1292, 1, 2, 5),
-(1293, 1, 2, 6),
-(1294, 1, 2, 12),
-(1295, 1, 2, 4),
-(1296, 1, 2, 8),
-(1297, 1, 2, 1),
-(1298, 1, 2, 9),
-(1299, 1, 2, 7),
-(1300, 1, 3, 3),
-(1301, 1, 3, 11),
-(1302, 1, 3, 10),
-(1303, 1, 3, 2),
-(1304, 1, 3, 5),
-(1305, 1, 3, 6),
-(1306, 1, 3, 12),
-(1307, 1, 3, 4),
-(1308, 1, 3, 8),
-(1309, 1, 3, 1),
-(1310, 1, 3, 9),
-(1311, 1, 3, 7),
-(1312, 1, 4, 3),
-(1313, 1, 4, 11),
-(1314, 1, 4, 10),
-(1315, 1, 4, 2),
-(1316, 1, 4, 5),
-(1317, 1, 4, 6),
-(1318, 1, 4, 12),
-(1319, 1, 4, 4),
-(1320, 1, 4, 8),
-(1321, 1, 4, 1),
-(1322, 1, 4, 9),
-(1323, 1, 4, 7);
+(1324, 2, 3, 8),
+(1325, 2, 3, 7),
+(1326, 1, 1, 7),
+(1327, 1, 2, 2),
+(1328, 1, 2, 6),
+(1329, 1, 2, 5),
+(1330, 1, 2, 4),
+(1331, 1, 2, 8),
+(1332, 1, 2, 1),
+(1333, 1, 2, 7),
+(1334, 1, 3, 2),
+(1335, 1, 3, 6),
+(1336, 1, 3, 5),
+(1337, 1, 3, 4),
+(1338, 1, 3, 8),
+(1339, 1, 3, 1),
+(1340, 1, 3, 7),
+(1341, 1, 4, 2),
+(1342, 1, 4, 6),
+(1343, 1, 4, 5),
+(1344, 1, 4, 4),
+(1345, 1, 4, 8),
+(1346, 1, 4, 1),
+(1347, 1, 4, 7),
+(1348, 1, 15, 2),
+(1349, 1, 15, 6),
+(1350, 1, 15, 5),
+(1351, 1, 15, 4),
+(1352, 1, 15, 8),
+(1353, 1, 15, 1),
+(1354, 1, 15, 7),
+(1355, 1, 16, 2),
+(1356, 1, 16, 6),
+(1357, 1, 16, 5),
+(1358, 1, 16, 4),
+(1359, 1, 16, 8),
+(1360, 1, 16, 1),
+(1361, 1, 16, 7),
+(1362, 1, 17, 2),
+(1363, 1, 17, 6),
+(1364, 1, 17, 5),
+(1365, 1, 17, 4),
+(1366, 1, 17, 8),
+(1367, 1, 17, 1),
+(1368, 1, 17, 7),
+(1382, 4, 3, 2),
+(1383, 4, 3, 6),
+(1384, 4, 3, 5),
+(1385, 4, 3, 4),
+(1386, 4, 3, 8),
+(1387, 4, 3, 1),
+(1388, 4, 3, 7),
+(1389, 4, 16, 7),
+(1390, 4, 17, 7);
 
 -- --------------------------------------------------------
 
@@ -1146,10 +1186,10 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `username`, `email`, `password`, `first_name`, `last_name`, `date_created`, `status`, `is_disabled`, `profile_pic_path`) VALUES
-(1, 'navithebear', 'navi@example.com', '$2y$12$2esj1uaDmbD3K6Fi.C0CiuOye96x8OjARwTc82ViEAPvmx4b1cL0S', 'navi', 'slu', '2025-02-19 01:19:52', 'Online', 0, 'assets/img/user_images/user_1.gif'),
-(2, 'userman', 'um@example.com', '$2y$12$wE3B0Dq4z0Bd1AHXf4gumexeObTqWXm7aASm7PnkCrtiL.iIfObS.', 'user', 'manager', '2025-02-19 05:40:35', 'Offline', 0, NULL),
+(1, 'navithebear', 'navi@example.com', '$2y$12$2esj1uaDmbD3K6Fi.C0CiuOye96x8OjARwTc82ViEAPvmx4b1cL0S', 'navi', 'slu', '2025-02-19 01:19:52', 'Offline', 0, 'assets/img/user_images/user_1.gif'),
+(2, 'userman', 'um@example.com', '$2y$12$wE3B0Dq4z0Bd1AHXf4gumexeObTqWXm7aASm7PnkCrtiL.iIfObS.', 'user', 'manager', '2025-02-19 05:40:35', 'Online', 0, NULL),
 (3, 'equipman', 'em@example.com', '$2y$12$J0iy9bwoalbG2/NkqDZchuLU4sWramGpsw1EsSZ6se0CefM/sqpZq', '123', '123', '2025-02-19 05:40:35', '', 0, NULL),
-(4, 'rpman', 'rp@example.com', '$2y$12$dWnJinU4uO7ETYIKi9cL0uN4wJgjACaF.q0Pbkr5yNUK2q1HUQk8G', 'ropriv', 'manager', '2025-02-19 05:41:59', '', 0, NULL),
+(4, 'rpman', 'rp@example.com', '$2y$12$dWnJinU4uO7ETYIKi9cL0uN4wJgjACaF.q0Pbkr5yNUK2q1HUQk8G', 'ropriv', 'manager', '2025-02-19 05:41:59', 'Offline', 0, NULL),
 (106, 'ttest1', 'test1@example.com', '$2y$10$2bz/ybJjCzyFYEd26NEZr.tsuqUZTpSwQtSTU1IQ8fVHyD2dzjTkO', 'test1', 'test1', '2025-03-21 08:30:58', '', 1, NULL),
 (107, 'ttest2', 'test2@example.com', '$2y$10$9uEUFx90zNh3wJmh8deSXenpr6PVopkRfkkzq4PtPAwPFRCx4cecW', 'test2', 'test2', '2025-03-21 08:31:14', '', 1, NULL),
 (134, '1123', 'Testertesting123@example.com', '$2y$12$xFf4FmS./UoBc..wijJsUuk8on6EcSeIWiThkd5p5sMdFtoBs23pa', '123', '123', '2025-05-13 13:28:15', '', 1, NULL);
@@ -1627,7 +1667,7 @@ ALTER TABLE `user_roles`
 -- AUTO_INCREMENT for table `audit_log`
 --
 ALTER TABLE `audit_log`
-  MODIFY `TrackID` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=572;
+  MODIFY `TrackID` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=589;
 
 --
 -- AUTO_INCREMENT for table `charge_invoice`
@@ -1663,7 +1703,7 @@ ALTER TABLE `equipment_status`
 -- AUTO_INCREMENT for table `modules`
 --
 ALTER TABLE `modules`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `privileges`
@@ -1693,19 +1733,19 @@ ALTER TABLE `roles`
 -- AUTO_INCREMENT for table `role_changes`
 --
 ALTER TABLE `role_changes`
-  MODIFY `ChangeID` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=279;
+  MODIFY `ChangeID` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=284;
 
 --
 -- AUTO_INCREMENT for table `role_module_privileges`
 --
 ALTER TABLE `role_module_privileges`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1324;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1391;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=135;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=136;
 
 --
 -- Constraints for dumped tables

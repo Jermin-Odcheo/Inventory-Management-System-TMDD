@@ -51,6 +51,22 @@ $rbac = new RBACService($pdo, $userId);
             </li>
             <?php endif; ?>
 
+            <?php if ($rbac->hasPrivilege('Management', 'View')): ?>
+            <li class="dropdown-item">
+                <button class="dropdown-toggle" aria-expanded="false">
+                    <i class="fas fa-history"></i> Management
+                    <i class="fas fa-chevron-down dropdown-icon"></i>
+                </button>
+                <ul class="dropdown tree" aria-expanded="false">
+                <li class="nav-item">
+                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/role_manager/department_management.php" class="nav-link">
+                            <span class="submenu-text">Department Management</span>
+                        </a>
+                    </li>
+                </ul>
+            </li>
+            <?php endif; ?>
+
             <?php if ($rbac->hasPrivilege('User Management', 'View')): ?>
             <li class="dropdown-item">
                 <button class="dropdown-toggle" aria-expanded="false">
@@ -89,11 +105,6 @@ $rbac = new RBACService($pdo, $userId);
                     <li class="nav-item">
                         <a href="<?php echo BASE_URL; ?>src/view/php/modules/privilege_manager/manage_privileges.php" class="nav-link">
                             <span class="submenu-text">Privilege Management <br> 🆕💻 (Prototype)</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/role_manager/department_management.php" class="nav-link">
-                            <span class="submenu-text">Department Management</span>
                         </a>
                     </li>
                 </ul>
