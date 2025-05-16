@@ -10,6 +10,20 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: " . BASE_URL . "public/index.php"); // Redirect to login page
     exit();
 }
+
+// Initialize RBAC and check permissions
+$rbac = new RBACService($pdo, $_SESSION['user_id']);
+
+// Check for required privilege
+$hasEquipmentMgmtPermission = $rbac->hasPrivilege('Equipment Management', 'Track');
+
+// If user doesn't have permission, redirect them
+if (!$hasEquipmentMgmtPermission) {
+    // Redirect to an unauthorized page
+    header("Location: " . BASE_URL . "src/view/php/general/auth.php");
+    exit();
+}
+
 // Fetch all audit logs (including permanent deletes)
 $query = "
     SELECT
@@ -175,7 +189,7 @@ function formatDetailsAndChanges($log)
 {
     // Normalize action to lowercase
     $action = strtolower($log['Action'] ?? '');
-
+    
     // Parse JSON fields for old/new data with null checks
     $oldData = !is_null($log['OldVal']) ? json_decode($log['OldVal'], true) : [];
     $newData = !is_null($log['NewVal']) ? json_decode($log['NewVal'], true) : [];
@@ -183,41 +197,43 @@ function formatDetailsAndChanges($log)
     // Prepare default strings
     $details = '';
     $changes = '';
+
     //Target Entity Set to ASSET TAG
     $targetEntityName = $newData['asset_tag'] ?? $oldData['asset_tag'] ?? 'Unknown';
-    switch ($action) {
 
+    // List of fields that should never be shown in diff
+    $systemFields = ['date_created', 'date_acquired', 'date_modified', 'is_disabled'];
+
+    // Filter out system fields from both datasets before comparison
+    $filteredOldData = array_diff_key($oldData, array_flip($systemFields));
+    $filteredNewData = array_diff_key($newData, array_flip($systemFields));
+
+    switch ($action) {
         case 'create':
             $details = htmlspecialchars("$targetEntityName has been created");
             $changes = formatNewValue($log['NewVal']);
             break;
-
         case 'modified':
-            $changedFields = getChangedFieldNames($oldData, $newData);
+            $changedFields = getChangedFieldNames($filteredOldData, $filteredNewData);
             if (!empty($changedFields)) {
                 $details = "Modified Fields: " . htmlspecialchars(implode(', ', $changedFields));
             } else {
                 $details = "Modified Fields: None";
             }
-            $changes = formatAuditDiff($log['OldVal'], $log['NewVal']);
+            $changes = formatAuditDiff(json_encode($filteredOldData), json_encode($filteredNewData));
             break;
-
         case 'restored':
             $details = htmlspecialchars("$targetEntityName has been restored");
             $changes = "is_deleted 1 -> 0";
             break;
-
         case 'remove':
-            // Use the target's name instead of a generic message
             $details = htmlspecialchars("$targetEntityName has been removed");
             $changes = "is_deleted 0 -> 1";
             break;
-
         case 'delete':
             $details = htmlspecialchars("$targetEntityName has been deleted from the database");
             $changes = formatNewValue($log['OldVal']);
             break;
-
         default:
             $details = htmlspecialchars($log['Details'] ?? '');
             $changes = formatNewValue($log['OldVal']);
@@ -232,16 +248,26 @@ function formatDetailsAndChanges($log)
  */
 function getChangedFieldNames(array $oldData, array $newData)
 {
+    // Fields that should NOT be included in the diff
+    $systemFields = ['date_created', 'date_acquired', 'date_modified', 'is_disabled'];
+
     $changed = [];
-    // We combine the keys
     $allKeys = array_unique(array_merge(array_keys($oldData), array_keys($newData)));
+
     foreach ($allKeys as $key) {
+        // Skip system-managed fields
+        if (in_array($key, $systemFields)) {
+            continue;
+        }
+
         $oldVal = $oldData[$key] ?? null;
         $newVal = $newData[$key] ?? null;
+
         if ($oldVal !== $newVal) {
             $changed[] = ucwords(str_replace('_', ' ', $key));
         }
     }
+
     return $changed;
 }
 
@@ -274,6 +300,12 @@ function getChangedFieldNames(array $oldData, array $newData)
                 </div>
 
                 <div class="card-body">
+                    <!-- Permission Info Banner -->
+                    <div class="alert alert-info mb-4">
+                        <i class="fas fa-shield-alt me-2"></i>
+                        You have permission to view Equipment Management audit logs.
+                    </div>
+                    
                     <!-- Filter Section -->
                     <div class="row mb-4">
                         <div class="col-md-4 mb-2">

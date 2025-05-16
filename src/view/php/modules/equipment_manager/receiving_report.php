@@ -110,6 +110,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $accountable_individual = trim($_POST['accountable_individual'] ?? '');
     $po_no = trim($_POST['po_no'] ?? '');
     $ai_loc = trim($_POST['ai_loc'] ?? '');
+
+    // Enforce RR and PO prefixes BEFORE validation
+    if ($rr_no !== '' && strpos($rr_no, 'RR') !== 0) {
+        $rr_no = 'RR' . $rr_no;
+    }
+    if ($po_no !== '' && strpos($po_no, 'PO') !== 0) {
+        $po_no = 'PO' . $po_no;
+    }
     $is_disabled = 0;
     $date_created = trim($_POST['date_created'] ?? '');
     if (empty($date_created)) {
@@ -118,8 +126,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $date_created = date('Y-m-d H:i:s', strtotime($date_created));
     }
 
+    // Validate required fields and proper RR/PO format
+    $fieldError = false;
     if (empty($rr_no) || empty($accountable_individual) || empty($po_no) || empty($ai_loc) || empty($date_created)) {
-        $_SESSION['errors'] = ["Please fill in all required fields."];
+        $fieldError = 'Please fill in all required fields.';
+    } elseif (!preg_match('/^RR\d+$/', $rr_no)) {
+        $fieldError = 'RR Number must be in the format RR followed by numbers (e.g., RR123).';
+    } elseif (!preg_match('/^PO\d+$/', $po_no)) {
+        $fieldError = 'PO Number must be in the format PO followed by numbers (e.g., PO123).';
+    }
+    if ($fieldError) {
+        $_SESSION['errors'] = [$fieldError];
         if (is_ajax_request()) {
             ob_clean();
             header('Content-Type: application/json');
@@ -268,11 +285,13 @@ try {
             /* Adjust if you have a sidebar */
             padding: 20px;
             margin-bottom: 20px;
+            margin-top: 70px; /* Ensure content is visible below navbar */
         }
 
         @media (max-width: 768px) {
             .main-content {
                 margin-left: 0;
+                margin-top: 70px; /* Also apply for mobile */
             }
         }
 
@@ -306,8 +325,10 @@ try {
 
     <div class="main-content">
         <div class="container-fluid">
+            <!-- Management Title -->
             <h2 class="mb-4">Receiving Report Management</h2>
-            <div class="card shadow">
+            <!-- End Management Title -->
+            <div class="card shadow" style="margin-top: 20px;">
                 <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
                     <span><i class="bi bi-list-ul"></i> List of Receiving Reports</span>
                     <div class="input-group w-auto">
@@ -443,7 +464,7 @@ try {
                         <input type="hidden" name="action" value="add">
                         <div class="mb-3">
                             <label class="form-label">RR Number <span class="text-danger">*</span></label>
-                            <input type="text" name="rr_no" class="form-control" required>
+                            <input type="number" name="rr_no" class="form-control" required min="0" step="1" title="Numbers only" id="add_rr_no">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Accountable Individual <span class="text-danger">*</span></label>
@@ -451,7 +472,7 @@ try {
                         </div>
                         <div class="mb-3">
                             <label class="form-label">PO Number <span class="text-danger">*</span></label>
-                            <input type="text" name="po_no" class="form-control" required>
+                            <input type="number" name="po_no" class="form-control" required min="0" step="1" title="Numbers only" id="add_po_no">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Location <span class="text-danger">*</span></label>
@@ -493,7 +514,7 @@ try {
                         <input type="hidden" name="id" id="edit_report_id">
                         <div class="mb-3">
                             <label class="form-label">RR Number <span class="text-danger">*</span></label>
-                            <input type="text" name="rr_no" id="edit_rr_no" class="form-control" required>
+                            <input type="number" name="rr_no" id="edit_rr_no" class="form-control" required min="0" step="1" title="Numbers only">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Accountable Individual <span class="text-danger">*</span></label>
@@ -501,7 +522,7 @@ try {
                         </div>
                         <div class="mb-3">
                             <label class="form-label">PO Number <span class="text-danger">*</span></label>
-                            <input type="text" name="po_no" id="edit_po_no" class="form-control" required>
+                            <input type="number" name="po_no" id="edit_po_no" class="form-control" required min="0" step="1" title="Numbers only">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Location <span class="text-danger">*</span></label>
@@ -568,9 +589,12 @@ try {
             $(document).on('click', '.edit-report', function() {
                 const btnData = $(this).data();
                 $('#edit_report_id').val(btnData.id);
-                $('#edit_rr_no').val(btnData.rr);
+                // Remove RR/PO prefix when showing in modal (for editing)
+                let rrVal = btnData.rr ? btnData.rr.replace(/^RR/, '') : '';
+                let poVal = btnData.po ? btnData.po.replace(/^PO/, '') : '';
+                $('#edit_rr_no').val(rrVal);
                 $('#edit_accountable_individual').val(btnData.individual);
-                $('#edit_po_no').val(btnData.po);
+                $('#edit_po_no').val(poVal);
                 $('#edit_ai_loc').val(btnData.location);
                 $('#edit_date_created').val(btnData.date_created.replace(' ', 'T').substring(0, 16));
                 editModal.show();
@@ -607,12 +631,41 @@ try {
             });
 
             // Add form
+            // Client-side validation and prefix for Add form
             $('#addReportForm').on('submit', function(e) {
+                let rrNo = $('#add_rr_no').val();
+                let poNo = $('#add_po_no').val();
+                let valid = true;
+                if (!/^\d+$/.test(rrNo)) {
+                    showToast('RR Number must contain numbers only.', 'error');
+                    valid = false;
+                }
+                if (!/^\d+$/.test(poNo)) {
+                    showToast('PO Number must contain numbers only.', 'error');
+                    valid = false;
+                }
+                if (!valid) {
+                    e.preventDefault();
+                    return false;
+                }
+                // Build data with prefixed RR/PO numbers
+                const formData = $(this).serializeArray();
+                let dataObj = {};
+                formData.forEach(function(item) {
+                    if (item.name === 'rr_no') {
+                        dataObj['rr_no'] = 'RR' + rrNo;
+                    } else if (item.name === 'po_no') {
+                        dataObj['po_no'] = 'PO' + poNo;
+                    } else {
+                        dataObj[item.name] = item.value;
+                    }
+                });
+
                 e.preventDefault();
                 $.ajax({
                     url: 'receiving_report.php',
                     method: 'POST',
-                    data: $(this).serialize(),
+                    data: dataObj,
                     dataType: 'json',
                     success(response) {
                         if (response.status === 'success') {
@@ -631,12 +684,41 @@ try {
             });
 
             // Edit form
+            // Client-side validation and prefix for Edit form
             $('#editReportForm').on('submit', function(e) {
+                let rrNo = $('#edit_rr_no').val();
+                let poNo = $('#edit_po_no').val();
+                let valid = true;
+                if (!/^\d+$/.test(rrNo)) {
+                    showToast('RR Number must contain numbers only.', 'error');
+                    valid = false;
+                }
+                if (!/^\d+$/.test(poNo)) {
+                    showToast('PO Number must contain numbers only.', 'error');
+                    valid = false;
+                }
+                if (!valid) {
+                    e.preventDefault();
+                    return false;
+                }
+                // Build data with prefixed RR/PO numbers
+                const formData = $(this).serializeArray();
+                let dataObj = {};
+                formData.forEach(function(item) {
+                    if (item.name === 'rr_no') {
+                        dataObj['rr_no'] = 'RR' + rrNo;
+                    } else if (item.name === 'po_no') {
+                        dataObj['po_no'] = 'PO' + poNo;
+                    } else {
+                        dataObj[item.name] = item.value;
+                    }
+                });
+
                 e.preventDefault();
                 $.ajax({
                     url: 'receiving_report.php',
                     method: 'POST',
-                    data: $(this).serialize(),
+                    data: dataObj,
                     dataType: 'json',
                     success(response) {
                         if (response.status === 'success') {
@@ -654,6 +736,31 @@ try {
                 });
             });
         });
+        // Block non-numeric input for RR and PO fields
+        function blockNonNumericInput(selector) {
+            $(document).on('keydown', selector, function(e) {
+                // Allow: backspace, delete, tab, escape, enter, arrows, home, end
+                if ($.inArray(e.keyCode, [46, 8, 9, 27, 13, 110, 190]) !== -1 ||
+                    // Allow: Ctrl/cmd+A
+                    (e.keyCode === 65 && (e.ctrlKey === true || e.metaKey === true)) ||
+                    // Allow: Ctrl/cmd+C
+                    (e.keyCode === 67 && (e.ctrlKey === true || e.metaKey === true)) ||
+                    // Allow: Ctrl/cmd+X
+                    (e.keyCode === 88 && (e.ctrlKey === true || e.metaKey === true)) ||
+                    // Allow: home, end, left, right
+                    (e.keyCode >= 35 && e.keyCode <= 39)) {
+                        return;
+                }
+                // Ensure that it is a number and stop the keypress
+                if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
+                    e.preventDefault();
+                }
+            });
+        }
+        blockNonNumericInput('#add_rr_no');
+        blockNonNumericInput('#add_po_no');
+        blockNonNumericInput('#edit_rr_no');
+        blockNonNumericInput('#edit_po_no');
     </script>
 
     <script src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js" defer></script>

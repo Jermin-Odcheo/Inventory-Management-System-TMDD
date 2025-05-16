@@ -19,7 +19,7 @@ final class RBACService
         SELECT
           m.module_name,
           p.priv_name
-        FROM user_roles ur
+        FROM user_department_roles ur
         JOIN roles r
           ON ur.role_id = r.id
          AND r.is_disabled = 0

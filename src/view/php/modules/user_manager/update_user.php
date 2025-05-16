@@ -1,7 +1,7 @@
 <?php
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
-require_once('../../clients/admins/RBACService.php');
+// RBACService.php is already required in config.php - no need to include it again
 
 ob_start();
 
@@ -22,13 +22,59 @@ try {
 
     $userId    = filter_var($_POST['user_id'], FILTER_VALIDATE_INT);
     $email     = filter_var($_POST['email'], FILTER_VALIDATE_EMAIL);
+    $username  = trim($_POST['username'] ?? '');
     $firstName = trim($_POST['first_name']);
     $lastName  = trim($_POST['last_name']);
     $departments = isset($_POST['departments']) && is_array($_POST['departments']) ? $_POST['departments'] : [];
+    $roles = isset($_POST['roles']) && is_array($_POST['roles']) ? $_POST['roles'] : [];
     $password  = $_POST['password'] ?? '';
     
     if (!$userId || !$email || !$firstName || !$lastName) {
         throw new Exception('Invalid input data');
+    }
+
+    // Get the current user data to check for changes
+    $currentUserStmt = $pdo->prepare("
+        SELECT email, username, first_name, last_name
+        FROM users
+        WHERE id = ?
+    ");
+    $currentUserStmt->execute([$userId]);
+    $currentUser = $currentUserStmt->fetch(PDO::FETCH_ASSOC);
+    
+    // Get current department assignments
+    $currentDeptsStmt = $pdo->prepare("
+        SELECT department_id
+        FROM user_department_roles
+        WHERE user_id = ?
+    ");
+    $currentDeptsStmt->execute([$userId]);
+    $currentDepartments = $currentDeptsStmt->fetchAll(PDO::FETCH_COLUMN);
+    
+    // Sort arrays for comparison
+    sort($currentDepartments);
+    $deptIdsToCompare = array_map('intval', $departments);
+    sort($deptIdsToCompare);
+    
+    // Check if any data has changed
+    $hasChanges = false;
+    
+    if ($currentUser['email'] !== $email || 
+        $currentUser['username'] !== $username || 
+        $currentUser['first_name'] !== $firstName || 
+        $currentUser['last_name'] !== $lastName || 
+        !empty($password) ||
+        $currentDepartments !== $deptIdsToCompare) {
+        $hasChanges = true;
+    }
+    
+    // If no changes, return an error
+    if (!$hasChanges) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'No changes detected to save'
+        ]);
+        exit();
     }
 
     // Validate departments
@@ -46,6 +92,28 @@ try {
             }
         }
     }
+    
+    // If no valid departments, throw an error (departments are required)
+    if (empty($validDepartments)) {
+        throw new Exception('At least one valid department is required');
+    }
+    
+    // Validate roles (now optional)
+    $validRoles = [];
+    if (!empty($roles)) {
+        foreach ($roles as $roleId) {
+            $roleId = filter_var($roleId, FILTER_VALIDATE_INT);
+            if ($roleId) {
+                // Verify role exists
+                $stmt = $pdo->prepare("SELECT COUNT(*) FROM roles WHERE id = ? AND is_disabled = 0");
+                $stmt->execute([$roleId]);
+                if ($stmt->fetchColumn() > 0) {
+                    $validRoles[] = $roleId;
+                }
+            }
+        }
+    }
+    // Roles are now optional - removed default role assignment
 
     // Hash the password only if provided
     $hashedPassword = !empty($password) ? password_hash($password, PASSWORD_DEFAULT) : '';
@@ -107,6 +175,7 @@ try {
     $updateUserStmt = $pdo->prepare("
         UPDATE users 
         SET email = ?, 
+            username = ?,
             first_name = ?, 
             last_name = ?, 
             status = ?
@@ -114,6 +183,7 @@ try {
     ");
     $updateUserStmt->execute([
         $email,
+        $username,
         $firstName,
         $lastName,
         'active', // Adjust based on your status logic
@@ -130,15 +200,23 @@ try {
         $updatePasswordStmt->execute([$hashedPassword, $userId]);
     }
     
-    // Update departments (remove all existing and add new ones)
-    $deleteDepartmentsStmt = $pdo->prepare("DELETE FROM user_departments WHERE user_id = ?");
+    // Update departments and roles (remove all existing and add new ones)
+    $deleteDepartmentsStmt = $pdo->prepare("DELETE FROM user_department_roles WHERE user_id = ?");
     $deleteDepartmentsStmt->execute([$userId]);
     
-    // Add new departments
+    // Add new department-role associations
     if (!empty($validDepartments)) {
-        $insertDepartmentStmt = $pdo->prepare("INSERT INTO user_departments (user_id, department_id) VALUES (?, ?)");
+        $insertStmt = $pdo->prepare("INSERT INTO user_department_roles (user_id, department_id, role_id) VALUES (?, ?, ?)");
+        
         foreach ($validDepartments as $deptId) {
-            $insertDepartmentStmt->execute([$userId, $deptId]);
+            if (!empty($validRoles)) {
+                foreach ($validRoles as $roleId) {
+                    $insertStmt->execute([$userId, $deptId, $roleId]);
+                }
+            } else {
+                // No roles provided, assign department with null role
+                $insertStmt->execute([$userId, $deptId, null]);
+            }
         }
     }
     
@@ -155,7 +233,29 @@ try {
         )
         VALUES (?, ?, 'modified', ?, 'User Management', 'Success', NOW())
     ");
-    $details = "Updated user information: " . $email;
+    
+    // Generate details of what changed
+    $changes = [];
+    if ($currentUser['email'] !== $email) {
+        $changes[] = "email: {$currentUser['email']} → {$email}";
+    }
+    if ($currentUser['username'] !== $username) {
+        $changes[] = "username: {$currentUser['username']} → {$username}";
+    }
+    if ($currentUser['first_name'] !== $firstName) {
+        $changes[] = "first name: {$currentUser['first_name']} → {$firstName}";
+    }
+    if ($currentUser['last_name'] !== $lastName) {
+        $changes[] = "last name: {$currentUser['last_name']} → {$lastName}";
+    }
+    if (!empty($password)) {
+        $changes[] = "password updated";
+    }
+    if ($currentDepartments !== $deptIdsToCompare) {
+        $changes[] = "department assignments updated";
+    }
+    
+    $details = "Updated user information: " . implode(", ", $changes);
     $auditStmt->execute([
         $_SESSION['user_id'],
         $userId,

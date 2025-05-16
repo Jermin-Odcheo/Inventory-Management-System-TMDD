@@ -70,16 +70,7 @@ body {
     cursor: pointer;
 }
 
-.btn-primary {
-    background: var(--accent-color);
-    color: white;
-    border: none;
-}
-
-.btn-primary:hover {
-    background: darken(var(--accent-color), 10%);
-}
-
+ 
 .form-select, .search-input input {
 
     border-radius: var(--radius);
@@ -108,11 +99,7 @@ body {
     text-align: left;
     border-bottom: 1px solid #eee;
 }
-
-.table th {
  
-}
-
 .table tbody tr:hover {
     background-color: #f1f4f8;
 }

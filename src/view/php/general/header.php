@@ -5,8 +5,23 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: " . BASE_URL . "public/index.php"); // Redirect to login page
     exit();
 }
+
+$user_id = $_SESSION['user_id'] ?? null;
+if ($user_id !== null) {
+    $stmt = $pdo->prepare("SELECT profile_pic_path FROM users WHERE id = ?");
+    $stmt->execute([$user_id]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    print("hello " . $user['profile_pic_path']);
+} else {
+    die("User not logged in."); // or redirect
+}
+
 $role = isset($_SESSION["role"]) ? $_SESSION["role"] : "";
 $email = $_SESSION['email'];
+
+$user_id = $_SESSION['user_id'] ?? null;
+
+ 
 ?>
 
 <!DOCTYPE html>
@@ -446,10 +461,17 @@ $email = $_SESSION['email'];
     <div class="header-widgets">
         <div class="user-profile" onclick="toggleDropdown()">
             <div class="profile-picture-container">
-                <img src="../../../../../public/assets/img/profile.jpg" alt="User Profile" class="profile-picture">
+                <img 
+                    src="<?php echo !empty($user['profile_pic_path']) 
+                        ? '../../../../../public/' . htmlspecialchars($user['profile_pic_path']) 
+                        : '../../../../../public/assets/img/default_profile.jpg'; ?>" 
+                    alt=s"User Profile" 
+                    class="profile-picture"
+                >
                 <!-- Small drop-down indicator inside the profile photo -->
                 <span class="dropdown-indicator"><i class="fas fa-caret-down"></i></span>
             </div>
+
             <div class="user-info">
                 <!--TO CHANGE FOR USERNAME-->
                 <div class="user-name"><?php echo $email; ?></div>

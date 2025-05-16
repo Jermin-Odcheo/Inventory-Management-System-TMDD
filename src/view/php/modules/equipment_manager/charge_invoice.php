@@ -71,8 +71,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $date_of_purchase = trim($_POST['date_of_purchase'] ?? '');
     $po_no = trim($_POST['po_no'] ?? '');
 
-    if (empty($invoice_no) || empty($date_of_purchase)) {
-        $_SESSION['errors'] = ["Please fill in all required fields."];
+    // Enforce CI prefix before validation
+    if ($invoice_no !== '' && strpos($invoice_no, 'CI') !== 0) {
+        $invoice_no = 'CI' . $invoice_no;
+    }
+    // Enforce PO prefix before validation
+    if ($po_no !== '' && strpos($po_no, 'PO') !== 0) {
+        $po_no = 'PO' . $po_no;
+    }
+
+    // Validate required fields and format
+    $fieldError = false;
+    if (empty($invoice_no) || empty($date_of_purchase) || empty($po_no)) {
+        $fieldError = 'Please fill in all required fields.';
+    } elseif (!preg_match('/^CI\d+$/', $invoice_no)) {
+        $fieldError = 'Invoice Number must be in the format CI followed by numbers (e.g., CI123).';
+    } elseif (!preg_match('/^PO\d+$/', $po_no)) {
+        $fieldError = 'PO Number must be in the format PO followed by numbers (e.g., PO123).';
+    }
+    if ($fieldError) {
+        $_SESSION['errors'] = [$fieldError];
         if (is_ajax_request()) {
             header('Content-Type: application/json');
             echo json_encode(['status' => 'error', 'message' => $_SESSION['errors'][0]]);
@@ -496,7 +514,7 @@ try {
                             <div class="mb-3">
                                 <label for="invoice_no" class="form-label">Invoice Number <span
                                         class="text-danger">*</span></label>
-                                <input type="text" class="form-control" name="invoice_no" required>
+                                <input type="number" class="form-control" name="invoice_no" min="0" step="1" required pattern="\d*" inputmode="numeric">
                             </div>
                             <div class="mb-3">
                                 <label for="date_of_purchase" class="form-label">Date of Purchase <span
@@ -505,7 +523,7 @@ try {
                             </div>
                             <div class="mb-3">
                                 <label for="po_no" class="form-label">Purchase Order Number</label>
-                                <input type="text" class="form-control" name="po_no" required>
+                                <input type="number" class="form-control" name="po_no" min="0" step="1" required pattern="\d*" inputmode="numeric">
                             </div>
                             <div class="text-end">
                                 <button type="button" class="btn btn-secondary" style="margin-right: 4px;"
@@ -535,8 +553,7 @@ try {
                             <div class="mb-3">
                                 <label for="edit_invoice_no" class="form-label">Invoice Number <span
                                         class="text-danger">*</span></label>
-                                <input type="text" class="form-control" name="invoice_no" id="edit_invoice_no"
-                                    required>
+                                <input type="number" class="form-control" name="invoice_no" id="edit_invoice_no" min="0" step="1" required pattern="\d*" inputmode="numeric">
                             </div>
                             <div class="mb-3">
                                 <label for="edit_date_of_purchase" class="form-label">Date of Purchase <span
@@ -547,7 +564,7 @@ try {
                             <div class="mb-3">
                                 <label for="edit_po_no" class="form-label">Purchase Order Number <span
                                         class="text-danger">*</span></label>
-                                <input type="text" class="form-control" name="po_no" id="edit_po_no" required>
+                                <input type="number" class="form-control" name="po_no" id="edit_po_no" min="0" step="1" required pattern="\d*" inputmode="numeric">
                             </div>
                             <div class="mb-3">
                                 <button type="submit" class="btn btn-primary">Save Changes</button>
@@ -564,6 +581,38 @@ try {
         var deleteInvoiceId = null;
 
         $(document).ready(function() {
+            // Always clean up modal backdrop and body class after modal is hidden
+            $('#addInvoiceModal').on('hidden.bs.modal', function () {
+                $('.modal-backdrop').remove();
+                $('body').removeClass('modal-open').css('overflow', '');
+                $('body').css('padding-right', '');
+            });
+            // Restrict Invoice Number and PO Number fields to numbers only (block e, +, -, . and paste)
+            $(document).on('keydown', 'input[name="invoice_no"], #edit_invoice_no, input[name="po_no"], #edit_po_no', function(e) {
+                // Allow: backspace, delete, tab, escape, enter, arrows
+                if ($.inArray(e.keyCode, [46, 8, 9, 27, 13, 110, 190]) !== -1 ||
+                    // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+                    ((e.keyCode == 65 || e.keyCode == 67 || e.keyCode == 86 || e.keyCode == 88) && (e.ctrlKey === true || e.metaKey === true)) ||
+                    // Allow: home, end, left, right, down, up
+                    (e.keyCode >= 35 && e.keyCode <= 40)) {
+                        return;
+                }
+                // Block: e, +, -, .
+                if ([69, 187, 189, 190].includes(e.keyCode)) {
+                    e.preventDefault();
+                }
+                // Ensure only numbers
+                if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
+                    e.preventDefault();
+                }
+            });
+            // Block paste of non-numeric
+            $(document).on('paste', 'input[name="invoice_no"], #edit_invoice_no, input[name="po_no"], #edit_po_no', function(e) {
+                var pasted = (e.originalEvent || e).clipboardData.getData('text');
+                if (!/^\d+$/.test(pasted)) {
+                    e.preventDefault();
+                }
+            });
             // Search filter for invoices
             $('#searchInvoice').on('input', function() {
                 var searchText = $(this).val().toLowerCase();
@@ -626,11 +675,31 @@ try {
 
             // Add Invoice AJAX submission
             $('#addInvoiceForm').on('submit', function(e) {
+                let invoiceNo = $(this).find('input[name="invoice_no"]').val();
+                let valid = true;
+                if (!/^\d+$/.test(invoiceNo)) {
+                    showToast('Invoice Number must contain numbers only.', 'error');
+                    valid = false;
+                }
+                if (!valid) {
+                    e.preventDefault();
+                    return false;
+                }
+                // Build data with prefixed invoice number
+                const formData = $(this).serializeArray();
+                let dataObj = {};
+                formData.forEach(function(item) {
+                    if (item.name === 'invoice_no') {
+                        dataObj['invoice_no'] = 'CI' + invoiceNo;
+                    } else {
+                        dataObj[item.name] = item.value;
+                    }
+                });
                 e.preventDefault();
                 $.ajax({
                     url: 'charge_invoice.php',
                     method: 'POST',
-                    data: $(this).serialize(),
+                    data: dataObj,
                     dataType: 'json',
                     success: function(response) {
                         if (response.status === 'success') {
@@ -643,14 +712,8 @@ try {
                             if (addModal) {
                                 addModal.hide();
                             }
-
                             // Reset form fields to be blank when reopening the modal
                             $('#addInvoiceForm')[0].reset();
-
-                            // Ensure modal backdrop is removed and body class is reset after closing the modal
-                            $('.modal-backdrop').remove();
-                            $('body').removeClass('modal-open').css('overflow', '');
-                            $('body').css('padding-right', '');
                         } else {
                             showToast(response.message, 'error');
                         }
@@ -667,11 +730,31 @@ try {
 
             // Edit Invoice AJAX submission
             $('#editInvoiceForm').on('submit', function(e) {
+                let invoiceNo = $(this).find('input[name="invoice_no"]').val();
+                let valid = true;
+                if (!/^\d+$/.test(invoiceNo)) {
+                    showToast('Invoice Number must contain numbers only.', 'error');
+                    valid = false;
+                }
+                if (!valid) {
+                    e.preventDefault();
+                    return false;
+                }
+                // Build data with prefixed invoice number
+                const formData = $(this).serializeArray();
+                let dataObj = {};
+                formData.forEach(function(item) {
+                    if (item.name === 'invoice_no') {
+                        dataObj['invoice_no'] = 'CI' + invoiceNo;
+                    } else {
+                        dataObj[item.name] = item.value;
+                    }
+                });
                 e.preventDefault();
                 $.ajax({
                     url: 'charge_invoice.php',
                     method: 'POST',
-                    data: $(this).serialize(),
+                    data: dataObj,
                     dataType: 'json',
                     beforeSend: function() {
                         // Optionally add loading state

@@ -1,7 +1,6 @@
 <?php
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
-require_once('../../clients/admins/RBACService.php');
 
 // Debug mode
 error_reporting(E_ALL);
@@ -28,17 +27,36 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
+// Check if the RBACService class exists
+if (!class_exists('RBACService')) {
+    ob_clean();
+    echo json_encode([
+        'success' => false,
+        'message' => 'RBACService class not found. There may be an issue with your server configuration.'
+    ]);
+    exit();
+}
+
 // Initialize RBAC Service
-$rbac = new RBACService($pdo, $_SESSION['user_id']);
+try {
+    $rbac = new RBACService($pdo, $_SESSION['user_id']);
+} catch (Exception $e) {
+    ob_clean();
+    echo json_encode([
+        'success' => false, 
+        'message' => 'Error initializing RBAC service: ' . $e->getMessage()
+    ]);
+    exit();
+}
 
 try {
     // Debug incoming data
     debugLog("POST data:", $_POST);
     debugLog("Session user_id:", $_SESSION['user_id']);
 
-    // Check if user has delete permission
-    if (!$rbac->hasPrivilege('User Management', 'Delete')) {
-        throw new Exception("You don't have permission to delete users.");
+    // Check if user has remove permission
+    if (!$rbac->hasPrivilege('User Management', 'Remove')) {
+        throw new Exception("You don't have permission to remove users.");
     }
 
     $pdo->beginTransaction();

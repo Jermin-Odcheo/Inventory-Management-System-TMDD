@@ -2,6 +2,7 @@
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
 
+//@current_user_id is For audit logs
 $userId = $_SESSION['user_id'] ?? null;
 
 if (!$userId) {

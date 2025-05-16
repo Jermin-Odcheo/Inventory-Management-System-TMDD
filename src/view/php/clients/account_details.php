@@ -9,9 +9,17 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: " . BASE_URL . "public/index.php");
     exit();
 }
-
+print("Hello");
 $user_id = $_SESSION['user_id'];
 
+if ($user_id !== null) {
+    $stmt = $pdo->prepare("SELECT profile_pic_path FROM users WHERE id = ?");
+    $stmt->execute([$user_id]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    print("hello " . $user['profile_pic_path']);
+} else {
+    die("User not logged in."); // or redirect
+}
 // Fetch user details and role
 $sql = "
     SELECT u.email, u.username, u.first_name, u.last_name, r.role_name 
@@ -108,6 +116,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
         $error_message = "Failed to delete account. Please try again later.";
     }
 }
+
+//for profile pic uploading
+if (isset($_POST['update_profile_pic']) && isset($_FILES['profile_picture'])) {
+    $upload_dir = __DIR__ . '/../../../../public/assets/img/user_images/'; // adjust path as needed
+    $relative_dir = 'assets/img/user_images/';
+    $uploaded_file = $_FILES['profile_picture'];
+    
+    $allowed_types = ['jpg', 'jpeg', 'png', 'gif'];
+    $file_ext = strtolower(pathinfo($uploaded_file['name'], PATHINFO_EXTENSION));
+
+    if (in_array($file_ext, $allowed_types) && getimagesize($uploaded_file['tmp_name'])) {
+        // Delete old image if it's not default
+        if (!empty($user['profile_pic_path']) && file_exists(__DIR__ . '/../public/' . $user['profile_pic_path'])) {
+            unlink(__DIR__ . '/../public/' . $user['profile_pic_path']);
+        }
+
+        // Create new filename (e.g., user_123.jpg)
+        $new_filename = 'user_' . $user_id . '.' . $file_ext;
+
+        $target_file = $upload_dir . $new_filename;
+        $relative_path = $relative_dir . $new_filename;
+
+        if (move_uploaded_file($uploaded_file['tmp_name'], $target_file)) {
+            // Update the user's profile_pic_path in DB
+            $stmt = $pdo->prepare("UPDATE users SET profile_pic_path = ? WHERE id = ?");
+            print("the id is : " . $user_id);
+            $stmt->execute([$relative_path, $user_id]);
+
+            // Update in session or $user array if needed
+            $user['profile_pic_path'] = $relative_path;
+            $success_message = "Profile picture updated successfully.";
+        } else {
+            $error_message = "Failed to upload the image.";
+        }
+    } else {
+        $error_message = "Invalid image file.";
+    }
+}
+
+if ($user_id !== null) {
+    $stmt = $pdo->prepare("SELECT profile_pic_path FROM users WHERE id = ?");
+    $stmt->execute([$user_id]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    print($user['profile_pic_path']);
+} else {
+    die("User not logged in."); // or redirect
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -155,7 +211,7 @@ html::-webkit-scrollbar {
             box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
             padding: 25px;
             width: 88%;
-            max-width: 1400px;
+            max-width: 1000px;
             margin: 80px auto 15px auto;
         }
         
@@ -413,6 +469,7 @@ html::-webkit-scrollbar {
 <body>
 <?php include '../general/sidebar.php'; ?>
 <div class="main-content">
+<div style="max-height: 100vh; overflow-y: auto;">
     <div class="container">
         <h2>Account Details</h2>
         
@@ -457,6 +514,8 @@ html::-webkit-scrollbar {
                     </div>
                 </form>
             </div>
+
+            
             
             <div class="form-section">
                 <h3>Change Password</h3>
@@ -514,6 +573,32 @@ html::-webkit-scrollbar {
             </div>
         </div>
         
+        <div class="form-section">
+            <h3>Profile Picture</h3>
+            <form method="POST" enctype="multipart/form-data" id="profile-pic-form">
+                <div class="form-group">
+                    <?php if (!empty($user['profile_pic_path'])): ?>
+                        <div class="current-pic">
+                            <p>Current Picture:</p>
+                            <img 
+                                src="<?php echo !empty($user['profile_pic_path']) 
+                                    ? '/public/' . htmlspecialchars($user['profile_pic_path']) 
+                                    : '/public/assets/img/default_profile.jpg'; ?>" 
+                                style="max-width: 150px; height: auto;"
+                            >
+                        </div>
+                    <?php endif; ?>
+                    <label for="profile_picture">Upload New Picture</label>
+                    <input type="file" id="profile_picture" name="profile_picture" accept="image/*" required>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" onclick="document.getElementById('profile-pic-form').reset()">Cancel</button>
+                    <button type="submit" name="update_profile_pic" class="btn-primary">Update Picture</button>
+                </div>
+            </form>
+        </div>
+
         <div class="danger-zone">
     <h3>Danger Zone</h3>
     <p>Permanently delete your account and all associated data. This action cannot be undone.</p>
@@ -521,6 +606,7 @@ html::-webkit-scrollbar {
         Delete My Account
     </button>
 </div>
+    </div>
     </div>
 </div>
 
