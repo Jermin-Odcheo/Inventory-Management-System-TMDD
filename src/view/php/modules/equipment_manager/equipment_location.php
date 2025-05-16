@@ -375,13 +375,13 @@ function safeHtml($value)
                                 <?php foreach ($equipmentLocations as $index => $loc): ?>
                                     <tr>
                                         <td><?= $index + 1 ?></td>
-                                        <td><?= htmlspecialchars($loc['asset_tag']) ?></td>
-                                        <td><?= htmlspecialchars($loc['building_loc']) ?></td>
-                                        <td><?= htmlspecialchars($loc['floor_no']) ?></td>
-                                        <td><?= htmlspecialchars($loc['specific_area']) ?></td>
-                                        <td><?= htmlspecialchars($loc['person_responsible']) ?></td>
-                                        <td><?= htmlspecialchars($loc['department_name']) ?></td>
-                                        <td><?= htmlspecialchars($loc['remarks']) ?></td>
+                                        <td><?= htmlspecialchars($loc['asset_tag'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($loc['building_loc'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($loc['floor_no'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($loc['specific_area'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($loc['person_responsible'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($loc['department_name'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($loc['remarks'] ?? '') ?></td>
                                         <td><?= date('Y-m-d H:i', strtotime($loc['date_created'])) ?></td>
                                         <td>
                                             <?php if ($canModify): ?>
@@ -389,13 +389,13 @@ function safeHtml($value)
                                                     data-bs-toggle="modal"
                                                     data-bs-target="#editLocationModal"
                                                     data-id="<?= $loc['equipment_location_id'] ?>"
-                                                    data-asset="<?= htmlspecialchars($loc['asset_tag']) ?>"
-                                                    data-building="<?= htmlspecialchars($loc['building_loc']) ?>"
-                                                    data-floor="<?= htmlspecialchars($loc['floor_no']) ?>"
-                                                    data-area="<?= htmlspecialchars($loc['specific_area']) ?>"
-                                                    data-person="<?= htmlspecialchars($loc['person_responsible']) ?>"
-                                                    data-department="<?= htmlspecialchars($loc['department_id']) ?>"
-                                                    data-remarks="<?= htmlspecialchars($loc['remarks']) ?>">
+                                                    data-asset="<?= htmlspecialchars($loc['asset_tag'] ?? '') ?>"
+                                                    data-building="<?= htmlspecialchars($loc['building_loc'] ?? '') ?>"
+                                                    data-floor="<?= htmlspecialchars($loc['floor_no'] ?? '') ?>"
+                                                    data-area="<?= htmlspecialchars($loc['specific_area'] ?? '') ?>"
+                                                    data-person="<?= htmlspecialchars($loc['person_responsible'] ?? '') ?>"
+                                                    data-department="<?= htmlspecialchars($loc['department_id'] ?? '') ?>"
+                                                    data-remarks="<?= htmlspecialchars($loc['remarks'] ?? '') ?>">
                                                     <i class="bi bi-pencil"></i>
                                                 </button>
                                             <?php endif; ?>

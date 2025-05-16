@@ -9,7 +9,7 @@ include '../../general/header.php';
 // -------------------------
 $userId = $_SESSION['user_id'] ?? null;
 if (!is_int($userId) && !ctype_digit((string)$userId)) {
-    header("Location: /public/index.php");
+    header("Location: index.php");
     exit();
 }
 $userId = (int)$userId;

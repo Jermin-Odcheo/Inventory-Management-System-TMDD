@@ -104,6 +104,7 @@ SELECT
   u.last_name,
   u.status AS Status,
   u.is_disabled,
+  u.profile_pic_path,
   GROUP_CONCAT(DISTINCT d.department_name ORDER BY d.department_name) AS departments,
   GROUP_CONCAT(DISTINCT r.role_name ORDER BY r.role_name) AS roles
 FROM users u
@@ -251,8 +252,12 @@ try {
                             </a>
                         </th>
                         <th>
+                            <a>Profile Picture</a>
+                        </th>
+
+                        <th>
                             <a href="?sort=First_Name&dir=<?php echo toggleDirection($sortBy, $sortDir, 'First_Name'); ?>">
-                                Name<?php echo sortIcon($sortBy, 'First_Name', $sortDir); ?>
+                                Username<?php echo sortIcon($sortBy, 'First_Name', $sortDir); ?>
                             </a>
                         </th>
                         <th>
@@ -283,7 +288,17 @@ try {
                                 </td>
                                 <td><?= htmlspecialchars((string)$u['id'], ENT_QUOTES, 'UTF-8'); ?></td>
                                 <td><?= htmlspecialchars($u['email'], ENT_QUOTES, 'UTF-8'); ?></td>
-                                <td><?= htmlspecialchars("{$u['first_name']} {$u['last_name']}", ENT_QUOTES, 'UTF-8'); ?></td>
+                                <td>
+                                    <img 
+                                        src="<?= !empty($u['profile_pic_path']) 
+                                            ? '../../../../../public/' . htmlspecialchars($u['profile_pic_path'], ENT_QUOTES, 'UTF-8') 
+                                            : '../../../../../public/assets/img/default_profile.jpg'; ?>" 
+                                        alt="Profile Picture"
+                                        class="profile-picture"
+                                        style="width: 40px; height: 40px; object-fit: cover; border-radius: 50%;">
+                                </td>
+
+                                <td><?= htmlspecialchars($u['username'], ENT_QUOTES, 'UTF-8'); ?></td>
                                 <td>
                                     <?php
                                     $depts = getUserDepartments($pdo, (int)$u['id']);
