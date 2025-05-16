@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: May 16, 2025 at 01:58 AM
+-- Generation Time: May 15, 2025 at 03:25 AM
 -- Server version: 9.1.0
--- PHP Version: 8.3.14
+-- PHP Version: 8.2.13
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -160,7 +160,7 @@ CREATE TABLE IF NOT EXISTS `audit_log` (
   `Status` varchar(50) DEFAULT NULL,
   `Date_Time` datetime NOT NULL,
   PRIMARY KEY (`TrackID`)
-) ENGINE=MyISAM AUTO_INCREMENT=566 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=593 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `audit_log`
@@ -507,7 +507,34 @@ INSERT INTO `audit_log` (`TrackID`, `UserID`, `EntityID`, `Action`, `Details`, `
 (562, 1, 3, 'modified', 'Updated user information: em@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-13 22:14:19'),
 (563, 1, 3, 'modified', 'Updated user information: em@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-13 22:14:24'),
 (564, 1, 3, 'modified', 'Updated user information: em@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-13 22:14:32'),
-(565, 1, 4, 'Restored', 'User has been restored', '{\"id\": 4, \"email\": \"rp@example.com\", \"status\": \"\", \"username\": \"rpman\", \"last_name\": \"manager\", \"first_name\": \"ropriv\", \"is_disabled\": 1, \"date_created\": \"2025-02-19 13:41:59.000000\"}', '', 'User Management', 'Successful', '2025-05-15 10:26:55');
+(565, 1, 3, 'modified', 'Updated user information: em@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-15 09:02:40'),
+(566, 1, 135, 'Create', 'New user added: ttest', NULL, '{\"id\": 135, \"email\": \"tester1233321@gmail.com\", \"status\": \"Offline\", \"username\": \"ttest\", \"last_name\": \"test\", \"department\": \"Unknown\", \"first_name\": \"test\", \"date_created\": \"2025-05-15 09:03:25.000000\"}', 'User Management', 'Successful', '2025-05-15 09:03:25'),
+(567, 1, 135, 'modified', 'Updated user information: tester1233321@gmail.com', NULL, NULL, 'User Management', 'Success', '2025-05-15 09:07:41'),
+(568, 1, 135, 'modified', 'Updated user information: tester1233321@gmail.com', NULL, NULL, 'User Management', 'Success', '2025-05-15 09:11:11'),
+(569, 1, 135, 'modified', 'Updated user information: tester1233321@gmail.com', NULL, NULL, 'User Management', 'Success', '2025-05-15 09:11:20'),
+(570, 1, 135, 'modified', 'Updated user information: tester1233321@gmail.com', NULL, NULL, 'User Management', 'Success', '2025-05-15 09:14:53'),
+(571, 1, 135, 'modified', 'Updated user information: tester1233321@gmail.com', NULL, NULL, 'User Management', 'Success', '2025-05-15 09:15:01'),
+(572, 1, 135, 'modified', 'Updated user information: tester1233321@gmail.com', NULL, NULL, 'User Management', 'Success', '2025-05-15 09:19:22'),
+(573, 1, 135, 'modified', 'Updated user information: tester1233321@gmail.com', NULL, NULL, 'User Management', 'Success', '2025-05-15 09:19:34'),
+(574, 1, 135, 'modified', 'Updated user information: tester1233321@gmail.com', NULL, NULL, 'User Management', 'Success', '2025-05-15 09:19:47'),
+(575, 1, 3, 'modified', 'Updated user information: em@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-15 09:20:07'),
+(576, 1, 3, 'modified', 'Updated user information: em@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-15 09:30:10'),
+(577, 1, 135, 'modified', 'Updated user information: tester1233321@gmail.com', NULL, NULL, 'User Management', 'Success', '2025-05-15 09:30:19'),
+(578, 1, 46, 'Remove', 'Department \'57877\' has been moved to archive', '{\"id\":46,\"abbreviation\":\"9876\",\"department_name\":\"57877\"}', '{\"id\":46,\"abbreviation\":\"9876\",\"department_name\":\"57877\"}', 'Department Management', 'Successful', '2025-05-15 09:36:45'),
+(579, 1, 46, 'Restored', 'Department \'57877\' has been restored', '{\"id\":46,\"abbreviation\":\"9876\",\"department_name\":\"57877\"}', '{\"id\":46,\"abbreviation\":\"9876\",\"department_name\":\"57877\"}', 'Department Management', 'Successful', '2025-05-15 09:48:04'),
+(580, 1, 4, 'Restored', 'User has been restored', '{\"id\": 4, \"email\": \"rp@example.com\", \"status\": \"\", \"username\": \"rpman\", \"last_name\": \"manager\", \"first_name\": \"ropriv\", \"is_disabled\": 1, \"date_created\": \"2025-02-19 13:41:59.000000\"}', '', 'User Management', 'Successful', '2025-05-15 09:48:30'),
+(581, 1, 4, 'modified', 'Updated user information: rp@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-15 09:48:40'),
+(582, 1, 46, 'Remove', 'Department \'57877\' has been moved to archive', '{\"id\":46,\"abbreviation\":\"9876\",\"department_name\":\"57877\"}', '{\"id\":46,\"abbreviation\":\"9876\",\"department_name\":\"57877\"}', 'Department Management', 'Successful', '2025-05-15 09:48:54'),
+(583, 1, 46, 'Restored', 'Department \'57877\' has been restored', '{\"id\":46,\"abbreviation\":\"9876\",\"department_name\":\"57877\"}', '{\"id\":46,\"abbreviation\":\"9876\",\"department_name\":\"57877\"}', 'Department Management', 'Successful', '2025-05-15 09:55:48'),
+(584, 1, 46, 'Remove', 'Department \'57877\' has been moved to archive', '{\"id\":46,\"abbreviation\":\"9876\",\"department_name\":\"57877\"}', '{\"id\":46,\"abbreviation\":\"9876\",\"department_name\":\"57877\"}', 'Department Management', 'Successful', '2025-05-15 09:56:14'),
+(585, 1, 46, 'Restored', 'Department \'57877\' has been restored', '{\"id\":46,\"abbreviation\":\"9876\",\"department_name\":\"57877\"}', '{\"id\":46,\"abbreviation\":\"9876\",\"department_name\":\"57877\"}', 'Department Management', 'Successful', '2025-05-15 09:56:25'),
+(586, 1, 32, 'Remove', 'Role \'testsetes\' has been archived', '{\n    \"role_id\": 32,\n    \"role_name\": \"testsetes\",\n    \"modules_and_privileges\": []\n}', '{\"id\":32,\"role_name\":\"testsetes\",\"is_disabled\":1}', 'Roles and Privileges', 'Successful', '2025-05-15 10:17:35'),
+(587, 1, 2, 'modified', 'Updated user information: um@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-15 10:27:53'),
+(588, 1, 2, 'modified', 'Updated user information: um@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-15 10:28:20'),
+(589, 1, 3, 'Remove', 'Role \'Equipment Manager\' has been archived', '{\n    \"role_id\": 3,\n    \"role_name\": \"Equipment Manager\",\n    \"modules_and_privileges\": []\n}', '{\"id\":3,\"role_name\":\"Equipment Manager\",\"is_disabled\":1}', 'Roles and Privileges', 'Successful', '2025-05-15 10:30:36'),
+(590, 1, 3, 'Restore', 'Role \'Equipment Manager\' has been restored', '{\"role_id\":3,\"role_name\":\"Equipment Manager\",\"modules_and_privileges\":[]}', '{\"role_id\":3,\"role_name\":\"Equipment Manager\",\"modules_and_privileges\":[]}', 'Roles and Privileges', 'Successful', '2025-05-15 10:30:50'),
+(591, 1, 2, 'modified', 'Updated user information: um@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-15 10:54:10'),
+(592, 1, 3, 'modified', 'Updated user information: em@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-15 10:55:05');
 
 -- --------------------------------------------------------
 
@@ -562,7 +589,7 @@ INSERT INTO `departments` (`id`, `department_name`, `abbreviation`, `is_disabled
 (3, 'Office of the Internal Auditor', 'OIA', 0),
 (4, 'Office of the Vice President for Mission and Identity', 'OVPMI', 0),
 (5, 'Center for Campus Ministry', 'CCM', 0),
-(6, 'Community Extension and Outreach Programs Office', 'CEOP', 1),
+(6, 'Community Extension and Outreach Programs Office', 'CEOP', 0),
 (7, 'St. Aloysius Gonzaga Parish Office', 'SAGPO', 1),
 (8, 'Sunflower Child and Youth Wellness Center', 'SCYWC', 1),
 (9, 'Office of the Vice President for Academic Affairs', 'OVPAA', 1),
@@ -629,8 +656,8 @@ CREATE TABLE IF NOT EXISTS `equipment_details` (
 -- Dumping data for table `equipment_details`
 --
 
-INSERT INTO `equipment_details` (`id`, `asset_tag`, `asset_description_1`, `asset_description_2`, `specifications`, `brand`, `model`, `serial_number`, `date_acquired`, `invoice_no`, `rr_no`, `location`, `accountable_individual`, `remarks`, `date_created`, `is_disabled`, `date_modified`) VALUES
-(5, '5556233', '1231', '1123', '3123', '332123', '31233', '123123', '2025-05-15 02:23:26', NULL, '3123141', '2312312', '1235123', '1231231', '2025-03-17 15:31:00', 1, '2025-05-15 02:23:26');
+INSERT INTO `equipment_details` (`id`, `asset_tag`, `asset_description_1`, `asset_description_2`, `specifications`, `brand`, `model`, `serial_number`, `invoice_no`, `rr_no`, `location`, `accountable_individual`, `remarks`, `date_created`, `is_disabled`) VALUES
+(5, '5556233', '1231', '1123', '3123', '332123', '31233', '123123', NULL, '3123141', '2312312', '1235123', '1231231', '2025-03-17 15:31:00', 1);
 
 -- --------------------------------------------------------
 
@@ -821,7 +848,7 @@ INSERT INTO `roles` (`id`, `role_name`, `is_disabled`) VALUES
 (4, 'User Manager', 0),
 (5, 'RP Manager', 0),
 (6, 'Auditor', 0),
-(32, 'testsetes', 0);
+(32, 'testsetes', 1);
 
 -- --------------------------------------------------------
 
@@ -844,7 +871,7 @@ CREATE TABLE IF NOT EXISTS `role_changes` (
   PRIMARY KEY (`ChangeID`),
   KEY `UserID` (`UserID`),
   KEY `RoleID` (`RoleID`)
-) ENGINE=MyISAM AUTO_INCREMENT=279 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=282 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `role_changes`
@@ -1073,7 +1100,10 @@ INSERT INTO `role_changes` (`ChangeID`, `UserID`, `RoleID`, `Action`, `OldRoleNa
 (230, 1, 26, 'Modified', 'test', 'test', '2025-03-13 09:44:23', '[]', '[]', 0),
 (276, 1, 1, 'Modified', 'TMDD-Dev', 'TMDD-Dev', '2025-05-09 14:28:34', '[\"1|1\",\"4|3\",\"4|11\",\"4|10\",\"4|2\",\"4|5\",\"4|6\",\"4|12\",\"4|4\",\"4|8\",\"4|1\",\"4|9\",\"4|7\",\"2|3\",\"2|11\",\"2|10\",\"2|2\",\"2|5\",\"2|6\",\"2|12\",\"2|4\",\"2|8\",\"2|1\",\"2|9\",\"2|7\",\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\"]', '[\"2|3\",\"2|11\",\"2|10\",\"2|2\",\"2|5\",\"2|6\",\"2|12\",\"2|4\",\"2|8\",\"2|1\",\"2|9\",\"2|7\",\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\",\"4|3\",\"4|11\",\"4|10\",\"4|2\",\"4|5\",\"4|6\",\"4|12\",\"4|4\",\"4|8\",\"4|1\",\"4|9\",\"4|7\"]', 0),
 (277, 1, 1, 'Modified', 'TMDD-Dev', 'TMDD-Dev', '2025-05-09 14:28:39', '[\"4|3\",\"4|11\",\"4|10\",\"4|2\",\"4|5\",\"4|6\",\"4|12\",\"4|4\",\"4|8\",\"4|1\",\"4|9\",\"4|7\",\"2|3\",\"2|11\",\"2|10\",\"2|2\",\"2|5\",\"2|6\",\"2|12\",\"2|4\",\"2|8\",\"2|1\",\"2|9\",\"2|7\",\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\"]', '[\"1|7\",\"2|3\",\"2|11\",\"2|10\",\"2|2\",\"2|5\",\"2|6\",\"2|12\",\"2|4\",\"2|8\",\"2|1\",\"2|9\",\"2|7\",\"3|3\",\"3|11\",\"3|10\",\"3|2\",\"3|5\",\"3|6\",\"3|12\",\"3|4\",\"3|8\",\"3|1\",\"3|9\",\"3|7\",\"4|3\",\"4|11\",\"4|10\",\"4|2\",\"4|5\",\"4|6\",\"4|12\",\"4|4\",\"4|8\",\"4|1\",\"4|9\",\"4|7\"]', 0),
-(278, 1, 32, 'Add', NULL, 'testsetes', '2025-05-09 15:23:21', NULL, NULL, 0);
+(278, 1, 32, 'Add', NULL, 'testsetes', '2025-05-09 15:23:21', NULL, NULL, 0),
+(279, 1, 32, 'Delete', 'testsetes', NULL, '2025-05-15 10:17:35', '{\n    \"role_id\": 32,\n    \"role_name\": \"testsetes\",\n    \"modules_and_privileges\": []\n}', NULL, 0),
+(280, 1, 3, 'Delete', 'Equipment Manager', NULL, '2025-05-15 10:30:36', '{\n    \"role_id\": 3,\n    \"role_name\": \"Equipment Manager\",\n    \"modules_and_privileges\": []\n}', NULL, 0),
+(281, 1, 3, '', 'Equipment Manager', 'Equipment Manager', '2025-05-15 10:30:50', NULL, NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -1181,24 +1211,24 @@ CREATE TABLE IF NOT EXISTS `users` (
   `date_created` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `status` enum('Offline','Online') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
-  `profile_pic_path` varchar(2048) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `username` (`username`),
   UNIQUE KEY `email` (`email`)
-) ENGINE=InnoDB AUTO_INCREMENT=135 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=136 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `username`, `email`, `password`, `first_name`, `last_name`, `date_created`, `status`, `is_disabled`, `profile_pic_path`) VALUES
-(1, 'navithebear', 'navi@example.com', '$2y$12$2esj1uaDmbD3K6Fi.C0CiuOye96x8OjARwTc82ViEAPvmx4b1cL0S', 'navi', 'slu', '2025-02-19 01:19:52', 'Online', 0, 'assets/img/user_images/user_1.gif'),
-(2, 'userman', 'um@example.com', '$2y$12$wE3B0Dq4z0Bd1AHXf4gumexeObTqWXm7aASm7PnkCrtiL.iIfObS.', 'user', 'manager', '2025-02-19 05:40:35', 'Offline', 0, NULL),
-(3, 'equipman', 'em@example.com', '$2y$12$J0iy9bwoalbG2/NkqDZchuLU4sWramGpsw1EsSZ6se0CefM/sqpZq', '123', '123', '2025-02-19 05:40:35', '', 0, NULL),
-(4, 'rpman', 'rp@example.com', '$2y$12$dWnJinU4uO7ETYIKi9cL0uN4wJgjACaF.q0Pbkr5yNUK2q1HUQk8G', 'ropriv', 'manager', '2025-02-19 05:41:59', '', 0, NULL),
-(106, 'ttest1', 'test1@example.com', '$2y$10$2bz/ybJjCzyFYEd26NEZr.tsuqUZTpSwQtSTU1IQ8fVHyD2dzjTkO', 'test1', 'test1', '2025-03-21 08:30:58', '', 1, NULL),
-(107, 'ttest2', 'test2@example.com', '$2y$10$9uEUFx90zNh3wJmh8deSXenpr6PVopkRfkkzq4PtPAwPFRCx4cecW', 'test2', 'test2', '2025-03-21 08:31:14', '', 1, NULL),
-(134, '1123', 'Testertesting123@example.com', '$2y$12$xFf4FmS./UoBc..wijJsUuk8on6EcSeIWiThkd5p5sMdFtoBs23pa', '123', '123', '2025-05-13 13:28:15', '', 1, NULL);
+INSERT INTO `users` (`id`, `username`, `email`, `password`, `first_name`, `last_name`, `date_created`, `status`, `is_disabled`) VALUES
+(1, 'navithebear', 'navi@example.com', '$2y$12$2esj1uaDmbD3K6Fi.C0CiuOye96x8OjARwTc82ViEAPvmx4b1cL0S', 'navi', 'slu', '2025-02-19 01:19:52', 'Online', 0),
+(2, 'userman', 'um@example.com', '$2y$12$wE3B0Dq4z0Bd1AHXf4gumexeObTqWXm7aASm7PnkCrtiL.iIfObS.', 'user', 'manager', '2025-02-19 05:40:35', '', 0),
+(3, 'equipman', 'em@example.com', '$2y$12$J0iy9bwoalbG2/NkqDZchuLU4sWramGpsw1EsSZ6se0CefM/sqpZq', '123', '123', '2025-02-19 05:40:35', '', 0),
+(4, 'rpman', 'rp@example.com', '$2y$12$dWnJinU4uO7ETYIKi9cL0uN4wJgjACaF.q0Pbkr5yNUK2q1HUQk8G', 'ropriv', 'manager', '2025-02-19 05:41:59', '', 0),
+(106, 'ttest1', 'test1@example.com', '$2y$10$2bz/ybJjCzyFYEd26NEZr.tsuqUZTpSwQtSTU1IQ8fVHyD2dzjTkO', 'test1', 'test1', '2025-03-21 08:30:58', '', 1),
+(107, 'ttest2', 'test2@example.com', '$2y$10$9uEUFx90zNh3wJmh8deSXenpr6PVopkRfkkzq4PtPAwPFRCx4cecW', 'test2', 'test2', '2025-03-21 08:31:14', '', 1),
+(134, '1123', 'Testertesting123@example.com', '$2y$12$xFf4FmS./UoBc..wijJsUuk8on6EcSeIWiThkd5p5sMdFtoBs23pa', '123', '123', '2025-05-13 13:28:15', '', 1),
+(135, 'ttest', 'tester1233321@gmail.com', '$2y$10$bIr5HyfmrSzF9t6TBNQzC.1hRgU38.hX6rjHiFHO0ZTTBQQvruCW2', 'test', 'test', '2025-05-15 01:03:25', '', 0);
 
 --
 -- Triggers `users`
@@ -1428,57 +1458,6 @@ DELIMITER ;
 -- --------------------------------------------------------
 
 --
--- Table structure for table `user_departments`
---
-
-DROP TABLE IF EXISTS `user_departments`;
-CREATE TABLE IF NOT EXISTS `user_departments` (
-  `user_id` int NOT NULL,
-  `department_id` int NOT NULL,
-  PRIMARY KEY (`user_id`,`department_id`),
-  KEY `department_id` (`department_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
---
--- Dumping data for table `user_departments`
---
-
-INSERT INTO `user_departments` (`user_id`, `department_id`) VALUES
-(1, 1),
-(12, 1),
-(37, 1),
-(49, 1),
-(50, 1),
-(75, 1),
-(104, 1),
-(106, 1),
-(5, 2),
-(83, 2),
-(96, 2),
-(97, 2),
-(103, 2),
-(105, 2),
-(48, 3),
-(69, 3),
-(84, 3),
-(87, 3),
-(93, 3),
-(94, 3),
-(95, 3),
-(107, 3),
-(11, 4),
-(92, 4),
-(12, 5),
-(82, 5),
-(85, 5),
-(86, 5),
-(101, 5),
-(74, 40),
-(13, 42);
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `user_department_roles`
 --
 
@@ -1486,8 +1465,9 @@ DROP TABLE IF EXISTS `user_department_roles`;
 CREATE TABLE IF NOT EXISTS `user_department_roles` (
   `user_id` int NOT NULL,
   `department_id` int NOT NULL,
-  `role_id` int NOT NULL,
-  PRIMARY KEY (`user_id`,`department_id`,`role_id`),
+  `role_id` int DEFAULT NULL,
+  PRIMARY KEY (`user_id`,`department_id`),
+  UNIQUE KEY `role_id_2` (`role_id`),
   KEY `department_id` (`department_id`),
   KEY `role_id` (`role_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -1498,62 +1478,10 @@ CREATE TABLE IF NOT EXISTS `user_department_roles` (
 
 INSERT INTO `user_department_roles` (`user_id`, `department_id`, `role_id`) VALUES
 (1, 1, 1),
-(2, 12, 3),
-(2, 12, 4),
-(2, 12, 5),
-(2, 12, 6),
-(2, 12, 32),
-(2, 24, 4),
-(2, 24, 32),
-(3, 1, 3),
-(3, 3, 3),
-(3, 5, 3),
-(3, 46, 3),
-(4, 28, 2),
-(4, 28, 6),
-(134, 5, 3);
-
--- --------------------------------------------------------
-
---
--- Table structure for table `user_roles`
---
-
-DROP TABLE IF EXISTS `user_roles`;
-CREATE TABLE IF NOT EXISTS `user_roles` (
-  `user_id` int NOT NULL,
-  `role_id` int NOT NULL,
-  PRIMARY KEY (`user_id`,`role_id`),
-  KEY `role_id` (`role_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
---
--- Dumping data for table `user_roles`
---
-
-INSERT INTO `user_roles` (`user_id`, `role_id`) VALUES
-(1, 1),
-(12, 1),
-(12, 2),
-(83, 2),
-(3, 3),
-(12, 3),
-(37, 3),
-(48, 3),
-(84, 3),
-(2, 4),
-(13, 4),
-(49, 4),
-(50, 4),
-(4, 5),
-(69, 5),
-(5, 6),
-(11, 6),
-(74, 6),
-(75, 6),
-(82, 6),
-(85, 6),
-(86, 6);
+(2, 28, NULL),
+(3, 6, NULL),
+(135, 28, NULL),
+(4, 23, NULL);
 
 --
 -- Constraints for dumped tables
