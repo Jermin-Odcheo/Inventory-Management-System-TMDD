@@ -447,7 +447,7 @@ ob_end_clean();
                                         <td><?= safeHtml($equipment['date_created']); ?></td>
                                         <td><?= !empty($equipment['date_created']) ? date('Y-m-d H:i', strtotime($equipment['date_created'])) : ''; ?></td>
                                         <td><?= !empty($equipment['date_modified']) ? date('Y-m-d H:i', strtotime($equipment['date_modified'])) : ''; ?></td>
-                                        <td><?= safeHtml((strpos($equipment['rr_no'], 'RR') === 0 ? $equipment['rr_no'] : ('RR' . $equipment['rr_no']))); ?></td>
+                                        <td><?= safeHtml((strpos($equipment['rr_no'] ?? '', 'RR') === 0 ? $equipment['rr_no'] : ('RR' . $equipment['rr_no']))); ?></td>
                                         <td><?= safeHtml($equipment['location']); ?></td>
                                         <td><?= safeHtml($equipment['accountable_individual']); ?></td>
                                         <td><?= safeHtml($equipment['remarks']); ?></td>

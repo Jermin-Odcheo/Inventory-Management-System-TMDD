@@ -16,23 +16,6 @@ $email = $_SESSION['email']; // Assuming you stored email in session
 
 // Define page title dynamically based on role
 $dashboardTitle = "Dashboard"; // Default title
-switch (strtolower(trim($role))) { // Normalize role to avoid case issues
-    case 'super admin':
-        $dashboardTitle = "Super Admin Dashboard";
-        break;
-    case 'tmdd-dev':
-        $dashboardTitle = "TMDD-Dev";
-        break;
-    case 'super user':
-        $dashboardTitle = "Super User Dashboard";
-        break;
-    case 'regular user':
-        $dashboardTitle = "Regular User Dashboard";
-        break;
-    default:
-        $dashboardTitle = "User Dashboard"; // Fallback
-}
-
 function getUserDetails($pdo, $userId) {
     // Get Roles
     $roleQuery = $pdo->prepare("
@@ -169,7 +152,7 @@ try {
         <h1>Welcome to the <?php echo $dashboardTitle; ?></h1>
         <p>Hello, <?php echo htmlspecialchars($email); ?>!</p>
     </header>
-
+<!-- 
     <div class="dashboard-container">
         <!-- Role-Based Dashboard Content -->
         <?php if (strtolower(trim($role)) === 'super admin'): ?>
@@ -261,7 +244,7 @@ try {
                 </table>
             </section>
         <?php endif; ?>
-    </div>
+    </div> -->
 </div>
 </body>
 </html>
