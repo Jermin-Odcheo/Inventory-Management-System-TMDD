@@ -619,7 +619,7 @@ CREATE TABLE IF NOT EXISTS `equipment_details` (
   `remarks` text,
   `date_created` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
-  `date_modified` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `date_modified` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, -- [Cascade Fix 2025-05-16T09:52:12+08:00] Ensure auto-update on row update
   PRIMARY KEY (`id`),
   UNIQUE KEY `asset_tag` (`asset_tag`),
   KEY `invoice_no` (`invoice_no`)
