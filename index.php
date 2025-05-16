@@ -9,16 +9,16 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="./index.css">
-    <link rel="icon" type="image/png" href="./assets/img/SLU Logo.png">
+    <link rel="icon" type="image/png" href="/public/assets/img/SLU Logo.png">
 </head>
 
 <body>
 <div class="container">
     <div class="left-section">
-        <img src="./assets/img/SLU Logo.png" alt="Logo">
+        <img src="/public/assets/img/SLU Logo.png" alt="Logo">
     </div>
     <div class="right-section">
-        <form class="login-form" action="../config/authenticate.php" method="POST">
+        <form class="login-form" action="/config/authenticate.php" method="POST">
             <h2 class="welcome-message">Welcome Back!</h2>
 
             <?php session_start(); ?>
@@ -51,7 +51,7 @@
 </div>
 
 <footer>
-    <?php include '../src/view/php/general/footer.php'; ?>
+    <?php include '/src/view/php/general/footer.php'; ?>
 </footer>
 
 <script>
