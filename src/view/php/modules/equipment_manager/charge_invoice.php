@@ -24,8 +24,7 @@ $canCreate = $rbac->hasPrivilege('Equipment Transactions', 'Create');
 $canModify = $rbac->hasPrivilege('Equipment Transactions', 'Modify');
 $canDelete = $rbac->hasPrivilege('Equipment Transactions', 'Remove');
 
-
-// Set audit log session variables for MySQL triggers.
+// Set audit-log session vars for MySQL triggers.
 if (isset($_SESSION['user_id'])) {
     $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
     $pdo->exec("SET @current_module = 'Charge Invoice'");
@@ -33,175 +32,197 @@ if (isset($_SESSION['user_id'])) {
     $pdo->exec("SET @current_user_id = NULL");
     $pdo->exec("SET @current_module = NULL");
 }
-
-// Set IP address (adjust if using a proxy)
+// Set IP (adjust if behind proxy)
 $ipAddress = $_SERVER['REMOTE_ADDR'];
 $pdo->exec("SET @current_ip = '" . $ipAddress . "'");
 
-// Initialize messages
-$errors = [];
-$success = "";
-if (isset($_SESSION['errors'])) {
-    $errors = $_SESSION['errors'];
-    unset($_SESSION['errors']);
-}
-if (isset($_SESSION['success'])) {
-    $success = $_SESSION['success'];
-    unset($_SESSION['success']);
-}
+// Flash messages
+$errors = $_SESSION['errors']  ?? [];
+$success = $_SESSION['success'] ?? '';
+unset($_SESSION['errors'], $_SESSION['success']);
 
-    // Fetch list of existing POs for the datalist
-    $stmtPO = $pdo->prepare("
+// Fetch active POs for dropdown
+$stmtPO = $pdo->prepare("
   SELECT po_no
-  FROM purchase_order
-  WHERE is_disabled = 0
-  ORDER BY po_no
+    FROM purchase_order
+   WHERE is_disabled = 0
+   ORDER BY po_no
 ");
-    $stmtPO->execute();
-    $poList = $stmtPO->fetchAll(PDO::FETCH_COLUMN);
+$stmtPO->execute();
+$poList = $stmtPO->fetchAll(PDO::FETCH_COLUMN);
 
-
-    function is_ajax_request()
+function is_ajax_request()
 {
-    return isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&
-        strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+    return isset($_SERVER['HTTP_X_REQUESTED_WITH'])
+        && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+}
+/**
+ * Logs an audit entry including Details and Status.
+ *
+ * @param PDO    $pdo
+ * @param string $action    e.g. 'Create', 'Modified', 'Delete'
+ * @param mixed  $oldVal    JSON or null
+ * @param mixed  $newVal    JSON or null
+ * @param int    $entityId  optional
+ * @param string $details   human summary (e.g. "Charge Invoice CI123 created")
+ * @param string $status    e.g. 'Successful' or 'Failed'
+ */
+function logAudit($pdo, $action, $oldVal, $newVal, $entityId = null, $details = '', $status = 'Successful')
+{
+    $stmt = $pdo->prepare("
+      INSERT INTO audit_log
+        (UserID, EntityID, Module, Action, OldVal, NewVal, Details, Status, Date_Time)
+      VALUES (?, ?, 'Charge Invoice', ?, ?, ?, ?, ?, NOW())
+    ");
+    $stmt->execute([
+        $_SESSION['user_id'],
+        $entityId,
+        $action,
+        $oldVal,
+        $newVal,
+        $details,
+        $status
+    ]);
 }
 
-// Add this function to log audit entries
-function logAudit($pdo, $action, $oldVal, $newVal, $entityId = null)
-{
-    $stmt = $pdo->prepare("INSERT INTO audit_log (UserID, EntityID, Module, Action, OldVal, NewVal, Date_Time) VALUES (?, ?, 'Charge Invoice', ?, ?, ?, NOW())");
-    $stmt->execute([$_SESSION['user_id'], $entityId, $action, $oldVal, $newVal]);
-}
-
-// ------------------------
-// PROCESS FORM SUBMISSIONS (Add / Update)
-// ------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $invoice_no = trim($_POST['invoice_no'] ?? '');
+    $invoice_no       = trim($_POST['invoice_no']       ?? '');
     $date_of_purchase = trim($_POST['date_of_purchase'] ?? '');
-    $po_no = trim($_POST['po_no'] ?? '');
+    $po_no            = trim($_POST['po_no']            ?? '');
 
-    // Enforce CI prefix before validation
+    // enforce CI prefix
     if ($invoice_no !== '' && strpos($invoice_no, 'CI') !== 0) {
         $invoice_no = 'CI' . $invoice_no;
     }
-    // Enforce PO prefix before validation
-    if ($po_no !== '' && strpos($po_no, 'PO') !== 0) {
-        $po_no = 'PO' . $po_no;
+    // po_no comes straight from the <select> (either "" or "POxxx")
+
+    // 1) Validation
+    $fieldError = null;
+    if ($invoice_no === '') {
+        $fieldError = 'Invoice Number is required.';
+    } elseif (!preg_match('/^CI\d+$/', $invoice_no)) {
+        $fieldError = 'Invoice Number must be like CI123.';
+    } elseif ($po_no !== '' && !in_array($po_no, $poList, true)) {
+        $fieldError = 'Invalid PO Number selected.';
     }
 
-    // Validate required fields and format
-    $fieldError = false;
-    if (empty($invoice_no) || empty($date_of_purchase) || empty($po_no)) {
-        $fieldError = 'Please fill in all required fields.';
-    } elseif (!preg_match('/^CI\d+$/', $invoice_no)) {
-        $fieldError = 'Invoice Number must be in the format CI followed by numbers (e.g., CI123).';
-    } elseif (!preg_match('/^PO\d+$/', $po_no)) {
-        $fieldError = 'PO Number must be in the format PO followed by numbers (e.g., PO123).';
-    }
     if ($fieldError) {
         $_SESSION['errors'] = [$fieldError];
         if (is_ajax_request()) {
             header('Content-Type: application/json');
-            echo json_encode(['status' => 'error', 'message' => $_SESSION['errors'][0]]);
+            echo json_encode(['status' => 'error', 'message' => $fieldError]);
             exit;
         }
-        header("Location: charge_invoice.php");
+        header('Location: charge_invoice.php');
         exit;
     }
 
-    if (isset($_POST['action']) && $_POST['action'] === 'add') {
-        try {
-            // Check if user has Create privilege
-            if (!$rbac->hasPrivilege('Equipment Transactions', 'Create')) {
-                throw new Exception('You do not have permission to add charge invoices');
-            }
+    // normalize optional fields
+    if ($po_no === '') {
+        $po_no = null;
+    }
+    if ($date_of_purchase === '') {
+        $date_of_purchase = null;
+    }
 
-            $stmt = $pdo->prepare("INSERT INTO charge_invoice (invoice_no, date_of_purchase, po_no, date_created, is_disabled)
-                               VALUES (?, ?, ?, NOW(), 0)");
-            $stmt->execute([$invoice_no, $date_of_purchase, $po_no]);
-            logAudit($pdo, 'add', null, json_encode(['invoice_no' => $invoice_no, 'date_of_purchase' => $date_of_purchase, 'po_no' => $po_no]));
-            $_SESSION['success'] = "Charge Invoice has been added successfully.";
-        } catch (PDOException $e) {
-            $_SESSION['errors'] = ["Error adding Charge Invoice: " . $e->getMessage()];
+    // ADD
+    if (($_POST['action'] ?? '') === 'add') {
+        try {
+            if (!$canCreate) {
+                throw new Exception('No permission to add invoices.');
+            }
+            $ins = $pdo->prepare("
+          INSERT INTO charge_invoice
+            (invoice_no, date_of_purchase, po_no, date_created, is_disabled)
+          VALUES (?, ?, ?, NOW(), 0)
+        ");
+            $ins->execute([$invoice_no, $date_of_purchase, $po_no]);
+
+            $newId = $pdo->lastInsertId();
+            logAudit(
+                $pdo,
+                'Create',
+                null,
+                json_encode([
+                    'invoice_no'       => $invoice_no,
+                    'date_of_purchase' => $date_of_purchase,
+                    'po_no'            => $po_no
+                ]),
+                $newId,
+                "Charge Invoice {$invoice_no} created",
+                'Successful'
+            );
+
+            $_SESSION['success'] = "Charge Invoice added.";
         } catch (Exception $e) {
-            $_SESSION['errors'] = [$e->getMessage()];
+            $_SESSION['errors'] = ["Error adding Charge Invoice: " . $e->getMessage()];
+            // optionally: log a Failed audit here as well
         }
     }
 
-    if (isset($_POST['action']) && $_POST['action'] === 'update') {
-        // Clear any previous output
+
+    // 4) UPDATE
+    if (($_POST['action'] ?? '') === 'update') {
         ob_clean();
-
         try {
-            // Check if user has Modify privilege
-            if (!$rbac->hasPrivilege('Equipment Transactions', 'Modify')) {
-                throw new Exception('You do not have permission to modify charge invoices');
+            if (!$canModify) {
+                throw new Exception('No permission to modify invoices.');
             }
+            $id = (int)$_POST['id'];
+            // fetch old
+            $sel = $pdo->prepare("SELECT * FROM charge_invoice WHERE id = ?");
+            $sel->execute([$id]);
+            $old = $sel->fetch(PDO::FETCH_ASSOC);
+            if (!$old) throw new Exception('Charge Invoice not found.');
 
-            $id = $_POST['id'];
-            $invoice_no = trim($_POST['invoice_no']);
-            $date_of_purchase = trim($_POST['date_of_purchase']);
-            $po_no = trim($_POST['po_no']);
+            // run update...
+            $upd = $pdo->prepare("
+          UPDATE charge_invoice
+             SET invoice_no       = ?,
+                 date_of_purchase = ?,
+                 po_no            = ?
+           WHERE id = ? AND is_disabled = 0
+        ");
+            $upd->execute([$invoice_no, $date_of_purchase, $po_no, $id]);
 
-            if (empty($invoice_no) || empty($date_of_purchase) || empty($po_no)) {
-                throw new Exception('Please fill in all required fields.');
+            if ($upd->rowCount() > 0) {
+                logAudit(
+                    $pdo,
+                    'Modified',
+                    json_encode($old),
+                    json_encode([
+                        'invoice_no'       => $invoice_no,
+                        'date_of_purchase' => $date_of_purchase,
+                        'po_no'            => $po_no
+                    ]),
+                    $id,
+                    "Charge Invoice {$invoice_no} updated",
+                    'Successful'
+                );
+
+                header('Content-Type: application/json');
+                echo json_encode(['status' => 'success', 'message' => 'Charge Invoice updated successfully.']);
+                exit;
             }
-
-            // Fetch the current values for OldVal
-            $stmt = $pdo->prepare("SELECT * FROM charge_invoice WHERE id = ?");
-            $stmt->execute([$id]);
-            $oldData = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if ($oldData) {
-                // Validate that the provided PO number exists in the purchase_order table
-                $stmt = $pdo->prepare("SELECT po_no FROM purchase_order WHERE po_no = ?");
-                $stmt->execute([$po_no]);
-                $existingPO = $stmt->fetch(PDO::FETCH_ASSOC);
-
-                if (!$existingPO) {
-                    throw new Exception('Invalid Purchase Order Number. Please ensure the Purchase Order exists.');
-                }
-
-                $stmt = $pdo->prepare("UPDATE charge_invoice 
-                                  SET invoice_no = ?, 
-                                      date_of_purchase = ?, 
-                                      po_no = ? 
-                                  WHERE id = ? AND is_disabled = 0");
-                $stmt->execute([$invoice_no, $date_of_purchase, $po_no, $id]);
-
-                if ($stmt->rowCount() > 0) {
-                    // Log both old and new values
-                    logAudit($pdo, 'modified', json_encode($oldData), json_encode(['invoice_no' => $invoice_no, 'date_of_purchase' => $date_of_purchase, 'po_no' => $po_no]));
-                    header('Content-Type: application/json');
-                    echo json_encode(['status' => 'success', 'message' => 'Charge Invoice updated successfully.']);
-                    exit;
-                } else {
-                    throw new Exception('No changes were made or record not found.');
-                }
-            } else {
-                throw new Exception('Charge Invoice not found.');
-            }
-        } catch (PDOException $e) {
-            header('Content-Type: application/json');
-            echo json_encode(['status' => 'error', 'message' => 'Error updating Charge Invoice: ' . $e->getMessage()]);
-            exit;
+            throw new Exception('No changes made or record not found.');
         } catch (Exception $e) {
+            // you could also logAudit(..., 'Failed') here if desired
             header('Content-Type: application/json');
             echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
             exit;
         }
     }
 
+
+    // 5) Final AJAX / redirect response
     if (is_ajax_request()) {
         ob_clean();
         header('Content-Type: application/json');
-        $response = ['status' => 'success', 'message' => $_SESSION['success'] ?? 'Operation completed successfully'];
+        $resp = ['status' => 'success', 'message' => $_SESSION['success'] ?? 'Operation completed successfully'];
         if (!empty($_SESSION['errors'])) {
-            $response = ['status' => 'error', 'message' => $_SESSION['errors'][0]];
+            $resp = ['status' => 'error', 'message' => $_SESSION['errors'][0]];
         }
-        echo json_encode($response);
+        echo json_encode($resp);
         exit;
     }
     header("Location: charge_invoice.php");
@@ -209,43 +230,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // ------------------------
-// DELETE CHARGE INVOICE (soft delete)
+// SOFT DELETE
 // ------------------------
-if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
+if (($_GET['action'] ?? '') === 'delete' && isset($_GET['id'])) {
     $id = $_GET['id'];
     try {
-        // Check if user has Remove privilege
-        if (!$rbac->hasPrivilege('Equipment Transactions', 'Remove')) {
-            throw new Exception('You do not have permission to delete charge invoices');
+        if (!$canDelete) {
+            throw new Exception('No permission to delete invoices.');
         }
+        // fetch old
+        $sel = $pdo->prepare("SELECT * FROM charge_invoice WHERE id = ?");
+        $sel->execute([$id]);
+        $old = $sel->fetch(PDO::FETCH_ASSOC);
 
-        // Fetch the current values for OldVal before deletion
-        $stmt = $pdo->prepare("SELECT * FROM charge_invoice WHERE id = ?");
-        $stmt->execute([$id]);
-        $oldData = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($old) {
+            $pdo->prepare("UPDATE charge_invoice SET is_disabled = 1 WHERE id = ?")
+                ->execute([$id]);
 
-        if ($oldData) {
-            $stmt = $pdo->prepare("UPDATE charge_invoice SET is_disabled = 1 WHERE id = ?");
-            $stmt->execute([$id]);
+            logAudit(
+                $pdo,
+                'Delete',
+                json_encode($old),
+                null,
+                $id,
+                "Charge Invoice {$old['invoice_no']} deleted",
+                'Successful'
+            );
+
             $_SESSION['success'] = "Charge Invoice deleted successfully.";
-            // Log the deletion with old values and entity id
-            logAudit($pdo, 'delete', json_encode($oldData), null, $id);
         } else {
             $_SESSION['errors'] = ["Charge Invoice not found for deletion."];
         }
-    } catch (PDOException $e) {
-        $_SESSION['errors'] = ["Error deleting Charge Invoice: " . $e->getMessage()];
     } catch (Exception $e) {
         $_SESSION['errors'] = [$e->getMessage()];
     }
     if (is_ajax_request()) {
         ob_clean();
         header('Content-Type: application/json');
-        $response = ['status' => 'success', 'message' => $_SESSION['success'] ?? 'Operation completed successfully'];
+        $resp = ['status' => 'success', 'message' => $_SESSION['success'] ?? 'Done'];
         if (!empty($_SESSION['errors'])) {
-            $response = ['status' => 'error', 'message' => $_SESSION['errors'][0]];
+            $resp = ['status' => 'error', 'message' => $_SESSION['errors'][0]];
         }
-        echo json_encode($response);
+        echo json_encode($resp);
         exit;
     }
     header("Location: charge_invoice.php");
@@ -253,35 +279,35 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 }
 
 // ------------------------
-// LOAD CHARGE INVOICE DATA FOR EDITING (if applicable)
+// LOAD FOR EDIT
 // ------------------------
 $editChargeInvoice = null;
-if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) {
-    $id = $_GET['id'];
+if (($_GET['action'] ?? '') === 'edit' && isset($_GET['id'])) {
     try {
-        $stmt = $pdo->prepare("SELECT * FROM charge_invoice WHERE id = ? AND is_disabled = 0");
-        $stmt->execute([$id]);
-        $editChargeInvoice = $stmt->fetch(PDO::FETCH_ASSOC);
+        $sel = $pdo->prepare("SELECT * FROM charge_invoice WHERE id = ? AND is_disabled = 0");
+        $sel->execute([$_GET['id']]);
+        $editChargeInvoice = $sel->fetch(PDO::FETCH_ASSOC);
         if (!$editChargeInvoice) {
             $_SESSION['errors'] = ["Charge Invoice not found for editing."];
             header("Location: charge_invoice.php");
             exit;
         }
     } catch (PDOException $e) {
-        $errors[] = "Error loading Charge Invoice for editing: " . $e->getMessage();
+        $errors[] = "Error loading for edit: " . $e->getMessage();
     }
 }
 
 // ------------------------
-// RETRIEVE ALL CHARGE INVOICES (active only)
+// LIST ALL
 // ------------------------
 try {
-    $stmt = $pdo->query("SELECT * FROM charge_invoice WHERE is_disabled = 0 ORDER BY id DESC");
-    $chargeInvoices = $stmt->fetchAll();
+    $all = $pdo->query("SELECT * FROM charge_invoice WHERE is_disabled = 0 ORDER BY id DESC");
+    $chargeInvoices = $all->fetchAll();
 } catch (PDOException $e) {
     $errors[] = "Error retrieving Charge Invoices: " . $e->getMessage();
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -534,7 +560,14 @@ try {
                             </div>
                             <div class="mb-3">
                                 <label for="po_no" class="form-label">Purchase Order Number</label>
-                                <input type="number" class="form-control" name="po_no" min="0" step="1" required pattern="\d*" inputmode="numeric">
+                                <select class="form-select" name="po_no" id="po_no">
+                                    <option value="">— None / Select PO —</option>
+                                    <?php foreach ($poList as $opt): ?>
+                                        <option value="<?= htmlspecialchars($opt) ?>">
+                                            <?= htmlspecialchars($opt) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
                             </div>
                             <div class="text-end">
                                 <button type="button" class="btn btn-secondary" style="margin-right: 4px;"
@@ -573,10 +606,17 @@ try {
                                     id="edit_date_of_purchase" required>
                             </div>
                             <div class="mb-3">
-                                <label for="edit_po_no" class="form-label">Purchase Order Number <span
-                                        class="text-danger">*</span></label>
-                                <input type="number" class="form-control" name="po_no" id="edit_po_no" min="0" step="1" required pattern="\d*" inputmode="numeric">
+                                <label for="edit_po_no" class="form-label">Purchase Order Number</label>
+                                <select class="form-select" name="po_no" id="edit_po_no">
+                                    <option value="">— None / Select PO —</option>
+                                    <?php foreach ($poList as $opt): ?>
+                                        <option value="<?= htmlspecialchars($opt) ?>">
+                                            <?= htmlspecialchars($opt) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
                             </div>
+
                             <div class="mb-3">
                                 <button type="submit" class="btn btn-primary">Save Changes</button>
                             </div>
@@ -593,7 +633,7 @@ try {
 
         $(document).ready(function() {
             // Always clean up modal backdrop and body class after modal is hidden
-            $('#addInvoiceModal').on('hidden.bs.modal', function () {
+            $('#addInvoiceModal').on('hidden.bs.modal', function() {
                 $('.modal-backdrop').remove();
                 $('body').removeClass('modal-open').css('overflow', '');
                 $('body').css('padding-right', '');
@@ -606,7 +646,7 @@ try {
                     ((e.keyCode == 65 || e.keyCode == 67 || e.keyCode == 86 || e.keyCode == 88) && (e.ctrlKey === true || e.metaKey === true)) ||
                     // Allow: home, end, left, right, down, up
                     (e.keyCode >= 35 && e.keyCode <= 40)) {
-                        return;
+                    return;
                 }
                 // Block: e, +, -, .
                 if ([69, 187, 189, 190].includes(e.keyCode)) {
@@ -634,17 +674,22 @@ try {
 
             // Trigger Edit Invoice Modal using Bootstrap 5 Modal API
             $(document).on('click', '.edit-invoice', function() {
-                var id = $(this).data('id');
-                var invoice = $(this).data('invoice');
-                var date = $(this).data('date');
-                var po = $(this).data('po');
+                const id = $(this).data('id');
+                const invoice = $(this).data('invoice') || '';
+                const date = $(this).data('date') || '';
+                const po = $(this).data('po') || '';
+
+                // Fill hidden and inputs
                 $('#edit_invoice_id').val(id);
-                $('#edit_invoice_no').val(invoice);
+                $('#edit_invoice_no').val(invoice.replace(/^CI/, '')); // strip CI so input=number stays numeric
                 $('#edit_date_of_purchase').val(date);
-                $('#edit_po_no').val(po);
-                var editModal = new bootstrap.Modal(document.getElementById('editInvoiceModal'));
-                editModal.show();
+                $('#edit_po_no').val(po); // set the dropdown
+
+                // Show the edit modal
+                const modalEl = document.getElementById('editInvoiceModal');
+                bootstrap.Modal.getOrCreateInstance(modalEl).show();
             });
+
 
             // Trigger Delete Invoice Modal
             $(document).on('click', '.delete-invoice', function(e) {
@@ -773,9 +818,9 @@ try {
                     success: function(response) {
                         if (response.status === 'success') {
                             $('#invoiceTable').load(location.href + ' #invoiceTable', function() {
-                                    showToast(response.message, 'success');
-                                });
-                           
+                                showToast(response.message, 'success');
+                            });
+
                             var editModalEl = document.getElementById('editInvoiceModal');
                             var editModal = bootstrap.Modal.getInstance(editModalEl);
                             if (editModal) {

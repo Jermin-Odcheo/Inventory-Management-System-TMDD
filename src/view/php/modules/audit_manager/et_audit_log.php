@@ -16,13 +16,7 @@ $rbac = new RBACService($pdo, $_SESSION['user_id']);
 
 // Check for required privilege
 $hasEquipmentMgmtPermission = $rbac->hasPrivilege('Equipment Transaction', 'Track');
-
-// If user doesn't have permission, redirect them
-if (!$hasEquipmentMgmtPermission) {
-    // Redirect to an unauthorized page
-    header("Location: " . BASE_URL . "src/view/php/general/auth.php");
-    exit();
-}
+ 
 
 // Fetch all audit logs (including permanent deletes)
 $query = "
