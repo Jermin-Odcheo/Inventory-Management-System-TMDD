@@ -34,18 +34,18 @@ $rbac = new RBACService($pdo, $userId);
                 </button>
                 <ul class="dropdown tree" aria-expanded="false">
                     <ul><b> Audit Logs </b><br><hr>
-                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/audit_manager/audit_log.php">User Management Audit Logs</a></li>
-                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/audit_manager/em_audit_log.php">Equipment Management Audit Logs</a></li>
-                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/audit_manager/et_audit_log.php">Equipment Transaction Audit Logs</a></li>
-                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/audit_manager/rm_audit_log.php">Role Management Audit Logs</a></li>
-                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/audit_manager/department_audit_log.php">Department Management Audit Logs</a></li>
+                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/log_management/audit_manager/audit_log.php">User Management Audit Logs</a></li>
+                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/log_management/audit_manager/em_audit_log.php">Equipment Management Audit Logs</a></li>
+                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/log_management/audit_manager/et_audit_log.php">Equipment Transaction Audit Logs</a></li>
+                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/log_management/audit_manager/rm_audit_log.php">Role Management Audit Logs</a></li>
+                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/log_management/audit_manager/department_audit_log.php">Department Management Audit Logs</a></li>
                     </ul>
                     <ul><b> Archives </b><br><hr>
-                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/audit_manager/archive.php">User Management Archives</a></li>
-                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/audit_manager/em_archive.php">Equipment Management Archives</a></li>
-                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/audit_manager/et_archive.php">Equipment Transactions Archives</a></li>
-                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/audit_manager/rm_archive.php">Role Management Archives</a></li>
-                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/audit_manager/department_archive.php">Department Management Archives</a></li>
+                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/log_management/archive_manager/archive.php">User Management Archives</a></li>
+                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/log_management/archive_manager/em_archive.php">Equipment Management Archives</a></li>
+                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/log_management/archive_manager/et_archive.php">Equipment Transactions Archives</a></li>
+                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/log_management/archive_manager/rm_archive.php">Role Management Archives</a></li>
+                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/log_management/archive_manager/department_archive.php">Department Management Archives</a></li>
                     </ul>
                 </ul>
             </li>
@@ -59,7 +59,7 @@ $rbac = new RBACService($pdo, $userId);
                 </button>
                 <ul class="dropdown tree" aria-expanded="false">
                 <li class="nav-item">
-                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/role_manager/department_management.php" class="nav-link">
+                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/management/department_manager/department_management.php" class="nav-link">
                             <span class="submenu-text">Department Management</span>
                         </a>
                     </li>
@@ -98,12 +98,12 @@ $rbac = new RBACService($pdo, $userId);
                 </button>
                 <ul class="dropdown tree" aria-expanded="false">
                     <li class="nav-item">
-                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/role_manager/manage_roles.php" class="nav-link">
+                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/rolesandprivilege_manager/role_manager/manage_roles.php" class="nav-link">
                             <span class="submenu-text">Role Management</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/privilege_manager/manage_privileges.php" class="nav-link">
+                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/rolesandprivilege_manager/privilege_manager/manage_privileges.php" class="nav-link">
                             <span class="submenu-text">Privilege Management <br> 🆕💻 (Prototype)</span>
                         </a>
                     </li>
@@ -132,9 +132,9 @@ $rbac = new RBACService($pdo, $userId);
                     <i class="fas fa-chevron-down dropdown-icon"></i>
                 </button>
                 <ul class="dropdown tree" aria-expanded="false">
-                    <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_manager/purchase_order.php">Purchase Order</a></li>
-                    <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_manager/charge_invoice.php">Charge Invoice</a></li>
-                    <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_manager/receiving_report.php">Receiving Report</a></li>
+                    <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_transactions/purchase_order.php">Purchase Order</a></li>
+                    <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_transactions/charge_invoice.php">Charge Invoice</a></li>
+                    <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_transactions/receiving_report.php">Receiving Report</a></li>
                 </ul>
             </li>
             <?php endif; ?>
@@ -146,9 +146,9 @@ $rbac = new RBACService($pdo, $userId);
                     <i class="fas fa-chevron-down dropdown-icon"></i>
                 </button>
                 <ul class="dropdown tree" aria-expanded="false">
-                    <li><a href="#">User Management Reports 🔜 (Under Development)</a></li>
-                    <li><a href="#">Equipment Status Reports 🔜 (Under Development)</a></li>
-                    <li><a href="#">Equipment Transaction Reports 🔜 (Under Development)</a></li>
+                    <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/reports/userman_reports/usrep.php">User Management Reports 🔜 (Under Development)</a></li>
+                    <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/reports/equipman_reports/eqrep.php">Equipment Status Reports 🔜 (Under Development)</a></li>
+                    <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/reports/equiptrans_reports/eptranrep.php">Equipment Transaction Reports 🔜 (Under Development)</a></li>
                 </ul>
             </li>
             <?php endif; ?>

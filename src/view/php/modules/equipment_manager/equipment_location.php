@@ -16,7 +16,7 @@ $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH'])
 // 1) Auth guard (always run, AJAX or not)
 $userId = $_SESSION['user_id'] ?? null;
 if (!is_int($userId) && !ctype_digit((string)$userId)) {
-    header('Location: ../../../../../public/index.php');
+    header('Location: index.php');
     exit();
 }
 $userId = (int)$userId;
