@@ -9,9 +9,17 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: " . BASE_URL . "public/index.php");
     exit();
 }
-
+print("Hello");
 $user_id = $_SESSION['user_id'];
 
+if ($user_id !== null) {
+    $stmt = $pdo->prepare("SELECT profile_pic_path FROM users WHERE id = ?");
+    $stmt->execute([$user_id]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    print("hello " . $user['profile_pic_path']);
+} else {
+    die("User not logged in."); // or redirect
+}
 // Fetch user details and role
 $sql = "
     SELECT u.email, u.username, u.first_name, u.last_name, r.role_name 

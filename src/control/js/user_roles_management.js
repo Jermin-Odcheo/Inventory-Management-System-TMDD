@@ -752,6 +752,36 @@ if (saveUserRolesBtn && userPrivileges.canCreate) {
             Toast.error('No valid assignments to create', 5000, 'Error');
             return;
         }
+        
+        // Check if assignments already exist
+        let noChanges = true;
+        for (const assignment of newAssignments) {
+            const userId = assignment.userId;
+            const departmentId = assignment.departmentId;
+            
+            for (const roleId of assignment.roleIds) {
+                // Check if this exact user-department-role assignment already exists
+                const existingAssignment = userRoleDepartments.find(a => 
+                    a.userId === userId && 
+                    a.roleId === roleId && 
+                    a.departmentIds.includes(departmentId)
+                );
+                
+                // If any assignment doesn't exist yet, we have changes to save
+                if (!existingAssignment) {
+                    noChanges = false;
+                    break;
+                }
+            }
+            
+            if (!noChanges) break;
+        }
+        
+        // If no changes, show notification and exit
+        if (noChanges) {
+            Toast.info('No changes to save - these assignments already exist', 3000, 'Information');
+            return;
+        }
 
         fetch('save_user_role.php', {
             method: 'POST',
@@ -864,6 +894,34 @@ if (saveDepartmentRoleBtn && userPrivileges.canModify) {
             
             if (!departmentId) {
                 Toast.error('No department ID found for this assignment', 5000, 'Error');
+                return;
+            }
+            
+            // Check if there are any changes
+            let hasChanges = false;
+            
+            // Check if this is an edit of an existing role assignment
+            if (currentEditingData.roleId !== null) {
+                // Compare the old role with the new roles
+                if (updatedRoles.length === 0) {
+                    // If we're removing the role, that's a change
+                    hasChanges = true;
+                } else if (updatedRoles.length === 1 && updatedRoles[0] === currentEditingData.roleId) {
+                    // If the only role is the same as before, no change
+                    hasChanges = false;
+                } else {
+                    // In all other cases, there's a change
+                    hasChanges = true;
+                }
+            } else {
+                // For null roles (no previous role assignment)
+                // If we're adding any roles, that's a change
+                hasChanges = updatedRoles.length > 0;
+            }
+            
+            // If no changes, show notification and exit
+            if (!hasChanges) {
+                Toast.info('No changes to save', 3000, 'Information');  
                 return;
             }
             
@@ -992,7 +1050,7 @@ if (saveDepartmentRoleBtn && userPrivileges.canModify) {
                             renderUserRolesTable(null, null, null, userSortDirection);
                             showToast(response.message, 'success');
                         } else {
-                            showToast(response.message, 'error');
+                            showToast(response.message, 'error'); 
                         }
                     },
                     error: function () {
