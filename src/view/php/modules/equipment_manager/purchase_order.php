@@ -25,7 +25,7 @@ $rbac->requirePrivilege('Equipment Transaction', 'View');
 // 3) Button flags
 $canCreate = $rbac->hasPrivilege('Equipment Transaction', 'Create');
 $canModify = $rbac->hasPrivilege('Equipment Transaction', 'Modify');
-$canDelete = $rbac->hasPrivilege('Equipment Transaction', 'Remove');
+$canRemove = $rbac->hasPrivilege('Equipment Transaction', 'Remove');
 
 function is_ajax_request()
 {
@@ -33,17 +33,41 @@ function is_ajax_request()
         strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 }
 
-// Add this function to log audit entries
-function logAudit($pdo, $action, $oldVal, $newVal, $entityId = null)
-{
-    $stmt = $pdo->prepare("INSERT INTO audit_log (UserID, EntityID, Module, Action, OldVal, NewVal, Date_Time) VALUES (?, ?, 'Purchase Order', ?, ?, ?, NOW())");
-    $stmt->execute([$_SESSION['user_id'], $entityId, $action, $oldVal, $newVal]);
-}
+    // Add this function to log audit entries
+    /**
+     * Logs an audit entry including Details and Status.
+     *
+     * @param PDO    $pdo
+     * @param string $action   e.g. 'Create', 'Modify', 'Remove'
+     * @param mixed  $oldVal   JSON or null
+     * @param mixed  $newVal   JSON or null
+     * @param int    $entityId optional PO ID
+     * @param string $details  human-readable summary
+     * @param string $status   e.g. 'Successful' or 'Failed'
+     */
+    function logAudit($pdo, $action, $oldVal, $newVal, $entityId = null, $details = '', $status = 'Successful')
+    {
+        $stmt = $pdo->prepare("
+        INSERT INTO audit_log
+          (UserID, EntityID, Module, Action, OldVal, NewVal, Details, Status, Date_Time)
+        VALUES (?, ?, 'Purchase Order', ?, ?, ?, ?, ?, NOW())
+    ");
+        $stmt->execute([
+            $_SESSION['user_id'],
+            $entityId,
+            $action,
+            $oldVal,
+            $newVal,
+            $details,
+            $status
+        ]);
+    }
 
-// ------------------------
-// PROCESS FORM SUBMISSIONS (Add / Update)
-// ------------------------
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    // ------------------------
+    // PROCESS FORM SUBMISSIONS (Add / Update)
+    // ------------------------
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Initialize messages
     $errors = [];
     $success = "";
@@ -75,7 +99,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     (po_no, date_of_order, no_of_units, item_specifications, date_created, is_disabled)
                     VALUES (?, ?, ?, ?, NOW(), 0)");
                 $stmt->execute([$po_no, $date_of_order, $no_of_units, $item_specifications]);
-                logAudit($pdo, 'add', null, json_encode(['po_no' => $po_no, 'date_of_order' => $date_of_order, 'no_of_units' => $no_of_units, 'item_specifications' => $item_specifications]));
+                $payload = json_encode([
+                    'po_no'               => $po_no,
+                    'date_of_order'       => $date_of_order,
+                    'no_of_units'         => $no_of_units,
+                    'item_specifications' => $item_specifications
+                ]);
+                logAudit(
+                    $pdo,
+                    'Create',
+                    null,
+                    $payload,
+                    $pdo->lastInsertId(),             // the new PO ID
+                    "Purchase Order {$po_no} created",
+                    'Successful'
+                );
+
                 $success = "Purchase Order has been added successfully.";
             } catch (PDOException $e) {
                 $errors[] = "Error adding Purchase Order: " . $e->getMessage();
@@ -88,27 +127,95 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errors[] = "Invalid Purchase Order ID.";
             } else {
                 try {
-                    // Check if user has Modify privilege
+                    // 1) permission
                     if (!$rbac->hasPrivilege('Equipment Transaction', 'Modify')) {
                         throw new Exception('You do not have permission to modify purchase orders');
                     }
 
-                    // Fetch the current values for OldVal
-                    $stmt = $pdo->prepare("SELECT * FROM purchase_order WHERE id = ?");
+                    // 2) fetch existing row
+                    $stmt = $pdo->prepare("SELECT po_no, date_of_order, no_of_units, item_specifications FROM purchase_order WHERE id = ?");
                     $stmt->execute([$id]);
                     $oldData = $stmt->fetch(PDO::FETCH_ASSOC);
 
-                    if ($oldData) {
-                        $stmt = $pdo->prepare("UPDATE purchase_order SET 
-                            po_no = ?, date_of_order = ?, no_of_units = ?, item_specifications = ? 
-                            WHERE id = ?");
-                        $stmt->execute([$po_no, $date_of_order, $no_of_units, $item_specifications, $id]);
-
-                        // Log both old and new values
-                        logAudit($pdo, 'modified', json_encode($oldData), json_encode(['po_no' => $po_no, 'date_of_order' => $date_of_order, 'no_of_units' => $no_of_units, 'item_specifications' => $item_specifications]), $id);
-                        $success = "Purchase Order has been updated successfully.";
-                    } else {
+                    if (!$oldData) {
                         $errors[] = "Purchase Order not found.";
+                    } else {
+                        // 3) prepare new values
+                        $newData = [
+                            'po_no'               => $po_no,
+                            'date_of_order'       => $date_of_order,
+                            'no_of_units'         => $no_of_units,
+                            'item_specifications' => $item_specifications
+                        ];
+
+                        // 4) compute diffs
+                        $fieldLabels = [
+                            'po_no'               => 'PO No',
+                            'date_of_order'       => 'Date of Order',
+                            'no_of_units'         => 'No of Units',
+                            'item_specifications' => 'Item Specifications'
+                        ];
+                        $oldSubset   = [];
+                        $newSubset   = [];
+                        $detailParts = [];
+
+                        foreach ($fieldLabels as $key => $label) {
+                            $oldVal = $oldData[$key];
+                            $newVal = $newData[$key];
+
+                            // normalize numeric fields by casting to int, others by trimming strings
+                            if ($key === 'no_of_units') {
+                                $oldNorm = (string)(int)$oldVal;
+                                $newNorm = (string)(int)$newVal;
+                            } else {
+                                $oldNorm = trim((string)$oldVal);
+                                $newNorm = trim((string)$newVal);
+                            }
+
+                            // only record a change if the normalized values differ
+                            if ($oldNorm !== $newNorm) {
+                                $oldSubset[$key]   = $oldNorm;
+                                $newSubset[$key]   = $newNorm;
+                                $detailParts[]     = "The {$label} was changed from '{$oldNorm}' to '{$newNorm}'.";
+                            }
+                        }
+
+
+                        // 5) only run the update + audit if something actually changed
+                        if (!empty($newSubset)) {
+                            // run the UPDATE
+                            $stmt = $pdo->prepare("
+                        UPDATE purchase_order SET 
+                          po_no               = ?, 
+                          date_of_order       = ?, 
+                          no_of_units         = ?, 
+                          item_specifications = ? 
+                        WHERE id = ?
+                    ");
+                            $stmt->execute([
+                                $newData['po_no'],
+                                $newData['date_of_order'],
+                                $newData['no_of_units'],
+                                $newData['item_specifications'],
+                                $id
+                            ]);
+
+                            // log only the real changes
+                            logAudit(
+                                $pdo,
+                                'Modified',
+                                json_encode($oldSubset),
+                                json_encode($newSubset),
+                                $id,
+                                implode(' ', $detailParts),
+                                'Successful'
+                            );
+
+                            $success = "Purchase Order has been updated successfully.";
+                        } else {
+                            // no fields actually changed
+                            $success = "No changes detected; nothing was updated.";
+                        }
                     }
                 } catch (PDOException $e) {
                     $errors[] = "Error updating Purchase Order: " . $e->getMessage();
@@ -140,14 +247,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // ------------------------
-// DELETE PURCHASE ORDER (soft delete) with AJAX support
+// REMOVE PURCHASE ORDER (soft delete) with AJAX support
 // ------------------------
-if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
+if (isset($_GET['action']) && $_GET['action'] === 'remove' && isset($_GET['id'])) {
     $id = $_GET['id'];
     try {
         // Check if user has Remove privilege
         if (!$rbac->hasPrivilege('Equipment Transaction', 'Remove')) {
-            throw new Exception('You do not have permission to delete purchase orders');
+            throw new Exception('You do not have permission to remove purchase orders');
         }
 
         // Fetch the current values for OldVal before deletion
@@ -158,14 +265,22 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
         if ($oldData) {
             $stmt = $pdo->prepare("UPDATE purchase_order SET is_disabled = 1 WHERE id = ?");
             $stmt->execute([$id]);
-            $_SESSION['success'] = "Purchase Order deleted successfully.";
+            $_SESSION['success'] = "Purchase Order removed successfully.";
             // Log the deletion with old values and entity id
-            logAudit($pdo, 'delete', json_encode($oldData), null, $id);
+            logAudit(
+                $pdo,
+                'Remove',
+                json_encode($oldData),
+                null,
+                $id,
+                "Purchase Order {$oldData['po_no']} removed",
+                'Successful'
+            );
         } else {
-            $_SESSION['errors'] = ["Purchase Order not found for deletion."];
+            $_SESSION['errors'] = ["Purchase Order not found for Removal."];
         }
     } catch (PDOException $e) {
-        $_SESSION['errors'] = ["Error deleting Purchase Order: " . $e->getMessage()];
+        $_SESSION['errors'] = ["Error Removing Purchase Order: " . $e->getMessage()];
     } catch (Exception $e) {
         $_SESSION['errors'] = [$e->getMessage()];
     }
@@ -262,7 +377,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
     }
 }
 
-// Add this after the DELETE action handling section
+// Add this after the REMOVE action handling section
 if (isset($_GET['action']) && $_GET['action'] === 'filter') {
     try {
         $query = "SELECT * FROM purchase_order WHERE is_disabled = 0";
@@ -483,8 +598,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                                                                 <i class="bi bi-pencil-square"></i> Edit
                                                             </a>
                                                         <?php endif; ?>
-                                                        <?php if ($canDelete): ?>
-                                                            <a class="btn btn-sm btn-outline-danger delete-po"
+                                                        <?php if ($canRemove): ?>
+                                                            <a class="btn btn-sm btn-outline-danger remove-po"
                                                                 data-id="<?php echo htmlspecialchars($po['id']); ?>"
                                                                 href="#">
                                                                 <i class="bi bi-trash"></i> Remove
@@ -542,24 +657,24 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
         </div> <!-- End main-content -->
     </div> <!-- End wrapper -->
 
-    <?php if ($canDelete): ?>
-        <!-- Delete Purchase Order Modal -->
-        <div class="modal fade" id="deletePOModal" tabindex="-1">
+    <?php if ($canRemove): ?>
+        <!-- Remove Purchase Order Modal -->
+        <div class="modal fade" id="removePOModal" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">Confirm Deletion</h5>
+                        <h5 class="modal-title">Confirm Removal</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"
                             aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        Are you sure you want to delete this purchase order?
+                        Are you sure you want to remove this purchase order?
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary"
                             data-bs-dismiss="modal">Cancel</button>
-                        <button type="button" id="confirmDeleteBtn"
-                            class="btn btn-danger">Delete</button>
+                        <button type="button" id="confirmRemoveBtn"
+                            class="btn btn-danger">Remove</button>
                     </div>
                 </div>
             </div>
@@ -662,42 +777,57 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
             });
         });
 
-        // Trigger Edit Purchase Order Modal using Bootstrap 5 Modal API
-        $(document).on('click', '.edit-po', function() {
-            var id = $(this).data('id');
-            var po = $(this).data('po');
-            var date = $(this).data('date');
-            var units = $(this).data('units');
-            var item = $(this).data('item');
+        $(document).ready(function() {
+            // DEBUG: make sure Bootstrap.Modal exists
+            console.log('bootstrap.Modal =', typeof bootstrap.Modal);
 
-            $('#edit_po_id').val(id);
-            $('#edit_po_no').val(po);
-            $('#edit_date_of_order').val(date);
-            $('#edit_no_of_units').val(units);
-            $('#edit_item_specifications').val(item);
+            $(document).on('click', '.edit-po', function(e) {
+                e.preventDefault();
+                console.log('📝 edit-po clicked', this);
 
-            var editModal = new bootstrap.Modal(document.getElementById('editPOModal'));
-            editModal.show();
+                // Extract all data- attributes
+                const id = $(this).data('id');
+                const rawPo = $(this).data('po') || ''; // e.g. "PO123"
+                const date = $(this).data('date') || '';
+                const units = $(this).data('units') || '';
+                const item = $(this).data('item') || '';
+
+                // Strip off the "PO" prefix so the <input type="number"> only gets digits
+                const numericPo = rawPo.replace(/^PO/, '');
+
+                // Fill the Edit form
+                $('#edit_po_id').val(id);
+                $('#edit_po_no').val(numericPo);
+                $('#edit_date_of_order').val(date);
+                $('#edit_no_of_units').val(units);
+                $('#edit_item_specifications').val(item);
+
+                // Show the modal (using getOrCreateInstance is a bit safer)
+                const modalEl = document.getElementById('editPOModal');
+                const editModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                editModal.show();
+            });
         });
 
-        // Delete Purchase Order using a Delete Modal
-        var deleteId = null; // global var to store id for deletion
-        $(document).on('click', '.delete-po', function(e) {
+
+        // Remove Purchase Order using a Remove Modal
+        var removeId = null; // global var to store id for removal
+        $(document).on('click', '.remove-po', function(e) {
             e.preventDefault();
-            deleteId = $(this).data('id');
-            var deleteModal = new bootstrap.Modal(document.getElementById('deletePOModal'));
-            deleteModal.show();
+            removeId = $(this).data('id');
+            var removeModal = new bootstrap.Modal(document.getElementById('removePOModal'));
+            removeModal.show();
         });
 
-        // Confirm Delete button in the Delete Modal
-        $(document).on('click', '#confirmDeleteBtn', function() {
-            if (deleteId) {
+        // Confirm Remove button in the Remove Modal
+        $(document).on('click', '#confirmRemoveBtn', function() {
+            if (removeId) {
                 $.ajax({
                     url: 'purchase_order.php',
                     method: 'GET',
                     data: {
-                        action: 'delete',
-                        id: deleteId
+                        action: 'remove',
+                        id: removeId
                     },
                     dataType: 'json',
                     success: function(response) {
@@ -708,9 +838,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                         } else {
                             showToast(response.message, 'error');
                         }
-                        // Hide the delete modal after processing
-                        var deleteModalEl = document.getElementById('deletePOModal');
-                        var modalInstance = bootstrap.Modal.getInstance(deleteModalEl);
+                        // Hide the remove modal after processing
+                        var removeModalEl = document.getElementById('removePOModal');
+                        var modalInstance = bootstrap.Modal.getInstance(removeModalEl);
                         modalInstance.hide();
                     },
                     error: function() {
