@@ -15,123 +15,91 @@ if (!isset($data['userId']) || !isset($data['departmentId'])) {
 }
 
 $userId = (int)$data['userId'];
-// Handle null or empty string oldRoleId
-$oldRoleId = isset($data['oldRoleId']) && $data['oldRoleId'] !== '' && $data['oldRoleId'] !== null 
-    ? (int)$data['oldRoleId'] 
-    : null;
+// Treat missing or empty oldRoleId as 0
+$oldRoleId = isset($data['oldRoleId']) && $data['oldRoleId'] !== ''
+    ? (int)$data['oldRoleId']
+    : 0;
 
-// Convert roleIds to integers, but preserve null values
+// Convert roleIds to integers, using 0 for null or non-numeric
 $roleIds = [];
 if (isset($data['roleIds']) && is_array($data['roleIds'])) {
     foreach ($data['roleIds'] as $rid) {
-        if ($rid === null) {
-            // Keep null values as null
-            $roleIds[] = null;
-        } else {
-            // Convert non-null values to integers
-            $roleIds[] = (int)$rid;
-        }
+        $roleIds[] = is_numeric($rid) ? (int)$rid : 0;
     }
 }
 
-$departmentId = (int)$data['departmentId']; // Single department ID
-$preserveExistingDepartments = isset($data['preserveExistingDepartments']) && $data['preserveExistingDepartments'];
+$departmentId = (int)$data['departmentId'];
 
-error_log("Processed data: userId=$userId, oldRoleId=" . var_export($oldRoleId, true) . 
-          ", departmentId=$departmentId, roleIds=" . json_encode($roleIds));
+error_log("Processed data: userId=$userId, oldRoleId=$oldRoleId, departmentId=$departmentId, roleIds=" . json_encode($roleIds));
 
 try {
     $pdo->beginTransaction();
-    
-    // If an old role was specified, and it's not in the new roles list, remove it
-    if ($oldRoleId !== null && !in_array($oldRoleId, $roleIds)) {
+
+    // 1) Remove the old role if it’s no longer in the new list
+    if ($oldRoleId !== 0 && !in_array($oldRoleId, $roleIds)) {
         $stmtDeleteRole = $pdo->prepare("
-            DELETE FROM user_department_roles 
+            DELETE FROM user_department_roles
             WHERE user_id = ? AND role_id = ? AND department_id = ?
         ");
         $stmtDeleteRole->execute([$userId, $oldRoleId, $departmentId]);
-    } else if ($oldRoleId === null) {
-        // If old role was null, delete the null role entry for this department
-        $stmtDeleteNullRole = $pdo->prepare("
-            DELETE FROM user_department_roles 
-            WHERE user_id = ? AND role_id IS NULL AND department_id = ?
-        ");
-        $stmtDeleteNullRole->execute([$userId, $departmentId]);
     }
-    
-    // If no roles are selected, ensure department exists with null role
+    // 2) If oldRoleId was “none”, delete any existing zero-role entry
+    else if ($oldRoleId === 0) {
+        $stmtDeleteZero = $pdo->prepare("
+            DELETE FROM user_department_roles
+            WHERE user_id = ? AND role_id = 0 AND department_id = ?
+        ");
+        $stmtDeleteZero->execute([$userId, $departmentId]);
+    }
+
+    // 3) If no roles selected at all, ensure a single “0” record exists
     if (empty($roleIds)) {
-        // Remove any existing roles for this department-user combination
-        $stmtDeleteRoles = $pdo->prepare("
-            DELETE FROM user_department_roles 
+        // remove everything for this dept
+        $stmtDeleteAll = $pdo->prepare("
+            DELETE FROM user_department_roles
             WHERE user_id = ? AND department_id = ?
         ");
-        $stmtDeleteRoles->execute([$userId, $departmentId]);
-        
-        // Insert the department with null role
-        $stmtInsertNullRole = $pdo->prepare("
-            INSERT INTO user_department_roles (user_id, department_id, role_id) 
-            VALUES (?, ?, NULL)
+        $stmtDeleteAll->execute([$userId, $departmentId]);
+
+        // insert the zero-role placeholder
+        $stmtInsertZero = $pdo->prepare("
+            INSERT INTO user_department_roles (user_id, department_id, role_id)
+            VALUES (?, ?, 0)
             ON DUPLICATE KEY UPDATE user_id = VALUES(user_id)
         ");
-        $stmtInsertNullRole->execute([$userId, $departmentId]);
+        $stmtInsertZero->execute([$userId, $departmentId]);
     } else {
-        // We have non-null roles to add
-        
-        // First, delete any existing null role for this user-department
-        // This ensures we don't end up with both null and non-null roles
-        $stmtDeleteNullRole = $pdo->prepare("
-            DELETE FROM user_department_roles 
-            WHERE user_id = ? AND role_id IS NULL AND department_id = ?
+        // 4) Remove any existing zero-role so we only have explicit roles
+        $stmtDeleteZero = $pdo->prepare("
+            DELETE FROM user_department_roles
+            WHERE user_id = ? AND role_id = 0 AND department_id = ?
         ");
-        $stmtDeleteNullRole->execute([$userId, $departmentId]);
-        
-        // Insert new roles for the department
+        $stmtDeleteZero->execute([$userId, $departmentId]);
+
+        // 5) Insert each selected role
         $stmtInsertRole = $pdo->prepare("
-            INSERT INTO user_department_roles (user_id, department_id, role_id) 
+            INSERT INTO user_department_roles (user_id, department_id, role_id)
             VALUES (?, ?, ?)
             ON DUPLICATE KEY UPDATE user_id = VALUES(user_id)
         ");
-        
+
         foreach ($roleIds as $roleId) {
-            // Skip the old role if it's already in the database
+            // skip re-inserting the oldRoleId if it’s still valid
             if ($roleId === $oldRoleId) continue;
-            
-            // For null roles, we need a different SQL query
-            if ($roleId === null) {
-                // Check if null role already exists
-                $stmtCheckNullRole = $pdo->prepare("
-                    SELECT COUNT(*) FROM user_department_roles 
-                    WHERE user_id = ? AND role_id IS NULL AND department_id = ?
-                ");
-                $stmtCheckNullRole->execute([$userId, $departmentId]);
-                
-                if ((int)$stmtCheckNullRole->fetchColumn() === 0) {
-                    // Insert the new null role for this department
-                    $stmtInsertNullRole = $pdo->prepare("
-                        INSERT INTO user_department_roles (user_id, department_id, role_id) 
-                        VALUES (?, ?, NULL)
-                    ");
-                    $stmtInsertNullRole->execute([$userId, $departmentId]);
-                }
-            } else {
-                // Regular non-null role
-                // Check if this user-role-department combination already exists
-                $stmtCheckRole = $pdo->prepare("
-                    SELECT COUNT(*) FROM user_department_roles 
-                    WHERE user_id = ? AND role_id = ? AND department_id = ?
-                ");
-                $stmtCheckRole->execute([$userId, $roleId, $departmentId]);
-                
-                if ((int)$stmtCheckRole->fetchColumn() === 0) {
-                    // Insert the new role for this department
-                    $stmtInsertRole->execute([$userId, $departmentId, $roleId]);
-                }
+
+            // check if already exists
+            $stmtCheck = $pdo->prepare("
+                SELECT COUNT(*) FROM user_department_roles
+                WHERE user_id = ? AND role_id = ? AND department_id = ?
+            ");
+            $stmtCheck->execute([$userId, $roleId, $departmentId]);
+            if ((int)$stmtCheck->fetchColumn() === 0) {
+                $stmtInsertRole->execute([$userId, $departmentId, $roleId]);
             }
         }
     }
-    
-    // Get all role-department combinations for this user
+
+    // 6) Build the response: group department_ids by role_id
     $stmtGetAll = $pdo->prepare("
         SELECT role_id, department_id
         FROM user_department_roles
@@ -139,43 +107,26 @@ try {
     ");
     $stmtGetAll->execute([$userId]);
     $combinations = $stmtGetAll->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Group by role_id
+
     $roleMap = [];
     foreach ($combinations as $combo) {
-        $roleId = $combo['role_id'] !== null ? (int)$combo['role_id'] : null;
-        $deptId = (int)$combo['department_id'];
-        
-        if (!isset($roleMap[$roleId])) {
-            $roleMap[$roleId] = [];
-        }
-        
-        if (!in_array($deptId, $roleMap[$roleId])) {
-            $roleMap[$roleId][] = $deptId;
-        }
+        $r = (int)$combo['role_id'];
+        $d = (int)$combo['department_id'];
+        $roleMap[$r][] = $d;
     }
-    
-    // Build assignments for the response
-    $allAssignments = [];
-    foreach ($roleMap as $roleId => $deptIds) {
-        $allAssignments[] = [
-            'userId' => $userId,
-            'roleId' => $roleId,
-            'departmentIds' => $deptIds
+
+    $assignments = [];
+    foreach ($roleMap as $r => $depts) {
+        $assignments[] = [
+            'userId'        => $userId,
+            'roleId'        => $r,
+            'departmentIds' => array_values(array_unique($depts)),
         ];
     }
-    
+
     $pdo->commit();
-    
-    echo json_encode([
-        'success' => true,
-        'assignments' => $allAssignments
-    ]);
+    echo json_encode(['success' => true, 'assignments' => $assignments]);
 } catch (Exception $e) {
     $pdo->rollBack();
-    echo json_encode([
-        'success' => false, 
-        'error' => $e->getMessage()
-    ]);
+    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
-?>

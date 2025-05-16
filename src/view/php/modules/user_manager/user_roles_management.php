@@ -33,8 +33,8 @@ $usersData = $stmt->fetchAll();
 $stmt = $pdo->query("SELECT id, role_name FROM roles WHERE is_disabled = 0");
 $rolesData = $stmt->fetchAll();
 
-// Query all departments (show all regardless of is_disabled)
-$stmt = $pdo->query("SELECT id, department_name, abbreviation FROM departments ORDER BY department_name");
+// Query all departments
+$stmt = $pdo->query("SELECT id, department_name, abbreviation FROM departments WHERE is_disabled = 0 ORDER BY department_name");
 $departmentsData = $stmt->fetchAll();
 // Fetch all user–department–role triples
 $stmt = $pdo->query(
