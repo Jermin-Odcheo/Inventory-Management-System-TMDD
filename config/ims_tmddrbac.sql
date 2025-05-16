@@ -2,10 +2,10 @@
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
--- Host: 127.0.0.1
--- Generation Time: May 16, 2025 at 09:33 AM
+-- Host: 127.0.0.1:3306
+-- Generation Time: May 16, 2025 at 07:42 AM
 -- Server version: 9.1.0
--- PHP Version: 8.0.30
+-- PHP Version: 8.2.13
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -25,6 +25,7 @@ DELIMITER $$
 --
 -- Procedures
 --
+DROP PROCEDURE IF EXISTS `UpdateUserAndDepartment`$$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `UpdateUserAndDepartment` (IN `p_user_id` INT, IN `p_email` VARCHAR(255), IN `p_first_name` VARCHAR(191), IN `p_last_name` VARCHAR(191), IN `p_password` VARCHAR(255), IN `p_status` VARCHAR(50), IN `p_department_id` INT, IN `p_changed_by` INT, IN `p_module` VARCHAR(191))   BEGIN
     DECLARE diffList TEXT DEFAULT '';
     DECLARE old_email VARCHAR(255);
@@ -146,8 +147,9 @@ DELIMITER ;
 -- Table structure for table `audit_log`
 --
 
-CREATE TABLE `audit_log` (
-  `TrackID` int NOT NULL,
+DROP TABLE IF EXISTS `audit_log`;
+CREATE TABLE IF NOT EXISTS `audit_log` (
+  `TrackID` int NOT NULL AUTO_INCREMENT,
   `UserID` int NOT NULL,
   `EntityID` int DEFAULT NULL,
   `Action` varchar(255) NOT NULL,
@@ -156,8 +158,9 @@ CREATE TABLE `audit_log` (
   `NewVal` text,
   `Module` varchar(255) NOT NULL,
   `Status` varchar(50) DEFAULT NULL,
-  `Date_Time` datetime NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `Date_Time` datetime NOT NULL,
+  PRIMARY KEY (`TrackID`)
+) ENGINE=MyISAM AUTO_INCREMENT=611 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `audit_log`
@@ -504,30 +507,52 @@ INSERT INTO `audit_log` (`TrackID`, `UserID`, `EntityID`, `Action`, `Details`, `
 (562, 1, 3, 'modified', 'Updated user information: em@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-13 22:14:19'),
 (563, 1, 3, 'modified', 'Updated user information: em@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-13 22:14:24'),
 (564, 1, 3, 'modified', 'Updated user information: em@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-13 22:14:32'),
-(565, 1, 4, 'Restored', 'User has been restored', '{\"id\": 4, \"email\": \"rp@example.com\", \"status\": \"\", \"username\": \"rpman\", \"last_name\": \"manager\", \"first_name\": \"ropriv\", \"is_disabled\": 1, \"date_created\": \"2025-02-19 13:41:59.000000\"}', '', 'User Management', 'Successful', '2025-05-15 10:26:55'),
-(566, 1, 1, 'Logout', 'navithebear is now offline.', '{\"status\": \"Online\"}', '{\"status\": \"Offline\"}', 'User Management', 'Successful', '2025-05-16 10:09:19'),
-(567, 1, 1, 'Login', 'navithebear is now online.', '{\"status\": \"Offline\"}', '{\"status\": \"Online\"}', 'User Management', 'Successful', '2025-05-16 10:11:45'),
-(568, 1, 1, 'Logout', 'navithebear is now offline.', '{\"status\": \"Online\"}', '{\"status\": \"Offline\"}', 'User Management', 'Successful', '2025-05-16 10:11:47'),
-(569, 1, 1, 'Login', 'navithebear is now online.', '{\"status\": \"Offline\"}', '{\"status\": \"Online\"}', 'User Management', 'Successful', '2025-05-16 10:12:15'),
-(570, 1, 1, 'Logout', 'navithebear is now offline.', '{\"status\": \"Online\"}', '{\"status\": \"Offline\"}', 'User Management', 'Successful', '2025-05-16 10:12:17'),
-(571, 1, 1, 'Login', 'navithebear is now online.', '{\"status\": \"Offline\"}', '{\"status\": \"Online\"}', 'User Management', 'Successful', '2025-05-16 13:46:41'),
-(572, 1, 1, 'Logout', 'navithebear is now offline.', '{\"status\": \"Online\"}', '{\"status\": \"Offline\"}', 'User Management', 'Successful', '2025-05-16 14:32:57'),
-(573, 1, 1, 'Login', 'navithebear is now online.', '{\"status\": \"Offline\"}', '{\"status\": \"Online\"}', 'User Management', 'Successful', '2025-05-16 14:33:45'),
-(574, 4, 4, 'Logout', 'rpman is now offline.', '{\"status\": \"Online\"}', '{\"status\": \"Offline\"}', 'User Management', 'Successful', '2025-05-16 14:57:40'),
-(575, 1, 1, 'Logout', 'navithebear is now offline.', '{\"status\": \"Online\"}', '{\"status\": \"Offline\"}', 'User Management', 'Successful', '2025-05-16 15:08:04'),
-(576, 4, 4, 'Login', 'rpman is now online.', '{\"status\": \"Offline\"}', '{\"status\": \"Online\"}', 'User Management', 'Successful', '2025-05-16 15:08:10'),
-(577, 1, 2, 'Modified', 'Modified Fields: User Management: Added Restore, View', '{\n    \"role_id\": 2,\n    \"role_name\": \"Super Admin\",\n    \"privileges\": []\n}', '{\n    \"role_id\": 2,\n    \"role_name\": \"Super Admin\",\n    \"privileges\": {\n        \"User Management\": [\n            \"Restore\",\n            \"View\"\n        ]\n    }\n}', 'Roles and Privileges', 'Successful', '2025-05-16 15:08:39'),
-(578, 2, 2, 'Login', 'userman is now online.', '{\"status\": \"Offline\"}', '{\"status\": \"Online\"}', 'User Management', 'Successful', '2025-05-16 15:09:43'),
-(579, 2, 2, 'Logout', 'userman is now offline.', '{\"status\": \"Online\"}', '{\"status\": \"Offline\"}', 'User Management', 'Successful', '2025-05-16 15:11:58'),
-(580, 4, 4, 'Logout', 'rpman is now offline.', '{\"status\": \"Online\"}', '{\"status\": \"Offline\"}', 'User Management', 'Successful', '2025-05-16 15:13:02'),
-(581, 1, 1, 'Login', 'navithebear is now online.', '{\"status\": \"Offline\"}', '{\"status\": \"Online\"}', 'User Management', 'Successful', '2025-05-16 15:17:09'),
-(582, 1, 135, 'Create', 'New user added: toff', NULL, '{\"id\": 135, \"email\": \"tmdd@slu.edu.ph\", \"status\": \"Offline\", \"username\": \"toff\", \"last_name\": \"OFF\", \"department\": \"Unknown\", \"first_name\": \"TMDD\", \"date_created\": \"2025-05-16 15:19:31.000000\"}', 'User Management', 'Successful', '2025-05-16 15:19:31'),
-(583, 1, 1, 'Modified', 'Modified Fields: Equipment Transactions: Added Create, Modify, Permanently Delete, Remove, Restore, Track, View, Management: Added Create, Modify, Permanently Delete, Remove, Restore, Track, View, Reports: Added Create, Modify, Permanently Delete, Remove, Restore, Track, View', '{\n    \"role_id\": 1,\n    \"role_name\": \"TMDD-Dev\",\n    \"privileges\": {\n        \"Roles and Privileges\": [\n            \"Track\",\n            \"Create\",\n            \"Remove\",\n            \"Permanently Delete\",\n            \"Modify\",\n            \"View\",\n            \"Restore\"\n        ],\n        \"User Management\": [\n            \"Track\",\n            \"Create\",\n            \"Remove\",\n            \"Permanently Delete\",\n            \"Modify\",\n            \"View\",\n            \"Restore\"\n        ],\n        \"Equipment Management\": [\n            \"Track\",\n            \"Create\",\n            \"Remove\",\n            \"Permanently Delete\",\n            \"Modify\",\n            \"View\",\n            \"Restore\"\n        ],\n        \"Audit\": [\n            \"View\"\n        ]\n    }\n}', '{\n    \"role_id\": 1,\n    \"role_name\": \"TMDD-Dev\",\n    \"privileges\": {\n        \"Audit\": [\n            \"View\"\n        ],\n        \"Equipment Management\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ],\n        \"Equipment Transactions\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ],\n        \"Management\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ],\n        \"Reports\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ],\n        \"Roles and Privileges\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ],\n        \"User Management\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ]\n    }\n}', 'Roles and Privileges', 'Successful', '2025-05-16 15:30:04'),
-(584, 1, 1, 'Logout', 'navithebear is now offline.', '{\"status\": \"Online\"}', '{\"status\": \"Offline\"}', 'User Management', 'Successful', '2025-05-16 15:31:14'),
-(585, 2, 2, 'Login', 'userman is now online.', '{\"status\": \"Offline\"}', '{\"status\": \"Online\"}', 'User Management', 'Successful', '2025-05-16 15:31:27'),
-(586, 1, 4, 'Modified', 'Modified Fields: User Management: Added Create, Modify, Permanently Delete, Remove, Restore, Track, View', '{\n    \"role_id\": 4,\n    \"role_name\": \"User Manager\",\n    \"privileges\": []\n}', '{\n    \"role_id\": 4,\n    \"role_name\": \"User Manager\",\n    \"privileges\": {\n        \"User Management\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ]\n    }\n}', 'Roles and Privileges', 'Successful', '2025-05-16 15:31:51'),
-(587, 1, 4, 'Modified', 'Modified Fields: User Management: Removed View', '{\n    \"role_id\": 4,\n    \"role_name\": \"User Manager\",\n    \"privileges\": {\n        \"User Management\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ]\n    }\n}', '{\n    \"role_id\": 4,\n    \"role_name\": \"User Manager\",\n    \"privileges\": {\n        \"User Management\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\"\n        ]\n    }\n}', 'Roles and Privileges', 'Successful', '2025-05-16 15:32:07'),
-(588, 1, 4, 'Modified', 'Modified Fields: User Management: Added View, Management: Added View, Reports: Added View', '{\n    \"role_id\": 4,\n    \"role_name\": \"User Manager\",\n    \"privileges\": {\n        \"User Management\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\"\n        ]\n    }\n}', '{\n    \"role_id\": 4,\n    \"role_name\": \"User Manager\",\n    \"privileges\": {\n        \"Management\": [\n            \"View\"\n        ],\n        \"Reports\": [\n            \"View\"\n        ],\n        \"User Management\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ]\n    }\n}', 'Roles and Privileges', 'Successful', '2025-05-16 15:32:23');
+(565, 1, 3, 'modified', 'Updated user information: em@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-15 09:02:40'),
+(566, 1, 135, 'Create', 'New user added: ttest', NULL, '{\"id\": 135, \"email\": \"tester1233321@gmail.com\", \"status\": \"Offline\", \"username\": \"ttest\", \"last_name\": \"test\", \"department\": \"Unknown\", \"first_name\": \"test\", \"date_created\": \"2025-05-15 09:03:25.000000\"}', 'User Management', 'Successful', '2025-05-15 09:03:25'),
+(567, 1, 135, 'modified', 'Updated user information: tester1233321@gmail.com', NULL, NULL, 'User Management', 'Success', '2025-05-15 09:07:41'),
+(568, 1, 135, 'modified', 'Updated user information: tester1233321@gmail.com', NULL, NULL, 'User Management', 'Success', '2025-05-15 09:11:11'),
+(569, 1, 135, 'modified', 'Updated user information: tester1233321@gmail.com', NULL, NULL, 'User Management', 'Success', '2025-05-15 09:11:20'),
+(570, 1, 135, 'modified', 'Updated user information: tester1233321@gmail.com', NULL, NULL, 'User Management', 'Success', '2025-05-15 09:14:53'),
+(571, 1, 135, 'modified', 'Updated user information: tester1233321@gmail.com', NULL, NULL, 'User Management', 'Success', '2025-05-15 09:15:01'),
+(572, 1, 135, 'modified', 'Updated user information: tester1233321@gmail.com', NULL, NULL, 'User Management', 'Success', '2025-05-15 09:19:22'),
+(573, 1, 135, 'modified', 'Updated user information: tester1233321@gmail.com', NULL, NULL, 'User Management', 'Success', '2025-05-15 09:19:34'),
+(574, 1, 135, 'modified', 'Updated user information: tester1233321@gmail.com', NULL, NULL, 'User Management', 'Success', '2025-05-15 09:19:47'),
+(575, 1, 3, 'modified', 'Updated user information: em@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-15 09:20:07'),
+(576, 1, 3, 'modified', 'Updated user information: em@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-15 09:30:10'),
+(577, 1, 135, 'modified', 'Updated user information: tester1233321@gmail.com', NULL, NULL, 'User Management', 'Success', '2025-05-15 09:30:19'),
+(578, 1, 46, 'Remove', 'Department \'57877\' has been moved to archive', '{\"id\":46,\"abbreviation\":\"9876\",\"department_name\":\"57877\"}', '{\"id\":46,\"abbreviation\":\"9876\",\"department_name\":\"57877\"}', 'Department Management', 'Successful', '2025-05-15 09:36:45'),
+(579, 1, 46, 'Restored', 'Department \'57877\' has been restored', '{\"id\":46,\"abbreviation\":\"9876\",\"department_name\":\"57877\"}', '{\"id\":46,\"abbreviation\":\"9876\",\"department_name\":\"57877\"}', 'Department Management', 'Successful', '2025-05-15 09:48:04'),
+(580, 1, 4, 'Restored', 'User has been restored', '{\"id\": 4, \"email\": \"rp@example.com\", \"status\": \"\", \"username\": \"rpman\", \"last_name\": \"manager\", \"first_name\": \"ropriv\", \"is_disabled\": 1, \"date_created\": \"2025-02-19 13:41:59.000000\"}', '', 'User Management', 'Successful', '2025-05-15 09:48:30'),
+(581, 1, 4, 'modified', 'Updated user information: rp@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-15 09:48:40'),
+(582, 1, 46, 'Remove', 'Department \'57877\' has been moved to archive', '{\"id\":46,\"abbreviation\":\"9876\",\"department_name\":\"57877\"}', '{\"id\":46,\"abbreviation\":\"9876\",\"department_name\":\"57877\"}', 'Department Management', 'Successful', '2025-05-15 09:48:54'),
+(583, 1, 46, 'Restored', 'Department \'57877\' has been restored', '{\"id\":46,\"abbreviation\":\"9876\",\"department_name\":\"57877\"}', '{\"id\":46,\"abbreviation\":\"9876\",\"department_name\":\"57877\"}', 'Department Management', 'Successful', '2025-05-15 09:55:48'),
+(584, 1, 46, 'Remove', 'Department \'57877\' has been moved to archive', '{\"id\":46,\"abbreviation\":\"9876\",\"department_name\":\"57877\"}', '{\"id\":46,\"abbreviation\":\"9876\",\"department_name\":\"57877\"}', 'Department Management', 'Successful', '2025-05-15 09:56:14'),
+(585, 1, 46, 'Restored', 'Department \'57877\' has been restored', '{\"id\":46,\"abbreviation\":\"9876\",\"department_name\":\"57877\"}', '{\"id\":46,\"abbreviation\":\"9876\",\"department_name\":\"57877\"}', 'Department Management', 'Successful', '2025-05-15 09:56:25'),
+(586, 1, 32, 'Remove', 'Role \'testsetes\' has been archived', '{\n    \"role_id\": 32,\n    \"role_name\": \"testsetes\",\n    \"modules_and_privileges\": []\n}', '{\"id\":32,\"role_name\":\"testsetes\",\"is_disabled\":1}', 'Roles and Privileges', 'Successful', '2025-05-15 10:17:35'),
+(587, 1, 2, 'modified', 'Updated user information: um@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-15 10:27:53'),
+(588, 1, 2, 'modified', 'Updated user information: um@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-15 10:28:20'),
+(589, 1, 3, 'Remove', 'Role \'Equipment Manager\' has been archived', '{\n    \"role_id\": 3,\n    \"role_name\": \"Equipment Manager\",\n    \"modules_and_privileges\": []\n}', '{\"id\":3,\"role_name\":\"Equipment Manager\",\"is_disabled\":1}', 'Roles and Privileges', 'Successful', '2025-05-15 10:30:36'),
+(590, 1, 3, 'Restore', 'Role \'Equipment Manager\' has been restored', '{\"role_id\":3,\"role_name\":\"Equipment Manager\",\"modules_and_privileges\":[]}', '{\"role_id\":3,\"role_name\":\"Equipment Manager\",\"modules_and_privileges\":[]}', 'Roles and Privileges', 'Successful', '2025-05-15 10:30:50'),
+(591, 1, 2, 'modified', 'Updated user information: um@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-15 10:54:10'),
+(592, 1, 3, 'modified', 'Updated user information: em@example.com', NULL, NULL, 'User Management', 'Success', '2025-05-15 10:55:05'),
+(593, 1, 1, 'Modified', 'Modified Fields: Equipment Transaction: Added Track', '{\n    \"role_id\": 1,\n    \"role_name\": \"TMDD-Dev\",\n    \"privileges\": {\n        \"Audit\": [\n            \"View\"\n        ],\n        \"Equipment Management\": [\n            \"Add\",\n            \"Approve\",\n            \"Assign\",\n            \"Create\",\n            \"Delete\",\n            \"Modify\",\n            \"Reject\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"Undo\",\n            \"View\"\n        ],\n        \"Roles and Privileges\": [\n            \"Add\",\n            \"Approve\",\n            \"Assign\",\n            \"Create\",\n            \"Delete\",\n            \"Modify\",\n            \"Reject\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"Undo\",\n            \"View\"\n        ],\n        \"User Management\": [\n            \"Add\",\n            \"Approve\",\n            \"Assign\",\n            \"Create\",\n            \"Delete\",\n            \"Modify\",\n            \"Reject\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"Undo\",\n            \"View\"\n        ]\n    }\n}', '{\n    \"role_id\": 1,\n    \"role_name\": \"TMDD-Dev\",\n    \"privileges\": {\n        \"Audit\": [\n            \"View\"\n        ],\n        \"Equipment Management\": [\n            \"Add\",\n            \"Approve\",\n            \"Assign\",\n            \"Create\",\n            \"Delete\",\n            \"Modify\",\n            \"Reject\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"Undo\",\n            \"View\"\n        ],\n        \"Equipment Transaction\": [\n            \"Track\"\n        ],\n        \"Roles and Privileges\": [\n            \"Add\",\n            \"Approve\",\n            \"Assign\",\n            \"Create\",\n            \"Delete\",\n            \"Modify\",\n            \"Reject\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"Undo\",\n            \"View\"\n        ],\n        \"User Management\": [\n            \"Add\",\n            \"Approve\",\n            \"Assign\",\n            \"Create\",\n            \"Delete\",\n            \"Modify\",\n            \"Reject\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"Undo\",\n            \"View\"\n        ]\n    }\n}', 'Roles and Privileges', 'Successful', '2025-05-16 11:52:02'),
+(594, 1, 1, 'Modified', 'Modified Fields: Equipment Transaction: Added Create, Remove, View', '{\n    \"role_id\": 1,\n    \"role_name\": \"TMDD-Dev\",\n    \"privileges\": {\n        \"Audit\": [\n            \"View\"\n        ],\n        \"Equipment Management\": [\n            \"Add\",\n            \"Approve\",\n            \"Assign\",\n            \"Create\",\n            \"Delete\",\n            \"Modify\",\n            \"Reject\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"Undo\",\n            \"View\"\n        ],\n        \"Equipment Transaction\": [\n            \"Track\"\n        ],\n        \"Roles and Privileges\": [\n            \"Add\",\n            \"Approve\",\n            \"Assign\",\n            \"Create\",\n            \"Delete\",\n            \"Modify\",\n            \"Reject\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"Undo\",\n            \"View\"\n        ],\n        \"User Management\": [\n            \"Add\",\n            \"Approve\",\n            \"Assign\",\n            \"Create\",\n            \"Delete\",\n            \"Modify\",\n            \"Reject\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"Undo\",\n            \"View\"\n        ]\n    }\n}', '{\n    \"role_id\": 1,\n    \"role_name\": \"TMDD-Dev\",\n    \"privileges\": {\n        \"Audit\": [\n            \"View\"\n        ],\n        \"Equipment Management\": [\n            \"Add\",\n            \"Approve\",\n            \"Assign\",\n            \"Create\",\n            \"Delete\",\n            \"Modify\",\n            \"Reject\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"Undo\",\n            \"View\"\n        ],\n        \"Equipment Transaction\": [\n            \"Create\",\n            \"Remove\",\n            \"Track\",\n            \"View\"\n        ],\n        \"Roles and Privileges\": [\n            \"Add\",\n            \"Approve\",\n            \"Assign\",\n            \"Create\",\n            \"Delete\",\n            \"Modify\",\n            \"Reject\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"Undo\",\n            \"View\"\n        ],\n        \"User Management\": [\n            \"Add\",\n            \"Approve\",\n            \"Assign\",\n            \"Create\",\n            \"Delete\",\n            \"Modify\",\n            \"Reject\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"Undo\",\n            \"View\"\n        ]\n    }\n}', 'Roles and Privileges', 'Successful', '2025-05-16 11:52:55'),
+(595, 1, NULL, 'add', NULL, NULL, '{\"po_no\":\"PO6787654\",\"date_of_order\":\"2025-05-18\",\"no_of_units\":\"12\",\"item_specifications\":\"34\"}', 'Purchase Order', NULL, '2025-05-16 11:53:07'),
+(596, 1, NULL, 'add', NULL, NULL, '{\"po_no\":\"PO2345654\",\"date_of_order\":\"2025-05-21\",\"no_of_units\":\"123123\",\"item_specifications\":\"123\"}', 'Purchase Order', NULL, '2025-05-16 13:03:33'),
+(597, 1, 1, 'Modified', 'Modified Fields: Equipment Transaction: Added Modify', '{\n    \"role_id\": 1,\n    \"role_name\": \"TMDD-Dev\",\n    \"privileges\": {\n        \"Audit\": [\n            \"View\"\n        ],\n        \"Equipment Management\": [\n            \"Add\",\n            \"Approve\",\n            \"Assign\",\n            \"Create\",\n            \"Delete\",\n            \"Modify\",\n            \"Reject\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"Undo\",\n            \"View\"\n        ],\n        \"Equipment Transaction\": [\n            \"Create\",\n            \"Remove\",\n            \"Track\",\n            \"View\"\n        ],\n        \"Roles and Privileges\": [\n            \"Add\",\n            \"Approve\",\n            \"Assign\",\n            \"Create\",\n            \"Delete\",\n            \"Modify\",\n            \"Reject\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"Undo\",\n            \"View\"\n        ],\n        \"User Management\": [\n            \"Add\",\n            \"Approve\",\n            \"Assign\",\n            \"Create\",\n            \"Delete\",\n            \"Modify\",\n            \"Reject\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"Undo\",\n            \"View\"\n        ]\n    }\n}', '{\n    \"role_id\": 1,\n    \"role_name\": \"TMDD-Dev\",\n    \"privileges\": {\n        \"Audit\": [\n            \"View\"\n        ],\n        \"Equipment Management\": [\n            \"Add\",\n            \"Approve\",\n            \"Assign\",\n            \"Create\",\n            \"Delete\",\n            \"Modify\",\n            \"Reject\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"Undo\",\n            \"View\"\n        ],\n        \"Equipment Transaction\": [\n            \"Create\",\n            \"Modify\",\n            \"Remove\",\n            \"Track\",\n            \"View\"\n        ],\n        \"Roles and Privileges\": [\n            \"Add\",\n            \"Approve\",\n            \"Assign\",\n            \"Create\",\n            \"Delete\",\n            \"Modify\",\n            \"Reject\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"Undo\",\n            \"View\"\n        ],\n        \"User Management\": [\n            \"Add\",\n            \"Approve\",\n            \"Assign\",\n            \"Create\",\n            \"Delete\",\n            \"Modify\",\n            \"Reject\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"Undo\",\n            \"View\"\n        ]\n    }\n}', 'Roles and Privileges', 'Successful', '2025-05-16 13:05:55'),
+(598, 1, 20, 'modified', NULL, '{\"id\":20,\"po_no\":\"PO2345654\",\"date_of_order\":\"2025-05-21\",\"no_of_units\":123123,\"item_specifications\":\"123\",\"date_created\":\"2025-05-16 13:03:33\",\"is_disabled\":0}', '{\"po_no\":\"PO23456542\",\"date_of_order\":\"2025-05-21\",\"no_of_units\":\"123123\",\"item_specifications\":\"123\"}', 'Purchase Order', NULL, '2025-05-16 14:00:47'),
+(599, 1, NULL, 'Create', NULL, NULL, '{\"po_no\":\"PO345123\",\"date_of_order\":\"2025-05-22\",\"no_of_units\":\"1\",\"item_specifications\":\"331\"}', 'Purchase Order', NULL, '2025-05-16 14:01:19'),
+(600, 1, 21, 'delete', NULL, '{\"id\":21,\"po_no\":\"PO345123\",\"date_of_order\":\"2025-05-22\",\"no_of_units\":1,\"item_specifications\":\"331\",\"date_created\":\"2025-05-16 14:01:19\",\"is_disabled\":0}', NULL, 'Purchase Order', NULL, '2025-05-16 14:01:26'),
+(601, 1, 20, 'modified', NULL, '{\"id\":20,\"po_no\":\"PO23456542\",\"date_of_order\":\"2025-05-21\",\"no_of_units\":123123,\"item_specifications\":\"123\",\"date_created\":\"2025-05-16 13:03:33\",\"is_disabled\":0}', '{\"po_no\":\"PO234565422\",\"date_of_order\":\"2025-05-21\",\"no_of_units\":\"123123\",\"item_specifications\":\"123\"}', 'Purchase Order', NULL, '2025-05-16 14:39:13'),
+(602, 1, 20, 'Modified', 'Purchase Order PO22222331 updated', '{\"id\":20,\"po_no\":\"PO234565422\",\"date_of_order\":\"2025-05-21\",\"no_of_units\":123123,\"item_specifications\":\"123\",\"date_created\":\"2025-05-16 13:03:33\",\"is_disabled\":0}', '{\"po_no\":\"PO22222331\",\"date_of_order\":\"2025-05-21\",\"no_of_units\":\"123123\",\"item_specifications\":\"123\"}', 'Purchase Order', 'Successful', '2025-05-16 14:44:47'),
+(603, 1, 20, 'Modified', 'The PO No was changed from \'PO22222331\' to \'PO3333312\'. The No of Units was changed from \'123123\' to \'123123\'.', '{\"po_no\":\"PO22222331\",\"no_of_units\":123123}', '{\"po_no\":\"PO3333312\",\"no_of_units\":\"123123\"}', 'Purchase Order', 'Successful', '2025-05-16 14:52:28'),
+(604, 1, 20, 'Modified', 'The No of Units was changed from \'123123\' to \'33333\'. The Item Specifications was changed from \'123\' to \'33333\'.', '{\"no_of_units\":123123,\"item_specifications\":\"123\"}', '{\"no_of_units\":\"33333\",\"item_specifications\":\"33333\"}', 'Purchase Order', 'Successful', '2025-05-16 14:52:33'),
+(605, 1, 19, 'Modified', 'The PO No was changed from \'PO6787654\' to \'PO67876543\'.', '{\"po_no\":\"PO6787654\"}', '{\"po_no\":\"PO67876543\"}', 'Purchase Order', 'Successful', '2025-05-16 14:56:52'),
+(606, 1, 19, 'Modified', 'The Item Specifications was changed from \'34\' to \'341\'.', '{\"item_specifications\":\"34\"}', '{\"item_specifications\":\"341\"}', 'Purchase Order', 'Successful', '2025-05-16 14:56:59'),
+(607, 1, 18, 'Delete', 'Purchase Order 312312312312 deleted', '{\"id\":18,\"po_no\":\"312312312312\",\"date_of_order\":\"2025-03-18\",\"no_of_units\":131223,\"item_specifications\":\"12213123\",\"date_created\":\"2025-03-18 09:13:58\",\"is_disabled\":0}', NULL, 'Purchase Order', 'Successful', '2025-05-16 14:57:11'),
+(608, 1, 17, 'Delete', 'Purchase Order 123412311 deleted', '{\"id\":17,\"po_no\":\"123412311\",\"date_of_order\":\"2025-04-02\",\"no_of_units\":333,\"item_specifications\":\"333\",\"date_created\":\"2025-03-17 10:20:59\",\"is_disabled\":0}', NULL, 'Purchase Order', 'Successful', '2025-05-16 14:57:12'),
+(609, 1, 20, 'Remove', 'Purchase Order PO3333312 removed', '{\"id\":20,\"po_no\":\"PO3333312\",\"date_of_order\":\"2025-05-21\",\"no_of_units\":33333,\"item_specifications\":\"33333\",\"date_created\":\"2025-05-16 13:03:33\",\"is_disabled\":0}', NULL, 'Purchase Order', 'Successful', '2025-05-16 15:07:09'),
+(610, 1, 19, 'Remove', 'Purchase Order PO67876543 removed', '{\"id\":19,\"po_no\":\"PO67876543\",\"date_of_order\":\"2025-05-18\",\"no_of_units\":12,\"item_specifications\":\"341\",\"date_created\":\"2025-05-16 11:53:07\",\"is_disabled\":0}', NULL, 'Purchase Order', 'Successful', '2025-05-16 15:15:13');
 
 -- --------------------------------------------------------
 
@@ -535,14 +560,18 @@ INSERT INTO `audit_log` (`TrackID`, `UserID`, `EntityID`, `Action`, `Details`, `
 -- Table structure for table `charge_invoice`
 --
 
-CREATE TABLE `charge_invoice` (
-  `id` int NOT NULL,
+DROP TABLE IF EXISTS `charge_invoice`;
+CREATE TABLE IF NOT EXISTS `charge_invoice` (
+  `id` int NOT NULL AUTO_INCREMENT,
   `invoice_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
   `date_of_purchase` date NOT NULL,
   `po_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
   `date_created` datetime DEFAULT CURRENT_TIMESTAMP,
-  `is_disabled` tinyint(1) NOT NULL DEFAULT '0'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `invoice_no` (`invoice_no`),
+  KEY `po_no` (`po_no`)
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `charge_invoice`
@@ -557,12 +586,16 @@ INSERT INTO `charge_invoice` (`id`, `invoice_no`, `date_of_purchase`, `po_no`, `
 -- Table structure for table `departments`
 --
 
-CREATE TABLE `departments` (
-  `id` int NOT NULL,
+DROP TABLE IF EXISTS `departments`;
+CREATE TABLE IF NOT EXISTS `departments` (
+  `id` int NOT NULL AUTO_INCREMENT,
   `department_name` varchar(191) NOT NULL,
   `abbreviation` varchar(50) NOT NULL,
-  `is_disabled` tinyint(1) NOT NULL DEFAULT '0'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `department_name` (`department_name`),
+  UNIQUE KEY `abbreviation` (`abbreviation`)
+) ENGINE=InnoDB AUTO_INCREMENT=47 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `departments`
@@ -613,8 +646,9 @@ INSERT INTO `departments` (`id`, `department_name`, `abbreviation`, `is_disabled
 -- Table structure for table `equipment_details`
 --
 
-CREATE TABLE `equipment_details` (
-  `id` int NOT NULL,
+DROP TABLE IF EXISTS `equipment_details`;
+CREATE TABLE IF NOT EXISTS `equipment_details` (
+  `id` int NOT NULL AUTO_INCREMENT,
   `asset_tag` varchar(50) NOT NULL,
   `asset_description_1` text NOT NULL,
   `asset_description_2` text NOT NULL,
@@ -630,8 +664,11 @@ CREATE TABLE `equipment_details` (
   `remarks` text,
   `date_created` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
-  `date_modified` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `date_modified` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `asset_tag` (`asset_tag`),
+  KEY `invoice_no` (`invoice_no`)
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `equipment_details`
@@ -646,8 +683,9 @@ INSERT INTO `equipment_details` (`id`, `asset_tag`, `asset_description_1`, `asse
 -- Table structure for table `equipment_location`
 --
 
-CREATE TABLE `equipment_location` (
-  `equipment_location_id` int NOT NULL,
+DROP TABLE IF EXISTS `equipment_location`;
+CREATE TABLE IF NOT EXISTS `equipment_location` (
+  `equipment_location_id` int NOT NULL AUTO_INCREMENT,
   `asset_tag` varchar(50) NOT NULL,
   `building_loc` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
   `floor_no` varchar(50) DEFAULT NULL,
@@ -656,8 +694,11 @@ CREATE TABLE `equipment_location` (
   `department_id` int DEFAULT NULL,
   `remarks` text,
   `date_created` datetime DEFAULT CURRENT_TIMESTAMP,
-  `is_disabled` tinyint(1) NOT NULL DEFAULT '0'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`equipment_location_id`),
+  UNIQUE KEY `asset_tag` (`asset_tag`),
+  KEY `department_id` (`department_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `equipment_location`
@@ -672,14 +713,16 @@ INSERT INTO `equipment_location` (`equipment_location_id`, `asset_tag`, `buildin
 -- Table structure for table `equipment_status`
 --
 
-CREATE TABLE `equipment_status` (
-  `equipment_status_id` int NOT NULL,
+DROP TABLE IF EXISTS `equipment_status`;
+CREATE TABLE IF NOT EXISTS `equipment_status` (
+  `equipment_status_id` int NOT NULL AUTO_INCREMENT,
   `asset_tag` varchar(255) NOT NULL,
   `status` varchar(255) NOT NULL,
   `action` varchar(255) NOT NULL,
   `remarks` text,
   `date_created` datetime DEFAULT CURRENT_TIMESTAMP,
-  `is_disabled` tinyint(1) DEFAULT '0'
+  `is_disabled` tinyint(1) DEFAULT '0',
+  PRIMARY KEY (`equipment_status_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
@@ -688,10 +731,13 @@ CREATE TABLE `equipment_status` (
 -- Table structure for table `modules`
 --
 
-CREATE TABLE `modules` (
-  `id` int NOT NULL,
-  `module_name` varchar(100) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+DROP TABLE IF EXISTS `modules`;
+CREATE TABLE IF NOT EXISTS `modules` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `module_name` varchar(100) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `module_name` (`module_name`)
+) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `modules`
@@ -712,11 +758,13 @@ INSERT INTO `modules` (`id`, `module_name`) VALUES
 -- Table structure for table `privileges`
 --
 
-CREATE TABLE `privileges` (
-  `id` int NOT NULL,
+DROP TABLE IF EXISTS `privileges`;
+CREATE TABLE IF NOT EXISTS `privileges` (
+  `id` int NOT NULL AUTO_INCREMENT,
   `priv_name` varchar(191) NOT NULL,
-  `is_disabled` tinyint NOT NULL DEFAULT '0'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `is_disabled` tinyint NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=26 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `privileges`
@@ -737,15 +785,18 @@ INSERT INTO `privileges` (`id`, `priv_name`, `is_disabled`) VALUES
 -- Table structure for table `purchase_order`
 --
 
-CREATE TABLE `purchase_order` (
-  `id` int NOT NULL,
+DROP TABLE IF EXISTS `purchase_order`;
+CREATE TABLE IF NOT EXISTS `purchase_order` (
+  `id` int NOT NULL AUTO_INCREMENT,
   `po_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
   `date_of_order` date NOT NULL,
   `no_of_units` int NOT NULL,
   `item_specifications` text NOT NULL,
   `date_created` datetime DEFAULT CURRENT_TIMESTAMP,
-  `is_disabled` tinyint(1) NOT NULL DEFAULT '0'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `po_no` (`po_no`)
+) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `purchase_order`
@@ -773,15 +824,19 @@ INSERT INTO `purchase_order` (`id`, `po_no`, `date_of_order`, `no_of_units`, `it
 -- Table structure for table `receive_report`
 --
 
-CREATE TABLE `receive_report` (
-  `id` int NOT NULL,
+DROP TABLE IF EXISTS `receive_report`;
+CREATE TABLE IF NOT EXISTS `receive_report` (
+  `id` int NOT NULL AUTO_INCREMENT,
   `rr_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
   `accountable_individual` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
   `ai_loc` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci,
   `po_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
   `date_created` datetime DEFAULT CURRENT_TIMESTAMP,
-  `is_disabled` tinyint(1) NOT NULL DEFAULT '0'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `rr_no` (`rr_no`),
+  KEY `po_no` (`po_no`)
+) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
 
@@ -789,11 +844,14 @@ CREATE TABLE `receive_report` (
 -- Table structure for table `roles`
 --
 
-CREATE TABLE `roles` (
-  `id` int NOT NULL,
+DROP TABLE IF EXISTS `roles`;
+CREATE TABLE IF NOT EXISTS `roles` (
+  `id` int NOT NULL AUTO_INCREMENT,
   `role_name` varchar(100) NOT NULL,
-  `is_disabled` tinyint(1) NOT NULL DEFAULT '0'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `role_name` (`role_name`)
+) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `roles`
@@ -814,8 +872,9 @@ INSERT INTO `roles` (`id`, `role_name`, `is_disabled`) VALUES
 -- Table structure for table `role_changes`
 --
 
-CREATE TABLE `role_changes` (
-  `ChangeID` int NOT NULL,
+DROP TABLE IF EXISTS `role_changes`;
+CREATE TABLE IF NOT EXISTS `role_changes` (
+  `ChangeID` int NOT NULL AUTO_INCREMENT,
   `UserID` int NOT NULL,
   `RoleID` int NOT NULL,
   `Action` enum('Add','Modified','Delete') NOT NULL,
@@ -824,8 +883,11 @@ CREATE TABLE `role_changes` (
   `ChangeTimestamp` datetime DEFAULT CURRENT_TIMESTAMP,
   `OldPrivileges` text,
   `NewPrivileges` text,
-  `IsUndone` tinyint(1) DEFAULT '0'
-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `IsUndone` tinyint(1) DEFAULT '0',
+  PRIMARY KEY (`ChangeID`),
+  KEY `UserID` (`UserID`),
+  KEY `RoleID` (`RoleID`)
+) ENGINE=MyISAM AUTO_INCREMENT=284 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `role_changes`
@@ -1067,12 +1129,17 @@ INSERT INTO `role_changes` (`ChangeID`, `UserID`, `RoleID`, `Action`, `OldRoleNa
 -- Table structure for table `role_module_privileges`
 --
 
-CREATE TABLE `role_module_privileges` (
-  `id` int NOT NULL,
+DROP TABLE IF EXISTS `role_module_privileges`;
+CREATE TABLE IF NOT EXISTS `role_module_privileges` (
+  `id` int NOT NULL AUTO_INCREMENT,
   `role_id` int DEFAULT NULL,
   `module_id` int DEFAULT NULL,
-  `privilege_id` int DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `privilege_id` int DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `role_id` (`role_id`),
+  KEY `module_id` (`module_id`),
+  KEY `fk_rmp_privilege` (`privilege_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1391 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `role_module_privileges`
@@ -1168,8 +1235,9 @@ INSERT INTO `role_module_privileges` (`id`, `role_id`, `module_id`, `privilege_i
 -- Table structure for table `users`
 --
 
-CREATE TABLE `users` (
-  `id` int NOT NULL,
+DROP TABLE IF EXISTS `users`;
+CREATE TABLE IF NOT EXISTS `users` (
+  `id` int NOT NULL AUTO_INCREMENT,
   `username` varchar(50) NOT NULL,
   `email` varchar(100) NOT NULL,
   `password` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
@@ -1178,8 +1246,11 @@ CREATE TABLE `users` (
   `date_created` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `status` enum('Offline','Online') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
-  `profile_pic_path` varchar(2048) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `profile_pic_path` varchar(2048) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `username` (`username`),
+  UNIQUE KEY `email` (`email`)
+) ENGINE=InnoDB AUTO_INCREMENT=136 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `users`
@@ -1197,6 +1268,7 @@ INSERT INTO `users` (`id`, `username`, `email`, `password`, `first_name`, `last_
 --
 -- Triggers `users`
 --
+DROP TRIGGER IF EXISTS `after_user_disable`;
 DELIMITER $$
 CREATE TRIGGER `after_user_disable` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
     -- Only log if the user is actually being disabled (active to disabled)
@@ -1235,6 +1307,7 @@ CREATE TRIGGER `after_user_disable` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
 END
 $$
 DELIMITER ;
+DROP TRIGGER IF EXISTS `user_after_delete`;
 DELIMITER $$
 CREATE TRIGGER `user_after_delete` AFTER DELETE ON `users` FOR EACH ROW BEGIN
     -- Only log if the user was archived (is_disabled = 1)
@@ -1269,6 +1342,7 @@ CREATE TRIGGER `user_after_delete` AFTER DELETE ON `users` FOR EACH ROW BEGIN
 END
 $$
 DELIMITER ;
+DROP TRIGGER IF EXISTS `user_after_restore`;
 DELIMITER $$
 CREATE TRIGGER `user_after_restore` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
     -- Only log if the user is actually being disabled (active to disabled)
@@ -1307,6 +1381,7 @@ CREATE TRIGGER `user_after_restore` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
 END
 $$
 DELIMITER ;
+DROP TRIGGER IF EXISTS `user_status_change`;
 DELIMITER $$
 CREATE TRIGGER `user_status_change` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
     -- Only log if the status has changed
@@ -1364,6 +1439,7 @@ CREATE TRIGGER `user_status_change` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
 END
 $$
 DELIMITER ;
+DROP TRIGGER IF EXISTS `users_after_create`;
 DELIMITER $$
 CREATE TRIGGER `users_after_create` AFTER INSERT ON `users` FOR EACH ROW BEGIN
     -- Declare variable to hold department name
@@ -1417,61 +1493,17 @@ DELIMITER ;
 -- --------------------------------------------------------
 
 --
--- Table structure for table `user_departments`
---
-
-CREATE TABLE `user_departments` (
-  `user_id` int NOT NULL,
-  `department_id` int NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
---
--- Dumping data for table `user_departments`
---
-
-INSERT INTO `user_departments` (`user_id`, `department_id`) VALUES
-(1, 1),
-(12, 1),
-(37, 1),
-(49, 1),
-(50, 1),
-(75, 1),
-(104, 1),
-(106, 1),
-(5, 2),
-(83, 2),
-(96, 2),
-(97, 2),
-(103, 2),
-(105, 2),
-(48, 3),
-(69, 3),
-(84, 3),
-(87, 3),
-(93, 3),
-(94, 3),
-(95, 3),
-(107, 3),
-(11, 4),
-(92, 4),
-(12, 5),
-(82, 5),
-(85, 5),
-(86, 5),
-(101, 5),
-(74, 40),
-(13, 42);
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `user_department_roles`
 --
 
-CREATE TABLE `user_department_roles` (
+DROP TABLE IF EXISTS `user_department_roles`;
+CREATE TABLE IF NOT EXISTS `user_department_roles` (
   `user_id` int NOT NULL,
   `department_id` int NOT NULL,
-  `role_id` int NOT NULL
+  `role_id` int NOT NULL DEFAULT '0',
+  PRIMARY KEY (`user_id`,`department_id`,`role_id`),
+  KEY `user_id` (`user_id`),
+  KEY `department_id` (`department_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
@@ -1480,272 +1512,10 @@ CREATE TABLE `user_department_roles` (
 
 INSERT INTO `user_department_roles` (`user_id`, `department_id`, `role_id`) VALUES
 (1, 1, 1),
-(2, 5, 4),
-(3, 1, 3),
-(3, 3, 3),
-(3, 5, 3),
-(3, 5, 32),
-(3, 46, 3),
-(4, 28, 2),
-(4, 28, 6),
-(134, 5, 3);
-
--- --------------------------------------------------------
-
---
--- Table structure for table `user_roles`
---
-
-CREATE TABLE `user_roles` (
-  `user_id` int NOT NULL,
-  `role_id` int NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
---
--- Dumping data for table `user_roles`
---
-
-INSERT INTO `user_roles` (`user_id`, `role_id`) VALUES
-(1, 1),
-(12, 1),
-(12, 2),
-(83, 2),
-(3, 3),
-(12, 3),
-(37, 3),
-(48, 3),
-(84, 3),
-(2, 4),
-(13, 4),
-(49, 4),
-(50, 4),
-(4, 5),
-(69, 5),
-(5, 6),
-(11, 6),
-(74, 6),
-(75, 6),
-(82, 6),
-(85, 6),
-(86, 6);
-
---
--- Indexes for dumped tables
---
-
---
--- Indexes for table `audit_log`
---
-ALTER TABLE `audit_log`
-  ADD PRIMARY KEY (`TrackID`);
-
---
--- Indexes for table `charge_invoice`
---
-ALTER TABLE `charge_invoice`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `invoice_no` (`invoice_no`),
-  ADD KEY `po_no` (`po_no`);
-
---
--- Indexes for table `departments`
---
-ALTER TABLE `departments`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `department_name` (`department_name`),
-  ADD UNIQUE KEY `abbreviation` (`abbreviation`);
-
---
--- Indexes for table `equipment_details`
---
-ALTER TABLE `equipment_details`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `asset_tag` (`asset_tag`),
-  ADD KEY `invoice_no` (`invoice_no`);
-
---
--- Indexes for table `equipment_location`
---
-ALTER TABLE `equipment_location`
-  ADD PRIMARY KEY (`equipment_location_id`),
-  ADD UNIQUE KEY `asset_tag` (`asset_tag`),
-  ADD KEY `department_id` (`department_id`);
-
---
--- Indexes for table `equipment_status`
---
-ALTER TABLE `equipment_status`
-  ADD PRIMARY KEY (`equipment_status_id`);
-
---
--- Indexes for table `modules`
---
-ALTER TABLE `modules`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `module_name` (`module_name`);
-
---
--- Indexes for table `privileges`
---
-ALTER TABLE `privileges`
-  ADD PRIMARY KEY (`id`);
-
---
--- Indexes for table `purchase_order`
---
-ALTER TABLE `purchase_order`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `po_no` (`po_no`);
-
---
--- Indexes for table `receive_report`
---
-ALTER TABLE `receive_report`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `rr_no` (`rr_no`),
-  ADD KEY `po_no` (`po_no`);
-
---
--- Indexes for table `roles`
---
-ALTER TABLE `roles`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `role_name` (`role_name`);
-
---
--- Indexes for table `role_changes`
---
-ALTER TABLE `role_changes`
-  ADD PRIMARY KEY (`ChangeID`),
-  ADD KEY `UserID` (`UserID`),
-  ADD KEY `RoleID` (`RoleID`);
-
---
--- Indexes for table `role_module_privileges`
---
-ALTER TABLE `role_module_privileges`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `role_id` (`role_id`),
-  ADD KEY `module_id` (`module_id`),
-  ADD KEY `fk_rmp_privilege` (`privilege_id`);
-
---
--- Indexes for table `users`
---
-ALTER TABLE `users`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `username` (`username`),
-  ADD UNIQUE KEY `email` (`email`);
-
---
--- Indexes for table `user_departments`
---
-ALTER TABLE `user_departments`
-  ADD PRIMARY KEY (`user_id`,`department_id`),
-  ADD KEY `department_id` (`department_id`);
-
---
--- Indexes for table `user_department_roles`
---
-ALTER TABLE `user_department_roles`
-  ADD PRIMARY KEY (`user_id`,`department_id`,`role_id`),
-  ADD KEY `department_id` (`department_id`),
-  ADD KEY `role_id` (`role_id`);
-
---
--- Indexes for table `user_roles`
---
-ALTER TABLE `user_roles`
-  ADD PRIMARY KEY (`user_id`,`role_id`),
-  ADD KEY `role_id` (`role_id`);
-
---
--- AUTO_INCREMENT for dumped tables
---
-
---
--- AUTO_INCREMENT for table `audit_log`
---
-ALTER TABLE `audit_log`
-  MODIFY `TrackID` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=589;
-
---
--- AUTO_INCREMENT for table `charge_invoice`
---
-ALTER TABLE `charge_invoice`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
-
---
--- AUTO_INCREMENT for table `departments`
---
-ALTER TABLE `departments`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=47;
-
---
--- AUTO_INCREMENT for table `equipment_details`
---
-ALTER TABLE `equipment_details`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
-
---
--- AUTO_INCREMENT for table `equipment_location`
---
-ALTER TABLE `equipment_location`
-  MODIFY `equipment_location_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
-
---
--- AUTO_INCREMENT for table `equipment_status`
---
-ALTER TABLE `equipment_status`
-  MODIFY `equipment_status_id` int NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `modules`
---
-ALTER TABLE `modules`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
-
---
--- AUTO_INCREMENT for table `privileges`
---
-ALTER TABLE `privileges`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
-
---
--- AUTO_INCREMENT for table `purchase_order`
---
-ALTER TABLE `purchase_order`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
-
---
--- AUTO_INCREMENT for table `receive_report`
---
-ALTER TABLE `receive_report`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
-
---
--- AUTO_INCREMENT for table `roles`
---
-ALTER TABLE `roles`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
-
---
--- AUTO_INCREMENT for table `role_changes`
---
-ALTER TABLE `role_changes`
-  MODIFY `ChangeID` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=284;
-
---
--- AUTO_INCREMENT for table `role_module_privileges`
---
-ALTER TABLE `role_module_privileges`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1391;
-
---
--- AUTO_INCREMENT for table `users`
---
-ALTER TABLE `users`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=136;
+(3, 2, 2),
+(3, 2, 3),
+(3, 2, 5),
+(4, 5, 0);
 
 --
 -- Constraints for dumped tables

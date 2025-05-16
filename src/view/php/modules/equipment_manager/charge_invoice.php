@@ -17,12 +17,12 @@ $userId = (int)$userId;
 
 // 2) Init RBAC & enforce "View"
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
-$rbac->requirePrivilege('Equipment Transaction', 'View');
+$rbac->requirePrivilege('Equipment Transactions', 'View');
 
 // 3) Button flags
-$canCreate = $rbac->hasPrivilege('Equipment Transaction', 'Create');
-$canModify = $rbac->hasPrivilege('Equipment Transaction', 'Modify');
-$canDelete = $rbac->hasPrivilege('Equipment Transaction', 'Remove');
+$canCreate = $rbac->hasPrivilege('Equipment Transactions', 'Create');
+$canModify = $rbac->hasPrivilege('Equipment Transactions', 'Modify');
+$canDelete = $rbac->hasPrivilege('Equipment Transactions', 'Remove');
 
 
 // Set audit log session variables for MySQL triggers.
@@ -50,7 +50,18 @@ if (isset($_SESSION['success'])) {
     unset($_SESSION['success']);
 }
 
-function is_ajax_request()
+    // Fetch list of existing POs for the datalist
+    $stmtPO = $pdo->prepare("
+  SELECT po_no
+  FROM purchase_order
+  WHERE is_disabled = 0
+  ORDER BY po_no
+");
+    $stmtPO->execute();
+    $poList = $stmtPO->fetchAll(PDO::FETCH_COLUMN);
+
+
+    function is_ajax_request()
 {
     return isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&
         strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
@@ -103,7 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action']) && $_POST['action'] === 'add') {
         try {
             // Check if user has Create privilege
-            if (!$rbac->hasPrivilege('Equipment Transaction', 'Create')) {
+            if (!$rbac->hasPrivilege('Equipment Transactions', 'Create')) {
                 throw new Exception('You do not have permission to add charge invoices');
             }
 
@@ -125,7 +136,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         try {
             // Check if user has Modify privilege
-            if (!$rbac->hasPrivilege('Equipment Transaction', 'Modify')) {
+            if (!$rbac->hasPrivilege('Equipment Transactions', 'Modify')) {
                 throw new Exception('You do not have permission to modify charge invoices');
             }
 
@@ -204,7 +215,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
     $id = $_GET['id'];
     try {
         // Check if user has Remove privilege
-        if (!$rbac->hasPrivilege('Equipment Transaction', 'Remove')) {
+        if (!$rbac->hasPrivilege('Equipment Transactions', 'Remove')) {
             throw new Exception('You do not have permission to delete charge invoices');
         }
 

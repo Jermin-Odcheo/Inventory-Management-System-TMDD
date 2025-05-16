@@ -17,12 +17,12 @@ $userId = (int)$userId;
 
 // 2) Init RBAC & enforce "View"
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
-$rbac->requirePrivilege('Equipment Transaction', 'View');
+$rbac->requirePrivilege('Equipment Transactions', 'View');
 
 // 3) Button flags
-$canCreate = $rbac->hasPrivilege('Equipment Transaction', 'Create');
-$canModify = $rbac->hasPrivilege('Equipment Transaction', 'Modify');
-$canDelete = $rbac->hasPrivilege('Equipment Transaction', 'Remove');
+$canCreate = $rbac->hasPrivilege('Equipment Transactions', 'Create');
+$canModify = $rbac->hasPrivilege('Equipment Transactions', 'Modify');
+$canDelete = $rbac->hasPrivilege('Equipment Transactions', 'Remove');
  
 // Set audit log session variables for MySQL triggers.
 if (isset($_SESSION['user_id'])) {
@@ -67,7 +67,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
     $id = $_GET['id'];
     try {
         // Check if user has Remove privilege
-        if (!$rbac->hasPrivilege('Equipment Transaction', 'Remove')) {
+        if (!$rbac->hasPrivilege('Equipment Transactions', 'Remove')) {
             throw new Exception('You do not have permission to delete receiving reports');
         }
         
@@ -151,7 +151,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $response = ['status' => '', 'message' => ''];
         try {
             // Check if user has Create privilege
-            if (!$rbac->hasPrivilege('Equipment Transaction', 'Create')) {
+            if (!$rbac->hasPrivilege('Equipment Transactions', 'Create')) {
                 throw new Exception('You do not have permission to add receiving reports');
             }
             
@@ -187,7 +187,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $response = ['status' => '', 'message' => ''];
         try {
             // Check if user has Modify privilege
-            if (!$rbac->hasPrivilege('Equipment Transaction', 'Modify')) {
+            if (!$rbac->hasPrivilege('Equipment Transactions', 'Modify')) {
                 throw new Exception('You do not have permission to modify receiving reports');
             }
             

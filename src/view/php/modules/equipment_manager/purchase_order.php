@@ -18,14 +18,14 @@ $userId = (int)$userId;
 
 // 2) Init RBAC & enforce "View"
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
-$rbac->requirePrivilege('Equipment Transaction', 'View');
+$rbac->requirePrivilege('Equipment Transactions', 'View');
 
 
 
 // 3) Button flags
-$canCreate = $rbac->hasPrivilege('Equipment Transaction', 'Create');
-$canModify = $rbac->hasPrivilege('Equipment Transaction', 'Modify');
-$canRemove = $rbac->hasPrivilege('Equipment Transaction', 'Remove');
+$canCreate = $rbac->hasPrivilege('Equipment Transactions', 'Create');
+$canModify = $rbac->hasPrivilege('Equipment Transactions', 'Modify');
+$canRemove = $rbac->hasPrivilege('Equipment Transactions', 'Remove');
 
 function is_ajax_request()
 {
@@ -91,7 +91,7 @@ function is_ajax_request()
         if (isset($_POST['action']) && $_POST['action'] === 'add') {
             try {
                 // Check if user has Create privilege
-                if (!$rbac->hasPrivilege('Equipment Transaction', 'Create')) {
+                if (!$rbac->hasPrivilege('Equipment Transactions', 'Create')) {
                     throw new Exception('You do not have permission to add purchase orders');
                 }
 
@@ -128,7 +128,7 @@ function is_ajax_request()
             } else {
                 try {
                     // 1) permission
-                    if (!$rbac->hasPrivilege('Equipment Transaction', 'Modify')) {
+                    if (!$rbac->hasPrivilege('Equipment Transactions', 'Modify')) {
                         throw new Exception('You do not have permission to modify purchase orders');
                     }
 
@@ -253,7 +253,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'remove' && isset($_GET['id'])
     $id = $_GET['id'];
     try {
         // Check if user has Remove privilege
-        if (!$rbac->hasPrivilege('Equipment Transaction', 'Remove')) {
+        if (!$rbac->hasPrivilege('Equipment Transactions', 'Remove')) {
             throw new Exception('You do not have permission to remove purchase orders');
         }
 
@@ -266,7 +266,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'remove' && isset($_GET['id'])
             $stmt = $pdo->prepare("UPDATE purchase_order SET is_disabled = 1 WHERE id = ?");
             $stmt->execute([$id]);
             $_SESSION['success'] = "Purchase Order removed successfully.";
-            // Log the deletion with old values and entity id
+            // Log the removal with old values and entity id
             logAudit(
                 $pdo,
                 'Remove',
