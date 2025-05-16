@@ -1,5 +1,5 @@
 <?php
-$host = 'localhost';
+$host = '10.10.10.240';
 $db   = 'ims_tmddrbac';
 $user = 'root'; // default username for localhost
 $pass = ''; // default password for localhost
