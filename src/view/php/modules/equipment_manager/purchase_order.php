@@ -18,14 +18,14 @@ $userId = (int)$userId;
 
 // 2) Init RBAC & enforce "View"
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
-$rbac->requirePrivilege('Equipment Management', 'View');
+$rbac->requirePrivilege('Equipment Transaction', 'View');
 
 
 
 // 3) Button flags
-$canCreate = $rbac->hasPrivilege('Equipment Management', 'Create');
-$canModify = $rbac->hasPrivilege('Equipment Management', 'Modify');
-$canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
+$canCreate = $rbac->hasPrivilege('Equipment Transaction', 'Create');
+$canModify = $rbac->hasPrivilege('Equipment Transaction', 'Modify');
+$canDelete = $rbac->hasPrivilege('Equipment Transaction', 'Remove');
 
 function is_ajax_request()
 {
@@ -67,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (isset($_POST['action']) && $_POST['action'] === 'add') {
             try {
                 // Check if user has Create privilege
-                if (!$rbac->hasPrivilege('Equipment Management', 'Create')) {
+                if (!$rbac->hasPrivilege('Equipment Transaction', 'Create')) {
                     throw new Exception('You do not have permission to add purchase orders');
                 }
 
@@ -89,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 try {
                     // Check if user has Modify privilege
-                    if (!$rbac->hasPrivilege('Equipment Management', 'Modify')) {
+                    if (!$rbac->hasPrivilege('Equipment Transaction', 'Modify')) {
                         throw new Exception('You do not have permission to modify purchase orders');
                     }
 
@@ -146,7 +146,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
     $id = $_GET['id'];
     try {
         // Check if user has Remove privilege
-        if (!$rbac->hasPrivilege('Equipment Management', 'Remove')) {
+        if (!$rbac->hasPrivilege('Equipment Transaction', 'Remove')) {
             throw new Exception('You do not have permission to delete purchase orders');
         }
 
