@@ -5,6 +5,17 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: " . BASE_URL . "public/index.php"); // Redirect to login page
     exit();
 }
+
+$user_id = $_SESSION['user_id'] ?? null;
+if ($user_id !== null) {
+    $stmt = $pdo->prepare("SELECT profile_pic_path FROM users WHERE id = ?");
+    $stmt->execute([$user_id]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    print("hello " . $user['profile_pic_path']);
+} else {
+    die("User not logged in."); // or redirect
+}
+
 $role = isset($_SESSION["role"]) ? $_SESSION["role"] : "";
 $email = $_SESSION['email'];
 

@@ -1050,7 +1050,7 @@ if (saveDepartmentRoleBtn && userPrivileges.canModify) {
                             renderUserRolesTable(null, null, null, userSortDirection);
                             showToast(response.message, 'success');
                         } else {
-                            showToast(response.message, 'error');
+                            showToast(response.message, 'error'); 
                         }
                     },
                     error: function () {

@@ -48,7 +48,7 @@ try {
 function getUserDepartments(PDO $pdo, int $userId): array
 {
     $stmt = $pdo->prepare(
-        'SELECT udr.department_id, d.department_name, d.abbreviation 
+        'SELECT DISTINCT udr.department_id, d.department_name, d.abbreviation 
          FROM user_department_roles udr
          JOIN departments d ON udr.department_id = d.id
          WHERE udr.user_id = ?'
@@ -301,7 +301,7 @@ try {
                                 <td>
                                     <?php
                                     $rS = $pdo->prepare("
-                    SELECT r.role_name
+                    SELECT DISTINCT r.role_name
                       FROM user_department_roles ur
                       JOIN roles r ON r.id=ur.role_id AND r.is_disabled=0
                      WHERE ur.user_id=?
