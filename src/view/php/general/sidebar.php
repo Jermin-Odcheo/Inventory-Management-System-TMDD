@@ -4,8 +4,6 @@ declare(strict_types=1);
 require_once(__DIR__ . '/../../../../config/ims-tmdd.php');
 require_once(__DIR__ . '/../../../control/RBACService.php');
 
-session_start();
-
 $userId = $_SESSION['user_id'] ?? null;
 if (!$userId) {
     die('User not logged in');
