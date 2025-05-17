@@ -3,7 +3,7 @@ session_start();
 require '../../../../config/ims-tmdd.php';
 // If not logged in, redirect to the LOGIN PAGE
 if (!isset($_SESSION['user_id'])) {
-    header("Location: " . BASE_URL . "public/index.php");
+    header("Location: " . BASE_URL . "index.php");
     exit();
 }
 
@@ -16,7 +16,8 @@ $email = $_SESSION['email']; // Assuming you stored email in session
 
 // Define page title dynamically based on role
 $dashboardTitle = "Dashboard"; // Default title
-function getUserDetails($pdo, $userId) {
+function getUserDetails($pdo, $userId)
+{
     // Get Roles
     $roleQuery = $pdo->prepare("
         SELECT DISTINCT r.role_name
@@ -85,18 +86,18 @@ try {
 <head>
     <meta charset="UTF-8">
     <title><?php echo $dashboardTitle; ?></title>
-    <link rel="stylesheet" href="../../../styles/css/dashboard.css">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/dashboard.css">
     <style>
         body {
             background-color: #f4f7fc;
             color: #333;
         }
-        
+
         .main-content {
             background-color: #f4f7fc;
             padding-left: 60px;
         }
-        
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -109,37 +110,37 @@ try {
             padding: 10px;
             text-align: left;
         }
-        
+
         h1 {
             color: #2c3e50;
         }
-        
+
         .detail-card, .module-section {
             background-color: #fff;
             border: 1px solid #e0e0e0;
             padding: 15px;
             margin-bottom: 15px;
             border-radius: 5px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         }
-        
+
         .privilege-list li {
             color: #333;
         }
-        
+
         .dashboard-container {
             background-color: #f4f7fc;
         }
-        
+
         section {
             background-color: #fff;
             padding: 20px;
             border-radius: 5px;
             margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
             border: 1px solid #e0e0e0;
         }
-        
+
         select.form-control {
             background-color: #fff;
             border: 1px solid #e0e0e0;

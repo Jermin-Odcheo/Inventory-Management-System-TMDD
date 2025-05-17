@@ -9,8 +9,9 @@ include '../../general/header.php';
 // -------------------------
 $userId = $_SESSION['user_id'] ?? null;
 if (!is_int($userId) && !ctype_digit((string)$userId)) {
-    header("Location: index.php");
-    exit();
+    header('Location: ' . BASE_URL . 'index.php');
+    exit;
+    
 }
 $userId = (int)$userId;
 
@@ -162,7 +163,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) 
 
                 // [Cascade Fix 2025-05-16T09:52:12+08:00] Always update date_modified when saving, even if no other fields change
 $stmt = $pdo->prepare("UPDATE equipment_details SET 
-            asset_tag = ?, asset_description_1 = ?, asset_description_2 = ?, specifications = ?, 
+            asset_tag = ?, asset_description_1 = ?, asset_descrsiption_2 = ?, specifications = ?, 
             brand = ?, model = ?, serial_number = ?, location = ?, accountable_individual = ?, 
             rr_no = ?, remarks = ?, date_modified = NOW() WHERE id = ?");
                 $stmt->execute($values);

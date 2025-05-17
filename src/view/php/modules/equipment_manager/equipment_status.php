@@ -324,8 +324,8 @@ include('../../general/header.php');
 // Initialize RBAC
 $userId = $_SESSION['user_id'] ?? null;
 if (!is_int($userId) && !ctype_digit((string)$userId)) {
-    header('Location: index.php');
-    exit();
+    header('Location: ' . BASE_URL . 'index.php');
+    exit;
 }
 $userId = (int)$userId;
 

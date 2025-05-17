@@ -18,14 +18,7 @@ $rbac = new RBACService($pdo, $_SESSION['user_id']);
 // 1. "Audit" module with "Track" privilege, or 
 // 2. "User Management" module with "Track" privilege
 $hasAuditPermission = $rbac->hasPrivilege('Audit', 'Track');
-$hasUserMgmtPermission = $rbac->hasPrivilege('User Management', 'Track');
 
-// If user doesn't have either permission, redirect them
-if (!$hasAuditPermission && !$hasUserMgmtPermission) {
-    // Redirect to an unauthorized page or dashboard
-    header("Location: " . BASE_URL . "src/view/php/unauthorized.php");
-    exit();
-}
 
 // Fetch all audit logs - only showing User Management logs
 $query = "SELECT audit_log.*, users.email AS email 
@@ -303,7 +296,7 @@ function getNormalizedAction($log)
                 <!-- Permission Info Banner -->
                 <div class="alert alert-info mb-4">
                     <i class="fas fa-shield-alt me-2"></i>
-                    <?php if (!$hasAuditPermission && $hasUserMgmtPermission): ?>
+                    <?php if (!$hasAuditPermission): ?>
                         You have User Management tracking permissions.
                     <?php else: ?>
                         You have access to User Management audit logs.

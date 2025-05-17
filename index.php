@@ -43,7 +43,6 @@
             </div>
 
             <button type="submit" name="submit">Log In</button>
-
             <div class="signup-container">
             </div>
         </form>

@@ -6,8 +6,9 @@ include '../general/header.php';
 
 // If not logged in, redirect to login page
 if (!isset($_SESSION['user_id'])) {
-    header("Location: " . BASE_URL . "public/index.php");
-    exit();
+    header('Location: ' . BASE_URL . 'index.php');
+    exit;
+
 }
 print("Hello");
 $user_id = $_SESSION['user_id'];
@@ -24,7 +25,7 @@ if ($user_id !== null) {
 $sql = "
     SELECT u.email, u.username, u.first_name, u.last_name, r.role_name 
     FROM users u 
-    LEFT JOIN user_roles ur ON u.id = ur.user_id 
+    LEFT JOIN user_department_roles ur ON u.id = ur.user_id 
     LEFT JOIN roles r ON ur.role_id = r.id 
     WHERE u.id = ?
 ";
@@ -110,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
         // Destroy session
         session_destroy();
         // Redirect to homepage or login page
-        header("Location: " . BASE_URL . "public/index.php?account_deleted=1");
+        header("Location: " . BASE_URL . "index.php?account_deleted=1");
         exit();
     } else {
         $error_message = "Failed to delete account. Please try again later.";

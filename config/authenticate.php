@@ -8,7 +8,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     if (empty($email) || empty($password)) {
         $_SESSION['error'] = "Email and password are required.";
-        header("Location: ../public/index.php");
+        header("Location: " . BASE_URL . "index.php");
         exit();
     }
 
@@ -22,7 +22,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if ($user) {
         if ($user['is_disabled'] === 1) {
             $_SESSION['error'] = "Your account has been disabled.";
-            header("Location: ../public/index.php");
+            header("Location: " . BASE_URL . "index.php");
             exit();
         }
 
@@ -53,12 +53,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             exit();
         } else {
             $_SESSION['error'] = "Invalid email or password.";
-            header("Location: ../public/index.php");
+            header("Location: " . BASE_URL . "index.php");
             exit();
         }
     } else {
         $_SESSION['error'] = "Invalid email or password.";
-        header("Location: ../public/index.php");
+        header("Location: " . BASE_URL . "index.php");
         exit();
     }
 }

@@ -8,7 +8,7 @@ include '../../../general/footer.php';
 // 1) Auth guard
 $userId = $_SESSION['user_id'] ?? null;
 if (!is_int($userId) && !ctype_digit((string)$userId)) {
-    header('Location: ../../../../../../public/index.php');
+    header("Location: " . BASE_URL . "index.php");
     exit();
 }
 $userId = (int)$userId;

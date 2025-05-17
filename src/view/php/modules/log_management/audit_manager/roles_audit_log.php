@@ -15,10 +15,10 @@ if (!isset($_SESSION['user_id'])) {
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
 
 // Check for required privilege
-$hasRolesPrivPermission = $rbac->hasPrivilege('Roles and Privileges', 'Track');
+$hasAuditPermission = $rbac->hasPrivilege('Audit', 'Track');
 
 // If user doesn't have permission, redirect them
-if (!$hasRolesPrivPermission) {
+if (!$hasAuditPermission) {
     // Redirect to an unauthorized page
     header("Location: " . BASE_URL . "src/view/php/general/auth.php");
     exit();
