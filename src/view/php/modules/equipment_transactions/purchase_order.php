@@ -439,57 +439,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Custom Styles (if any) -->
-    <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
+    <!-- Custom Styles -->
+    <link href="../../../styles/css/equipment-transactions.css" rel="stylesheet">
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <style>
-        body {
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background-color: #f8f9fa;
-            min-height: 100vh;
-            padding-top: 80px;
-        }
-
-        .wrapper {
-            display: flex;
-            min-height: 100vh;
-        }
-
-        .sidebar {
-            width: 300px;
-            background-color: #2c3e50;
-            color: #fff;
-        }
-
-        .main-content {
-            flex: 1;
-            padding: 20px;
-            margin-left: 300px;
-        }
-
-        /* Fix for Save Changes button hover state */
-        .btn-primary:hover {
-            color: #fff !important;
-            /* Ensure text stays white on hover */
-            background-color: #0b5ed7;
-            /* Darker blue on hover */
-            border-color: #0a58ca;
-        }
-
-        /* Specific styling for the edit form button */
-        #editPOForm .btn-primary {
-            transition: all 0.2s ease-in-out;
-        }
-
-        #editPOForm .btn-primary:hover {
-            color: #fff !important;
-            background-color: #0d6efd;
-            border-color: #0d6efd;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-    </style>
 </head>
 
 <body>
@@ -595,14 +548,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                                                                 data-date="<?php echo htmlspecialchars($po['date_of_order']); ?>"
                                                                 data-units="<?php echo htmlspecialchars($po['no_of_units']); ?>"
                                                                 data-item="<?php echo htmlspecialchars($po['item_specifications']); ?>">
-                                                                <i class="bi bi-pencil-square"></i> Edit
+                                                                <i class="bi bi-pencil-square"></i> <span>Edit</span>
                                                             </a>
                                                         <?php endif; ?>
                                                         <?php if ($canRemove): ?>
                                                             <a class="btn btn-sm btn-outline-danger remove-po"
                                                                 data-id="<?php echo htmlspecialchars($po['id']); ?>"
                                                                 href="#">
-                                                                <i class="bi bi-trash"></i> Remove
+                                                                <i class="bi bi-trash"></i> <span>Remove</span>
                                                             </a>
                                                         <?php endif; ?>
                                                     </div>

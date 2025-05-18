@@ -1,0 +1,407 @@
+/* 
+* Equipment Transactions CSS
+* This CSS is used for all equipment transaction modules:
+* - Purchase Order
+* - Receiving Report
+* - Charge Invoice 
+*/
+
+:root {
+    --primary-color: #2c3e50;
+    --secondary-color: #3498db;
+    --success-color: #2ecc71;
+    --danger-color: #e74c3c;
+    --warning-color: #f39c12;
+    --info-color: #3498db;
+    --light-color: #f8f9fa;
+    --dark-color: #343a40;
+    --bg-color: #f8f9fa;
+    --text-color: #333333;
+    --border-color: #dee2e6;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --border-radius: 0.375rem;
+    --transition-speed: 0.2s;
+    --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Common Layout Styles */
+body {
+    font-family: var(--font-family);
+    background-color: var(--bg-color);
+    min-height: 100vh;
+    padding-top: 80px;
+}
+
+.wrapper {
+    display: flex;
+    min-height: 100vh;
+}
+
+.main-content {
+    margin-left: 300px;
+    padding: 20px;
+    width: calc(100vw - 320px);
+}
+
+@media (max-width: 768px) {
+    .main-content {
+        margin-left: 0;
+        width: 100%;
+    }
+}
+
+/* Card Styles */
+.card {
+    border: none;
+    box-shadow: 0 4px 12px var(--shadow-color);
+    border-radius: var(--border-radius);
+    margin-bottom: 1.5rem;
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+}
+
+.card-header.bg-dark {
+    background-color: var(--dark-color) !important;
+}
+
+.card-body {
+    padding: 1.25rem;
+}
+
+/* Table Styles */
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 0;
+}
+
+.table-responsive {
+    overflow-x: auto;
+    margin-bottom: 1rem;
+}
+
+.table th {
+    background-color: var(--dark-color);
+    color: var(--light-color);
+    font-weight: 500;
+    vertical-align: middle;
+    padding: 0.75rem;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.table td {
+    padding: 0.75rem;
+    vertical-align: middle;
+    border-top: 1px solid var(--border-color);
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* Button Styles */
+.btn {
+    border-radius: var(--border-radius);
+    transition: all var(--transition-speed) ease-in-out;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.75rem;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+/* Edit and Remove buttons - icons only */
+.edit-invoice, .edit-report, .edit-po, 
+.delete-invoice, .delete-report, .remove-po {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    justify-content: center;
+}
+
+.edit-invoice span, .edit-report span, .edit-po span,
+.delete-invoice span, .delete-report span, .remove-po span {
+    display: none;
+}
+
+.edit-invoice i, .edit-report i, .edit-po i,
+.delete-invoice i, .delete-report i, .remove-po i {
+    font-size: 1.1rem;
+}
+
+/* Add buttons - black with white text */
+.btn-success {
+    background-color: #000000;
+    border-color: #000000;
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: #333333;
+    border-color: #333333;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-primary {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+}
+
+.btn-primary:hover {
+    background-color: #2980b9;
+    border-color: #2980b9;
+    color: #fff !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-danger {
+    background-color: var(--danger-color);
+    border-color: var(--danger-color);
+}
+
+.btn-danger:hover {
+    background-color: #c0392b;
+    border-color: #c0392b;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-outline-primary {
+    color: var(--secondary-color);
+    border-color: var(--secondary-color);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--secondary-color);
+    color: #fff;
+}
+
+.btn-outline-danger {
+    color: var(--danger-color);
+    border-color: var(--danger-color);
+}
+
+.btn-outline-danger:hover {
+    background-color: var(--danger-color);
+    color: #fff;
+}
+
+.btn-group {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Form Styles */
+.form-label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+.form-control, .form-select {
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    transition: border-color var(--transition-speed) ease-in-out, 
+                box-shadow var(--transition-speed) ease-in-out;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
+}
+
+.input-group {
+    display: flex;
+    align-items: center;
+}
+
+.input-group-text {
+    background-color: var(--light-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+}
+
+/* Modal Styles */
+.modal-content {
+    border: none;
+    border-radius: var(--border-radius);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+    background-color: var(--light-color);
+    border-bottom: 1px solid var(--border-color);
+    padding: 1rem 1.5rem;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.modal-footer {
+    background-color: var(--light-color);
+    border-top: 1px solid var(--border-color);
+    padding: 1rem;
+}
+
+/* Utilities */
+.mb-3 {
+    margin-bottom: 1rem;
+}
+
+.mb-4 {
+    margin-bottom: 1.5rem;
+}
+
+.mt-3 {
+    margin-top: 1rem;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.text-end {
+    text-align: right;
+}
+
+.d-flex {
+    display: flex;
+}
+
+.justify-content-between {
+    justify-content: space-between;
+}
+
+.align-items-center {
+    align-items: center;
+}
+
+.gap-2 {
+    gap: 0.5rem;
+}
+
+/* Badge Styles */
+.badge {
+    display: inline-block;
+    padding: 0.35em 0.65em;
+    font-size: 0.75em;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 0.25rem;
+}
+
+.bg-success {
+    background-color: var(--success-color) !important;
+}
+
+.bg-danger {
+    background-color: var(--danger-color) !important;
+}
+
+/* Select2 Customization */
+.select2-container--default .select2-selection--single {
+    height: 38px;
+    padding: 0.375rem 0.75rem;
+    font-size: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 36px;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 1.5;
+    padding-left: 0;
+}
+
+.select2-dropdown {
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+}
+
+.select2-search--dropdown .select2-search__field {
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 0.375rem 0.75rem;
+}
+
+/* Toast messages */
+.toast {
+    background-color: #fff;
+    border-radius: var(--border-radius);
+    border: none;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.toast-header {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.toast-success .toast-header {
+    background-color: var(--success-color);
+    color: #fff;
+}
+
+.toast-error .toast-header {
+    background-color: var(--danger-color);
+    color: #fff;
+}
+
+/* Pagination Styles */
+.pagination {
+    display: flex;
+    padding-left: 0;
+    list-style: none;
+    justify-content: center;
+}
+
+.pagination .page-item {
+    margin: 0 0.25rem;
+}
+
+.pagination .page-link {
+    position: relative;
+    display: block;
+    padding: 0.5rem 0.75rem;
+    line-height: 1.25;
+    color: var(--secondary-color);
+    background-color: #fff;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+}
+
+.pagination .page-item.active .page-link {
+    z-index: 3;
+    color: #fff;
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+}
+
+.pagination .page-link:hover {
+    z-index: 2;
+    color: #0056b3;
+    text-decoration: none;
+    background-color: #e9ecef;
+    border-color: var(--border-color);
+} 

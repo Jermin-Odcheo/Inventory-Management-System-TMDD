@@ -298,11 +298,29 @@ if (($_GET['action'] ?? '') === 'edit' && isset($_GET['id'])) {
 }
 
 // ------------------------
-// LIST ALL
+// LIST ALL (including invoices without a PO)
 // ------------------------
 try {
-    $all = $pdo->query("SELECT * FROM charge_invoice WHERE is_disabled = 0 ORDER BY id DESC");
-    $chargeInvoices = $all->fetchAll();
+    $stmt = $pdo->prepare("
+        SELECT 
+            ci.*,
+            po.date_of_order,
+            po.no_of_units,
+            po.item_specifications
+        FROM charge_invoice AS ci
+        LEFT JOIN purchase_order AS po
+            ON ci.po_no = po.po_no
+        WHERE
+            ci.is_disabled = 0
+          AND (
+                ci.po_no      IS NULL      -- no PO selected
+             OR ci.po_no      = ''        -- empty string
+             OR po.is_disabled = 0        -- PO exists and is not disabled
+          )
+        ORDER BY ci.id DESC
+    ");
+    $stmt->execute();
+    $chargeInvoices = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     $errors[] = "Error retrieving Charge Invoices: " . $e->getMessage();
 }
@@ -321,50 +339,17 @@ try {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Custom Styles (if any) -->
-    <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+    <!-- Custom Styles -->
+    <link href="../../../styles/css/equipment-transactions.css" rel="stylesheet">
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <style>
-        body {
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background-color: #f8f9fa;
-            min-height: 100vh;
-            padding-top: 80px;
-        }
-
-        .main-content {
-            margin-left: 300px;
-            padding: 20px;
-        }
-
-        /* Fix for Save Changes button hover state */
-        .btn-primary:hover {
-            color: #fff !important;
-            /* Ensure text stays white on hover */
-            background-color: #0b5ed7;
-            /* Darker blue on hover */
-            border-color: #0a58ca;
-        }
-
-        /* Specific styling for the edit form button */
-        #editInvoiceForm .btn-primary {
-            transition: all 0.2s ease-in-out;
-        }
-
-        #editInvoiceForm .btn-primary:hover {
-            color: #fff !important;
-            background-color: #0d6efd;
-            border-color: #0d6efd;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-    </style>
 </head>
 
 <body>
     <?php include('../../general/sidebar.php'); ?>
-    <div class="container-fluid" style="margin-left: 320px; padding: 20px; width: calc(100vw - 340px);">
+    <div class="main-content">
         <!-- The page now displays notifications only via toast messages -->
 
         <h2 class="mb-4">Charge Invoice Management</h2>
@@ -452,14 +437,14 @@ try {
                                                         data-invoice="<?php echo htmlspecialchars($invoice['invoice_no'] ?? ''); ?>"
                                                         data-date="<?php echo htmlspecialchars($invoice['date_of_purchase'] ?? ''); ?>"
                                                         data-po="<?php echo htmlspecialchars($invoice['po_no'] ?? ''); ?>">
-                                                        <i class="bi bi-pencil-square"></i> Edit
+                                                        <i class="bi bi-pencil-square"></i> <span>Edit</span>
                                                     </a>
                                                 <?php endif; ?>
                                                 <?php if ($canDelete): ?>
                                                     <a class="btn btn-sm btn-outline-danger delete-invoice"
                                                         data-id="<?php echo htmlspecialchars($invoice['id']); ?>"
                                                         href="#">
-                                                        <i class="bi bi-trash"></i> Remove
+                                                        <i class="bi bi-trash"></i> <span>Remove</span>
                                                     </a>
                                                 <?php endif; ?>
                                             </div>
@@ -560,18 +545,16 @@ try {
                             </div>
                             <div class="mb-3">
                                 <label for="po_no" class="form-label">Purchase Order Number</label>
-                                <select class="form-select" name="po_no" id="po_no">
-                                    <option value="">— None / Select PO —</option>
+                                <select class="form-select" name="po_no" id="add_po_no">
+                                    <option value="">— None —</option>
                                     <?php foreach ($poList as $opt): ?>
-                                        <option value="<?= htmlspecialchars($opt) ?>">
-                                            <?= htmlspecialchars($opt) ?>
-                                        </option>
+                                        <option value="<?= htmlspecialchars($opt) ?>"><?= htmlspecialchars($opt) ?></option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
+
                             <div class="text-end">
-                                <button type="button" class="btn btn-secondary" style="margin-right: 4px;"
-                                    data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-secondary" style="margin-right: 4px;" data-bs-dismiss="modal">Cancel</button>
                                 <button type="submit" class="btn btn-primary">Confirm</button>
                             </div>
                         </form>
@@ -606,17 +589,14 @@ try {
                                     id="edit_date_of_purchase" required>
                             </div>
                             <div class="mb-3">
-                                <label for="edit_po_no" class="form-label">Purchase Order Number</label>
+                                <label for="po_no" class="form-label">Purchase Order Number</label>
                                 <select class="form-select" name="po_no" id="edit_po_no">
-                                    <option value="">— None / Select PO —</option>
+                                    <option value="">— None —</option>
                                     <?php foreach ($poList as $opt): ?>
-                                        <option value="<?= htmlspecialchars($opt) ?>">
-                                            <?= htmlspecialchars($opt) ?>
-                                        </option>
+                                        <option value="<?= htmlspecialchars($opt) ?>"><?= htmlspecialchars($opt) ?></option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
-
                             <div class="mb-3">
                                 <button type="submit" class="btn btn-primary">Save Changes</button>
                             </div>
@@ -632,6 +612,20 @@ try {
         var deleteInvoiceId = null;
 
         $(document).ready(function() {
+            $('#add_po_no').select2({
+                dropdownParent: $('#addInvoiceModal'),
+                width: '100%',
+                placeholder: 'Type or select PO…',
+                allowClear: true
+            });
+            
+            $('#edit_po_no').select2({
+                dropdownParent: $('#editInvoiceModal'),
+                width: '100%',
+                placeholder: 'Type or select PO…',
+                allowClear: true
+            });
+
             // Always clean up modal backdrop and body class after modal is hidden
             $('#addInvoiceModal').on('hidden.bs.modal', function() {
                 $('.modal-backdrop').remove();
@@ -683,7 +677,7 @@ try {
                 $('#edit_invoice_id').val(id);
                 $('#edit_invoice_no').val(invoice.replace(/^CI/, '')); // strip CI so input=number stays numeric
                 $('#edit_date_of_purchase').val(date);
-                $('#edit_po_no').val(po); // set the dropdown
+                $('#edit_po_no').val(po).trigger('change'); // set the dropdown and trigger Select2 update
 
                 // Show the edit modal
                 const modalEl = document.getElementById('editInvoiceModal');
