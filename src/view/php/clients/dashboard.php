@@ -9,7 +9,7 @@ if (!isset($_SESSION['user_id'])) {
 
 include '../general/header.php';
 include '../general/sidebar.php';
-include '../general/footer.php';
+
 
 $role = $_SESSION['role'];
 $email = $_SESSION['email']; // Assuming you stored email in session
@@ -86,7 +86,7 @@ try {
 <head>
     <meta charset="UTF-8">
     <title><?php echo $dashboardTitle; ?></title>
-    <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/dashboard.css">
+    <!-- <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/dashboard.css">
     <style>
         body {
             background-color: #f4f7fc;
@@ -145,7 +145,7 @@ try {
             background-color: #fff;
             border: 1px solid #e0e0e0;
         }
-    </style>
+    </style> -->
 </head>
 <body>
 <div class="main-content">
@@ -158,4 +158,5 @@ try {
     </div>
 </div>
 </body>
+<?php include '../general/footer.php'; ?>
 </html>

@@ -40,7 +40,7 @@ SELECT
                 JOIN privileges p ON p.id = rmp2.privilege_id
                 WHERE rmp2.role_id = r.id
                   AND rmp2.module_id = m.id
-                  AND LOWER(p.priv_name) = 'view'
+
             ), 'No privileges') 
         ELSE
             COALESCE((

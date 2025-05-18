@@ -1,4 +1,7 @@
 <?php
+// Include the main config file first
+require_once __DIR__ . '/config.php';
+
 $host = 'localhost';
 $db   = 'ims_tmddrbac';
 $user = 'root'; // default username for localhost

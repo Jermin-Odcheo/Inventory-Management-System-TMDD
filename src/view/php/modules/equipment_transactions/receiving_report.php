@@ -278,6 +278,55 @@ try {
 } catch (PDOException $e) {
     $errors[] = "Error retrieving Receiving Reports: " . $e->getMessage();
 }
+
+// Add the filter code here, BEFORE ob_end_clean()
+if (isset($_GET['action']) && $_GET['action'] === 'filter') {
+    try {
+        $query = "SELECT * FROM receive_report WHERE is_disabled = 0";
+        $params = [];
+
+        switch ($_GET['type']) {
+            case 'desc':
+                $query .= " ORDER BY date_created DESC";
+                break;
+            case 'asc':
+                $query .= " ORDER BY date_created ASC";
+                break;
+            case 'month':
+                $query .= " AND MONTH(date_created) = ? AND YEAR(date_created) = ?";
+                $params[] = $_GET['month'];
+                $params[] = $_GET['year'];
+                break;
+            case 'range':
+                $query .= " AND date_created BETWEEN ? AND ?";
+                $params[] = $_GET['dateFrom'];
+                $params[] = $_GET['dateTo'];
+                break;
+        }
+
+        $stmt = $pdo->prepare($query);
+        $stmt->execute($params);
+        $filteredReports = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (is_ajax_request()) {
+            ob_clean();
+            echo json_encode([
+                'status' => 'success',
+                'reports' => $filteredReports
+            ]);
+            exit;
+        }
+    } catch (PDOException $e) {
+        if (is_ajax_request()) {
+            ob_clean();
+            echo json_encode([
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ]);
+            exit;
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -313,7 +362,7 @@ try {
             </div>
             <div class="card-body p-3">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <div class="d-flex gap-2">
+ 
                         <?php if ($canCreate): ?>
                             <button type="button" class="btn btn-success btn-sm" id="openAddBtn">
                                 <i class="bi bi-plus-circle"></i> Add Receiving Report
@@ -330,7 +379,40 @@ try {
                             }
                             ?>
                         </select>
-                    </div>
+                        <select class="form-select form-select-sm" id="dateFilter" style="width: auto;">
+                            <option value="">Filter by Date</option>
+                            <option value="desc">Newest to Oldest</option>
+                            <option value="asc">Oldest to Newest</option>
+                            <option value="month">Specific Month</option>
+                            <option value="range">Custom Date Range</option>
+                        </select>
+                        <div id="dateInputsContainer" style="display: none;">
+                            <div class="d-flex gap-2" id="monthPickerContainer" style="display: none;">
+                                <select class="form-select form-select-sm" id="monthSelect" style="min-width: 130px;">
+                                    <option value="">Select Month</option>
+                                    <?php
+                                    $months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                                    foreach ($months as $index => $month) {
+                                        echo "<option value='" . ($index + 1) . "'>" . $month . "</option>";
+                                    }
+                                    ?>
+                                </select>
+                                <select class="form-select form-select-sm" id="yearSelect" style="min-width: 110px;">
+                                    <option value="">Select Year</option>
+                                    <?php
+                                    $currentYear = date('Y');
+                                    for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
+                                        echo "<option value='" . $year . "'>" . $year . "</option>";
+                                    }
+                                    ?>
+                                </select>
+                            </div>
+                            <div class="d-flex gap-2" id="dateRangePickers" style="display: none;">
+                                <input type="date" class="form-control form-control-sm" id="dateFrom" placeholder="From">
+                                <input type="date" class="form-control form-control-sm" id="dateTo" placeholder="To">
+                            </div>
+                        </div>
+ 
                 </div>
 
                 <div class="table-responsive" id="table">
@@ -757,6 +839,137 @@ try {
     blockNonNumericInput('#add_po_no');
     blockNonNumericInput('#edit_rr_no');
     blockNonNumericInput('#edit_po_no');
+
+    $(document).ready(function() {
+        // Date filter handling
+        $('#dateFilter').on('change', function() {
+            const filterType = $(this).val();
+
+            // Hide all containers first
+            $('#dateInputsContainer').hide();
+            $('#monthPickerContainer').hide();
+            $('#dateRangePickers').hide();
+
+            // Show appropriate containers based on selection
+            if (filterType === 'month') {
+                $('#dateInputsContainer').show();
+                $('#monthPickerContainer').show();
+            } else if (filterType === 'range') {
+                $('#dateInputsContainer').show();
+                $('#dateRangePickers').show();
+            } else if (filterType === 'desc' || filterType === 'asc') {
+                // Immediately trigger the filter for desc/asc
+                applyFilter(filterType);
+            }
+        });
+
+        // Handle month/year selection changes
+        $('#monthSelect, #yearSelect').on('change', function() {
+            const month = $('#monthSelect').val();
+            const year = $('#yearSelect').val();
+            if (month && year) {
+                applyFilter('month', {
+                    month,
+                    year
+                });
+            }
+        });
+
+        // Handle date range changes
+        $('#dateFrom, #dateTo').on('change', function() {
+            const dateFrom = $('#dateFrom').val();
+            const dateTo = $('#dateTo').val();
+            if (dateFrom && dateTo) {
+                applyFilter('range', {
+                    dateFrom,
+                    dateTo
+                });
+            }
+        });
+
+        // Function to apply the filter
+        function applyFilter(type, params = {}) {
+            let filterData = {
+                action: 'filter',
+                type: type
+            };
+
+            // Add additional parameters based on filter type
+            if (type === 'month') {
+                filterData.month = params.month;
+                filterData.year = params.year;
+            } else if (type === 'range') {
+                filterData.dateFrom = params.dateFrom;
+                filterData.dateTo = params.dateTo;
+            }
+
+            $.ajax({
+                url: 'receiving_report.php',
+                method: 'GET',
+                data: filterData,
+                success: function(response) {
+                    try {
+                        const data = JSON.parse(response);
+                        if (data.status === 'success') {
+                            // Update table body with filtered results
+                            let tableBody = '';
+                            data.reports.forEach(report => {
+                                tableBody += `
+                                <tr>
+                                    <td>${report.id}</td>
+                                    <td>${report.rr_no}</td>
+                                    <td>${report.accountable_individual}</td>
+                                    <td>${report.po_no}</td>
+                                    <td>${report.ai_loc}</td>
+                                    <td>${new Date(report.date_created).toLocaleString()}</td>
+                                    <td>
+                                        ${report.is_disabled == 1 
+                                            ? '<span class="badge bg-danger">Disabled</span>'
+                                            : '<span class="badge bg-success">Active</span>'}
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="btn-group" role="group">
+                                            <button class="btn btn-sm btn-outline-primary edit-report"
+                                                    data-id="${report.id}"
+                                                    data-rr="${report.rr_no}"
+                                                    data-individual="${report.accountable_individual}"
+                                                    data-po="${report.po_no}"
+                                                    data-location="${report.ai_loc}"
+                                                    data-date_created="${report.date_created}">
+                                                <i class="bi bi-pencil-square"></i> <span>Edit</span>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger delete-report"
+                                                    data-id="${report.id}">
+                                                <i class="bi bi-trash"></i> <span>Remove</span>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+                            });
+                            $('#rrTable tbody').html(tableBody || '<tr><td colspan="8">No Receiving Reports found.</td></tr>');
+                        } else {
+                            showToast('Error filtering data: ' + data.message, 'error');
+                        }
+                    } catch (e) {
+                        console.error('Error parsing response:', e);
+                        showToast('Error processing response', 'error');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('AJAX Error:', error);
+                    showToast('Error filtering data', 'error');
+                }
+            });
+        }
+
+        // Reset filter when empty option is selected
+        $('#dateFilter').on('change', function() {
+            if (!$(this).val()) {
+                window.location.reload();
+            }
+        });
+    });
 </script>
 
 <script src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js" defer></script>

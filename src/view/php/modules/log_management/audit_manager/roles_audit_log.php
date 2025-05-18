@@ -4,7 +4,7 @@ require '../../../../../../config/ims-tmdd.php';
 
 // Include Header
 include '../../../general/header.php';
-
+include '../../../general/sidebar.php';
 //If not logged in redirect to the LOGIN PAGE
 if (!isset($_SESSION['user_id'])) {
     header("Location: " . BASE_URL . "index.php"); // Redirect to login page
@@ -17,10 +17,17 @@ $rbac = new RBACService($pdo, $_SESSION['user_id']);
 // Check for required privilege
 $hasAuditPermission = $rbac->hasPrivilege('Audit', 'Track');
 
-// If user doesn't have permission, redirect them
+// If user doesn't have permission, show an inline "no permission" page
 if (!$hasAuditPermission) {
-    // Redirect to an unauthorized page
-    header("Location: " . BASE_URL . "src/view/php/general/auth.php");
+    echo '
+      <div class="container d-flex justify-content-center align-items-center" 
+           style="height:70vh; padding-left:300px">
+        <div class="alert alert-danger text-center">
+          <h1><i class="bi bi-shield-lock"></i> Access Denied</h1>
+          <p class="mb-0">You do not have permission to view this page.</p>
+        </div>
+      </div>
+    ';
     exit();
 }
 
@@ -267,7 +274,7 @@ function getChangedFieldNames(array $oldData, array $newData)
     <link rel="stylesheet" href="/Inventory-Managment-System-TMDD/src/view/styles/css/audit_log.css">
 </head>
 <body>
-<?php include '../../../general/sidebar.php'; ?>
+
 
 <div class="main-content">
     <div class="container-fluid">

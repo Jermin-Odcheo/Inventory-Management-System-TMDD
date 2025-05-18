@@ -298,17 +298,7 @@ function safeHtml($value)
     <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.min.css" rel="stylesheet">
     <!-- Select2 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <style>
-        /* Ensure Select2 dropdown appears above modal content and below the select field */
-        .select2-container--open {
-            z-index: 9999 !important;
-        }
-        /* Fix for Select2 dropdown inside Bootstrap modal */
-        .modal-body, .modal-dialog, .modal-content {
-            overflow: visible !important;
-        }
-    </style>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
 </head>
 
 <body>
@@ -325,7 +315,7 @@ function safeHtml($value)
 
             <div class="card-body">
                 <div class="container-fluid px-0">
-                    <div class="row align-items-center g-2">
+                    <div class="filter-container">
                         <div class="col-auto">
                             <?php if ($canCreate): ?>
                                 <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#addLocationModal">
@@ -333,7 +323,7 @@ function safeHtml($value)
                                 </button>
                             <?php endif; ?>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <select class="form-select" id="filterBuilding">
                                 <option value="">Filter by Building</option>
                                 <?php
@@ -346,11 +336,48 @@ function safeHtml($value)
                                 ?>
                             </select>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
+                            <select class="form-select" id="dateFilter">
+                                <option value="">Filter by Date</option>
+                                <option value="desc">Newest to Oldest</option>
+                                <option value="asc">Oldest to Newest</option>
+                                <option value="month">Specific Month</option>
+                                <option value="range">Custom Date Range</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
                             <div class="input-group">
                                 <input type="text" id="eqSearch" class="form-control" placeholder="Search Equipment...">
                                 <span class="input-group-text"><i class="bi bi-search"></i></span>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Date Inputs Row -->
+                    <div id="dateInputsContainer" class="date-inputs-container">
+                        <div class="month-picker-container" id="monthPickerContainer">
+                            <select class="form-select" id="monthSelect">
+                                <option value="">Select Month</option>
+                                <?php
+                                $months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                                foreach ($months as $index => $month) {
+                                    echo "<option value='" . ($index + 1) . "'>" . $month . "</option>";
+                                }
+                                ?>
+                            </select>
+                            <select class="form-select" id="yearSelect">
+                                <option value="">Select Year</option>
+                                <?php
+                                $currentYear = date('Y');
+                                for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
+                                    echo "<option value='" . $year . "'>" . $year . "</option>";
+                                }
+                                ?>
+                            </select>
+                        </div>
+                        <div class="date-range-container" id="dateRangePickers">
+                            <input type="date" class="form-control" id="dateFrom" placeholder="From">
+                            <input type="date" class="form-control" id="dateTo" placeholder="To">
                         </div>
                     </div>
                 </div>
@@ -635,16 +662,95 @@ function safeHtml($value)
                 filterTable();
             });
 
-            function filterTable() {
-                const searchValue = $('#eqSearch').val().toLowerCase();
-                const filterValue = $('#filterBuilding').val().toLowerCase();
-                const rows = $('#table tbody tr');
+            // Date filter handling
+            $('#dateFilter').on('change', function() {
+                const filterType = $(this).val();
+                
+                // Hide all containers first
+                $('#dateInputsContainer').hide();
+                $('#monthPickerContainer').hide();
+                $('#dateRangePickers').hide();
+                
+                // Show appropriate containers based on selection
+                if (filterType === 'month') {
+                    $('#dateInputsContainer').show();
+                    $('#monthPickerContainer').show();
+                } else if (filterType === 'range') {
+                    $('#dateInputsContainer').show();
+                    $('#dateRangePickers').show();
+                } else if (filterType === 'desc' || filterType === 'asc') {
+                    // Apply sorting without showing date inputs
+                    filterTable();
+                }
+            });
+            
+            // Handle month/year selection changes
+            $('#monthSelect, #yearSelect').on('change', function() {
+                const month = $('#monthSelect').val();
+                const year = $('#yearSelect').val();
+                
+                if (month && year) {
+                    filterTable();
+                }
+            });
+            
+            // Handle date range changes
+            $('#dateFrom, #dateTo').on('change', function() {
+                const dateFrom = $('#dateFrom').val();
+                const dateTo = $('#dateTo').val();
+                
+                if (dateFrom && dateTo) {
+                    filterTable();
+                }
+            });
 
-                rows.each(function() {
-                    const rowText = $(this).text().toLowerCase();
-                    const buildingCell = $(this).find('td:nth-child(3)').text().toLowerCase();
-                    $(this).toggle(rowText.includes(searchValue) && (!filterValue || buildingCell === filterValue));
+            function filterTable() {
+                const searchText = $('#eqSearch').val().toLowerCase();
+                const filterBuilding = $('#filterBuilding').val().toLowerCase();
+                const dateFilterType = $('#dateFilter').val();
+                const selectedMonth = $('#monthSelect').val();
+                const selectedYear = $('#yearSelect').val();
+                const dateFrom = $('#dateFrom').val();
+                const dateTo = $('#dateTo').val();
+                
+                // First apply building filter and search text filter
+                $("#table tbody tr").each(function() {
+                    const row = $(this);
+                    const rowText = row.text().toLowerCase();
+                    const buildingText = row.find('td:eq(2)').text().toLowerCase();
+                    const dateCell = row.find('td:eq(8)').text(); // Date created column
+                    const date = new Date(dateCell);
+                    
+                    const searchMatch = rowText.includes(searchText);
+                    const buildingMatch = !filterBuilding || buildingText === filterBuilding;
+                    
+                    let dateMatch = true;
+                    if (dateFilterType === 'month' && selectedMonth && selectedYear) {
+                        dateMatch = (date.getMonth() + 1 === parseInt(selectedMonth)) && 
+                                   (date.getFullYear() === parseInt(selectedYear));
+                    } else if (dateFilterType === 'range' && dateFrom && dateTo) {
+                        const from = new Date(dateFrom);
+                        const to = new Date(dateTo);
+                        to.setHours(23, 59, 59); // Include the entire "to" day
+                        dateMatch = date >= from && date <= to;
+                    }
+                    
+                    row.toggle(searchMatch && buildingMatch && dateMatch);
                 });
+                
+                // Then handle sorting if needed
+                if (dateFilterType === 'asc' || dateFilterType === 'desc') {
+                    const tbody = $('#table tbody');
+                    const rows = tbody.find('tr').toArray();
+                    
+                    rows.sort(function(a, b) {
+                        const dateA = new Date($(a).find('td:eq(8)').text());
+                        const dateB = new Date($(b).find('td:eq(8)').text());
+                        return dateFilterType === 'asc' ? dateA - dateB : dateB - dateA;
+                    });
+                    
+                    tbody.append(rows);
+                }
             }
 
             // Delegate event for editing location

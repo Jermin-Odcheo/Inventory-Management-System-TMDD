@@ -26,7 +26,7 @@ $rbac = new RBACService($pdo, $userId);
                 </a>
             </li>
 
-            <?php if ($rbac->hasPrivilege('Audit', 'View')): ?>
+            <?php if ($rbac->hasPrivilege('Audit', 'Track')): ?>
             <li class="dropdown-item">
                 <button class="dropdown-toggle" aria-expanded="false">
                     <i class="fas fa-history"></i> Logs

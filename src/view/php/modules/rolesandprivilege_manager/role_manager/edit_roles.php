@@ -52,9 +52,9 @@ $modules = $stmtModules->fetchAll(PDO::FETCH_ASSOC);
 $stmtPrivileges = $pdo->query("SELECT * FROM privileges WHERE is_disabled = 0 ORDER BY priv_name");
 $allPrivileges = $stmtPrivileges->fetchAll(PDO::FETCH_ASSOC);
 
-// Get Audit module ID and View privilege ID for validation
+// Get Audit module ID and Track privilege ID for validation
 $auditModuleId = null;
-$viewPrivilegeId = null;
+$trackPrivilegeId = null;
 foreach ($modules as $mod) {
     if (strtolower($mod['module_name']) === 'audit') {
         $auditModuleId = $mod['id'];
@@ -62,8 +62,8 @@ foreach ($modules as $mod) {
     }
 }
 foreach ($allPrivileges as $priv) {
-    if (strtolower($priv['priv_name']) === 'view') {
-        $viewPrivilegeId = $priv['id'];
+    if (strtolower($priv['priv_name']) === 'track') {
+        $trackPrivilegeId = $priv['id'];
         break;
     }
 }
@@ -86,13 +86,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         exit;
     }
 
-    // Filter out non-view privileges for Audit module
+    // Filter privileges for Audit module to only allow Track privilege
     $filteredSelected = [];
     foreach ($selected as $value) {
         list($moduleID, $privilegeID) = explode('|', $value);
         
-        // Skip if this is a non-view privilege for Audit module
-        if ($auditModuleId && $moduleID == $auditModuleId && $privilegeID != $viewPrivilegeId) {
+        // For Audit module, only allow Track privilege
+        if ($auditModuleId && $moduleID == $auditModuleId) {
+            if ($privilegeID == $trackPrivilegeId) {
+                $filteredSelected[] = $value;
+            }
             continue;
         }
         
@@ -326,22 +329,70 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             </div>
                             <div class="card-body">
                                 <div class="row g-3">
-                                    <?php foreach ($allPrivileges as $priv): 
-                                        // Skip non-view privileges for Audit module
-                                        if (strtolower($mod['module_name']) === 'audit' && strtolower($priv['priv_name']) !== 'view') {
+                                    <?php 
+                                    // Get privileges for this module from role_module_privileges
+                                    $stmt = $pdo->prepare("
+                                        SELECT DISTINCT p.* 
+                                        FROM privileges p 
+                                        LEFT JOIN role_module_privileges rmp ON p.id = rmp.privilege_id 
+                                        WHERE rmp.module_id = ? OR p.is_disabled = 0
+                                        ORDER BY p.id
+                                    ");
+                                    $stmt->execute([$mod['id']]);
+                                    $modulePrivileges = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                                    foreach ($modulePrivileges as $priv): 
+                                        // For Audit module, only show Track privilege
+                                        if ($mod['id'] == $auditModuleId && strtolower($priv['priv_name']) !== 'track') {
                                             continue;
                                         }
                                         
+                                        // For Audit module, only allow Track privilege
+                                        if ($mod['id'] == $auditModuleId) {
+                                            $value = $mod['id'] . '|' . $priv['id'];
+                                            $isChecked = in_array($value, $currentPrivilegeCombos);
+                                            
+                                            // Map privilege names to icons
+                                            $iconClass = match(strtolower($priv['priv_name'])) {
+                                                'track'  => 'bi-graph-up',
+                                                default  => 'bi-shield-check',
+                                            };
+                                            ?>
+                                            <div class="col-md-4 col-lg-3">
+                                                <div class="form-check form-switch">
+                                                    <input class="form-check-input"
+                                                           type="checkbox"
+                                                           role="switch"
+                                                           name="privileges[]"
+                                                           value="<?php echo $value; ?>"
+                                                           id="priv_<?php echo $mod['id'] . '_' . $priv['id']; ?>"
+                                                        <?php echo $isChecked ? 'checked' : ''; ?>>
+                                                    <label class="form-check-label"
+                                                           for="priv_<?php echo $mod['id'] . '_' . $priv['id']; ?>">
+                                                        <i class="bi <?php echo $iconClass; ?> me-1"></i>
+                                                        <?php echo htmlspecialchars($priv['priv_name']); ?>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <?php
+                                            continue;
+                                        }
+                                        
+                                        // For other modules, show all privileges
                                         $value = $mod['id'] . '|' . $priv['id'];
                                         $isChecked = in_array($value, $currentPrivilegeCombos);
                                         
-                                        // Optional: Map priv_name to an icon
+                                        // Map privilege names to icons
                                         $iconClass = match(strtolower($priv['priv_name'])) {
+                                            'track'  => 'bi-graph-up',
                                             'view'   => 'bi-eye',
                                             'create' => 'bi-plus-circle',
                                             'edit'   => 'bi-pencil',
                                             'delete' => 'bi-trash',
-                                            'track'  => 'bi-graph-up',
+                                            'modify' => 'bi-pencil-square',
+                                            'remove' => 'bi-trash',
+                                            'restore' => 'bi-arrow-counterclockwise',
+                                            'permanently delete' => 'bi-trash-fill',
                                             default  => 'bi-shield-check',
                                         };
                                         ?>
@@ -353,13 +404,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                                        name="privileges[]"
                                                        value="<?php echo $value; ?>"
                                                        id="priv_<?php echo $mod['id'] . '_' . $priv['id']; ?>"
-                                                    <?php echo $isChecked ? 'checked' : ''; ?>
-                                                    <?php 
-                                                    // Disable non-view checkboxes for Audit module
-                                                    if (strtolower($mod['module_name']) === 'audit' && strtolower($priv['priv_name']) !== 'view') {
-                                                        echo 'disabled';
-                                                    }
-                                                    ?>>
+                                                    <?php echo $isChecked ? 'checked' : ''; ?>>
                                                 <label class="form-check-label"
                                                        for="priv_<?php echo $mod['id'] . '_' . $priv['id']; ?>">
                                                     <i class="bi <?php echo $iconClass; ?> me-1"></i>

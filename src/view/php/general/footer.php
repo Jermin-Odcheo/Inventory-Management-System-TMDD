@@ -3,7 +3,8 @@
 <footer class="footer">
     <p class="footer-text">&copy; 2025 TMDD Interns</p>
 </footer>
-<script src="<?php echo BASE_URL; ?>src/control/js/toast.js"></script>
+<script src="<?php echo defined('BASE_URL') ? BASE_URL : '/'; ?>src/control/js/toast.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <style>
     /* Base styles for the footer */

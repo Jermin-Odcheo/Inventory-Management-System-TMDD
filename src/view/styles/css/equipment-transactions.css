@@ -64,10 +64,7 @@ body {
     align-items: center;
     padding: 1rem 1.25rem;
 }
-
-.card-header.bg-dark {
-    background-color: var(--dark-color) !important;
-}
+ 
 
 .card-body {
     padding: 1.25rem;
@@ -86,7 +83,6 @@ body {
 }
 
 .table th {
-    background-color: var(--dark-color);
     color: var(--light-color);
     font-weight: 500;
     vertical-align: middle;
@@ -115,11 +111,11 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.375rem 0.75rem;
+    padding: 0.5rem 0.75rem;
 }
 
 .btn-sm {
-    padding: 0.25rem 0.5rem;
+    padding: 0.5rem 0.5rem;
     font-size: 0.875rem;
 }
 
@@ -145,7 +141,6 @@ body {
 /* Add buttons - black with white text */
 .btn-success {
     background-color: #000000;
-    border-color: #000000;
     color: white;
 }
 

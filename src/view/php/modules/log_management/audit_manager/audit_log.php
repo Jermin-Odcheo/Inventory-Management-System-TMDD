@@ -4,7 +4,7 @@ require '../../../../../../config/ims-tmdd.php';
 
 // Include Header
 include '../../../general/header.php';
-
+include '../../../general/sidebar.php';
 // Redirect if not logged in
 if (!isset($_SESSION['user_id'])) {
     header("Location: " . BASE_URL . "index.php");
@@ -14,11 +14,22 @@ if (!isset($_SESSION['user_id'])) {
 // Initialize RBAC and check permissions
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
 
-// Check if user has either privilege: 
-// 1. "Audit" module with "Track" privilege, or 
-// 2. "User Management" module with "Track" privilege
+// Check for required privilege
 $hasAuditPermission = $rbac->hasPrivilege('Audit', 'Track');
 
+// If user doesn't have permission, show an inline "no permission" page
+if (!$hasAuditPermission) {
+    echo '
+      <div class="container d-flex justify-content-center align-items-center" 
+           style="height:70vh; padding-left:300px">
+        <div class="alert alert-danger text-center">
+          <h1><i class="bi bi-shield-lock"></i> Access Denied</h1>
+          <p class="mb-0">You do not have permission to view this page.</p>
+        </div>
+      </div>
+    ';
+    exit();
+}
 
 // Fetch all audit logs - only showing User Management logs
 $query = "SELECT audit_log.*, users.email AS email 
@@ -280,7 +291,7 @@ function getNormalizedAction($log)
 
 </head>
 <body>
-<?php include '../../../general/sidebar.php'; ?>
+
 
 <div class="main-content">
     <div class="container-fluid">

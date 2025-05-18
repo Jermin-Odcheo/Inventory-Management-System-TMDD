@@ -46,6 +46,9 @@ $user_id = $_SESSION['user_id'] ?? null;
           href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/toast.css">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/header_footer.css">
@@ -139,7 +142,7 @@ $user_id = $_SESSION['user_id'] ?? null;
         dropdownTrigger.classList.toggle('active');
     }
 
-    // Close the dropdown if the user clicks outside of it
+    // Close the dropdown if the user clicks outside it
     window.onclick = function(event) {
         // Handle the profile dropdown
         if (!event.target.closest('.user-profile')) {

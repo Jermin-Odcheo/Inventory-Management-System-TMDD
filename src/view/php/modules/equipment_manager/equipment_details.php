@@ -297,27 +297,9 @@ ob_end_clean();
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Equipment Details Management</title>
     <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
-    <style>
-        /* Hide pagination buttons when table is empty */
-        .table tbody:empty ~ .container-fluid #prevPage,
-        .table tbody:empty ~ .container-fluid #nextPage {
-            display: none !important;
-        }
-        
-        /* Hide pagination info when table is empty */
-        .table tbody:empty ~ .container-fluid .text-muted #currentPage,
-        .table tbody:empty ~ .container-fluid .text-muted #rowsPerPage,
-        .table tbody:empty ~ .container-fluid .text-muted #totalRows {
-            display: inline-block;
-            min-width: 10px;
-        }
-        
-        /* Ensure empty tbody has some height for CSS selectors to work */
-        .table tbody:empty {
-            display: block;
-            min-height: 10px;
-        }
-    </style>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
 </head>
 
 <body>
@@ -339,7 +321,7 @@ ob_end_clean();
             <div class="card-body">
                 <div class="container-fluid px-0">
                     <!-- Toolbar Row -->
-                    <div class="row align-items-lg-center g-2">
+                    <div class="filter-container">
                         <div class="col-auto">
                             <?php if ($canCreate): ?>
                             <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#addEquipmentModal">
@@ -380,34 +362,30 @@ ob_end_clean();
                     </div>
 
                     <!-- Date Inputs Row -->
-                    <div class="row mt-3 g-2" id="dateInputsContainer" style="display: none;">
-                        <div class="col-md-6">
-                            <div class="d-flex gap-2" id="monthPickerContainer" style="display: none;">
-                                <select class="form-select" id="monthSelect">
-                                    <option value="">Select Month</option>
-                                    <?php
-                                    $months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-                                    foreach ($months as $index => $month) {
-                                        echo "<option value='" . ($index + 1) . "'>" . $month . "</option>";
-                                    }
-                                    ?>
-                                </select>
-                                <select class="form-select" id="yearSelect">
-                                    <option value="">Select Year</option>
-                                    <?php
-                                    $currentYear = date('Y');
-                                    for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
-                                        echo "<option value='" . $year . "'>" . $year . "</option>";
-                                    }
-                                    ?>
-                                </select>
-                            </div>
+                    <div id="dateInputsContainer" class="date-inputs-container">
+                        <div class="month-picker-container" id="monthPickerContainer">
+                            <select class="form-select" id="monthSelect">
+                                <option value="">Select Month</option>
+                                <?php
+                                $months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                                foreach ($months as $index => $month) {
+                                    echo "<option value='" . ($index + 1) . "'>" . $month . "</option>";
+                                }
+                                ?>
+                            </select>
+                            <select class="form-select" id="yearSelect">
+                                <option value="">Select Year</option>
+                                <?php
+                                $currentYear = date('Y');
+                                for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
+                                    echo "<option value='" . $year . "'>" . $year . "</option>";
+                                }
+                                ?>
+                            </select>
                         </div>
-                        <div class="col-md-6">
-                            <div class="d-flex gap-2" id="dateRangePickers" style="display: none;">
-                                <input type="date" class="form-control" id="dateFrom" placeholder="From">
-                                <input type="date" class="form-control" id="dateTo" placeholder="To">
-                            </div>
+                        <div class="date-range-container" id="dateRangePickers">
+                            <input type="date" class="form-control" id="dateFrom" placeholder="From">
+                            <input type="date" class="form-control" id="dateTo" placeholder="To">
                         </div>
                     </div>
                 </div>
@@ -793,6 +771,18 @@ ob_end_clean();
                     $('#dateInputsContainer').show();
                     $('#dateRangePickers').show();
                     $('#dateFrom, #dateTo').show();
+                } else if (value === 'asc' || value === 'desc') {
+                    // Apply sorting directly
+                    const tbody = $('.table tbody');
+                    const rows = tbody.find('tr').toArray();
+                    
+                    rows.sort(function(a, b) {
+                        const dateA = new Date($(a).find('td:eq(8)').text());
+                        const dateB = new Date($(b).find('td:eq(8)').text());
+                        return value === 'asc' ? dateA - dateB : dateB - dateA;
+                    });
+                    
+                    tbody.append(rows);
                 } else {
                     filterTable();
                 }
