@@ -190,77 +190,67 @@ $userRoleDepartments = array_values($userRoleMap);
     </div>
 
 
-    <!-- Add User to Roles Modal -->
-    <div id="add-user-roles-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title">Add User to Roles</h2>
+<!-- Add User to Roles Modal -->
+<div id="add-user-roles-modal" class="modal">
+    <div class="modal-content">
+        <h2>add user to roles modal</h2>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="search-department-dropdown">select department <span class="text-danger">*</span></label>
+                <select id="search-department-dropdown">
+                    <option value="">Select one department</option>
+                    <?php foreach ($departmentsData as $dept): ?>
+                        <option value="<?php echo $dept['id']; ?>"><?php echo htmlspecialchars($dept['department_name']); ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <small class="text-muted">Department is required</small>
             </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="search-department-dropdown">Select Department <span class="text-danger">*</span></label>
-                    <select id="search-department-dropdown" class="form-control">
-                        <option value="">Select one department</option>
-                        <?php foreach ($departmentsData as $dept): ?>
-                            <option value="<?php echo $dept['id']; ?>"><?php echo htmlspecialchars($dept['department_name']); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                    <small class="form-text text-muted">Department is required</small>
-                </div>
-                <div class="form-group">
-                    <label>Selected Department</label>
-                    <div id="selected-department-container"></div>
-                </div>
-                <div class="form-group">
-                    <label for="search-role-dropdown">Search Role/s (optional)</label>
-                    <select id="search-role-dropdown" class="form-control">
-                        <option value="">Select roles</option>
-                        <?php foreach ($rolesData as $role): ?>
-                            <option value="<?php echo $role['id']; ?>"><?php echo htmlspecialchars($role['role_name']); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                    <small class="form-text text-muted">Leave empty for assignments without roles</small>
-                </div>
-                <div class="form-group">
-                    <label>Current Role Selection</label>
-                    <div id="selected-roles-container"></div>
-                </div>
-                <div class="form-group">
-                    <label for="search-users-dropdown">Search User/s</label>
-                    <select id="search-users-dropdown" class="form-control">
-                        <option value="">Select users</option>
-                        <?php foreach ($usersData as $user): ?>
-                            <option value="<?php echo $user['id']; ?>"><?php echo htmlspecialchars($user['username']); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Current User Selection</label>
-                    <div id="selected-users-container"></div>
-                </div>
-                <div class="form-group">
-                    <label>List of Current Users</label>
-                    <div class="department-table-container">
-                        <table id="current-users-table">
-                            <thead>
-                                <tr>
-                                    <th>Username</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- Optionally pre-populate if needed -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+            <div class="form-group">
+                <label>selected department</label>
+                <div id="selected-department-container"></div>
             </div>
-            <div class="modal-footer">
-                <button id="close-user-roles-modal" class="btn btn-secondary">Cancel</button>
-                <button id="save-user-roles" class="btn btn-primary">Save</button>
+            <div class="form-group">
+                <label for="search-role-dropdown">search role/s (optional)</label>
+                <select id="search-role-dropdown">
+                    <option value="">Select roles</option>
+                    <?php foreach ($rolesData as $role): ?>
+                        <option value="<?php echo $role['id']; ?>"><?php echo htmlspecialchars($role['role_name']); ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <small class="text-muted">Leave empty for assignments without roles</small>
+            </div>
+            <div class="form-group">
+                <label>current role selection</label>
+                <div id="selected-roles-container"></div>
+            </div>
+            <div class="form-group">
+                <label for="search-users-dropdown">search user/s</label>
+                <select id="search-users-dropdown">
+                    <option value="">Select users</option>
+                    <?php foreach ($usersData as $user): ?>
+                        <option value="<?php echo $user['id']; ?>"><?php echo htmlspecialchars($user['username']); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>current user selection</label>
+                <div id="selected-users-container"></div>
+            </div>
+            <div class="form-group">
+                <label>list of current users</label>
+                <table id="current-users-table">
+                    <tbody>
+                    <!-- Optionally pre-populate if needed -->
+                    </tbody>
+                </table>
             </div>
         </div>
+        <div class="modal-footer">
+            <button id="close-user-roles-modal">Cancel</button>
+            <button id="save-user-roles">Save</button>
+        </div>
     </div>
+</div>
 
     <!-- Add Department to Role Modal -->
     <div id="add-department-role-modal" class="modal">
