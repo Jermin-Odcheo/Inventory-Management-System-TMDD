@@ -5,6 +5,7 @@ require_once '../../../../../config/ims-tmdd.php';
 session_start();
 include '../../general/header.php';
 include '../../general/sidebar.php';
+include '../../general/footer.php';
 
 // Enable error reporting for debugging (disable in production)
 ini_set('display_errors', '1');
@@ -57,23 +58,6 @@ function getUserDepartments(PDO $pdo, int $userId): array
     return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 }
 
-function toggleDirection(string $currentSort, string $currentDir, string $col): string
-{
-    return $currentSort === $col
-        ? ($currentDir === 'asc' ? 'desc' : 'asc')
-        : 'asc';
-}
-
-function sortIcon(string $currentSort, string $col, string $dir): string
-{
-    if ($currentSort === $col) {
-        return $dir === 'asc'
-            ? ' <i class="bi bi-caret-up-fill"></i>'
-            : ' <i class="bi bi-caret-down-fill"></i>';
-    }
-    return '';
-}
-
 // 5) Build filters & sort
 $sortMap = [
     'id' => 'u.id',
@@ -84,28 +68,23 @@ $sortMap = [
     'Status' => 'u.status',
 ];
 
-$sortBy = $_GET['sort'] ?? 'id';
-if (!isset($sortMap[$sortBy])) {
-    $sortBy = 'id';
-}
+// Default sorting
+$sortBy = 'id';
+$sortDir = 'asc';
 
-$sortDir = ($_GET['dir'] ?? '') === 'desc' ? 'desc' : 'asc';
-
-$hasDeptFilter = isset($_GET['department']) && $_GET['department'] !== 'all';
-$hasSearchFilter = !empty(trim((string)($_GET['search'] ?? '')));
-
-// Base SQL
+// Base SQL - simplified to load all users without server-side filtering
 $sql = "
 SELECT
   u.id,
   u.email,
   u.username,
   u.first_name,
-  u.last_name,
+  u.last_name, 
   u.status AS Status,
   u.is_disabled,
   u.profile_pic_path,
   GROUP_CONCAT(DISTINCT d.department_name ORDER BY d.department_name) AS departments,
+  GROUP_CONCAT(DISTINCT d.abbreviation ORDER BY d.abbreviation) AS dept_abbreviations,
   GROUP_CONCAT(DISTINCT r.role_name ORDER BY r.role_name) AS roles
 FROM users u
 LEFT JOIN user_department_roles udr
@@ -116,41 +95,11 @@ LEFT JOIN roles r
   ON udr.role_id = r.id
 WHERE u.is_disabled = 0
 GROUP BY u.id, u.email, u.username, u.first_name, u.last_name, u.status, u.is_disabled
+ORDER BY u.id DESC
 ";
-
-if ($hasDeptFilter) {
-    $sql .= " HAVING departments LIKE :department";
-}
-if ($hasSearchFilter) {
-    $sql .= $hasDeptFilter ? " AND (" : " HAVING (";
-    $sql .= "
-        u.email           LIKE :search
-     OR u.username        LIKE :search
-     OR u.first_name      LIKE :search
-     OR u.last_name       LIKE :search
-     OR departments       LIKE :search
-     OR roles             LIKE :search
-    )";
-}
-
-$sql .= " ORDER BY {$sortMap[$sortBy]} $sortDir";
 
 try {
     $stmt = $pdo->prepare($sql);
-
-    if ($hasDeptFilter) {
-        $deptId = filter_var($_GET['department'], FILTER_VALIDATE_INT);
-        if ($deptId === false) {
-            die('Invalid department ID.');
-        }
-        $stmt->bindValue(':department', $deptId, PDO::PARAM_INT);
-    }
-    if ($hasSearchFilter) {
-        $like = '%' . trim((string)$_GET['search']) . '%';
-        $stmt->bindValue(':search', $like, PDO::PARAM_STR);
-    }
-
-    $pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, true);
     $stmt->execute();
     $users = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 } catch (PDOException $e) {
@@ -166,38 +115,43 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/pagination.css">
-    <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/user_roles_management.css">
-    <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/user_management.css">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/user_module.css">
     <!-- Bootstrap 5 bundle (includes Popper & the native Modal/Data API) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="<?php echo BASE_URL; ?>src/control/js/user_management.js" defer></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <!-- Select2 JS -->
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
-    <title>Manage Users</title>
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
     <!-- Select2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <!-- User Management JS -->
+    <script src="<?php echo BASE_URL; ?>src/control/js/user_management.js" defer></script>
+
+    <title>Manage Users</title>
 </head>
 
 <body>
     <div class="main-content container-fluid">
         <header>
             <h1>USER MANAGER</h1>
+            <?php if ($rbac->hasPrivilege('User Management', 'Modify')): ?>
+                <small>
+                    <a href="fix_role_id.php" class="text-muted">Fix Database</a> | 
+                    <a href="manage_roles.php" class="text-muted">Manage Role Assignments</a>
+                </small>
+            <?php endif; ?>
         </header>
 
-        <div class="filters-container d-flex align-items-end mb-3">
-            <div class="search-filter me-3">
-                <label for="search-filters" class="form-label">Search Users</label>
-                <input type="text" id="search-filters" name="search" class="form-control"
-                    placeholder="Search…"
-                    value="<?php echo htmlspecialchars($_GET['search'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+        <div class="filters-container">
+            <div class="search-filter">
+                <label for="search-filters">SEARCH USERS</label>
+                <input type="text" id="search-filters" name="search" placeholder="Search…">
             </div>
-            <div class="filter-container me-auto">
-                <label for="department-filter" class="form-label">Filter by Department</label>
-                <select id="department-filter" name="department" class="form-select" style="width: 250px;">
+            <div class="filter-container">
+                <label for="department-filter">FILTER BY DEPARTMENT</label>
+                <select id="department-filter" name="department" autocomplete="off">
                     <option value="all">All Departments</option>
                     <?php
                     // Fetch all departments directly for the filter dropdown, show ALL regardless of is_disabled
@@ -205,11 +159,7 @@ try {
                         $deptStmt = $pdo->query("SELECT department_name FROM departments ORDER BY department_name");
                         $allDepartments = $deptStmt->fetchAll(PDO::FETCH_COLUMN);
                         foreach ($allDepartments as $deptName) {
-                            echo '<option value="' . htmlspecialchars($deptName) . '"';
-                            if ((isset($_GET['department']) && $_GET['department'] === $deptName)) {
-                                echo ' selected';
-                            }
-                            echo '>' . htmlspecialchars($deptName) . '</option>';
+                            echo '<option value="' . htmlspecialchars($deptName) . '">' . htmlspecialchars($deptName) . '</option>';
                         }
                     } catch (PDOException $e) {
                         // fallback: empty
@@ -217,23 +167,27 @@ try {
                     ?>
                 </select>
             </div>
-
-            <?php if ($canCreate): ?>
-                <button id="create-btn" class="btn btn-primary me-2">
-                    Create New User
+            <div>
+                <button type="button" id="clear-filters-btn">
+                    Clear Filters
                 </button>
-            <?php endif; ?>
-
-
-            <?php if ($canDelete): ?>
-                <!-- Bulk remove button, hidden until >=2 checked -->
-                <button id="delete-selected"
-                    class="btn btn-danger me-2"
-                    style="display:none;"
-                    disabled>
-                    Remove Selected
-                </button>
-            <?php endif; ?>
+            </div>
+            <div class="action-buttons">
+                <?php if ($canCreate): ?>
+                    <button type="button" id="create-btn" class="btn btn-primary">
+                        Create New User
+                    </button>
+                <?php endif; ?>
+                <?php if ($canDelete): ?>
+                    <!-- Bulk remove button, hidden until >=2 checked -->
+                    <button type="button" id="delete-selected"
+                        class="btn btn-danger"
+                        style="display:none;"
+                        disabled>
+                        Remove Selected
+                    </button>
+                <?php endif; ?>
+            </div>
         </div>
 
         <div class="table-responsive" id="table">
@@ -242,13 +196,13 @@ try {
                     <tr>
                         <th><input type="checkbox" id="select-all"></th>
                         <th>
-                            <a href="?sort=id&dir=<?php echo toggleDirection($sortBy, $sortDir, 'id'); ?>">
-                                #<?php echo sortIcon($sortBy, 'id', $sortDir); ?>
+                            <a href="#" class="sort-header" data-sort="id">
+                                #<i class="bi bi-caret-up-fill sort-icon"></i>
                             </a>
                         </th>
                         <th>
-                            <a href="?sort=Email&dir=<?php echo toggleDirection($sortBy, $sortDir, 'Email'); ?>">
-                                Email<?php echo sortIcon($sortBy, 'Email', $sortDir); ?>
+                            <a href="#" class="sort-header" data-sort="email">
+                                Email<i class="bi bi-caret-up-fill sort-icon"></i>
                             </a>
                         </th>
                         <th>
@@ -256,18 +210,18 @@ try {
                         </th>
 
                         <th>
-                            <a href="?sort=First_Name&dir=<?php echo toggleDirection($sortBy, $sortDir, 'First_Name'); ?>">
-                                Username<?php echo sortIcon($sortBy, 'First_Name', $sortDir); ?>
+                            <a href="#" class="sort-header" data-sort="username">
+                                Username<i class="bi bi-caret-up-fill sort-icon"></i>
                             </a>
                         </th>
                         <th>
-                            <a href="?sort=Department&dir=<?php echo toggleDirection($sortBy, $sortDir, 'Department'); ?>">
-                                Department<?php echo sortIcon($sortBy, 'Department', $sortDir); ?>
+                            <a href="#" class="sort-header" data-sort="department">
+                                Department<i class="bi bi-caret-up-fill sort-icon"></i>
                             </a>
                         </th>
                         <th>
-                            <a href="?sort=Status&dir=<?php echo toggleDirection($sortBy, $sortDir, 'Status'); ?>">
-                                Status<?php echo sortIcon($sortBy, 'Status', $sortDir); ?>
+                            <a href="#" class="sort-header" data-sort="status">
+                                Status<i class="bi bi-caret-up-fill sort-icon"></i>
                             </a>
                         </th>
                         <th>Roles</th>
@@ -277,7 +231,7 @@ try {
                 <tbody>
                     <?php if (empty($users)): ?>
                         <tr>
-                            <td colspan="8" class="text-center text-muted">No users found.</td>
+                            <td colspan="9" class="text-center text-muted">No users found.</td>
                         </tr>
                         <?php else: foreach ($users as $u): ?>
                             <tr>
@@ -294,8 +248,7 @@ try {
                                             ? '../../../../../public/' . htmlspecialchars($u['profile_pic_path'], ENT_QUOTES, 'UTF-8') 
                                             : '../../../../../public/assets/img/default_profile.jpg'; ?>" 
                                         alt="Profile Picture"
-                                        class="profile-picture"
-                                        style="width: 40px; height: 40px; object-fit: cover; border-radius: 50%;">
+                                        class="profile-picture">
                                 </td>
 
                                 <td><?= htmlspecialchars($u['username'], ENT_QUOTES, 'UTF-8'); ?></td>
@@ -304,9 +257,14 @@ try {
                                     $depts = getUserDepartments($pdo, (int)$u['id']);
                                     if ($depts) {
                                         $deptNames = array_map(function($dept) {
-                                            return $dept['abbreviation'] ?: $dept['department_name'];
+                                            if (!empty($dept['abbreviation'])) {
+                                                return htmlspecialchars($dept['department_name'] . ' (' . $dept['abbreviation'] . ')', ENT_QUOTES, 'UTF-8');
+                                            } else {
+                                                return htmlspecialchars($dept['department_name'], ENT_QUOTES, 'UTF-8');
+                                            }
                                         }, $depts);
-                                        echo htmlspecialchars(implode(', ', $deptNames), ENT_QUOTES, 'UTF-8');
+                                        $deptString = implode(', ', $deptNames);
+                                        echo '<span title="' . $deptString . '">' . $deptString . '</span>';
                                     } else {
                                         echo 'Not assigned';
                                     }
@@ -331,7 +289,7 @@ try {
                                 </td>
                                 <td>
                                     <?php if ($canModify): ?>
-                                        <button class="btn btn-sm btn-outline-primary edit-btn"
+                                        <button class="btn-outline-primary edit-btn"
                                             data-id="<?= htmlspecialchars((string)$u['id'], ENT_QUOTES, 'UTF-8'); ?>"
                                             data-email="<?= htmlspecialchars($u['email'], ENT_QUOTES, 'UTF-8'); ?>"
                                             data-username="<?= htmlspecialchars($u['username'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
@@ -341,7 +299,7 @@ try {
                                         </button>
                                     <?php endif; ?>
                                     <?php if ($canDelete): ?>
-                                        <button class="btn btn-sm btn-outline-danger delete-btn"
+                                        <button class="btn-outline-danger delete-btn"
                                             data-id="<?= htmlspecialchars((string)$u['id'], ENT_QUOTES, 'UTF-8'); ?>">
                                             <i class="bi bi-trash"></i>
                                         </button>
@@ -364,7 +322,7 @@ try {
                     </div>
                     <div class="col-12 col-sm-auto ms-sm-auto">
                         <div class="d-flex align-items-center gap-2">
-                            <button id="prevPage" class="btn btn-outline-primary d-none" <?= $totalUsers <= 10 ? 'style="display:none !important;"' : '' ?>>
+                            <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1" <?= $totalUsers <= 10 ? 'style="display:none !important;"' : '' ?>>
                                 <i class="bi bi-chevron-left"></i> Previous
                             </button>
                             <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
@@ -373,7 +331,7 @@ try {
                                 <option value="30">30</option>
                                 <option value="50">50</option>
                             </select>
-                            <button id="nextPage" class="btn btn-outline-primary d-none" <?= $totalUsers <= 10 ? 'style="display:none !important;"' : '' ?>>
+                            <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1" <?= $totalUsers <= 10 ? 'style="display:none !important;"' : '' ?>>
                                 Next <i class="bi bi-chevron-right"></i>
                             </button>
                         </div>
@@ -387,8 +345,6 @@ try {
             </div>
         </div>
     </div>
-
-    <?php include '../../general/footer.php'; ?>
 
     <!-- Create User Modal -->
     <div class="modal fade" id="createUserModal" tabindex="-1" aria-labelledby="createUserModalLabel" aria-hidden="true">
@@ -453,7 +409,7 @@ try {
                             </div>
                             <div class="col-md-12">
                                 <label class="form-label">Assigned Departments Table</label>
-                                <div class="table-responsive department-table-container">
+                                <div class="department-table-container">
                                     <table class="table table-striped table-hover" id="createAssignedDepartmentsTable">
                                         <thead>
                                             <tr>
@@ -530,7 +486,7 @@ try {
                             </div>
                             <div class="col-md-12">
                                 <label class="form-label">Assigned Departments Table</label>
-                                <div class="table-responsive department-table-container">
+                                <div class="department-table-container">
                                     <table class="table table-striped table-hover" id="assignedDepartmentsTable">
                                         <thead>
                                             <tr>
@@ -558,7 +514,7 @@ try {
     <!-- Confirm Delete Modal -->
     <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel"
         aria-hidden="true">
-        <div class="modal-dialog modal-lower">
+        <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="confirmDeleteModalLabel">Confirm Remove</h5>
@@ -569,41 +525,25 @@ try {
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" id="confirmDeleteButton" class="btn btn-danger">Delete</button>
+                    <button type="button" id="confirmDeleteButton" class="btn btn-danger">Remove</button>
                 </div>
             </div>
         </div>
     </div>
 <script>
 $(document).ready(function() {
-    // Initialize Select2 for department filter
+    // Initialize Select2 for department filter with custom positioning
     $('#department-filter').select2({
         placeholder: 'All Departments',
         allowClear: true,
-        width: 'resolve'
+ 
+        minimumResultsForSearch: 5,
+        dropdownParent: $('body') // Attach to body for proper z-index handling
     });
-    // Preserve selection on reload
-    var selectedDept = '<?php echo isset($_GET['department']) ? htmlspecialchars($_GET['department'], ENT_QUOTES, 'UTF-8') : 'all'; ?>';
-    if (selectedDept) {
-        $('#department-filter').val(selectedDept).trigger('change');
-    }
-});
-</script>
-<script>
-$(document).ready(function() {
-    // Initialize Select2 for department filter (already present)
-    $('#department-filter').select2({
-        placeholder: 'All Departments',
-        allowClear: true,
-        width: 'resolve'
-    });
-    var selectedDept = '<?php echo isset($_GET['department']) ? htmlspecialchars($_GET['department'], ENT_QUOTES, 'UTF-8') : 'all'; ?>';
-    if (selectedDept) {
-        $('#department-filter').val(selectedDept).trigger('change');
-    }
+    
     // Initialize Select2 for modal department dropdown
     $('#modal_department').select2({
-        dropdownParent: $('#createUserModal'),
+        dropdownParent: $('#createUserModal .modal-body'),
         placeholder: 'Select Department',
         allowClear: true,
         width: '100%'
@@ -611,11 +551,180 @@ $(document).ready(function() {
     
     // Initialize Select2 for edit department dropdown
     $('#editDepartments').select2({
-        dropdownParent: $('#editUserModal'),
+        dropdownParent: $('#editUserModal .modal-body'),
         placeholder: 'Select Department',
         allowClear: true,
         width: '100%'
     });
+    
+    // Sorting variables
+    let currentSort = 'id';
+    let currentSortDir = 'asc';
+    
+    // Client-side sorting function
+    function sortTable(column) {
+        // Update sort direction if clicking the same column
+        if (column === currentSort) {
+            currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+            currentSort = column;
+            currentSortDir = 'asc';
+        }
+        
+        // Update sort icons
+        $('.sort-icon').removeClass('bi-caret-up-fill bi-caret-down-fill');
+        const iconClass = currentSortDir === 'asc' ? 'bi-caret-up-fill' : 'bi-caret-down-fill';
+        $(`.sort-header[data-sort="${column}"] .sort-icon`).addClass(iconClass);
+        
+        // Get column index based on column name
+        let colIndex;
+        switch(column) {
+            case 'id': colIndex = 1; break;
+            case 'email': colIndex = 2; break;
+            case 'username': colIndex = 4; break;
+            case 'department': colIndex = 5; break;
+            case 'status': colIndex = 6; break;
+            default: colIndex = 1;
+        }
+        
+        // Sort the table rows
+        const rows = $('#umTable tbody tr').get();
+        rows.sort(function(a, b) {
+            const aValue = $(a).children('td').eq(colIndex).text().trim().toLowerCase();
+            const bValue = $(b).children('td').eq(colIndex).text().trim().toLowerCase();
+            
+            // Handle numeric sorting for IDs
+            if (column === 'id') {
+                return currentSortDir === 'asc' 
+                    ? parseInt(aValue) - parseInt(bValue)
+                    : parseInt(bValue) - parseInt(aValue);
+            }
+            
+            // String comparison for other columns
+            if (aValue < bValue) return currentSortDir === 'asc' ? -1 : 1;
+            if (aValue > bValue) return currentSortDir === 'asc' ? 1 : -1;
+            return 0;
+        });
+        
+        // Re-append sorted rows to the table
+        $.each(rows, function(index, row) {
+            $('#umTable tbody').append(row);
+        });
+        
+        // Apply current filters after sorting
+        filterTable();
+    }
+    
+    // Bind sort headers
+    $('.sort-header').on('click', function(e) {
+        e.preventDefault();
+        const column = $(this).data('sort');
+        sortTable(column);
+    });
+    
+    // Direct client-side filtering function
+    function filterTable() {
+        const searchText = $('#search-filters').val().toLowerCase();
+        const deptFilter = $('#department-filter').val();
+        
+        console.log('Filtering with:', { searchText, deptFilter });
+        
+        // Show all rows first
+        $('#umTable tbody tr').show();
+        
+        // Apply search filter if present
+        if (searchText) {
+            $('#umTable tbody tr').each(function() {
+                const rowText = $(this).text().toLowerCase();
+                if (!rowText.includes(searchText)) {
+                    $(this).hide();
+                }
+            });
+        }
+        
+        // Apply department filter if selected
+        if (deptFilter && deptFilter !== 'all') {
+            $('#umTable tbody tr:visible').each(function() {
+                const deptCell = $(this).find('td:nth-child(6)').text().toLowerCase();
+                if (!deptCell.includes(deptFilter.toLowerCase())) {
+                    $(this).hide();
+                }
+            });
+        }
+        
+        // Update the visibility count
+        const visibleCount = $('#umTable tbody tr:visible').length;
+        const totalCount = $('#umTable tbody tr').length;
+        console.log(`Showing ${visibleCount} of ${totalCount} rows`);
+        
+        // Update pagination info
+        $('#totalRows').text(visibleCount);
+        if (visibleCount > 0) {
+            const rowsPerPage = parseInt($('#rowsPerPageSelect').val()) || 10;
+            $('#rowsPerPage').text(Math.min(rowsPerPage, visibleCount));
+            $('#currentPage').text('1');
+        } else {
+            $('#rowsPerPage').text('0');
+            $('#currentPage').text('0');
+        }
+        
+        // Update pagination controls
+        updatePaginationControls(visibleCount);
+    }
+    
+    // Helper to update pagination visibility
+    function updatePaginationControls(visibleCount) {
+        const rowsPerPage = parseInt($('#rowsPerPageSelect').val()) || 10;
+        
+        if (visibleCount <= rowsPerPage) {
+            $('#prevPage, #nextPage').addClass('d-none');
+            $('#pagination').empty();
+        } else {
+            $('#prevPage, #nextPage').removeClass('d-none');
+            // If you have a pagination function, call it here
+        }
+    }
+    
+    // Bind to search input with debounce for performance
+    let searchTimer;
+    $('#search-filters').on('input', function() {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(filterTable, 300);
+    });
+    
+    // Bind to department select changes
+    $('#department-filter').on('change', function() {
+        filterTable();
+    });
+    
+    // Clear filters button
+    $('#clear-filters-btn').on('click', function() {
+        // Clear both filters safely
+        $('#search-filters').val('');
+        $('#department-filter').val('all').trigger('change');
+        
+        // Show all rows and update the pagination counts
+        $('#umTable tbody tr').show();
+        
+        const totalRows = $('#umTable tbody tr').length;
+        $('#totalRows').text(totalRows);
+        $('#rowsPerPage').text(Math.min(totalRows, parseInt($('#rowsPerPageSelect').val()) || 10));
+        $('#currentPage').text('1');
+        
+        // Update pagination controls
+        updatePaginationControls(totalRows);
+        
+        console.log('Filters cleared');
+    });
+    
+    // Handle rows per page changes
+    $('#rowsPerPageSelect').on('change', function() {
+        filterTable();
+    });
+    
+    // Run initial filtering and sorting
+    sortTable('id');
+    filterTable();
 });
 </script>
 </body>

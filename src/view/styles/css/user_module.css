@@ -1,0 +1,874 @@
+/* Unified CSS for User Management and User Roles Management pages */
+
+/* Base Styles & Reset */
+* {
+    box-sizing: border-box;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+:root {
+    /* Modern color palette */
+    --primary: #4f46e5;
+    --primary-hover: #4338ca;
+    --primary-light: #eef2ff;
+    --danger: #ef4444;
+    --danger-light: #fee2e2;
+    --success: #10b981;
+    --success-light: #d1fae5;
+
+    /* Neutral colors */
+    --text-primary: #111827;
+    --text-secondary: #4b5563;
+    --text-tertiary: #6b7280;
+    --border: #e5e7eb;
+    --border-focus: #a5b4fc;
+    --background: #f9fafb;
+    --background-alt: #ffffff;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+body {
+    background-color: var(--background);
+    color: var(--text-primary);
+    line-height: 1.6;
+    font-size: 0.875rem;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Main content container */
+.main-content {
+    margin-left: 300px; /* Matches .sidebar width */
+    padding: 80px 1rem 2rem !important; /* Top padding for header space - important to override any inline styles */
+    min-height: calc(100vh - 40px); /* Ensure it fits within viewport with some margin */
+    width: auto;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+/* Page header */
+header h1 {
+    margin-bottom: 25px;
+    color: #333;
+    font-weight: 600;
+    font-size: 1.5rem;
+    letter-spacing: -0.025em;
+}
+
+.main-content > header {
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Filters container */
+.filters-container {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f9fafb;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    gap: 20px;
+    position: sticky;
+    top: 70px;
+    z-index: 100;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+/* Search and filter elements */
+.search-filter,
+.filter-container {
+    margin-bottom: 10px;
+    min-width: 200px;
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    height: 74px; /* Fixed height to ensure uniform alignment */
+}
+
+.search-filter label,
+.filter-container label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #4b5563;
+    text-transform: uppercase;
+}
+
+.search-filter input {
+    height: 38px;
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
+    padding: 0 12px;
+    width: 100%;
+}
+
+/* Ensure consistent height for inputs, selects and Select2 */
+.filter-container select,
+.select-container .select2-container {
+    width: 100% !important;
+    min-width: 220px;
+    height: 38px !important;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.search-filter input:focus,
+.filter-container select:focus {
+    outline: none;
+    border-color: #a5b4fc;
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15);
+}
+
+/* Button styling */
+.btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    cursor: pointer;
+}
+
+.btn-primary {
+    background-color: #4f46e5;
+    border-color: #4f46e5;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 38px;
+}
+
+.btn-primary:hover {
+    background-color: #4338ca;
+    border-color: #4338ca;
+}
+
+.btn-outline-secondary {
+    color: #4b5563;
+    border-color: #d1d5db;
+    background-color: white;
+}
+
+.btn-outline-secondary:hover {
+    background-color: #f9fafb;
+}
+
+.btn-danger {
+    background-color: #ef4444;
+    border-color: #ef4444;
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #dc2626;
+    border-color: #dc2626;
+}
+
+.btn-sm {
+    padding: 4px 10px;
+    font-size: 0.875rem;
+}
+
+/* Clear filters button */
+#clear-filters-btn {
+    height: 38px;
+    padding: 6px 16px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background-color: white;
+    font-weight: 500;
+    color: #4b5563;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#clear-filters-btn:hover {
+    background-color: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+/* Action buttons container */
+.action-buttons {
+    margin-left: auto;
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    height: 74px;
+    justify-content: flex-end;
+}
+
+/* Table styling */
+.table-responsive {
+    overflow-x: auto;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    background-color: #fff;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+table th {
+    background-color: #f9fafb;
+    color: #4b5563;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #e5e7eb;
+    color: #111827;
+}
+
+table tbody tr:hover {
+    background-color: #f9fafb;
+}
+
+/* Sorting controls */
+.sort-header {
+    color: #4b5563;
+    text-decoration: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.sort-icon {
+    font-size: 0.75rem;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+
+.sort-header:hover .sort-icon,
+.sort-header.active .sort-icon {
+    opacity: 1;
+}
+
+/* Pagination styling */
+.pagination {
+    display: flex;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    justify-content: center;
+    gap: 4px;
+}
+
+.pagination li {
+    display: inline-block;
+}
+
+.pagination a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    padding: 0 6px;
+    border-radius: 6px;
+    background-color: white;
+    border: 1px solid #e5e7eb;
+    color: #4b5563;
+    text-decoration: none;
+}
+
+.pagination a:hover {
+    background-color: #f9fafb;
+}
+
+.pagination .active a {
+    background-color: #4f46e5;
+    border-color: #4f46e5;
+    color: white;
+}
+
+/* Select2 styling - standardized for both pages */
+.select2-container {
+    
+    box-sizing: border-box;
+}
+
+.select2-container--default .select2-selection--single {
+    height: 38px !important;
+    padding: 5px 8px;
+    border: 1px solid #d1d5db !important;
+    border-radius: 6px !important;
+    background-color: white;
+    display: flex;
+    align-items: center;
+}
+
+.select2-results {
+    padding: 8px;
+}
+
+.select2-results__options {
+    max-height: 250px;
+ 
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    color: #111827;
+    line-height: 26px;
+    padding: 0;
+    margin-right: 20px;
+}
+
+.select2-selection__arrow {
+    height: 38px !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 36px !important;
+}
+
+.select2-container--open .select2-dropdown {
+    border-color: #a5b4fc;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.select2-dropdown {
+    border: 1px solid #d1d5db;
+    border-radius: 6px !important;
+    overflow: hidden;
+    background-color: white;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+ 
+ 
+}
+
+.select2-container--default .select2-results__option {
+    padding: 8px 12px;
+    transition: background-color 0.2s;
+}
+
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background-color: #4f46e5;
+}
+
+.select2-container--default .select2-search--dropdown .select2-search__field {
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    padding: 6px 8px;
+    margin-bottom: 8px;
+}
+
+/* Modal styling - standardized for both pages */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1050;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+    position: relative;
+    background-color: white;
+    margin: 5% auto;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    width: 80%;
+    max-width: 700px;
+    animation: modalFadeIn 0.3s;
+    max-height: 90vh;
+    height: fit-content;
+}
+
+@keyframes modalFadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.modal-header {
+    padding-bottom: 16px;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 20px;
+}
+
+.modal-body {
+    padding: 0 0 20px 0;
+}
+
+.modal-footer {
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.modal-title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.modal-content h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #111827;
+    text-transform: capitalize;
+}
+
+.modal.fade .modal-dialog {
+    transition: transform 0.3s ease-out;
+    transform: translate(0, -25%);
+}
+
+.modal-lower {
+    max-width: 700px;
+    margin: 5% auto;
+}
+
+/* Form elements */
+.form-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #4b5563;
+}
+
+.form-control {
+    display: block;
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: #111827;
+    background-color: white;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-control:focus {
+    border-color: #a5b4fc;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15);
+}
+
+.form-text {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #4b5563;
+    text-transform: capitalize;
+}
+
+.form-group select {
+    display: block;
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: #111827;
+    background-color: white;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+/* Profile picture styling */
+.profile-picture {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* Department table container */
+.department-table-container {
+    max-height: 200px;
+ 
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    margin-top: 8px;
+}
+
+/* Info field for modals */
+.info-field {
+    background-color: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    font-size: 0.875rem;
+    color: #111827;
+    min-height: 38px;
+    display: flex;
+    align-items: center;
+}
+
+/* Selected items containers */
+#selected-users-container, 
+#selected-roles-container, 
+#selected-department-container,
+#added-departments-container,
+#assignedDepartmentsList,
+#createAssignedDepartmentsList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 38px;
+    padding: 8px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background-color: #f9fafb;
+    margin-bottom: 16px;
+}
+
+.selected-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background-color: #eef2ff;
+    border: 1px solid #c7d2fe;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 0.875rem;
+    color: #4f46e5;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.selected-item .remove-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background-color: #c7d2fe;
+    border: none;
+    color: #4f46e5;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 0;
+    margin-left: 4px;
+}
+
+.selected-item .remove-btn:hover {
+    background-color: #a5b4fc;
+    color: #4338ca;
+}
+
+/* Tables for user/role/department listings */
+#current-users-table,
+#departments-table,
+#assignedDepartmentsTable,
+#createAssignedDepartmentsTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+    margin-bottom: 16px;
+}
+
+#current-users-table tbody,
+#departments-table tbody,
+#assignedDepartmentsTable tbody,
+#createAssignedDepartmentsTable tbody {
+    max-height: 200px;
+    overflow-y: auto;
+    display: block;
+}
+
+#current-users-table tr,
+#departments-table tr,
+#assignedDepartmentsTable tr,
+#createAssignedDepartmentsTable tr {
+    display: flex;
+    width: 100%;
+}
+
+#current-users-table td:last-child,
+#departments-table td:last-child,
+#assignedDepartmentsTable td:last-child,
+#createAssignedDepartmentsTable td:last-child {
+    text-align: right;
+    width: 60px;
+    flex: 0 0 60px;
+}
+
+/* Standardized table headers */
+#assignedDepartmentsTable th,
+#createAssignedDepartmentsTable th,
+#current-users-table th,
+#departments-table th {
+    background-color: #f9fafb;
+    color: #4b5563;
+    font-weight: 600;
+    font-size: 0.75rem;
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+    text-transform: uppercase;
+    width: 100%;
+}
+
+/* Standardized table cells */
+#assignedDepartmentsTable td,
+#createAssignedDepartmentsTable td,
+#current-users-table td,
+#departments-table td {
+    padding: 8px 16px;
+    border-bottom: 1px solid #e5e7eb;
+    color: #111827;
+    width: 100%;
+}
+
+/* Standardized action buttons - black and white */
+.btn-outline-primary,
+.btn-outline-danger,
+.btn-outline-secondary,
+.delete-btn,
+.edit-btn,
+.table-remove-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+ 
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    background-color: white;
+    color: #111827;
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 5px;
+}
+
+.btn-outline-primary:hover,
+.btn-outline-secondary:hover,
+.edit-btn:hover {
+    background-color: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.btn-outline-danger:hover,
+.delete-btn:hover,
+.table-remove-btn:hover {
+    background-color: #fee2e2;
+    border-color: #fca5a5;
+    color: #b91c1c;
+}
+
+/* Icon styling */
+.bi {
+    font-size: 1rem;
+}
+
+/* Scrollbar styling for tables */
+#assignedDepartmentsTable tbody::-webkit-scrollbar,
+#createAssignedDepartmentsTable tbody::-webkit-scrollbar,
+#current-users-table tbody::-webkit-scrollbar,
+#departments-table tbody::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+#assignedDepartmentsTable tbody::-webkit-scrollbar-track,
+#createAssignedDepartmentsTable tbody::-webkit-scrollbar-track,
+#current-users-table tbody::-webkit-scrollbar-track,
+#departments-table tbody::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+#assignedDepartmentsTable tbody::-webkit-scrollbar-thumb,
+#createAssignedDepartmentsTable tbody::-webkit-scrollbar-thumb,
+#current-users-table tbody::-webkit-scrollbar-thumb,
+#departments-table tbody::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 3px;
+}
+
+#assignedDepartmentsTable tbody::-webkit-scrollbar-thumb:hover,
+#createAssignedDepartmentsTable tbody::-webkit-scrollbar-thumb:hover,
+#current-users-table tbody::-webkit-scrollbar-thumb:hover,
+#departments-table tbody::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .main-content {
+        margin-left: 0;
+        padding: 70px 1rem 2rem;
+        overflow: auto;
+    }
+
+    .filters-container {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .search-filter,
+    .filter-container {
+        min-width: 100%;
+        height: auto;
+    }
+
+    #clear-filters-btn {
+        width: 100%;
+        margin-top: 8px;
+    }
+
+    .action-buttons {
+        width: 100%;
+        margin-left: 0;
+        justify-content: space-between;
+        height: auto;
+    }
+
+    .modal-content {
+        width: 95%;
+        margin: 10% auto;
+        padding: 16px;
+    }
+
+    header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .modal-lower {
+        max-width: 95%;
+    }
+}
+
+/* Fix for modal backdrop issue */
+.modal-backdrop {
+  z-index: 1040 !important;
+}
+
+.modal {
+  z-index: 1050 !important;
+}
+
+/* Ensure Select2 dropdowns appear above modals */
+.select2-container {
+  z-index: 1060 !important;
+}
+
+/* Fix Bootstrap modal positioning */
+.modal-dialog.modal-lower {
+  display: flex;
+  height: calc(100% - 3.5rem);
+  margin-top: 1.75rem;
+  margin-bottom: 1.75rem;
+}
+
+.modal.fade .modal-dialog {
+  transform: translate(0, 0);
+}
+
+/* Fix for confirmation modal height */
+#confirmDeleteModal .modal-dialog {
+  max-width: 500px;
+}
+
+#confirmDeleteModal .modal-content {
+  margin: 0 auto;
+}
+
+#confirmDeleteModal .modal-body {
+  padding: 1rem;
+}
+
+/* Ensure modals are properly sized */
+.modal-dialog.modal-lower {
+  margin: 1.75rem auto;
+}
+
+/* Department column width control with word wrap */
+#umTable th:nth-child(6),
+#umTable td:nth-child(6) {
+  width: 200px;
+  max-width: 200px;
+  word-wrap: break-word;
+  word-break: break-word;
+  white-space: normal;
+  vertical-align: middle;
+  line-height: 1.4;
+  padding: 12px 16px;
+}
+
+/* Make department text display properly with word wrap */
+#umTable td:nth-child(6) span {
+  display: block;
+  word-wrap: break-word;
+  word-break: break-word;
+  white-space: normal;
+  hyphens: auto;
+}
+
+/* Ensure stable table layout */
+#umTable {
+  table-layout: unset;
+  width: 100%;
+} 

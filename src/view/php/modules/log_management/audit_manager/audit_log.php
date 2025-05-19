@@ -176,8 +176,8 @@ function formatDetailsAndChanges($log)
     $oldData = ($log['OldVal'] !== null) ? json_decode($log['OldVal'], true) : [];
     $newData = ($log['NewVal'] !== null) ? json_decode($log['NewVal'], true) : [];
 
-    $userEmail = $log['user_email'] ?? ($newData['email'] ?? 'User');
-    $targetEntityName = $newData['email'] ?? $oldData['email'] ?? 'Unknown';
+    $userEmail = $log['email'] ?? ($newData['email'] ?? 'User');
+    $targetEntityName = $newData['username'] ?? $oldData['username'] ?? 'Unknown';
     $targetName = $userEmail;
     if ($action === 'remove' && isset($newData['first_name'], $newData['last_name'])) {
         $targetName = $newData['first_name'] . ' ' . $newData['last_name'];
@@ -195,13 +195,28 @@ function formatDetailsAndChanges($log)
             break;
 
         case 'modified':
-            $changedFields = getChangedFieldNames($oldData, $newData);
-            $defaultMessage = !empty($changedFields)
-                ? "Modified Fields: " . htmlspecialchars(implode(', ', $changedFields))
-                : "Modified Fields: None";
-            list($details, $changes) = processStatusMessage($defaultMessage, $log, function () use ($log) {
-                return formatNewValue($log['NewVal']);
-            });
+            // Check if this is a user role modification
+            if (isset($oldData['role']) && isset($newData['role'])) {
+                $oldRole = $oldData['role'];
+                $newRole = $newData['role'];
+                $details = htmlspecialchars("Modified role for $targetEntityName");
+                $changes = htmlspecialchars("$oldRole -> $newRole");
+            } else {
+                $changedFields = getChangedFieldNames($oldData, $newData);
+                $defaultMessage = !empty($changedFields)
+                    ? "Modified Fields: " . htmlspecialchars(implode(', ', $changedFields))
+                    : "Modified Fields: None";
+                list($details, $changes) = processStatusMessage($defaultMessage, $log, function () use ($log, $oldData, $newData) {
+                    // For each changed field, show old -> new
+                    $changesText = [];
+                    foreach ($oldData as $key => $value) {
+                        if (isset($newData[$key]) && $value !== $newData[$key]) {
+                            $changesText[] = "$key: $value -> " . $newData[$key];
+                        }
+                    }
+                    return !empty($changesText) ? implode("<br>", $changesText) : formatNewValue($log['NewVal']);
+                });
+            }
             break;
 
         case 'restored':
@@ -210,13 +225,32 @@ function formatDetailsAndChanges($log)
             break;
 
         case 'remove':
-            $details = htmlspecialchars("$targetName has been removed");
-            $changes = "is_deleted 0 -> 1";
+            // Check if this is a user role removal
+            if (isset($oldData['role'])) {
+                $role = $oldData['role'];
+                $details = htmlspecialchars("The role '$role' for $targetEntityName has been removed");
+                $changes = formatNewValue($log['OldVal']);
+            } else {
+                $details = htmlspecialchars("$targetName has been removed");
+                $changes = "is_deleted 0 -> 1";
+            }
             break;
 
         case 'delete':
             $details = htmlspecialchars("$targetEntityName has been deleted from the database");
             $changes = formatNewValue($log['OldVal']);
+            break;
+
+        case 'add':
+            // Check if this is a user role addition
+            if (isset($newData['role'])) {
+                $role = $newData['role'];
+                $details = htmlspecialchars("The role '$role' has been added to $targetEntityName");
+                $changes = formatNewValue($log['NewVal']);
+            } else {
+                $details = htmlspecialchars($log['Details'] ?? '');
+                $changes = formatNewValue($log['NewVal']);
+            }
             break;
 
         default:

@@ -368,17 +368,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                                 <i class="bi bi-plus-circle"></i> Add Receiving Report
                             </button>
                         <?php endif; ?>
-                        <select class="form-select form-select-sm" id="filterLocation" style="width: auto;">
-                            <option value="">Filter Location</option>
-                            <?php
-                            $locations = array_unique(array_column($receivingReports, 'ai_loc'));
-                            foreach ($locations as $location) {
-                                if (!empty($location)) {
-                                    echo "<option value='" . htmlspecialchars($location) . "'>" . htmlspecialchars($location) . "</option>";
-                                }
-                            }
-                            ?>
-                        </select>
                         <select class="form-select form-select-sm" id="dateFilter" style="width: auto;">
                             <option value="">Filter by Date</option>
                             <option value="desc">Newest to Oldest</option>
@@ -669,6 +658,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
             width: '100%',
             placeholder: 'Type or select PO…',
             allowClear: true
+        });
+
+        // Search filter for reports
+        $('#searchReport').on('input', function() {
+            var searchText = $(this).val().toLowerCase();
+            $("#table tbody tr").filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(searchText) > -1);
+            });
         });
 
         // Filter table

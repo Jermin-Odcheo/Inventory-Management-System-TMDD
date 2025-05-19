@@ -68,6 +68,7 @@ $(document).ready(function() {
     
     // Use event delegation for dynamically added elements
     $(document).on('click', '.edit-btn', function() {
+         $(".modal-backdrop").hide();
         const userId = $(this).data('id');
         const email = $(this).data('email');
         const username = $(this).data('username');
@@ -137,31 +138,32 @@ $(document).ready(function() {
         modal.show();
     });
     
+    // Handle delete button clicks
     $(document).on('click', '.delete-btn', function() {
         const userId = $(this).data('id');
-        
         $('#confirmDeleteMessage').text('Are you sure you want to remove this user?');
-        $('#confirmDeleteButton').data('ids', [userId]);
+        $('#confirmDeleteButton').data('id', userId);
+        $('#confirmDeleteButton').data('type', 'single');
         
-        var deleteModal = document.getElementById('confirmDeleteModal');
-        var modal = new bootstrap.Modal(deleteModal);
-        modal.show();
+        // Show the modal with compact sizing
+        const confirmModal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
+        confirmModal.show();
     });
     
+    // Handle bulk delete button click
     $('#delete-selected').on('click', function() {
-        const selectedIds = getSelectedUserIds();
+        const selectedIds = [];
+        $('.select-row:checked').each(function() {
+            selectedIds.push($(this).val());
+        });
         
         if (selectedIds.length > 0) {
-            const message = selectedIds.length === 1 
-                ? 'Are you sure you want to remove 1 user?' 
-                : `Are you sure you want to remove ${selectedIds.length} users?`;
-                
-            $('#confirmDeleteMessage').text(message);
-            $('#confirmDeleteButton').data('ids', selectedIds);
+            $('#confirmDeleteMessage').text(`Are you sure you want to remove ${selectedIds.length} selected users?`);
+            $('#confirmDeleteButton').data('type', 'multiple');
             
-            var deleteModal = document.getElementById('confirmDeleteModal');
-            var modal = new bootstrap.Modal(deleteModal);
-            modal.show();
+            // Show the modal
+            const confirmModal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
+            confirmModal.show();
         }
     });
     
@@ -342,61 +344,72 @@ $(document).ready(function() {
     });
     
     // ===== DELETE USER FUNCTIONALITY =====
-    // Handle delete confirmation
+    // Handle confirmation of deletion
     $('#confirmDeleteButton').on('click', function() {
-        const userIds = $(this).data('ids');
+        const type = $(this).data('type');
         
-        const data = userIds.length === 1 
-            ? { user_id: userIds[0] }  // Single delete
-            : { user_ids: userIds };   // Bulk delete
+        if (type === 'single') {
+            const userId = $(this).data('id');
+            deleteUser(userId);
+        } else if (type === 'multiple') {
+            const selectedIds = [];
+            $('.select-row:checked').each(function() {
+                selectedIds.push($(this).val());
+            });
+            deleteMultipleUsers(selectedIds);
+        }
         
+        // Hide the modal
+        const confirmModal = bootstrap.Modal.getInstance(document.getElementById('confirmDeleteModal'));
+        confirmModal.hide();
+    });
+    
+    // Function to delete a single user
+    function deleteUser(userId) {
         $.ajax({
-            url: 'delete_user.php',  // Correct endpoint
+            url: 'delete_user.php',
             type: 'POST',
-            data: data,
+            data: { user_id: userId },
             dataType: 'json',
             success: function(response) {
                 if (response.success) {
-                    var deleteModal = bootstrap.Modal.getInstance(document.getElementById('confirmDeleteModal'));
-                    if (deleteModal) {
-                        deleteModal.hide();
-                    }
-                    
-                    // Reload table and show success message
-                    reloadUserTable();
-                    showToast(response.message || 'User(s) removed successfully!', 'success', 3000);
+                    // Remove the row from the table
+                    $(`tr:has(.delete-btn[data-id="${userId}"])`).remove();
+                    showToast('User removed successfully', 'success');
                 } else {
-                    showToast(response.message || 'Failed to remove user(s).', 'error', 5000);
+                    showToast(response.message || 'Failed to remove user', 'error');
                 }
             },
-            error: function(xhr, status, error) {
-                console.error("Error deleting user:", error);
-                console.error("Response text:", xhr.responseText);
-                
-                let errorMsg = 'Error removing user. Please try again.';
-                
-                // Enhanced error detection and reporting
-                if (xhr.responseText) {
-                    try {
-                        // First check if response is JSON
-                        const errorResponse = JSON.parse(xhr.responseText);
-                        errorMsg = errorResponse.message || errorMsg;
-                    } catch (e) {
-                        // Not JSON, check for known error patterns in HTML response
-                        if (xhr.responseText.includes('RBACService')) {
-                            errorMsg = 'Server configuration error: RBACService class not found';
-                        } else if (xhr.responseText.includes('Fatal error')) {
-                            errorMsg = 'Server error: ' + (xhr.responseText.match(/Fatal error:(.+?)<br/i)?.[1]?.trim() || 'Unknown fatal error occurred');
-                        } else if (xhr.responseText.includes('Warning')) {
-                            errorMsg = 'Server warning: ' + (xhr.responseText.match(/Warning:(.+?)<br/i)?.[1]?.trim() || 'Unknown warning occurred');
-                        }
-                    }
-                }
-                
-                showToast(errorMsg, 'error', 5000);
+            error: function() {
+                showToast('An error occurred while processing your request', 'error');
             }
         });
-    });
+    }
+    
+    // Function to delete multiple users
+    function deleteMultipleUsers(userIds) {
+        $.ajax({
+            url: 'delete_user.php',
+            type: 'POST',
+            data: { user_ids: userIds },
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    // Remove the rows from the table
+                    userIds.forEach(function(id) {
+                        $(`tr:has(.select-row[value="${id}"])`).remove();
+                    });
+                    showToast('Selected users removed successfully', 'success');
+                    $('#delete-selected').hide().prop('disabled', true);
+                } else {
+                    showToast(response.message || 'Failed to remove users', 'error');
+                }
+            },
+            error: function() {
+                showToast('An error occurred while processing your request', 'error');
+            }
+        });
+    }
     
     // ===== BULK DELETE FUNCTIONALITY =====
     // Select all checkbox
@@ -521,4 +534,27 @@ $(document).ready(function() {
             updateEditDepartmentsDisplay();
         });
     }
+});
+
+// Ensure modals are properly initialized and configured
+document.addEventListener('DOMContentLoaded', function() {
+    // Fix modal backdrop issue
+    const fixModalBackdrop = () => {
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(modal => {
+            modal.addEventListener('show.bs.modal', function() {
+                setTimeout(() => {
+                    const backdrop = document.querySelector('.modal-backdrop');
+                    if (backdrop) {
+                        backdrop.style.zIndex = '1040';
+                    }
+                    modal.style.zIndex = '1050';
+                }, 0);
+            });
+        });
+    };
+    
+    fixModalBackdrop();
+    
+    // Rest of your existing code...
 });

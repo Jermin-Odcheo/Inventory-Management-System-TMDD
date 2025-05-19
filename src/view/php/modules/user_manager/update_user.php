@@ -42,16 +42,23 @@ try {
     $currentUserStmt->execute([$userId]);
     $currentUser = $currentUserStmt->fetch(PDO::FETCH_ASSOC);
     
-    // Get current department assignments
-    $currentDeptsStmt = $pdo->prepare("
-        SELECT department_id
-        FROM user_department_roles
+    // Get current department-role assignments before deleting them
+    $currentAssignmentsStmt = $pdo->prepare("
+        SELECT department_id, role_id 
+        FROM user_department_roles 
         WHERE user_id = ?
     ");
-    $currentDeptsStmt->execute([$userId]);
-    $currentDepartments = $currentDeptsStmt->fetchAll(PDO::FETCH_COLUMN);
+    $currentAssignmentsStmt->execute([$userId]);
+    $currentAssignments = $currentAssignmentsStmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Create a map of department_id => role_id for existing assignments
+    $existingRoleMap = [];
+    foreach ($currentAssignments as $assignment) {
+        $existingRoleMap[$assignment['department_id']] = $assignment['role_id'];
+    }
     
     // Sort arrays for comparison
+    $currentDepartments = array_keys($existingRoleMap);
     sort($currentDepartments);
     $deptIdsToCompare = array_map('intval', $departments);
     sort($deptIdsToCompare);
@@ -123,9 +130,14 @@ try {
      * Check if the new email already exists (excluding the current user)
      * Updating a user with existing email address will log and mark the status as 'Failed'
      */
-    $dupStmt = $pdo->prepare("SELECT id FROM users WHERE email = ? AND id != ?");
+    $dupStmt = $pdo->prepare("SELECT id, username FROM users WHERE email = ? AND id != ?");
     $dupStmt->execute([$email, $userId]);
     if ($dupStmt->rowCount() > 0) {
+        // Get the existing user with this email
+        $existingUser = $dupStmt->fetch(PDO::FETCH_ASSOC);
+        $existingUserId = $existingUser['id'];
+        $existingUsername = $existingUser['username'];
+        
         // Retrieve the current email of the user being modified.
         $currentStmt = $pdo->prepare("SELECT email FROM users WHERE id = ?");
         $currentStmt->execute([$userId]);
@@ -161,7 +173,7 @@ try {
             $newValJson
         ]);
 
-        throw new Exception("Email address already exists");
+        throw new Exception("Email address already exists for user: " . $existingUsername);
     }
 
     // Begin transaction
@@ -204,19 +216,17 @@ try {
     $deleteDepartmentsStmt = $pdo->prepare("DELETE FROM user_department_roles WHERE user_id = ?");
     $deleteDepartmentsStmt->execute([$userId]);
     
-    // Add new department-role associations
-    if (!empty($validDepartments)) {
-        $insertStmt = $pdo->prepare("INSERT INTO user_department_roles (user_id, department_id, role_id) VALUES (?, ?, ?)");
-        
-        foreach ($validDepartments as $deptId) {
-            if (!empty($validRoles)) {
-                foreach ($validRoles as $roleId) {
-                    $insertStmt->execute([$userId, $deptId, $roleId]);
-                }
-            } else {
-                // No roles provided, assign department with null role
-                $insertStmt->execute([$userId, $deptId, null]);
-            }
+    // Insert new department associations
+    $insertStmt = $pdo->prepare("INSERT INTO user_department_roles (user_id, department_id, role_id) VALUES (?, ?, ?)");
+    
+    foreach ($departments as $deptId) {
+        // Check if this department had a previous role assignment
+        if (isset($existingRoleMap[$deptId])) {
+            // Preserve the existing role for this department
+            $insertStmt->execute([$userId, $deptId, $existingRoleMap[$deptId]]);
+        } else {
+            // New department gets role_id = 0
+            $insertStmt->execute([$userId, $deptId, 0]);
         }
     }
     
@@ -233,36 +243,73 @@ try {
         )
         VALUES (?, ?, 'modified', ?, 'User Management', 'Success', NOW())
     ");
-    
-    // Generate details of what changed
+    // … after inserting user_department_roles …
+
+    // 1) Build list of changed fields
+    $oldVals = [];
+    $newVals = [];
     $changes = [];
+
     if ($currentUser['email'] !== $email) {
+        $oldVals['email'] = $currentUser['email'];
+        $newVals['email'] = $email;
         $changes[] = "email: {$currentUser['email']} → {$email}";
     }
     if ($currentUser['username'] !== $username) {
+        $oldVals['username'] = $currentUser['username'];
+        $newVals['username'] = $username;
         $changes[] = "username: {$currentUser['username']} → {$username}";
     }
     if ($currentUser['first_name'] !== $firstName) {
+        $oldVals['first_name'] = $currentUser['first_name'];
+        $newVals['first_name'] = $firstName;
         $changes[] = "first name: {$currentUser['first_name']} → {$firstName}";
     }
     if ($currentUser['last_name'] !== $lastName) {
+        $oldVals['last_name'] = $currentUser['last_name'];
+        $newVals['last_name'] = $lastName;
         $changes[] = "last name: {$currentUser['last_name']} → {$lastName}";
     }
     if (!empty($password)) {
+        // never log raw passwords—mask them
+        $oldVals['password'] = '********';
+        $newVals['password'] = '********';
         $changes[] = "password updated";
     }
     if ($currentDepartments !== $deptIdsToCompare) {
-        $changes[] = "department assignments updated";
+        $oldVals['departments'] = $currentDepartments;
+        $newVals['departments'] = $deptIdsToCompare;
+        $changes[] = "departments changed";
     }
-    
-    $details = "Updated user information: " . implode(", ", $changes);
+
+    $details    = "Updated user information: " . implode(", ", $changes);
+    $oldValJson = json_encode($oldVals);
+    $newValJson = json_encode($newVals);
+
+    // 2) Insert including OldVal and NewVal
+    $auditStmt = $pdo->prepare("
+        INSERT INTO audit_log (
+            UserID,
+            EntityID,
+            Action,
+            Details,
+            OldVal,
+            NewVal,
+            Module,
+            `Status`,
+            Date_Time
+        ) VALUES (?, ?, 'modified', ?, ?, ?, 'User Management', 'Success', NOW())
+    ");
     $auditStmt->execute([
         $_SESSION['user_id'],
         $userId,
-        $details
+        $details,
+        $oldValJson,
+        $newValJson
     ]);
 
     $pdo->commit();
+
 
     echo json_encode([
         'success' => true,

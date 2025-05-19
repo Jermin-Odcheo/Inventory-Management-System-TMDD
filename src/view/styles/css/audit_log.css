@@ -189,7 +189,7 @@ col.date {
     gap: 0.25rem;
 }
 
-.action-create {
+.action-create, .action-add {
     background-color: #639ce6;
     color: #ffffff;
     padding: 0.5em 0.75em;

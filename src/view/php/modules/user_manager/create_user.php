@@ -31,6 +31,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $firstName = trim($_POST['first_name']);
         $lastName = trim($_POST['last_name']);
         $password = $_POST['password'];
+        $username = trim($_POST['username']);
         $departmentID = $_POST['department'];
         $customDept = trim($_POST['custom_department'] ?? '');
         $departments = isset($_POST['departments']) && is_array($_POST['departments']) ? $_POST['departments'] : [];
@@ -42,6 +43,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if (empty($firstName)) $errors[] = "First name is required";
         if (empty($lastName)) $errors[] = "Last name is required";
         if (empty($password)) $errors[] = "Password is required";
+        if (empty($username)) $errors[] = "Username is required";
         if (empty($departments) && empty($departmentID)) $errors[] = "At least one department is required";
 
         // Handle single department selection (for backward compatibility)
@@ -73,12 +75,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
          * Check email uniqueness
          * Creating a user with existing email address will log and mark the status as 'Failed'
          */
-        $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+        $stmt = $pdo->prepare("SELECT id, username FROM users WHERE email = ?");
         $stmt->execute([$email]);
         if ($stmt->rowCount() > 0) {
             // Get the existing user record (the conflicting record)
             $existingUser = $stmt->fetch(PDO::FETCH_ASSOC);
             $existingUserId = $existingUser['id'];
+            $existingUsername = $existingUser['username'];
 
             // Prepare a JSON object that includes the attempted email address without extra labels
             $newValJson = json_encode(['email' => $email]);
@@ -107,8 +110,39 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $newValJson
             ]);
 
-            throw new Exception("Email address already exists");
+            throw new Exception("Email address already exists for user: " . $existingUsername);
         }
+
+        // Check for duplicate username
+        $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ?");
+        $stmt->execute([$username]);
+        if ($stmt->rowCount() > 0) {
+            // Log the duplicate username attempt
+            $auditStmt = $pdo->prepare("
+                INSERT INTO audit_log (
+                    UserID,
+                    EntityID,
+                    Action,
+                    Details,
+                    OldVal,
+                    NewVal,
+                    Module,
+                    `Status`,
+                    Date_Time
+                )
+                VALUES (?, NULL, 'create', ?, NULL, ?, 'User Management', 'Failed', NOW())
+            ");
+            $customMessage = 'Attempted to create user with existing username: ' . $username;
+            $newValJson = json_encode(['username' => $username]);
+            $auditStmt->execute([
+                $_SESSION['user_id'],
+                $customMessage,
+                $newValJson
+            ]);
+
+            throw new Exception("Username is already taken. Please try a different username.");
+        }
+
         $pdo->beginTransaction();
 
         // Create user
@@ -117,7 +151,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             (username, email, password, first_name, last_name, date_created) 
             VALUES (?, ?, ?, ?, ?, NOW())");
 
-        $username = strtolower($firstName[0] . $lastName);
         $stmt->execute([
             $username,
             $email,
@@ -133,8 +166,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             
             // If no departments were selected, set a default department
             if (empty($departments)) {
-                // Use a default department (e.g., ID 1)
-                $stmt->execute([$userID, 1, null]); // Default department with null role
+                // Use a default department (e.g., ID 1) with role_id = 0 (not null)
+                $stmt->execute([$userID, 1, 0]);
             } else {
                 // Add each department with each role
                 foreach ($departments as $deptId) {
@@ -149,8 +182,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                 }
                             }
                         } else {
-                            // No roles provided, assign department with null role
-                            $stmt->execute([$userID, $deptId, null]);
+                            // No roles provided, assign department with role_id = 0 (not null)
+                            $stmt->execute([$userID, $deptId, 0]);
                         }
                     }
                 }
