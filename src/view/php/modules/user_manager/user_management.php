@@ -130,6 +130,69 @@ try {
     <script src="<?php echo BASE_URL; ?>src/control/js/user_management.js" defer></script>
 
     <title>Manage Users</title>
+    <style>
+        /* Fix Select2 dropdown positioning in modals */
+        .select2-container--default {
+            z-index: 9999 !important;
+        }
+        
+        .modal-content {
+            overflow: hidden; /* Prevent content from showing through */
+        }
+        
+        .modal-footer {
+            border-top: 1px solid #dee2e6;
+            background-color: #fff;
+            margin-top: 1rem;
+            padding: 1rem;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        /* Fix for Department select dropdown in modals */
+        .select2-dropdown {
+            z-index: 9999 !important; /* Ensure dropdown appears over other elements */
+        }
+        
+        .select2-container--open .select2-dropdown {
+            margin-top: 2px;
+        }
+        
+        /* Additional fixes from user_roles_management.php */
+        .select2-container {
+            width: 100% !important;
+        }
+        
+        body.modal-open {
+            overflow: hidden;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1050;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+        
+        /* Toast notification styles */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+        }
+        
+        .toast {
+            min-width: 300px;
+        }
+    </style>
 </head>
 
 <body>
@@ -418,11 +481,11 @@ try {
                                 </div>
                             </div>
                         </div>
-                        <div class="mt-4 text-end">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-primary">Create User</button>
-                        </div>
                     </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="submitCreateUser">Create User</button>
                 </div>
             </div>
         </div>
@@ -495,11 +558,11 @@ try {
                                 </div>
                             </div>
                         </div>
-                        <div class="mt-4 text-end">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-primary">Save Changes</button>
-                        </div>
                     </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="submitEditUser">Save Changes</button>
                 </div>
             </div>
         </div>
@@ -536,7 +599,7 @@ try {
 
             // Initialize Select2 for modal department dropdown
             $('#modal_department').select2({
-                dropdownParent: $('#createUserModal .modal-body'),
+                dropdownParent: $('#createUserModal'),
                 placeholder: 'Select Department',
                 allowClear: true,
                 width: '100%'
@@ -544,10 +607,16 @@ try {
 
             // Initialize Select2 for edit department dropdown
             $('#editDepartments').select2({
-                dropdownParent: $('#editUserModal .modal-body'),
+                dropdownParent: $('#editUserModal'),
                 placeholder: 'Select Department',
                 allowClear: true,
                 width: '100%'
+            });
+
+            // Fix Select2 dropdown positioning in modals
+            $('.modal').on('shown.bs.modal', function() {
+                $(this).find('.select2-container').css('width', '100%');
+                $(this).find('select').trigger('change.select2');
             });
 
             // Sorting variables
@@ -691,6 +760,7 @@ try {
                 sortTable(column);
                 filterTable(); // Apply filtering after sorting
             });
+ 
 
             // Use the nested function structure as preferred by user
             $(function() {
@@ -739,6 +809,242 @@ try {
 
                 // Initial sort/filter (done only once)
                 sortTable('id');
+            });
+            
+            // Handle create user form submission
+            $('#submitCreateUser').on('click', function() {
+                const form = $('#createUserForm');
+                const formData = new FormData(form[0]);
+                
+                // First, check if departments are added directly from the dropdown
+                const selectedDept = $('#modal_department').val();
+                console.log("Selected department from dropdown:", selectedDept);
+                
+                if (selectedDept) {
+                    // If a department is selected from the dropdown, use it directly
+                    formData.append('department', selectedDept);
+                    console.log("Using department from dropdown:", selectedDept);
+                } else {
+                    // Check if departments are in the table
+                    const departmentRows = $('#createAssignedDepartmentsTable tbody tr');
+                    console.log("Department rows in table:", departmentRows.length);
+                    
+                    if (departmentRows.length === 0) {
+                        showToast('At least one department must be assigned', 'error');
+                        return;
+                    }
+                    
+                    // Clear any existing department values to avoid duplicates
+                    formData.delete('departments[]');
+                    formData.delete('department');
+                    
+                    // Approach 1: Set single department (for compatibility)
+                    const firstDeptId = departmentRows.first().data('department-id');
+                    if (firstDeptId) {
+                        console.log("Setting department ID:", firstDeptId);
+                        formData.append('department', firstDeptId);
+                    }
+                    
+                    // Approach 2: Add all departments as array
+                    departmentRows.each(function() {
+                        const deptId = $(this).data('department-id') || $(this).find('td:first').data('department-id');
+                        const deptName = $(this).find('td:first').text().trim();
+                        
+                        console.log("Row department:", deptName, "ID:", deptId);
+                        
+                        if (deptId) {
+                            formData.append('departments[]', deptId);
+                        } else {
+                            // Try to find department ID by name
+                            <?php foreach($departments as $id => $dept): ?>
+                            if (deptName === '<?= htmlspecialchars($dept['department_name']) ?>') {
+                                console.log("Found department by name:", deptName, "ID:", <?= $id ?>);
+                                formData.append('departments[]', <?= $id ?>);
+                            }
+                            <?php endforeach; ?>
+                        }
+                    });
+                }
+                
+                // Log all form data for debugging
+                for (let pair of formData.entries()) {
+                    console.log(pair[0] + ': ' + pair[1]);
+                }
+                
+                $.ajax({
+                    url: form.attr('action'),
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        console.log("Server response:", response);
+                        try {
+                            const result = typeof response === 'string' ? JSON.parse(response) : response;
+                            if (result.success) {
+                                showToast('User created successfully', 'success');
+                                $('#createUserModal').modal('hide');
+                                // Reload page after successful creation
+                                setTimeout(function() {
+                                    window.location.reload();
+                                }, 1500);
+                            } else {
+                                showToast(result.message || 'Failed to create user', 'error');
+                            }
+                        } catch (e) {
+                            // Handle non-JSON responses which might still indicate success
+                            if (typeof response === 'string' && response.includes('success')) {
+                                showToast('User created successfully', 'success');
+                                $('#createUserModal').modal('hide');
+                                setTimeout(function() {
+                                    window.location.reload();
+                                }, 1500);
+                            } else {
+                                showToast('Error processing response', 'error');
+                                console.error('Error parsing response:', e, response);
+                            }
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.log("AJAX error:", status, error);
+                        console.log("Response:", xhr.responseText);
+                        try {
+                            // First try to extract JSON from the response if it contains HTML errors
+                            let jsonStr = xhr.responseText;
+                            if (jsonStr.includes('{') && jsonStr.includes('}')) {
+                                jsonStr = jsonStr.substring(jsonStr.indexOf('{'), jsonStr.lastIndexOf('}')+1);
+                                const result = JSON.parse(jsonStr);
+                                alert('Error: ' + (result.message || 'Failed to create user'));
+                            } else {
+                                const result = JSON.parse(xhr.responseText);
+                                alert('Error: ' + (result.message || 'Failed to create user'));
+                            }
+                        } catch (e) {
+                            // If there's a username error in the response text, extract and show it
+                            if (xhr.responseText.includes('username is already taken')) {
+                                alert('Error: Username is already taken. Please try a different username.');
+                            } else {
+                                alert('Server error occurred. Please try again.');
+                            }
+                            console.error('Parse error:', e);
+                        }
+                    }
+                });
+            });
+            
+            // Handle edit user form submission
+            $('#submitEditUser').on('click', function() {
+                const form = $('#editUserForm');
+                const formData = new FormData(form[0]);
+                
+                // Check if departments are selected from the assigned departments table
+                const departmentRows = $('#assignedDepartmentsTable tbody tr');
+                if (departmentRows.length === 0) {
+                    showToast('At least one department must be assigned', 'error');
+                    return;
+                }
+                
+                // Clear any existing department values to avoid duplicates
+                formData.delete('departments[]');
+                formData.delete('department');
+                
+                // Debug info
+                console.log("Department rows found:", departmentRows.length);
+                
+                // Try two approaches to ensure departments are sent:
+                
+                // Approach 1: Set single department (for compatibility with older code)
+                // Get the first department ID from the table
+                const firstDeptId = departmentRows.first().data('department-id');
+                if (firstDeptId) {
+                    console.log("Setting department ID:", firstDeptId);
+                    formData.append('department', firstDeptId);
+                }
+                
+                // Approach 2: Add all departments as array
+                departmentRows.each(function() {
+                    const deptId = $(this).data('department-id') || $(this).find('td:first').data('department-id');
+                    const deptName = $(this).find('td:first').text().trim();
+                    
+                    console.log("Row department:", deptName, "ID:", deptId);
+                    
+                    if (deptId) {
+                        formData.append('departments[]', deptId);
+                    } else {
+                        // Try to find department ID by name
+                        <?php foreach($departments as $id => $dept): ?>
+                        if (deptName === '<?= htmlspecialchars($dept['department_name']) ?>') {
+                            console.log("Found department by name:", deptName, "ID:", <?= $id ?>);
+                            formData.append('departments[]', <?= $id ?>);
+                        }
+                        <?php endforeach; ?>
+                    }
+                });
+                
+                // Log all form data for debugging
+                for (let pair of formData.entries()) {
+                    console.log(pair[0] + ': ' + pair[1]);
+                }
+                
+                $.ajax({
+                    url: form.attr('action'),
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        console.log("Server response:", response);
+                        try {
+                            const result = typeof response === 'string' ? JSON.parse(response) : response;
+                            if (result.success) {
+                                showToast('User updated successfully', 'success');
+                                $('#editUserModal').modal('hide');
+                                // Reload page after successful update
+                                setTimeout(function() {
+                                    window.location.reload();
+                                }, 1500);
+                            } else {
+                                showToast(result.message || 'Failed to update user', 'error');
+                            }
+                        } catch (e) {
+                            // Handle non-JSON responses which might still indicate success
+                            if (typeof response === 'string' && response.includes('success')) {
+                                showToast('User updated successfully', 'success');
+                                $('#editUserModal').modal('hide');
+                                setTimeout(function() {
+                                    window.location.reload();
+                                }, 1500);
+                            } else {
+                                showToast('Error processing response', 'error');
+                                console.error('Error parsing response:', e, response);
+                            }
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.log("AJAX error:", status, error);
+                        console.log("Response:", xhr.responseText);
+                        try {
+                            // First try to extract JSON from the response if it contains HTML errors
+                            let jsonStr = xhr.responseText;
+                            if (jsonStr.includes('{') && jsonStr.includes('}')) {
+                                jsonStr = jsonStr.substring(jsonStr.indexOf('{'), jsonStr.lastIndexOf('}')+1);
+                                const result = JSON.parse(jsonStr);
+                                alert('Error: ' + (result.message || 'Failed to update user'));
+                            } else {
+                                const result = JSON.parse(xhr.responseText);
+                                alert('Error: ' + (result.message || 'Failed to update user'));
+                            }
+                        } catch (e) {
+                            // If there's a username error in the response text, extract and show it
+                            if (xhr.responseText.includes('username is already taken')) {
+                                alert('Error: Username is already taken. Please try a different username.');
+                            } else {
+                                alert('Server error occurred. Please try again.');
+                            }
+                            console.error('Parse error:', e);
+                        }
+                    }
+                });
             });
         });
 

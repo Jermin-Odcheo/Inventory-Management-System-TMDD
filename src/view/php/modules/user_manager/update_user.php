@@ -277,9 +277,38 @@ try {
         $changes[] = "password updated";
     }
     if ($currentDepartments !== $deptIdsToCompare) {
-        $oldVals['departments'] = $currentDepartments;
-        $newVals['departments'] = $deptIdsToCompare;
-        $changes[] = "departments changed";
+        // Fetch department names for the audit log instead of just IDs
+        $oldDeptNames = [];
+        $newDeptNames = [];
+        
+        // Get all department names in one query
+        $allDeptIds = array_merge($currentDepartments, $deptIdsToCompare);
+        if (!empty($allDeptIds)) {
+            $placeholders = str_repeat('?,', count($allDeptIds) - 1) . '?';
+            $deptStmt = $pdo->prepare("SELECT id, department_name FROM departments WHERE id IN ($placeholders)");
+            $deptStmt->execute($allDeptIds);
+            $deptMap = [];
+            
+            while ($dept = $deptStmt->fetch(PDO::FETCH_ASSOC)) {
+                $deptMap[$dept['id']] = $dept['department_name'];
+            }
+            
+            // Convert IDs to names
+            foreach ($currentDepartments as $deptId) {
+                $oldDeptNames[] = $deptMap[$deptId] ?? "Department ID: $deptId";
+            }
+            
+            foreach ($deptIdsToCompare as $deptId) {
+                $newDeptNames[] = $deptMap[$deptId] ?? "Department ID: $deptId";
+            }
+        }
+        
+        $oldDeptStr = implode(', ', $oldDeptNames);
+        $newDeptStr = implode(', ', $newDeptNames);
+        
+        $oldVals['departments'] = $oldDeptStr;
+        $newVals['departments'] = $newDeptStr;
+        $changes[] = "departments changed from [$oldDeptStr] to [$newDeptStr]";
     }
 
     $details    = "Updated user information: " . implode(", ", $changes);

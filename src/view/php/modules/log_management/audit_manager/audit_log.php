@@ -58,11 +58,21 @@ function formatNewValue($jsonStr)
 
     $html = '<ul class="list-group">';
     foreach ($data as $key => $value) {
-        $displayValue = is_null($value) ? '<em>null</em>' : htmlspecialchars($value);
         $friendlyKey = ucwords(str_replace('_', ' ', $key));
-        $html .= '<li class="list-group-item d-flex justify-content-between align-items-center">
-                    <strong>' . $friendlyKey . ':</strong> <span>' . $displayValue . '</span>
-                  </li>';
+        
+        // Special handling for departments
+        if ($key === 'departments' && !empty($value)) {
+            // Simple format matching the modified action display
+            $deptHtml = "<strong>{$friendlyKey}:</strong> ";
+            $deptHtml .= "<span class='text-primary'>" . htmlspecialchars($value) . "</span>";
+            
+            $html .= '<li class="list-group-item">' . $deptHtml . '</li>';
+        } else {
+            $displayValue = is_null($value) ? '<em>null</em>' : htmlspecialchars($value);
+            $html .= '<li class="list-group-item d-flex justify-content-between align-items-center">
+                        <strong>' . $friendlyKey . ':</strong> <span>' . $displayValue . '</span>
+                      </li>';
+        }
     }
     $html .= '</ul>';
     return $html;
@@ -103,7 +113,27 @@ function formatAuditDiff($oldJson, $newJson, $status = null)
         $newVal = $newData[$key] ?? '';
         if ($oldVal !== $newVal) {
             $friendlyField = ucwords(str_replace('_', ' ', $key));
-            $descriptions[] = "The {$friendlyField} was changed from '<em>{$oldVal}</em>' to '<strong>{$newVal}</strong>'.";
+            
+            // Special handling for departments to display as lists
+            if ($key === 'departments') {
+                // Split the department strings by commas
+                $oldDepts = !empty($oldVal) ? explode(', ', $oldVal) : [];
+                $newDepts = !empty($newVal) ? explode(', ', $newVal) : [];
+                
+                // Find added and removed departments
+                $added = array_diff($newDepts, $oldDepts);
+                $removed = array_diff($oldDepts, $newDepts);
+                
+                // Simplest possible format - just a direct text comparison
+                $html = "<strong>Departments:</strong> ";
+                $html .= "<span class='text-secondary'>" . htmlspecialchars($oldVal) . "</span>";
+                $html .= " <i class='fas fa-arrow-right'></i> ";
+                $html .= "<span class='text-primary'>" . htmlspecialchars($newVal) . "</span>";
+                
+                $descriptions[] = $html;
+            } else {
+                $descriptions[] = "The {$friendlyField} was changed from '<em>{$oldVal}</em>' to '<strong>{$newVal}</strong>'.";
+            }
         }
     }
 
@@ -207,11 +237,27 @@ function formatDetailsAndChanges($log)
                     ? "Modified Fields: " . htmlspecialchars(implode(', ', $changedFields))
                     : "Modified Fields: None";
                 list($details, $changes) = processStatusMessage($defaultMessage, $log, function () use ($log, $oldData, $newData) {
-                    // For each changed field, show old -> new
+                    // Special handling for departments - display in table format
+                    if (isset($oldData['departments']) || isset($newData['departments'])) {
+                        $oldDeptStr = $oldData['departments'] ?? '';
+                        $newDeptStr = $newData['departments'] ?? '';
+                        
+                        // Simplest possible format - just a direct text comparison
+                        $html = "<strong>Departments:</strong> ";
+                        $html .= "<span class='text-secondary'>" . htmlspecialchars($oldDeptStr) . "</span>";
+                        $html .= " <i class='fas fa-arrow-right'></i> ";
+                        $html .= "<span class='text-primary'>" . htmlspecialchars($newDeptStr) . "</span>";
+                        
+                        return $html;
+                    }
+                    
+                    // For other fields, show old -> new
                     $changesText = [];
                     foreach ($oldData as $key => $value) {
                         if (isset($newData[$key]) && $value !== $newData[$key]) {
-                            $changesText[] = "$key: $value -> " . $newData[$key];
+                            if ($key !== 'departments') { // Skip departments as they're handled above
+                                $changesText[] = "$key: $value -> " . $newData[$key];
+                            }
                         }
                     }
                     return !empty($changesText) ? implode("<br>", $changesText) : formatNewValue($log['NewVal']);

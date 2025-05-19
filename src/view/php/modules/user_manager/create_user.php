@@ -3,6 +3,10 @@
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
 
+// Suppress warnings in output
+error_reporting(E_ERROR | E_PARSE);
+ini_set('display_errors', 0);
+
 // Set header for JSON response
 header('Content-Type: application/json');
 
@@ -32,7 +36,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $lastName = trim($_POST['last_name']);
         $password = $_POST['password'];
         $username = trim($_POST['username']);
-        $departmentID = $_POST['department'];
+        $departmentID = isset($_POST['department']) ? $_POST['department'] : null;
         $customDept = trim($_POST['custom_department'] ?? '');
         $departments = isset($_POST['departments']) && is_array($_POST['departments']) ? $_POST['departments'] : [];
         $roles = isset($_POST['roles']) && is_array($_POST['roles']) ? $_POST['roles'] : [];
@@ -199,6 +203,61 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
 
         $pdo->commit();
+
+        // Create a success audit log entry with proper department information
+        try {
+            // Get department names for the audit log
+            $deptNames = [];
+            if (!empty($departments)) {
+                $placeholders = str_repeat('?,', count($departments) - 1) . '?';
+                $deptStmt = $pdo->prepare("SELECT id, department_name FROM departments WHERE id IN ($placeholders)");
+                $deptStmt->execute($departments);
+                
+                while ($dept = $deptStmt->fetch(PDO::FETCH_ASSOC)) {
+                    $deptNames[] = $dept['department_name'];
+                }
+            }
+            
+            $deptStr = implode(', ', $deptNames);
+            
+            // Create new value object for audit log
+            $newUserData = [
+                'email' => $email,
+                'username' => $username,
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                'departments' => $deptStr
+            ];
+            
+            // Insert audit log entry
+            $auditStmt = $pdo->prepare("
+                INSERT INTO audit_log (
+                    UserID,
+                    EntityID,
+                    Action,
+                    Details,
+                    OldVal,
+                    NewVal,
+                    Module,
+                    `Status`,
+                    Date_Time
+                )
+                VALUES (?, ?, 'create', ?, NULL, ?, 'User Management', 'Success', NOW())
+            ");
+            
+            $details = "Created new user with departments: " . $deptStr;
+            $newValJson = json_encode($newUserData);
+            
+            $auditStmt->execute([
+                $_SESSION['user_id'],
+                $userID,
+                $details,
+                $newValJson
+            ]);
+        } catch (Exception $auditEx) {
+            // Just log any errors with the audit, don't throw
+            error_log("Error creating audit log: " . $auditEx->getMessage());
+        }
 
         // Success response
         echo json_encode([
