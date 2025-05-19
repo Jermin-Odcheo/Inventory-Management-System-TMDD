@@ -160,7 +160,7 @@ CREATE TABLE IF NOT EXISTS `audit_log` (
   `Status` varchar(50) DEFAULT NULL,
   `Date_Time` datetime NOT NULL,
   PRIMARY KEY (`TrackID`)
-) ENGINE=MyISAM AUTO_INCREMENT=666 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=666 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `audit_log`
@@ -619,15 +619,15 @@ INSERT INTO `audit_log` (`TrackID`, `UserID`, `EntityID`, `Action`, `Details`, `
 DROP TABLE IF EXISTS `charge_invoice`;
 CREATE TABLE IF NOT EXISTS `charge_invoice` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `invoice_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `invoice_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `date_of_purchase` date NOT NULL,
-  `po_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `po_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `date_created` datetime DEFAULT CURRENT_TIMESTAMP,
   `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `invoice_no` (`invoice_no`),
   KEY `po_no` (`po_no`)
-) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `charge_invoice`
@@ -660,7 +660,7 @@ CREATE TABLE IF NOT EXISTS `departments` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `department_name` (`department_name`),
   UNIQUE KEY `abbreviation` (`abbreviation`)
-) ENGINE=InnoDB AUTO_INCREMENT=47 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=47 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `departments`
@@ -722,8 +722,8 @@ CREATE TABLE IF NOT EXISTS `equipment_details` (
   `model` varchar(100) DEFAULT NULL,
   `serial_number` varchar(100) DEFAULT NULL,
   `date_acquired` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `invoice_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
-  `rr_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `invoice_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `rr_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `location` varchar(255) DEFAULT NULL,
   `accountable_individual` varchar(255) DEFAULT NULL,
   `remarks` text,
@@ -733,7 +733,7 @@ CREATE TABLE IF NOT EXISTS `equipment_details` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `asset_tag` (`asset_tag`),
   KEY `invoice_no` (`invoice_no`)
-) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `equipment_details`
@@ -752,10 +752,10 @@ DROP TABLE IF EXISTS `equipment_location`;
 CREATE TABLE IF NOT EXISTS `equipment_location` (
   `equipment_location_id` int NOT NULL AUTO_INCREMENT,
   `asset_tag` varchar(50) NOT NULL,
-  `building_loc` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `building_loc` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `floor_no` varchar(50) DEFAULT NULL,
-  `specific_area` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci,
-  `person_responsible` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `specific_area` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+  `person_responsible` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `department_id` int DEFAULT NULL,
   `remarks` text,
   `date_created` datetime DEFAULT CURRENT_TIMESTAMP,
@@ -763,7 +763,7 @@ CREATE TABLE IF NOT EXISTS `equipment_location` (
   PRIMARY KEY (`equipment_location_id`),
   UNIQUE KEY `asset_tag` (`asset_tag`),
   KEY `department_id` (`department_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `equipment_location`
@@ -788,7 +788,7 @@ CREATE TABLE IF NOT EXISTS `equipment_status` (
   `date_created` datetime DEFAULT CURRENT_TIMESTAMP,
   `is_disabled` tinyint(1) DEFAULT '0',
   PRIMARY KEY (`equipment_status_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -802,7 +802,7 @@ CREATE TABLE IF NOT EXISTS `modules` (
   `module_name` varchar(100) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `module_name` (`module_name`)
-) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `modules`
@@ -829,8 +829,7 @@ CREATE TABLE IF NOT EXISTS `privileges` (
   `priv_name` varchar(191) NOT NULL,
   `is_disabled` tinyint NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=26 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
+) ENGINE=InnoDB AUTO_INCREMENT=26 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 --
 -- Dumping data for table `privileges`
 --
@@ -853,7 +852,7 @@ INSERT INTO `privileges` (`id`, `priv_name`, `is_disabled`) VALUES
 DROP TABLE IF EXISTS `purchase_order`;
 CREATE TABLE IF NOT EXISTS `purchase_order` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `po_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `po_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `date_of_order` date NOT NULL,
   `no_of_units` int NOT NULL,
   `item_specifications` text NOT NULL,
@@ -861,7 +860,7 @@ CREATE TABLE IF NOT EXISTS `purchase_order` (
   `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `po_no` (`po_no`)
-) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `purchase_order`
@@ -881,16 +880,16 @@ INSERT INTO `purchase_order` (`id`, `po_no`, `date_of_order`, `no_of_units`, `it
 DROP TABLE IF EXISTS `receive_report`;
 CREATE TABLE IF NOT EXISTS `receive_report` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `rr_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
-  `accountable_individual` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
-  `ai_loc` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci,
-  `po_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `rr_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `accountable_individual` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `ai_loc` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+  `po_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `date_created` datetime DEFAULT CURRENT_TIMESTAMP,
   `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `rr_no` (`rr_no`),
   KEY `po_no` (`po_no`)
-) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `receive_report`
@@ -913,7 +912,7 @@ CREATE TABLE IF NOT EXISTS `roles` (
   `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `role_name` (`role_name`)
-) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `roles`
@@ -949,7 +948,7 @@ CREATE TABLE IF NOT EXISTS `role_changes` (
   PRIMARY KEY (`ChangeID`),
   KEY `UserID` (`UserID`),
   KEY `RoleID` (`RoleID`)
-) ENGINE=MyISAM AUTO_INCREMENT=307 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=307 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `role_changes`
@@ -1224,7 +1223,7 @@ CREATE TABLE IF NOT EXISTS `role_module_privileges` (
   KEY `role_id` (`role_id`),
   KEY `module_id` (`module_id`),
   KEY `fk_rmp_privilege` (`privilege_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2252 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2252 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `role_module_privileges`
@@ -1323,17 +1322,17 @@ CREATE TABLE IF NOT EXISTS `users` (
   `id` int NOT NULL AUTO_INCREMENT,
   `username` varchar(50) NOT NULL,
   `email` varchar(100) NOT NULL,
-  `password` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `password` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `first_name` varchar(100) DEFAULT NULL,
   `last_name` varchar(100) DEFAULT NULL,
   `date_created` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `status` enum('Offline','Online') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `status` enum('Offline','Online') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
   `profile_pic_path` varchar(2048) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `username` (`username`),
   UNIQUE KEY `email` (`email`)
-) ENGINE=InnoDB AUTO_INCREMENT=136 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=136 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `users`
@@ -1587,7 +1586,7 @@ CREATE TABLE IF NOT EXISTS `user_department_roles` (
   PRIMARY KEY (`user_id`,`department_id`,`role_id`),
   KEY `user_id` (`user_id`),
   KEY `department_id` (`department_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `user_department_roles`

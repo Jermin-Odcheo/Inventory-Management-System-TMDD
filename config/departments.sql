@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS `departments` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `department_name` (`department_name`),
   UNIQUE KEY `abbreviation` (`abbreviation`)
-) ENGINE=InnoDB AUTO_INCREMENT=47 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=47 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `departments`
