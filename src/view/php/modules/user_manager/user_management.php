@@ -530,7 +530,6 @@ try {
             $('#department-filter').select2({
                 placeholder: 'All Departments',
                 allowClear: true,
-
                 minimumResultsForSearch: 5,
                 dropdownParent: $('body') // Attach to body for proper z-index handling
             });
@@ -616,16 +615,8 @@ try {
                     $('#umTable tbody').append(row);
                 });
 
-                // Apply current filters after sorting
-                filterTable();
+                // Do NOT call filterTable() here - this caused multiple calls
             }
-
-            // Bind sort headers
-            $('.sort-header').on('click', function(e) {
-                e.preventDefault();
-                const column = $(this).data('sort');
-                sortTable(column);
-            });
 
             // Direct client-side filtering function
             function filterTable() {
@@ -693,7 +684,15 @@ try {
                 }
             }
 
-            // Bind to search input with debounce for performance
+            // Bind sort headers
+            $('.sort-header').off('click').on('click', function(e) {
+                e.preventDefault();
+                const column = $(this).data('sort');
+                sortTable(column);
+                filterTable(); // Apply filtering after sorting
+            });
+
+            // Use the nested function structure as preferred by user
             $(function() {
                 // remove any other handlers (e.g. leftover from user_management.js)
                 $('#search-filters').off('input');
@@ -707,47 +706,40 @@ try {
                 $('#search-filters').on('keydown', function(e) {
                     if (e.key === 'Enter') e.preventDefault();
                 });
+                
+                // Bind to department select changes
+                $('#department-filter').off('change').on('change', function() {
+                    filterTable();
+                });
 
-                // then run your initial sort/filter
+                // Clear filters button
+                $('#clear-filters-btn').off('click').on('click', function() {
+                    // Clear both filters safely
+                    $('#search-filters').val('');
+                    $('#department-filter').val('all').trigger('change');
+
+                    // Show all rows and update the pagination counts
+                    $('#umTable tbody tr').show();
+
+                    const totalRows = $('#umTable tbody tr').length;
+                    $('#totalRows').text(totalRows);
+                    $('#rowsPerPage').text(Math.min(totalRows, parseInt($('#rowsPerPageSelect').val()) || 10));
+                    $('#currentPage').text('1');
+
+                    // Update pagination controls
+                    updatePaginationControls(totalRows);
+
+                    console.log('Filters cleared');
+                });
+
+                // Handle rows per page changes
+                $('#rowsPerPageSelect').off('change').on('change', function() {
+                    filterTable();
+                });
+
+                // Initial sort/filter (done only once)
                 sortTable('id');
-                filterTable();
             });
-
-
-
-            // Bind to department select changes
-            $('#department-filter').on('change', function() {
-                filterTable();
-            });
-
-            // Clear filters button
-            $('#clear-filters-btn').on('click', function() {
-                // Clear both filters safely
-                $('#search-filters').val('');
-                $('#department-filter').val('all').trigger('change');
-
-                // Show all rows and update the pagination counts
-                $('#umTable tbody tr').show();
-
-                const totalRows = $('#umTable tbody tr').length;
-                $('#totalRows').text(totalRows);
-                $('#rowsPerPage').text(Math.min(totalRows, parseInt($('#rowsPerPageSelect').val()) || 10));
-                $('#currentPage').text('1');
-
-                // Update pagination controls
-                updatePaginationControls(totalRows);
-
-                console.log('Filters cleared');
-            });
-
-            // Handle rows per page changes
-            $('#rowsPerPageSelect').on('change', function() {
-                filterTable();
-            });
-
-            // Run initial filtering and sorting
-            sortTable('id');
-            filterTable();
         });
 
         $('#createUserModal').on('hidden.bs.modal', function() {
@@ -756,13 +748,13 @@ try {
             // 1) Reset the entire form (clears all <input>, <select>, etc.)
             $modal.find('form')[0].reset();
 
-            // 2) If you’re using Select2 on #modal_department, clear it
+            // 2) If you're using Select2 on #modal_department, clear it
             const $dept = $modal.find('#modal_department');
             if ($dept.hasClass('select2-hidden-accessible')) {
                 $dept.val(null).trigger('change');
             }
 
-            // 3) Hide & clear your “custom department” text field
+            // 3) Hide & clear your "custom department" text field
             const $custom = $modal.find('#modal_custom_department');
             $custom.val('').hide();
 
