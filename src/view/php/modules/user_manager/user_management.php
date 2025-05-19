@@ -445,12 +445,6 @@ try {
                                     class="form-control mt-2" style="display:none;"
                                     placeholder="Enter custom department">
                             </div>
-                            <div class="col-12">
-                                <label class="form-label">Currently Assigned Departments</label>
-                                <div id="createAssignedDepartmentsList" class="border rounded p-2 mb-2">
-                                    <!-- Department badges will be added here dynamically -->
-                                </div>
-                            </div>
                             <div class="col-md-12">
                                 <label class="form-label">Assigned Departments Table</label>
                                 <div class="table-responsive department-table-container">

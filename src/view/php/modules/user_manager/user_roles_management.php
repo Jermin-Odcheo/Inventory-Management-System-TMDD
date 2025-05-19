@@ -443,14 +443,6 @@ $userRoleDepartments = array_values($userRoleMap);
                 <label>current user selection</label>
                 <div id="selected-users-container"></div>
             </div>
-            <div class="form-group">
-                <label>list of current users</label>
-                <table id="current-users-table">
-                    <tbody>
-                    <!-- Optionally pre-populate if needed -->
-                    </tbody>
-                </table>
-            </div>
         </div>
         <div class="modal-footer">
             <button id="close-user-roles-modal">Cancel</button>

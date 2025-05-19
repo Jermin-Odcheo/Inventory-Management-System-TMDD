@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS `audit_log` (
   `TrackID` int NOT NULL AUTO_INCREMENT,
   `UserID` int NOT NULL,
   `EntityID` int DEFAULT NULL,
-  `Action` enum('View','Modified','Delete','Add','Undo','Update','Create','Remove','Restored') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `Action` enum('View','Modified','Delete','Add','Undo','Update','Create','Remove','Restored') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `Details` text,
   `OldVal` text,
   `NewVal` text,
@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS `audit_log` (
   PRIMARY KEY (`TrackID`),
   KEY `idx_module` (`Module`),
   KEY `idx_action` (`Action`)
-) ENGINE=InnoDB AUTO_INCREMENT=99 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=99 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `audit_log`
@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS `chargeinvoice` (
   `PurchaseOrderNumber` varchar(50) DEFAULT NULL,
   PRIMARY KEY (`ChargeInvoiceID`),
   KEY `PurchaseOrderNumber` (`PurchaseOrderNumber`)
-) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Triggers for Charge Invoice
@@ -210,7 +210,7 @@ CREATE TABLE IF NOT EXISTS `equipmentdetails` (
   KEY `ReceivingReportFormNumber` (`ReceivingReportFormNumber`),
   KEY `AccountableIndividualLocation` (`AccountableIndividualLocation`(250)),
   KEY `AccountableIndividual` (`AccountableIndividual`)
-) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `equipmentdetails`
@@ -239,7 +239,7 @@ CREATE TABLE IF NOT EXISTS `equipmentlocation` (
   `ModifiedDate` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`EquipmentLocationID`),
   KEY `AssetTag` (`AssetTag`)
-) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `equipmentlocation`
@@ -266,7 +266,7 @@ CREATE TABLE IF NOT EXISTS `equipmentstatus` (
   `AccountableIndividual` varchar(100) DEFAULT NULL,
   PRIMARY KEY (`EquipmentStatusID`),
   KEY `AssetTag` (`AssetTag`)
-) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `equipmentstatus`
@@ -371,7 +371,7 @@ CREATE TABLE IF NOT EXISTS `purchaseorder` (
   `ItemsSpecification` text,
   PRIMARY KEY (`PurchaseOrderID`),
   UNIQUE KEY `PurchaseOrderNumber` (`PurchaseOrderNumber`)
-) ENGINE=MyISAM AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `purchaseorder`
@@ -506,7 +506,7 @@ CREATE TABLE IF NOT EXISTS `receivingreportform` (
   `ModifiedDate` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`ReceivingReportFormID`),
   UNIQUE KEY `ReceivingReportNumber` (`ReceivingReportNumber`)
-) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `receivingreportform`
@@ -666,7 +666,7 @@ CREATE TABLE IF NOT EXISTS `role_changes` (
   PRIMARY KEY (`ChangeID`),
   KEY `UserID` (`UserID`),
   KEY `RoleID` (`RoleID`)
-) ENGINE=MyISAM AUTO_INCREMENT=31 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=31 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
