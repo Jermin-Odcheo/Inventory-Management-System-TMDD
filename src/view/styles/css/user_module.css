@@ -135,13 +135,62 @@ header h1 {
 }
 
 /* Button styling */
-.btn {
+.btn{
     padding: 8px 16px;
     border-radius: 6px;
     font-weight: 500;
     transition: all 0.2s ease;
     border: 1px solid transparent;
     cursor: pointer;
+}
+.close-user-roles-modal {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    cursor: pointer;
+}
+.save-user-roles{
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    cursor: pointer;
+}
+
+/* Add styling for ID selectors */
+#close-user-roles-modal {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border: 1px solid #d1d5db;
+    background-color: white;
+    color: #4b5563;
+    cursor: pointer;
+}
+
+#save-user-roles {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    background-color: #4f46e5;
+    border-color: #4f46e5;
+    color: white;
+    cursor: pointer;
+}
+
+#close-user-roles-modal:hover {
+    background-color: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+#save-user-roles:hover {
+    background-color: #4338ca;
+    border-color: #4338ca;
 }
 
 .btn-primary {
@@ -410,10 +459,11 @@ table tbody tr:hover {
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    width: 80%;
+    width: 100%;
     max-width: 700px;
     animation: modalFadeIn 0.3s;
-    max-height: 90vh;
+    max-height: 80vh;
+    overflow-y: auto;
     height: fit-content;
 }
 
@@ -438,6 +488,10 @@ table tbody tr:hover {
     display: flex;
     justify-content: flex-end;
     gap: 12px;
+    position: sticky;
+    bottom: 0;
+    background-color: white;
+    z-index: 10;
 }
 
 .modal-title {
@@ -539,7 +593,7 @@ table tbody tr:hover {
 /* Department table container */
 .department-table-container {
     max-height: 200px;
- 
+    overflow-y: auto;
     border: 1px solid #e5e7eb;
     border-radius: 6px;
     margin-top: 8px;
@@ -624,22 +678,24 @@ table tbody tr:hover {
     border-collapse: collapse;
     font-size: 0.875rem;
     margin-bottom: 16px;
+    table-layout: fixed;
+    display: table;
 }
 
 #current-users-table tbody,
 #departments-table tbody,
 #assignedDepartmentsTable tbody,
 #createAssignedDepartmentsTable tbody {
-    max-height: 200px;
-    overflow-y: auto;
-    display: block;
+ 
+ 
+    width: 100%;
 }
 
 #current-users-table tr,
 #departments-table tr,
 #assignedDepartmentsTable tr,
 #createAssignedDepartmentsTable tr {
-    display: flex;
+    display: table-row;
     width: 100%;
 }
 
@@ -785,9 +841,11 @@ table tbody tr:hover {
     }
 
     .modal-content {
-        width: 95%;
+        width: 100%;
         margin: 10% auto;
         padding: 16px;
+        max-height: 80vh;
+        overflow-y: auto;
     }
 
     header {
@@ -817,10 +875,8 @@ table tbody tr:hover {
 
 /* Fix Bootstrap modal positioning */
 .modal-dialog.modal-lower {
-  display: flex;
-  height: calc(100% - 3.5rem);
-  margin-top: 1.75rem;
-  margin-bottom: 1.75rem;
+  margin: 1.75rem auto;
+  max-width: 700px;
 }
 
 .modal.fade .modal-dialog {
@@ -842,7 +898,8 @@ table tbody tr:hover {
 
 /* Ensure modals are properly sized */
 .modal-dialog.modal-lower {
-  margin: 1.75rem auto;
+    margin: 1.75rem auto;
+    height: auto;
 }
 
 /* Department column width control with word wrap */
@@ -871,4 +928,26 @@ table tbody tr:hover {
 #umTable {
   table-layout: unset;
   width: 100%;
+}
+
+/* Fix for edit user modal */
+#editUserModal .modal-body {
+    overflow-y: auto;
+    max-height: 60vh;
+    overflow-x: hidden;
+    padding-right: 5px;
+}
+
+#editUserModal .department-table-container {
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+#editUserForm .mt-4 {
+    position: sticky;
+    bottom: 0;
+    background-color: white;
+    padding-top: 10px;
+    margin-bottom: 0 !important;
+    z-index: 10;
 } 
