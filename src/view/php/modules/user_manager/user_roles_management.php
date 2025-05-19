@@ -28,6 +28,8 @@ $canTrack  = $rbac->hasPrivilege('User Management', 'Track');
 // Query active users
 $stmt = $pdo->query("SELECT id, username, email, first_name, last_name, date_created, status FROM users WHERE is_disabled = 0");
 $usersData = $stmt->fetchAll();
+// Store the actual count of users
+$totalUsers = count($usersData);
 
 // Query active roles
 $stmt = $pdo->query("SELECT id, role_name FROM roles WHERE is_disabled = 0");
@@ -160,7 +162,14 @@ $userRoleDepartments = array_values($userRoleMap);
                 <div class="row align-items-center g-3">
                     <div class="col-12 col-sm-auto">
                         <div class="text-muted">
-                            Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows">100</span> entries
+                            <?php 
+                            // Use the actual user count, not the number of rows in the table
+                            $rowsPerPage = 10; // Default rows per page
+                            $displayEnd = min($rowsPerPage, $totalUsers);
+                            ?>
+                            <input type="hidden" id="total-users" value="<?= $totalUsers ?>">
+                            <input type="hidden" id="actual-user-count" value="<?= $totalUsers ?>">
+                            Showing <span id="currentPage">1</span> to <span id="rowsPerPage"> <?= $displayEnd ?></span> of <span id="totalRows"><?= $totalUsers ?></span> entries
                         </div>
                     </div>
                     <div class="col-12 col-sm-auto ms-sm-auto">
@@ -576,9 +585,18 @@ $userRoleDepartments = array_values($userRoleMap);
                     });
                 }
 
-                // Update the visibility count
-                const visibleCount = $('#urTable tbody tr:visible').length;
-                const totalCount = $('#urTable tbody tr').length;
+                // Count unique users instead of rows
+                const uniqueUsernames = new Set();
+                $('#urTable tbody tr:visible').each(function() {
+                    const username = $(this).find('td:nth-child(2)').text().trim();
+                    if (username) {
+                        uniqueUsernames.add(username);
+                    }
+                });
+                
+                // Update the visibility count - THIS IS THE KEY PART
+                const visibleCount = uniqueUsernames.size;
+                console.log(`Showing ${visibleCount} unique users`);
 
                 // Update pagination info
                 $('#totalRows').text(visibleCount);
@@ -591,17 +609,26 @@ $userRoleDepartments = array_values($userRoleMap);
                     $('#currentPage').text('0');
                 }
 
-                // Update pagination controls if available
-                if (typeof updatePaginationControls === 'function') {
-                    updatePaginationControls(visibleCount);
+                // Update pagination controls
+                updatePaginationControls(visibleCount);
+            }
+            
+            // Helper to update pagination visibility
+            function updatePaginationControls(visibleCount) {
+                const rowsPerPage = parseInt($('#rowsPerPageSelect').val()) || 10;
+                
+                if (visibleCount <= rowsPerPage) {
+                    $('#prevPage, #nextPage').addClass('d-none');
+                    $('#pagination').empty();
+                } else {
+                    $('#prevPage, #nextPage').removeClass('d-none');
+                    // If you have a pagination function, call it here
                 }
-
-                console.log(`Showing ${visibleCount} of ${totalCount} rows`);
             }
 
             // Bind to search input with debounce for performance
             let searchTimer;
-            $('#search-users').on('input', function() {x    
+            $('#search-users').on('input', function() {
                 clearTimeout(searchTimer);
                 searchTimer = setTimeout(filterTable, 300);
             });
@@ -621,11 +648,22 @@ $userRoleDepartments = array_values($userRoleMap);
                 // Show all rows
                 $('#urTable tbody tr').show();
 
-                // Update counts
-                const totalRows = $('#urTable tbody tr').length;
+                // Count unique users
+                const uniqueUsernames = new Set();
+                $('#urTable tbody tr').each(function() {
+                    const username = $(this).find('td:nth-child(2)').text().trim();
+                    if (username) {
+                        uniqueUsernames.add(username);
+                    }
+                });
+                
+                const totalRows = uniqueUsernames.size;
                 $('#totalRows').text(totalRows);
                 $('#rowsPerPage').text(Math.min(totalRows, parseInt($('#rowsPerPageSelect').val()) || 10));
                 $('#currentPage').text('1');
+
+                // Update pagination controls
+                updatePaginationControls(totalRows);
 
                 console.log('Filters cleared');
             });

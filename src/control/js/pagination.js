@@ -4,14 +4,25 @@ let prevButton, nextButton, rowsSelect, currentPageSpan, rowsPerPageSpan, totalR
 
 // Pagination function with simpler, more direct approach
 function updatePagination() {
-    // Get all data rows
+    // Count unique users instead of rows
     const allRows = document.querySelectorAll('#table table tbody tr');
-    console.log("Total rows in table:", allRows.length);
+    const uniqueUsernames = new Set();
+    
+    allRows.forEach(row => {
+        const userCell = row.querySelector('td:nth-child(2)');
+        if (userCell) {
+            const username = userCell.textContent.trim();
+            if (username) {
+                uniqueUsernames.add(username);
+            }
+        }
+    });
+    
+    // Get the count of unique users
+    let totalRows = uniqueUsernames.size;
     
     // Get the total rows from the hidden input if it exists
     const totalRowsInput = document.getElementById('total-users');
-    let totalRows = allRows.length;
-    
     if (totalRowsInput) {
         totalRows = parseInt(totalRowsInput.value, 10);
         console.log("Total rows from input:", totalRows);
@@ -48,21 +59,49 @@ function updatePagination() {
 
     console.log(`Page ${currentPage}: Showing rows ${startIndex} to ${endIndex-1} of ${totalRows}`);
 
+    // Track which users we've already shown on this page
+    const shownUsers = new Set();
+    let visibleRowCount = 0;
+
     // IMPORTANT: First hide ALL rows
+    const allRows = document.querySelectorAll('#table table tbody tr');
     allRows.forEach(row => {
         row.style.display = 'none'; // Hide every row first
     });
 
-    // Then only show the rows for current page
-    for (let i = startIndex; i < Math.min(endIndex, allRows.length); i++) {
-        if (allRows[i]) {
-            allRows[i].style.display = ''; // Show row (using empty string reverts to default display value)
+    // Then only show the rows for current page, but limit by unique users
+    for (let i = 0; i < allRows.length; i++) {
+        const row = allRows[i];
+        const userCell = row.querySelector('td:nth-child(2)');
+        
+        if (userCell) {
+            const username = userCell.textContent.trim();
+            
+            // If this is a new user and we haven't reached our limit for this page
+            if (username && !shownUsers.has(username) && shownUsers.size < rowsPerPage) {
+                // If we're past the starting index
+                if (shownUsers.size >= startIndex) {
+                    // Show all rows for this user
+                    const userRows = Array.from(allRows).filter(r => {
+                        const cell = r.querySelector('td:nth-child(2)');
+                        return cell && cell.textContent.trim() === username;
+                    });
+                    
+                    userRows.forEach(r => {
+                        r.style.display = '';
+                        visibleRowCount++;
+                    });
+                }
+                
+                // Add this user to our shown set
+                shownUsers.add(username);
+            }
         }
     }
 
     // Update pagination info text
     const displayStart = totalRows === 0 ? 0 : startIndex + 1;
-    const displayEnd = Math.min(endIndex, totalRows);
+    const displayEnd = Math.min(startIndex + shownUsers.size, totalRows);
 
     // Ensure correct text when table is empty
     if (totalRows === 0) {
@@ -165,10 +204,25 @@ function renderPagination() {
     const paginationContainer = document.getElementById('pagination');
     paginationContainer.innerHTML = '';
 
-    // Get actual total rows, either from hidden input or table rows
-    const totalRowsInput = document.getElementById('total-users');
-    let totalRows = document.querySelectorAll('#table tbody tr').length;
+    // Count unique users instead of rows
+    const allRows = document.querySelectorAll('#table table tbody tr');
+    const uniqueUsernames = new Set();
     
+    allRows.forEach(row => {
+        const userCell = row.querySelector('td:nth-child(2)');
+        if (userCell) {
+            const username = userCell.textContent.trim();
+            if (username) {
+                uniqueUsernames.add(username);
+            }
+        }
+    });
+    
+    // Get the count of unique users
+    let totalRows = uniqueUsernames.size;
+    
+    // Get the total rows from the hidden input if it exists
+    const totalRowsInput = document.getElementById('total-users');
     if (totalRowsInput) {
         totalRows = parseInt(totalRowsInput.value, 10);
     }

@@ -108,6 +108,10 @@ document.addEventListener("DOMContentLoaded", function () {
       filteredUsers.sort((a, b) => b.username.localeCompare(a.username));
     }
 
+    // Track the number of unique users displayed
+    let uniqueUserCount = 0;
+    const uniqueUsernames = new Set();
+
     filteredUsers.forEach((user) => {
       let assignments = userRoleDepartments.filter(
         (assignment) => assignment.userId === user.id
@@ -131,6 +135,10 @@ document.addEventListener("DOMContentLoaded", function () {
       if ((filterRoleId || filterDeptName) && assignments.length === 0) {
         return;
       }
+
+      // Increment unique user count since we're displaying this user
+      uniqueUserCount++;
+      uniqueUsernames.add(user.username);
 
       if (assignments.length === 0) {
         const tr = $(`
@@ -342,6 +350,20 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       }
     });
+    
+    // After rendering the table, update the pagination info
+    const totalUsers = uniqueUsernames.size;
+    $('#totalRows').text(totalUsers);
+    
+    const rowsPerPage = parseInt($('#rowsPerPageSelect').val()) || 10;
+    $('#rowsPerPage').text(Math.min(rowsPerPage, totalUsers));
+    $('#currentPage').text('1');
+    
+    // Update pagination controls
+    if (typeof updatePaginationControls === 'function') {
+      updatePaginationControls(totalUsers);
+    }
+    
     if ($.trim(tbody.html()) === "") {
       const tr = $(`
               <tr>
@@ -1366,4 +1388,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Initial render of the table
   renderUserRolesTable(null, null, null, userSortDirection);
+  
+  // Count unique users for initial pagination
+  const uniqueUsernames = new Set(usersData.map(user => user.username));
+  const totalUsers = uniqueUsernames.size;
+  
+  $('#totalRows').text(totalUsers);
+  const rowsPerPage = parseInt($('#rowsPerPageSelect').val()) || 10;
+  const displayEnd = Math.min(rowsPerPage, totalUsers);
+  $('#rowsPerPage').text(displayEnd);
+  $('#currentPage').text('1');
 });
