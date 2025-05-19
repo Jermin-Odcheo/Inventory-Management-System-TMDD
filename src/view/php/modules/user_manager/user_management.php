@@ -617,6 +617,57 @@ $(document).ready(function() {
         width: '100%'
     });
 });
+document.addEventListener("DOMContentLoaded", function () {
+    const createUserModal = document.getElementById('createUserModal');
+
+    createUserModal.addEventListener('hidden.bs.modal', function () {
+        const form = document.getElementById('createUserForm');
+        form.reset(); // Resets basic form fields
+
+        // Clear department select value
+        const deptSelect = document.getElementById('modal_department');
+        deptSelect.value = ""; // Reset selection
+        deptSelect.selectedIndex = 0; // In case value doesn't reset visually
+
+        // Reset custom department field
+        const customDept = document.getElementById('modal_custom_department');
+        customDept.value = "";
+        customDept.style.display = "none";
+
+        // Clear assigned department badges and table
+        document.getElementById('createAssignedDepartmentsList').innerHTML = '';
+        document.querySelector('#createAssignedDepartmentsTable tbody').innerHTML = '';
+
+        // Reset password strength bar
+        const progressBar = createUserModal.querySelector('.progress-bar');
+        if (progressBar) {
+            progressBar.style.width = '0%';
+            progressBar.setAttribute('aria-valuenow', '0');
+        }
+
+        // Hide password strength display
+        const strengthSection = createUserModal.querySelector('.password-strength');
+        if (strengthSection) {
+            strengthSection.classList.add('d-none');
+        }
+
+        // Reset password visibility icon
+        const passwordInput = document.getElementById('password');
+        if (passwordInput.type === 'text') {
+            passwordInput.type = 'password';
+            const icon = createUserModal.querySelector('.toggle-password i');
+            if (icon) {
+                icon.classList.remove('bi-eye-slash');
+                icon.classList.add('bi-eye');
+            }
+        }
+
+        // Optional: Reset select2 if you're using it
+        if ($(deptSelect).hasClass("select2-hidden-accessible")) {
+            $(deptSelect).val("").trigger("change");
+        }
+    });
+});
 </script>
 </body>
 
