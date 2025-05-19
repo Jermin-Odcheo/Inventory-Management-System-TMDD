@@ -138,7 +138,7 @@ try {
             <h1>USER MANAGER</h1>
             <?php if ($rbac->hasPrivilege('User Management', 'Modify')): ?>
                 <small>
-                    <a href="fix_role_id.php" class="text-muted">Fix Database</a> | 
+                    <a href="fix_role_id.php" class="text-muted">Fix Database</a> |
                     <a href="manage_roles.php" class="text-muted">Manage Role Assignments</a>
                 </small>
             <?php endif; ?>
@@ -243,10 +243,10 @@ try {
                                 <td><?= htmlspecialchars((string)$u['id'], ENT_QUOTES, 'UTF-8'); ?></td>
                                 <td><?= htmlspecialchars($u['email'], ENT_QUOTES, 'UTF-8'); ?></td>
                                 <td>
-                                    <img 
-                                        src="<?= !empty($u['profile_pic_path']) 
-                                            ? '../../../../../public/' . htmlspecialchars($u['profile_pic_path'], ENT_QUOTES, 'UTF-8') 
-                                            : '../../../../../public/assets/img/default_profile.jpg'; ?>" 
+                                    <img
+                                        src="<?= !empty($u['profile_pic_path'])
+                                                    ? '../../../../../public/' . htmlspecialchars($u['profile_pic_path'], ENT_QUOTES, 'UTF-8')
+                                                    : '../../../../../public/assets/img/default_profile.jpg'; ?>"
                                         alt="Profile Picture"
                                         class="profile-picture">
                                 </td>
@@ -256,7 +256,7 @@ try {
                                     <?php
                                     $depts = getUserDepartments($pdo, (int)$u['id']);
                                     if ($depts) {
-                                        $deptNames = array_map(function($dept) {
+                                        $deptNames = array_map(function ($dept) {
                                             if (!empty($dept['abbreviation'])) {
                                                 return htmlspecialchars($dept['department_name'] . ' (' . $dept['abbreviation'] . ')', ENT_QUOTES, 'UTF-8');
                                             } else {
@@ -524,254 +524,314 @@ try {
             </div>
         </div>
     </div>
-<script>
-$(document).ready(function() {
-    // Initialize Select2 for department filter with custom positioning
-    $('#department-filter').select2({
-        placeholder: 'All Departments',
-        allowClear: true,
- 
-        minimumResultsForSearch: 5,
-        dropdownParent: $('body') // Attach to body for proper z-index handling
-    });
-    
-    // Initialize Select2 for modal department dropdown
-    $('#modal_department').select2({
-        dropdownParent: $('#createUserModal .modal-body'),
-        placeholder: 'Select Department',
-        allowClear: true,
-        width: '100%'
-    });
-    
-    // Initialize Select2 for edit department dropdown
-    $('#editDepartments').select2({
-        dropdownParent: $('#editUserModal .modal-body'),
-        placeholder: 'Select Department',
-        allowClear: true,
-        width: '100%'
-    });
-    
-    // Sorting variables
-    let currentSort = 'id';
-    let currentSortDir = 'asc';
-    
-    // Client-side sorting function
-    function sortTable(column) {
-        // Update sort direction if clicking the same column
-        if (column === currentSort) {
-            currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
-        } else {
-            currentSort = column;
-            currentSortDir = 'asc';
-        }
-        
-        // Update sort icons
-        $('.sort-icon').removeClass('bi-caret-up-fill bi-caret-down-fill');
-        const iconClass = currentSortDir === 'asc' ? 'bi-caret-up-fill' : 'bi-caret-down-fill';
-        $(`.sort-header[data-sort="${column}"] .sort-icon`).addClass(iconClass);
-        
-        // Get column index based on column name
-        let colIndex;
-        switch(column) {
-            case 'id': colIndex = 1; break;
-            case 'email': colIndex = 2; break;
-            case 'username': colIndex = 4; break;
-            case 'department': colIndex = 5; break;
-            case 'status': colIndex = 6; break;
-            default: colIndex = 1;
-        }
-        
-        // Sort the table rows
-        const rows = $('#umTable tbody tr').get();
-        rows.sort(function(a, b) {
-            const aValue = $(a).children('td').eq(colIndex).text().trim().toLowerCase();
-            const bValue = $(b).children('td').eq(colIndex).text().trim().toLowerCase();
-            
-            // Handle numeric sorting for IDs
-            if (column === 'id') {
-                return currentSortDir === 'asc' 
-                    ? parseInt(aValue) - parseInt(bValue)
-                    : parseInt(bValue) - parseInt(aValue);
+    <script>
+        $(document).ready(function() {
+            // Initialize Select2 for department filter with custom positioning
+            $('#department-filter').select2({
+                placeholder: 'All Departments',
+                allowClear: true,
+
+                minimumResultsForSearch: 5,
+                dropdownParent: $('body') // Attach to body for proper z-index handling
+            });
+
+            // Initialize Select2 for modal department dropdown
+            $('#modal_department').select2({
+                dropdownParent: $('#createUserModal .modal-body'),
+                placeholder: 'Select Department',
+                allowClear: true,
+                width: '100%'
+            });
+
+            // Initialize Select2 for edit department dropdown
+            $('#editDepartments').select2({
+                dropdownParent: $('#editUserModal .modal-body'),
+                placeholder: 'Select Department',
+                allowClear: true,
+                width: '100%'
+            });
+
+            // Sorting variables
+            let currentSort = 'id';
+            let currentSortDir = 'asc';
+
+            // Client-side sorting function
+            function sortTable(column) {
+                // Update sort direction if clicking the same column
+                if (column === currentSort) {
+                    currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    currentSort = column;
+                    currentSortDir = 'asc';
+                }
+
+                // Update sort icons
+                $('.sort-icon').removeClass('bi-caret-up-fill bi-caret-down-fill');
+                const iconClass = currentSortDir === 'asc' ? 'bi-caret-up-fill' : 'bi-caret-down-fill';
+                $(`.sort-header[data-sort="${column}"] .sort-icon`).addClass(iconClass);
+
+                // Get column index based on column name
+                let colIndex;
+                switch (column) {
+                    case 'id':
+                        colIndex = 1;
+                        break;
+                    case 'email':
+                        colIndex = 2;
+                        break;
+                    case 'username':
+                        colIndex = 4;
+                        break;
+                    case 'department':
+                        colIndex = 5;
+                        break;
+                    case 'status':
+                        colIndex = 6;
+                        break;
+                    default:
+                        colIndex = 1;
+                }
+
+                // Sort the table rows
+                const rows = $('#umTable tbody tr').get();
+                rows.sort(function(a, b) {
+                    const aValue = $(a).children('td').eq(colIndex).text().trim().toLowerCase();
+                    const bValue = $(b).children('td').eq(colIndex).text().trim().toLowerCase();
+
+                    // Handle numeric sorting for IDs
+                    if (column === 'id') {
+                        return currentSortDir === 'asc' ?
+                            parseInt(aValue) - parseInt(bValue) :
+                            parseInt(bValue) - parseInt(aValue);
+                    }
+
+                    // String comparison for other columns
+                    if (aValue < bValue) return currentSortDir === 'asc' ? -1 : 1;
+                    if (aValue > bValue) return currentSortDir === 'asc' ? 1 : -1;
+                    return 0;
+                });
+
+                // Re-append sorted rows to the table
+                $.each(rows, function(index, row) {
+                    $('#umTable tbody').append(row);
+                });
+
+                // Apply current filters after sorting
+                filterTable();
             }
-            
-            // String comparison for other columns
-            if (aValue < bValue) return currentSortDir === 'asc' ? -1 : 1;
-            if (aValue > bValue) return currentSortDir === 'asc' ? 1 : -1;
-            return 0;
+
+            // Bind sort headers
+            $('.sort-header').on('click', function(e) {
+                e.preventDefault();
+                const column = $(this).data('sort');
+                sortTable(column);
+            });
+
+            // Direct client-side filtering function
+            function filterTable() {
+                const searchText = $('#search-filters').val().toLowerCase();
+                const deptFilter = $('#department-filter').val();
+
+                console.log('Filtering with:', {
+                    searchText,
+                    deptFilter
+                });
+
+                // Show all rows first
+                $('#umTable tbody tr').show();
+
+                // Apply search filter if present
+                if (searchText) {
+                    $('#umTable tbody tr').each(function() {
+                        const rowText = $(this).text().toLowerCase();
+                        if (!rowText.includes(searchText)) {
+                            $(this).hide();
+                        }
+                    });
+                }
+
+                // Apply department filter if selected
+                if (deptFilter && deptFilter !== 'all') {
+                    $('#umTable tbody tr:visible').each(function() {
+                        const deptCell = $(this).find('td:nth-child(6)').text().toLowerCase();
+                        if (!deptCell.includes(deptFilter.toLowerCase())) {
+                            $(this).hide();
+                        }
+                    });
+                }
+
+                // Update the visibility count
+                const visibleCount = $('#umTable tbody tr:visible').length;
+                const totalCount = $('#umTable tbody tr').length;
+                console.log(`Showing ${visibleCount} of ${totalCount} rows`);
+
+                // Update pagination info
+                $('#totalRows').text(visibleCount);
+                if (visibleCount > 0) {
+                    const rowsPerPage = parseInt($('#rowsPerPageSelect').val()) || 10;
+                    $('#rowsPerPage').text(Math.min(rowsPerPage, visibleCount));
+                    $('#currentPage').text('1');
+                } else {
+                    $('#rowsPerPage').text('0');
+                    $('#currentPage').text('0');
+                }
+
+                // Update pagination controls
+                updatePaginationControls(visibleCount);
+            }
+
+            // Helper to update pagination visibility
+            function updatePaginationControls(visibleCount) {
+                const rowsPerPage = parseInt($('#rowsPerPageSelect').val()) || 10;
+
+                if (visibleCount <= rowsPerPage) {
+                    $('#prevPage, #nextPage').addClass('d-none');
+                    $('#pagination').empty();
+                } else {
+                    $('#prevPage, #nextPage').removeClass('d-none');
+                    // If you have a pagination function, call it here
+                }
+            }
+
+            // Bind to search input with debounce for performance
+            $(function() {
+                // remove any other handlers (e.g. leftover from user_management.js)
+                $('#search-filters').off('input');
+
+                // re-bind your client-side filter
+                $('#search-filters').on('input', function(e) {
+                    filterTable(); // your existing function
+                });
+
+                // prevent ENTER from accidentally submitting anything
+                $('#search-filters').on('keydown', function(e) {
+                    if (e.key === 'Enter') e.preventDefault();
+                });
+
+                // then run your initial sort/filter
+                sortTable('id');
+                filterTable();
+            });
+
+
+
+            // Bind to department select changes
+            $('#department-filter').on('change', function() {
+                filterTable();
+            });
+
+            // Clear filters button
+            $('#clear-filters-btn').on('click', function() {
+                // Clear both filters safely
+                $('#search-filters').val('');
+                $('#department-filter').val('all').trigger('change');
+
+                // Show all rows and update the pagination counts
+                $('#umTable tbody tr').show();
+
+                const totalRows = $('#umTable tbody tr').length;
+                $('#totalRows').text(totalRows);
+                $('#rowsPerPage').text(Math.min(totalRows, parseInt($('#rowsPerPageSelect').val()) || 10));
+                $('#currentPage').text('1');
+
+                // Update pagination controls
+                updatePaginationControls(totalRows);
+
+                console.log('Filters cleared');
+            });
+
+            // Handle rows per page changes
+            $('#rowsPerPageSelect').on('change', function() {
+                filterTable();
+            });
+
+            // Run initial filtering and sorting
+            sortTable('id');
+            filterTable();
+        });
+
+        $('#createUserModal').on('hidden.bs.modal', function() {
+            const $modal = $(this);
+
+            // 1) Reset the entire form (clears all <input>, <select>, etc.)
+            $modal.find('form')[0].reset();
+
+            // 2) If you’re using Select2 on #modal_department, clear it
+            const $dept = $modal.find('#modal_department');
+            if ($dept.hasClass('select2-hidden-accessible')) {
+                $dept.val(null).trigger('change');
+            }
+
+            // 3) Hide & clear your “custom department” text field
+            const $custom = $modal.find('#modal_custom_department');
+            $custom.val('').hide();
+
+            // 4) Empty the Assigned Departments table
+            $modal.find('#createAssignedDepartmentsTable tbody').empty();
+
+            // 5) (Optional) Reset any password-strength UI or other bits
+            $modal.find('.password-strength').addClass('d-none');
+            $modal.find('.progress-bar')
+                .css('width', '0%')
+                .attr('aria-valuenow', '0');
+            const $pwdToggleIcon = $modal.find('.toggle-password i');
+            $modal.find('#password').attr('type', 'password');
+            $pwdToggleIcon.removeClass('bi-eye-slash').addClass('bi-eye');
         });
         
-        // Re-append sorted rows to the table
-        $.each(rows, function(index, row) {
-            $('#umTable tbody').append(row);
+        document.addEventListener("DOMContentLoaded", function() {
+            const createUserModal = document.getElementById('createUserModal');
+
+            createUserModal.addEventListener('hidden.bs.modal', function() {
+                const form = document.getElementById('createUserForm');
+                form.reset(); // Resets basic form fields
+
+
+                // Clear department select value
+                const deptSelect = document.getElementById('modal_department');
+                deptSelect.value = ""; // Reset selection
+                deptSelect.selectedIndex = 0; // In case value doesn't reset visually
+
+                // Reset custom department field
+                const customDept = document.getElementById('modal_custom_department');
+                customDept.value = "";
+                customDept.style.display = "none";
+
+                // Clear assigned department badges and table
+                document.getElementById('createAssignedDepartmentsList').innerHTML = '';
+                document.querySelector('#createAssignedDepartmentsTable tbody').innerHTML = '';
+
+                // Reset password strength bar
+                const progressBar = createUserModal.querySelector('.progress-bar');
+                if (progressBar) {
+                    progressBar.style.width = '0%';
+                    progressBar.setAttribute('aria-valuenow', '0');
+                }
+
+                // Hide password strength display
+                const strengthSection = createUserModal.querySelector('.password-strength');
+                if (strengthSection) {
+                    strengthSection.classList.add('d-none');
+                }
+
+                // Reset password visibility icon
+                const passwordInput = document.getElementById('password');
+                if (passwordInput.type === 'text') {
+                    passwordInput.type = 'password';
+                    const icon = createUserModal.querySelector('.toggle-password i');
+                    if (icon) {
+                        icon.classList.remove('bi-eye-slash');
+                        icon.classList.add('bi-eye');
+                    }
+                }
+
+                // Optional: Reset select2 if you're using it
+                if ($(deptSelect).hasClass("select2-hidden-accessible")) {
+                    $(deptSelect).val("").trigger("change");
+                }
+            });
         });
-        
-        // Apply current filters after sorting
-        filterTable();
-    }
-    
-    // Bind sort headers
-    $('.sort-header').on('click', function(e) {
-        e.preventDefault();
-        const column = $(this).data('sort');
-        sortTable(column);
-    });
-    
-    // Direct client-side filtering function
-    function filterTable() {
-        const searchText = $('#search-filters').val().toLowerCase();
-        const deptFilter = $('#department-filter').val();
-        
-        console.log('Filtering with:', { searchText, deptFilter });
-        
-        // Show all rows first
-        $('#umTable tbody tr').show();
-        
-        // Apply search filter if present
-        if (searchText) {
-            $('#umTable tbody tr').each(function() {
-                const rowText = $(this).text().toLowerCase();
-                if (!rowText.includes(searchText)) {
-                    $(this).hide();
-                }
-            });
-        }
-        
-        // Apply department filter if selected
-        if (deptFilter && deptFilter !== 'all') {
-            $('#umTable tbody tr:visible').each(function() {
-                const deptCell = $(this).find('td:nth-child(6)').text().toLowerCase();
-                if (!deptCell.includes(deptFilter.toLowerCase())) {
-                    $(this).hide();
-                }
-            });
-        }
-        
-        // Update the visibility count
-        const visibleCount = $('#umTable tbody tr:visible').length;
-        const totalCount = $('#umTable tbody tr').length;
-        console.log(`Showing ${visibleCount} of ${totalCount} rows`);
-        
-        // Update pagination info
-        $('#totalRows').text(visibleCount);
-        if (visibleCount > 0) {
-            const rowsPerPage = parseInt($('#rowsPerPageSelect').val()) || 10;
-            $('#rowsPerPage').text(Math.min(rowsPerPage, visibleCount));
-            $('#currentPage').text('1');
-        } else {
-            $('#rowsPerPage').text('0');
-            $('#currentPage').text('0');
-        }
-        
-        // Update pagination controls
-        updatePaginationControls(visibleCount);
-    }
-    
-    // Helper to update pagination visibility
-    function updatePaginationControls(visibleCount) {
-        const rowsPerPage = parseInt($('#rowsPerPageSelect').val()) || 10;
-        
-        if (visibleCount <= rowsPerPage) {
-            $('#prevPage, #nextPage').addClass('d-none');
-            $('#pagination').empty();
-        } else {
-            $('#prevPage, #nextPage').removeClass('d-none');
-            // If you have a pagination function, call it here
-        }
-    }
-    
-    // Bind to search input with debounce for performance
-    let searchTimer;
-    $('#search-filters').on('input', function() {
-        clearTimeout(searchTimer);
-        searchTimer = setTimeout(filterTable, 300);
-    });
-    
-    // Bind to department select changes
-    $('#department-filter').on('change', function() {
-        filterTable();
-    });
-    
-    // Clear filters button
-    $('#clear-filters-btn').on('click', function() {
-        // Clear both filters safely
-        $('#search-filters').val('');
-        $('#department-filter').val('all').trigger('change');
-        
-        // Show all rows and update the pagination counts
-        $('#umTable tbody tr').show();
-        
-        const totalRows = $('#umTable tbody tr').length;
-        $('#totalRows').text(totalRows);
-        $('#rowsPerPage').text(Math.min(totalRows, parseInt($('#rowsPerPageSelect').val()) || 10));
-        $('#currentPage').text('1');
-        
-        // Update pagination controls
-        updatePaginationControls(totalRows);
-        
-        console.log('Filters cleared');
-    });
-    
-    // Handle rows per page changes
-    $('#rowsPerPageSelect').on('change', function() {
-        filterTable();
-    });
-    
-    // Run initial filtering and sorting
-    sortTable('id');
-    filterTable();
-});
-document.addEventListener("DOMContentLoaded", function () {
-    const createUserModal = document.getElementById('createUserModal');
-
-    createUserModal.addEventListener('hidden.bs.modal', function () {
-        const form = document.getElementById('createUserForm');
-        form.reset(); // Resets basic form fields
-
-        // Clear department select value
-        const deptSelect = document.getElementById('modal_department');
-        deptSelect.value = ""; // Reset selection
-        deptSelect.selectedIndex = 0; // In case value doesn't reset visually
-
-        // Reset custom department field
-        const customDept = document.getElementById('modal_custom_department');
-        customDept.value = "";
-        customDept.style.display = "none";
-
-        // Clear assigned department badges and table
-        document.getElementById('createAssignedDepartmentsList').innerHTML = '';
-        document.querySelector('#createAssignedDepartmentsTable tbody').innerHTML = '';
-
-        // Reset password strength bar
-        const progressBar = createUserModal.querySelector('.progress-bar');
-        if (progressBar) {
-            progressBar.style.width = '0%';
-            progressBar.setAttribute('aria-valuenow', '0');
-        }
-
-        // Hide password strength display
-        const strengthSection = createUserModal.querySelector('.password-strength');
-        if (strengthSection) {
-            strengthSection.classList.add('d-none');
-        }
-
-        // Reset password visibility icon
-        const passwordInput = document.getElementById('password');
-        if (passwordInput.type === 'text') {
-            passwordInput.type = 'password';
-            const icon = createUserModal.querySelector('.toggle-password i');
-            if (icon) {
-                icon.classList.remove('bi-eye-slash');
-                icon.classList.add('bi-eye');
-            }
-        }
-
-        // Optional: Reset select2 if you're using it
-        if ($(deptSelect).hasClass("select2-hidden-accessible")) {
-            $(deptSelect).val("").trigger("change");
-        }
-    });
-});
-</script>
+    </script>
 </body>
 
 </html>
