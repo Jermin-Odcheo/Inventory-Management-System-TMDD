@@ -2,10 +2,10 @@
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
--- Host: 127.0.0.1:3306
--- Generation Time: May 18, 2025 at 10:54 AM
--- Server version: 9.1.0
--- PHP Version: 8.3.14
+-- Host: 127.0.0.1
+-- Generation Time: May 19, 2025 at 10:45 AM
+-- Server version: 10.4.32-MariaDB
+-- PHP Version: 8.0.30
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -25,7 +25,6 @@ DELIMITER $$
 --
 -- Procedures
 --
-DROP PROCEDURE IF EXISTS `UpdateUserAndDepartment`$$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `UpdateUserAndDepartment` (IN `p_user_id` INT, IN `p_email` VARCHAR(255), IN `p_first_name` VARCHAR(191), IN `p_last_name` VARCHAR(191), IN `p_password` VARCHAR(255), IN `p_status` VARCHAR(50), IN `p_department_id` INT, IN `p_changed_by` INT, IN `p_module` VARCHAR(191))   BEGIN
     DECLARE diffList TEXT DEFAULT '';
     DECLARE old_email VARCHAR(255);
@@ -147,20 +146,18 @@ DELIMITER ;
 -- Table structure for table `audit_log`
 --
 
-DROP TABLE IF EXISTS `audit_log`;
-CREATE TABLE IF NOT EXISTS `audit_log` (
-  `TrackID` int NOT NULL AUTO_INCREMENT,
-  `UserID` int NOT NULL,
-  `EntityID` int DEFAULT NULL,
+CREATE TABLE `audit_log` (
+  `TrackID` int(11) NOT NULL,
+  `UserID` int(11) NOT NULL,
+  `EntityID` int(11) DEFAULT NULL,
   `Action` varchar(255) NOT NULL,
-  `Details` text,
-  `OldVal` text,
-  `NewVal` text,
+  `Details` text DEFAULT NULL,
+  `OldVal` text DEFAULT NULL,
+  `NewVal` text DEFAULT NULL,
   `Module` varchar(255) NOT NULL,
   `Status` varchar(50) DEFAULT NULL,
-  `Date_Time` datetime NOT NULL,
-  PRIMARY KEY (`TrackID`)
-) ENGINE=MyISAM AUTO_INCREMENT=666 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `Date_Time` datetime NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `audit_log`
@@ -608,7 +605,89 @@ INSERT INTO `audit_log` (`TrackID`, `UserID`, `EntityID`, `Action`, `Details`, `
 (662, 1, 1, 'Modified', 'Modified Fields: Audit: Added Track', '{\n    \"role_id\": 1,\n    \"role_name\": \"TMDD-Dev\",\n    \"privileges\": {\n        \"Roles and Privileges\": [\n            \"Track\",\n            \"Create\",\n            \"Remove\",\n            \"Permanently Delete\",\n            \"Modify\",\n            \"View\",\n            \"Restore\"\n        ],\n        \"User Management\": [\n            \"Track\",\n            \"Create\",\n            \"Remove\",\n            \"Permanently Delete\",\n            \"Modify\",\n            \"View\",\n            \"Restore\"\n        ],\n        \"Equipment Management\": [\n            \"Track\",\n            \"Create\",\n            \"Remove\",\n            \"Permanently Delete\",\n            \"Modify\",\n            \"View\",\n            \"Restore\"\n        ],\n        \"Equipment Transactions\": [\n            \"Track\",\n            \"Create\",\n            \"Remove\",\n            \"Permanently Delete\",\n            \"Modify\",\n            \"View\",\n            \"Restore\"\n        ],\n        \"Reports\": [\n            \"Track\",\n            \"Create\",\n            \"Remove\",\n            \"Permanently Delete\",\n            \"Modify\",\n            \"View\",\n            \"Restore\"\n        ],\n        \"Management\": [\n            \"Track\",\n            \"Create\",\n            \"Remove\",\n            \"Permanently Delete\",\n            \"Modify\",\n            \"View\",\n            \"Restore\"\n        ]\n    }\n}', '{\n    \"role_id\": 1,\n    \"role_name\": \"TMDD-Dev\",\n    \"privileges\": {\n        \"Audit\": [\n            \"Track\"\n        ],\n        \"Equipment Management\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ],\n        \"Equipment Transactions\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ],\n        \"Management\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ],\n        \"Reports\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ],\n        \"Roles and Privileges\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ],\n        \"User Management\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ]\n    }\n}', 'Roles and Privileges', 'Successful', '2025-05-18 18:03:54'),
 (663, 1, 1, 'Modified', 'Modified Fields: Audit: Removed Track', '{\n    \"role_id\": 1,\n    \"role_name\": \"TMDD-Dev\",\n    \"privileges\": {\n        \"Audit\": [\n            \"Track\"\n        ],\n        \"Roles and Privileges\": [\n            \"Track\",\n            \"Create\",\n            \"Remove\",\n            \"Permanently Delete\",\n            \"Modify\",\n            \"View\",\n            \"Restore\"\n        ],\n        \"User Management\": [\n            \"Track\",\n            \"Create\",\n            \"Remove\",\n            \"Permanently Delete\",\n            \"Modify\",\n            \"View\",\n            \"Restore\"\n        ],\n        \"Equipment Management\": [\n            \"Track\",\n            \"Create\",\n            \"Remove\",\n            \"Permanently Delete\",\n            \"Modify\",\n            \"View\",\n            \"Restore\"\n        ],\n        \"Equipment Transactions\": [\n            \"Track\",\n            \"Create\",\n            \"Remove\",\n            \"Permanently Delete\",\n            \"Modify\",\n            \"View\",\n            \"Restore\"\n        ],\n        \"Reports\": [\n            \"Track\",\n            \"Create\",\n            \"Remove\",\n            \"Permanently Delete\",\n            \"Modify\",\n            \"View\",\n            \"Restore\"\n        ],\n        \"Management\": [\n            \"Track\",\n            \"Create\",\n            \"Remove\",\n            \"Permanently Delete\",\n            \"Modify\",\n            \"View\",\n            \"Restore\"\n        ]\n    }\n}', '{\n    \"role_id\": 1,\n    \"role_name\": \"TMDD-Dev\",\n    \"privileges\": {\n        \"Equipment Management\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ],\n        \"Equipment Transactions\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ],\n        \"Management\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ],\n        \"Reports\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ],\n        \"Roles and Privileges\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ],\n        \"User Management\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ]\n    }\n}', 'Roles and Privileges', 'Successful', '2025-05-18 18:04:08'),
 (664, 1, 1, 'Modified', 'Modified Fields: Audit: Added Track', '{\n    \"role_id\": 1,\n    \"role_name\": \"TMDD-Dev\",\n    \"privileges\": {\n        \"Roles and Privileges\": [\n            \"Track\",\n            \"Create\",\n            \"Remove\",\n            \"Permanently Delete\",\n            \"Modify\",\n            \"View\",\n            \"Restore\"\n        ],\n        \"User Management\": [\n            \"Track\",\n            \"Create\",\n            \"Remove\",\n            \"Permanently Delete\",\n            \"Modify\",\n            \"View\",\n            \"Restore\"\n        ],\n        \"Equipment Management\": [\n            \"Track\",\n            \"Create\",\n            \"Remove\",\n            \"Permanently Delete\",\n            \"Modify\",\n            \"View\",\n            \"Restore\"\n        ],\n        \"Equipment Transactions\": [\n            \"Track\",\n            \"Create\",\n            \"Remove\",\n            \"Permanently Delete\",\n            \"Modify\",\n            \"View\",\n            \"Restore\"\n        ],\n        \"Reports\": [\n            \"Track\",\n            \"Create\",\n            \"Remove\",\n            \"Permanently Delete\",\n            \"Modify\",\n            \"View\",\n            \"Restore\"\n        ],\n        \"Management\": [\n            \"Track\",\n            \"Create\",\n            \"Remove\",\n            \"Permanently Delete\",\n            \"Modify\",\n            \"View\",\n            \"Restore\"\n        ]\n    }\n}', '{\n    \"role_id\": 1,\n    \"role_name\": \"TMDD-Dev\",\n    \"privileges\": {\n        \"Audit\": [\n            \"Track\"\n        ],\n        \"Equipment Management\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ],\n        \"Equipment Transactions\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ],\n        \"Management\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ],\n        \"Reports\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ],\n        \"Roles and Privileges\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ],\n        \"User Management\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ]\n    }\n}', 'Roles and Privileges', 'Successful', '2025-05-18 18:04:12'),
-(665, 1, 2, 'Modified', 'Modified Fields: Audit: Added Track', '{\n    \"role_id\": 2,\n    \"role_name\": \"Super Admin\",\n    \"privileges\": {\n        \"User Management\": [\n            \"View\",\n            \"Restore\"\n        ]\n    }\n}', '{\n    \"role_id\": 2,\n    \"role_name\": \"Super Admin\",\n    \"privileges\": {\n        \"Audit\": [\n            \"Track\"\n        ],\n        \"User Management\": [\n            \"Restore\",\n            \"View\"\n        ]\n    }\n}', 'Roles and Privileges', 'Successful', '2025-05-18 18:04:15');
+(665, 1, 2, 'Modified', 'Modified Fields: Audit: Added Track', '{\n    \"role_id\": 2,\n    \"role_name\": \"Super Admin\",\n    \"privileges\": {\n        \"User Management\": [\n            \"View\",\n            \"Restore\"\n        ]\n    }\n}', '{\n    \"role_id\": 2,\n    \"role_name\": \"Super Admin\",\n    \"privileges\": {\n        \"Audit\": [\n            \"Track\"\n        ],\n        \"User Management\": [\n            \"Restore\",\n            \"View\"\n        ]\n    }\n}', 'Roles and Privileges', 'Successful', '2025-05-18 18:04:15'),
+(666, 1, 3, 'Modified', 'Modified Fields: Equipment Management: Added Create, Modify, Permanently Delete, Remove, Restore, Track, View, Equipment Transactions: Added Create, Modify, Permanently Delete, Remove, Restore, Track, View', '{\n    \"role_id\": 3,\n    \"role_name\": \"Equipment Manager\",\n    \"privileges\": []\n}', '{\n    \"role_id\": 3,\n    \"role_name\": \"Equipment Manager\",\n    \"privileges\": {\n        \"Equipment Management\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ],\n        \"Equipment Transactions\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ]\n    }\n}', 'Roles and Privileges', 'Successful', '2025-05-19 08:34:57'),
+(667, 3, 12, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"SLU000004087\",\"asset_description_1\":\"Computer\",\"asset_description_2\":\"Desktop CPU\",\"specifications\":\"OS: Windows 11 Pro\\r\\nCPU: Intel Core i5-13400\\r\\nGPU: Inter UHD Graphics 730\\r\\nDisplay: refer to SLU000004088\\r\\nRam: 16GB DDR4\\r\\nStorage: 256GB SSD 1TB\\r\\nPSU: Integrated\\r\\nOffice: Office Home and Student 2021 (4,350.00)\\r\\nAccessories: 1. USB KBM-wired | Acer\\r\\n                    2. Webcam | Genius (1,250.00)\\r\\n\\r\\n\",\"brand\":\"Acer\",\"model\":\"Veriton X4710G\",\"serial_number\":\"DTVYGSP01B40700C1E3000\",\"location\":\"HRD-Extension-Job Analysis\",\"accountable_individual\":\"Alyana Mikaela E. De Guzman\",\"rr_no\":\"\",\"date_created\":\"2025-05-19 08:45:06\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 08:45:06'),
+(668, 3, 13, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"SLU000004088\",\"asset_description_1\":\"Computer\",\"asset_description_2\":\"Desktop Monitor\",\"specifications\":\"22\\\"\",\"brand\":\"Acer\",\"model\":\"V226HQL\",\"serial_number\":\"MMTYBSP001409006D13S11\",\"location\":\"HRD-Extension-Job Analysis\",\"accountable_individual\":\"Alyana Mikaela E. De Guzman\",\"rr_no\":\"\",\"date_created\":\"2025-05-19 08:49:06\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 08:49:06');
+INSERT INTO `audit_log` (`TrackID`, `UserID`, `EntityID`, `Action`, `Details`, `OldVal`, `NewVal`, `Module`, `Status`, `Date_Time`) VALUES
+(669, 3, 14, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"SLU000004089\",\"asset_description_1\":\"Computer\",\"asset_description_2\":\"Desktop CPU\",\"specifications\":\"OS: Windows 11 Pro \\r\\nCPU: Intel Core i5-13400 \\r\\nGPU: Inter UHD Graphics 730 \\r\\nDisplay: refer to SLU000004088 \\r\\nRam: 16GB DDR4 \\r\\nStorage: 256GB SSD 1TB \\r\\nPSU: Integrated \\r\\nOffice: Office Home and Student 2021 (4,350.00) \\r\\nAccessories: 1. USB KBM-wired | Acer \\r\\n                    2. Webcam | Genius (1,250.00)\",\"brand\":\"\",\"model\":\"\",\"serial_number\":\"\",\"location\":\"\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"date_created\":\"2025-05-19 08:49:28\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 08:49:28'),
+(670, 3, 14, 'Modified', 'Equipment details modified', '{\"asset_tag\":\"SLU000004089\",\"asset_description_1\":\"Computer\",\"asset_description_2\":\"Desktop CPU\",\"specifications\":\"OS: Windows 11 Pro \\r\\nCPU: Intel Core i5-13400 \\r\\nGPU: Inter UHD Graphics 730 \\r\\nDisplay: refer to SLU000004088 \\r\\nRam: 16GB DDR4 \\r\\nStorage: 256GB SSD 1TB \\r\\nPSU: Integrated \\r\\nOffice: Office Home and Student 2021 (4,350.00) \\r\\nAccessories: 1. USB KBM-wired | Acer \\r\\n                    2. Webcam | Genius (1,250.00)\",\"brand\":\"\",\"model\":\"\",\"serial_number\":\"\",\"date_acquired\":\"2025-05-19 08:49:28\",\"invoice_no\":null,\"rr_no\":null,\"location\":\"\",\"accountable_individual\":\"\",\"remarks\":\"\",\"date_modified\":\"2025-05-19 08:49:28\"}', '{\"asset_tag\":\"SLU000004089\",\"asset_description_1\":\"Computer\",\"asset_description_2\":\"Desktop CPU\",\"specifications\":\"OS: Windows 11 Pro \\r\\nCPU: Intel Core i5-13400 \\r\\nGPU: Inter UHD Graphics 730 \\r\\nDisplay: refer to SLU000004090\\r\\nRam: 16GB DDR4 \\r\\nStorage: 256GB SSD 1TB \\r\\nPSU: Integrated \\r\\nOffice: Office Home and Student 2021 (4,350.00) \\r\\nAccessories: 1. USB KBM-wired | Acer \\r\\n                    2. Webcam | Genius (1,250.00)\",\"brand\":\"\",\"model\":\"\",\"serial_number\":\"\",\"location\":\"\",\"accountable_individual\":\"\",\"rr_no\":\"N\\/A\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 08:50:10'),
+(671, 3, 12, 'Modified', 'Equipment details modified', '{\"asset_tag\":\"SLU000004087\",\"asset_description_1\":\"Computer\",\"asset_description_2\":\"Desktop CPU\",\"specifications\":\"OS: Windows 11 Pro\\r\\nCPU: Intel Core i5-13400\\r\\nGPU: Inter UHD Graphics 730\\r\\nDisplay: refer to SLU000004088\\r\\nRam: 16GB DDR4\\r\\nStorage: 256GB SSD 1TB\\r\\nPSU: Integrated\\r\\nOffice: Office Home and Student 2021 (4,350.00)\\r\\nAccessories: 1. USB KBM-wired | Acer\\r\\n                    2. Webcam | Genius (1,250.00)\\r\\n\\r\\n\",\"brand\":\"Acer\",\"model\":\"Veriton X4710G\",\"serial_number\":\"DTVYGSP01B40700C1E3000\",\"date_acquired\":\"2025-05-19 08:45:06\",\"invoice_no\":null,\"rr_no\":null,\"location\":\"HRD-Extension-Job Analysis\",\"accountable_individual\":\"Alyana Mikaela E. De Guzman\",\"remarks\":\"\",\"date_modified\":\"2025-05-19 08:45:06\"}', '{\"asset_tag\":\"SLU000004087\",\"asset_description_1\":\"Computer\",\"asset_description_2\":\"Desktop CPU\",\"specifications\":\"OS: Windows 11 Pro\\r\\nCPU: Intel Core i5-13400\\r\\nMB: Veriton X4710G\\r\\nGPU: Inter UHD Graphics 730\\r\\nDisplay: refer to SLU000004088\\r\\nRam: 16GB DDR4\\r\\nStorage: 256GB SSD 1TB\\r\\nPSU: Integrated\\r\\nOffice: Office Home and Student 2021 (4,350.00)\\r\\nAccessories: 1. USB KBM-wired | Acer\\r\\n                    2. Webcam | Genius (1,250.00)\\r\\n\\r\\n\",\"brand\":\"Acer\",\"model\":\"Veriton X4710G\",\"serial_number\":\"DTVYGSP01B40700C1E3000\",\"location\":\"HRD-Extension-Job Analysis\",\"accountable_individual\":\"Alyana Mikaela E. De Guzman\",\"rr_no\":\"N\\/A\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 08:50:56'),
+(672, 3, 14, 'Modified', 'Equipment details modified', '{\"asset_tag\":\"SLU000004089\",\"asset_description_1\":\"Computer\",\"asset_description_2\":\"Desktop CPU\",\"specifications\":\"OS: Windows 11 Pro \\r\\nCPU: Intel Core i5-13400 \\r\\nGPU: Inter UHD Graphics 730 \\r\\nDisplay: refer to SLU000004090\\r\\nRam: 16GB DDR4 \\r\\nStorage: 256GB SSD 1TB \\r\\nPSU: Integrated \\r\\nOffice: Office Home and Student 2021 (4,350.00) \\r\\nAccessories: 1. USB KBM-wired | Acer \\r\\n                    2. Webcam | Genius (1,250.00)\",\"brand\":\"\",\"model\":\"\",\"serial_number\":\"\",\"date_acquired\":\"2025-05-19 08:49:28\",\"invoice_no\":null,\"rr_no\":\"RRN\\/A\",\"location\":\"\",\"accountable_individual\":\"\",\"remarks\":\"\",\"date_modified\":\"2025-05-19 08:50:10\"}', '{\"asset_tag\":\"SLU000004089\",\"asset_description_1\":\"Computer\",\"asset_description_2\":\"Desktop CPU\",\"specifications\":\"OS: Windows 11 Pro \\r\\nCPU: Intel Core i5-13400\\r\\nMB: Veriton X4710G \\r\\nGPU: Inter UHD Graphics 730 \\r\\nDisplay: refer to SLU000004090\\r\\nRam: 16GB DDR4 \\r\\nStorage: 256GB SSD 1TB \\r\\nPSU: Integrated \\r\\nOffice: Office Home and Student 2021 (4,350.00) \\r\\nAccessories: 1. USB KBM-wired | Acer \\r\\n                    2. Webcam | Genius (1,250.00)\",\"brand\":\"Acer\",\"model\":\"V226HQL\",\"serial_number\":\"DTVYGSP01B40700C3E3000\",\"location\":\"HRD-Extension-Job Analysis\",\"accountable_individual\":\"Alyana Mikaela E. De Guzman\",\"rr_no\":\"\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 08:52:59'),
+(673, 3, 15, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"SLU000004090\",\"asset_description_1\":\"Computer\",\"asset_description_2\":\"Desktop Monitor\",\"specifications\":\"22\\\"\",\"brand\":\"Acer\",\"model\":\"M\",\"serial_number\":\"\",\"location\":\"\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"date_created\":\"2025-05-19 08:53:42\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 08:53:42'),
+(674, 3, 15, 'Modified', 'Equipment details modified', '{\"asset_tag\":\"SLU000004090\",\"asset_description_1\":\"Computer\",\"asset_description_2\":\"Desktop Monitor\",\"specifications\":\"22\\\"\",\"brand\":\"Acer\",\"model\":\"M\",\"serial_number\":\"\",\"date_acquired\":\"2025-05-19 08:53:42\",\"invoice_no\":null,\"rr_no\":null,\"location\":\"\",\"accountable_individual\":\"\",\"remarks\":\"\",\"date_modified\":\"2025-05-19 08:53:42\"}', '{\"asset_tag\":\"SLU000004090\",\"asset_description_1\":\"Computer\",\"asset_description_2\":\"Desktop Monitor\",\"specifications\":\"22\\\"\",\"brand\":\"Acer\",\"model\":\"V226HQL\",\"serial_number\":\"MMTYBSP001409006D33S11\",\"location\":\"HRD-Extension-Job Analysis\",\"accountable_individual\":\"Aira Rhayne Salazar\",\"rr_no\":\"\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 08:56:25'),
+(675, 3, 14, 'Modified', 'Equipment details modified', '{\"asset_tag\":\"SLU000004089\",\"asset_description_1\":\"Computer\",\"asset_description_2\":\"Desktop CPU\",\"specifications\":\"OS: Windows 11 Pro \\r\\nCPU: Intel Core i5-13400\\r\\nMB: Veriton X4710G \\r\\nGPU: Inter UHD Graphics 730 \\r\\nDisplay: refer to SLU000004090\\r\\nRam: 16GB DDR4 \\r\\nStorage: 256GB SSD 1TB \\r\\nPSU: Integrated \\r\\nOffice: Office Home and Student 2021 (4,350.00) \\r\\nAccessories: 1. USB KBM-wired | Acer \\r\\n                    2. Webcam | Genius (1,250.00)\",\"brand\":\"Acer\",\"model\":\"V226HQL\",\"serial_number\":\"DTVYGSP01B40700C3E3000\",\"date_acquired\":\"2025-05-19 08:49:28\",\"invoice_no\":null,\"rr_no\":null,\"location\":\"HRD-Extension-Job Analysis\",\"accountable_individual\":\"Alyana Mikaela E. De Guzman\",\"remarks\":\"\",\"date_modified\":\"2025-05-19 08:52:59\"}', '{\"asset_tag\":\"SLU000004089\",\"asset_description_1\":\"Computer\",\"asset_description_2\":\"Desktop CPU\",\"specifications\":\"OS: Windows 11 Pro \\r\\nCPU: Intel Core i5-13400\\r\\nMB: Veriton X4710G \\r\\nGPU: Inter UHD Graphics 730 \\r\\nDisplay: refer to SLU000004090\\r\\nRam: 16GB DDR4 \\r\\nStorage: 256GB SSD 1TB \\r\\nPSU: Integrated \\r\\nOffice: Office Home and Student 2021 (4,350.00) \\r\\nAccessories: 1. USB KBM-wired | Acer \\r\\n                    2. Webcam | Genius (1,250.00)\",\"brand\":\"Acer\",\"model\":\"V226HQL\",\"serial_number\":\"DTVYGSP01B40700C3E3000\",\"location\":\"HRD-Extension-Job Analysis\",\"accountable_individual\":\"Aira Rhayne Salazar\",\"rr_no\":\"N\\/A\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 08:56:49'),
+(676, 3, 16, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"SLU000004091\",\"asset_description_1\":\"Computer\",\"asset_description_2\":\"Desktop CPU\",\"specifications\":\"OS: Windows 11 Pro \\r\\nCPU: Intel Core i5-13400\\r\\nMB: Veriton X4710G \\r\\nGPU: Inter UHD Graphics 730 \\r\\nDisplay: refer to SLU000004092\\r\\nRam: 16GB DDR4 \\r\\nStorage: 256GB SSD 1TB \\r\\nPSU: Integrated \\r\\nOffice: Office Home and Student 2021 (4,350.00) \\r\\nAccessories: 1. USB KBM-wired | Acer \\r\\n                    2. Webcam | Genius (1,250.00)\",\"brand\":\"Acer\",\"model\":\"Veritom X4710G\",\"serial_number\":\"DTVYGSP01B40700C263000\",\"location\":\"HRD Office - Cubicle 1\",\"accountable_individual\":\"Nissah T. Lipao\",\"rr_no\":\"\",\"date_created\":\"2025-05-19 08:59:40\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 08:59:40'),
+(677, 3, 17, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"SLU000004092\",\"asset_description_1\":\"Computer\",\"asset_description_2\":\"Desktop Monitor\",\"specifications\":\"22\\\"\",\"brand\":\"Acer\",\"model\":\"V226HQL\",\"serial_number\":\"MMTYBSP001409006E03S11\",\"location\":\"HRD Office - Cubicle 1\",\"accountable_individual\":\"Nissah T. Lipao\",\"rr_no\":\"\",\"date_created\":\"2025-05-19 09:00:54\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 09:00:54'),
+(678, 3, 18, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"SLU000004093\",\"asset_description_1\":\"UPS\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"ACP\",\"model\":\"BVX6501-PH\",\"serial_number\":\"9B2430A19187\",\"location\":\"HRD-Extension-Job Analysis\",\"accountable_individual\":\"Alyana Mikaela E. De Guzman\",\"rr_no\":\"\",\"date_created\":\"2025-05-19 09:02:28\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 09:02:28'),
+(679, 3, 22, 'Create', 'Purchase Order PO1025000664 created', NULL, '{\"po_no\":\"PO1025000664\",\"date_of_order\":\"2024-11-12\",\"no_of_units\":\"3\",\"item_specifications\":\"Desktop Computer: Acer Veriton X47\"}', 'Purchase Order', 'Successful', '2025-05-19 09:29:56'),
+(680, 3, 22, 'Modified', 'The Item Specifications was changed from \'Desktop Computer: Acer Veriton X47\' to \'SET\'.', '{\"item_specifications\":\"Desktop Computer: Acer Veriton X47\"}', '{\"item_specifications\":\"SET\"}', 'Purchase Order', 'Successful', '2025-05-19 09:30:11'),
+(681, 3, 24, 'Create', 'Charge Invoice CI20247 created', NULL, '{\"invoice_no\":\"CI20247\",\"date_of_purchase\":\"2024-11-19\",\"po_no\":\"PO1025000664\"}', 'Charge Invoice', 'Successful', '2025-05-19 09:31:23'),
+(682, 3, NULL, 'add', NULL, NULL, '{\"rr_no\":\"RR007571\",\"accountable_individual\":\"Jeremy Lee Dela Cruz\",\"po_no\":\"PO1025000664\",\"ai_loc\":\"HRD\",\"date_created\":\"2025-05-19 03:32:00\"}', 'Receiving Report', NULL, '2025-05-19 09:33:33'),
+(683, 3, NULL, 'modified', NULL, '{\"id\":19,\"rr_no\":\"RR007571\",\"accountable_individual\":\"Jeremy Lee Dela Cruz\",\"ai_loc\":\"HRD\",\"po_no\":\"PO1025000664\",\"date_created\":\"2025-05-19 03:32:00\",\"is_disabled\":0}', '{\"rr_no\":\"RR007571\",\"accountable_individual\":\"Jeremy Lee Dela Cruz\",\"po_no\":\"PO1025000664\",\"ai_loc\":\"HRD\",\"date_created\":\"2024-11-19 03:32:00\"}', 'Receiving Report', NULL, '2025-05-19 09:34:03'),
+(684, 1, 1, 'Logout', 'navithebear is now offline.', '{\"status\": \"Online\"}', '{\"status\": \"Offline\"}', 'User Management', 'Successful', '2025-05-19 10:49:06'),
+(685, 1, 1, 'Login', 'navithebear is now online.', '{\"status\": \"Offline\"}', '{\"status\": \"Online\"}', 'User Management', 'Successful', '2025-05-19 11:03:20'),
+(686, 1, 136, 'Create', 'New user added: pbalanza', NULL, '{\"id\": 136, \"username\": \"pbalanza\", \"email\": \"psalmer@example.com\", \"first_name\": \"psalmer\", \"last_name\": \"balanza\", \"department\": \"Unknown\", \"status\": \"Offline\", \"date_created\": \"2025-05-19 13:24:39\"}', 'User Management', 'Successful', '2025-05-19 13:24:39'),
+(687, 1, 137, 'Create', 'New user added: pbalanza', NULL, '{\"id\": 137, \"username\": \"pbalanza\", \"email\": \"psalmer@example.com\", \"first_name\": \"psalmer\", \"last_name\": \"balanza\", \"department\": \"Unknown\", \"status\": \"Offline\", \"date_created\": \"2025-05-19 13:24:45\"}', 'User Management', 'Successful', '2025-05-19 13:24:45'),
+(688, 1, 138, 'Create', 'New user added: pbalanza', NULL, '{\"id\": 138, \"username\": \"pbalanza\", \"email\": \"psalmer@example.com\", \"first_name\": \"psalmer\", \"last_name\": \"balanza\", \"department\": \"Unknown\", \"status\": \"Offline\", \"date_created\": \"2025-05-19 13:24:51\"}', 'User Management', 'Successful', '2025-05-19 13:24:51'),
+(689, 1, 139, 'Create', 'New user added: pbalanza', NULL, '{\"id\": 139, \"username\": \"pbalanza\", \"email\": \"psalmer@example.com\", \"first_name\": \"psalmer\", \"last_name\": \"balanza\", \"department\": \"Unknown\", \"status\": \"Offline\", \"date_created\": \"2025-05-19 13:24:59\"}', 'User Management', 'Successful', '2025-05-19 13:24:59'),
+(690, 1, 140, 'Create', 'New user added: pbalanza', NULL, '{\"id\": 140, \"username\": \"pbalanza\", \"email\": \"psalmer@example.com\", \"first_name\": \"psalmer\", \"last_name\": \"balanza\", \"department\": \"Unknown\", \"status\": \"Offline\", \"date_created\": \"2025-05-19 13:26:48\"}', 'User Management', 'Successful', '2025-05-19 13:26:48'),
+(691, 1, 25, 'Create', 'Charge Invoice CI12123456 created', NULL, '{\"invoice_no\":\"CI12123456\",\"date_of_purchase\":\"2024-12-12\",\"po_no\":\"PO0000978\"}', 'Charge Invoice', 'Successful', '2025-05-19 13:44:27'),
+(692, 1, 19, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"56988456\",\"asset_description_1\":\"Computer\",\"asset_description_2\":\"Desktop\",\"specifications\":\"14 inch\",\"brand\":\"Asus\",\"model\":\"Zen\",\"serial_number\":\"090909\",\"location\":\"Diego Silang\",\"accountable_individual\":\"Justine Lucas\",\"rr_no\":\"89078\",\"date_created\":\"2025-05-19 13:47:03\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 13:47:03'),
+(693, 1, 1, 'Add', 'New equipment status added', NULL, '{\"asset_tag\":\"90909890\",\"status\":\"For Disposal\",\"action\":\"Collection\",\"remarks\":\"\",\"is_disabled\":0}', 'Equipment Status', 'Successful', '0000-00-00 00:00:00'),
+(694, 3, 20, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"00001244-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859AC1759\",\"serial_number\":\"\",\"location\":\"\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"date_created\":\"2025-05-19 14:32:13\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 14:32:13'),
+(695, 3, 20, 'Modified', 'Equipment details modified', '{\"asset_tag\":\"00001244-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859AC1759\",\"serial_number\":\"\",\"date_acquired\":\"2025-05-19 14:32:13\",\"invoice_no\":null,\"rr_no\":null,\"location\":\"\",\"accountable_individual\":\"\",\"remarks\":\"\",\"date_modified\":\"2025-05-19 14:32:13\"}', '{\"asset_tag\":\"00001244-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859 AC1750\",\"serial_number\":\"RZOM31400398\",\"location\":\"\",\"accountable_individual\":\"\",\"rr_no\":\"N\\/A\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 14:33:24'),
+(696, 3, 21, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"00001245-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859 AC1750\",\"serial_number\":\"RZOM31400391\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"date_created\":\"2025-05-19 14:34:58\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 14:34:58'),
+(697, 3, 20, 'Modified', 'Equipment details modified', '{\"asset_tag\":\"00001244-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859 AC1750\",\"serial_number\":\"RZOM31400398\",\"date_acquired\":\"2025-05-19 14:32:13\",\"invoice_no\":null,\"rr_no\":\"RRN\\/A\",\"location\":\"\",\"accountable_individual\":\"\",\"remarks\":\"\",\"date_modified\":\"2025-05-19 14:33:24\"}', '{\"asset_tag\":\"00001244-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859 AC1750\",\"serial_number\":\"RZOM31400398\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"rr_no\":\"RRN\\/A\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 14:35:10'),
+(698, 3, 22, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"00001246-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859 AC1750\",\"serial_number\":\"RZOM31400396\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"date_created\":\"2025-05-19 14:36:06\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 14:36:06'),
+(699, 3, 20, 'Modified', 'Equipment details modified', '{\"asset_tag\":\"00001244-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859 AC1750\",\"serial_number\":\"RZOM31400398\",\"date_acquired\":\"2025-05-19 14:32:13\",\"invoice_no\":null,\"rr_no\":\"RRN\\/A\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"remarks\":\"\",\"date_modified\":\"2025-05-19 14:35:10\"}', '{\"asset_tag\":\"00001244-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859 AC1750\",\"serial_number\":\"RZOM31400398\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 14:36:30'),
+(700, 3, 23, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"00001247-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859 AC1750\",\"serial_number\":\"RZOM31400397\",\"location\":\"Rizal\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"date_created\":\"2025-05-19 14:37:09\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 14:37:09'),
+(701, 3, 24, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"00001248-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859 AC1750\",\"serial_number\":\"RZOM31400392\",\"location\":\"Die\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"date_created\":\"2025-05-19 14:38:52\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 14:38:52'),
+(702, 3, 24, 'Modified', 'Equipment details modified', '{\"asset_tag\":\"00001248-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859 AC1750\",\"serial_number\":\"RZOM31400392\",\"date_acquired\":\"2025-05-19 14:38:52\",\"invoice_no\":null,\"rr_no\":null,\"location\":\"Die\",\"accountable_individual\":\"\",\"remarks\":\"\",\"date_modified\":\"2025-05-19 14:38:52\"}', '{\"asset_tag\":\"00001248-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859 AC1750\",\"serial_number\":\"RZOM31400392\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"rr_no\":\"N\\/A\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 14:39:01'),
+(703, 3, 25, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"00001249-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859 AC1750\",\"serial_number\":\"RZOM314000047\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"date_created\":\"2025-05-19 14:40:13\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 14:40:13'),
+(704, 3, 24, 'Modified', 'Equipment details modified', '{\"asset_tag\":\"00001248-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859 AC1750\",\"serial_number\":\"RZOM31400392\",\"date_acquired\":\"2025-05-19 14:38:52\",\"invoice_no\":null,\"rr_no\":\"RRN\\/A\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"remarks\":\"\",\"date_modified\":\"2025-05-19 14:39:01\"}', '{\"asset_tag\":\"00001248-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859 AC1750\",\"serial_number\":\"RZOM314000392\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"rr_no\":\"RRN\\/A\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 14:40:22'),
+(705, 3, 23, 'Modified', 'Equipment details modified', '{\"asset_tag\":\"00001247-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859 AC1750\",\"serial_number\":\"RZOM31400397\",\"date_acquired\":\"2025-05-19 14:37:09\",\"invoice_no\":null,\"rr_no\":null,\"location\":\"Rizal\",\"accountable_individual\":\"\",\"remarks\":\"\",\"date_modified\":\"2025-05-19 14:37:09\"}', '{\"asset_tag\":\"00001247-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859 AC1750\",\"serial_number\":\"RZOM314000397\",\"location\":\"Rizal\",\"accountable_individual\":\"\",\"rr_no\":\"N\\/A\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 14:40:29'),
+(706, 3, 20, 'Modified', 'Equipment details modified', '{\"asset_tag\":\"00001244-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859 AC1750\",\"serial_number\":\"RZOM31400398\",\"date_acquired\":\"2025-05-19 14:32:13\",\"invoice_no\":null,\"rr_no\":null,\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"remarks\":\"\",\"date_modified\":\"2025-05-19 14:36:30\"}', '{\"asset_tag\":\"00001244-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859 AC1750\",\"serial_number\":\"RZOM314000398\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"rr_no\":\"N\\/A\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 14:40:35'),
+(707, 3, 21, 'Modified', 'Equipment details modified', '{\"asset_tag\":\"00001245-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859 AC1750\",\"serial_number\":\"RZOM31400391\",\"date_acquired\":\"2025-05-19 14:34:58\",\"invoice_no\":null,\"rr_no\":null,\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"remarks\":\"\",\"date_modified\":\"2025-05-19 14:34:58\"}', '{\"asset_tag\":\"00001245-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859 AC1750\",\"serial_number\":\"RZOM314000391\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"rr_no\":\"N\\/A\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 14:40:41'),
+(708, 3, 22, 'Modified', 'Equipment details modified', '{\"asset_tag\":\"00001246-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859 AC1750\",\"serial_number\":\"RZOM31400396\",\"date_acquired\":\"2025-05-19 14:36:06\",\"invoice_no\":null,\"rr_no\":null,\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"remarks\":\"\",\"date_modified\":\"2025-05-19 14:36:06\"}', '{\"asset_tag\":\"00001246-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859 AC1750\",\"serial_number\":\"RZOM314000396\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"rr_no\":\"N\\/A\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 14:40:47'),
+(709, 3, 26, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"00001250-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859 AC1750\",\"serial_number\":\"RZOM314000399\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"date_created\":\"2025-05-19 14:42:01\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 14:42:01'),
+(710, 3, 27, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"00001251-TMD\",\"asset_description_1\":\"Switch\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"Linksys\",\"model\":\"LGS108 (8 Port)\",\"serial_number\":\"13KK20F16A03756\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"date_created\":\"2025-05-19 14:43:29\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 14:43:29'),
+(711, 3, 28, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"00001252-TMD\",\"asset_description_1\":\"Switch\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"Linksys\",\"model\":\"LGS108 (8 Port)\",\"serial_number\":\"13KK20F16A03698\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"date_created\":\"2025-05-19 14:44:22\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 14:44:22'),
+(712, 3, 29, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"00001253-TMD\",\"asset_description_1\":\"Switch\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"Linksys\",\"model\":\"LGS108 (8 Port)\",\"serial_number\":\"13KK20F16A03741\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"date_created\":\"2025-05-19 14:45:43\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 14:45:43'),
+(713, 3, 30, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"00001254-TMD\",\"asset_description_1\":\"Switch\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"Linksys\",\"model\":\"LGS108 (8 Port)\",\"serial_number\":\"13KK20F16A03759\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"date_created\":\"2025-05-19 14:46:20\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 14:46:20'),
+(714, 3, 31, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"00001255-TMD\",\"asset_description_1\":\"Switch\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"Linksys\",\"model\":\"LGS108 (8 Port)\",\"serial_number\":\"13KK20F16A03734\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"date_created\":\"2025-05-19 14:47:39\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 14:47:39'),
+(715, 3, 32, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"00001256-TMD\",\"asset_description_1\":\"Switch\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"Linksys\",\"model\":\"LGS108 (8 Port)\",\"serial_number\":\"13KK20F16A03761\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"date_created\":\"2025-05-19 14:48:56\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 14:48:56'),
+(716, 3, 33, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"00001257-TMD\",\"asset_description_1\":\"Switch\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"CISCO\",\"model\":\"SG95-24 (24 Port)\",\"serial_number\":\"DNI240209XU\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"date_created\":\"2025-05-19 14:50:39\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 14:50:39'),
+(717, 3, 34, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"00001871-TMD\",\"asset_description_1\":\"Antenna - UHD RFID\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"Chafon\",\"model\":\"CF-RA8080 \\/ Time-in 1\",\"serial_number\":\"\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"date_created\":\"2025-05-19 14:57:20\",\"remarks\":\"for university employees\"}', 'Equipment Details', 'Successful', '2025-05-19 14:57:20'),
+(718, 3, 34, 'Modified', 'Equipment details modified', '{\"asset_tag\":\"00001871-TMD\",\"asset_description_1\":\"Antenna - UHD RFID\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"Chafon\",\"model\":\"CF-RA8080 \\/ Time-in 1\",\"serial_number\":\"\",\"date_acquired\":\"2025-05-19 14:57:20\",\"invoice_no\":null,\"rr_no\":null,\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"remarks\":\"for university employees\",\"date_modified\":\"2025-05-19 14:57:20\"}', '{\"asset_tag\":\"00001871-TMD\",\"asset_description_1\":\"Antenna - UHD RFID\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"Chafon\",\"model\":\"CF-RA8080 \\/ Time-in 1\",\"serial_number\":\"\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"rr_no\":\"N\\/A\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 14:58:14'),
+(719, 3, 34, 'Modified', 'Equipment details modified', '{\"asset_tag\":\"00001871-TMD\",\"asset_description_1\":\"Antenna - UHD RFID\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"Chafon\",\"model\":\"CF-RA8080 \\/ Time-in 1\",\"serial_number\":\"\",\"date_acquired\":\"2025-05-19 14:57:20\",\"invoice_no\":null,\"rr_no\":\"RRN\\/A\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"remarks\":\"\",\"date_modified\":\"2025-05-19 14:58:14\"}', '{\"asset_tag\":\"00001871-TMD\",\"asset_description_1\":\"Antenna - UHD RFID\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"Chafon\",\"model\":\"CF-RA8080 \\/ Time-in 1\",\"serial_number\":\"\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 14:58:22'),
+(720, 3, 24, 'Modified', 'Equipment details modified', '{\"asset_tag\":\"00001248-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859 AC1750\",\"serial_number\":\"RZOM314000392\",\"date_acquired\":\"2025-05-19 14:38:52\",\"invoice_no\":null,\"rr_no\":\"RRN\\/A\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"remarks\":\"\",\"date_modified\":\"2025-05-19 14:40:22\"}', '{\"asset_tag\":\"00001248-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859 AC1750\",\"serial_number\":\"RZOM314000392\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 14:58:33'),
+(721, 3, 23, 'Modified', 'Equipment details modified', '{\"asset_tag\":\"00001247-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859 AC1750\",\"serial_number\":\"RZOM314000397\",\"date_acquired\":\"2025-05-19 14:37:09\",\"invoice_no\":null,\"rr_no\":\"RRN\\/A\",\"location\":\"Rizal\",\"accountable_individual\":\"\",\"remarks\":\"\",\"date_modified\":\"2025-05-19 14:40:29\"}', '{\"asset_tag\":\"00001247-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859 AC1750\",\"serial_number\":\"RZOM314000397\",\"location\":\"Rizal\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 14:58:40'),
+(722, 3, 22, 'Modified', 'Equipment details modified', '{\"asset_tag\":\"00001246-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859 AC1750\",\"serial_number\":\"RZOM314000396\",\"date_acquired\":\"2025-05-19 14:36:06\",\"invoice_no\":null,\"rr_no\":\"RRN\\/A\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"remarks\":\"\",\"date_modified\":\"2025-05-19 14:40:47\"}', '{\"asset_tag\":\"00001246-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859 AC1750\",\"serial_number\":\"RZOM314000396\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 14:58:53'),
+(723, 3, 21, 'Modified', 'Equipment details modified', '{\"asset_tag\":\"00001245-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859 AC1750\",\"serial_number\":\"RZOM314000391\",\"date_acquired\":\"2025-05-19 14:34:58\",\"invoice_no\":null,\"rr_no\":\"RRN\\/A\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"remarks\":\"\",\"date_modified\":\"2025-05-19 14:40:41\"}', '{\"asset_tag\":\"00001245-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859 AC1750\",\"serial_number\":\"RZOM314000391\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 14:59:01'),
+(724, 3, 20, 'Modified', 'Equipment details modified', '{\"asset_tag\":\"00001244-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859 AC1750\",\"serial_number\":\"RZOM314000398\",\"date_acquired\":\"2025-05-19 14:32:13\",\"invoice_no\":null,\"rr_no\":\"RRN\\/A\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"remarks\":\"\",\"date_modified\":\"2025-05-19 14:40:35\"}', '{\"asset_tag\":\"00001244-TMD\",\"asset_description_1\":\"Access Point - Wireless\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"D-Link\",\"model\":\"DIR- 859 AC1750\",\"serial_number\":\"RZOM314000398\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 14:59:07'),
+(725, 3, 35, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"00001872-TMD\",\"asset_description_1\":\"Antenna - UHD RFID\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"Chafon\",\"model\":\"CF-RA8080 \\/ Time-in 2\",\"serial_number\":\"\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"date_created\":\"2025-05-19 14:59:58\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 14:59:58'),
+(726, 3, 36, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"00001873-TMD\",\"asset_description_1\":\"Antenna - UHD RFID\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"Chafon\",\"model\":\"CF-RA8080 \\/ Time-out 1\",\"serial_number\":\"\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"date_created\":\"2025-05-19 15:00:45\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 15:00:45'),
+(727, 3, 37, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"00001874-TMD\",\"asset_description_1\":\"Antenna - UHD RFID\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"Chafon\",\"model\":\"CF-RA8080 \\/ Time-out 2\",\"serial_number\":\"\",\"location\":\"Diego Silang\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"date_created\":\"2025-05-19 15:01:35\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 15:01:35'),
+(728, 3, 38, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"00016351-TMD\",\"asset_description_1\":\"UPS\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"APC\",\"model\":\"BVX650I-PH\",\"serial_number\":\"9B2224A06504\",\"location\":\"\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"date_created\":\"2025-05-19 15:05:39\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 15:05:39'),
+(729, 3, 39, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"00016352-TMD\",\"asset_description_1\":\"UPS\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"APC\",\"model\":\"BVX650I-PH\",\"serial_number\":\"9B2222A18229\",\"location\":\"\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"date_created\":\"2025-05-19 15:07:18\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 15:07:18'),
+(730, 3, 40, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"00016353-TMD\",\"asset_description_1\":\"UPS\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"APC\",\"model\":\"BVX650I-PH\",\"serial_number\":\"9B2238A30857\",\"location\":\"\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"date_created\":\"2025-05-19 15:08:17\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 15:08:17'),
+(731, 3, 7, 'Modified', 'Equipment location modified', '{\"equipment_location_id\":7,\"asset_tag\":\"00001247-TMD\",\"building_loc\":\"Diego Silang\",\"floor_no\":\"1\",\"specific_area\":\"Tuklas Lunas\",\"person_responsible\":\"Network Administrators\",\"department_id\":null,\"remarks\":\"Borrowed by Tuklas Lunas\",\"date_created\":\"2025-05-19 15:10:31\",\"is_disabled\":0}', '{\"asset_tag\":\"00001247-TMD\",\"building_loc\":\"Rizal\",\"floor_no\":\"1\",\"specific_area\":\"Tuklas Lunas\",\"person_responsible\":\"Network Administrators\",\"department_id\":null,\"remarks\":\"Borrowed by Tuklas Lunas\"}', 'Equipment Location', 'Successful', '0000-00-00 00:00:00'),
+(732, 3, 21, 'Modified', 'Equipment location modified', '{\"equipment_location_id\":21,\"asset_tag\":\"00001872-TMD\",\"building_loc\":\"Diego Silang\",\"floor_no\":\"2\",\"specific_area\":\"Silang\",\"person_responsible\":\"TMDD Team\",\"department_id\":null,\"remarks\":\"\",\"date_created\":\"2025-05-19 15:25:33\",\"is_disabled\":0}', '{\"asset_tag\":\"00001872-TMD\",\"building_loc\":\"Diego Silang\",\"floor_no\":\"2\",\"specific_area\":\"Silang\",\"person_responsible\":\"TMDD Team\",\"department_id\":null,\"remarks\":\"for university employees\"}', 'Equipment Location', 'Successful', '0000-00-00 00:00:00'),
+(733, 3, 3, 'Logout', 'equipman is now offline.', '{\"status\": \"Online\"}', '{\"status\": \"Offline\"}', 'User Management', 'Successful', '2025-05-19 15:33:01'),
+(734, 1, 4, 'Modified', 'Modified Fields: Reports: Removed View', '{\n    \"role_id\": 4,\n    \"role_name\": \"User Manager\",\n    \"privileges\": {\n        \"User Management\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ],\n        \"Reports\": [\n            \"View\"\n        ],\n        \"Management\": [\n            \"View\"\n        ]\n    }\n}', '{\n    \"role_id\": 4,\n    \"role_name\": \"User Manager\",\n    \"privileges\": {\n        \"Management\": [\n            \"View\"\n        ],\n        \"User Management\": [\n            \"Create\",\n            \"Modify\",\n            \"Permanently Delete\",\n            \"Remove\",\n            \"Restore\",\n            \"Track\",\n            \"View\"\n        ]\n    }\n}', 'Roles and Privileges', 'Successful', '2025-05-19 15:33:25'),
+(735, 3, 3, 'Login', 'equipman is now online.', '{\"status\": \"Offline\"}', '{\"status\": \"Online\"}', 'User Management', 'Successful', '2025-05-19 15:35:40'),
+(736, 1, 23, 'Create', 'Purchase Order PO347823947 created', NULL, '{\"po_no\":\"PO347823947\",\"date_of_order\":\"274387-03-31\",\"no_of_units\":\"2\",\"item_specifications\":\"testing123\"}', 'Purchase Order', 'Successful', '2025-05-19 15:43:16'),
+(737, 1, 23, 'Remove', 'Purchase Order PO347823947 removed', '{\"id\":23,\"po_no\":\"PO347823947\",\"date_of_order\":\"0000-00-00\",\"no_of_units\":2,\"item_specifications\":\"testing123\",\"date_created\":\"2025-05-19 15:43:16\",\"is_disabled\":0}', NULL, 'Purchase Order', 'Successful', '2025-05-19 15:43:25'),
+(738, 1, NULL, 'add', NULL, NULL, '{\"rr_no\":\"RR2321\",\"accountable_individual\":\"testing123\",\"po_no\":\"PO9928922\",\"ai_loc\":\"here\",\"date_created\":\"2025-05-19 09:43:00\"}', 'Receiving Report', NULL, '2025-05-19 15:44:41'),
+(739, 1, 20, 'delete', NULL, '{\"id\":20,\"rr_no\":\"RR2321\",\"accountable_individual\":\"testing123\",\"ai_loc\":\"here\",\"po_no\":\"PO9928922\",\"date_created\":\"2025-05-19 09:43:00\",\"is_disabled\":0}', NULL, 'Receiving Report', NULL, '2025-05-19 15:45:03'),
+(740, 1, 41, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"00016384-TMD\",\"asset_description_1\":\"UPS\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"APC\",\"model\":\"8VX6501\",\"serial_number\":\"982224A22039\",\"location\":\"\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"date_created\":\"2025-05-19 15:48:02\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 15:48:02'),
+(741, 1, 42, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"00016385-TMD\",\"asset_description_1\":\"UPS\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"APC\",\"model\":\"BVX6501-PH\",\"serial_number\":\"982234A30870\",\"location\":\"\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"date_created\":\"2025-05-19 15:50:08\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 15:50:08'),
+(742, 1, 47, 'Create', 'Department \'test123\' has been Created', NULL, '{\"id\":\"47\",\"abbreviation\":\"tt\",\"department_name\":\"test123\"}', 'Department Management', 'Successful', '2025-05-19 15:51:46'),
+(743, 1, 47, 'Modified', 'Department \'test123\' details modified', '{\"id\":47,\"abbreviation\":\"tt\",\"department_name\":\"test123\"}', '{\"id\":\"47\",\"abbreviation\":\"testing\",\"department_name\":\"test123\"}', 'Department Management', 'Successful', '2025-05-19 15:52:07'),
+(744, 1, 47, 'Remove', 'Department \'test123\' has been moved to archive', '{\"id\":47,\"abbreviation\":\"testing\",\"department_name\":\"test123\"}', '{\"id\":47,\"abbreviation\":\"testing\",\"department_name\":\"test123\"}', 'Department Management', 'Successful', '2025-05-19 15:52:12'),
+(745, 1, 43, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"00016386-TMD\",\"asset_description_1\":\"UPS\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"APC\",\"model\":\"BVX6501-PH\",\"serial_number\":\"982222A18231\",\"location\":\"\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"date_created\":\"2025-05-19 15:53:42\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 15:53:42'),
+(746, 1, 44, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"00016387-TMD\",\"asset_description_1\":\"UPS\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"APC\",\"model\":\"BVX6501-PH\",\"serial_number\":\"982222B18238\",\"location\":\"\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"date_created\":\"2025-05-19 16:30:33\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-19 16:30:33');
 
 -- --------------------------------------------------------
 
@@ -616,18 +695,14 @@ INSERT INTO `audit_log` (`TrackID`, `UserID`, `EntityID`, `Action`, `Details`, `
 -- Table structure for table `charge_invoice`
 --
 
-DROP TABLE IF EXISTS `charge_invoice`;
-CREATE TABLE IF NOT EXISTS `charge_invoice` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `invoice_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+CREATE TABLE `charge_invoice` (
+  `id` int(11) NOT NULL,
+  `invoice_no` varchar(20) DEFAULT NULL,
   `date_of_purchase` date NOT NULL,
-  `po_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
-  `date_created` datetime DEFAULT CURRENT_TIMESTAMP,
-  `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `invoice_no` (`invoice_no`),
-  KEY `po_no` (`po_no`)
-) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `po_no` varchar(20) DEFAULT NULL,
+  `date_created` datetime DEFAULT current_timestamp(),
+  `is_disabled` tinyint(1) NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `charge_invoice`
@@ -643,7 +718,9 @@ INSERT INTO `charge_invoice` (`id`, `invoice_no`, `date_of_purchase`, `po_no`, `
 (19, 'CI123123123', '2025-05-07', NULL, '2025-05-17 13:55:02', 0),
 (20, 'CI3123123', '2025-05-01', 'PO9928922', '2025-05-17 14:10:04', 0),
 (22, 'CI213123123', '2025-05-17', 'PO9928922', '2025-05-17 14:28:53', 0),
-(23, 'CI8886734', '2025-05-18', 'PO0000978', '2025-05-17 22:59:59', 0);
+(23, 'CI8886734', '2025-05-18', 'PO0000978', '2025-05-17 22:59:59', 0),
+(24, 'CI20247', '2024-11-19', 'PO1025000664', '2025-05-19 09:31:23', 0),
+(25, 'CI12123456', '2024-12-12', 'PO0000978', '2025-05-19 13:44:27', 0);
 
 -- --------------------------------------------------------
 
@@ -651,16 +728,12 @@ INSERT INTO `charge_invoice` (`id`, `invoice_no`, `date_of_purchase`, `po_no`, `
 -- Table structure for table `departments`
 --
 
-DROP TABLE IF EXISTS `departments`;
-CREATE TABLE IF NOT EXISTS `departments` (
-  `id` int NOT NULL AUTO_INCREMENT,
+CREATE TABLE `departments` (
+  `id` int(11) NOT NULL,
   `department_name` varchar(191) NOT NULL,
   `abbreviation` varchar(50) NOT NULL,
-  `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `department_name` (`department_name`),
-  UNIQUE KEY `abbreviation` (`abbreviation`)
-) ENGINE=InnoDB AUTO_INCREMENT=47 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `is_disabled` tinyint(1) NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `departments`
@@ -703,7 +776,8 @@ INSERT INTO `departments` (`id`, `department_name`, `abbreviation`, `is_disabled
 (34, 'Students\' Residence Hall', 'SRH', 0),
 (35, 'Medical Clinic', 'MC', 0),
 (36, 'Office for Legal Affairs', 'OLA', 0),
-(46, '5777', '9876', 0);
+(46, '5777', '9876', 0),
+(47, 'test123', 'testing', 1);
 
 -- --------------------------------------------------------
 
@@ -711,9 +785,8 @@ INSERT INTO `departments` (`id`, `department_name`, `abbreviation`, `is_disabled
 -- Table structure for table `equipment_details`
 --
 
-DROP TABLE IF EXISTS `equipment_details`;
-CREATE TABLE IF NOT EXISTS `equipment_details` (
-  `id` int NOT NULL AUTO_INCREMENT,
+CREATE TABLE `equipment_details` (
+  `id` int(11) NOT NULL,
   `asset_tag` varchar(50) NOT NULL,
   `asset_description_1` text NOT NULL,
   `asset_description_2` text NOT NULL,
@@ -721,26 +794,56 @@ CREATE TABLE IF NOT EXISTS `equipment_details` (
   `brand` varchar(100) DEFAULT NULL,
   `model` varchar(100) DEFAULT NULL,
   `serial_number` varchar(100) DEFAULT NULL,
-  `date_acquired` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `invoice_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
-  `rr_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `date_acquired` datetime NOT NULL DEFAULT current_timestamp(),
+  `invoice_no` varchar(20) DEFAULT NULL,
+  `rr_no` varchar(20) DEFAULT NULL,
   `location` varchar(255) DEFAULT NULL,
   `accountable_individual` varchar(255) DEFAULT NULL,
-  `remarks` text,
-  `date_created` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
-  `date_modified` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `asset_tag` (`asset_tag`),
-  KEY `invoice_no` (`invoice_no`)
-) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `remarks` text DEFAULT NULL,
+  `date_created` datetime NOT NULL DEFAULT current_timestamp(),
+  `is_disabled` tinyint(1) NOT NULL DEFAULT 0,
+  `date_modified` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `equipment_details`
 --
 
 INSERT INTO `equipment_details` (`id`, `asset_tag`, `asset_description_1`, `asset_description_2`, `specifications`, `brand`, `model`, `serial_number`, `date_acquired`, `invoice_no`, `rr_no`, `location`, `accountable_individual`, `remarks`, `date_created`, `is_disabled`, `date_modified`) VALUES
-(5, '5556233', '1231', '1123', '3123', '332123', '31233', '123123', '2025-05-15 02:23:26', NULL, '3123141', '2312312', '1235123', '1231231', '2025-03-17 15:31:00', 1, '2025-05-15 02:23:26');
+(5, '5556233', '1231', '1123', '3123', '332123', '31233', '123123', '2025-05-15 02:23:26', NULL, '3123141', '2312312', '1235123', '1231231', '2025-03-17 15:31:00', 1, '2025-05-15 02:23:26'),
+(12, 'SLU000004087', 'Computer', 'Desktop CPU', 'OS: Windows 11 Pro\r\nCPU: Intel Core i5-13400\r\nMB: Veriton X4710G\r\nGPU: Inter UHD Graphics 730\r\nDisplay: refer to SLU000004088\r\nRam: 16GB DDR4\r\nStorage: 256GB SSD 1TB\r\nPSU: Integrated\r\nOffice: Office Home and Student 2021 (4,350.00)\r\nAccessories: 1. USB KBM-wired | Acer\r\n                    2. Webcam | Genius (1,250.00)\r\n\r\n', 'Acer', 'Veriton X4710G', 'DTVYGSP01B40700C1E3000', '2025-05-19 08:45:06', NULL, 'RRN/A', 'HRD-Extension-Job Analysis', 'Alyana Mikaela E. De Guzman', '', '2025-05-19 08:45:06', 0, '2025-05-19 08:50:56'),
+(13, 'SLU000004088', 'Computer', 'Desktop Monitor', '22\"', 'Acer', 'V226HQL', 'MMTYBSP001409006D13S11', '2025-05-19 08:49:06', NULL, NULL, 'HRD-Extension-Job Analysis', 'Alyana Mikaela E. De Guzman', '', '2025-05-19 08:49:06', 0, '2025-05-19 08:49:06'),
+(14, 'SLU000004089', 'Computer', 'Desktop CPU', 'OS: Windows 11 Pro \r\nCPU: Intel Core i5-13400\r\nMB: Veriton X4710G \r\nGPU: Inter UHD Graphics 730 \r\nDisplay: refer to SLU000004090\r\nRam: 16GB DDR4 \r\nStorage: 256GB SSD 1TB \r\nPSU: Integrated \r\nOffice: Office Home and Student 2021 (4,350.00) \r\nAccessories: 1. USB KBM-wired | Acer \r\n                    2. Webcam | Genius (1,250.00)', 'Acer', 'V226HQL', 'DTVYGSP01B40700C3E3000', '2025-05-19 08:49:28', NULL, 'RRN/A', 'HRD-Extension-Job Analysis', 'Aira Rhayne Salazar', '', '2025-05-19 08:49:28', 0, '2025-05-19 08:56:49'),
+(15, 'SLU000004090', 'Computer', 'Desktop Monitor', '22\"', 'Acer', 'V226HQL', 'MMTYBSP001409006D33S11', '2025-05-19 08:53:42', NULL, NULL, 'HRD-Extension-Job Analysis', 'Aira Rhayne Salazar', '', '2025-05-19 08:53:42', 0, '2025-05-19 08:56:25'),
+(16, 'SLU000004091', 'Computer', 'Desktop CPU', 'OS: Windows 11 Pro \r\nCPU: Intel Core i5-13400\r\nMB: Veriton X4710G \r\nGPU: Inter UHD Graphics 730 \r\nDisplay: refer to SLU000004092\r\nRam: 16GB DDR4 \r\nStorage: 256GB SSD 1TB \r\nPSU: Integrated \r\nOffice: Office Home and Student 2021 (4,350.00) \r\nAccessories: 1. USB KBM-wired | Acer \r\n                    2. Webcam | Genius (1,250.00)', 'Acer', 'Veritom X4710G', 'DTVYGSP01B40700C263000', '2025-05-19 08:59:40', NULL, NULL, 'HRD Office - Cubicle 1', 'Nissah T. Lipao', '', '2025-05-19 08:59:40', 0, '2025-05-19 08:59:40'),
+(17, 'SLU000004092', 'Computer', 'Desktop Monitor', '22\"', 'Acer', 'V226HQL', 'MMTYBSP001409006E03S11', '2025-05-19 09:00:54', NULL, NULL, 'HRD Office - Cubicle 1', 'Nissah T. Lipao', '', '2025-05-19 09:00:54', 0, '2025-05-19 09:00:54'),
+(18, 'SLU000004093', 'UPS', '', '', 'ACP', 'BVX6501-PH', '9B2430A19187', '2025-05-19 09:02:28', NULL, NULL, 'HRD-Extension-Job Analysis', 'Alyana Mikaela E. De Guzman', '', '2025-05-19 09:02:28', 0, '2025-05-19 09:02:28'),
+(19, '56988456', 'Computer', 'Desktop', '14 inch', 'Asus', 'Zen', '090909', '2025-05-19 13:47:03', NULL, 'RR89078', 'Diego Silang', 'Justine Lucas', '', '2025-05-19 13:47:03', 0, '2025-05-19 13:47:03'),
+(20, '00001244-TMD', 'Access Point - Wireless', '', '', 'D-Link', 'DIR- 859 AC1750', 'RZOM314000398', '2025-05-19 14:32:13', NULL, NULL, 'Diego Silang', '', '', '2025-05-19 14:32:13', 0, '2025-05-19 14:59:07'),
+(21, '00001245-TMD', 'Access Point - Wireless', '', '', 'D-Link', 'DIR- 859 AC1750', 'RZOM314000391', '2025-05-19 14:34:58', NULL, NULL, 'Diego Silang', '', '', '2025-05-19 14:34:58', 0, '2025-05-19 14:59:01'),
+(22, '00001246-TMD', 'Access Point - Wireless', '', '', 'D-Link', 'DIR- 859 AC1750', 'RZOM314000396', '2025-05-19 14:36:06', NULL, NULL, 'Diego Silang', '', '', '2025-05-19 14:36:06', 0, '2025-05-19 14:58:53'),
+(23, '00001247-TMD', 'Access Point - Wireless', '', '', 'D-Link', 'DIR- 859 AC1750', 'RZOM314000397', '2025-05-19 14:37:09', NULL, NULL, 'Rizal', '', '', '2025-05-19 14:37:09', 0, '2025-05-19 14:58:40'),
+(24, '00001248-TMD', 'Access Point - Wireless', '', '', 'D-Link', 'DIR- 859 AC1750', 'RZOM314000392', '2025-05-19 14:38:52', NULL, NULL, 'Diego Silang', '', '', '2025-05-19 14:38:52', 0, '2025-05-19 14:58:33'),
+(25, '00001249-TMD', 'Access Point - Wireless', '', '', 'D-Link', 'DIR- 859 AC1750', 'RZOM314000047', '2025-05-19 14:40:13', NULL, NULL, 'Diego Silang', '', '', '2025-05-19 14:40:13', 0, '2025-05-19 14:40:13'),
+(26, '00001250-TMD', 'Access Point - Wireless', '', '', 'D-Link', 'DIR- 859 AC1750', 'RZOM314000399', '2025-05-19 14:42:01', NULL, NULL, 'Diego Silang', '', '', '2025-05-19 14:42:01', 0, '2025-05-19 14:42:01'),
+(27, '00001251-TMD', 'Switch', '', '', 'Linksys', 'LGS108 (8 Port)', '13KK20F16A03756', '2025-05-19 14:43:29', NULL, NULL, 'Diego Silang', '', '', '2025-05-19 14:43:29', 0, '2025-05-19 14:43:29'),
+(28, '00001252-TMD', 'Switch', '', '', 'Linksys', 'LGS108 (8 Port)', '13KK20F16A03698', '2025-05-19 14:44:22', NULL, NULL, 'Diego Silang', '', '', '2025-05-19 14:44:22', 0, '2025-05-19 14:44:22'),
+(29, '00001253-TMD', 'Switch', '', '', 'Linksys', 'LGS108 (8 Port)', '13KK20F16A03741', '2025-05-19 14:45:43', NULL, NULL, 'Diego Silang', '', '', '2025-05-19 14:45:43', 0, '2025-05-19 14:45:43'),
+(30, '00001254-TMD', 'Switch', '', '', 'Linksys', 'LGS108 (8 Port)', '13KK20F16A03759', '2025-05-19 14:46:20', NULL, NULL, 'Diego Silang', '', '', '2025-05-19 14:46:20', 0, '2025-05-19 14:46:20'),
+(31, '00001255-TMD', 'Switch', '', '', 'Linksys', 'LGS108 (8 Port)', '13KK20F16A03734', '2025-05-19 14:47:39', NULL, NULL, 'Diego Silang', '', '', '2025-05-19 14:47:39', 0, '2025-05-19 14:47:39'),
+(32, '00001256-TMD', 'Switch', '', '', 'Linksys', 'LGS108 (8 Port)', '13KK20F16A03761', '2025-05-19 14:48:56', NULL, NULL, 'Diego Silang', '', '', '2025-05-19 14:48:56', 0, '2025-05-19 14:48:56'),
+(33, '00001257-TMD', 'Switch', '', '', 'CISCO', 'SG95-24 (24 Port)', 'DNI240209XU', '2025-05-19 14:50:39', NULL, NULL, 'Diego Silang', '', '', '2025-05-19 14:50:39', 0, '2025-05-19 14:50:39'),
+(34, '00001871-TMD', 'Antenna - UHD RFID', '', '', 'Chafon', 'CF-RA8080 / Time-in 1', '', '2025-05-19 14:57:20', NULL, NULL, 'Diego Silang', '', '', '2025-05-19 14:57:20', 0, '2025-05-19 14:58:22'),
+(35, '00001872-TMD', 'Antenna - UHD RFID', '', '', 'Chafon', 'CF-RA8080 / Time-in 2', '', '2025-05-19 14:59:58', NULL, NULL, 'Diego Silang', '', '', '2025-05-19 14:59:58', 0, '2025-05-19 14:59:58'),
+(36, '00001873-TMD', 'Antenna - UHD RFID', '', '', 'Chafon', 'CF-RA8080 / Time-out 1', '', '2025-05-19 15:00:45', NULL, NULL, 'Diego Silang', '', '', '2025-05-19 15:00:45', 0, '2025-05-19 15:00:45'),
+(37, '00001874-TMD', 'Antenna - UHD RFID', '', '', 'Chafon', 'CF-RA8080 / Time-out 2', '', '2025-05-19 15:01:35', NULL, NULL, 'Diego Silang', '', '', '2025-05-19 15:01:35', 0, '2025-05-19 15:01:35'),
+(38, '00016351-TMD', 'UPS', '', '', 'APC', 'BVX650I-PH', '9B2224A06504', '2025-05-19 15:05:39', NULL, NULL, '', '', '', '2025-05-19 15:05:39', 0, '2025-05-19 15:05:39'),
+(39, '00016352-TMD', 'UPS', '', '', 'APC', 'BVX650I-PH', '9B2222A18229', '2025-05-19 15:07:18', NULL, NULL, '', '', '', '2025-05-19 15:07:18', 0, '2025-05-19 15:07:18'),
+(40, '00016353-TMD', 'UPS', '', '', 'APC', 'BVX650I-PH', '9B2238A30857', '2025-05-19 15:08:17', NULL, NULL, '', '', '', '2025-05-19 15:08:17', 0, '2025-05-19 15:08:17'),
+(41, '00016384-TMD', 'UPS', '', '', 'APC', '8VX6501', '982224A22039', '2025-05-19 15:48:02', NULL, NULL, '', '', '', '2025-05-19 15:48:02', 0, '2025-05-19 15:48:02'),
+(42, '00016385-TMD', 'UPS', '', '', 'APC', 'BVX6501-PH', '982234A30870', '2025-05-19 15:50:08', NULL, NULL, '', '', '', '2025-05-19 15:50:08', 0, '2025-05-19 15:50:08'),
+(43, '00016386-TMD', 'UPS', '', '', 'APC', 'BVX6501-PH', '982222A18231', '2025-05-19 15:53:42', NULL, NULL, '', '', '', '2025-05-19 15:53:42', 0, '2025-05-19 15:53:42'),
+(44, '00016387-TMD', 'UPS', '', '', 'APC', 'BVX6501-PH', '982222B18238', '2025-05-19 16:30:33', NULL, NULL, '', '', '', '2025-05-19 16:30:33', 0, '2025-05-19 16:30:33');
 
 -- --------------------------------------------------------
 
@@ -748,29 +851,43 @@ INSERT INTO `equipment_details` (`id`, `asset_tag`, `asset_description_1`, `asse
 -- Table structure for table `equipment_location`
 --
 
-DROP TABLE IF EXISTS `equipment_location`;
-CREATE TABLE IF NOT EXISTS `equipment_location` (
-  `equipment_location_id` int NOT NULL AUTO_INCREMENT,
+CREATE TABLE `equipment_location` (
+  `equipment_location_id` int(11) NOT NULL,
   `asset_tag` varchar(50) NOT NULL,
-  `building_loc` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `building_loc` varchar(255) DEFAULT NULL,
   `floor_no` varchar(50) DEFAULT NULL,
-  `specific_area` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci,
-  `person_responsible` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
-  `department_id` int DEFAULT NULL,
-  `remarks` text,
-  `date_created` datetime DEFAULT CURRENT_TIMESTAMP,
-  `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
-  PRIMARY KEY (`equipment_location_id`),
-  UNIQUE KEY `asset_tag` (`asset_tag`),
-  KEY `department_id` (`department_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `specific_area` text DEFAULT NULL,
+  `person_responsible` varchar(255) DEFAULT NULL,
+  `department_id` int(11) DEFAULT NULL,
+  `remarks` text DEFAULT NULL,
+  `date_created` datetime DEFAULT current_timestamp(),
+  `is_disabled` tinyint(1) NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `equipment_location`
 --
 
 INSERT INTO `equipment_location` (`equipment_location_id`, `asset_tag`, `building_loc`, `floor_no`, `specific_area`, `person_responsible`, `department_id`, `remarks`, `date_created`, `is_disabled`) VALUES
-(1, '2222333111', 'Silang', '2', 'S231', 'Tester', 1, 'N/A', '2025-03-17 15:57:42', 0);
+(1, '2222333111', 'Silang', '2', 'S231', 'Tester', 1, 'N/A', '2025-03-17 15:57:42', 0),
+(4, '00001244-TMD', 'Diego Silang', '', 'Basement - TMDD DATA CENTER', 'Network Administrators', NULL, '', '2025-05-19 14:54:36', 0),
+(5, '00001245-TMD', 'Diego Silang', '', 'Basement - FINANCE MEZZANINE', 'Network Administrators', NULL, 'Borrowed by Finance', '2025-05-19 15:03:04', 0),
+(6, '00001246-TMD', 'Diego Silang', '', 'Basement - TMDD DATA CENTER', 'Network Administrators', NULL, '', '2025-05-19 15:09:28', 0),
+(7, '00001247-TMD', 'Rizal', '1', 'Tuklas Lunas', 'Network Administrators', NULL, 'Borrowed by Tuklas Lunas', '2025-05-19 15:10:31', 0),
+(8, '00001248-TMD', 'Diego Silang', '', 'Basement - TMDD', 'Network Administrators', NULL, '', '2025-05-19 15:11:53', 0),
+(9, '00001249-TMD', 'Diego Silang', '', 'Basement - TMDD', 'Network Administrators', NULL, '', '2025-05-19 15:13:06', 0),
+(10, '00001250-TMD', 'Diego Silang', '', 'Basement - TMDD', 'Network Administrators', NULL, '', '2025-05-19 15:14:41', 0),
+(12, '00001251-TMD', 'Diego Silang', '', 'Basement - TMDD DATA CENTER', 'Network Administrators', NULL, '', '2025-05-19 15:17:07', 0),
+(13, '00001252-TMD', 'Diego Silang', '', 'Basement - TMDD', 'Network Administrators', NULL, '', '2025-05-19 15:17:46', 0),
+(14, '00001253-TMD', 'Diego Silang', '', 'Basement', 'Network Administrators', NULL, '', '2025-05-19 15:18:49', 0),
+(15, '00001254-TMD', 'Diego Silang', '', 'Basement - TMDD DATA CENTER', 'Network Administrators', NULL, '', '2025-05-19 15:19:22', 0),
+(17, '00001255-TMD', 'Diego Silang', '', 'Basement', 'Network Administrators', NULL, '', '2025-05-19 15:21:13', 0),
+(18, '00001256-TMD', 'Diego Silang', '', 'Basement - TMDD', 'Network Administrators', NULL, '', '2025-05-19 15:22:00', 0),
+(19, '00001257-TMD', 'Diego Silang', '', 'Basement - TMDD', 'Network Administrators', NULL, '', '2025-05-19 15:23:08', 0),
+(20, '00001871-TMD', 'Diego Silang', '2', 'Silang Lobby', 'TMDD Team', NULL, 'for university employees', '2025-05-19 15:24:42', 0),
+(21, '00001872-TMD', 'Diego Silang', '2', 'Silang', 'TMDD Team', NULL, 'for university employees', '2025-05-19 15:25:33', 0),
+(22, '00001873-TMD', 'Diego Silang', '2', 'Silang Lobby', 'TMDD Team', NULL, 'for university employees', '2025-05-19 15:26:25', 0),
+(23, '00001874-TMD', 'Diego Silang', '2', 'Silang Lobby', 'TMDD Team', NULL, 'for university employees', '2025-05-19 15:27:01', 0);
 
 -- --------------------------------------------------------
 
@@ -778,17 +895,22 @@ INSERT INTO `equipment_location` (`equipment_location_id`, `asset_tag`, `buildin
 -- Table structure for table `equipment_status`
 --
 
-DROP TABLE IF EXISTS `equipment_status`;
-CREATE TABLE IF NOT EXISTS `equipment_status` (
-  `equipment_status_id` int NOT NULL AUTO_INCREMENT,
+CREATE TABLE `equipment_status` (
+  `equipment_status_id` int(11) NOT NULL,
   `asset_tag` varchar(255) NOT NULL,
   `status` varchar(255) NOT NULL,
   `action` varchar(255) NOT NULL,
-  `remarks` text,
-  `date_created` datetime DEFAULT CURRENT_TIMESTAMP,
-  `is_disabled` tinyint(1) DEFAULT '0',
-  PRIMARY KEY (`equipment_status_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `remarks` text DEFAULT NULL,
+  `date_created` datetime DEFAULT current_timestamp(),
+  `is_disabled` tinyint(1) DEFAULT 0
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `equipment_status`
+--
+
+INSERT INTO `equipment_status` (`equipment_status_id`, `asset_tag`, `status`, `action`, `remarks`, `date_created`, `is_disabled`) VALUES
+(1, '90909890', 'For Disposal', 'Collection', '', '2025-05-19 13:48:55', 0);
 
 -- --------------------------------------------------------
 
@@ -796,13 +918,10 @@ CREATE TABLE IF NOT EXISTS `equipment_status` (
 -- Table structure for table `modules`
 --
 
-DROP TABLE IF EXISTS `modules`;
-CREATE TABLE IF NOT EXISTS `modules` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `module_name` varchar(100) NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `module_name` (`module_name`)
-) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE `modules` (
+  `id` int(11) NOT NULL,
+  `module_name` varchar(100) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `modules`
@@ -823,13 +942,11 @@ INSERT INTO `modules` (`id`, `module_name`) VALUES
 -- Table structure for table `privileges`
 --
 
-DROP TABLE IF EXISTS `privileges`;
-CREATE TABLE IF NOT EXISTS `privileges` (
-  `id` int NOT NULL AUTO_INCREMENT,
+CREATE TABLE `privileges` (
+  `id` int(11) NOT NULL,
   `priv_name` varchar(191) NOT NULL,
-  `is_disabled` tinyint NOT NULL DEFAULT '0',
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=26 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `is_disabled` tinyint(4) NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `privileges`
@@ -850,18 +967,15 @@ INSERT INTO `privileges` (`id`, `priv_name`, `is_disabled`) VALUES
 -- Table structure for table `purchase_order`
 --
 
-DROP TABLE IF EXISTS `purchase_order`;
-CREATE TABLE IF NOT EXISTS `purchase_order` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `po_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+CREATE TABLE `purchase_order` (
+  `id` int(11) NOT NULL,
+  `po_no` varchar(20) DEFAULT NULL,
   `date_of_order` date NOT NULL,
-  `no_of_units` int NOT NULL,
+  `no_of_units` int(11) NOT NULL,
   `item_specifications` text NOT NULL,
-  `date_created` datetime DEFAULT CURRENT_TIMESTAMP,
-  `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `po_no` (`po_no`)
-) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `date_created` datetime DEFAULT current_timestamp(),
+  `is_disabled` tinyint(1) NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `purchase_order`
@@ -870,7 +984,9 @@ CREATE TABLE IF NOT EXISTS `purchase_order` (
 INSERT INTO `purchase_order` (`id`, `po_no`, `date_of_order`, `no_of_units`, `item_specifications`, `date_created`, `is_disabled`) VALUES
 (19, 'PO23123123', '2025-05-16', 23, '1212', '2025-05-16 16:33:22', 0),
 (20, 'PO9928922', '2025-05-18', 12, 'AMD', '2025-05-17 14:03:16', 0),
-(21, 'PO0000978', '2025-05-18', 2, 'TRA', '2025-05-17 22:59:41', 0);
+(21, 'PO0000978', '2025-05-18', 2, 'TRA', '2025-05-17 22:59:41', 0),
+(22, 'PO1025000664', '2024-11-12', 3, 'SET', '2025-05-19 09:29:56', 0),
+(23, 'PO347823947', '0000-00-00', 2, 'testing123', '2025-05-19 15:43:16', 1);
 
 -- --------------------------------------------------------
 
@@ -878,19 +994,15 @@ INSERT INTO `purchase_order` (`id`, `po_no`, `date_of_order`, `no_of_units`, `it
 -- Table structure for table `receive_report`
 --
 
-DROP TABLE IF EXISTS `receive_report`;
-CREATE TABLE IF NOT EXISTS `receive_report` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `rr_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
-  `accountable_individual` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
-  `ai_loc` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci,
-  `po_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
-  `date_created` datetime DEFAULT CURRENT_TIMESTAMP,
-  `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `rr_no` (`rr_no`),
-  KEY `po_no` (`po_no`)
-) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE `receive_report` (
+  `id` int(11) NOT NULL,
+  `rr_no` varchar(20) DEFAULT NULL,
+  `accountable_individual` varchar(255) DEFAULT NULL,
+  `ai_loc` text DEFAULT NULL,
+  `po_no` varchar(20) DEFAULT NULL,
+  `date_created` datetime DEFAULT current_timestamp(),
+  `is_disabled` tinyint(1) NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `receive_report`
@@ -898,7 +1010,9 @@ CREATE TABLE IF NOT EXISTS `receive_report` (
 
 INSERT INTO `receive_report` (`id`, `rr_no`, `accountable_individual`, `ai_loc`, `po_no`, `date_created`, `is_disabled`) VALUES
 (17, 'RR989898', 'Steve', 'Silang', 'PO23123123', '2025-05-17 06:02:00', 0),
-(18, 'RR3478123', 'N/A', 'over there', 'PO23123123', '2025-05-18 04:08:00', 0);
+(18, 'RR3478123', 'N/A', 'over there', 'PO23123123', '2025-05-18 04:08:00', 0),
+(19, 'RR007571', 'Jeremy Lee Dela Cruz', 'HRD', 'PO1025000664', '2024-11-19 03:32:00', 0),
+(20, 'RR2321', 'testing123', 'here', 'PO9928922', '2025-05-19 09:43:00', 1);
 
 -- --------------------------------------------------------
 
@@ -906,14 +1020,11 @@ INSERT INTO `receive_report` (`id`, `rr_no`, `accountable_individual`, `ai_loc`,
 -- Table structure for table `roles`
 --
 
-DROP TABLE IF EXISTS `roles`;
-CREATE TABLE IF NOT EXISTS `roles` (
-  `id` int NOT NULL AUTO_INCREMENT,
+CREATE TABLE `roles` (
+  `id` int(11) NOT NULL,
   `role_name` varchar(100) NOT NULL,
-  `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `role_name` (`role_name`)
-) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `is_disabled` tinyint(1) NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `roles`
@@ -934,22 +1045,18 @@ INSERT INTO `roles` (`id`, `role_name`, `is_disabled`) VALUES
 -- Table structure for table `role_changes`
 --
 
-DROP TABLE IF EXISTS `role_changes`;
-CREATE TABLE IF NOT EXISTS `role_changes` (
-  `ChangeID` int NOT NULL AUTO_INCREMENT,
-  `UserID` int NOT NULL,
-  `RoleID` int NOT NULL,
+CREATE TABLE `role_changes` (
+  `ChangeID` int(11) NOT NULL,
+  `UserID` int(11) NOT NULL,
+  `RoleID` int(11) NOT NULL,
   `Action` enum('Add','Modified','Delete') NOT NULL,
   `OldRoleName` varchar(191) DEFAULT NULL,
   `NewRoleName` varchar(191) DEFAULT NULL,
-  `ChangeTimestamp` datetime DEFAULT CURRENT_TIMESTAMP,
-  `OldPrivileges` text,
-  `NewPrivileges` text,
-  `IsUndone` tinyint(1) DEFAULT '0',
-  PRIMARY KEY (`ChangeID`),
-  KEY `UserID` (`UserID`),
-  KEY `RoleID` (`RoleID`)
-) ENGINE=MyISAM AUTO_INCREMENT=307 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `ChangeTimestamp` datetime DEFAULT current_timestamp(),
+  `OldPrivileges` text DEFAULT NULL,
+  `NewPrivileges` text DEFAULT NULL,
+  `IsUndone` tinyint(1) DEFAULT 0
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `role_changes`
@@ -1206,7 +1313,9 @@ INSERT INTO `role_changes` (`ChangeID`, `UserID`, `RoleID`, `Action`, `OldRoleNa
 (303, 1, 1, 'Modified', 'TMDD-Dev', 'TMDD-Dev', '2025-05-18 18:03:54', '[\"2|1\",\"3|1\",\"4|1\",\"15|1\",\"16|1\",\"17|1\",\"2|2\",\"3|2\",\"4|2\",\"15|2\",\"16|2\",\"17|2\",\"2|4\",\"3|4\",\"4|4\",\"15|4\",\"16|4\",\"17|4\",\"2|5\",\"3|5\",\"4|5\",\"15|5\",\"16|5\",\"17|5\",\"2|6\",\"3|6\",\"4|6\",\"15|6\",\"16|6\",\"17|6\",\"2|7\",\"3|7\",\"4|7\",\"15|7\",\"16|7\",\"17|7\",\"2|8\",\"3|8\",\"4|8\",\"15|8\",\"16|8\",\"17|8\"]', '[\"1|1\",\"2|1\",\"2|2\",\"2|4\",\"2|5\",\"2|6\",\"2|7\",\"2|8\",\"3|1\",\"3|2\",\"3|4\",\"3|5\",\"3|6\",\"3|7\",\"3|8\",\"4|1\",\"4|2\",\"4|4\",\"4|5\",\"4|6\",\"4|7\",\"4|8\",\"15|1\",\"15|2\",\"15|4\",\"15|5\",\"15|6\",\"15|7\",\"15|8\",\"16|1\",\"16|2\",\"16|4\",\"16|5\",\"16|6\",\"16|7\",\"16|8\",\"17|1\",\"17|2\",\"17|4\",\"17|5\",\"17|6\",\"17|7\",\"17|8\"]', 0),
 (304, 1, 1, 'Modified', 'TMDD-Dev', 'TMDD-Dev', '2025-05-18 18:04:08', '[\"1|1\",\"2|1\",\"3|1\",\"4|1\",\"15|1\",\"16|1\",\"17|1\",\"2|2\",\"3|2\",\"4|2\",\"15|2\",\"16|2\",\"17|2\",\"2|4\",\"3|4\",\"4|4\",\"15|4\",\"16|4\",\"17|4\",\"2|5\",\"3|5\",\"4|5\",\"15|5\",\"16|5\",\"17|5\",\"2|6\",\"3|6\",\"4|6\",\"15|6\",\"16|6\",\"17|6\",\"2|7\",\"3|7\",\"4|7\",\"15|7\",\"16|7\",\"17|7\",\"2|8\",\"3|8\",\"4|8\",\"15|8\",\"16|8\",\"17|8\"]', '[\"2|1\",\"2|2\",\"2|4\",\"2|5\",\"2|6\",\"2|7\",\"2|8\",\"3|1\",\"3|2\",\"3|4\",\"3|5\",\"3|6\",\"3|7\",\"3|8\",\"4|1\",\"4|2\",\"4|4\",\"4|5\",\"4|6\",\"4|7\",\"4|8\",\"15|1\",\"15|2\",\"15|4\",\"15|5\",\"15|6\",\"15|7\",\"15|8\",\"16|1\",\"16|2\",\"16|4\",\"16|5\",\"16|6\",\"16|7\",\"16|8\",\"17|1\",\"17|2\",\"17|4\",\"17|5\",\"17|6\",\"17|7\",\"17|8\"]', 0),
 (305, 1, 1, 'Modified', 'TMDD-Dev', 'TMDD-Dev', '2025-05-18 18:04:12', '[\"2|1\",\"3|1\",\"4|1\",\"15|1\",\"16|1\",\"17|1\",\"2|2\",\"3|2\",\"4|2\",\"15|2\",\"16|2\",\"17|2\",\"2|4\",\"3|4\",\"4|4\",\"15|4\",\"16|4\",\"17|4\",\"2|5\",\"3|5\",\"4|5\",\"15|5\",\"16|5\",\"17|5\",\"2|6\",\"3|6\",\"4|6\",\"15|6\",\"16|6\",\"17|6\",\"2|7\",\"3|7\",\"4|7\",\"15|7\",\"16|7\",\"17|7\",\"2|8\",\"3|8\",\"4|8\",\"15|8\",\"16|8\",\"17|8\"]', '[\"1|1\",\"2|1\",\"2|2\",\"2|4\",\"2|5\",\"2|6\",\"2|7\",\"2|8\",\"3|1\",\"3|2\",\"3|4\",\"3|5\",\"3|6\",\"3|7\",\"3|8\",\"4|1\",\"4|2\",\"4|4\",\"4|5\",\"4|6\",\"4|7\",\"4|8\",\"15|1\",\"15|2\",\"15|4\",\"15|5\",\"15|6\",\"15|7\",\"15|8\",\"16|1\",\"16|2\",\"16|4\",\"16|5\",\"16|6\",\"16|7\",\"16|8\",\"17|1\",\"17|2\",\"17|4\",\"17|5\",\"17|6\",\"17|7\",\"17|8\"]', 0),
-(306, 1, 2, 'Modified', 'Super Admin', 'Super Admin', '2025-05-18 18:04:15', '[\"3|7\",\"3|8\"]', '[\"1|1\",\"3|7\",\"3|8\"]', 0);
+(306, 1, 2, 'Modified', 'Super Admin', 'Super Admin', '2025-05-18 18:04:15', '[\"3|7\",\"3|8\"]', '[\"1|1\",\"3|7\",\"3|8\"]', 0),
+(307, 1, 3, 'Modified', 'Equipment Manager', 'Equipment Manager', '2025-05-19 08:34:57', '[]', '[\"4|1\",\"4|2\",\"4|4\",\"4|5\",\"4|6\",\"4|7\",\"4|8\",\"15|1\",\"15|2\",\"15|4\",\"15|5\",\"15|6\",\"15|7\",\"15|8\"]', 0),
+(308, 1, 4, 'Modified', 'User Manager', 'User Manager', '2025-05-19 15:33:25', '[\"3|2\",\"3|6\",\"3|5\",\"3|4\",\"3|8\",\"3|1\",\"3|7\",\"16|7\",\"17|7\"]', '[\"3|1\",\"3|2\",\"3|4\",\"3|5\",\"3|6\",\"3|7\",\"3|8\",\"17|7\"]', 0);
 
 -- --------------------------------------------------------
 
@@ -1214,17 +1323,12 @@ INSERT INTO `role_changes` (`ChangeID`, `UserID`, `RoleID`, `Action`, `OldRoleNa
 -- Table structure for table `role_module_privileges`
 --
 
-DROP TABLE IF EXISTS `role_module_privileges`;
-CREATE TABLE IF NOT EXISTS `role_module_privileges` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `role_id` int DEFAULT NULL,
-  `module_id` int DEFAULT NULL,
-  `privilege_id` int DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `role_id` (`role_id`),
-  KEY `module_id` (`module_id`),
-  KEY `fk_rmp_privilege` (`privilege_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2252 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE `role_module_privileges` (
+  `id` int(11) NOT NULL,
+  `role_id` int(11) DEFAULT NULL,
+  `module_id` int(11) DEFAULT NULL,
+  `privilege_id` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `role_module_privileges`
@@ -1255,15 +1359,6 @@ INSERT INTO `role_module_privileges` (`id`, `role_id`, `module_id`, `privilege_i
 (1224, 0, 4, 10),
 (1225, 0, 4, 11),
 (1226, 0, 4, 12),
-(1382, 4, 3, 2),
-(1383, 4, 3, 6),
-(1384, 4, 3, 5),
-(1385, 4, 3, 4),
-(1386, 4, 3, 8),
-(1387, 4, 3, 1),
-(1388, 4, 3, 7),
-(1389, 4, 16, 7),
-(1390, 4, 17, 7),
 (1562, 0, 1, 1),
 (2206, 1, 1, 1),
 (2207, 1, 2, 1),
@@ -1310,7 +1405,29 @@ INSERT INTO `role_module_privileges` (`id`, `role_id`, `module_id`, `privilege_i
 (2248, 1, 17, 8),
 (2249, 2, 1, 1),
 (2250, 2, 3, 7),
-(2251, 2, 3, 8);
+(2251, 2, 3, 8),
+(2252, 3, 4, 1),
+(2253, 3, 4, 2),
+(2254, 3, 4, 4),
+(2255, 3, 4, 5),
+(2256, 3, 4, 6),
+(2257, 3, 4, 7),
+(2258, 3, 4, 8),
+(2259, 3, 15, 1),
+(2260, 3, 15, 2),
+(2261, 3, 15, 4),
+(2262, 3, 15, 5),
+(2263, 3, 15, 6),
+(2264, 3, 15, 7),
+(2265, 3, 15, 8),
+(2266, 4, 3, 1),
+(2267, 4, 3, 2),
+(2268, 4, 3, 4),
+(2269, 4, 3, 5),
+(2270, 4, 3, 6),
+(2271, 4, 3, 7),
+(2272, 4, 3, 8),
+(2273, 4, 17, 7);
 
 -- --------------------------------------------------------
 
@@ -1318,22 +1435,18 @@ INSERT INTO `role_module_privileges` (`id`, `role_id`, `module_id`, `privilege_i
 -- Table structure for table `users`
 --
 
-DROP TABLE IF EXISTS `users`;
-CREATE TABLE IF NOT EXISTS `users` (
-  `id` int NOT NULL AUTO_INCREMENT,
+CREATE TABLE `users` (
+  `id` int(11) NOT NULL,
   `username` varchar(50) NOT NULL,
   `email` varchar(100) NOT NULL,
-  `password` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `password` varchar(255) NOT NULL,
   `first_name` varchar(100) DEFAULT NULL,
   `last_name` varchar(100) DEFAULT NULL,
-  `date_created` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `status` enum('Offline','Online') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
-  `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
-  `profile_pic_path` varchar(2048) DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `username` (`username`),
-  UNIQUE KEY `email` (`email`)
-) ENGINE=InnoDB AUTO_INCREMENT=136 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `date_created` timestamp NULL DEFAULT current_timestamp(),
+  `status` enum('Offline','Online') NOT NULL,
+  `is_disabled` tinyint(1) NOT NULL DEFAULT 0,
+  `profile_pic_path` varchar(2048) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `users`
@@ -1342,7 +1455,7 @@ CREATE TABLE IF NOT EXISTS `users` (
 INSERT INTO `users` (`id`, `username`, `email`, `password`, `first_name`, `last_name`, `date_created`, `status`, `is_disabled`, `profile_pic_path`) VALUES
 (1, 'navithebear', 'navi@example.com', '$2y$12$2esj1uaDmbD3K6Fi.C0CiuOye96x8OjARwTc82ViEAPvmx4b1cL0S', 'navi', 'slu', '2025-02-19 01:19:52', 'Online', 0, 'assets/img/user_images/user_1.gif'),
 (2, 'userman', 'um@example.com', '$2y$12$wE3B0Dq4z0Bd1AHXf4gumexeObTqWXm7aASm7PnkCrtiL.iIfObS.', 'user', 'manager', '2025-02-19 05:40:35', 'Online', 0, NULL),
-(3, 'equipman', 'em@example.com', '$2y$12$J0iy9bwoalbG2/NkqDZchuLU4sWramGpsw1EsSZ6se0CefM/sqpZq', '123', '123', '2025-02-19 05:40:35', '', 0, NULL),
+(3, 'equipman', 'em@example.com', '$2y$12$J0iy9bwoalbG2/NkqDZchuLU4sWramGpsw1EsSZ6se0CefM/sqpZq', '123', '123', '2025-02-19 05:40:35', 'Online', 0, NULL),
 (4, 'rpman', 'rp@example.com', '$2y$12$dWnJinU4uO7ETYIKi9cL0uN4wJgjACaF.q0Pbkr5yNUK2q1HUQk8G', 'ropriv', 'manager', '2025-02-19 05:41:59', 'Offline', 0, NULL),
 (106, 'ttest1', 'test1@example.com', '$2y$10$2bz/ybJjCzyFYEd26NEZr.tsuqUZTpSwQtSTU1IQ8fVHyD2dzjTkO', 'test1', 'test1', '2025-03-21 08:30:58', '', 1, NULL),
 (107, 'ttest2', 'test2@example.com', '$2y$10$9uEUFx90zNh3wJmh8deSXenpr6PVopkRfkkzq4PtPAwPFRCx4cecW', 'test2', 'test2', '2025-03-21 08:31:14', '', 1, NULL),
@@ -1351,7 +1464,6 @@ INSERT INTO `users` (`id`, `username`, `email`, `password`, `first_name`, `last_
 --
 -- Triggers `users`
 --
-DROP TRIGGER IF EXISTS `after_user_disable`;
 DELIMITER $$
 CREATE TRIGGER `after_user_disable` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
     -- Only log if the user is actually being disabled (active to disabled)
@@ -1390,7 +1502,6 @@ CREATE TRIGGER `after_user_disable` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
 END
 $$
 DELIMITER ;
-DROP TRIGGER IF EXISTS `user_after_delete`;
 DELIMITER $$
 CREATE TRIGGER `user_after_delete` AFTER DELETE ON `users` FOR EACH ROW BEGIN
     -- Only log if the user was archived (is_disabled = 1)
@@ -1425,7 +1536,6 @@ CREATE TRIGGER `user_after_delete` AFTER DELETE ON `users` FOR EACH ROW BEGIN
 END
 $$
 DELIMITER ;
-DROP TRIGGER IF EXISTS `user_after_restore`;
 DELIMITER $$
 CREATE TRIGGER `user_after_restore` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
     -- Only log if the user is actually being disabled (active to disabled)
@@ -1464,7 +1574,6 @@ CREATE TRIGGER `user_after_restore` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
 END
 $$
 DELIMITER ;
-DROP TRIGGER IF EXISTS `user_status_change`;
 DELIMITER $$
 CREATE TRIGGER `user_status_change` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
     -- Only log if the status has changed
@@ -1522,7 +1631,6 @@ CREATE TRIGGER `user_status_change` AFTER UPDATE ON `users` FOR EACH ROW BEGIN
 END
 $$
 DELIMITER ;
-DROP TRIGGER IF EXISTS `users_after_create`;
 DELIMITER $$
 CREATE TRIGGER `users_after_create` AFTER INSERT ON `users` FOR EACH ROW BEGIN
     -- Declare variable to hold department name
@@ -1579,15 +1687,11 @@ DELIMITER ;
 -- Table structure for table `user_department_roles`
 --
 
-DROP TABLE IF EXISTS `user_department_roles`;
-CREATE TABLE IF NOT EXISTS `user_department_roles` (
-  `user_id` int NOT NULL,
-  `department_id` int NOT NULL,
-  `role_id` int NOT NULL DEFAULT '0',
-  PRIMARY KEY (`user_id`,`department_id`,`role_id`),
-  KEY `user_id` (`user_id`),
-  KEY `department_id` (`department_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE `user_department_roles` (
+  `user_id` int(11) NOT NULL,
+  `department_id` int(11) NOT NULL,
+  `role_id` int(11) NOT NULL DEFAULT 0
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `user_department_roles`
@@ -1595,10 +1699,215 @@ CREATE TABLE IF NOT EXISTS `user_department_roles` (
 
 INSERT INTO `user_department_roles` (`user_id`, `department_id`, `role_id`) VALUES
 (1, 1, 1),
-(3, 2, 2),
+(1, 29, 4),
+(2, 29, 4),
 (3, 2, 3),
-(3, 2, 5),
-(4, 5, 0);
+(4, 5, 5),
+(4, 29, 4);
+
+--
+-- Indexes for dumped tables
+--
+
+--
+-- Indexes for table `audit_log`
+--
+ALTER TABLE `audit_log`
+  ADD PRIMARY KEY (`TrackID`);
+
+--
+-- Indexes for table `charge_invoice`
+--
+ALTER TABLE `charge_invoice`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `invoice_no` (`invoice_no`),
+  ADD KEY `po_no` (`po_no`);
+
+--
+-- Indexes for table `departments`
+--
+ALTER TABLE `departments`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `department_name` (`department_name`),
+  ADD UNIQUE KEY `abbreviation` (`abbreviation`);
+
+--
+-- Indexes for table `equipment_details`
+--
+ALTER TABLE `equipment_details`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `asset_tag` (`asset_tag`),
+  ADD KEY `invoice_no` (`invoice_no`);
+
+--
+-- Indexes for table `equipment_location`
+--
+ALTER TABLE `equipment_location`
+  ADD PRIMARY KEY (`equipment_location_id`),
+  ADD UNIQUE KEY `asset_tag` (`asset_tag`),
+  ADD KEY `department_id` (`department_id`);
+
+--
+-- Indexes for table `equipment_status`
+--
+ALTER TABLE `equipment_status`
+  ADD PRIMARY KEY (`equipment_status_id`);
+
+--
+-- Indexes for table `modules`
+--
+ALTER TABLE `modules`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `module_name` (`module_name`);
+
+--
+-- Indexes for table `privileges`
+--
+ALTER TABLE `privileges`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `purchase_order`
+--
+ALTER TABLE `purchase_order`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `po_no` (`po_no`);
+
+--
+-- Indexes for table `receive_report`
+--
+ALTER TABLE `receive_report`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `rr_no` (`rr_no`),
+  ADD KEY `po_no` (`po_no`);
+
+--
+-- Indexes for table `roles`
+--
+ALTER TABLE `roles`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `role_name` (`role_name`);
+
+--
+-- Indexes for table `role_changes`
+--
+ALTER TABLE `role_changes`
+  ADD PRIMARY KEY (`ChangeID`),
+  ADD KEY `UserID` (`UserID`),
+  ADD KEY `RoleID` (`RoleID`);
+
+--
+-- Indexes for table `role_module_privileges`
+--
+ALTER TABLE `role_module_privileges`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `role_id` (`role_id`),
+  ADD KEY `module_id` (`module_id`),
+  ADD KEY `fk_rmp_privilege` (`privilege_id`);
+
+--
+-- Indexes for table `users`
+--
+ALTER TABLE `users`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `username` (`username`),
+  ADD UNIQUE KEY `email` (`email`);
+
+--
+-- Indexes for table `user_department_roles`
+--
+ALTER TABLE `user_department_roles`
+  ADD PRIMARY KEY (`user_id`,`department_id`,`role_id`),
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `department_id` (`department_id`);
+
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `audit_log`
+--
+ALTER TABLE `audit_log`
+  MODIFY `TrackID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=747;
+
+--
+-- AUTO_INCREMENT for table `charge_invoice`
+--
+ALTER TABLE `charge_invoice`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
+
+--
+-- AUTO_INCREMENT for table `departments`
+--
+ALTER TABLE `departments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=48;
+
+--
+-- AUTO_INCREMENT for table `equipment_details`
+--
+ALTER TABLE `equipment_details`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=45;
+
+--
+-- AUTO_INCREMENT for table `equipment_location`
+--
+ALTER TABLE `equipment_location`
+  MODIFY `equipment_location_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+
+--
+-- AUTO_INCREMENT for table `equipment_status`
+--
+ALTER TABLE `equipment_status`
+  MODIFY `equipment_status_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `modules`
+--
+ALTER TABLE `modules`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+
+--
+-- AUTO_INCREMENT for table `privileges`
+--
+ALTER TABLE `privileges`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
+
+--
+-- AUTO_INCREMENT for table `purchase_order`
+--
+ALTER TABLE `purchase_order`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+
+--
+-- AUTO_INCREMENT for table `receive_report`
+--
+ALTER TABLE `receive_report`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+
+--
+-- AUTO_INCREMENT for table `roles`
+--
+ALTER TABLE `roles`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
+
+--
+-- AUTO_INCREMENT for table `role_changes`
+--
+ALTER TABLE `role_changes`
+  MODIFY `ChangeID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=309;
+
+--
+-- AUTO_INCREMENT for table `role_module_privileges`
+--
+ALTER TABLE `role_module_privileges`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2274;
+
+--
+-- AUTO_INCREMENT for table `users`
+--
+ALTER TABLE `users`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=141;
 
 --
 -- Constraints for dumped tables

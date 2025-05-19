@@ -1,6 +1,8 @@
 <?php
 require_once __DIR__ . '/../../../../../../config/ims-tmdd.php';
 session_start();
+$today = date('Y-m-d');
+$todayDisplay = date('F j, Y');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -14,8 +16,8 @@ session_start();
     }
 
     .main-content {
-      margin-top: 75px; /* Adjust this if your header is taller */
-      padding-left: 100px; /* Adjust if your sidebar is wider */
+      margin-top: 75px;
+      padding-left: 100px;
       padding-right: 100px;
     }
 
@@ -48,6 +50,7 @@ session_start();
     <form method="POST" action="generate_report_preview.php" target="previewFrame">
       <!-- Section 1: Document Setup -->
       <div class="row form-section">
+        <h5>Document Specifications</h5>
         <div class="col-md-6">
           <label class="form-label">Document Type:</label>
           <select name="doc_type" class="form-select" required>
@@ -62,12 +65,16 @@ session_start();
             <option value="legal">Legal (8x14")</option>
           </select>
         </div>
+        <!-- Hidden orientation -->
+        <input type="hidden" name="orientation" value="landscape">
       </div>
 
       <!-- Section 2: Location and Timeline -->
       <div class="row form-section">
+        <h5>Data Range</h5>
+        <h6>*Select the filtering details you want to display*</h6>
         <div class="col-md-6">
-          <label class="form-label">Laboratory/Office (Specific_area):</label>
+          <label class="form-label">Laboratory/Office:</label>
           <select name="specific_area" class="form-select" required>
             <?php
             $stmt = $pdo->query("SELECT DISTINCT specific_area FROM equipment_location ORDER BY specific_area");
@@ -78,7 +85,7 @@ session_start();
           </select>
         </div>
         <div class="col-md-6">
-          <label class="form-label">Location (building_loc):</label>
+          <label class="form-label">Location:</label>
           <select name="building_loc" class="form-select" required>
             <?php
             $stmt = $pdo->query("SELECT DISTINCT building_loc FROM equipment_location ORDER BY building_loc");
@@ -90,21 +97,22 @@ session_start();
         </div>
         <div class="col-md-6 mt-2">
           <label class="form-label">Date From:</label>
-          <input type="date" name="date_from" class="form-control" required>
+          <input type="date" name="date_from" class="form-control" required value="<?= $today ?>">
         </div>
         <div class="col-md-6 mt-2">
           <label class="form-label">Date To:</label>
-          <input type="date" name="date_to" class="form-control" required>
+          <input type="date" name="date_to" class="form-control" required value="<?= $today ?>">
         </div>
       </div>
 
       <!-- Section 3: Columns -->
       <div class="form-section">
+        <h5>Generated Table Columns</h5>
+        <h6>*Select the columns you want to display on the Table*</h6>
         <label class="form-label">Select Columns to Include:</label>
         <div class="row">
           <?php
           $columns = [
-            'last_modified_date' => 'Last Modified date / Date Created',
             'asset_tag' => 'Asset Tag',
             'asset_description' => 'Asset Description 1 & 2',
             'spec_brand_model' => 'Specifications, Brand and Model',
@@ -134,6 +142,7 @@ session_start();
 
       <!-- Section 4: Prepared By -->
       <div class="row form-section">
+        <h5>Preparation by Box:</h5>
         <div class="col-md-6">
           <label class="form-label">Prepared By:</label>
           <input type="text" name="prepared_by" class="form-control" required placeholder="Full Name">
@@ -141,6 +150,10 @@ session_start();
         <div class="col-md-6">
           <label class="form-label">Role Title / Department:</label>
           <input type="text" name="role_department" class="form-control" required>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Date:</label>
+          <input type="text" name="prepared_date" class="form-control" value="<?= $todayDisplay ?>" readonly>
         </div>
       </div>
 
