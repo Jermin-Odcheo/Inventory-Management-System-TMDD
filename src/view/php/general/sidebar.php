@@ -147,8 +147,7 @@ $rbac = new RBACService($pdo, $userId);
                 </button>
                 <ul class="dropdown tree" aria-expanded="false">
                     <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/reports/userman_reports/usrep.php">User Management Reports 🔜 (Under Development)</a></li>
-                    <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/reports/equipman_reports/eqrep.php">Equipment Status Reports 🔜 (Under Development)</a></li>
-                    <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/reports/equiptrans_reports/eptranrep.php">Equipment Transaction Reports 🔜 (Under Development)</a></li>
+                    <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/reports/equipman_reports/eqrep.php">Equipment Management Report 🔜 (Prototype)</a></li>
                 </ul>
             </li>
             <?php endif; ?>

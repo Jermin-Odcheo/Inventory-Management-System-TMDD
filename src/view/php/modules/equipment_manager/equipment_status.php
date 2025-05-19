@@ -527,10 +527,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                 <th>#</th>
                                 <th>Asset Tag</th>
                                 <th>Status</th>
-                                <th>Action</th>
+                                <th>Process Action Taken</th>
                                 <th>Created Date</th>
                                 <th>Remarks</th>
-                                <th>Status</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -546,7 +545,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                     echo "<td>" . htmlspecialchars($row['action']) . "</td>";
                                     echo "<td>" . date('Y-m-d H:i', strtotime($row['date_created'])) . "</td>";
                                     echo "<td>" . htmlspecialchars($row['remarks']) . "</td>";
-                                    echo "<td>" . ($row['is_disabled'] ? '<span class=\"badge bg-danger\">Disabled</span>' : '<span class=\"badge bg-success\">Active</span>') . "</td>";
                                     echo "<td>
                       <div class='d-flex justify-content-center gap-2'>";
                                     
@@ -637,10 +635,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                             <label for="status" class="form-label">Status</label>
                             <select class="form-select" name="status">
                                 <option value="">Select Status</option>
+                                <option value="Disposed">Maintenance</option>
                                 <option value="Working">Working</option>
                                 <option value="For Repair">For Repair</option>
                                 <option value="For Disposal">For Disposal</option>
                                 <option value="Disposed">Disposed</option>
+                                <option value="Disposed">Condemned</option>
                             </select>
                         </div>
                         <div class="mb-3">

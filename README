@@ -18,3 +18,12 @@ C. Src - actual coding area natin
     c.3 view
         - PHP : all modules na user 
         - Styles : all css
+
+        Technologies used:
+        PHP
+        JS
+        Bootstrap
+
+Models Used:
+RBAC Model
+Inventory Management Systems Model
