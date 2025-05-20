@@ -5,7 +5,7 @@ let prevButton, nextButton, rowsSelect, currentPageSpan, rowsPerPageSpan, totalR
 // Pagination function with simpler, more direct approach
 function updatePagination() {
     // Count unique users instead of rows
-    var allRows = document.querySelectorAll('#table table tbody tr');
+    const allRows = document.querySelectorAll('#table table tbody tr');
     const uniqueUsernames = new Set();
     
     allRows.forEach(row => {
@@ -64,7 +64,7 @@ function updatePagination() {
     let visibleRowCount = 0;
 
     // IMPORTANT: First hide ALL rows
-    allRows = document.querySelectorAll('#table table tbody tr');
+    const allRows = document.querySelectorAll('#table table tbody tr');
     allRows.forEach(row => {
         row.style.display = 'none'; // Hide every row first
     });
