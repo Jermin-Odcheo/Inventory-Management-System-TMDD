@@ -857,7 +857,7 @@ try {
                         } else {
                             // Try to find department ID by name
                             <?php foreach($departments as $id => $dept): ?>
-                            if (deptName === '<?= htmlspecialchars($dept['department_name']) ?>') {
+                            if (deptName === '<?= json_encode($dept['department_name']) ?>') {
                                 console.log("Found department by name:", deptName, "ID:", <?= $id ?>);
                                 formData.append('departments[]', <?= $id ?>);
                             }
