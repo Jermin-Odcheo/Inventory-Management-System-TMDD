@@ -468,10 +468,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                         <div class="col-md-3">
                             <select class="form-select" id="filterStatus">
                                 <option value="">Filter by Status</option>
-                                <option value="Working">Working</option>
-                                <option value="For Repair">For Repair</option>
-                                <option value="For Disposal">For Disposal</option>
-                                <option value="Disposed">Disposed</option>
+                                <option value="Maintenance">Maintenance</option>
+<option value="Working">Working</option>
+<option value="For Repair">For Repair</option>
+<option value="For Disposal">For Disposal</option>
+<option value="Disposed">Disposed</option>
+<option value="Condemned">Condemned</option>
                             </select>
                         </div>
                         <div class="col-md-3">
