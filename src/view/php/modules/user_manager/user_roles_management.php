@@ -278,7 +278,7 @@ $userRoleDepartments = array_values($userRoleMap);
                     <div id="edit-department-info" class="info-field"></div>
                 </div>
                 <div class="form-group">
-                    <label>Add Role to Department (optional)</label>
+                    <label for="department-dropdown">Add Role to Department (optional)</label>
                     <select id="department-dropdown" class="form-control">
                         <option value="">Select role</option>
                         <?php foreach ($rolesData as $role): ?>
@@ -288,30 +288,17 @@ $userRoleDepartments = array_values($userRoleMap);
                     <small class="form-text text-muted">You can save without adding any roles</small>
                 </div>
                 <div class="form-group">
-                    <label>Added Roles</label>
-                    <div id="added-departments-container"></div>
-                </div>
-                <div class="form-group">
-                    <label>List of Roles</label>
+                    <label>Assigned Roles Table</label>
                     <div class="department-table-container">
-                        <table id="departments-table">
+                        <table class="table table-striped table-hover" id="assigned-roles-table">
                             <thead>
                                 <tr>
                                     <th>Role Name</th>
-                                    <th></th>
+                                    <th class="text-end" style="width: 60px;"></th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($rolesData as $role): ?>
-                                    <tr>
-                                        <td><?php echo htmlspecialchars($role['role_name']); ?></td>
-                                        <td>
-                                            <button class="delete-btn" data-role-id="<?php echo $role['id']; ?>">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
+                                <!-- Role rows will be added here dynamically -->
                             </tbody>
                         </table>
                     </div>
@@ -684,30 +671,33 @@ $userRoleDepartments = array_values($userRoleMap);
                     // Get the role object
                     const role = rolesData.find(r => r.id === roleId);
                     if (role) {
-                        // Add the role to the selection
-                        const container = document.getElementById('added-departments-container');
+                        // Add the role to the table
+                        const tbody = $('#assigned-roles-table tbody');
                         
                         // Check if this role is already selected
-                        const alreadySelected = Array.from(container.children).some(
-                            child => parseInt(child.dataset.id) === roleId
-                        );
+                        const alreadySelected = tbody.find(`tr[data-id="${roleId}"]`).length > 0;
                         
                         if (!alreadySelected) {
-                            // Create the selected item element
-                            const selectedItem = document.createElement('span');
-                            selectedItem.className = 'selected-item';
-                            selectedItem.dataset.id = role.id;
-                            selectedItem.innerHTML = `
-                                ${role.role_name}
-                                <button class="remove-btn" data-id="${role.id}" data-type="role_for_dept">✕</button>
-                            `;
-                            container.appendChild(selectedItem);
+                            // Create the table row
+                            const tr = $(`
+                                <tr data-id="${role.id}">
+                                    <td>${role.role_name}</td>
+                                    <td class="text-end">
+                                        <button class="btn-outline-danger delete-btn" data-role-id="${role.id}">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            `);
                             
-                            // Add remove button event listener
-                            selectedItem.querySelector('.remove-btn').addEventListener('click', function() {
+                            // Add to table
+                            tbody.append(tr);
+                            
+                            // Add click handler for delete button
+                            tr.find('.delete-btn').on('click', function() {
                                 // Remove from the selectedRoles array
                                 window.selectedRoles = window.selectedRoles.filter(r => r.id !== role.id);
-                                selectedItem.remove();
+                                tr.remove();
                             });
                             
                             // Add to the selectedRoles array

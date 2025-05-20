@@ -562,11 +562,55 @@ document.addEventListener("DOMContentLoaded", function () {
               modalTitle.textContent = `Edit roles for ${user.username}`;
 
               // Clear the roles container and reset selected roles
-              document.getElementById("added-departments-container").innerHTML =
-                "";
+              document.querySelector('#assigned-roles-table tbody').innerHTML = "";
               selectedRoles = [];
               // Make sure the global selectedRoles is also initialized
               window.selectedRoles = [];
+              
+              // Find all roles associated with this user and department
+              const userRoles = userRoleDepartments.filter(assignment => 
+                assignment.userId === userId && 
+                assignment.departmentIds.includes(departmentId)
+              );
+              
+              // Add all roles to the table
+              userRoles.forEach(userRole => {
+                // Skip role ID 0 (no role)
+                if (userRole.roleId === 0 || userRole.roleId === null) return;
+                
+                const role = getRoleById(userRole.roleId);
+                
+                if (role && role.id !== 0) {
+                  console.log("Adding role to selection:", role);
+                  
+                  // Create a new table row for the role
+                  const tbody = document.querySelector('#assigned-roles-table tbody');
+                  const tr = document.createElement('tr');
+                  tr.dataset.id = role.id;
+                  tr.innerHTML = `
+                    <td>${role.role_name}</td>
+                    <td class="text-end">
+                      <button class="btn-outline-danger delete-btn" data-role-id="${role.id}">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </td>
+                  `;
+                  
+                  // Add to table
+                  tbody.appendChild(tr);
+                  
+                  // Add click handler for delete button
+                  tr.querySelector('.delete-btn').addEventListener('click', function() {
+                    // Remove from the selectedRoles array
+                    window.selectedRoles = window.selectedRoles.filter(r => r.id !== role.id);
+                    tr.remove();
+                  });
+                  
+                  // Add to the selectedRoles array
+                  if (!window.selectedRoles) window.selectedRoles = [];
+                  window.selectedRoles.push(role);
+                }
+              });
 
               // Show the modal
               addDepartmentRoleModal.style.display = "block";
@@ -638,22 +682,52 @@ document.addEventListener("DOMContentLoaded", function () {
 
             modalTitle.textContent = `Edit roles for ${user.username}`;
 
-            document.getElementById("added-departments-container").innerHTML =
-              "";
+            // Clear the roles table
+            document.querySelector('#assigned-roles-table tbody').innerHTML = "";
             selectedRoles = [];
+            window.selectedRoles = [];
 
-            // Add the current role
-            const role = getRoleById(roleId);
-            if (role && role.id !== 0) {
-              console.log("Adding current role to selection:", role);
-              addItemToSelection(
-                "added-departments-container",
-                role,
-                "role_for_dept"
-              );
-            } else {
-              console.log("No role to add or role ID is 0");
-            }
+            // Find all roles associated with this user and department
+            const userRoles = userRoleDepartments.filter(assignment => 
+              assignment.userId === userId && 
+              assignment.departmentIds.includes(departmentId)
+            );
+            
+            // Add all roles to the table
+            userRoles.forEach(userRole => {
+              const role = getRoleById(userRole.roleId);
+              
+              if (role && role.id !== 0) {
+                console.log("Adding role to selection:", role);
+                
+                // Create a new table row for the role
+                const tbody = document.querySelector('#assigned-roles-table tbody');
+                const tr = document.createElement('tr');
+                tr.dataset.id = role.id;
+                tr.innerHTML = `
+                  <td>${role.role_name}</td>
+                  <td class="text-end">
+                    <button class="btn-outline-danger delete-btn" data-role-id="${role.id}">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </td>
+                `;
+                
+                // Add to table
+                tbody.appendChild(tr);
+                
+                // Add click handler for delete button
+                tr.querySelector('.delete-btn').addEventListener('click', function() {
+                  // Remove from the selectedRoles array
+                  window.selectedRoles = window.selectedRoles.filter(r => r.id !== role.id);
+                  tr.remove();
+                });
+                
+                // Add to the selectedRoles array
+                if (!window.selectedRoles) window.selectedRoles = [];
+                window.selectedRoles.push(role);
+              }
+            });
 
             addDepartmentRoleModal.style.display = "block";
           } else {
@@ -764,11 +838,44 @@ document.addEventListener("DOMContentLoaded", function () {
         const role = getRoleById(roleId);
         console.log("Role object:", role);
         
-        addItemToSelection(
-          "added-departments-container",
-          role,
-          "role_for_dept"
+        // Check if this role is already in the table
+        const tbody = document.querySelector('#assigned-roles-table tbody');
+        const existingRow = Array.from(tbody.querySelectorAll('tr')).find(
+          row => parseInt(row.dataset.id) === roleId
         );
+        
+        if (existingRow) {
+          console.log("Role already exists in table");
+          Toast.info(`${role.role_name} is already selected`, 2000, "Info");
+          return;
+        }
+        
+        // Create a new table row for the role
+        const tr = document.createElement('tr');
+        tr.dataset.id = role.id;
+        tr.innerHTML = `
+          <td>${role.role_name}</td>
+          <td class="text-end">
+            <button class="btn-outline-danger delete-btn" data-role-id="${role.id}">
+              <i class="bi bi-trash"></i>
+            </button>
+          </td>
+        `;
+        
+        // Add to table
+        tbody.appendChild(tr);
+        
+        // Add click handler for delete button
+        tr.querySelector('.delete-btn').addEventListener('click', function() {
+          // Remove from the selectedRoles array
+          window.selectedRoles = window.selectedRoles.filter(r => r.id !== role.id);
+          tr.remove();
+        });
+        
+        // Add to the selectedRoles array
+        if (!window.selectedRoles) window.selectedRoles = [];
+        window.selectedRoles.push(role);
+        
         this.value = "";
         // Reset Select2 to show placeholder after selection
         $(this).val(null).trigger('change');
@@ -851,12 +958,20 @@ document.addEventListener("DOMContentLoaded", function () {
       selectedRoles = [];
       selectedUsers = [];
       selectedDepartment = null;
-      
-      // Clear all selection containers
+      window.selectedRoles = [];
+      window.selectedUsers = [];
+      window.selectedDepartment = null;
+
+      // Clear all containers
       if (selectedRolesContainer) selectedRolesContainer.innerHTML = "";
       if (selectedUsersContainer) selectedUsersContainer.innerHTML = "";
       if (selectedDepartmentContainer) selectedDepartmentContainer.innerHTML = "";
       
+      // Clear the roles table
+      if (document.querySelector('#assigned-roles-table tbody')) {
+        document.querySelector('#assigned-roles-table tbody').innerHTML = "";
+      }
+
       // Show the modal
       addUserRolesModal.style.display = "block";
     });
@@ -870,6 +985,16 @@ document.addEventListener("DOMContentLoaded", function () {
 
   if (closeDepartmentRoleModal) {
     closeDepartmentRoleModal.addEventListener("click", function () {
+      // Clear the roles table
+      if (document.querySelector('#assigned-roles-table tbody')) {
+        document.querySelector('#assigned-roles-table tbody').innerHTML = "";
+      }
+      
+      // Reset role selections
+      selectedRoles = [];
+      window.selectedRoles = [];
+      
+      // Hide the modal
       addDepartmentRoleModal.style.display = "none";
     });
   }
@@ -1228,6 +1353,27 @@ document.addEventListener("DOMContentLoaded", function () {
         console.log("Checking for changes:");
         console.log("Current role ID:", currentEditingData.roleId);
         console.log("Updated roles:", updatedRoles);
+        
+        // Find all existing roles for this user and department
+        const existingRoles = userRoleDepartments
+          .filter(a => a.userId === currentEditingData.userId && a.departmentIds.includes(departmentId))
+          .map(a => a.roleId);
+        
+        console.log("Existing roles:", existingRoles);
+        
+        // Check if there are actual changes
+        const rolesAdded = updatedRoles.filter(roleId => !existingRoles.includes(roleId));
+        const rolesRemoved = existingRoles.filter(roleId => !updatedRoles.includes(roleId) && roleId !== 0 && roleId !== null);
+        
+        if (rolesAdded.length === 0 && rolesRemoved.length === 0) {
+          console.log("No changes detected");
+          Toast.info("No changes detected", 3000, "Info");
+          addDepartmentRoleModal.style.display = "none";
+          return;
+        }
+        
+        console.log("Roles added:", rolesAdded);
+        console.log("Roles removed:", rolesRemoved);
 
         fetch("update_user_department.php", {
           method: "POST",

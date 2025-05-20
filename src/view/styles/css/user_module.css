@@ -673,7 +673,8 @@ table tbody tr:hover {
 #current-users-table,
 #departments-table,
 #assignedDepartmentsTable,
-#createAssignedDepartmentsTable {
+#createAssignedDepartmentsTable,
+#assigned-roles-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.875rem;
@@ -685,7 +686,8 @@ table tbody tr:hover {
 #current-users-table tbody,
 #departments-table tbody,
 #assignedDepartmentsTable tbody,
-#createAssignedDepartmentsTable tbody {
+#createAssignedDepartmentsTable tbody,
+#assigned-roles-table tbody {
  
  
     width: 100%;
@@ -694,7 +696,8 @@ table tbody tr:hover {
 #current-users-table tr,
 #departments-table tr,
 #assignedDepartmentsTable tr,
-#createAssignedDepartmentsTable tr {
+#createAssignedDepartmentsTable tr,
+#assigned-roles-table tr {
     display: table-row;
     width: 100%;
 }
@@ -702,7 +705,8 @@ table tbody tr:hover {
 #current-users-table td:last-child,
 #departments-table td:last-child,
 #assignedDepartmentsTable td:last-child,
-#createAssignedDepartmentsTable td:last-child {
+#createAssignedDepartmentsTable td:last-child,
+#assigned-roles-table td:last-child {
     text-align: right;
     width: 60px;
     flex: 0 0 60px;
@@ -712,7 +716,8 @@ table tbody tr:hover {
 #assignedDepartmentsTable th,
 #createAssignedDepartmentsTable th,
 #current-users-table th,
-#departments-table th {
+#departments-table th,
+#assigned-roles-table th {
     background-color: #f9fafb;
     color: #4b5563;
     font-weight: 600;
@@ -728,7 +733,8 @@ table tbody tr:hover {
 #assignedDepartmentsTable td,
 #createAssignedDepartmentsTable td,
 #current-users-table td,
-#departments-table td {
+#departments-table td,
+#assigned-roles-table td {
     padding: 8px 16px;
     border-bottom: 1px solid #e5e7eb;
     color: #111827;
@@ -780,7 +786,8 @@ table tbody tr:hover {
 #assignedDepartmentsTable tbody::-webkit-scrollbar,
 #createAssignedDepartmentsTable tbody::-webkit-scrollbar,
 #current-users-table tbody::-webkit-scrollbar,
-#departments-table tbody::-webkit-scrollbar {
+#departments-table tbody::-webkit-scrollbar,
+#assigned-roles-table tbody::-webkit-scrollbar {
     width: 6px;
     height: 6px;
 }
@@ -788,7 +795,8 @@ table tbody tr:hover {
 #assignedDepartmentsTable tbody::-webkit-scrollbar-track,
 #createAssignedDepartmentsTable tbody::-webkit-scrollbar-track,
 #current-users-table tbody::-webkit-scrollbar-track,
-#departments-table tbody::-webkit-scrollbar-track {
+#departments-table tbody::-webkit-scrollbar-track,
+#assigned-roles-table tbody::-webkit-scrollbar-track {
     background: #f1f1f1;
     border-radius: 3px;
 }
@@ -796,15 +804,17 @@ table tbody tr:hover {
 #assignedDepartmentsTable tbody::-webkit-scrollbar-thumb,
 #createAssignedDepartmentsTable tbody::-webkit-scrollbar-thumb,
 #current-users-table tbody::-webkit-scrollbar-thumb,
-#departments-table tbody::-webkit-scrollbar-thumb {
-    background: #d1d5db;
+#departments-table tbody::-webkit-scrollbar-thumb,
+#assigned-roles-table tbody::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
     border-radius: 3px;
 }
 
 #assignedDepartmentsTable tbody::-webkit-scrollbar-thumb:hover,
 #createAssignedDepartmentsTable tbody::-webkit-scrollbar-thumb:hover,
 #current-users-table tbody::-webkit-scrollbar-thumb:hover,
-#departments-table tbody::-webkit-scrollbar-thumb:hover {
+#departments-table tbody::-webkit-scrollbar-thumb:hover,
+#assigned-roles-table tbody::-webkit-scrollbar-thumb:hover {
     background: #9ca3af;
 }
 
