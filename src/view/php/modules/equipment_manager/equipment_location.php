@@ -823,7 +823,10 @@ function safeHtml($value)
             $('#addLocationForm').on('submit', function(e) {
                 e.preventDefault();
                 const submitBtn = $(this).find('button[type="submit"]');
-                const originalBtnText = submitBtn.text();
+                const originalBtnText = submitBtn.data('original-text') || submitBtn.text();
+
+                // Store the original text once
+                submitBtn.data('original-text', originalBtnText);
                 submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Adding...');
 
                 $.ajax({
@@ -835,6 +838,9 @@ function safeHtml($value)
                         'X-Requested-With': 'XMLHttpRequest'
                     },
                     success: function(result) {
+                        // Always re-enable the button
+                        submitBtn.prop('disabled', false).html(originalBtnText);
+
                         if (result.status === 'success') {
                             $('#addLocationModal').modal('hide');
                             $('#elTable').load(location.href + ' #elTable', function() {
@@ -845,10 +851,12 @@ function safeHtml($value)
                         }
                     },
                     error: function(xhr, status, error) {
-                        showToast('Error updating location: ' + error, 'error');
+                        submitBtn.prop('disabled', false).html(originalBtnText);
+                        showToast('Error adding location: ' + error, 'error');
                     }
                 });
             });
+
 
             // Department searchable dropdown (Add Location Modal)
             $('#addLocationModal').on('shown.bs.modal', function () {
