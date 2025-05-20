@@ -589,6 +589,9 @@ try {
     </div>
     <script>
         $(document).ready(function() {
+            // Initialize selectedDepartments array for the global scope
+            let selectedDepartments = [];
+            
             // Initialize Select2 for department filter with custom positioning
             $('#department-filter').select2({
                 placeholder: 'All Departments',
@@ -612,6 +615,51 @@ try {
                 allowClear: true,
                 width: '100%'
             });
+            
+            // Add department selection handler
+            $('#modal_department').on('change', function() {
+                const deptId = $(this).val();
+                if (!deptId) return; // Skip if no department selected
+                
+                const deptName = $(this).find('option:selected').text();
+                
+                if (deptId && !selectedDepartments.some(d => d.id === deptId)) {
+                    selectedDepartments.push({ id: deptId, name: deptName });
+                    updateDepartmentsDisplay();
+                }
+                
+                // Reset selection
+                $(this).val(null).trigger('change');
+            });
+            
+            // Function to update departments display table
+            function updateDepartmentsDisplay() {
+                // Update create user departments display
+                const $table = $('#createAssignedDepartmentsTable tbody');
+                
+                $table.empty();
+                
+                selectedDepartments.forEach(function(dept) {
+                    // Add row to table
+                    $table.append(`
+                        <tr data-department-id="${dept.id}">
+                            <td>${dept.name}</td>
+                            <td class="text-end">
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-dept" data-dept-id="${dept.id}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `);
+                });
+                
+                // Add event handlers for removal buttons
+                $('.remove-dept').on('click', function() {
+                    const deptId = $(this).data('dept-id');
+                    selectedDepartments = selectedDepartments.filter(d => d.id !== deptId);
+                    updateDepartmentsDisplay();
+                });
+            }
 
             // Fix Select2 dropdown positioning in modals
             $('.modal').on('shown.bs.modal', function() {
@@ -813,58 +861,36 @@ try {
             
             // Handle create user form submission
             $('#submitCreateUser').on('click', function() {
-                console.log("Hello");
                 const form = $('#createUserForm');
                 const formData = new FormData(form[0]);
                 
-                // First, check if departments are added directly from the dropdown
-                const selectedDept = $('#modal_department').val();
-                console.log("Selected department from dropdown:", selectedDept);
-                
-                if (selectedDept) {
-                    // If a department is selected from the dropdown, use it directly
-                    formData.append('department', selectedDept);
-                    console.log("Using department from dropdown:", selectedDept);
-                } else {
-                    // Check if departments are in the table
-                    const departmentRows = $('#createAssignedDepartmentsTable tbody tr');
-                    console.log("Department rows in table:", departmentRows.length);
-                    
-                    if (departmentRows.length === 0) {
+                // Check if departments have been added
+                if (selectedDepartments.length === 0) {
+                    // Try to get from dropdown directly as a fallback
+                    const selectedDept = $('#modal_department').val();
+                    if (selectedDept) {
+                        const deptName = $('#modal_department option:selected').text();
+                        selectedDepartments.push({ id: selectedDept, name: deptName });
+                        updateDepartmentsDisplay();
+                    } else {
+                        // No departments selected
                         showToast('At least one department must be assigned', 'error');
                         return;
                     }
-                    
-                    // Clear any existing department values to avoid duplicates
-                    formData.delete('departments[]');
-                    formData.delete('department');
-                    
-                    // Approach 1: Set single department (for compatibility)
-                    const firstDeptId = departmentRows.first().data('department-id');
-                    if (firstDeptId) {
-                        console.log("Setting department ID:", firstDeptId);
-                        formData.append('department', firstDeptId);
-                    }
-                    
-                    // Approach 2: Add all departments as array
-                    departmentRows.each(function() {
-                        const deptId = $(this).data('department-id') || $(this).find('td:first').data('department-id');
-                        const deptName = $(this).find('td:first').text().trim();
-                        
-                        console.log("Row department:", deptName, "ID:", deptId);
-                        
-                        if (deptId) {
-                            formData.append('departments[]', deptId);
-                        } else {
-                            // Try to find department ID by name
-                            <?php foreach($departments as $id => $dept): ?>
-                            if (deptName === '<?= json_encode($dept['department_name']) ?>') {
-                                console.log("Found department by name:", deptName, "ID:", <?= $id ?>);
-                                formData.append('departments[]', <?= $id ?>);
-                            }
-                            <?php endforeach; ?>
-                        }
-                    });
+                }
+                
+                // Clear any existing department values to avoid duplicates
+                formData.delete('departments[]');
+                formData.delete('department');
+                
+                // Add all departments as array
+                selectedDepartments.forEach((dept, index) => {
+                    formData.append(`departments[${index}]`, dept.id);
+                });
+                
+                // Set a single department for compatibility with older backend code
+                if (selectedDepartments.length > 0) {
+                    formData.append('department', selectedDepartments[0].id);
                 }
                 
                 // Log all form data for debugging
@@ -1048,87 +1074,38 @@ try {
                     }
                 });
             });
-        });
 
-        $('#createUserModal').on('hidden.bs.modal', function() {
-            const $modal = $(this);
+            // Reset selectedDepartments when the modal is closed
+            $('#createUserModal').on('hidden.bs.modal', function() {
+                const $modal = $(this);
 
-            // 1) Reset the entire form (clears all <input>, <select>, etc.)
-            $modal.find('form')[0].reset();
+                // 1) Reset the entire form (clears all <input>, <select>, etc.)
+                $modal.find('form')[0].reset();
 
-            // 2) If you're using Select2 on #modal_department, clear it
-            const $dept = $modal.find('#modal_department');
-            if ($dept.hasClass('select2-hidden-accessible')) {
-                $dept.val(null).trigger('change');
-            }
-
-            // 3) Hide & clear your "custom department" text field
-            const $custom = $modal.find('#modal_custom_department');
-            $custom.val('').hide();
-
-            // 4) Empty the Assigned Departments table
-            $modal.find('#createAssignedDepartmentsTable tbody').empty();
-
-            // 5) (Optional) Reset any password-strength UI or other bits
-            $modal.find('.password-strength').addClass('d-none');
-            $modal.find('.progress-bar')
-                .css('width', '0%')
-                .attr('aria-valuenow', '0');
-            const $pwdToggleIcon = $modal.find('.toggle-password i');
-            $modal.find('#password').attr('type', 'password');
-            $pwdToggleIcon.removeClass('bi-eye-slash').addClass('bi-eye');
-        });
-        
-        document.addEventListener("DOMContentLoaded", function() {
-            const createUserModal = document.getElementById('createUserModal');
-
-            createUserModal.addEventListener('hidden.bs.modal', function() {
-                const form = document.getElementById('createUserForm');
-                form.reset(); // Resets basic form fields
-
-
-                // Clear department select value
-                const deptSelect = document.getElementById('modal_department');
-                deptSelect.value = ""; // Reset selection
-                deptSelect.selectedIndex = 0; // In case value doesn't reset visually
-
-                // Reset custom department field
-                const customDept = document.getElementById('modal_custom_department');
-                customDept.value = "";
-                customDept.style.display = "none";
-
-                // Clear assigned department badges and table
-                document.getElementById('createAssignedDepartmentsList').innerHTML = '';
-                document.querySelector('#createAssignedDepartmentsTable tbody').innerHTML = '';
-
-                // Reset password strength bar
-                const progressBar = createUserModal.querySelector('.progress-bar');
-                if (progressBar) {
-                    progressBar.style.width = '0%';
-                    progressBar.setAttribute('aria-valuenow', '0');
+                // 2) If you're using Select2 on #modal_department, clear it
+                const $dept = $modal.find('#modal_department');
+                if ($dept.hasClass('select2-hidden-accessible')) {
+                    $dept.val(null).trigger('change');
                 }
 
-                // Hide password strength display
-                const strengthSection = createUserModal.querySelector('.password-strength');
-                if (strengthSection) {
-                    strengthSection.classList.add('d-none');
-                }
+                // 3) Hide & clear your "custom department" text field
+                const $custom = $modal.find('#modal_custom_department');
+                $custom.val('').hide();
 
-                // Reset password visibility icon
-                const passwordInput = document.getElementById('password');
-                if (passwordInput.type === 'text') {
-                    passwordInput.type = 'password';
-                    const icon = createUserModal.querySelector('.toggle-password i');
-                    if (icon) {
-                        icon.classList.remove('bi-eye-slash');
-                        icon.classList.add('bi-eye');
-                    }
-                }
+                // 4) Empty the Assigned Departments table
+                $modal.find('#createAssignedDepartmentsTable tbody').empty();
+                
+                // 5) Reset selectedDepartments array
+                selectedDepartments = [];
 
-                // Optional: Reset select2 if you're using it
-                if ($(deptSelect).hasClass("select2-hidden-accessible")) {
-                    $(deptSelect).val("").trigger("change");
-                }
+                // 6) (Optional) Reset any password-strength UI or other bits
+                $modal.find('.password-strength').addClass('d-none');
+                $modal.find('.progress-bar')
+                    .css('width', '0%')
+                    .attr('aria-valuenow', '0');
+                const $pwdToggleIcon = $modal.find('.toggle-password i');
+                $modal.find('#password').attr('type', 'password');
+                $pwdToggleIcon.removeClass('bi-eye-slash').addClass('bi-eye');
             });
         });
     </script>
