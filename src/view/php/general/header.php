@@ -163,9 +163,11 @@ $user_id = $_SESSION['user_id'] ?? null;
             const mainDropdownMenu = document.getElementById('mainDropdownMenu');
             const dropdownTrigger = document.querySelector('.dropdown-trigger');
 
-            if (mainDropdownMenu.classList.contains('show')) {
-                mainDropdownMenu.classList.remove('show');
-                dropdownTrigger.classList.remove('active');
+            if (mainDropdownMenu && dropdownTrigger) {
+                if (mainDropdownMenu.classList.contains('show')) {
+                    mainDropdownMenu.classList.remove('show');
+                    dropdownTrigger.classList.remove('active');
+                }
             }
         }
     }
