@@ -600,7 +600,7 @@ function formatChanges($oldJsonStr)
         console.log('Sending delete request for department ID:', deleteId);
         
         $.ajax({
-            url: '../../management/department_manager/restore_department.php',
+            url: '../../role_manager/delete_department.php',
             method: 'POST',
             data: { dept_id: deleteId, permanent: 1 },
             dataType: 'json',
