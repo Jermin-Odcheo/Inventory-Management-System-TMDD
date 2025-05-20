@@ -685,10 +685,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                             <label for="edit_status" class="form-label"><i class="bi bi-info-circle"></i> Status</label>
                             <select class="form-select" id="edit_status" name="status">
                                 <option value="">Select Status</option>
+                                <option value="Maintenance">Maintenance</option>
                                 <option value="Working">Working</option>
                                 <option value="For Repair">For Repair</option>
                                 <option value="For Disposal">For Disposal</option>
                                 <option value="Disposed">Disposed</option>
+                                <option value="Condemned">Condemned</option>
                             </select>
                         </div>
                         <div class="mb-3">
