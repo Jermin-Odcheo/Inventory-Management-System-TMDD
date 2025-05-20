@@ -10,6 +10,10 @@ $todayDisplay = date('F j, Y');
   <meta charset="UTF-8">
   <title>Generate Equipment Report</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
   <style>
     body {
       background-color: #f5f5f5;
@@ -286,6 +290,18 @@ $todayDisplay = date('F j, Y');
     docTypeSelect.value = 'custom';
   });
 });
+
+$(document).ready(function () {
+    $('#specificAreaSelect').select2({
+      placeholder: "Select Laboratory/Office",
+      width: '100%'
+    });
+
+    $('#buildingLocSelect').select2({
+      placeholder: "Select Building Location",
+      width: '100%'
+    });
+  });
 </script>
 </body>
 </html>

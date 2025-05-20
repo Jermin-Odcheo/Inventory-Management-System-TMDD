@@ -3,8 +3,8 @@ Array
     [docTypeSelect] => detailed
     [paper_size] => letter
     [orientation] => landscape
-    [specific_area] => Silang
-    [building_loc] => Silang
+    [specific_area] => 0001
+    [building_loc] => 0001
     [date_from] => 2000-01-01
     [date_to] => 2025-05-20
     [columns] => Array
