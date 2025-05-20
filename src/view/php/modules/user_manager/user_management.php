@@ -813,6 +813,7 @@ try {
             
             // Handle create user form submission
             $('#submitCreateUser').on('click', function() {
+                console.log("Hello");
                 const form = $('#createUserForm');
                 const formData = new FormData(form[0]);
                 
@@ -965,7 +966,8 @@ try {
                 departmentRows.each(function() {
                     const deptId = $(this).data('department-id') || $(this).find('td:first').data('department-id');
                     const deptName = $(this).find('td:first').text().trim();
-                    
+                    const cleanDeptName = deptName.replace(/^"+|"+$/g, '').trim();
+
                     console.log("Row department:", deptName, "ID:", deptId);
                     
                     if (deptId) {
@@ -973,8 +975,8 @@ try {
                     } else {
                         // Try to find department ID by name v1
                         <?php foreach($departments as $id => $dept): ?>
-                        if (deptName === <?= json_encode($dept['department_name']) ?>) {
-                            console.log("Found department by name:", deptName, "ID:", <?= $id ?>);
+                        if (cleanDeptName === <?= json_encode($dept['department_name']) ?>) {
+                            console.log("Found department by name:", cleanDeptName, "ID:", <?= $id ?>);
                             formData.append('departments[]', <?= $id ?>);
                         }
                         <?php endforeach; ?>
