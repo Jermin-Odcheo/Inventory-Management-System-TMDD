@@ -271,12 +271,26 @@ function formatDetailsAndChanges($log)
             break;
 
         case 'remove':
-            // Check if this is a user role removal
-            if (isset($oldData['role'])) {
+            // First check for our new format with roles array
+            if (isset($oldData['roles']) && is_array($oldData['roles'])) {
+                // Use the details directly from the database
+                $details = htmlspecialchars($log['Details'] ?? '');
+                
+                // Format the changes as a clean list
+                $changes = '<div class="role-removal-info">';
+                $changes .= '<div><strong>Username:</strong> ' . htmlspecialchars($oldData['username'] ?? 'Unknown') . '</div>';
+                $changes .= '<div><strong>Department:</strong> ' . htmlspecialchars($oldData['department'] ?? 'Unknown Department') . '</div>';
+                $changes .= '<div><strong>Removed Roles:</strong> ' . htmlspecialchars(implode(", ", $oldData['roles'])) . '</div>';
+                $changes .= '</div>';
+            }
+            // Check for older format with single role
+            else if (isset($oldData['role'])) {
                 $role = $oldData['role'];
                 $details = htmlspecialchars("The role '$role' for $targetEntityName has been removed");
                 $changes = formatNewValue($log['OldVal']);
-            } else {
+            } 
+            // Default case for user removal
+            else {
                 $details = htmlspecialchars("$targetName has been removed");
                 $changes = "is_deleted 0 -> 1";
             }
@@ -291,8 +305,19 @@ function formatDetailsAndChanges($log)
             // Check if this is a user role addition
             if (isset($newData['role'])) {
                 $role = $newData['role'];
-                $details = htmlspecialchars("The role '$role' has been added to $targetEntityName");
-                $changes = formatNewValue($log['NewVal']);
+                
+                // Check if this is actually a role modification or removal
+                // If we have old role data, treat it as a modification
+                if (isset($oldData['role']) && $oldData['role'] !== $role) {
+                    $oldRole = $oldData['role'];
+                    $details = htmlspecialchars("Modified role for $targetEntityName: $oldRole -> $role");
+                    $changes = htmlspecialchars("$oldRole -> $role");
+                }
+                // Otherwise it's a standard role addition
+                else {
+                    $details = htmlspecialchars("The role '$role' has been added to $targetEntityName");
+                    $changes = formatNewValue($log['NewVal']);
+                }
             } else {
                 $details = htmlspecialchars($log['Details'] ?? '');
                 $changes = formatNewValue($log['NewVal']);
@@ -341,10 +366,33 @@ function getChangedFieldNames(array $oldData, array $newData)
 /**
  * Normalizes the action for display.
  * If the JSON values indicate a restore, it returns 'restored'.
+ * For role removals, ensures proper display.
  */
 function getNormalizedAction($log)
 {
     $action = strtolower($log['Action'] ?? '');
+    
+    // For user role removals, always ensure action is "remove"
+    if ($action === 'remove' && !is_null($log['OldVal'])) {
+        $oldData = json_decode($log['OldVal'], true);
+        if (is_array($oldData) && (isset($oldData['role']) || isset($oldData['roles']))) {
+            return 'remove';
+        }
+    }
+    
+    // Check if this is actually a role modification labeled as "add"
+    if ($action === 'add' && !is_null($log['OldVal']) && !is_null($log['NewVal'])) {
+        $oldData = json_decode($log['OldVal'], true);
+        $newData = json_decode($log['NewVal'], true);
+        
+        if (is_array($oldData) && is_array($newData) && 
+            isset($oldData['role']) && isset($newData['role']) && 
+            $oldData['role'] !== $newData['role']) {
+            return 'modified';
+        }
+    }
+    
+    // Check for restore action (existing logic)
     if (!is_null($log['OldVal']) && !is_null($log['NewVal'])) {
         $oldData = json_decode($log['OldVal'], true);
         $newData = json_decode($log['NewVal'], true);
@@ -354,6 +402,7 @@ function getNormalizedAction($log)
             return 'restored';
         }
     }
+    
     return $action;
 }
 ?>

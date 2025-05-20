@@ -98,6 +98,11 @@ function addToAuditLog($actionType, $details) {
         // Create a human-readable details message showing the change
         $detailsMessage = "Modified: $oldRoleName -> $newRolesString";
         
+        // If roles are being removed from a department, customize the message
+        if (empty($newRoleNames) || (count($newRoleNames) === 1 && $newRoleNames[0] === 'No Role')) {
+            $detailsMessage = "Removed all roles from department";
+        }
+        
         // Create simple strings for OldVal and NewVal with just username and role
         $oldValString = "{\"username\":\"$targetUsername\",\"role\":\"$oldRoleName\"}";
         $newValString = "{\"username\":\"$targetUsername\",\"role\":\"$newRolesString\"}";
@@ -119,7 +124,7 @@ function addToAuditLog($actionType, $details) {
         return $stmt->execute([
             $currentUserId,
             $userId,
-            'Modified',
+            $actionType,
             $detailsMessage,
             $oldValString,
             $newValString,
@@ -161,50 +166,34 @@ try {
         $stmtDeleteZero->execute([$userId, $departmentId]);
     }
 
+    // NEW APPROACH: First delete all existing roles for this user and department
+    // This ensures we remove any roles that are no longer in the roleIds list
+    $stmtDeleteAllForDept = $pdo->prepare("
+        DELETE FROM user_department_roles
+        WHERE user_id = ? AND department_id = ?
+    ");
+    $stmtDeleteAllForDept->execute([$userId, $departmentId]);
+    error_log("Deleted all existing roles for user $userId in department $departmentId");
+
     // 3) If no roles selected at all, ensure a single "0" record exists
     if (empty($roleIds)) {
-        // remove everything for this dept
-        $stmtDeleteAll = $pdo->prepare("
-            DELETE FROM user_department_roles
-            WHERE user_id = ? AND department_id = ?
-        ");
-        $stmtDeleteAll->execute([$userId, $departmentId]);
-
         // insert the zero-role placeholder
         $stmtInsertZero = $pdo->prepare("
             INSERT INTO user_department_roles (user_id, department_id, role_id)
             VALUES (?, ?, 0)
-            ON DUPLICATE KEY UPDATE user_id = VALUES(user_id)
         ");
         $stmtInsertZero->execute([$userId, $departmentId]);
+        error_log("Inserted zero-role placeholder for user $userId in department $departmentId");
     } else {
-        // 4) Remove any existing zero-role so we only have explicit roles
-        $stmtDeleteZero = $pdo->prepare("
-            DELETE FROM user_department_roles
-            WHERE user_id = ? AND role_id = 0 AND department_id = ?
-        ");
-        $stmtDeleteZero->execute([$userId, $departmentId]);
-
         // 5) Insert each selected role
         $stmtInsertRole = $pdo->prepare("
             INSERT INTO user_department_roles (user_id, department_id, role_id)
             VALUES (?, ?, ?)
-            ON DUPLICATE KEY UPDATE user_id = VALUES(user_id)
         ");
 
         foreach ($roleIds as $roleId) {
-            // skip re-inserting the oldRoleId if it's still valid
-            if ($roleId === $oldRoleId) continue;
-
-            // check if already exists
-            $stmtCheck = $pdo->prepare("
-                SELECT COUNT(*) FROM user_department_roles
-                WHERE user_id = ? AND role_id = ? AND department_id = ?
-            ");
-            $stmtCheck->execute([$userId, $roleId, $departmentId]);
-            if ((int)$stmtCheck->fetchColumn() === 0) {
-                $stmtInsertRole->execute([$userId, $departmentId, $roleId]);
-            }
+            $stmtInsertRole->execute([$userId, $departmentId, $roleId]);
+            error_log("Inserted role $roleId for user $userId in department $departmentId");
         }
     }
 
@@ -236,8 +225,11 @@ try {
             }
         }
         
+        // Determine if this is a removal or modification
+        $actionType = empty($roleIds) ? 'Remove' : 'Modified';
+        
         // Log the action
-        addToAuditLog('UPDATE_USER_ROLE', [
+        addToAuditLog($actionType, [
             'performed_by' => $username,
             'target_user' => $targetUsername,
             'department' => $departmentName,
