@@ -555,7 +555,7 @@ function formatChanges($oldJsonStr)
         console.log('Sending restore request for department ID:', restoreId);
         
         $.ajax({
-            url: '../../role_manager/restore_department.php',
+            url: '../../management/department_manager/restore_department.php',
             method: 'POST',
             data: { id: restoreId },
             dataType: 'json',

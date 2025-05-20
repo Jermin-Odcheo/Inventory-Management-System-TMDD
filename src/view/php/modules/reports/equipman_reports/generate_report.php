@@ -1,230 +1,199 @@
 <?php
+require_once __DIR__ . '/../../../../../../config/ims-tmdd.php';
+
+require_once __DIR__ . '/../../../../../control/libs/vendor/autoload.php';
+require_once __DIR__ . '/../../../../../control/libs/phpoffice/vendor/autoload.php';
+
 use Dompdf\Dompdf;
-use Dompdf\Options;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpWord\PhpWord;
+use PhpOffice\PhpWord\IOFactory;
 
-require_once __DIR__ . '/../../../../control/libs/dompdf/vendor/autoload.php';
-require_once __DIR__ . '/../../../../config/ims-tmdd.php';  // Your PDO connection
+/**
+ * Export equipment report in PDF, Excel, or Word format.
+ *
+ * @param array $data         POST data including filters, columns, etc.
+ * @param PDO   $pdo          PDO database connection.
+ * @param string $exportType  'pdf'|'excel'|'docs'
+ * @return void
+ */
+function exportEquipmentReport(array $data, PDO $pdo, string $exportType = 'pdf'): void {
+    // Sanitize and prepare variables from $data
+    $columns = $data['columns'] ?? [];
+    $specific_area = $data['specific_area'] ?? '';
+    $building_loc = $data['building_loc'] ?? '';
+    $date_from = $data['date_from'] ?? '';
+    $date_to = $data['date_to'] ?? '';
+    $prepared_by = htmlspecialchars($data['prepared_by'] ?? '');
+    $role_department = htmlspecialchars($data['role_department'] ?? '');
+    $prep_date = htmlspecialchars($data['prepared_date'] ?? '');
 
-// Start session if you want to get user info from session
-session_start();
+    // Map friendly column names to SQL columns
+    $column_map = [
+        'asset_tag' => 'ed.asset_tag',
+        'asset_description' => "CONCAT(ed.asset_description_1, ' ', ed.asset_description_2)",
+        'spec_brand_model' => "CONCAT(ed.specifications, ' / ', ed.brand, ' / ', ed.model)",
+        'serial_number' => 'ed.serial_number',
+        'date_acquired' => 'ed.date_acquired',
+        'invoice_no' => 'ed.invoice_no',
+        'receiving_report' => 'ed.rr_no',
+        'building_location' => 'el.building_loc',
+        'accountable_individual' => 'ed.accountable_individual',
+        'remarks' => 'ed.remarks',
+        'date_created' => 'ed.date_created',
+        'last_date_modified' => 'ed.date_modified',
+        'equipment_status' => 'es.status',
+        'action_taken' => 'es.action',
+        'status_date_creation' => 'es.date_created',
+        'status_remarks' => 'es.remarks'
+    ];
 
-// Helper function to safely get POST data
-function post($key, $default = null) {
-    return isset($_POST[$key]) ? $_POST[$key] : $default;
-}
-
-// Retrieve form data
-$documentType = post('document_type'); // 'summary' or 'detailed'
-$specificArea = post('specific_area'); // string - filter header
-$buildingLoc = post('building_loc');   // string - filter header
-$dateFrom = post('date_from');         // string yyyy-mm-dd
-$dateTo = post('date_to');             // string yyyy-mm-dd
-
-// Checkbox fields to include
-$columns = post('columns', []); // array of checked columns
-
-// Validate mandatory header fields
-if (!$specificArea || !$buildingLoc || !$dateFrom || !$dateTo) {
-    die('Missing required header fields.');
-}
-
-// Mandatory columns (header info) always included
-$mandatoryHeaderCols = ['specific_area', 'building_loc', 'timeline'];
-
-// Mapping checkbox keys to SQL fields and column labels
-$columnMap = [
-    'last_modified' => ['label' => 'Last Modified Date', 'fields' => ['last_modified']],
-    'date_created' => ['label' => 'Date Created', 'fields' => ['date_created']],
-    'asset_tag' => ['label' => 'Asset Tag', 'fields' => ['asset_tag']],
-    'asset_description' => ['label' => 'Asset Description', 'fields' => ['asset_description_1', 'asset_description_2']],
-    'spec_brand_model' => ['label' => 'Specifications / Brand / Model', 'fields' => ['specifications', 'brand', 'model']],
-    'serial_number' => ['label' => 'Serial Number', 'fields' => ['serial_number']],
-    'date_acquired' => ['label' => 'Date Acquired', 'fields' => ['date_acquired']],
-    'invoice_no' => ['label' => 'Invoice No', 'fields' => ['invoice_no']],
-    'receiving_report' => ['label' => 'Receiving Report', 'fields' => ['receiving_report']],
-    'building_location' => ['label' => 'Building Location', 'fields' => ['building_location']],
-    'accountable_individual' => ['label' => 'Accountable Individual', 'fields' => ['accountable_individual']],
-    'remarks' => ['label' => 'Remarks', 'fields' => ['remarks']],
-    'equipment_status' => ['label' => 'Equipment Status', 'fields' => ['status']],
-    'action_taken' => ['label' => 'Action Taken', 'fields' => ['action_taken']],
-    'status_date_creation' => ['label' => 'Status Date Creation', 'fields' => ['status_date_creation']],
-    'status_remarks' => ['label' => 'Status Remarks', 'fields' => ['status_remarks']],
-];
-
-// Build SELECT fields dynamically
-$selectFields = [];
-foreach ($columns as $colKey) {
-    if (isset($columnMap[$colKey])) {
-        foreach ($columnMap[$colKey]['fields'] as $field) {
-            $selectFields[$field] = true;
-        }
-    }
-}
-
-// Add mandatory fields for grouping & filtering
-$selectFields['specific_area'] = true;
-$selectFields['building_loc'] = true;
-$selectFields['date_created'] = true;  // to filter timeline, assumed in equipment_details
-
-// Build the SELECT list string
-$selectList = implode(', ', array_keys($selectFields));
-
-// Prepare SQL query with JOIN for Equipment Status (if status fields requested)
-$joinStatus = false;
-$statusFields = ['status', 'action_taken', 'status_date_creation', 'status_remarks'];
-foreach ($columns as $colKey) {
-    if (in_array($colKey, ['equipment_status', 'action_taken', 'status_date_creation', 'status_remarks'])) {
-        $joinStatus = true;
-        break;
-    }
-}
-
-$sql = "SELECT ed.$selectList";
-if ($joinStatus) {
-    // Join Equipment Status table (assuming foreign key is equipment_id)
-    $sql .= ", es.status, es.action_taken, es.status_date_creation, es.status_remarks ";
-}
-$sql .= " FROM equipment_details ed ";
-if ($joinStatus) {
-    $sql .= " LEFT JOIN equipment_status es ON ed.equipment_id = es.equipment_id ";
-}
-$sql .= " WHERE ed.specific_area = :specific_area AND ed.building_loc = :building_loc ";
-$sql .= " AND ed.date_created BETWEEN :date_from AND :date_to ";
-$sql .= " ORDER BY ed.specific_area, ed.building_loc, ed.date_created ASC";
-
-// Prepare statement
-$stmt = $pdo->prepare($sql);
-$stmt->execute([
-    ':specific_area' => $specificArea,
-    ':building_loc' => $buildingLoc,
-    ':date_from' => $dateFrom,
-    ':date_to' => $dateTo,
-]);
-
-$data = $stmt->fetchAll();
-
-// Group data by specific_area and building_loc (should all be same since filtered but for safe measure)
-$grouped = [];
-foreach ($data as $row) {
-    $area = $row['specific_area'];
-    $loc = $row['building_loc'];
-    if (!isset($grouped[$area])) {
-        $grouped[$area] = [];
-    }
-    if (!isset($grouped[$area][$loc])) {
-        $grouped[$area][$loc] = [];
-    }
-    $grouped[$area][$loc][] = $row;
-}
-
-// Get current user name & role from session for Prepared By (adjust to your session keys)
-$preparedByName = isset($_SESSION['user_firstname'], $_SESSION['user_lastname'])
-    ? $_SESSION['user_firstname'] . ' ' . $_SESSION['user_lastname']
-    : '________________________';
-
-$preparedByRole = isset($_SESSION['user_role_title'])
-    ? $_SESSION['user_role_title']
-    : '________________________';
-
-// Document date
-$docDate = date('F j, Y');
-
-// Build the HTML for the PDF
-$html = '<html><head>
-<style>
-    body { font-family: DejaVu Sans, sans-serif; font-size: 12px; }
-    h2, h3 { text-align: center; margin: 5px 0; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-    th, td { border: 1px solid #000; padding: 5px; }
-    th { background-color: #f0f0f0; }
-    .header-section { margin-bottom: 20px; }
-    .footer { margin-top: 40px; }
-    .signature-line { border-bottom: 1px solid #000; width: 300px; margin-bottom: 5px; }
-</style>
-</head><body>';
-
-// Header
-$html .= "<h2>Equipment Report</h2>";
-$html .= "<div class='header-section'>";
-$html .= "<strong>Laboratory/Office:</strong> " . htmlspecialchars($specificArea) . "<br>";
-$html .= "<strong>Location:</strong> " . htmlspecialchars($buildingLoc) . "<br>";
-$html .= "<strong>Timeline:</strong> " . htmlspecialchars($dateFrom) . " to " . htmlspecialchars($dateTo) . "<br>";
-$html .= "</div>";
-
-// Loop over grouped data and create tables
-foreach ($grouped as $area => $locations) {
-    foreach ($locations as $loc => $rows) {
-        $html .= "<h3>Specific Area: " . htmlspecialchars($area) . " | Location: " . htmlspecialchars($loc) . "</h3>";
-
-        // Table header row
-        $html .= "<table><thead><tr>";
-        foreach ($columns as $colKey) {
-            if (isset($columnMap[$colKey])) {
-                $html .= "<th>" . $columnMap[$colKey]['label'] . "</th>";
+    // Prepare SQL SELECT columns
+    $selected_sql_columns = [];
+    if (!empty($columns)) {
+        foreach ($columns as $col) {
+            if (isset($column_map[$col])) {
+                $selected_sql_columns[] = $column_map[$col] . " AS `$col`";
             }
         }
-        $html .= "</tr></thead><tbody>";
+    }
+    if (empty($selected_sql_columns)) {
+        // default columns if none selected
+        $selected_sql_columns[] = 'ed.asset_tag AS asset_tag';
+        $selected_sql_columns[] = "CONCAT(ed.asset_description_1, ' ', ed.asset_description_2) AS asset_description";
+        $columns = ['asset_tag', 'asset_description'];
+    }
+    $columnList = implode(", ", $selected_sql_columns);
 
-        // Table rows
-        foreach ($rows as $row) {
-            $html .= "<tr>";
-            foreach ($columns as $colKey) {
-                if (!isset($columnMap[$colKey])) continue;
+    // Build SQL query
+    $sql = "SELECT $columnList
+            FROM equipment_details ed
+            LEFT JOIN equipment_status es ON ed.asset_tag = es.asset_tag
+            LEFT JOIN equipment_location el ON ed.asset_tag = el.asset_tag
+                AND el.specific_area = ?
+                AND el.building_loc = ?
+            LEFT JOIN charge_invoice ci ON ed.invoice_no = ci.invoice_no
+            LEFT JOIN receive_report rr ON ed.rr_no = rr.rr_no
+            WHERE ed.date_created BETWEEN ? AND ?";
 
-                $cellValue = '';
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$specific_area, $building_loc, $date_from, $date_to]);
+    $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-                // Special combined columns
-                if ($colKey === 'asset_description') {
-                    $cellValue = trim($row['asset_description_1'] . ' ' . $row['asset_description_2']);
-                } elseif ($colKey === 'spec_brand_model') {
-                    $cellValue = trim($row['specifications'] . ' / ' . $row['brand'] . ' / ' . $row['model']);
-                } elseif ($colKey === 'equipment_status') {
-                    $cellValue = $row['status'] ?? '';
-                } elseif ($colKey === 'action_taken') {
-                    $cellValue = $row['action_taken'] ?? '';
-                } elseif ($colKey === 'status_date_creation') {
-                    $cellValue = $row['status_date_creation'] ?? '';
-                } elseif ($colKey === 'status_remarks') {
-                    $cellValue = $row['status_remarks'] ?? '';
-                } else {
-                    // Regular single field
-                    $field = $columnMap[$colKey]['fields'][0];
-                    $cellValue = $row[$field] ?? '';
+    switch (strtolower($exportType)) {
+        case 'pdf':
+            $html = '<h3>Equipment Report</h3>';
+            $html .= "<p><strong>Office:</strong> $specific_area</p>";
+            $html .= "<p><strong>Location:</strong> $building_loc</p>";
+            $html .= "<p><strong>Date Range:</strong> $date_from to $date_to</p>";
+            $html .= "<p><strong>Prepared By:</strong> $prepared_by<br><strong>$role_department</strong><br><strong>Date:</strong> $prep_date</p>";
+            $html .= '<table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; font-size: 10px; width: 100%;">';
+            // Header row
+            $html .= '<tr style="background-color:#eee;">';
+            foreach ($columns as $col) {
+                $html .= '<th>' . htmlspecialchars(ucwords(str_replace('_', ' ', $col))) . '</th>';
+            }
+            $html .= '</tr>';
+            // Data rows
+            if (!empty($results)) {
+                foreach ($results as $row) {
+                    $html .= '<tr>';
+                    foreach ($columns as $col) {
+                        $html .= '<td>' . htmlspecialchars($row[$col] ?? '') . '</td>';
+                    }
+                    $html .= '</tr>';
                 }
-
-                $html .= "<td>" . htmlspecialchars($cellValue) . "</td>";
+            } else {
+                $html .= '<tr><td colspan="' . count($columns) . '" style="text-align:center;">No data found.</td></tr>';
             }
-            $html .= "</tr>";
-        }
+            $html .= '</table>';
 
-        $html .= "</tbody></table>";
+            $dompdf = new Dompdf();
+            $dompdf->loadHtml($html);
+            $dompdf->setPaper('letter', 'landscape');
+            $dompdf->render();
+            $dompdf->stream("Equipment_Report.pdf", ["Attachment" => true]);
+            break;
+
+        case 'excel':
+            $spreadsheet = new Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+
+            // Header
+            $colIndex = 1;
+            foreach ($columns as $col) {
+                $sheet->setCellValueByColumnAndRow($colIndex, 1, ucwords(str_replace('_', ' ', $col)));
+                $colIndex++;
+            }
+
+            // Data rows
+            $rowIndex = 2;
+            foreach ($results as $row) {
+                $colIndex = 1;
+                foreach ($columns as $col) {
+                    $sheet->setCellValueByColumnAndRow($colIndex, $rowIndex, $row[$col] ?? '');
+                    $colIndex++;
+                }
+                $rowIndex++;
+            }
+
+            header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            header('Content-Disposition: attachment;filename="Equipment_Report.xlsx"');
+            header('Cache-Control: max-age=0');
+
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output');
+            break;
+
+        case 'docs':
+            $phpWord = new PhpWord();
+            $section = $phpWord->addSection();
+
+            $section->addText("Equipment Report", ['bold' => true, 'size' => 16]);
+            $section->addText("Office: $specific_area");
+            $section->addText("Location: $building_loc");
+            $section->addText("Date Range: $date_from to $date_to");
+            $section->addText("Prepared By: $prepared_by");
+            $section->addText("Role/Department: $role_department");
+            $section->addText("Date Prepared: $prep_date");
+            $section->addTextBreak(1);
+
+            $tableStyle = ['borderSize' => 6, 'borderColor' => '999999', 'cellMargin' => 50];
+            $firstRowStyle = ['bgColor' => 'CCCCCC'];
+            $phpWord->addTableStyle('Equipment Table', $tableStyle, $firstRowStyle);
+            $table = $section->addTable('Equipment Table');
+
+            // Header row
+            $table->addRow();
+            foreach ($columns as $col) {
+                $table->addCell(1750)->addText(ucwords(str_replace('_', ' ', $col)), ['bold' => true]);
+            }
+
+            // Data rows
+            if (!empty($results)) {
+                foreach ($results as $row) {
+                    $table->addRow();
+                    foreach ($columns as $col) {
+                        $table->addCell(1750)->addText($row[$col] ?? '');
+                    }
+                }
+            } else {
+                $table->addRow();
+                $table->addCell(1750 * count($columns))->addText("No data found.", ['italic' => true]);
+            }
+
+            header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+            header('Content-Disposition: attachment;filename="Equipment_Report.docx"');
+            header('Cache-Control: max-age=0');
+
+            $objWriter = IOFactory::createWriter($phpWord, 'Word2007');
+            $objWriter->save('php://output');
+            break;
+
+        default:
+            http_response_code(400);
+            echo "Invalid export type specified.";
+            exit;
     }
 }
-
-// Footer with Prepared By info
-$html .= "<div class='footer'>";
-$html .= "<p><strong>Prepared By:</strong></p>";
-$html .= "<p class='signature-line'>{$preparedByName}</p>";
-$html .= "<p>{$preparedByRole}</p>";
-$html .= "<p><strong>Date:</strong> {$docDate}</p>";
-$html .= "</div>";
-
-$html .= "</body></html>";
-
-// Instantiate Dompdf and render PDF
-$options = new Options();
-$options->set('isRemoteEnabled', true);
-$dompdf = new Dompdf($options);
-
-// Set paper size
-$paperSize = (post('paper_size') === 'legal') ? 'legal' : 'letter';
-$dompdf->setPaper($paperSize, 'portrait');
-
-$dompdf->loadHtml($html);
-$dompdf->render();
-
-// Output PDF to browser (force download)
-$filename = 'equipment_report_' . date('Ymd_His') . '.pdf';
-$dompdf->stream($filename, ['Attachment' => 1]);
-
-exit();

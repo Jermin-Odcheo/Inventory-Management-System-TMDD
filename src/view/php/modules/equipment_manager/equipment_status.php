@@ -460,7 +460,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                     <div class="filter-container">
                         <div class="col-auto">
                             <?php if ($canCreate): ?>
-                            <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#addStatusModal">
+                            <button class="btn btn-dark" id="openAddStatusModalBtn" data-bs-toggle="modal" data-bs-target="#addStatusModal">
                                 <i class="bi bi-plus-lg"></i> Add New Status
                             </button>
                             <?php endif; ?>
@@ -685,10 +685,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                             <label for="edit_status" class="form-label"><i class="bi bi-info-circle"></i> Status</label>
                             <select class="form-select" id="edit_status" name="status">
                                 <option value="">Select Status</option>
+                                <option value="Maintenance">Maintenance</option>
                                 <option value="Working">Working</option>
                                 <option value="For Repair">For Repair</option>
                                 <option value="For Disposal">For Disposal</option>
                                 <option value="Disposed">Disposed</option>
+                                <option value="Condemned">Condemned</option>
                             </select>
                         </div>
                         <div class="mb-3">
@@ -925,10 +927,19 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                     success: function(result) {
                         if (result.status === 'success') {
                             $('#addStatusModal').modal('hide');
-                            $('.modal-backdrop').remove();
-                            $('#statusTable').load(location.href + ' #statusTable', function() {
-                                showToast(result.message, 'success');
-                            });
+// Remove any lingering modal backdrops and reset body class if needed
+setTimeout(function() {
+    if ($('.modal-backdrop').length) {
+        $('.modal-backdrop').remove();
+    }
+    if ($('body').hasClass('modal-open') && $('.modal.show').length === 0) {
+        $('body').removeClass('modal-open');
+        $('body').css('padding-right', '');
+    }
+}, 500);
+$('#statusTable').load(location.href + ' #statusTable', function() {
+    showToast(result.message, 'success');
+});
                         } else {
                             showToast(result.message, 'error');
                         }
@@ -987,6 +998,22 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             });
         });
     </script>
+<script>
+$(document).ready(function() {
+    $('#openAddStatusModalBtn').on('click', function() {
+        // Remove any lingering modal backdrops and modal-open class before showing the modal
+        setTimeout(function() {
+            if ($('.modal-backdrop').length) {
+                $('.modal-backdrop').remove();
+            }
+            if ($('body').hasClass('modal-open') && $('.modal.show').length === 0) {
+                $('body').removeClass('modal-open');
+                $('body').css('padding-right', '');
+            }
+        }, 10);
+    });
+});
+</script>
 </body>
 
 </html>

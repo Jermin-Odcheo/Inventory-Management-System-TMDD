@@ -102,11 +102,11 @@ $rbac = new RBACService($pdo, $userId);
                             <span class="submenu-text">Role Management</span>
                         </a>
                     </li>
-                    <li class="nav-item">
+                    <!-- <li class="nav-item">
                         <a href="<?php echo BASE_URL; ?>src/view/php/modules/rolesandprivilege_manager/privilege_manager/manage_privileges.php" class="nav-link">
                             <span class="submenu-text">Privilege Management <br> 🆕💻 (Prototype)</span>
                         </a>
-                    </li>
+                    </li> -->
                 </ul>
             </li>
             <?php endif; ?>
@@ -142,11 +142,11 @@ $rbac = new RBACService($pdo, $userId);
             <?php if ($rbac->hasPrivilege('Reports', 'View')): ?>
             <li class="dropdown-item">
                 <button class="dropdown-toggle" aria-expanded="false">
-                    <i class="fas fa-flag"></i> Reports 🔜 (Under Development)
+                    <i class="fas fa-flag"></i> Reports
                     <i class="fas fa-chevron-down dropdown-icon"></i>
                 </button>
                 <ul class="dropdown tree" aria-expanded="false">
-                    <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/reports/userman_reports/usrep.php">User Management Reports 🔜 (Under Development)</a></li>
+                    <!-- <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/reports/userman_reports/usrep.php">User Management Reports 🔜 (Under Development)</a></li> -->
                     <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/reports/equipman_reports/eqrep.php">Equipment Management Report 🔜 (Prototype)</a></li>
                 </ul>
             </li>
