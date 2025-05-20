@@ -4,11 +4,24 @@ let prevButton, nextButton, rowsSelect, currentPageSpan, rowsPerPageSpan, totalR
 
 // Pagination function with simpler, more direct approach
 function updatePagination() {
-    // Count unique users instead of rows
-    const allRows = document.querySelectorAll('#table table tbody tr');
+    // Try different selectors to find the table rows
+    let tableRows = document.querySelectorAll('#table table tbody tr');
+    
+    // If no rows found with first selector, try alternatives
+    if (!tableRows || tableRows.length <= 1) {
+        tableRows = document.querySelectorAll('#table tbody tr');
+    }
+    
+    // If still no rows, try more generic selector
+    if (!tableRows || tableRows.length <= 1) {
+        tableRows = document.querySelectorAll('table tbody tr');
+    }
+    
+    console.log("Selected rows count:", tableRows.length);
+    
     const uniqueUsernames = new Set();
     
-    allRows.forEach(row => {
+    tableRows.forEach(row => {
         const userCell = row.querySelector('td:nth-child(2)');
         if (userCell) {
             const username = userCell.textContent.trim();
@@ -27,6 +40,15 @@ function updatePagination() {
         totalRows = parseInt(totalRowsInput.value, 10);
         console.log("Total rows from input:", totalRows);
     }
+
+    // Fallback method: If total rows is still 0 or 1, count all visible rows
+    if (totalRows <= 1 && tableRows.length > 1) {
+        console.log("Using fallback row counting method");
+        totalRows = tableRows.length;
+    }
+    
+    // Debug
+    console.log("Total rows calculated:", totalRows, "Table rows count:", tableRows.length);
     
     totalRowsSpan.textContent = totalRows;
 
@@ -59,49 +81,38 @@ function updatePagination() {
 
     console.log(`Page ${currentPage}: Showing rows ${startIndex} to ${endIndex-1} of ${totalRows}`);
 
-    // Track which users we've already shown on this page
-    const shownUsers = new Set();
-    let visibleRowCount = 0;
-
-    // IMPORTANT: First hide ALL rows
-    const allRows = document.querySelectorAll('#table table tbody tr');
-    allRows.forEach(row => {
+    // IMPROVED ROW DISPLAY LOGIC
+    // First hide ALL rows
+    tableRows.forEach(row => {
         row.style.display = 'none'; // Hide every row first
     });
 
-    // Then only show the rows for current page, but limit by unique users
-    for (let i = 0; i < allRows.length; i++) {
-        const row = allRows[i];
-        const userCell = row.querySelector('td:nth-child(2)');
-        
-        if (userCell) {
-            const username = userCell.textContent.trim();
-            
-            // If this is a new user and we haven't reached our limit for this page
-            if (username && !shownUsers.has(username) && shownUsers.size < rowsPerPage) {
-                // If we're past the starting index
-                if (shownUsers.size >= startIndex) {
-                    // Show all rows for this user
-                    const userRows = Array.from(allRows).filter(r => {
-                        const cell = r.querySelector('td:nth-child(2)');
-                        return cell && cell.textContent.trim() === username;
-                    });
-                    
-                    userRows.forEach(r => {
-                        r.style.display = '';
-                        visibleRowCount++;
-                    });
-                }
-                
-                // Add this user to our shown set
-                shownUsers.add(username);
-            }
+    // Convert tableRows to array for easier manipulation
+    const rowsArray = Array.from(tableRows);
+    
+    // For debugging
+    console.log(`Looking to display rows from index ${startIndex} to ${endIndex-1}`);
+
+    // SIMPLIFIED APPROACH: Direct pagination without user grouping
+    // For cases where we're not grouping by user, just show rows by index
+    let displayedCount = 0;
+    let currentRowIndex = 0;
+    
+    // Skip rows until we reach our starting point
+    for (let i = 0; i < rowsArray.length && displayedCount < rowsPerPage; i++) {
+        if (currentRowIndex >= startIndex && currentRowIndex < endIndex) {
+            rowsArray[i].style.display = '';
+            displayedCount++;
         }
+        currentRowIndex++;
     }
+    
+    // Log how many rows were displayed
+    console.log(`Displayed ${displayedCount} rows for page ${currentPage}`);
 
     // Update pagination info text
     const displayStart = totalRows === 0 ? 0 : startIndex + 1;
-    const displayEnd = Math.min(startIndex + shownUsers.size, totalRows);
+    const displayEnd = Math.min(startIndex + rowsPerPage, totalRows);
 
     // Ensure correct text when table is empty
     if (totalRows === 0) {
@@ -204,11 +215,24 @@ function renderPagination() {
     const paginationContainer = document.getElementById('pagination');
     paginationContainer.innerHTML = '';
 
-    // Count unique users instead of rows
-    const allRows = document.querySelectorAll('#table table tbody tr');
+    // Try different selectors to find the table rows
+    let paginationRows = document.querySelectorAll('#table table tbody tr');
+    
+    // If no rows found with first selector, try alternatives
+    if (!paginationRows || paginationRows.length <= 1) {
+        paginationRows = document.querySelectorAll('#table tbody tr');
+    }
+    
+    // If still no rows, try more generic selector
+    if (!paginationRows || paginationRows.length <= 1) {
+        paginationRows = document.querySelectorAll('table tbody tr');
+    }
+    
+    console.log("renderPagination selected rows count:", paginationRows.length);
+    
     const uniqueUsernames = new Set();
     
-    allRows.forEach(row => {
+    paginationRows.forEach(row => {
         const userCell = row.querySelector('td:nth-child(2)');
         if (userCell) {
             const username = userCell.textContent.trim();
@@ -227,7 +251,16 @@ function renderPagination() {
         totalRows = parseInt(totalRowsInput.value, 10);
     }
     
+    // Fallback method: If total rows is still 0 or 1, count all visible rows
+    if (totalRows <= 1 && paginationRows.length > 1) {
+        console.log("Using fallback row counting method in renderPagination");
+        totalRows = paginationRows.length;
+    }
+    
     const maxPages = Math.ceil(totalRows / rowsPerPage);
+    
+    // Debug
+    console.log("renderPagination - totalRows:", totalRows, "maxPages:", maxPages);
     
     // Don't show pagination controls if no data or all fits on one page
     if (totalRows === 0 || maxPages <= 1) {
@@ -254,77 +287,65 @@ function renderPagination() {
         }
     }
 
-    // Calculate range of pages to show
-    let startPage, endPage;
-    if (maxPages <= 5) {
-        startPage = 1;
-        endPage = maxPages;
+    // Calculate range of pages to show - MODIFIED FOR BETTER PAGINATION
+    let visiblePages = [];
+    
+    // Always include page 1
+    visiblePages.push(1);
+    
+    // If we have lots of pages, limit how many we show
+    if (maxPages > 9) {
+        // Current page and surrounding pages
+        for (let i = Math.max(2, currentPage - 2); i <= Math.min(maxPages - 1, currentPage + 2); i++) {
+            visiblePages.push(i);
+        }
+        
+        // Always include last page
+        visiblePages.push(maxPages);
+        
+        // Sort and deduplicate
+        visiblePages = [...new Set(visiblePages)].sort((a, b) => a - b);
+        
+        // Add ellipses where needed
+        let finalPages = [];
+        for (let i = 0; i < visiblePages.length; i++) {
+            finalPages.push(visiblePages[i]);
+            
+            // Add ellipsis if there's a gap
+            if (i < visiblePages.length - 1 && visiblePages[i + 1] > visiblePages[i] + 1) {
+                finalPages.push('...');
+            }
+        }
+        
+        visiblePages = finalPages;
     } else {
-        if (currentPage <= 3) {
-            startPage = 1;
-            endPage = 5;
-        } else if (currentPage + 2 >= maxPages) {
-            startPage = maxPages - 4;
-            endPage = maxPages;
+        // For fewer pages, show all page numbers
+        visiblePages = Array.from({length: maxPages}, (_, i) => i + 1);
+    }
+    
+    // Create the pagination buttons
+    visiblePages.forEach(page => {
+        let li = document.createElement('li');
+        
+        if (page === '...') {
+            // Ellipsis
+            li.className = 'page-item disabled';
+            li.innerHTML = '<span class="page-link">...</span>';
         } else {
-            startPage = currentPage - 2;
-            endPage = currentPage + 2;
+            // Regular page number
+            li.className = 'page-item' + (page === currentPage ? ' active' : '');
+            let a = document.createElement('a');
+            a.className = 'page-link';
+            a.href = '#';
+            a.textContent = page;
+            a.addEventListener('click', function(e) {
+                e.preventDefault();
+                currentPage = page;
+                updatePagination();
+            });
+            li.appendChild(a);
         }
-    }
-
-    // Add first page + ellipsis if needed
-    if (startPage > 1) {
-        let li = document.createElement('li');
-        li.className = 'page-item';
-        li.innerHTML = `<a class="page-link" href="#">1</a>`;
-        li.addEventListener('click', function (e) {
-            e.preventDefault();
-            currentPage = 1;
-            updatePagination();
-        });
+        
         paginationContainer.appendChild(li);
-
-        if (startPage > 2) {
-            let ellipsis = document.createElement('li');
-            ellipsis.className = 'page-item disabled';
-            ellipsis.innerHTML = `<span class="page-link">...</span>`;
-            paginationContainer.appendChild(ellipsis);
-        }
-    }
-
-    // Add page numbers
-    for (let i = startPage; i <= endPage; i++) {
-        let li = document.createElement('li');
-        li.className = 'page-item' + (i === currentPage ? ' active' : '');
-        let a = document.createElement('a');
-        a.className = 'page-link';
-        a.href = '#';
-        a.textContent = i;
-        a.addEventListener('click', function (e) {
-            e.preventDefault();
-            currentPage = i;
-            updatePagination();
-        });
-        li.appendChild(a);
-        paginationContainer.appendChild(li);
-    }
-
-    // Add last page + ellipsis if needed
-    if (endPage < maxPages) {
-        if (endPage < maxPages - 1) {
-            let ellipsis = document.createElement('li');
-            ellipsis.className = 'page-item disabled';
-            ellipsis.innerHTML = `<span class="page-link">...</span>`;
-            paginationContainer.appendChild(ellipsis);
-        }
-        let li = document.createElement('li');
-        li.className = 'page-item';
-        li.innerHTML = `<a class="page-link" href="#">${maxPages}</a>`;
-        li.addEventListener('click', function (e) {
-            e.preventDefault();
-            currentPage = maxPages;
-            updatePagination();
-        });
-        paginationContainer.appendChild(li);
-    }
+    });
 }
