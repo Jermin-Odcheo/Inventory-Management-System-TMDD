@@ -364,6 +364,9 @@ document.addEventListener("DOMContentLoaded", function () {
       updatePaginationControls(totalUsers);
     }
     
+    // Update the hidden input for pagination to ensure correct counting
+    document.getElementById('total-users').value = totalUsers;
+    
     if ($.trim(tbody.html()) === "") {
       const tr = $(`
               <tr>
@@ -1652,4 +1655,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const displayEnd = Math.min(rowsPerPage, totalUsers);
   $('#rowsPerPage').text(displayEnd);
   $('#currentPage').text('1');
+  
+  // Update the hidden input for pagination to use the correct count
+  document.getElementById('total-users').value = totalUsers;
 });
