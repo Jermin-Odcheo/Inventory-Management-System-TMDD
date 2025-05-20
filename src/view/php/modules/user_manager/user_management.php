@@ -857,7 +857,7 @@ try {
                         } else {
                             // Try to find department ID by name
                             <?php foreach($departments as $id => $dept): ?>
-                            if (deptName === '<?= json_encode($dept['department_name']) ?>') {
+                            if (deptName === '<?= htmlspecialchars($dept['department_name']) ?>') {
                                 console.log("Found department by name:", deptName, "ID:", <?= $id ?>);
                                 formData.append('departments[]', <?= $id ?>);
                             }
@@ -971,9 +971,9 @@ try {
                     if (deptId) {
                         formData.append('departments[]', deptId);
                     } else {
-                        // Try to find department ID by name
+                        // Try to find department ID by name v1
                         <?php foreach($departments as $id => $dept): ?>
-                        if (deptName === '<?= htmlspecialchars($dept['department_name']) ?>') {
+                        if (deptName === <?= json_encode($dept['department_name']) ?>) {
                             console.log("Found department by name:", deptName, "ID:", <?= $id ?>);
                             formData.append('departments[]', <?= $id ?>);
                         }
