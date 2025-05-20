@@ -544,6 +544,18 @@ ob_end_clean();
                             </div>
                         </div>
                         <div class="mb-3">
+                            <div class="row">
+                                <div class="mb-3 col-md-6">
+                                    <label for="asset_description_1" class="form-label">Asset Description 1</label>
+                                    <input type="text" class="form-control" name="asset_description_1">
+                                </div>
+                                <div class="mb-3 col-md-6">
+                                    <label for="asset_description_2" class="form-label">Asset Description 2</label>
+                                    <input type="text" class="form-control" name="asset_description_2">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
                             <label for="specifications" class="form-label">Specification</label>
                             <textarea class="form-control" name="specifications" rows="3"></textarea>
                         </div>
@@ -568,9 +580,9 @@ ob_end_clean();
                                 <div class="mb-3 col-md-6">
                                     <label for="rr_no" class="form-label">RR#</label>
                                     <div class="input-group">
-    <span class="input-group-text">RR</span>
-    <input type="number" class="form-control" name="rr_no" min="0" step="1" pattern="[0-9]*" inputmode="numeric" title="Only numbers are allowed">
-</div>
+                                        <span class="input-group-text">RR</span>
+                                        <input type="number" class="form-control" name="rr_no" min="0" step="1" pattern="[0-9]*" inputmode="numeric" title="Only numbers are allowed">
+                                    </div>
                                 </div>
                             </div>
                         </div>
