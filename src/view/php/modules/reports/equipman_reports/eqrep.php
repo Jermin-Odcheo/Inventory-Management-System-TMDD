@@ -75,28 +75,33 @@ $todayDisplay = date('F j, Y');
       <div class="row form-section">
         <h5>Data Range</h5>
         <h6>*Select the filtering details you want to display*</h6>
+         <div class="col-md-6">
+          <label class="form-label">Location:</label>
+          <select name="building_loc" class="form-select" id="buildingLocSelect" required>
+  <option value="all">Select an area</option> <!-- wildcard option -->
+  <?php
+  $stmt = $pdo->query("SELECT DISTINCT building_loc FROM equipment_location ORDER BY building_loc");
+  while ($row = $stmt->fetch()) {
+    echo "<option value='" . htmlspecialchars($row['building_loc']) . "'>" . htmlspecialchars($row['building_loc']) . "</option>";
+  }
+  ?>
+</select>
+        </div>
         <div class="col-md-6">
           <label class="form-label">Laboratory/Office:</label>
           <select name="specific_area" class="form-select" id="specificAreaSelect" required>
-            <?php
-            $stmt = $pdo->query("SELECT DISTINCT specific_area FROM equipment_location ORDER BY specific_area");
-            while ($row = $stmt->fetch()) {
-              echo "<option value='" . htmlspecialchars($row['specific_area']) . "'>" . htmlspecialchars($row['specific_area']) . "</option>";
-            }
-            ?>
-          </select>
+  <option value="all">All</option> <!-- wildcard option -->
+  <?php
+  $stmt = $pdo->query("SELECT DISTINCT specific_area FROM equipment_location ORDER BY specific_area");
+  while ($row = $stmt->fetch()) {
+    echo "<option value='" . htmlspecialchars($row['specific_area']) . "'>" . htmlspecialchars($row['specific_area']) . "</option>";
+  }
+  ?>
+</select>
         </div>
-        <div class="col-md-6">
-          <label class="form-label">Location:</label>
-          <select name="building_loc" class="form-select" id="buildingLocSelect" required>
-            <?php
-            $stmt = $pdo->query("SELECT DISTINCT building_loc FROM equipment_location ORDER BY building_loc");
-            while ($row = $stmt->fetch()) {
-              echo "<option value='" . htmlspecialchars($row['building_loc']) . "'>" . htmlspecialchars($row['building_loc']) . "</option>";
-            }
-            ?>
-          </select>
-        </div>
+
+       
+
         <div class="col-md-6 mt-2">
           <label class="form-label">Date From:</label>
           <input type="date" name="date_from" id="dateFromInput" class="form-control" required value="<?= $today ?>">
@@ -302,6 +307,34 @@ $(document).ready(function () {
       width: '100%'
     });
   });
+
+  $(document).ready(function () {
+    
+  // When Location changes
+  $('#buildingLocSelect').on('change', function () {
+    const selectedLoc = $(this).val();
+    if (selectedLoc) {
+      $.ajax({
+        url: 'get_areas.php',
+        data: { building_loc: selectedLoc },
+        dataType: 'json',
+        success: function (areas) {
+          const $areaSelect = $('#specificAreaSelect');
+          $areaSelect.empty();
+          if (areas.length > 0) {
+            areas.forEach(area => {
+              $areaSelect.append(new Option(area, area));
+            });
+          } else {
+            $areaSelect.append(new Option('No areas available', ''));
+          }
+          $areaSelect.trigger('change.select2'); // Update select2 UI
+        }
+      });
+    }
+  });
+});
+
 </script>
 </body>
 </html>

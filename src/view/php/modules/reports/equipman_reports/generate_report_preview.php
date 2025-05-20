@@ -1,7 +1,7 @@
 <?php 
 // generate_report_preview.php
 require_once __DIR__ . '/../../../../../../config/ims-tmdd.php';
-require_once __DIR__ . '/../../../../../control/libs/vendor/autoload.php';
+require_once __DIR__ . '/../../../../../control/libs/dompdf/vendor/autoload.php';
 
 use Dompdf\Dompdf;
 
