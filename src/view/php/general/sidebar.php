@@ -11,6 +11,43 @@ if (!$userId) {
 
 $rbac = new RBACService($pdo, $userId);
 
+$modules = [
+    'User Management' => ['audit' => 'audit_log.php', 'archive' => 'archive.php'],
+    'Equipment Management' => ['audit' => 'em_audit_log.php', 'archive' => 'em_archive.php'],
+    'Equipment Transactions' => ['audit' => 'et_audit_log.php', 'archive' => 'et_archive.php'],
+    'Roles and Privileges' => ['audit' => 'rm_audit_log.php', 'archive' => 'rm_archive.php'],
+    'Management' => ['audit' => 'department_audit_log.php', 'archive' => 'department_archive.php'],
+];
+
+$auditModules = [];
+$archiveModules = [];
+
+// Check if user has global Track privilege on Audit module
+$hasGlobalAuditTrack = $rbac->hasPrivilege('Audit', 'Track');
+
+foreach ($modules as $module => $paths) {
+    if ($hasGlobalAuditTrack) {
+        // User has global Audit Track, so include all modules audit logs
+        $auditModules[$module] = $paths['audit'];
+    } else {
+        // No global Audit Track, only include audit logs if user has Track on the specific module
+        if ($rbac->hasPrivilege($module, 'Track')) {
+            $auditModules[$module] = $paths['audit'];
+        }
+    }
+
+    // Archives logic stays the same (depends on View + other privs)
+    $hasActionPriv = array_filter(
+        ['Restore', 'Remove', 'Permanently Delete'],
+        fn($priv) => $rbac->hasPrivilege($module, $priv)
+    );
+
+    if ($rbac->hasPrivilege($module, 'View') && !empty($hasActionPriv)) {
+        $archiveModules[$module] = $paths['archive'];
+    }
+}
+
+
 ?>
 
 <div class="sidebar">
@@ -26,27 +63,38 @@ $rbac = new RBACService($pdo, $userId);
                 </a>
             </li>
 
-            <?php if ($rbac->hasPrivilege('Audit', 'Track')): ?>
+            <?php if (!empty($auditModules)): ?>
             <li class="dropdown-item">
-                <button class="dropdown-toggle" aria-expanded="false">
-                    <i class="fas fa-history"></i> Logs
+                <button class="dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('show')">
+                    <i class="fas fa-history"></i> Audit Logs
                     <i class="fas fa-chevron-down dropdown-icon"></i>
                 </button>
-                <ul class="dropdown tree" aria-expanded="false">
-                    <ul><b> Audit Logs </b><br><hr>
-                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/log_management/audit_manager/audit_log.php">User Management Audit Logs</a></li>
-                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/log_management/audit_manager/em_audit_log.php">Equipment Management Audit Logs</a></li>
-                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/log_management/audit_manager/et_audit_log.php">Equipment Transaction Audit Logs</a></li>
-                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/log_management/audit_manager/rm_audit_log.php">Role Management Audit Logs</a></li>
-                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/log_management/audit_manager/department_audit_log.php">Department Management Audit Logs</a></li>
-                    </ul>
-                    <ul><b> Archives </b><br><hr>
-                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/log_management/archive_manager/archive.php">User Management Archives</a></li>
-                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/log_management/archive_manager/em_archive.php">Equipment Management Archives</a></li>
-                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/log_management/archive_manager/et_archive.php">Equipment Transactions Archives</a></li>
-                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/log_management/archive_manager/rm_archive.php">Role Management Archives</a></li>
-                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/log_management/archive_manager/department_archive.php">Department Management Archives</a></li>
-                    </ul>
+                <ul class="dropdown tree">
+                    <?php foreach ($auditModules as $module => $file): ?>
+                        <li class="nav-item">
+                            <a href="<?= BASE_URL ?>src/view/php/modules/log_management/audit_manager/<?= $file ?>">
+                                <?= $module ?> Audit Logs
+                            </a>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            </li>
+            <?php endif; ?>
+
+            <?php if (!empty($archiveModules)): ?>
+            <li class="dropdown-item">
+                <button class="dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('show')">
+                    <i class="fas fa-trash"></i> Archives
+                    <i class="fas fa-chevron-down dropdown-icon"></i>
+                </button>
+                <ul class="dropdown tree">
+                    <?php foreach ($archiveModules as $module => $file): ?>
+                        <li class="nav-item">
+                            <a href="<?= BASE_URL ?>src/view/php/modules/log_management/archive_manager/<?= $file ?>">
+                                <?= $module ?> Archives
+                            </a>
+                        </li>
+                    <?php endforeach; ?>
                 </ul>
             </li>
             <?php endif; ?>
@@ -54,7 +102,7 @@ $rbac = new RBACService($pdo, $userId);
             <?php if ($rbac->hasPrivilege('Management', 'View')): ?>
             <li class="dropdown-item">
                 <button class="dropdown-toggle" aria-expanded="false">
-                    <i class="fas fa-history"></i> Management
+                    <i class="fas fa-university"></i> Management
                     <i class="fas fa-chevron-down dropdown-icon"></i>
                 </button>
                 <ul class="dropdown tree" aria-expanded="false">
@@ -92,14 +140,14 @@ $rbac = new RBACService($pdo, $userId);
             <?php if ($rbac->hasPrivilege('Roles and Privileges', 'View')): ?>
             <li class="dropdown-item">
                 <button class="dropdown-toggle" aria-expanded="false">
-                    <i class="fa-solid fa-user"></i>
+                    <i class="fa-solid fa-th-list"></i>
                     <span class="menu-text">Roles and Privileges</span>
                     <i class="fas fa-chevron-down dropdown-icon"></i>
                 </button>
                 <ul class="dropdown tree" aria-expanded="false">
                     <li class="nav-item">
                         <a href="<?php echo BASE_URL; ?>src/view/php/modules/rolesandprivilege_manager/role_manager/manage_roles.php" class="nav-link">
-                            <span class="submenu-text">Role Management</span>
+                            <span class="submenu-text">Roles and Privileges Management</span>
                         </a>
                     </li>
                     <!-- <li class="nav-item">

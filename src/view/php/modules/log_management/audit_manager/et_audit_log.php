@@ -16,6 +16,7 @@ $rbac = new RBACService($pdo, $_SESSION['user_id']);
 
 // Check for required privilege
 $hasAuditPermission = $rbac->hasPrivilege('Audit', 'Track');
+$hasAuditPermission = $rbac->hasPrivilege('Equipment Transaction', 'Track');
 
 // If user doesn't have permission, show an inline “no permission” page
 if (!$hasAuditPermission) {
@@ -471,10 +472,11 @@ function getChangedFieldNames(array $oldData, array $newData)
                             <div class="row align-items-center g-3">
                                 <!-- Pagination Info -->
                                 <div class="col-12 col-sm-auto">
-                                    <div class="text-muted">
-                                        Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
-                                            id="totalRows">100</span> entries
-                                    </div>
+                                <div class="text-muted">
+                                <?php $totalLogs = count($auditLogs); ?>
+                                <input type="hidden" id="total-users" value="<?= $totalLogs ?>">
+                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows"><?= $totalLogs ?></span> entries
+                                </div>
                                 </div>
 
                                 <!-- Pagination Controls -->

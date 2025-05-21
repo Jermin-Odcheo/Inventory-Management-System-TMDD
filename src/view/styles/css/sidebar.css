@@ -67,6 +67,14 @@
 .dropdown-toggle::after {
     content: none;
 }
+.dropdown.tree {
+    display: none;
+    margin-left: 10px;
+}
+.dropdown.tree.show {
+    display: block;
+}
+
 
 /* Main nav items */
 .sidebar nav ul li a,
