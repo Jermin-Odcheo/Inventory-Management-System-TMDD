@@ -500,7 +500,22 @@ function safeHtml($value)
                         <input type="hidden" name="action" value="add">
                         <div class="mb-3">
                             <label for="asset_tag" class="form-label">Asset Tag <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" name="asset_tag" required>
+                            <select class="form-select" name="asset_tag" id="add_location_asset_tag" required style="width: 100%;">
+                                <option value="">Select or type Asset Tag</option>
+                                <?php
+                                // Fetch unique asset tags from equipment_details and equipment_status
+                                $assetTags = [];
+                                $stmt1 = $pdo->query("SELECT DISTINCT asset_tag FROM equipment_details WHERE is_disabled = 0");
+                                $assetTags = array_merge($assetTags, $stmt1->fetchAll(PDO::FETCH_COLUMN));
+                                $stmt2 = $pdo->query("SELECT DISTINCT asset_tag FROM equipment_status WHERE is_disabled = 0");
+                                $assetTags = array_merge($assetTags, $stmt2->fetchAll(PDO::FETCH_COLUMN));
+                                $assetTags = array_unique(array_filter($assetTags));
+                                sort($assetTags);
+                                foreach ($assetTags as $tag) {
+                                    echo '<option value="' . htmlspecialchars($tag) . '">' . htmlspecialchars($tag) . '</option>';
+                                }
+                                ?>
+                            </select>
                         </div>
                         <div class="mb-3">
                             <label for="building_loc" class="form-label">Building Location</label>
@@ -564,7 +579,15 @@ function safeHtml($value)
 
                         <div class="mb-3">
                             <label for="edit_asset_tag" class="form-label"><i class="bi bi-tag"></i> Asset Tag <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" name="asset_tag" id="edit_asset_tag" required>
+                            <select class="form-select" name="asset_tag" id="edit_location_asset_tag" required style="width: 100%;">
+                                <option value="">Select or type Asset Tag</option>
+                                <?php
+                                // Use the same $assetTags as above
+                                foreach ($assetTags as $tag) {
+                                    echo '<option value="' . htmlspecialchars($tag) . '">' . htmlspecialchars($tag) . '</option>';
+                                }
+                                ?>
+                            </select>
                         </div>
                         <div class="mb-3">
                             <label for="edit_building_loc" class="form-label"><i class="bi bi-building"></i> Building Location</label>
@@ -765,7 +788,7 @@ function safeHtml($value)
                 var remarks = $(this).data('remarks');
 
                 $('#edit_location_id').val(id);
-                $('#edit_asset_tag').val(assetTag);
+                $('#edit_location_asset_tag').val(assetTag);
                 $('#edit_building_loc').val(buildingLocation);
                 $('#edit_floor_no').val(floorNumber);
                 $('#edit_specific_area').val(specificArea);
@@ -908,6 +931,39 @@ function safeHtml($value)
                         showToast('Error updating location: ' + error, 'error');
                     }
                 });
+            });
+
+            // Asset Tag Select2 for Add Location Modal
+            $('#addLocationModal').on('shown.bs.modal', function () {
+                $('#add_location_asset_tag').select2({
+                    tags: true,
+                    placeholder: 'Select or type Asset Tag',
+                    allowClear: true,
+                    width: '100%',
+                    dropdownParent: $('#addLocationModal')
+                });
+            });
+            $('#addLocationModal').on('hidden.bs.modal', function () {
+                if ($('#add_location_asset_tag').hasClass('select2-hidden-accessible')) {
+                    $('#add_location_asset_tag').select2('destroy');
+                }
+                $(this).find('form')[0].reset();
+            });
+            // Asset Tag Select2 for Edit Location Modal
+            $('#editLocationModal').on('shown.bs.modal', function () {
+                $('#edit_location_asset_tag').select2({
+                    tags: true,
+                    placeholder: 'Select or type Asset Tag',
+                    allowClear: true,
+                    width: '100%',
+                    dropdownParent: $('#editLocationModal')
+                });
+            });
+            $('#editLocationModal').on('hidden.bs.modal', function () {
+                if ($('#edit_location_asset_tag').hasClass('select2-hidden-accessible')) {
+                    $('#edit_location_asset_tag').select2('destroy');
+                }
+                $(this).find('form')[0].reset();
             });
 
         });
