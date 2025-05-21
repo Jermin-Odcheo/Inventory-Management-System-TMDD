@@ -86,7 +86,7 @@ try {
 <head>
     <meta charset="UTF-8">
     <title><?php echo $dashboardTitle; ?></title>
-    <!-- <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/dashboard.css">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/dashboard.css">
     <style>
         body {
             background-color: #f4f7fc;
@@ -95,7 +95,8 @@ try {
 
         .main-content {
             background-color: #f4f7fc;
-            padding-left: 60px;
+            padding-left: 50px;
+            margin-top: 30px;
         }
 
         table {
@@ -145,7 +146,7 @@ try {
             background-color: #fff;
             border: 1px solid #e0e0e0;
         }
-    </style> -->
+    </style> 
 </head>
 <body>
 <div class="main-content">
