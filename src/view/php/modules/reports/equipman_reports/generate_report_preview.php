@@ -82,7 +82,7 @@ $column_map = [
     'date_acquired' => 'ed.date_acquired',
     'invoice_no' => 'ed.invoice_no',
     'receiving_report' => 'ed.rr_no',
-    'location' => 'ed.location',
+    'building_location' => 'ed.location',
     'accountable_individual' => 'ed.accountable_individual',
     'remarks' => 'ed.remarks',
     'date_created' => 'ed.date_created',
@@ -162,21 +162,57 @@ $checkStatusTableStmt = $pdo->query($checkStatusTableSql);
 $statusTableExists = ($checkStatusTableStmt->rowCount() > 0);
 error_log("equipment_status table exists: " . ($statusTableExists ? 'Yes' : 'No'));
 
-// SIMPLIFIED QUERY APPROACH - Temporarily bypass all the complex logic
-// and just get some data to display
-$sql = "SELECT asset_tag, 
-               CONCAT(asset_description_1, ' ', asset_description_2) AS asset_description,
-               specifications, 
-               brand, 
-               model, 
-               serial_number, 
-               date_acquired, 
-               location, 
-               accountable_individual
-        FROM equipment_details
-        LIMIT 20";
+// SIMPLIFIED QUERY APPROACH - But now respecting the selected columns
+$selectedColumns = [];
+$selectParts = [];
 
-error_log("Using simplified query: $sql");
+// Get all available columns from the column_map
+foreach ($column_map as $friendly_name => $sql_column) {
+    if (empty($columns) || in_array($friendly_name, $columns)) {
+        $selectedColumns[] = $friendly_name;
+        $selectParts[] = "$sql_column AS `$friendly_name`";
+    }
+}
+
+// If no columns were selected, use all columns
+if (empty($selectParts)) {
+    foreach ($column_map as $friendly_name => $sql_column) {
+        $selectedColumns[] = $friendly_name;
+        $selectParts[] = "$sql_column AS `$friendly_name`";
+    }
+}
+
+// Log what columns we're selecting
+error_log("Selected columns: " . implode(", ", $selectedColumns));
+
+// Check if we need to join with equipment_status table
+$needsStatusJoin = false;
+foreach ($selectedColumns as $col) {
+    if (in_array($col, ['equipment_status', 'action_taken', 'status_date_creation', 'status_remarks'])) {
+        $needsStatusJoin = true;
+        break;
+    }
+}
+
+$selectClause = implode(", ", $selectParts);
+$sql = "SELECT $selectClause FROM equipment_details ed";
+
+// Only join with equipment_status if needed and if the table exists
+if ($needsStatusJoin && $statusTableExists) {
+    $sql .= " LEFT JOIN equipment_status es ON ed.asset_tag = es.asset_tag";
+} else {
+    // If we need status fields but the table doesn't exist, modify the query to use NULL values
+    if ($needsStatusJoin) {
+        $sql = str_replace('es.status', 'NULL as status', $sql);
+        $sql = str_replace('es.action', 'NULL as action', $sql);
+        $sql = str_replace('es.date_created', 'NULL as status_date_created', $sql);
+        $sql = str_replace('es.remarks', 'NULL as status_remarks', $sql);
+    }
+}
+
+$sql .= " LIMIT 20";
+
+error_log("Using column-respecting query: $sql");
 
 $stmt = $pdo->prepare($sql);
 if (!$stmt) {
@@ -189,18 +225,8 @@ if (!$stmt->execute()) {
 }
 $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Update columns to match what we're actually retrieving
-$columns = [
-    'asset_tag', 
-    'asset_description', 
-    'specifications', 
-    'brand', 
-    'model', 
-    'serial_number', 
-    'date_acquired', 
-    'location', 
-    'accountable_individual'
-];
+// Use the selected columns for display
+$columns = $selectedColumns;
 
 // Debug output - log the number of results and the first row
 error_log("Number of results: " . count($results));
