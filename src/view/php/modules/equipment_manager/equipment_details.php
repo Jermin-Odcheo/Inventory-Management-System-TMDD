@@ -31,6 +31,99 @@ $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
           strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
 
 if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
+    if ($_POST['action'] === 'search') {
+        // Debug: Enable error reporting for AJAX
+        ini_set('display_errors', 1);
+        ini_set('display_startup_errors', 1);
+        error_reporting(E_ALL);
+        // Ensure no output before JSON
+        while (ob_get_level() > 0) { ob_end_clean(); }
+        header('Content-Type: application/json');
+        try {
+            $userId = $_SESSION['user_id'] ?? null;
+            $rbac = new RBACService($pdo, $userId);
+            $canModify = $rbac->hasPrivilege('Equipment Management', 'Modify');
+            $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
+            $search = trim($_POST['query'] ?? '');
+            $filter = trim($_POST['filter'] ?? '');
+            $sql = "SELECT id, asset_tag, asset_description_1, asset_description_2, specifications, brand, model, serial_number, location, accountable_individual, rr_no, remarks, date_created, date_modified FROM equipment_details WHERE is_disabled = 0 AND ("
+                . "asset_tag LIKE ? OR "
+                . "asset_description_1 LIKE ? OR "
+                . "asset_description_2 LIKE ? OR "
+                . "specifications LIKE ? OR "
+                . "brand LIKE ? OR "
+                . "model LIKE ? OR "
+                . "serial_number LIKE ? OR "
+                . "location LIKE ? OR "
+                . "accountable_individual LIKE ? OR "
+                . "rr_no LIKE ? OR "
+                . "remarks LIKE ?)";
+            $params = array_fill(0, 11, "%$search%");
+            if ($filter !== '') {
+                $sql .= " AND asset_description_1 = ?";
+                $params[] = $filter;
+            }
+            $sql .= " ORDER BY id DESC";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $equipmentDetails = $stmt->fetchAll();
+            ob_start();
+            if (!empty($equipmentDetails)) {
+                foreach ($equipmentDetails as $equipment) {
+                    echo '<tr>';
+                    echo '<td>' . safeHtml($equipment['id']) . '</td>';
+                    echo '<td>' . safeHtml($equipment['asset_tag']) . '</td>';
+                    echo '<td>' . safeHtml($equipment['asset_description_1']) . '</td>';
+                    echo '<td>' . safeHtml($equipment['asset_description_2']) . '</td>';
+                    echo '<td>' . safeHtml($equipment['specifications']) . '</td>';
+                    echo '<td>' . safeHtml($equipment['brand']) . '</td>';
+                    echo '<td>' . safeHtml($equipment['model']) . '</td>';
+                    echo '<td>' . safeHtml($equipment['serial_number']) . '</td>';
+                    echo '<td>' . (!empty($equipment['date_created']) ? date('Y-m-d H:i', strtotime($equipment['date_created'])) : '') . '</td>';
+                    echo '<td>' . (!empty($equipment['date_created']) ? date('Y-m-d H:i', strtotime($equipment['date_created'])) : '') . '</td>';
+                    echo '<td>' . (!empty($equipment['date_modified']) ? date('Y-m-d H:i', strtotime($equipment['date_modified'])) : '') . '</td>';
+                    echo '<td>' . safeHtml((strpos($equipment['rr_no'] ?? '', 'RR') === 0 ? $equipment['rr_no'] : ('RR' . $equipment['rr_no']))) . '</td>';
+                    echo '<td>' . safeHtml($equipment['location']) . '</td>';
+                    echo '<td>' . safeHtml($equipment['accountable_individual']) . '</td>';
+                    echo '<td>' . safeHtml($equipment['remarks']) . '</td>';
+                    echo '<td>';
+                    echo '<div class="btn-group">';
+                    if ($canModify) {
+                        echo '<button class="btn btn-outline-info btn-sm edit-equipment"'
+                            . ' data-id="' . safeHtml($equipment['id']) . '"'
+                            . ' data-asset="' . safeHtml($equipment['asset_tag']) . '"'
+                            . ' data-desc1="' . safeHtml($equipment['asset_description_1']) . '"'
+                            . ' data-desc2="' . safeHtml($equipment['asset_description_2']) . '"'
+                            . ' data-spec="' . safeHtml($equipment['specifications']) . '"'
+                            . ' data-brand="' . safeHtml($equipment['brand']) . '"'
+                            . ' data-model="' . safeHtml($equipment['model']) . '"'
+                            . ' data-serial="' . safeHtml($equipment['serial_number']) . '"'
+                            . ' data-location="' . safeHtml($equipment['location']) . '"'
+                            . ' data-accountable="' . safeHtml($equipment['accountable_individual']) . '"'
+                            . ' data-rr="' . safeHtml($equipment['rr_no']) . '"'
+                            . ' data-date="' . safeHtml($equipment['date_created']) . '"'
+                            . ' data-remarks="' . safeHtml($equipment['remarks']) . '">
+                            <i class="bi bi-pencil-square"></i>
+                        </button>';
+                    }
+                    if ($canDelete) {
+                        echo '<button class="btn btn-outline-danger btn-sm remove-equipment" data-id="' . safeHtml($equipment['id']) . '"><i class="bi bi-trash"></i></button>';
+                    }
+                    echo '</div>';
+                    echo '</td>';
+                    echo '</tr>';
+                }
+            } else {
+                echo '<tr><td colspan="16" class="text-center py-4"><div class="alert alert-warning mb-0"><i class="bi bi-exclamation-circle me-2"></i> No results found for the current filter criteria.</div></td></tr>';
+            }
+            $html = ob_get_clean();
+            echo json_encode(['status' => 'success', 'html' => $html]);
+        } catch (Throwable $e) {
+            error_log('AJAX Search Error: ' . $e->getMessage());
+            echo json_encode(['status' => 'error', 'message' => 'AJAX Search Error: ' . $e->getMessage()]);
+        }
+        exit;
+    }
     header('Content-Type: application/json');
     $response = ['status' => '', 'message' => ''];
 
@@ -544,18 +637,6 @@ ob_end_clean();
                             </div>
                         </div>
                         <div class="mb-3">
-                            <div class="row">
-                                <div class="mb-3 col-md-6">
-                                    <label for="asset_description_1" class="form-label">Asset Description 1</label>
-                                    <input type="text" class="form-control" name="asset_description_1">
-                                </div>
-                                <div class="mb-3 col-md-6">
-                                    <label for="asset_description_2" class="form-label">Asset Description 2</label>
-                                    <input type="text" class="form-control" name="asset_description_2">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
                             <label for="specifications" class="form-label">Specification</label>
                             <textarea class="form-control" name="specifications" rows="3"></textarea>
                         </div>
@@ -756,23 +837,50 @@ ob_end_clean();
         });
         
         $(document).ready(function() {
-            // Track if rows are being filtered
-            let isFiltering = false;
-            let filteredRowCount = 0;
-            
-            // Direct approach to check for empty table
-            if ($('#edTable tbody tr').length === 0) {
-                console.log('Table is empty - hiding pagination');
-                $('#prevPage, #nextPage').css({'display': 'none', 'visibility': 'hidden'});
-                $('#currentPage, #rowsPerPage, #totalRows').text('0');
-                $('#pagination').empty();
+    // Track if rows are being filtered
+    let isFiltering = false;
+    let filteredRowCount = 0;
+
+    // Direct approach to check for empty table
+    if ($('#edTable tbody tr').length === 0) {
+        console.log('Table is empty - hiding pagination');
+        $('#prevPage, #nextPage').css({'display': 'none', 'visibility': 'hidden'});
+        $('#currentPage, #rowsPerPage, #totalRows').text('0');
+        $('#pagination').empty();
+    }
+
+    // Check if table is empty on page load and hide pagination if needed
+    const tableRows = $('.table tbody tr').length;
+
+    // AJAX search handler (explicit URL)
+    function doEquipmentSearch() {
+        var query = $('#searchEquipment').val();
+        var filter = $('#filterEquipment').val();
+        $.ajax({
+            url: window.location.pathname, // always post to this PHP file
+            type: 'POST',
+            dataType: 'json',
+            data: { action: 'search', query: query, filter: filter },
+            success: function(response) {
+                if (response.status === 'success') {
+                    $('#edTable tbody').html(response.html);
+                } else {
+                    $('#edTable tbody').html('<tr><td colspan="16" class="text-center py-4"><div class="alert alert-danger mb-0">' + (response.message || 'Search failed. Please try again.') + '</div></td></tr>');
+                }
+            },
+            error: function(xhr, status, error) {
+                $('#edTable tbody').html('<tr><td colspan="16" class="text-center py-4"><div class="alert alert-danger mb-0">Search failed. Please try again.</div></td></tr>');
             }
-            
-            // Check if table is empty on page load and hide pagination if needed
-            const tableRows = $('.table tbody tr').length;
-            
-            // Bind search/filter events
-            $('#searchEquipment, #filterEquipment').on('input change', filterTable);
+        });
+    }
+
+    // Bind search input and icon
+    $('#searchEquipment').on('input', doEquipmentSearch);
+    // Also trigger search when clicking the search icon
+    $('.input-group-text').on('click', doEquipmentSearch);
+
+    // Trigger AJAX search when filter changes
+    $('#filterEquipment').on('change', doEquipmentSearch);
             $('#dateFilter').on('change', function() {
                 const value = $(this).val();
                 $('#dateInputsContainer, #monthPickerContainer, #dateRangePickers, #dateFrom, #dateTo').hide();

@@ -242,7 +242,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     `Status`,
                     Date_Time
                 )
-                VALUES (?, ?, 'create', ?, NULL, ?, 'User Management', 'Success', NOW())
+                VALUES (?, ?, 'create', ?, NULL, ?, 'User Management', 'Successful', NOW())
             ");
             
             $details = "Created new user with departments: " . $deptStr;
