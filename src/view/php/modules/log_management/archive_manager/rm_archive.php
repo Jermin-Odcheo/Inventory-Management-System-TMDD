@@ -288,8 +288,10 @@ function formatChanges($oldJsonStr)
                             <div class="row align-items-center g-3">
                                 <div class="col-12 col-sm-auto">
                                     <div class="text-muted">
+                                        <?php $totalRoles = count($roleData); ?>
+                                        <input type="hidden" id="total-users" value="<?= $totalRoles ?>">
                                         Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
-                                            id="totalRows">100</span> entries
+                                            id="totalRows"><?= $totalRoles ?></span> entries
                                     </div>
                                 </div>
                                 <div class="col-12 col-sm-auto ms-sm-auto">
