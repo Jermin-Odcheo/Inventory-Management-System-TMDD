@@ -583,14 +583,24 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                     <div class="row align-items-center g-3">
                         <div class="col-12 col-sm-auto">
                             <div class="text-muted">
-                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
-                                    id="totalRows">100</span>
+                                <?php 
+                                $totalStatus = 0;
+                                try {
+                                    $countStmt = $pdo->query("SELECT COUNT(*) FROM equipment_status WHERE is_disabled = 0");
+                                    $totalStatus = $countStmt->fetchColumn();
+                                } catch (PDOException $e) {
+                                    // Fallback to 0 if query fails
+                                }
+                                ?>
+                                <input type="hidden" id="total-users" value="<?= $totalStatus ?>">
+                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage"><?= min($totalStatus, 10) ?></span> of <span
+                                    id="totalRows"><?= $totalStatus ?></span>
                                 entries
                             </div>
                         </div>
                         <div class="col-12 col-sm-auto ms-sm-auto">
                             <div class="d-flex align-items-center gap-2">
-                                <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1" <?= $totalStatus <= 10 ? 'style="display:none !important;"' : '' ?>>
                                     <i class="bi bi-chevron-left"></i> Previous
                                 </button>
                                 <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
@@ -599,7 +609,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                     <option value="30">30</option>
                                     <option value="50">50</option>
                                 </select>
-                                <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1" <?= $totalStatus <= 10 ? 'style="display:none !important;"' : '' ?>>
                                     Next <i class="bi bi-chevron-right"></i>
                                 </button>
                             </div>
@@ -743,6 +753,35 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             // Real-time search & filter
             $('#searchStatus, #filterStatus').on('input change', function() {
                 filterTable();
+            });
+
+            // Force hide pagination buttons if no rows or all fit on one page
+            function checkAndHidePagination() {
+                const totalStatus = parseInt($('#total-users').val()) || 0;
+                const rowsPerPage = parseInt($('#rowsPerPageSelect').val()) || 10;
+                
+                if (totalStatus <= rowsPerPage) {
+                    $('#prevPage, #nextPage').css('display', 'none !important').hide();
+                }
+                
+                // Also check for visible rows (for when filtering is applied)
+                const visibleRows = $('#statusTable tbody tr:visible').length;
+                if (visibleRows <= rowsPerPage) {
+                    $('#prevPage, #nextPage').css('display', 'none !important').hide();
+                }
+            }
+            
+            // Run on page load with a longer delay to ensure DOM is fully processed
+            setTimeout(checkAndHidePagination, 300);
+            
+            // Run after any filter changes
+            $('#searchStatus, #filterStatus, #dateFilter, #monthSelect, #yearSelect, #dateFrom, #dateTo').on('change input', function() {
+                setTimeout(checkAndHidePagination, 100);
+            });
+            
+            // Run after rows per page changes
+            $('#rowsPerPageSelect').on('change', function() {
+                setTimeout(checkAndHidePagination, 100);
             });
 
             // Date filter handling
@@ -1011,6 +1050,34 @@ $(document).ready(function() {
         }, 10);
     });
 });
+</script>
+
+<!-- Force hide pagination buttons if no data -->
+<script>
+(function() {
+    // Function to check and hide pagination
+    function forcePaginationCheck() {
+        const totalRows = parseInt(document.getElementById('total-users')?.value || '0');
+        const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect')?.value || '10');
+        const prevBtn = document.getElementById('prevPage');
+        const nextBtn = document.getElementById('nextPage');
+        
+        if (totalRows <= rowsPerPage) {
+            if (prevBtn) prevBtn.style.cssText = 'display: none !important';
+            if (nextBtn) nextBtn.style.cssText = 'display: none !important';
+        }
+    }
+    
+    // Run immediately
+    forcePaginationCheck();
+    
+    // Also run after a delay to ensure DOM is fully loaded
+    setTimeout(forcePaginationCheck, 500);
+    setTimeout(forcePaginationCheck, 1000);
+    
+    // Add event listener for DOMContentLoaded
+    document.addEventListener('DOMContentLoaded', forcePaginationCheck);
+})();
 </script>
 </body>
 
