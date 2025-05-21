@@ -182,14 +182,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $fieldError = 'RR Number is required.';
     } elseif (!preg_match('/^RR\d+$/', $rr_no)) {
         $fieldError = 'RR Number must be like RR123.';
-    } elseif ($po_no !== '') {
-        $po_no_digits = $po_no;
-        if (strpos($po_no_digits, 'PO') === 0) {
-            $po_no_digits = substr($po_no_digits, 2);
-        }
-        if (!preg_match('/^\d+$/', $po_no_digits)) {
-            $fieldError = 'PO Number must contain numbers only.';
-        }
     }
 
     if ($fieldError) {
@@ -888,6 +880,42 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                     showToast('Error processing request.', 'error');
                 }
             });
+        });
+
+        // Restrict PO Number input to numbers only for Select2 tags (robust)
+        function restrictSelect2ToNumbersOnly(selector) {
+            function enforceNumericInput(input) {
+                input.addEventListener('input', function() {
+                    this.value = this.value.replace(/[^0-9]/g, '');
+                });
+            }
+            // When Select2 opens, enforce numeric input
+            $(document).on('select2:open', function(e) {
+                if (e.target && e.target.id === selector.replace('#', '')) {
+                    // Find the search field
+                    var searchField = document.querySelector('.select2-container--open .select2-search__field');
+                    if (searchField) {
+                        enforceNumericInput(searchField);
+                    }
+                }
+            });
+            // Also enforce on dynamically created search fields
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    mutation.addedNodes.forEach(function(node) {
+                        if (node.nodeType === 1 && node.classList.contains('select2-search__field')) {
+                            enforceNumericInput(node);
+                        }
+                    });
+                });
+            });
+            observer.observe(document.body, { childList: true, subtree: true });
+        }
+        $('#addReportModal').on('shown.bs.modal', function () {
+            restrictSelect2ToNumbersOnly('#add_po_no');
+        });
+        $('#editReportModal').on('shown.bs.modal', function () {
+            restrictSelect2ToNumbersOnly('#edit_po_no');
         });
     });
 
