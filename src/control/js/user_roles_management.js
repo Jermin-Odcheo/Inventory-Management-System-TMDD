@@ -413,7 +413,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (Number.isInteger(id) && id > 0) {
       // Log the missing role for debugging
       console.warn(`Role ID ${id} not found in available roles data`);
-      return { id: id, role_name: `Unknown Role` };
+      return { id: id, role_name: `No Role Assigned` };
     }
 
     // For invalid IDs
