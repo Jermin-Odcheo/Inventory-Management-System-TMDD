@@ -422,7 +422,11 @@ try {
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label for="email" class="form-label">Email</label>
-                                <input type="email" name="email" id="email" class="form-control" required>
+                                <input type="email" name="email" id="email" class="form-control" required pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$" title="Please enter a valid email address with a domain (e.g. user@example.com)">
+                                <small class="form-text text-muted">Email must include a domain (e.g. user@example.com)</small>
+                                <div class="invalid-feedback" id="emailFeedback">
+                                    Please enter a valid email address with a domain (e.g. user@example.com)
+                                </div>
                             </div>
                             <div class="col-md-6">
                                 <label for="username" class="form-label">Username</label>
@@ -505,7 +509,11 @@ try {
                         <div class="row g-3">
                             <div class="col-md-12">
                                 <label for="editEmail" class="form-label">Email</label>
-                                <input type="email" name="email" id="editEmail" class="form-control">
+                                <input type="email" name="email" id="editEmail" class="form-control" pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$" title="Please enter a valid email address with a domain (e.g. user@example.com)">
+                                <small class="form-text text-muted">Email must include a domain (e.g. user@example.com)</small>
+                                <div class="invalid-feedback" id="editEmailFeedback">
+                                    Please enter a valid email address with a domain (e.g. user@example.com)
+                                </div>
                             </div>
                             <div class="col-md-12">
                                 <label for="editUsername" class="form-label">Username</label>
@@ -591,6 +599,48 @@ try {
         $(document).ready(function() {
             // Initialize selectedDepartments array for the global scope
             let selectedDepartments = [];
+            
+            // Email validation function
+            function validateEmail(email) {
+                const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+                return regex.test(email);
+            }
+            
+            // Function to show toast notifications
+            function showToast(message, type = 'info') {
+                // Create toast container if it doesn't exist
+                if ($('.toast-container').length === 0) {
+                    $('body').append('<div class="toast-container"></div>');
+                }
+                
+                // Create toast with appropriate styling
+                const toastClass = type === 'error' ? 'bg-danger text-white' : 
+                                  type === 'success' ? 'bg-success text-white' : 
+                                  'bg-info text-white';
+                                  
+                const toast = `
+                    <div class="toast ${toastClass}" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="5000">
+                        <div class="toast-header">
+                            <strong class="me-auto">${type.charAt(0).toUpperCase() + type.slice(1)}</strong>
+                            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                    </div>
+                `;
+                
+                // Add toast to container and show it
+                $('.toast-container').append(toast);
+                const toastEl = $('.toast').last();
+                const bsToast = new bootstrap.Toast(toastEl);
+                bsToast.show();
+                
+                // Remove toast after it's hidden
+                toastEl.on('hidden.bs.toast', function() {
+                    $(this).remove();
+                });
+            }
             
             // Initialize Select2 for department filter with custom positioning
             $('#department-filter').select2({
@@ -864,6 +914,15 @@ try {
                 const form = $('#createUserForm');
                 const formData = new FormData(form[0]);
                 
+                // Validate email has domain
+                const email = $('#email').val();
+                if (!validateEmail(email)) {
+                    $('#email').addClass('is-invalid');
+                    return;
+                } else {
+                    $('#email').removeClass('is-invalid');
+                }
+                
                 // Check if departments have been added
                 if (selectedDepartments.length === 0) {
                     // Try to get from dropdown directly as a fallback
@@ -874,7 +933,7 @@ try {
                         updateDepartmentsDisplay();
                     } else {
                         // No departments selected
-                        showToast('At least one department must be assigned', 'error');
+                        Toast.error('At least one department must be assigned');
                         return;
                     }
                 }
@@ -909,25 +968,25 @@ try {
                         try {
                             const result = typeof response === 'string' ? JSON.parse(response) : response;
                             if (result.success) {
-                                showToast('User created successfully', 'success');
+                                Toast.success('User created successfully');
                                 $('#createUserModal').modal('hide');
                                 // Reload page after successful creation
                                 setTimeout(function() {
                                     window.location.reload();
                                 }, 1500);
                             } else {
-                                showToast(result.message || 'Failed to create user', 'error');
+                                Toast.error(result.message || 'Failed to create user');
                             }
                         } catch (e) {
                             // Handle non-JSON responses which might still indicate success
                             if (typeof response === 'string' && response.includes('success')) {
-                                showToast('User created successfully', 'success');
+                                Toast.success('User created successfully');
                                 $('#createUserModal').modal('hide');
                                 setTimeout(function() {
                                     window.location.reload();
                                 }, 1500);
                             } else {
-                                showToast('Error processing response', 'error');
+                                Toast.error('Error processing response');
                                 console.error('Error parsing response:', e, response);
                             }
                         }
@@ -964,10 +1023,19 @@ try {
                 const form = $('#editUserForm');
                 const formData = new FormData(form[0]);
                 
+                // Validate email has domain
+                const email = $('#editEmail').val();
+                if (!validateEmail(email)) {
+                    $('#editEmail').addClass('is-invalid');
+                    return;
+                } else {
+                    $('#editEmail').removeClass('is-invalid');
+                }
+                
                 // Check if departments are selected from the assigned departments table
                 const departmentRows = $('#assignedDepartmentsTable tbody tr');
                 if (departmentRows.length === 0) {
-                    showToast('At least one department must be assigned', 'error');
+                    Toast.error('At least one department must be assigned');
                     return;
                 }
                 
@@ -1025,25 +1093,25 @@ try {
                         try {
                             const result = typeof response === 'string' ? JSON.parse(response) : response;
                             if (result.success) {
-                                showToast('User updated successfully', 'success');
+                                Toast.success('User updated successfully');
                                 $('#editUserModal').modal('hide');
                                 // Reload page after successful update
                                 setTimeout(function() {
                                     window.location.reload();
                                 }, 1500);
                             } else {
-                                showToast(result.message || 'Failed to update user', 'error');
+                                Toast.error(result.message || 'Failed to update user');
                             }
                         } catch (e) {
                             // Handle non-JSON responses which might still indicate success
                             if (typeof response === 'string' && response.includes('success')) {
-                                showToast('User updated successfully', 'success');
+                                Toast.success('User updated successfully');
                                 $('#editUserModal').modal('hide');
                                 setTimeout(function() {
                                     window.location.reload();
                                 }, 1500);
                             } else {
-                                showToast('Error processing response', 'error');
+                                Toast.error('Error processing response');
                                 console.error('Error parsing response:', e, response);
                             }
                         }
@@ -1073,6 +1141,21 @@ try {
                         }
                     }
                 });
+            });
+
+            // Email input validation on change/input
+            $('#email').on('input', function() {
+                const email = $(this).val();
+                if (validateEmail(email)) {
+                    $(this).removeClass('is-invalid');
+                }
+            });
+            
+            $('#editEmail').on('input', function() {
+                const email = $(this).val();
+                if (validateEmail(email)) {
+                    $(this).removeClass('is-invalid');
+                }
             });
 
             // Reset selectedDepartments when the modal is closed
