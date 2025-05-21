@@ -49,6 +49,41 @@ if (isset($_SESSION['success'])) {
     unset($_SESSION['success']);
 }
 
+// Handler for AJAX RR existence check
+if (isset($_POST['action']) && $_POST['action'] === 'check_rr_exists' && isset($_POST['rr_no'])) {
+    $rr_no = trim($_POST['rr_no']);
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM receive_report WHERE rr_no = ?");
+    $stmt->execute([$rr_no]);
+    $exists = $stmt->fetchColumn() > 0;
+    header('Content-Type: application/json');
+    echo json_encode(['status' => $exists ? 'exists' : 'not_exists']);
+    exit;
+}
+
+// Auto-insert minimal RR entry if not exists
+if (isset($_POST['action']) && $_POST['action'] === 'auto_add_rr' && isset($_POST['rr_no']) && isset($_POST['date_created'])) {
+    $rr_no = $_POST['rr_no'];
+    $date_created = $_POST['date_created'];
+
+    // Check if already exists
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM receive_report WHERE rr_no = ? AND is_disabled = 0");
+    $stmt->execute([$rr_no]);
+    $count = $stmt->fetchColumn();
+
+    if ($count == 0) {
+        $stmt = $pdo->prepare("INSERT INTO receive_report (rr_no, date_created, is_disabled) VALUES (?, ?, 0)");
+        $result = $stmt->execute([$rr_no, $date_created]);
+        if ($stmt->rowCount() > 0) {
+            echo json_encode(['status' => 'inserted', 'debug' => 'Inserted RR: ' . $rr_no]);
+        } else {
+            echo json_encode(['status' => 'error', 'msg' => $pdo->errorInfo()[2], 'debug' => 'Insert failed for RR: ' . $rr_no]);
+        }
+    } else {
+        echo json_encode(['status' => 'exists', 'debug' => 'RR already exists or is_disabled=0: ' . $rr_no]);
+    }
+    exit;
+}
+
 function is_ajax_request()
 {
     return isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&
@@ -64,7 +99,6 @@ $stmtPO = $pdo->prepare("
 ");
 $stmtPO->execute();
 $poList = $stmtPO->fetchAll(PDO::FETCH_COLUMN);
-
 
 // Audit helper
 function logAudit($pdo, $action, $oldVal, $newVal, $entityId = null)
@@ -643,6 +677,30 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
     const addModal = new bootstrap.Modal(document.getElementById('addReportModal'));
     const editModal = new bootstrap.Modal(document.getElementById('editReportModal'));
     const deleteModal = new bootstrap.Modal(document.getElementById('deleteRRModal'));
+
+    // Prefill Add Report Modal if opened from equipment creation
+    $(document).ready(function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('openAddRR') === '1') {
+            const rrNo = sessionStorage.getItem('prefill_rr_no') || '';
+            const rrDate = sessionStorage.getItem('prefill_rr_date') || '';
+            if (rrNo) {
+                $('#add_rr_no').val(rrNo);
+            }
+            if (rrDate) {
+                $('#date_created').val(rrDate);
+            }
+            // Leave Accountable Individual, PO Number, and Location blank
+            $('input[name="accountable_individual"]').val('');
+            $('#add_po_no').val('').trigger('change');
+            $('input[name="ai_loc"]').val('');
+            // Show the modal
+            addModal.show();
+            // Clear sessionStorage after use
+            sessionStorage.removeItem('prefill_rr_no');
+            sessionStorage.removeItem('prefill_rr_date');
+        }
+    });
 
     $(function () {
         // Initialize Select2 dropdowns for PO numbers

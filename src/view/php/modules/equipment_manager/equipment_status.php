@@ -434,6 +434,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 <html lang="en">
 
 <head>
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Equipment Status Management</title>
@@ -639,7 +641,23 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                         <input type="hidden" name="action" value="add">
                         <div class="mb-3">
                             <label for="asset_tag" class="form-label">Asset Tag <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" name="asset_tag">
+                            <select class="form-select asset-tag-select2" name="asset_tag" id="add_status_asset_tag" required style="width: 100%;">
+    <option value="">Select or type Asset Tag</option>
+    <?php
+    // Fetch unique asset tags from equipment_details and equipment_location
+    $assetTags = [];
+    $stmt1 = $pdo->query("SELECT DISTINCT asset_tag FROM equipment_details WHERE is_disabled = 0");
+    $assetTags = array_merge($assetTags, $stmt1->fetchAll(PDO::FETCH_COLUMN));
+    $stmt2 = $pdo->query("SELECT DISTINCT asset_tag FROM equipment_location WHERE is_disabled = 0");
+    $assetTags = array_merge($assetTags, $stmt2->fetchAll(PDO::FETCH_COLUMN));
+    $assetTags = array_unique(array_filter($assetTags));
+    sort($assetTags);
+    foreach ($assetTags as $tag) {
+        echo '<option value="' . htmlspecialchars($tag) . '">' . htmlspecialchars($tag) . '</option>';
+    }
+    ?>
+</select>
+
                         </div>
                         <div class="mb-3">
                             <label for="status" class="form-label">Status</label>
@@ -1035,22 +1053,35 @@ $('#statusTable').load(location.href + ' #statusTable', function() {
             });
         });
     </script>
-<script>
-$(document).ready(function() {
-    $('#openAddStatusModalBtn').on('click', function() {
-        // Remove any lingering modal backdrops and modal-open class before showing the modal
-        setTimeout(function() {
-            if ($('.modal-backdrop').length) {
-                $('.modal-backdrop').remove();
-            }
-            if ($('body').hasClass('modal-open') && $('.modal.show').length === 0) {
-                $('body').removeClass('modal-open');
-                $('body').css('padding-right', '');
-            }
-        }, 10);
+
+    <!-- jQuery (required for Select2) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Select2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <script>
+    $(document).ready(function() {
+        $('#openAddStatusModalBtn').on('click', function() {
+            setTimeout(function() {
+                if ($('.modal-backdrop').length) {
+                    $('.modal-backdrop').remove();
+                }
+                if ($('body').hasClass('modal-open') && $('.modal.show').length === 0) {
+                    $('body').removeClass('modal-open');
+                    $('body').css('padding-right', '');
+                }
+            }, 10);
+        });
+        // Initialize Select2 for Asset Tag with tags (creatable)
+        $('#add_status_asset_tag').select2({
+            tags: true,
+            placeholder: 'Select or type Asset Tag',
+            allowClear: true,
+            width: '100%',
+            dropdownParent: $('#addStatusModal')
+        });
     });
-});
-</script>
+    </script>
 
 <!-- Force hide pagination buttons if no data -->
 <script>

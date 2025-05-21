@@ -622,7 +622,22 @@ ob_end_clean();
                         <input type="hidden" name="action" value="create">
                         <div class="mb-3">
                             <label for="asset_tag" class="form-label">Asset Tag <span style="color: red;">*</span></label>
-                            <input type="text" class="form-control" name="asset_tag" required>
+                            <select class="form-select" name="asset_tag" id="add_equipment_asset_tag" required style="width: 100%;">
+                                <option value="">Select or type Asset Tag</option>
+                                <?php
+                                // Fetch unique asset tags from equipment_location and equipment_status
+                                $assetTags = [];
+                                $stmt1 = $pdo->query("SELECT DISTINCT asset_tag FROM equipment_location WHERE is_disabled = 0");
+                                $assetTags = array_merge($assetTags, $stmt1->fetchAll(PDO::FETCH_COLUMN));
+                                $stmt2 = $pdo->query("SELECT DISTINCT asset_tag FROM equipment_status WHERE is_disabled = 0");
+                                $assetTags = array_merge($assetTags, $stmt2->fetchAll(PDO::FETCH_COLUMN));
+                                $assetTags = array_unique(array_filter($assetTags));
+                                sort($assetTags);
+                                foreach ($assetTags as $tag) {
+                                    echo '<option value="' . htmlspecialchars($tag) . '">' . htmlspecialchars($tag) . '</option>';
+                                }
+                                ?>
+                            </select>
                         </div>
                         <div class="mb-3">
                             <div class="row">
@@ -659,11 +674,143 @@ ob_end_clean();
                                     <input type="text" class="form-control" name="serial_number">
                                 </div>
                                 <div class="mb-3 col-md-6">
-                                    <label for="rr_no" class="form-label">RR#</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text">RR</span>
-                                        <input type="number" class="form-control" name="rr_no" min="0" step="1" pattern="[0-9]*" inputmode="numeric" title="Only numbers are allowed">
-                                    </div>
+    <label for="add_rr_no" class="form-label">RR#</label>
+    <select class="form-select rr-select2" name="rr_no" id="add_rr_no" required style="width: 100%;">
+        <option value="">Select or search RR Number</option>
+        <?php
+        // Fetch active RR numbers for dropdown
+        $stmtRR = $pdo->prepare("SELECT rr_no FROM receive_report WHERE is_disabled = 0 ORDER BY rr_no DESC");
+        $stmtRR->execute();
+        $rrList = $stmtRR->fetchAll(PDO::FETCH_COLUMN);
+        foreach ($rrList as $rrNo) {
+            echo '<option value="' . htmlspecialchars($rrNo) . '">' . htmlspecialchars($rrNo) . '</option>';
+        }
+        ?>
+    </select>
+</div>
+<style>
+/* Ensure Select2 input matches form-control size and font */
+.select2-container--default .select2-selection--single {
+    height: 38px;
+    padding: 6px 12px;
+    font-size: 1rem;
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    background-color: #fff;
+    box-shadow: none;
+    display: flex;
+    align-items: center;
+}
+.select2-container .select2-selection--single .select2-selection__rendered {
+    line-height: 24px;
+    color: #212529;
+}
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 36px;
+    right: 10px;
+}
+.select2-container--open .select2-dropdown {
+    z-index: 9999 !important;
+}
+</style>
+<script>
+// Custom function to anchor Select2 dropdown below RR# field
+
+
+$(function() {
+    $('#add_rr_no').select2({
+        placeholder: 'Select or search RR Number',
+        allowClear: true,
+        width: '100%',
+        tags: true, // Allow new entries
+        dropdownParent: $('#addEquipmentModal'), // Attach to modal for proper positioning
+        minimumResultsForSearch: 0,
+        dropdownPosition: 'below', // Always show dropdown below input
+        createTag: function(params) {
+            // Only allow non-empty, non-duplicate RR numbers (numbers only)
+            var term = $.trim(params.term);
+            if (term === '') return null;
+            var exists = false;
+            $('#add_rr_no option').each(function() {
+                if ($(this).text().toLowerCase() === term.toLowerCase()) exists = true;
+            });
+            // Only allow numbers for new tags
+            if (!/^[0-9]+$/.test(term)) {
+                return null;
+            }
+            return exists ? null : { id: term, text: term };
+        }
+    });
+
+$('#add_rr_no').on('select2:select', function(e) {
+    var data = e.params.data;
+    if (data.selected && data.id && $(this).find('option[value="'+data.id+'"').length === 0) {
+        // New tag, send AJAX to create RR
+        $.ajax({
+            url: 'modules/equipment_transactions/receiving_report.php',
+            method: 'POST',
+            data: { action: 'create_rr_no', rr_no: data.id },
+            dataType: 'json',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            success: function(response) {
+                if (response.status === 'success') {
+                    showToast('RR# '+data.id+' created!', 'success');
+                } else {
+                    showToast(response.message || 'Failed to create RR#', 'error');
+                }
+            },
+            error: function() {
+                showToast('AJAX error creating RR#', 'error');
+            }
+        });
+    }
+});
+
+// Also initialize for edit modal if present
+if ($('#edit_rr_no').length) {
+    $('#edit_rr_no').select2({
+        placeholder: 'Select or search RR Number',
+        allowClear: true,
+        width: '100%',
+        tags: true,
+        dropdownParent: $('#editEquipmentModal'),
+        minimumResultsForSearch: 0,
+        createTag: function(params) {
+            var term = $.trim(params.term);
+            if (term === '') return null;
+            var exists = false;
+            $('#edit_rr_no option').each(function() {
+                if ($(this).text().toLowerCase() === term.toLowerCase()) exists = true;
+            });
+            return exists ? null : { id: term, text: term };
+        }
+    });
+    $('#edit_rr_no').on('select2:select', function(e) {
+        var data = e.params.data;
+        if (data.selected && data.id && $(this).find('option[value="'+data.id+'"').length === 0) {
+            $.ajax({
+                url: 'modules/equipment_transactions/receiving_report.php',
+                method: 'POST',
+                data: { action: 'create_rr_no', rr_no: data.id },
+                dataType: 'json',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        showToast('RR# '+data.id+' created!', 'success');
+                    } else {
+                        showToast(response.message || 'Failed to create RR#', 'error');
+                    }
+                },
+                error: function() {
+                    showToast('AJAX error creating RR#', 'error');
+                }
+            });
+        }
+    });
+}
+
+});
+</script>
                                 </div>
                             </div>
                         </div>
@@ -707,7 +854,15 @@ ob_end_clean();
                         <input type="hidden" name="equipment_id" id="edit_equipment_id">
                         <div class="mb-3">
                             <label for="edit_asset_tag" class="form-label">Asset Tag <span style="color: red;">*</span></label>
-                            <input type="text" class="form-control" name="asset_tag" id="edit_asset_tag" required>
+                            <select class="form-select" name="asset_tag" id="edit_equipment_asset_tag" required style="width: 100%;">
+                                <option value="">Select or type Asset Tag</option>
+                                <?php
+                                // Use the same $assetTags as above
+                                foreach ($assetTags as $tag) {
+                                    echo '<option value="' . htmlspecialchars($tag) . '">' . htmlspecialchars($tag) . '</option>';
+                                }
+                                ?>
+                            </select>
                         </div>
                         <div class="mb-3">
                             <div class="row">
@@ -745,7 +900,20 @@ ob_end_clean();
                                 </div>
                                 <div class="mb-3 col-md-6">
                                     <label for="edit_rr_no" class="form-label">RR#</label>
-                                    <input type="text" class="form-control" name="rr_no" id="edit_rr_no">
+                                    <select class="form-select" name="rr_no" id="edit_rr_no" required>
+                                        <option value="">Select RR Number</option>
+                                        <?php
+                                        // Fetch active RR numbers for dropdown (reuse $rrList if already set, else fetch)
+                                        if (!isset($rrList)) {
+                                            $stmtRR = $pdo->prepare("SELECT rr_no FROM receive_report WHERE is_disabled = 0 ORDER BY rr_no DESC");
+                                            $stmtRR->execute();
+                                            $rrList = $stmtRR->fetchAll(PDO::FETCH_COLUMN);
+                                        }
+                                        foreach ($rrList as $rrNo) {
+                                            echo '<option value="' . htmlspecialchars($rrNo) . '">' . htmlspecialchars($rrNo) . '</option>';
+                                        }
+                                        ?>
+                                    </select>
                                 </div>
                             </div>
                         </div>
@@ -795,6 +963,7 @@ ob_end_clean();
 
     <!-- Scripts -->
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
         // Override updatePagination function to properly handle empty tables
         document.addEventListener('DOMContentLoaded', function() {
@@ -1025,7 +1194,7 @@ ob_end_clean();
             $(document).on('click', '.edit-equipment', function() {
                 const data = $(this).data();
                 $('#edit_equipment_id').val(data.id);
-                $('#edit_asset_tag').val(data.asset);
+                $('#edit_equipment_asset_tag').val(data.asset);
                 $('#edit_asset_description_1').val(data.desc1);
                 $('#edit_asset_description_2').val(data.desc2);
                 $('#edit_specifications').val(data.spec);
@@ -1189,6 +1358,39 @@ ob_end_clean();
                         submitBtn.prop('disabled', false).html('Save Changes');
                     }
                 });
+            });
+
+            // Asset Tag Select2 for Add Equipment Modal
+            $('#addEquipmentModal').on('shown.bs.modal', function () {
+                $('#add_equipment_asset_tag').select2({
+                    tags: true,
+                    placeholder: 'Select or type Asset Tag',
+                    allowClear: true,
+                    width: '100%',
+                    dropdownParent: $('#addEquipmentModal')
+                });
+            });
+            $('#addEquipmentModal').on('hidden.bs.modal', function () {
+                if ($('#add_equipment_asset_tag').hasClass('select2-hidden-accessible')) {
+                    $('#add_equipment_asset_tag').select2('destroy');
+                }
+                $(this).find('form')[0].reset();
+            });
+            // Asset Tag Select2 for Edit Equipment Modal
+            $('#editEquipmentModal').on('shown.bs.modal', function () {
+                $('#edit_equipment_asset_tag').select2({
+                    tags: true,
+                    placeholder: 'Select or type Asset Tag',
+                    allowClear: true,
+                    width: '100%',
+                    dropdownParent: $('#editEquipmentModal')
+                });
+            });
+            $('#editEquipmentModal').on('hidden.bs.modal', function () {
+                if ($('#edit_equipment_asset_tag').hasClass('select2-hidden-accessible')) {
+                    $('#edit_equipment_asset_tag').select2('destroy');
+                }
+                $(this).find('form')[0].reset();
             });
 
         });
