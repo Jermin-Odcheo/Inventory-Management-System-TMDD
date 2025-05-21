@@ -91,7 +91,7 @@ if (
                         $_SESSION['user_id'],
                         $newStatusId,
                         'Equipment Status',
-                        'Add',
+                        'Create',
                         'New equipment status added',
                         null,
                         $newValues,

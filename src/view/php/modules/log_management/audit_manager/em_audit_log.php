@@ -42,7 +42,8 @@ $query = "
     WHERE audit_log.Module IN (
       'Equipment Management',
       'Equipment Details',
-      'Equipment Location'
+      'Equipment Location',
+      'Equipment Status'
     )
     ORDER BY
       audit_log.TrackID DESC
