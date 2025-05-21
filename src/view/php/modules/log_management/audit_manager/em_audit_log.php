@@ -286,16 +286,10 @@ function getChangedFieldNames(array $oldData, array $newData)
 <head>
     <meta charset="UTF-8">
     <title>Audit Logs Dashboard</title>
-    <link rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="<?= BASE_URL ?>src/view/styles/css/audit_log.css">
 </head>
 
 <body>
-
-
     <div class="main-content">
         <div class="container-fluid">
             <div class="card">

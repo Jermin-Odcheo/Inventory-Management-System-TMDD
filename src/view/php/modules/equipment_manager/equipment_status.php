@@ -438,9 +438,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Equipment Status Management</title>
     <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.min.css" rel="stylesheet">
-    <!-- Select2 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+ 
 </head>
 
 <body>
