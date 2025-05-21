@@ -113,6 +113,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const uniqueUsernames = new Set();
 
     filteredUsers.forEach((user) => {
+
+      
       let assignments = userRoleDepartments.filter(
         (assignment) => assignment.userId === user.id
       );
@@ -144,7 +146,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const tr = $(`
                   <tr>
                     <td>${
-                      userPrivileges.canDelete
+                      userPrivileges.canDelete && firstRole.roleId !== null
                         ? '<input type="checkbox" class="select-row" value="' +
                           user.id +
                           '">'
@@ -413,7 +415,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (Number.isInteger(id) && id > 0) {
       // Log the missing role for debugging
       console.warn(`Role ID ${id} not found in available roles data`);
-      return { id: id, role_name: `No Role Assigned` };
+      return null;
     }
 
     // For invalid IDs
@@ -569,67 +571,46 @@ document.addEventListener("DOMContentLoaded", function () {
               selectedRoles = [];
               window.selectedRoles = [];
               
-              // Find all roles associated with this user and department
-              const userRoles = userRoleDepartments.filter(assignment => 
-                assignment.userId === userId && 
-                assignment.departmentIds.includes(departmentId)
-              );
-              
-              // Log the found roles for debugging
-              console.log("Found user roles for editing:", userRoles);
+              // Filter valid user role assignments
+              const userRoles = userRoleDepartments.filter(assignment => {
+                const role = getRoleById(assignment.roleId);
+                return (
+                  assignment.userId === userId &&
+                  assignment.departmentIds.includes(departmentId) &&
+                  role && role.role_name && role.id !== 0
+                );
+              });
+
+              // Log the found roles
+              console.log("Filtered valid user roles:", userRoles);
 
               // Add all roles to the table
               userRoles.forEach(userRole => {
                 const role = getRoleById(userRole.roleId);
-                
-                if (role && role.id !== 0) {
-                  console.log("Adding role to selection:", role);
-                  
-                  // Create a new table row for the role
-                  const tbody = document.querySelector('#assigned-roles-table tbody');
-                  const tr = document.createElement('tr');
-                  tr.dataset.id = role.id;
-                  tr.innerHTML = `
-                    <td>${role.role_name}</td>
-                    <td class="text-end">
-                      <button class="btn-outline-danger delete-btn" data-role-id="${role.id}">
-                        <i class="bi bi-trash"></i>
-                      </button>
-                    </td>
-                  `;
-                  
-                  // Add to table
-                  tbody.appendChild(tr);
-                  
-                  // Add click handler for delete button
-                  const deleteBtn = tr.querySelector('.delete-btn');
-                  deleteBtn.addEventListener('click', function(e) {
-                    // Stop event propagation to prevent other handlers from firing
-                    e.stopPropagation();
-                    
-                    // Get the role ID from the button's data attribute
-                    const roleId = parseInt(this.getAttribute('data-role-id'));
-                    console.log('Delete button clicked for role ID:', roleId);
-                    
-                    // Log the current state of selectedRoles before removal
-                    console.log('Current selectedRoles before removal:', JSON.stringify(window.selectedRoles));
-                    
-                    // Remove from the selectedRoles array
-                    if (window.selectedRoles) {
-                      window.selectedRoles = window.selectedRoles.filter(r => r.id !== roleId);
-                    }
-                    
-                    // Remove the table row
-                    tr.remove();
-                    
-                    console.log('Role removed:', roleId);
-                    console.log('Updated selectedRoles after removal:', JSON.stringify(window.selectedRoles));
-                  });
-                  
-                  // Add to the selectedRoles array
-                  if (!window.selectedRoles) window.selectedRoles = [];
-                  window.selectedRoles.push(role);
-                }
+                if (!role) return;
+
+                const tbody = document.querySelector('#assigned-roles-table tbody');
+                const tr = document.createElement('tr');
+                tr.dataset.id = role.id;
+                tr.innerHTML = `
+                  <td>${role.role_name}</td>
+                  <td class="text-end">
+                    <button class="btn-outline-danger delete-btn" data-role-id="${role.id}">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </td>
+                `;
+                tbody.appendChild(tr);
+
+                const deleteBtn = tr.querySelector('.delete-btn');
+                deleteBtn.addEventListener('click', function (e) {
+                  e.stopPropagation();
+                  const roleId = parseInt(this.getAttribute('data-role-id'));
+                  window.selectedRoles = window.selectedRoles.filter(r => r.id !== roleId);
+                  tr.remove();
+                });
+
+                window.selectedRoles.push(role);
               });
 
               // Show the modal
@@ -710,7 +691,8 @@ document.addEventListener("DOMContentLoaded", function () {
             // Find all roles associated with this user and department
             const userRoles = userRoleDepartments.filter(assignment => 
               assignment.userId === userId && 
-              assignment.departmentIds.includes(departmentId)
+              assignment.departmentIds.includes(departmentId) &&
+              getRoleById(assignment.roleId) // Make sure the role still exists
             );
             
             // Log the found roles for debugging
