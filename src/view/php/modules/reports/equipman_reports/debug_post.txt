@@ -1,34 +1,25 @@
 Array
 (
-    [docTypeSelect] => detailed
+    [docTypeSelect] => summarized
     [paper_size] => letter
     [orientation] => landscape
-    [specific_area] => Basement - FINANCE MEZZANINE
     [building_loc] => Diego Silang
-    [date_from] => 2025-05-20
-    [date_to] => 2025-05-20
+    [specific_area] => Basement
+    [date_from] => 2025-05-21
+    [date_to] => 2025-05-21
     [columns] => Array
         (
             [0] => asset_tag
             [1] => asset_description
             [2] => spec_brand_model
-            [3] => serial_number
-            [4] => date_acquired
-            [5] => invoice_no
-            [6] => receiving_report
-            [7] => building_location
-            [8] => accountable_individual
-            [9] => remarks
-            [10] => date_created
-            [11] => last_date_modified
-            [12] => equipment_status
-            [13] => action_taken
-            [14] => status_date_creation
-            [15] => status_remarks
+            [3] => equipment_status
+            [4] => action_taken
+            [5] => status_date_creation
+            [6] => status_remarks
         )
 
     [prepared_by] => Justine Lucas
     [role_department] => TMDD Intern
-    [prepared_date] => May 20, 2025
+    [prepared_date] => May 21, 2025
     [export_type] => pdf
 )
