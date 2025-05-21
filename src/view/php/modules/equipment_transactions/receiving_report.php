@@ -182,6 +182,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $fieldError = 'RR Number is required.';
     } elseif (!preg_match('/^RR\d+$/', $rr_no)) {
         $fieldError = 'RR Number must be like RR123.';
+    } elseif ($po_no !== '') {
+        $po_no_digits = $po_no;
+        if (strpos($po_no_digits, 'PO') === 0) {
+            $po_no_digits = substr($po_no_digits, 2);
+        }
+        if (!preg_match('/^\d+$/', $po_no_digits)) {
+            $fieldError = 'PO Number must contain numbers only.';
+        }
     }
 
     if ($fieldError) {
