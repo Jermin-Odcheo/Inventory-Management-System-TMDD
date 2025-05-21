@@ -313,7 +313,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) 
 
 // FETCH ALL
 try {
-    $stmt = $pdo->query("SELECT * FROM receive_report ORDER BY id DESC");
+    $stmt = $pdo->query("SELECT * FROM receive_report WHERE is_disabled = 0 ORDER BY id DESC");
     $receivingReports = $stmt->fetchAll();
 } catch (PDOException $e) {
     $errors[] = "Error retrieving Receiving Reports: " . $e->getMessage();
