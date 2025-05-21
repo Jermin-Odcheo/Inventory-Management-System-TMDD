@@ -101,10 +101,13 @@ $stmtPO->execute();
 $poList = $stmtPO->fetchAll(PDO::FETCH_COLUMN);
 
 // Audit helper
-function logAudit($pdo, $action, $oldVal, $newVal, $entityId = null)
+function logAudit($pdo, $action, $details, $status, $oldVal, $newVal, $entityId = null)
 {
-    $stmt = $pdo->prepare("INSERT INTO audit_log (UserID, EntityID, Module, Action, OldVal, NewVal, Date_Time) VALUES (?, ?, 'Receiving Report', ?, ?, ?, NOW())");
-    $stmt->execute([$_SESSION['user_id'], $entityId, $action, $oldVal, $newVal]);
+    $stmt = $pdo->prepare("
+        INSERT INTO audit_log (UserID, EntityID, Module, Action, Details, Status, OldVal, NewVal, Date_Time)
+        VALUES (?, ?, 'Receiving Report', ?, ?, ?, ?, ?, NOW())
+    ");
+    $stmt->execute([$_SESSION['user_id'], $entityId, $action, $details, $status, $oldVal, $newVal]);
 }
 
 // DELETE
@@ -124,14 +127,49 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             $stmt = $pdo->prepare("UPDATE receive_report SET is_disabled = 1 WHERE id = ?");
             $stmt->execute([$id]);
             $_SESSION['success'] = "Receiving Report deleted successfully.";
-            logAudit($pdo, 'delete', json_encode($oldData), null, $id);
+            logAudit(
+                $pdo,
+                'remove',
+                'Receiving Report has been remove',
+                'Successful',
+                json_encode($oldData),
+                null,
+                $id
+            );
         } else {
             $_SESSION['errors'] = ["Receiving Report not found for deletion."];
+            logAudit(
+                $pdo,
+                'remove',
+                'Receiving Report has been remove',
+                'Failed',
+                null,
+                null,
+                $id
+            );
         }
     } catch (PDOException $e) {
         $_SESSION['errors'] = ["Error deleting Receiving Report: " . $e->getMessage()];
+        logAudit(
+            $pdo,
+            'remove',
+            'Receiving Report has been remove',
+            'Failed',
+            json_encode($oldData),
+            null,
+            $id
+        );
     } catch (Exception $e) {
         $_SESSION['errors'] = [$e->getMessage()];
+        logAudit(
+            $pdo,
+            'remove',
+            'Receiving Report has been remove',
+            'Failed',
+            json_encode($oldData),
+            null,
+            $id
+        );
     }
 
     if (is_ajax_request()) {
@@ -204,35 +242,84 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$rbac->hasPrivilege('Equipment Transactions', 'Create')) {
                 throw new Exception('You do not have permission to add receiving reports');
             }
-
+    
             $stmt = $pdo->prepare("
                 INSERT INTO receive_report
                     (rr_no, accountable_individual, po_no, ai_loc, date_created, is_disabled)
                 VALUES (?, ?, ?, ?, ?, ?)
             ");
             $stmt->execute([$rr_no, $accountable_individual, $po_no, $ai_loc, $date_created, $is_disabled]);
+            
+            // Get the ID of the newly inserted record
+            $entityId = $pdo->lastInsertId();
+            
             $_SESSION['success'] = "Receiving Report has been added successfully.";
             $response['status'] = 'success';
             $response['message'] = $_SESSION['success'];
-            logAudit($pdo, 'add', null, json_encode([
-                'rr_no' => $rr_no,
-                'accountable_individual' => $accountable_individual,
-                'po_no' => $po_no,
-                'ai_loc' => $ai_loc,
-                'date_created' => $date_created
-            ]));
+            
+            // Log audit with updated fields
+            logAudit(
+                $pdo,
+                'create', // Changed from 'add' to 'create'
+                'New Receiving Report has been Created',
+                'Successful',
+                null,
+                json_encode([
+                    'rr_no' => $rr_no,
+                    'accountable_individual' => $accountable_individual,
+                    'po_no' => $po_no,
+                    'ai_loc' => $ai_loc,
+                    'date_created' => $date_created
+                ]),
+                $entityId
+            );
         } catch (PDOException $e) {
             $response['status'] = 'error';
             $response['message'] = "Error adding Receiving Report: " . $e->getMessage();
+            
+            // Log audit for failed attempt
+            logAudit(
+                $pdo,
+                'create',
+                'New Receiving Report has been Created',
+                'Failed',
+                null,
+                json_encode([
+                    'rr_no' => $rr_no,
+                    'accountable_individual' => $accountable_individual,
+                    'po_no' => $po_no,
+                    'ai_loc' => $ai_loc,
+                    'date_created' => $date_created
+                ]),
+                null // EntityID is null since the insert failed
+            );
         } catch (Exception $e) {
             $response['status'] = 'error';
             $response['message'] = $e->getMessage();
+            
+            // Log audit for failed attempt
+            logAudit(
+                $pdo,
+                'create',
+                'New Receiving Report has been Created',
+                'Failed',
+                null,
+                json_encode([
+                    'rr_no' => $rr_no,
+                    'accountable_individual' => $accountable_individual,
+                    'po_no' => $po_no,
+                    'ai_loc' => $ai_loc,
+                    'date_created' => $date_created
+                ]),
+                null
+            );
         }
         ob_clean();
         header('Content-Type: application/json');
         echo json_encode($response);
         exit;
-    } elseif (isset($_POST['action']) && $_POST['action'] === 'update') {
+
+    }elseif (isset($_POST['action']) && $_POST['action'] === 'update') {
         $id = $_POST['id'];
         $response = ['status' => '', 'message' => ''];
         try {
@@ -240,11 +327,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$rbac->hasPrivilege('Equipment Transactions', 'Modify')) {
                 throw new Exception('You do not have permission to modify receiving reports');
             }
-
+    
             $stmt = $pdo->prepare("SELECT * FROM receive_report WHERE id = ?");
             $stmt->execute([$id]);
             $oldData = $stmt->fetch(PDO::FETCH_ASSOC);
-
+    
             if ($oldData) {
                 $stmt = $pdo->prepare("
                     UPDATE receive_report
@@ -258,6 +345,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 logAudit(
                     $pdo,
                     'modified',
+                    'Receiving Report has been Updated',
+                    'Successful',
                     json_encode($oldData),
                     json_encode([
                         'rr_no' => $rr_no,
@@ -265,26 +354,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'po_no' => $po_no,
                         'ai_loc' => $ai_loc,
                         'date_created' => $date_created
-                    ])
+                    ]),
+                    $id // Use the ID as EntityID
                 );
             } else {
                 $response['status'] = 'error';
                 $response['message'] = "Receiving Report not found.";
+                logAudit(
+                    $pdo,
+                    'modified',
+                    'Receiving Report has been Updated',
+                    'Failed',
+                    null,
+                    null,
+                    $id
+                );
             }
         } catch (PDOException $e) {
             $response['status'] = 'error';
             $response['message'] = "Error updating Receiving Report: " . $e->getMessage();
+            logAudit(
+                $pdo,
+                'modified',
+                'Receiving Report has been Updated',
+                'Failed',
+                json_encode($oldData),
+                null,
+                $id
+            );
         } catch (Exception $e) {
             $response['status'] = 'error';
             $response['message'] = $e->getMessage();
+            logAudit(
+                $pdo,
+                'modified',
+                'Receiving Report has been Updated',
+                'Failed',
+                json_encode($oldData),
+                null,
+                $id
+            );
         }
         ob_clean();
         header('Content-Type: application/json');
         echo json_encode($response);
         exit;
     }
-}
 
+
+}
 // LOAD for edit
 $editReceivingReport = null;
 if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) {
@@ -359,6 +477,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
         }
     }
 }
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -397,7 +516,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
  
                         <?php if ($canCreate): ?>
                             <button type="button" class="btn btn-success btn-sm" id="openAddBtn">
-                                <i class="bi bi-plus-circle"></i> Add Receiving Report
+                                <i class="bi bi-plus-circle"></i> Create Receiving Report
                             </button>
                         <?php endif; ?>
                         <select class="form-select form-select-sm" id="dateFilter" style="width: auto;">
@@ -538,7 +657,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Add New Receiving Report</h5>
+                    <h5 class="modal-title">Create New Receiving Report</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">

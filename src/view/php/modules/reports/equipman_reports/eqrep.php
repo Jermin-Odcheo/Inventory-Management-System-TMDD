@@ -200,7 +200,7 @@ $todayDisplay = date('F j, Y');
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
   <script>
     document.addEventListener("DOMContentLoaded", function() {
-      const BASE_URL = '/src/view/php/modules/reports/equipman_reports/get_locations.php';
+      const BASE_URL = 'get_locations.php';
       $('#buildingLocSelect, #specificAreaSelect').select2({
         width: '100%'
       });
