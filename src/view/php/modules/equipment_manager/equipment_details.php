@@ -544,18 +544,6 @@ ob_end_clean();
                             </div>
                         </div>
                         <div class="mb-3">
-                            <div class="row">
-                                <div class="mb-3 col-md-6">
-                                    <label for="asset_description_1" class="form-label">Asset Description 1</label>
-                                    <input type="text" class="form-control" name="asset_description_1">
-                                </div>
-                                <div class="mb-3 col-md-6">
-                                    <label for="asset_description_2" class="form-label">Asset Description 2</label>
-                                    <input type="text" class="form-control" name="asset_description_2">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
                             <label for="specifications" class="form-label">Specification</label>
                             <textarea class="form-control" name="specifications" rows="3"></textarea>
                         </div>
