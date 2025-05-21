@@ -772,35 +772,20 @@ document.addEventListener("DOMContentLoaded", function () {
           const userId = parseInt(this.dataset.userId);
           const roleIdStr = this.dataset.roleId;
           // Handle roleId properly: "null" or "0" means null role
-          const roleId =
-            roleIdStr === "null" || roleIdStr === "0"
-              ? null
-              : parseInt(roleIdStr);
+          const roleId = roleIdStr === "null" || roleIdStr === "0" ? null : parseInt(roleIdStr);
           const departmentId = parseInt(this.dataset.deptId) || null;
-
-          // For debugging
-          console.log(
-            "Delete clicked for userId:",
-            userId,
-            "roleId:",
-            roleId,
-            "original:",
-            roleIdStr,
-            "departmentId:",
-            departmentId
+    
+          // Check if the user has actual roles in this department
+          const userAssignments = userRoleDepartments.filter(
+            (a) => a.userId === userId && a.departmentIds.includes(departmentId) && a.roleId !== null && a.roleId !== 0
           );
-
-          // Check if the user has actual roles or departments
-          const hasAssignments = userRoleDepartments.some(
-            (a) => a.userId === userId
-          );
-
-          // Don't allow deletion if user has no assignments
-          if (!hasAssignments) {
-            Toast.info("This user has no roles to delete", 5000, "Info");
+    
+          // If no actual roles exist, show "No Changes" message and stop
+          if (!userAssignments.length) {
+            Toast.info("No roles to delete for this user in this department", 5000, "No Changes");
             return;
           }
-
+    
           // Get user and department info for the confirmation message
           const user = getUserById(userId);
           let departmentName = "this department";
@@ -810,16 +795,15 @@ document.addEventListener("DOMContentLoaded", function () {
               departmentName = dept.department_name;
             }
           }
-
+    
           // Update the confirmation message
           const confirmMsg = document.querySelector('#delete-confirm-modal .modal-body p');
           if (confirmMsg && user) {
             confirmMsg.innerHTML = `Are you sure you want to remove all roles for <strong>${user.username}</strong> in <strong>${departmentName}</strong>?<br><small>The user will still be listed under this department but with no roles.</small>`;
           }
-
-          // Instead of a simple confirm(), show the custom delete modal.
+    
+          // Show the delete confirmation modal
           pendingDelete = { userId, roleId, departmentId };
-          // Show the pre-initialized modal
           if (deleteModal) {
             deleteModal.show();
           }
@@ -827,7 +811,6 @@ document.addEventListener("DOMContentLoaded", function () {
       });
     }
   }
-
   // Modal selection handlers
   if (searchRoleDropdown) {
     searchRoleDropdown.addEventListener("change", function () {
@@ -1073,7 +1056,7 @@ document.addEventListener("DOMContentLoaded", function () {
     confirmDeleteBtn.addEventListener("click", function () {
       if (pendingDelete) {
         const { userId, departmentId } = pendingDelete;
-
+  
         if (!departmentId) {
           Toast.error(
             "No department ID provided for this assignment",
@@ -1085,10 +1068,10 @@ document.addEventListener("DOMContentLoaded", function () {
           }
           return;
         }
-
+  
         // Log that we're removing all roles for this user in this department
         console.log(`Removing all roles for user ${userId} in department ${departmentId}`);
-
+  
         // Send AJAX request to delete all assignments for this user-department
         fetch("delete_user_role.php", {
           method: "POST",
@@ -1120,13 +1103,20 @@ document.addEventListener("DOMContentLoaded", function () {
                   (a) => !(a.userId === userId && a.departmentIds.includes(departmentId))
                 );
               }
-
+  
               // Re-render the table with the updated data
               renderUserRolesTable(null, null, null, userSortDirection);
               Toast.success(
                 "All roles removed successfully",
                 5000,
                 "Removed"
+              );
+            } else if (data.noChanges) {
+              // Handle case where no roles were deleted
+              Toast.info(
+                data.error || "No roles to delete for this user in this department",
+                5000,
+                "No Changes"
               );
             } else {
               Toast.error(
