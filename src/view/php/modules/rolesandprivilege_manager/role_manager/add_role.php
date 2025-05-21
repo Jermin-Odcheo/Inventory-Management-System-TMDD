@@ -102,9 +102,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             dataType: "json",
             success: function(response) {
                 if(response.success) {
+                    showToast(response.message, 'success', 5000);
                     $('#rolesTable').load(location.href + ' #rolesTable', function() {
                         updatePagination();
-                        showToast(response.message, 'success', 5000);
                     });
                     $('#addRoleModal').modal('hide');
                     $('.modal-backdrop').remove();
