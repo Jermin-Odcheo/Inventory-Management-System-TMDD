@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/../../../../../../config/ims-tmdd.php';
 require_once __DIR__ . '/../../../../../control/libs/vendor/autoload.php';
-require_once __DIR__ . '/../../../../../control/libs/phpoffice/vendor/autoload.php';
 
 use Dompdf\Dompdf;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -266,7 +265,7 @@ function exportEquipmentReport(array $data, PDO $pdo, string $exportType = 'pdf'
             $writer->save('php://output');
             break;
 
-        case 'docs':
+        case 'word':
             $phpWord = new PhpWord();
             $section = $phpWord->addSection();
             $section->addText("Equipment Report", ['bold' => true, 'size' => 16]);
