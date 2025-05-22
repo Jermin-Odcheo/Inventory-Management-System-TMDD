@@ -213,10 +213,15 @@ try {
                     <?php
                     // Fetch all departments directly for the filter dropdown, show ALL regardless of is_disabled
                     try {
-                        $deptStmt = $pdo->query("SELECT department_name FROM departments ORDER BY department_name");
-                        $allDepartments = $deptStmt->fetchAll(PDO::FETCH_COLUMN);
-                        foreach ($allDepartments as $deptName) {
-                            echo '<option value="' . htmlspecialchars($deptName) . '">' . htmlspecialchars($deptName) . '</option>';
+                        // Fetch both acronym and department_name
+                        $deptStmt = $pdo->query("SELECT department_name, abbreviation FROM departments ORDER BY department_name");
+                        $allDepartments = $deptStmt->fetchAll(PDO::FETCH_ASSOC);
+
+                        foreach ($allDepartments as $dept) {
+                            $name = htmlspecialchars($dept['department_name']);
+                            $abbreviation = htmlspecialchars($dept['abbreviation']);
+                            $label = "($abbreviation) $name";
+                            echo '<option value="' . $name . '">' . $label . '</option>';
                         }
                     } catch (PDOException $e) {
                         // fallback: empty
@@ -457,14 +462,23 @@ try {
                                 <select name="department" id="modal_department" class="form-select" style="width: 100%;">
                                     <option value="">Select Department</option>
                                     <?php foreach ($departments as $code => $d): ?>
-                                        <option value="<?= $code ?>"><?= htmlspecialchars($d['department_name']) ?></option>
+                                        <?php
+                                            // DEBUG dump
+                                            echo '<!-- DEBUG: ';
+                                            var_dump($d);
+                                            echo ' -->';
+                                        ?>
+                                        <option value="<?= htmlspecialchars(strval($code)) ?>">
+                                            (<?= htmlspecialchars($d['abbreviation']) ?>) <?= htmlspecialchars($d['department_name']) ?>
+                                        </option>
                                     <?php endforeach; ?>
-                                </select> <!-- No 'All Departments' and no 'Custom Department' -->
+                                </select>
                                 <small class="form-text text-muted">Select one or more departments (required)</small>
                                 <input type="text" id="modal_custom_department" name="custom_department"
                                     class="form-control mt-2" style="display:none;"
                                     placeholder="Enter custom department">
                             </div>
+
                             <div class="col-md-12">
                                 <label class="form-label">Assigned Departments Table</label>
                                 <div class="department-table-container">
@@ -535,11 +549,20 @@ try {
                                 <select name="departments[]" id="editDepartments" class="form-select">
                                     <option value="">Select departments</option>
                                     <?php foreach ($departments as $dept_id => $d): ?>
-                                        <option value="<?= $dept_id ?>"><?= htmlspecialchars($d['department_name']) ?></option>
+                                        <?php
+                                            // DEBUG: Show full array content in HTML comment
+                                            echo '<!-- DEBUG: ';
+                                            var_dump($d);
+                                            echo ' -->';
+                                        ?>
+                                        <option value="<?= htmlspecialchars(strval($dept_id)) ?>">
+                                            (<?= htmlspecialchars($d['abbreviation']) ?>) <?= htmlspecialchars($d['department_name']) ?>
+                                        </option>
                                     <?php endforeach; ?>
                                 </select>
                                 <small class="form-text text-muted">Select one or more departments (required)</small>
                             </div>
+
                             <div class="col-md-12 mt-2">
                                 <label class="form-label">Currently Assigned Departments</label>
                                 <div id="assignedDepartmentsList" class="border rounded p-2 mb-2">
@@ -703,8 +726,14 @@ try {
                 // Add event handlers for removal buttons
                 $('.remove-dept').on('click', function() {
                     const deptId = $(this).data('dept-id');
-                    selectedDepartments = selectedDepartments.filter(d => d.id !== deptId);
+                    
+                    console.log('Attempting to remove:', deptId);
+                    console.log('Before:', selectedDepartments);
+
+                    selectedDepartments = selectedDepartments.filter(d => String(d.id) !== String(deptId));
                     updateDepartmentsDisplay();
+                    
+                    console.log('After:', selectedDepartments);
                 });
             }
 

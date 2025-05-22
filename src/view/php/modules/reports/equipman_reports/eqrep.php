@@ -56,7 +56,7 @@ $todayDisplay = date('F j, Y');
 
     .select2-container--default .select2-selection--single .select2-selection__arrow {
       height: 38px;
-    }
+    } 
   </style>
 </head>
 
@@ -73,18 +73,23 @@ $todayDisplay = date('F j, Y');
           <h5>Document Specifications</h5>
           <div class="row">
             <div class="col-md-6">
-              <label class="form-label">Document Type:</label>
-              <select class="form-select" id="docTypeSelect" name="docTypeSelect" required>
-                <option value="summarized">Summarized Report</option>
-                <option value="detailed">Detailed Report</option>
-                <option value="custom" selected>Custom Report</option>
-              </select>
+              <label class="form-label">Report Type:</label>
+              <select class="form-select" id="repTypeSelect" name="repTypeSelect" required>
+  <option value="summarized">Summarized Report</option>
+  <option value="detailed">Complete Detailed Report</option>
+  <option value="custom" >Custom Report</option>
+  <option value="equipment_details">Equipment Details Only</option>
+  <option value="equipment_status">Equipment Status Only</option>
+  <option value="equipment_location"> Equipment Location Only</option>
+  <option value="receiving_report">Receiving Report Only</option>
+  <option value="charge_invoice">Charge Invoice Only</option>
+</select>
+
             </div>
             <div class="col-md-6">
               <label class="form-label">Location:</label>
               <select name="building_loc" class="form-select" id="buildingLocSelect" required>
                 <option value="all">All Locations</option>
-                <!-- Options will be populated dynamically via JavaScript -->
               </select>
             </div>
             <div class="col-md-6 mt-3">
@@ -107,39 +112,56 @@ $todayDisplay = date('F j, Y');
 
         <div class="form-section">
           <h5>Generated Table Columns</h5>
-          <h6>*Select the columns you want to include*</h6>
+          <h7>Instructions: Select the columns you want to include. Asset Tag is already permanently added.</h7>
           <div class="mb-2">
             <button type="button" class="btn btn-outline-secondary btn-sm" id="clearCheckboxes">Clear All</button>
           </div>
           <div class="row" id="checkboxContainer">
-            <?php
-            $columns = [
-              'asset_tag'              => 'Asset Tag',
-              'asset_description'      => 'Asset Description 1 & 2',
-              'spec_brand_model'       => 'Specifications, Brand and Model',
-              'serial_number'          => 'Serial Number',
-              'date_acquired'          => 'Date Acquired',
-              'invoice_no'             => 'Invoice No',
-              'receiving_report'       => 'Receiving Report',
-              'building_location'       => 'Location',
-              'specific_area'          => 'Laboratory/Office',
-              'accountable_individual' => 'Accountable Individual',
-              'remarks'                => 'Remarks',
-              'date_created'           => 'Date Created',
-              'last_date_modified'     => 'Last Date Modified',
-              'equipment_status'       => 'Equipment Status',
-              'action_taken'           => 'Action Taken',
-              'status_date_creation'   => 'Status Date Creation',
-              'status_remarks'         => 'Status Remarks'
-            ];
-            foreach ($columns as $val => $label) {
-              echo '<div class="col-md-4"><div class="form-check">';
-              echo "<input class='form-check-input report-checkbox' type='checkbox' name='columns[]' value='$val' id='$val'>";
-              echo "<label class='form-check-label' for='$val'>$label</label>";
-              echo '</div></div>';
-            }
-            ?>
-          </div>
+  <?php
+  $columnGroups = [
+    'Equipment Details' => [
+      'asset_tag' => 'Asset Tag',
+      'asset_description' => 'Asset Description 1 & 2',
+      'spec_brand_model' => 'Specifications, Brand and Model',
+      'serial_number' => 'Serial Number',
+      'remarks' => 'Remarks',
+      'date_created' => 'Date Created',
+      'last_date_modified' => 'Last Date Modified',
+    ],
+    'Equipment Status' => [
+      'equipment_status' => 'Equipment Status',
+      'action_taken' => 'Action Taken',
+      'status_date_creation' => 'Status Date Creation',
+      'status_remarks' => 'Status Remarks',
+    ],
+    'Equipment Location' => [
+      'specific_area' => 'Laboratory/Office',
+    ],
+    'Receiving Report' => [
+      'receiving_report' => 'RR number',
+      'building_location' => 'Location',
+      'accountable_individual' => 'Accountable Individual',
+    ],
+    'Charge Invoice' => [
+      'date_acquired' => 'Date Acquired',
+      'invoice_no' => 'Invoice No',
+    ]
+  ];
+
+  foreach ($columnGroups as $groupTitle => $groupColumns) {
+    echo "<div class='col-md-12 mt-3'><h6 class='fw-bold'>$groupTitle</h6><div class='row'>";
+    foreach ($groupColumns as $val => $label) {
+      echo "<div class='col-md-4'><div class='form-check'>";
+      echo "<input class='form-check-input report-checkbox' type='checkbox' 
+      name='columns[]' value='$val' id='$val'>";
+      echo "<label class='form-check-label' for='$val'>$label</label>";
+      echo "</div></div>";
+    }
+    echo "</div></div>";
+  }
+  ?>
+
+</div>
         </div>
 
         <div class="form-section">
@@ -171,7 +193,7 @@ $todayDisplay = date('F j, Y');
                 <option value="word">Word</option>
               </select>
             </div>
-            < class="col-md-8 d-flex justify-content-end gap-2 mt-3">
+            <div class="col-md-8 d-flex justify-content-end gap-2 mt-3">
               <button type="button" class="btn btn-dark" id="previewBtn">Preview Report</button>
               <?php if ($rbac->hasPrivilege('Reports', 'Export')): ?>
               <button type="submit" class="btn btn-primary" id="downloadBtn">Download Report</button>
@@ -179,7 +201,7 @@ $todayDisplay = date('F j, Y');
             </div>
           </div>
           <div id="docSpecsSection" class="mt-3">
-            <h6>Document Specifications (Visible for PDF/Word)</h6>
+            <h6>Document Specifications</h6>
             <label class="form-label">Paper Size:</label>
             <select name="paper_size" class="form-select" id="paperSizeSelect">
               <option value="letter">Letter (8x11")</option>
@@ -197,7 +219,6 @@ $todayDisplay = date('F j, Y');
     </div>
   </div>
 
-  <!-- JS includes -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
   <script>
@@ -269,7 +290,7 @@ $todayDisplay = date('F j, Y');
       const docSpecs = document.getElementById("docSpecsSection");
       const checkboxes = [...document.querySelectorAll('input.report-checkbox')];
       const clearBtn = document.getElementById("clearCheckboxes");
-      const docTypeSelect = document.getElementById("docTypeSelect");
+      const repTypeSelect = document.getElementById("repTypeSelect");
       const previewBtn = document.getElementById("previewBtn");
       const downloadBtn = document.getElementById("downloadBtn");
 
@@ -286,13 +307,45 @@ $todayDisplay = date('F j, Y');
         'status_remarks'
       ];
 
-      const applyDocTypeSelection = () => {
-        const docType = docTypeSelect.value;
+      const eqpDetailsCols = [
+        'asset_tag', 'asset_description', 'spec_brand_model', 'serial_number', 'remarks', 
+        'date_created', 'last_date_modified',
+      ];
+      
+      const eqpStatusCols = [
+        'asset_tag',  'equipment_status', 'action_taken', 'status_date_creation', 'status_remarks'
+      ];
+  
+      const eqpLocationCols = [
+        'asset_tag','specific_area'
+      ];
+
+      const RRCols = [
+        'asset_tag','receiving_report', 'building_location', 'accountable_individual',
+      ];
+      
+      const CICols = [
+        'asset_tag', 'date_acquired', 'invoice_no'
+      ];
+
+      const applyRepTypeSelection = () => {
+        const docType = repTypeSelect.value;
         if (docType === 'summarized') {
           checkboxes.forEach(cb => cb.checked = summarizedCols.includes(cb.value));
         } else if (docType === 'detailed') {
           checkboxes.forEach(cb => cb.checked = detailedCols.includes(cb.value));
-        } else {
+        }  else if (docType === 'equipment_details') {
+          checkboxes.forEach(cb => cb.checked = eqpDetailsCols.includes(cb.value));
+        } else if (docType === 'equipment_status') {
+          checkboxes.forEach(cb => cb.checked = eqpStatusCols.includes(cb.value));
+        }else if (docType === 'equipment_location') {
+          checkboxes.forEach(cb => cb.checked = eqpLocationCols.includes(cb.value));
+        }else if (docType === 'receiving_report') {
+          checkboxes.forEach(cb => cb.checked = RRCols.includes(cb.value));
+        }else if (docType === 'charge_invoice') {
+          checkboxes.forEach(cb => cb.checked = CICols.includes(cb.value));
+        }
+        else {
           checkboxes.forEach(cb => cb.checked = false);
         }
         updateDocTypeByCheckboxes();
@@ -308,22 +361,53 @@ $todayDisplay = date('F j, Y');
       const updateDocTypeByCheckboxes = () => {
         const selectedCols = getCheckedColumns();
         if (arraysEqual(selectedCols, detailedCols.slice().sort())) {
-          docTypeSelect.value = 'detailed';
-        } else if (arraysEqual(selectedCols, summarizedCols.slice().sort())) {
-          docTypeSelect.value = 'summarized';
-        } else {
-          docTypeSelect.value = 'custom';
+          repTypeSelect.value = 'detailed';
+        } 
+        else if (arraysEqual(selectedCols, summarizedCols.slice().sort())) {
+          repTypeSelect.value = 'summarized';
         }
+        else if (arraysEqual(selectedCols, eqpDetailsCols.slice().sort())) {
+          repTypeSelect.value = 'equipment_details';
+        }
+        else if (arraysEqual(selectedCols,  eqpStatusCols.slice().sort())) {
+          repTypeSelect.value = 'equipment_status';
+        }
+        else if (arraysEqual(selectedCols, eqpLocationCols.slice().sort())) {
+          repTypeSelect.value = 'equipment_location';
+        }
+        else if (arraysEqual(selectedCols, RRCols.slice().sort())) {
+          repTypeSelect.value = 'receiving_report';
+        }
+        else if (arraysEqual(selectedCols, CICols.slice().sort())) {
+          repTypeSelect.value = 'charge_invoice';
+        } 
+        else {
+          repTypeSelect.value = 'custom';
+        }
+
       };
 
+// Clear checkboxes automatically when "Custom Report" is selected
+document.getElementById("repTypeSelect").addEventListener("change", function () {
+  if (this.value === "custom") {
+    const checkboxes = document.querySelectorAll(".report-checkbox");
+    checkboxes.forEach(cb => {
+      if (!cb.disabled) {
+        cb.checked = false;
+      }
+    });
+  }
+});
+
+      
       clearBtn?.addEventListener("click", () => {
         checkboxes.forEach(cb => cb.checked = false);
-        docTypeSelect.value = 'custom';
+        repTypeSelect.value = 'custom';
       });
 
-      docTypeSelect?.addEventListener("change", applyDocTypeSelection);
+      repTypeSelect?.addEventListener("change", applyRepTypeSelection);
       checkboxes.forEach(cb => cb.addEventListener('change', updateDocTypeByCheckboxes));
-      applyDocTypeSelection();
+      applyRepTypeSelection();
 
       form.addEventListener("submit", (e) => {
         const building_loc = $('#buildingLocSelect').val();
@@ -369,6 +453,7 @@ $todayDisplay = date('F j, Y');
 
       exportType.dispatchEvent(new Event('change'));
     });
+    
   </script>
 </body>
 
