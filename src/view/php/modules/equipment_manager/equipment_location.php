@@ -327,6 +327,12 @@ function safeHtml($value)
         .filtered-out {
             display: none !important;
         }
+        th.sortable.asc::after {
+    content: " ▲";
+}
+th.sortable.desc::after {
+    content: " ▼";
+}
     </style>
 </head>
 
@@ -412,72 +418,72 @@ function safeHtml($value)
                 </div>
 
                 <div class="table-responsive" id="table">
-                    <table class="table" id="elTable">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Asset Tag</th>
-                                <th>Building</th>
-                                <th>Floor</th>
-                                <th>Area</th>
-                                <th>Person Responsible</th>
-                                <th>Department</th>
-                                <th>Remarks</th>
-                                <th>Date Created</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="locationTbody">
-                            <?php if (!empty($equipmentLocations)): ?>
-                                <?php foreach ($equipmentLocations as $index => $loc): ?>
-                                    <tr>
-                                        <td><?= $index + 1 ?></td>
-                                        <td><?= htmlspecialchars($loc['asset_tag'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($loc['building_loc'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($loc['floor_no'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($loc['specific_area'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($loc['person_responsible'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($loc['department_name'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($loc['remarks'] ?? '') ?></td>
-                                        <td><?= date('Y-m-d H:i', strtotime($loc['date_created'])) ?></td>
-                                        <td>
-                                            <?php if ($canModify): ?>
-                                                <button class="btn btn-sm btn-outline-info edit-location"
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#editLocationModal"
-                                                    data-id="<?= $loc['equipment_location_id'] ?>"
-                                                    data-asset="<?= htmlspecialchars($loc['asset_tag'] ?? '') ?>"
-                                                    data-building="<?= htmlspecialchars($loc['building_loc'] ?? '') ?>"
-                                                    data-floor="<?= htmlspecialchars($loc['floor_no'] ?? '') ?>"
-                                                    data-area="<?= htmlspecialchars($loc['specific_area'] ?? '') ?>"
-                                                    data-person="<?= htmlspecialchars($loc['person_responsible'] ?? '') ?>"
-                                                    data-department="<?= htmlspecialchars($loc['department_id'] ?? '') ?>"
-                                                    data-remarks="<?= htmlspecialchars($loc['remarks'] ?? '') ?>">
-                                                    <i class="bi bi-pencil"></i>
-                                                </button>
-                                            <?php endif; ?>
-
-                                            <?php if ($canDelete): ?>
-                                                <button class="btn btn-sm btn-outline-danger delete-location"
-                                                    data-id="<?= $loc['equipment_location_id'] ?>">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            <?php endif; ?>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-
-                            <?php else: ?>
-                                <td colspan="16" class="text-center py-4">
-                                    <div class="alert alert-info mb-0">
-                                        <i class="bi bi-info-circle me-2"></i> No Equipment Location found. Click on "Create Equipment" to add a new entry.
-                                    </div>
-                                </td>
+    <table class="table" id="elTable">
+        <thead>
+            <tr>
+                <th class="sortable" data-sort="number">#</th>
+                <th class="sortable" data-sort="string">Asset Tag</th>
+                <th class="sortable" data-sort="string">Building</th>
+                <th class="sortable" data-sort="string">Floor</th>
+                <th class="sortable" data-sort="string">Area</th>
+                <th class="sortable" data-sort="string">Person Responsible</th>
+                <th class="sortable" data-sort="string">Department</th>
+                <th class="sortable" data-sort="string">Remarks</th>
+                <th class="sortable" data-sort="date">Date Created</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="locationTbody">
+            <?php if (!empty($equipmentLocations)): ?>
+                <?php foreach ($equipmentLocations as $index => $loc): ?>
+                    <tr>
+                        <td><?= $index + 1 ?></td>
+                        <td><?= htmlspecialchars($loc['asset_tag'] ?? '') ?></td>
+                        <td><?= htmlspecialchars($loc['building_loc'] ?? '') ?></td>
+                        <td><?= htmlspecialchars($loc['floor_no'] ?? '') ?></td>
+                        <td><?= htmlspecialchars($loc['specific_area'] ?? '') ?></td>
+                        <td><?= htmlspecialchars($loc['person_responsible'] ?? '') ?></td>
+                        <td><?= htmlspecialchars($loc['department_name'] ?? '') ?></td>
+                        <td><?= htmlspecialchars($loc['remarks'] ?? '') ?></td>
+                        <td><?= date('Y-m-d H:i', strtotime($loc['date_created'])) ?></td>
+                        <td>
+                            <?php if ($canModify): ?>
+                                <button class="btn btn-sm btn-outline-info edit-location"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#editLocationModal"
+                                    data-id="<?= $loc['equipment_location_id'] ?>"
+                                    data-asset="<?= htmlspecialchars($loc['asset_tag'] ?? '') ?>"
+                                    data-building="<?= htmlspecialchars($loc['building_loc'] ?? '') ?>"
+                                    data-floor="<?= htmlspecialchars($loc['floor_no'] ?? '') ?>"
+                                    data-area="<?= htmlspecialchars($loc['specific_area'] ?? '') ?>"
+                                    data-person="<?= htmlspecialchars($loc['person_responsible'] ?? '') ?>"
+                                    data-department="<?= htmlspecialchars($loc['department_id'] ?? '') ?>"
+                                    data-remarks="<?= htmlspecialchars($loc['remarks'] ?? '') ?>">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
                             <?php endif; ?>
 
-                        </tbody>
-                    </table>
-                </div>
+                            <?php if ($canDelete): ?>
+                                <button class="btn btn-sm btn-outline-danger delete-location"
+                                    data-id="<?= $loc['equipment_location_id'] ?>">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <td colspan="16" class="text-center py-4">
+                    <div class="alert alert-info mb-0">
+                        <i class="bi bi-info-circle me-2"></i> No Equipment Location found. Click on "Create Equipment" to add a new entry.
+                    </div>
+                </td>
+            <?php endif; ?>
+        </tbody>
+    </table>
+</div>
+
+
                 <!-- Pagination Controls -->
                 <div class="container-fluid">
                     <div class="row align-items-center g-3">
@@ -1036,6 +1042,44 @@ function safeHtml($value)
             });
 
         });
+    document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll(".sortable").forEach(th => {
+            th.style.cursor = "pointer";
+            th.addEventListener("click", function () {
+                const table = th.closest("table");
+                const tbody = table.querySelector("tbody");
+                const rows = Array.from(tbody.querySelectorAll("tr"));
+                const index = Array.from(th.parentNode.children).indexOf(th);
+                const type = th.dataset.sort || "string";
+                const asc = !th.classList.contains("asc");
+
+                rows.sort((a, b) => {
+                    let x = a.children[index].innerText.trim();
+                    let y = b.children[index].innerText.trim();
+
+                    if (type === "number") {
+                        x = parseFloat(x) || 0;
+                        y = parseFloat(y) || 0;
+                    } else if (type === "date") {
+                        x = new Date(x);
+                        y = new Date(y);
+                    } else {
+                        x = x.toLowerCase();
+                        y = y.toLowerCase();
+                    }
+
+                    return asc ? (x > y ? 1 : -1) : (x < y ? 1 : -1);
+                });
+
+                tbody.innerHTML = "";
+                rows.forEach(row => tbody.appendChild(row));
+
+                table.querySelectorAll("th").forEach(th => th.classList.remove("asc", "desc"));
+                th.classList.add(asc ? "asc" : "desc");
+            });
+        });
+    });
+
     </script>
 </body>
 
