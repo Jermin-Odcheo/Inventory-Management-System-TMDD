@@ -90,6 +90,7 @@ unset($role);
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Role Management</title>
@@ -100,10 +101,10 @@ unset($role);
             display: flex;
             min-height: 100vh;
         }
- 
+
         .main-content {
             flex: 1;
- 
+
             margin-left: 300px;
         }
 
@@ -113,7 +114,8 @@ unset($role);
         }
 
         /* Button Styles */
-        .edit-btn, .delete-btn {
+        .edit-btn,
+        .delete-btn {
             background: none;
             border: none;
             cursor: pointer;
@@ -151,624 +153,680 @@ unset($role);
 </head>
 
 <body>
- 
-<div class="wrapper">
-    <div class="main-content container-fluid">
-        <header class="main-header">
-            <h1> Role Management</h1>
-        </header>
 
-        <div class="d-flex justify-content-end mb-3">
-            <!-- <?php if ($canViewArchive): ?>
+    <div class="wrapper">
+        <div class="main-content container-fluid">
+            <header class="main-header">
+                <h1> Role Management</h1>
+            </header>
+
+            <div class="d-flex justify-content-end mb-3">
+                <!-- <?php if ($canViewArchive): ?>
             <a href="archived_roles.php" class="btn btn-outline-secondary me-2">
                 <i class="bi bi-archive"></i> View Archived Roles
             </a> -->
             <?php endif; ?>
             <?php if ($canUndo): ?>
-            <button type="button" class="btn btn-secondary me-2" id="undoButton">Undo</button>
+                <button type="button" class="btn btn-secondary me-2" id="undoButton">Undo</button>
             <?php endif; ?>
             <?php if ($canRedo): ?>
-            <button type="button" class="btn btn-secondary" id="redoButton">Redo</button>
+                <button type="button" class="btn btn-secondary" id="redoButton">Redo</button>
             <?php endif; ?>
             <?php if ($canCreate): ?>
-            <button type="button" class="btn btn-primary ms-2" data-bs-toggle="modal" data-bs-target="#addRoleModal">
-                Create New Role
-            </button>
-            <?php endif; ?>
-        </div>
-
-        <!-- Add Filter Section -->
-        <div class="row mb-3">
-            <div class="col-md-3">
-                <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="text" id="roleNameFilter" class="form-control" placeholder="Filter by role name...">
-                </div>
-            </div>
-            <div class="col-md-3">
-                <select id="moduleFilter" class="form-select">
-                    <option value="">All Modules</option>
-                    <?php
-                    $modules = array_unique(array_column($roleData, 'Module_Name'));
-                    foreach ($modules as $module) {
-                        echo "<option value='" . htmlspecialchars($module) . "'>" . htmlspecialchars($module) . "</option>";
-                    }
-                    ?>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <select id="privilegeFilter" class="form-select" multiple>
-                    <?php
-                    $fixedPrivileges = ['Track', 'Create', 'Remove', 'Permanently Delete', 'Modify', 'View', 'Restore'];
-                    foreach ($fixedPrivileges as $privilege) {
-                        echo "<option value='" . htmlspecialchars($privilege) . "'>" . htmlspecialchars($privilege) . "</option>";
-                    }
-                    ?>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <button id="clear-filters-btn" class="btn btn-outline-secondary w-100">
-                    <i class="bi bi-x-circle"></i> Clear Filters
+                <button type="button" class="btn btn-primary ms-2" data-bs-toggle="modal" data-bs-target="#addRoleModal">
+                    Create New Role
                 </button>
+            <?php endif; ?>
             </div>
-        </div>
 
-        <div class="table-responsive" id="table">
-            <table id="rolesTable" class="table table-striped table-hover align-middle">
-                <thead class="table-dark">
-                <tr>
-                    <th style="width: 25px;">ID</th>
-                    <th style="width: 250px;">Role Name</th>
-                    <th>Modules & Privileges</th>
-                    <th style="width: 250px;">Actions</th>
-                </tr>
-                </thead>
-                <tbody id="auditTable">
-                <?php if (!empty($roles)): ?>
-                    <?php foreach ($roles as $roleID => $role): ?>
-                        <tr data-role-id="<?php echo $roleID; ?>">
-                            <td><?php echo htmlspecialchars($roleID); ?></td>
-                            <td class="role-name"><?php echo htmlspecialchars($role['Role_Name']); ?></td>
-                            <td class="privilege-list">
-                                <?php foreach ($role['Modules'] as $moduleName => $privileges): ?>
-                                    <div>
-                                        <strong><?php echo htmlspecialchars($moduleName); ?></strong>:
-                                        <?php echo !empty($privileges)
-                                            ? implode(', ', array_map('htmlspecialchars', $privileges))
-                                            : '<em>No privileges</em>'; ?>
-                                    </div>
-                                <?php endforeach; ?>
-                            </td>
-                            <td>
-                                <?php if ($canModify): ?>
-                                <button type="button" class="edit-btn edit-role-btn"
-                                        data-role-id="<?php echo $roleID; ?>" data-bs-toggle="modal"
-                                        data-bs-target="#editRoleModal">
-                                    <i class="bi bi-pencil-square"></i>
-                                </button>
-                                <?php endif; ?>
-                                <?php if ($canRemove): ?>
-                                <button type="button" class="delete-btn delete-role-btn"
-                                        data-role-id="<?php echo $roleID; ?>"
-                                        data-role-name="<?php echo htmlspecialchars($role['Role_Name']); ?>"
-                                        data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                                <?php endif; ?>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <tr>
-                        <td colspan="4">No roles found.</td>
-                    </tr>
-                <?php endif; ?>
-                </tbody>
-            </table>
-            <div class="container-fluid">
-                <div class="row align-items-center g-3">
-                    <div class="col-12 col-sm-auto">
-                        <div class="text-muted">
-                            Showing <span id="currentPage">1</span> to <span id="rowsPerPage"><?php echo min(10, count($roles)); ?></span> of <span
-                                    id="totalRows"><?php echo count($roles); ?></span> entries
-                        </div>
-                    </div>
-                    <div class="col-12 col-sm-auto ms-sm-auto">
-                        <div class="d-flex align-items-center gap-2">
-                            <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                <i class="bi bi-chevron-left"></i> Previous
-                            </button>
-                            <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
-                                <option value="5">5</option>
-                                <option value="10" selected>10</option>
-                                <option value="20">20</option>
-                                <option value="50">50</option>
-                            </select>
-                            <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                Next <i class="bi bi-chevron-right"></i>
-                            </button>
-                        </div>
+            <!-- Add Filter Section -->
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" id="roleNameFilter" class="form-control" placeholder="Filter by role name...">
                     </div>
                 </div>
-                <div class="row mt-3">
-                    <div class="col-12">
-                        <ul class="pagination justify-content-center" id="pagination"></ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
-
-<!-- Modals (unchanged) -->
-<div class="modal fade" id="editRoleModal" tabindex="-1" aria-labelledby="editRoleModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div id="editRoleContent">Loading...</div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel"
-     aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Confirm Delete</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                Are you sure you want to delete the role "<span id="roleNamePlaceholder"></span>"?
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <a id="confirmDeleteButton" href="#" class="btn btn-danger">Delete</a>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="addRoleModal" tabindex="-1" aria-labelledby="addRoleModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Create New Role</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" id="addRoleContent">Loading...</div>
-        </div>
-    </div>
-</div>
-
-<script>
-    // Pass RBAC privileges to JavaScript
-    const userPrivileges = {
-        canCreate: <?php echo json_encode($canCreate); ?>,
-        canModify: <?php echo json_encode($canModify); ?>,
-        canRemove: <?php echo json_encode($canRemove); ?>,
-        canUndo: <?php echo json_encode($canUndo); ?>,
-        canRedo: <?php echo json_encode($canRedo); ?>,
-        canViewArchive: <?php echo json_encode($canViewArchive); ?>
-    };
-
-    document.addEventListener('DOMContentLoaded', function () {
-        // Remove any custom pagination functions that might interfere with pagination.js
-        // and replace with a compatible function
-        function updatePaginationControls(visibleRows) {
-            // This triggers the existing pagination.js updatePagination function
-            if (typeof updatePagination === 'function') {
-                updatePagination();
-            }
-        }
-
-        // Check if Select2 is available
-        if ($.fn.select2) {
-            // Initialize Select2 for better dropdown experience
-            $('#moduleFilter').select2({
-                placeholder: 'Select Module...',
-                allowClear: true,
-                width: '100%'
-            });
-
-            $('#privilegeFilter').select2({
-                placeholder: 'Select Privileges...',
-                allowClear: true,
-                width: '100%',
-                closeOnSelect: false
-            });
-        }
-
-        // Filter function
-        function filterTable() {
-            const roleNameFilter = $('#roleNameFilter').val().toLowerCase();
-            const moduleFilter = $('#moduleFilter').val();
-            const privilegeFilters = $('#privilegeFilter').val() || [];
-
-            // Remove any "no results" message first
-            $('#no-results-row').remove();
-            
-            // Create a filtered array of rows that we'll use for pagination
-            window.filteredRows = window.allRows.filter(row => {
-                const $row = $(row);
-                const roleName = $row.find('.role-name').text().toLowerCase();
-                const privilegeList = $row.find('.privilege-list');
-                const privilegeText = privilegeList.text().toLowerCase();
-                
-                let showRow = true;
-
-                // Apply role name filter
-                if (roleNameFilter && !roleName.includes(roleNameFilter)) {
-                    showRow = false;
-                }
-
-                // Module and privilege combination filtering
-                if (moduleFilter) {
-                    // Find the specific module section
-                    let moduleFound = false;
-                    let moduleHasSelectedPrivileges = true;
-                    
-                    privilegeList.find('div').each(function() {
-                        const moduleSection = $(this).text().toLowerCase();
-                        if (moduleSection.includes(moduleFilter.toLowerCase())) {
-                            moduleFound = true;
-                            
-                            // If privileges are selected, check if this module actually has them
-                            if (privilegeFilters.length > 0) {
-                                // Check if module has "No privileges"
-                                if (moduleSection.includes("no privileges")) {
-                                    moduleHasSelectedPrivileges = false;
-                                    return false; // Break the each loop
-                                }
-                                
-                                // Check if module has ALL selected privileges
-                                const hasAllPrivileges = privilegeFilters.every(privilege => 
-                                    moduleSection.includes(privilege.toLowerCase())
-                                );
-                                
-                                if (!hasAllPrivileges) {
-                                    moduleHasSelectedPrivileges = false;
-                                    return false; // Break the each loop
-                                }
-                            }
-                            
-                            return false; // Break the each loop once we found the module
+                <div class="col-md-3">
+                    <select id="moduleFilter" class="form-select">
+                        <option value="">All Modules</option>
+                        <?php
+                        $modules = array_unique(array_column($roleData, 'Module_Name'));
+                        foreach ($modules as $module) {
+                            echo "<option value='" . htmlspecialchars($module) . "'>" . htmlspecialchars($module) . "</option>";
                         }
-                    });
-                    
-                    // Don't show if module wasn't found or doesn't have the selected privileges
-                    if (!moduleFound || !moduleHasSelectedPrivileges) {
-                        showRow = false;
-                    }
-                }
-                // Only privilege filtering (no module selected)
-                else if (privilegeFilters.length > 0) {
-                    const hasAllPrivileges = privilegeFilters.every(privilege => 
-                        privilegeText.includes(privilege.toLowerCase())
-                    );
-                    if (!hasAllPrivileges) {
-                        showRow = false;
-                    }
-                }
+                        ?>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select id="privilegeFilter" class="form-select" multiple>
+                        <?php
+                        $fixedPrivileges = ['Track', 'Create', 'Remove', 'Permanently Delete', 'Modify', 'View', 'Restore'];
+                        foreach ($fixedPrivileges as $privilege) {
+                            echo "<option value='" . htmlspecialchars($privilege) . "'>" . htmlspecialchars($privilege) . "</option>";
+                        }
+                        ?>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button id="clear-filters-btn" class="btn btn-outline-secondary w-100">
+                        <i class="bi bi-x-circle"></i> Clear Filters
+                    </button>
+                </div>
+            </div>
 
-                return showRow;
-            });
+            <div class="table-responsive" id="table">
+                <table id="rolesTable" class="table table-striped table-hover align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="width: 25px;">ID</th>
+                            <th style="width: 250px;">Role Name</th>
+                            <th>Modules & Privileges</th>
+                            <th style="width: 250px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="auditTable">
+                        <?php if (!empty($roles)): ?>
+                            <?php foreach ($roles as $roleID => $role): ?>
+                                <tr data-role-id="<?php echo $roleID; ?>">
+                                    <td><?php echo htmlspecialchars($roleID); ?></td>
+                                    <td class="role-name"><?php echo htmlspecialchars($role['Role_Name']); ?></td>
+                                    <td class="privilege-list">
+                                        <?php foreach ($role['Modules'] as $moduleName => $privileges): ?>
+                                            <div>
+                                                <strong><?php echo htmlspecialchars($moduleName); ?></strong>:
+                                                <?php echo !empty($privileges)
+                                                    ? implode(', ', array_map('htmlspecialchars', $privileges))
+                                                    : '<em>No privileges</em>'; ?>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </td>
+                                    <td>
+                                        <?php if ($canModify): ?>
+                                            <button type="button" class="edit-btn edit-role-btn"
+                                                data-role-id="<?php echo $roleID; ?>" data-bs-toggle="modal"
+                                                data-bs-target="#editRoleModal">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </button>
+                                        <?php endif; ?>
+                                        <?php if ($canRemove): ?>
+                                            <button type="button" class="delete-btn delete-role-btn"
+                                                data-role-id="<?php echo $roleID; ?>"
+                                                data-role-name="<?php echo htmlspecialchars($role['Role_Name']); ?>"
+                                                data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr>
+                                <td colspan="4">No roles found.</td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+                <div class="container-fluid">
+                    <div class="row align-items-center g-3">
+                        <div class="col-12 col-sm-auto">
+                            <div class="text-muted">
+                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage"><?php echo min(10, count($roles)); ?></span> of <span
+                                    id="totalRows"><?php echo count($roles); ?></span> entries
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-auto ms-sm-auto">
+                            <div class="d-flex align-items-center gap-2">
+                                <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                    <i class="bi bi-chevron-left"></i> Previous
+                                </button>
+                                <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                    <option value="5">5</option>
+                                    <option value="10" selected>10</option>
+                                    <option value="20">20</option>
+                                    <option value="50">50</option>
+                                </select>
+                                <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                    Next <i class="bi bi-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <ul class="pagination justify-content-center" id="pagination"></ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-            // Show "no results" message if no matches
-            if (window.filteredRows.length === 0) {
-                $('#auditTable').append(
-                    '<tr id="no-results-row"><td colspan="4" class="text-center py-3">' +
-                    '<div class="alert alert-info mb-0">' +
-                    '<i class="bi bi-info-circle me-2"></i>No matching roles found. Try adjusting your filters.' +
-                    '</div></td></tr>'
-                );
-            }
+    <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 
-            // Reset pagination to first page and update with filtered rows
-            window.currentPage = 1;
-            updatePagination();
-        }
+    <!-- Modals (unchanged) -->
+    <div class="modal fade" id="editRoleModal" tabindex="-1" aria-labelledby="editRoleModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div id="editRoleContent">Loading...</div>
+            </div>
+        </div>
+    </div>
 
-        // Add event listeners for filters
-        $('#roleNameFilter').on('input', filterTable);
-        $('#moduleFilter').on('change', filterTable);
-        $('#privilegeFilter').on('change', filterTable);
+    <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Delete</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to delete the role "<span id="roleNamePlaceholder"></span>"?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <a id="confirmDeleteButton" href="#" class="btn btn-danger">Delete</a>
+                </div>
+            </div>
+        </div>
+    </div>
 
-        // Clear filters button
-        $('#clear-filters-btn').on('click', function() {
-            $('#roleNameFilter').val('');
-            
-            // Handle Select2 dropdowns if available
-            if ($.fn.select2) {
-                $('#moduleFilter').val('').trigger('change');
-                $('#privilegeFilter').val(null).trigger('change');
-            } else {
-                $('#moduleFilter').val('');
-                $('#privilegeFilter').val([]);
-            }
-            
-            // Reset to show all rows (use original allRows)
-            window.filteredRows = window.allRows;
-            window.currentPage = 1;
-            updatePagination();
-            
-            // Remove any "no results" message
-            $('#no-results-row').remove();
-        });
+    <div class="modal fade" id="addRoleModal" tabindex="-1" aria-labelledby="addRoleModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create New Role</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="addRoleContent">Loading...</div>
+            </div>
+        </div>
+    </div>
 
-        // Initialize the pagination system correctly
-        window.allRows = Array.from(document.querySelectorAll('#auditTable tr'));
-        window.filteredRows = window.allRows; // Initially all rows are visible
-        
-        // Add this override for pagination.js to work with our filtered rows
-        window.updatePagination = function() {
-            const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value);
-            const totalRows = window.filteredRows.length;
-            const totalPages = Math.ceil(totalRows / rowsPerPage);
-            
-            // Update info display
-            document.getElementById('currentPage').textContent = window.currentPage;
-            document.getElementById('rowsPerPage').textContent = Math.min(rowsPerPage, totalRows);
-            document.getElementById('totalRows').textContent = totalRows;
-            
-            // Hide all rows first
-            window.allRows.forEach(row => {
-                row.style.display = 'none';
-            });
-            
-            // Show only the rows for the current page
-            const startIndex = (window.currentPage - 1) * rowsPerPage;
-            const endIndex = Math.min(startIndex + rowsPerPage, totalRows);
-            
-            for (let i = startIndex; i < endIndex; i++) {
-                if (window.filteredRows[i]) {
-                    window.filteredRows[i].style.display = '';
-                }
-            }
-            
-            // Update pagination controls
-            renderPaginationControls(totalPages);
-            
-            // Enable/disable prev/next buttons
-            document.getElementById('prevPage').disabled = window.currentPage <= 1;
-            document.getElementById('nextPage').disabled = window.currentPage >= totalPages;
+    <script>
+        // Pass RBAC privileges to JavaScript
+        const userPrivileges = {
+            canCreate: <?php echo json_encode($canCreate); ?>,
+            canModify: <?php echo json_encode($canModify); ?>,
+            canRemove: <?php echo json_encode($canRemove); ?>,
+            canUndo: <?php echo json_encode($canUndo); ?>,
+            canRedo: <?php echo json_encode($canRedo); ?>,
+            canViewArchive: <?php echo json_encode($canViewArchive); ?>
         };
-        
-        // Override pagination rendering to use ellipsis style
-        window.renderPaginationControls = function(totalPages) {
-            const paginationContainer = document.getElementById('pagination');
-            if (!paginationContainer) return;
 
-            paginationContainer.innerHTML = '';
-
-            if (totalPages <= 1) return;
-
-            // Always show first page
-            addPaginationItem(paginationContainer, 1, window.currentPage === 1);
-
-            // Show ellipses and a window of pages around current page
-            const maxVisiblePages = 5; // Adjust as needed
-            const halfWindow = Math.floor(maxVisiblePages / 2);
-            
-            let startPage = Math.max(2, window.currentPage - halfWindow);
-            let endPage = Math.min(totalPages - 1, window.currentPage + halfWindow);
-            
-            // Adjust for edge cases
-            if (window.currentPage <= halfWindow + 1) {
-                // Near start, show more pages after current
-                endPage = Math.min(totalPages - 1, maxVisiblePages);
-            } else if (window.currentPage >= totalPages - halfWindow) {
-                // Near end, show more pages before current
-                startPage = Math.max(2, totalPages - maxVisiblePages);
-            }
-            
-            // Show ellipsis after first page if needed
-            if (startPage > 2) {
-                addPaginationItem(paginationContainer, '...');
-            }
-            
-            // Show pages in the window
-            for (let i = startPage; i <= endPage; i++) {
-                addPaginationItem(paginationContainer, i, window.currentPage === i);
-            }
-            
-            // Show ellipsis before last page if needed
-            if (endPage < totalPages - 1) {
-                addPaginationItem(paginationContainer, '...');
-            }
-            
-            // Always show last page
-            if (totalPages > 1) {
-                addPaginationItem(paginationContainer, totalPages, window.currentPage === totalPages);
-            }
-        };
-        
-        // Helper function to add pagination items
-        window.addPaginationItem = function(container, page, isActive = false) {
-            const li = document.createElement('li');
-            li.className = 'page-item' + (isActive ? ' active' : '');
-
-            const a = document.createElement('a');
-            a.className = 'page-link';
-            a.href = '#';
-            a.textContent = page;
-
-            if (page !== '...') {
-                a.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    window.currentPage = parseInt(page);
+        document.addEventListener('DOMContentLoaded', function() {
+            // Remove any custom pagination functions that might interfere with pagination.js
+            // and replace with a compatible function
+            function updatePaginationControls(visibleRows) {
+                // This triggers the existing pagination.js updatePagination function
+                if (typeof updatePagination === 'function') {
                     updatePagination();
-                });
-            } else {
-                li.classList.add('disabled');
+                }
             }
 
-            li.appendChild(a);
-            container.appendChild(li);
-        };
-        
-        // Setup pagination controls
-        document.getElementById('prevPage').addEventListener('click', function() {
-            if (window.currentPage > 1) {
-                window.currentPage--;
+            // Check if Select2 is available
+            if ($.fn.select2) {
+                // Initialize Select2 for better dropdown experience
+                $('#moduleFilter').select2({
+                    placeholder: 'Select Module...',
+                    allowClear: true,
+                    width: '100%'
+                });
+
+                $('#privilegeFilter').select2({
+                    placeholder: 'Select Privileges...',
+                    allowClear: true,
+                    width: '100%',
+                    closeOnSelect: false
+                });
+            }
+
+            // Filter function
+            function filterTable() {
+                const roleNameFilter = $('#roleNameFilter').val().toLowerCase();
+                const moduleFilter = $('#moduleFilter').val();
+                const privilegeFilters = $('#privilegeFilter').val() || [];
+
+                // Remove any "no results" message first
+                $('#no-results-row').remove();
+
+                // Create a filtered array of rows that we'll use for pagination
+                window.filteredRows = window.allRows.filter(row => {
+                    const $row = $(row);
+                    const roleName = $row.find('.role-name').text().toLowerCase();
+                    const privilegeList = $row.find('.privilege-list');
+                    const privilegeText = privilegeList.text().toLowerCase();
+
+                    let showRow = true;
+
+                    // Apply role name filter
+                    if (roleNameFilter && !roleName.includes(roleNameFilter)) {
+                        showRow = false;
+                    }
+
+                    // Module and privilege combination filtering
+                    if (moduleFilter) {
+                        // Find the specific module section
+                        let moduleFound = false;
+                        let moduleHasSelectedPrivileges = true;
+
+                        privilegeList.find('div').each(function() {
+                            const moduleSection = $(this).text().toLowerCase();
+                            if (moduleSection.includes(moduleFilter.toLowerCase())) {
+                                moduleFound = true;
+
+                                // If privileges are selected, check if this module actually has them
+                                if (privilegeFilters.length > 0) {
+                                    // Check if module has "No privileges"
+                                    if (moduleSection.includes("no privileges")) {
+                                        moduleHasSelectedPrivileges = false;
+                                        return false; // Break the each loop
+                                    }
+
+                                    // Check if module has ALL selected privileges
+                                    const hasAllPrivileges = privilegeFilters.every(privilege =>
+                                        moduleSection.includes(privilege.toLowerCase())
+                                    );
+
+                                    if (!hasAllPrivileges) {
+                                        moduleHasSelectedPrivileges = false;
+                                        return false; // Break the each loop
+                                    }
+                                }
+
+                                return false; // Break the each loop once we found the module
+                            }
+                        });
+
+                        // Don't show if module wasn't found or doesn't have the selected privileges
+                        if (!moduleFound || !moduleHasSelectedPrivileges) {
+                            showRow = false;
+                        }
+                    }
+                    // Only privilege filtering (no module selected)
+                    else if (privilegeFilters.length > 0) {
+                        const hasAllPrivileges = privilegeFilters.every(privilege =>
+                            privilegeText.includes(privilege.toLowerCase())
+                        );
+                        if (!hasAllPrivileges) {
+                            showRow = false;
+                        }
+                    }
+
+                    return showRow;
+                });
+
+                // Show "no results" message if no matches
+                if (window.filteredRows.length === 0) {
+                    $('#auditTable').append(
+                        '<tr id="no-results-row"><td colspan="4" class="text-center py-3">' +
+                        '<div class="alert alert-info mb-0">' +
+                        '<i class="bi bi-info-circle me-2"></i>No matching roles found. Try adjusting your filters.' +
+                        '</div></td></tr>'
+                    );
+                }
+
+                // Reset pagination to first page and update with filtered rows
+                window.currentPage = 1;
                 updatePagination();
             }
-        });
-        
-        document.getElementById('nextPage').addEventListener('click', function() {
-            const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value);
-            const totalPages = Math.ceil(window.filteredRows.length / rowsPerPage);
-            
-            if (window.currentPage < totalPages) {
-                window.currentPage++;
+
+            // Add event listeners for filters
+            $('#roleNameFilter').on('input', filterTable);
+            $('#moduleFilter').on('change', filterTable);
+            $('#privilegeFilter').on('change', filterTable);
+
+            // Clear filters button
+            $('#clear-filters-btn').on('click', function() {
+                $('#roleNameFilter').val('');
+
+                // Handle Select2 dropdowns if available
+                if ($.fn.select2) {
+                    $('#moduleFilter').val('').trigger('change');
+                    $('#privilegeFilter').val(null).trigger('change');
+                } else {
+                    $('#moduleFilter').val('');
+                    $('#privilegeFilter').val([]);
+                }
+
+                // Reset to show all rows (use original allRows)
+                window.filteredRows = window.allRows;
+                window.currentPage = 1;
                 updatePagination();
+
+                // Remove any "no results" message
+                $('#no-results-row').remove();
+            });
+
+            // Initialize the pagination system correctly
+            window.allRows = Array.from(document.querySelectorAll('#auditTable tr'));
+            window.filteredRows = window.allRows; // Initially all rows are visible
+
+            // Add this override for pagination.js to work with our filtered rows
+            window.updatePagination = function() {
+                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value);
+                const totalRows = window.filteredRows.length;
+                const totalPages = Math.ceil(totalRows / rowsPerPage);
+
+                // Update info display
+                document.getElementById('currentPage').textContent = window.currentPage;
+                document.getElementById('rowsPerPage').textContent = Math.min(rowsPerPage, totalRows);
+                document.getElementById('totalRows').textContent = totalRows;
+
+                // Hide all rows first
+                window.allRows.forEach(row => {
+                    row.style.display = 'none';
+                });
+
+                // Show only the rows for the current page
+                const startIndex = (window.currentPage - 1) * rowsPerPage;
+                const endIndex = Math.min(startIndex + rowsPerPage, totalRows);
+
+                for (let i = startIndex; i < endIndex; i++) {
+                    if (window.filteredRows[i]) {
+                        window.filteredRows[i].style.display = '';
+                    }
+                }
+
+                // Update pagination controls
+                renderPaginationControls(totalPages);
+
+                // Enable/disable prev/next buttons
+                document.getElementById('prevPage').disabled = window.currentPage <= 1;
+                document.getElementById('nextPage').disabled = window.currentPage >= totalPages;
+            };
+
+            // Override pagination rendering to use ellipsis style
+            window.renderPaginationControls = function(totalPages) {
+                const paginationContainer = document.getElementById('pagination');
+                if (!paginationContainer) return;
+
+                paginationContainer.innerHTML = '';
+
+                if (totalPages <= 1) return;
+
+                // Always show first page
+                addPaginationItem(paginationContainer, 1, window.currentPage === 1);
+
+                // Show ellipses and a window of pages around current page
+                const maxVisiblePages = 5; // Adjust as needed
+                const halfWindow = Math.floor(maxVisiblePages / 2);
+
+                let startPage = Math.max(2, window.currentPage - halfWindow);
+                let endPage = Math.min(totalPages - 1, window.currentPage + halfWindow);
+
+                // Adjust for edge cases
+                if (window.currentPage <= halfWindow + 1) {
+                    // Near start, show more pages after current
+                    endPage = Math.min(totalPages - 1, maxVisiblePages);
+                } else if (window.currentPage >= totalPages - halfWindow) {
+                    // Near end, show more pages before current
+                    startPage = Math.max(2, totalPages - maxVisiblePages);
+                }
+
+                // Show ellipsis after first page if needed
+                if (startPage > 2) {
+                    addPaginationItem(paginationContainer, '...');
+                }
+
+                // Show pages in the window
+                for (let i = startPage; i <= endPage; i++) {
+                    addPaginationItem(paginationContainer, i, window.currentPage === i);
+                }
+
+                // Show ellipsis before last page if needed
+                if (endPage < totalPages - 1) {
+                    addPaginationItem(paginationContainer, '...');
+                }
+
+                // Always show last page
+                if (totalPages > 1) {
+                    addPaginationItem(paginationContainer, totalPages, window.currentPage === totalPages);
+                }
+            };
+
+            // Helper function to add pagination items
+            window.addPaginationItem = function(container, page, isActive = false) {
+                const li = document.createElement('li');
+                li.className = 'page-item' + (isActive ? ' active' : '');
+
+                const a = document.createElement('a');
+                a.className = 'page-link';
+                a.href = '#';
+                a.textContent = page;
+
+                if (page !== '...') {
+                    a.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        window.currentPage = parseInt(page);
+                        updatePagination();
+                    });
+                } else {
+                    li.classList.add('disabled');
+                }
+
+                li.appendChild(a);
+                container.appendChild(li);
+            };
+
+            // Setup pagination controls
+            document.getElementById('prevPage').addEventListener('click', function() {
+                if (window.currentPage > 1) {
+                    window.currentPage--;
+                    updatePagination();
+                }
+            });
+
+            document.getElementById('nextPage').addEventListener('click', function() {
+                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value);
+                const totalPages = Math.ceil(window.filteredRows.length / rowsPerPage);
+
+                if (window.currentPage < totalPages) {
+                    window.currentPage++;
+                    updatePagination();
+                }
+            });
+
+            document.getElementById('rowsPerPageSelect').addEventListener('change', function() {
+                window.currentPage = 1;
+                updatePagination();
+            });
+
+            // Function to force hide pagination buttons when not needed
+            function forcePaginationCheck() {
+                const totalRows = window.filteredRows ? window.filteredRows.length : 0;
+                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value);
+                const prevBtn = document.getElementById('prevPage');
+                const nextBtn = document.getElementById('nextPage');
+                const paginationEl = document.getElementById('pagination');
+
+                // Hide pagination completely if all rows fit on one page
+                if (totalRows <= rowsPerPage) {
+                    if (prevBtn) prevBtn.style.cssText = 'display: none !important';
+                    if (nextBtn) nextBtn.style.cssText = 'display: none !important';
+                    if (paginationEl) paginationEl.style.cssText = 'display: none !important';
+                } else {
+                    // Show pagination but conditionally hide prev/next buttons
+                    if (paginationEl) paginationEl.style.cssText = '';
+
+                    if (prevBtn) {
+                        if (window.currentPage <= 1) {
+                            prevBtn.style.cssText = 'display: none !important';
+                        } else {
+                            prevBtn.style.cssText = '';
+                        }
+                    }
+
+                    if (nextBtn) {
+                        const totalPages = Math.ceil(totalRows / rowsPerPage);
+                        if (window.currentPage >= totalPages) {
+                            nextBtn.style.cssText = 'display: none !important';
+                        } else {
+                            nextBtn.style.cssText = '';
+                        }
+                    }
+                }
             }
-        });
-        
-        document.getElementById('rowsPerPageSelect').addEventListener('change', function() {
+
+            // Add forcePaginationCheck to updatePagination
+            const originalUpdatePagination = window.updatePagination;
+            window.updatePagination = function() {
+                originalUpdatePagination();
+                forcePaginationCheck();
+            };
+
+            // Run immediately and after any filtering
+            forcePaginationCheck();
+            $('#roleNameFilter, #moduleFilter, #privilegeFilter').on('input change', function() {
+                setTimeout(forcePaginationCheck, 100);
+            });
+
+            // Initialize current page
             window.currentPage = 1;
             updatePagination();
-        });
-        
-        // Initialize current page
-        window.currentPage = 1;
-        updatePagination();
 
-        // **1. Load edit role modal content via AJAX**
-        $(document).on('click', '.edit-role-btn', function () {
-            if (!userPrivileges.canModify) return;
-            
-            var roleID = $(this).data('role-id');
-            $('#editRoleContent').html("Loading...");
-            $.ajax({
-                url: 'edit_roles.php',
-                type: 'GET',
-                data: {id: roleID},
-                headers: {'X-Requested-With': 'XMLHttpRequest'},
-                success: function (response) {
-                    $('#editRoleContent').html(response);
-                    $('#roleID').val(roleID);
-                },
-                error: function (xhr, status, error) {
-                    console.error('AJAX Error:', status, error);
-                    $('#editRoleContent').html('<p class="text-danger">Error loading role data. Please try again.</p>');
-                }
-            });
-        });
+            // **1. Load edit role modal content via AJAX**
+            $(document).on('click', '.edit-role-btn', function() {
+                if (!userPrivileges.canModify) return;
 
-        // **2. Handle delete role modal**
-        $('#confirmDeleteModal').on('show.bs.modal', function (event) {
-            if (!userPrivileges.canRemove) {
-                event.preventDefault();
-                return false;
-            }
-            
-            var button = $(event.relatedTarget);
-            var roleID = button.data('role-id');
-            var roleName = button.data('role-name');
-            $('#roleNamePlaceholder').text(roleName);
-            $('#confirmDeleteButton').data('role-id', roleID);
-        });
-
-        // **3. Confirm delete role via AJAX**
-        $(document).on('click', '#confirmDeleteButton', function (e) {
-            if (!userPrivileges.canRemove) return;
-            
-            e.preventDefault();
-            $(this).blur();
-            var roleID = $(this).data('role-id');
-            $.ajax({
-                type: 'POST',
-                url: 'delete_role.php',
-                data: {id: roleID},
-                dataType: 'json',
-                success: function (response) {
-                    if (response.success) {
-                        $('#rolesTable').load(location.href + ' #rolesTable', function () {
-                            updatePagination();
-                            showToast(response.message, 'success', 5000);
-                        });
-                        $('#confirmDeleteModal').modal('hide');
-                        $('.modal-backdrop').remove();
-                    } else {
-                        showToast(response.message || 'An error occurred', 'error', 5000);
+                var roleID = $(this).data('role-id');
+                $('#editRoleContent').html("Loading...");
+                $.ajax({
+                    url: 'edit_roles.php',
+                    type: 'GET',
+                    data: {
+                        id: roleID
+                    },
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    success: function(response) {
+                        $('#editRoleContent').html(response);
+                        $('#roleID').val(roleID);
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('AJAX Error:', status, error);
+                        $('#editRoleContent').html('<p class="text-danger">Error loading role data. Please try again.</p>');
                     }
-                },
-                error: function (xhr, status, error) {
-                    showToast('Error deleting role: ' + error, 'error', 5000);
-                }
+                });
             });
-        });
 
-        // **4. Load add role modal content**
-        $('#addRoleModal').on('show.bs.modal', function (event) {
-            if (!userPrivileges.canCreate) {
-                event.preventDefault();
-                return false;
-            }
-            
-            $('#addRoleContent').html("Loading...");
-            $.ajax({
-                url: 'add_role.php',
-                type: 'GET',
-                success: function (response) {
-                    $('#addRoleContent').html(response);
-                },
-                error: function () {
-                    $('#addRoleContent').html('<p class="text-danger">Error loading form.</p>');
+            // **2. Handle delete role modal**
+            $('#confirmDeleteModal').on('show.bs.modal', function(event) {
+                if (!userPrivileges.canRemove) {
+                    event.preventDefault();
+                    return false;
                 }
-            });
-        });
 
-        // **7. Undo button via AJAX**
-        $(document).on('click', '#undoButton', function () {
-            if (!userPrivileges.canUndo) return;
-            
-            $.ajax({
-                url: 'undo.php',
-                type: 'GET',
-                dataType: 'json',
-                success: function (response) {
-                    if (response.success) {
-                        $('#rolesTable').load(location.href + ' #rolesTable', function () {
-                            updatePagination();
-                            showToast(response.message, 'success', 5000);
-                        });
-                    } else {
-                        showToast(response.message || 'An error occurred', 'error', 5000);
+                var button = $(event.relatedTarget);
+                var roleID = button.data('role-id');
+                var roleName = button.data('role-name');
+                $('#roleNamePlaceholder').text(roleName);
+                $('#confirmDeleteButton').data('role-id', roleID);
+            });
+
+            // **3. Confirm delete role via AJAX**
+            $(document).on('click', '#confirmDeleteButton', function(e) {
+                if (!userPrivileges.canRemove) return;
+
+                e.preventDefault();
+                $(this).blur();
+                var roleID = $(this).data('role-id');
+                $.ajax({
+                    type: 'POST',
+                    url: 'delete_role.php',
+                    data: {
+                        id: roleID
+                    },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            $('#rolesTable').load(location.href + ' #rolesTable', function() {
+                                updatePagination();
+                                showToast(response.message, 'success', 5000);
+                            });
+                            $('#confirmDeleteModal').modal('hide');
+                            $('.modal-backdrop').remove();
+                        } else {
+                            showToast(response.message || 'An error occurred', 'error', 5000);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        showToast('Error deleting role: ' + error, 'error', 5000);
                     }
-                },
-                error: function (xhr, status, error) {
-                    showToast('Error processing undo request: ' + error, 'error', 5000);
-                }
+                });
             });
-        });
 
-        // **8. Redo button via AJAX**
-        $(document).on('click', '#redoButton', function () {
-            if (!userPrivileges.canRedo) return;
-            
-            $.ajax({
-                url: 'redo.php',
-                type: 'GET',
-                dataType: 'json',
-                success: function (response) {
-                    if (response.success) {
-                        $('#rolesTable').load(location.href + ' #rolesTable', function () {
-                            updatePagination();
-                            showToast(response.message, 'success', 5000);
-                        });
-                    } else {
-                        showToast(response.message || 'An error occurred', 'error', 5000);
-                    }
-                },
-                error: function (xhr, status, error) {
-                    showToast('Error processing redo request: ' + error, 'error', 5000);
+            // **4. Load add role modal content**
+            $('#addRoleModal').on('show.bs.modal', function(event) {
+                if (!userPrivileges.canCreate) {
+                    event.preventDefault();
+                    return false;
                 }
+
+                $('#addRoleContent').html("Loading...");
+                $.ajax({
+                    url: 'add_role.php',
+                    type: 'GET',
+                    success: function(response) {
+                        $('#addRoleContent').html(response);
+                    },
+                    error: function() {
+                        $('#addRoleContent').html('<p class="text-danger">Error loading form.</p>');
+                    }
+                });
+            });
+
+            // **7. Undo button via AJAX**
+            $(document).on('click', '#undoButton', function() {
+                if (!userPrivileges.canUndo) return;
+
+                $.ajax({
+                    url: 'undo.php',
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            $('#rolesTable').load(location.href + ' #rolesTable', function() {
+                                updatePagination();
+                                showToast(response.message, 'success', 5000);
+                            });
+                        } else {
+                            showToast(response.message || 'An error occurred', 'error', 5000);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        showToast('Error processing undo request: ' + error, 'error', 5000);
+                    }
+                });
+            });
+
+            // **8. Redo button via AJAX**
+            $(document).on('click', '#redoButton', function() {
+                if (!userPrivileges.canRedo) return;
+
+                $.ajax({
+                    url: 'redo.php',
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            $('#rolesTable').load(location.href + ' #rolesTable', function() {
+                                updatePagination();
+                                showToast(response.message, 'success', 5000);
+                            });
+                        } else {
+                            showToast(response.message || 'An error occurred', 'error', 5000);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        showToast('Error processing redo request: ' + error, 'error', 5000);
+                    }
+                });
             });
         });
-    });
-</script>
+    </script>
 </body>
+
 </html>
