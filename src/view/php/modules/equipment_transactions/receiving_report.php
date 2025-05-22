@@ -1246,6 +1246,49 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                 tableId: 'rrTable',
                 currentPage: 1
             });
+            
+            // Force hide pagination buttons if no data or all fits on one page
+            function forcePaginationCheck() {
+                const totalRows = parseInt(document.getElementById('totalRows')?.textContent || '0');
+                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect')?.value || '10');
+                const prevBtn = document.getElementById('prevPage');
+                const nextBtn = document.getElementById('nextPage');
+                const paginationEl = document.getElementById('pagination');
+
+                if (totalRows <= rowsPerPage) {
+                    if (prevBtn) prevBtn.style.cssText = 'display: none !important';
+                    if (nextBtn) nextBtn.style.cssText = 'display: none !important';
+                    if (paginationEl) paginationEl.style.cssText = 'display: none !important';
+                }
+                
+                // Also check for visible rows (for when filtering is applied)
+                const visibleRows = document.querySelectorAll('#rrTable tr:not(.filtered-out)').length;
+                if (visibleRows <= rowsPerPage) {
+                    if (prevBtn) prevBtn.style.cssText = 'display: none !important';
+                    if (nextBtn) nextBtn.style.cssText = 'display: none !important';
+                    if (paginationEl) paginationEl.style.cssText = 'display: none !important';
+                }
+            }
+
+            // Run immediately and after a short delay
+            forcePaginationCheck();
+            setTimeout(forcePaginationCheck, 200);
+            
+            // Run after any filter changes
+            const searchInput = document.getElementById('searchRR');
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    setTimeout(forcePaginationCheck, 100);
+                });
+            }
+            
+            // Run after rows per page changes
+            const rowsPerPageSelect = document.getElementById('rowsPerPageSelect');
+            if (rowsPerPageSelect) {
+                rowsPerPageSelect.addEventListener('change', function() {
+                    setTimeout(forcePaginationCheck, 100);
+                });
+            }
         });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
