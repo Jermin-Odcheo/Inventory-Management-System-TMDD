@@ -151,8 +151,6 @@ function formatChanges($oldJsonStr)
     <!-- Custom CSS for audit logs -->
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/audit_log.css">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/pagination.css">
-    <!-- Include Toast CSS/JS (make sure showToast is defined) -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
         .main-content {
             padding-top: 150px;

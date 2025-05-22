@@ -39,10 +39,6 @@
             </div>
         </div>
     </div>
-
-    <!-- jQuery (optional) -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    
     <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     
@@ -53,23 +49,12 @@
                 const modalElement = document.getElementById('testModal');
                 const modal = new bootstrap.Modal(modalElement);
                 modal.show();
-                console.log('Modal shown successfully via JavaScript');
             } catch (error) {
                 console.error('Error showing modal:', error);
                 alert('Error: ' + error.message);
             }
         });
-        
-        // Log when the modal is shown
-        const testModal = document.getElementById('testModal');
-        testModal.addEventListener('shown.bs.modal', function () {
-            console.log('Modal shown event fired');
-        });
-        
-        // Log when the modal is hidden
-        testModal.addEventListener('hidden.bs.modal', function () {
-            console.log('Modal hidden event fired');
-        });
+
     </script>
 </body>
 </html> 

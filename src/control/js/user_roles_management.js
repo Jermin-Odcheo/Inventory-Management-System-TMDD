@@ -553,16 +553,7 @@ document.addEventListener("DOMContentLoaded", function () {
               ? 0
               : parseInt(roleIdStr);
 
-          // For debugging
-          console.log(
-            "Edit clicked for userId:",
-            userId,
-            "roleId:",
-            roleId,
-            "original:",
-            roleIdStr
-          );
-          console.log("Available assignments:", userRoleDepartments);
+       
 
           // If roleId is 0, it means user doesn't have a role yet, but may have a department
           // We should still open the edit modal with the current department information
@@ -627,8 +618,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 );
               });
 
-              // Log the found roles
-              console.log("Filtered valid user roles:", userRoles);
+           
 
               // Add all roles to the table
               userRoles.forEach(userRole => {
@@ -741,15 +731,11 @@ document.addEventListener("DOMContentLoaded", function () {
               getRoleById(assignment.roleId) // Make sure the role still exists
             );
 
-            // Log the found roles for debugging
-            console.log("Found user roles for editing:", userRoles);
-
             // Add all roles to the table
             userRoles.forEach(userRole => {
               const role = getRoleById(userRole.roleId);
 
               if (role && role.id !== 0) {
-                console.log("Adding role to selection:", role);
 
                 // Create a new table row for the role
                 const tbody = document.querySelector('#assigned-roles-table tbody');
@@ -775,10 +761,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
                   // Get the role ID from the button's data attribute
                   const roleId = parseInt(this.getAttribute('data-role-id'));
-                  console.log('Delete button clicked for role ID:', roleId);
 
-                  // Log the current state of selectedRoles before removal
-                  console.log('Current selectedRoles before removal:', JSON.stringify(window.selectedRoles));
 
                   // Remove from the selectedRoles array
                   if (window.selectedRoles) {
@@ -788,8 +771,6 @@ document.addEventListener("DOMContentLoaded", function () {
                   // Remove the table row
                   tr.remove();
 
-                  console.log('Role removed:', roleId);
-                  console.log('Updated selectedRoles after removal:', JSON.stringify(window.selectedRoles));
                 });
 
                 // Add to the selectedRoles array
@@ -899,14 +880,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
   if (departmentDropdown) {
     departmentDropdown.addEventListener("change", function () {
-      console.log("Department dropdown change event triggered");
-      console.log("Selected value:", this.value);
 
       const roleId = parseInt(this.value);
       if (roleId) {
-        console.log("Role ID:", roleId);
         const role = getRoleById(roleId);
-        console.log("Role object:", role);
 
         // Check if this role is already in the table
         const tbody = document.querySelector('#assigned-roles-table tbody');
@@ -915,7 +892,6 @@ document.addEventListener("DOMContentLoaded", function () {
         );
 
         if (existingRow) {
-          console.log("Role already exists in table");
           Toast.info(`${role.role_name} is already selected`, 2000, "Info");
           return;
         }
@@ -943,11 +919,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
           // Get the role ID from the button's data attribute
           const roleId = parseInt(this.getAttribute('data-role-id'));
-          console.log('Delete button clicked for role ID:', roleId);
 
-          // Log the current state of selectedRoles before removal
-          console.log('Current selectedRoles before removal:', JSON.stringify(window.selectedRoles));
-
+            
           // Remove from the selectedRoles array
           if (window.selectedRoles) {
             window.selectedRoles = window.selectedRoles.filter(r => r.id !== roleId);
@@ -956,8 +929,6 @@ document.addEventListener("DOMContentLoaded", function () {
           // Remove the table row
           tr.remove();
 
-          console.log('Role removed:', roleId);
-          console.log('Updated selectedRoles after removal:', JSON.stringify(window.selectedRoles));
         });
 
         // Add to the selectedRoles array
@@ -1075,8 +1046,6 @@ document.addEventListener("DOMContentLoaded", function () {
           return;
         }
 
-        // Log that we're removing all roles for this user in this department
-        console.log(`Removing all roles for user ${userId} in department ${departmentId}`);
 
         // Send AJAX request to delete all assignments for this user-department
         fetch("delete_user_role.php", {
@@ -1152,20 +1121,12 @@ document.addEventListener("DOMContentLoaded", function () {
   // Save handler for adding users to roles
   if (saveUserRolesBtn && userPrivileges.canCreate) {
     saveUserRolesBtn.addEventListener("click", function () {
-      // Debug log to check what's in the arrays
-      console.log("Selected users (local):", selectedUsers);
-      console.log("Selected department (local):", selectedDepartment);
-      console.log("Selected users (window):", window.selectedUsers);
-      console.log("Selected department (window):", window.selectedDepartment);
+
 
       // Use window.selectedUsers and window.selectedDepartment which are set by the Select2 handlers
       const usersToSave = window.selectedUsers || selectedUsers || [];
       const departmentToSave = window.selectedDepartment || selectedDepartment;
       const rolesToSave = window.selectedRoles || selectedRoles || [];
-
-      console.log("Users to save:", usersToSave);
-      console.log("Department to save:", departmentToSave);
-      console.log("Roles to save:", rolesToSave);
 
       // Changed validation: only users and department are required, roles are optional
       if (!usersToSave || usersToSave.length === 0) {
@@ -1353,11 +1314,7 @@ document.addEventListener("DOMContentLoaded", function () {
   if (saveDepartmentRoleBtn && userPrivileges.canModify) {
     saveDepartmentRoleBtn.addEventListener("click", function () {
       if (currentEditingData) {
-        // When editing a user with no roles, we need to handle the case where roleId is null or 0
-        // Log full data for debugging
-        console.log("Saving with currentEditingData:", currentEditingData);
-        console.log("Selected roles (local):", selectedRoles);
-        console.log("Selected roles (window):", window.selectedRoles);
+
 
         // Use window.selectedRoles which is set by the Select2 handlers
         const rolesToUpdate = window.selectedRoles || selectedRoles || [];
@@ -1395,29 +1352,24 @@ document.addEventListener("DOMContentLoaded", function () {
         // Always consider it a change when there are roles selected or when removing roles
         let hasChanges = true;
 
-        console.log("Checking for changes:");
-        console.log("Current role ID:", currentEditingData.roleId);
-        console.log("Updated roles:", updatedRoles);
 
         // Find all existing roles for this user and department
         const existingRoles = userRoleDepartments
           .filter(a => a.userId === currentEditingData.userId && a.departmentIds.includes(departmentId))
           .map(a => a.roleId);
 
-        console.log("Existing roles:", existingRoles);
+       
 
         // Check if there are actual changes
         const rolesAdded = updatedRoles.filter(roleId => !existingRoles.includes(roleId));
         const rolesRemoved = existingRoles.filter(roleId => !updatedRoles.includes(roleId) && roleId !== 0 && roleId !== null);
 
-        console.log("Roles added:", rolesAdded);
-        console.log("Roles removed:", rolesRemoved);
 
         // Always continue with the update if roles were added or removed
         if (rolesAdded.length > 0 || rolesRemoved.length > 0) {
-          console.log("Changes detected - proceeding with update");
+         
         } else {
-          console.log("No changes detected");
+         
           Toast.info("No changes detected", 3000, "Info");
           addDepartmentRoleModal.style.display = "none";
           return;
@@ -1430,7 +1382,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
         // Map selected roles to their IDs to ensure we're sending the correct data
         updatedRoles = window.selectedRoles.map(role => role.id);
-        console.log("Final updatedRoles to send:", updatedRoles);
 
         // Log the update payload for debugging
         const updatePayload = {
@@ -1444,13 +1395,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
         // Check if we're removing all roles
         if (updatedRoles.length === 0) {
-          console.log("Removing all roles from this department");
           Toast.info("Removing all roles from this department...", 2000, "Processing");
-        } else {
-          console.log("Updating roles for this department");
         }
-
-        console.log("Sending update payload:", updatePayload);
 
         fetch("update_user_department.php", {
           method: "POST",
@@ -1461,7 +1407,6 @@ document.addEventListener("DOMContentLoaded", function () {
           .then((data) => {
             if (data.success) {
               // Log the server response for debugging
-              console.log("Server response:", data);
 
               // Update local data with server response
               if (data.assignments) {
@@ -1477,10 +1422,7 @@ document.addEventListener("DOMContentLoaded", function () {
                   ...data.assignments,
                 ];
 
-                console.log("Updated userRoleDepartments:", userRoleDepartments);
               } else {
-                // Fallback - manually update local data if no assignments returned
-                console.log("No assignments returned from server, updating locally");
 
                 // Remove existing roles for this user and department
                 userRoleDepartments = userRoleDepartments.filter(assignment =>
@@ -1498,8 +1440,6 @@ document.addEventListener("DOMContentLoaded", function () {
                     });
                   });
                 }
-
-                console.log("Locally updated userRoleDepartments:", userRoleDepartments);
               }
 
               // Close the modal

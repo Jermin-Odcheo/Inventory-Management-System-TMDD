@@ -439,7 +439,6 @@ function formatChanges($oldJsonStr)
     
     // Custom filtering for archive page
     document.addEventListener('DOMContentLoaded', function() {
-        console.log("Archive page loaded");
         
         // Initialize filters
         const actionFilter = document.getElementById('filterAction');
@@ -449,7 +448,6 @@ function formatChanges($oldJsonStr)
         // Set up direct event handlers on this page
         if (actionFilter) {
             actionFilter.addEventListener('change', function() {
-                console.log("Action filter changed to:", this.value);
                 if (typeof filterTable === 'function') {
                     filterTable();
                 }
@@ -458,7 +456,6 @@ function formatChanges($oldJsonStr)
         
         if (statusFilter) {
             statusFilter.addEventListener('change', function() {
-                console.log("Status filter changed to:", this.value);
                 if (typeof filterTable === 'function') {
                     filterTable();
                 }
@@ -467,7 +464,6 @@ function formatChanges($oldJsonStr)
         
         if (searchInput) {
             searchInput.addEventListener('input', function() {
-                console.log("Search input changed to:", this.value);
                 if (typeof filterTable === 'function') {
                     filterTable();
                 }
@@ -748,15 +744,13 @@ function formatChanges($oldJsonStr)
 <!-- jQuery Direct Filtering -->
 <script>
 $(document).ready(function() {
-    console.log("jQuery direct filter initialized");
-    
+
     // Store original table rows on page load for restoring
     var originalRows = [];
     
     function initializeRows() {
         // Get a fresh copy of all rows
         originalRows = $('#archiveTableBody tr').toArray();
-        console.log("Stored " + originalRows.length + " original rows");
     }
     
     // Initialize once page loads
@@ -767,12 +761,9 @@ $(document).ready(function() {
         var actionFilter = $('#filterAction').val().toLowerCase();
         var statusFilter = $('#filterStatus').val().toLowerCase();
         var searchFilter = $('#searchInput').val().toLowerCase();
-        
-        console.log("Filtering with - Action: '" + actionFilter + "', Status: '" + statusFilter + "', Search: '" + searchFilter + "'");
-        
+
         // Clone all original rows
         var allRows = originalRows.slice();
-        console.log("Starting with " + allRows.length + " total rows");
         
         // Filter rows
         var filteredRows = $.grep(allRows, function(row) {
@@ -783,7 +774,6 @@ $(document).ready(function() {
             if (actionFilter) {
                 var $actionCell = $row.find('td[data-label="Action"]');
                 var actionText = $actionCell.text().toLowerCase();
-                console.log("Action text: " + actionText);
                 
                 if (!actionText.includes(actionFilter)) {
                     matches = false;
@@ -794,7 +784,6 @@ $(document).ready(function() {
             if (statusFilter && matches) {
                 var $statusCell = $row.find('td[data-label="Status"]');
                 var statusText = $statusCell.text().toLowerCase();
-                console.log("Status text: " + statusText);
                 
                 if (!statusText.includes(statusFilter)) {
                     matches = false;
@@ -812,7 +801,6 @@ $(document).ready(function() {
             return matches;
         });
         
-        console.log("Filtered to " + filteredRows.length + " rows");
         
         // Clear table
         $('#archiveTableBody').empty();
@@ -888,22 +876,18 @@ $(document).ready(function() {
     window.checkRowContents = function() {
         $('#archiveTableBody tr').each(function(i, row) {
             var $row = $(row);
-            console.log("Row " + i + ":");
             
             var $actionCell = $row.find('td[data-label="Action"]');
             if ($actionCell.length) {
-                console.log("  Action: " + $actionCell.text().trim());
             }
             
             var $statusCell = $row.find('td[data-label="Status"]');
             if ($statusCell.length) {
-                console.log("  Status: " + $statusCell.text().trim());
             }
         });
     };
     
     // Run initial check
-    console.log("Running initial row content check:");
     window.checkRowContents();
 });
 </script>

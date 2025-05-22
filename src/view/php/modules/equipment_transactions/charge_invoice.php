@@ -375,8 +375,6 @@ try {
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
     <!-- Custom Styles -->
     <link href="../../../styles/css/equipment-transactions.css" rel="stylesheet">
-    <!-- jQuery -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 
 <body>
@@ -865,7 +863,7 @@ try {
                     },
                     error: function(xhr, status, error) {
                         console.error('Ajax error:', error);
-                        console.log(xhr.responseText); // This will help debug the actual server response
+                       
                         showToast('Error processing request. Please try again.', 'error');
 
                         // Remove modal backdrop in case of error

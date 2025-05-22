@@ -151,8 +151,7 @@ function formatChanges($oldJsonStr)
     <!-- Custom CSS for audit logs -->
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/audit_log.css">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/pagination.css">
-    <!-- Include Toast CSS/JS (make sure showToast is defined) -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
     <script>
         // Define showToast function to ensure it's available
         function showToast(message, type = 'info') {
@@ -664,7 +663,6 @@ function formatChanges($oldJsonStr)
     $(document).on('click', '#confirmRestoreBtn', function () {
         if (!userPrivileges.canRestore || !restoreId) return;
         
-        console.log('Sending restore request for department ID:', restoreId);
         
         $.ajax({
             url: '../../management/department_manager/restore_department.php',
@@ -673,7 +671,6 @@ function formatChanges($oldJsonStr)
             dataType: 'json',
             headers: { 'X-Requested-With': 'XMLHttpRequest' },
             success: function(response) {
-                console.log('Restore response:', response);
                 
                 // Hide restore modal immediately
                 var modalInstance = bootstrap.Modal.getInstance(document.getElementById('restoreArchiveModal'));
@@ -709,7 +706,6 @@ function formatChanges($oldJsonStr)
     $(document).on('click', '#confirmDeleteBtn', function () {
         if (!userPrivileges.canDelete || !deleteId) return;
         
-        console.log('Sending delete request for department ID:', deleteId);
         
         $.ajax({
             url: '../../role_manager/delete_department.php',
@@ -718,7 +714,7 @@ function formatChanges($oldJsonStr)
             dataType: 'json',
             headers: { 'X-Requested-With': 'XMLHttpRequest' },
             success: function(response) {
-                console.log('Delete response:', response);
+                
                 
                 // Hide delete modal immediately
                 var modalInstance = bootstrap.Modal.getInstance(document.getElementById('deleteArchiveModal'));
@@ -758,9 +754,7 @@ function formatChanges($oldJsonStr)
     // When confirming bulk restore in the modal, perform the AJAX call
     $(document).on('click', '#confirmBulkRestoreBtn', function () {
         if (!userPrivileges.canRestore || bulkRestoreIds.length === 0) return;
-        
-        console.log('Sending bulk restore request for department IDs:', bulkRestoreIds);
-        
+            
         $.ajax({
             url: '../../role_manager/restore_department.php',
             method: 'POST',
@@ -768,7 +762,6 @@ function formatChanges($oldJsonStr)
             dataType: 'json',
             headers: { 'X-Requested-With': 'XMLHttpRequest' },
             success: function(response) {
-                console.log('Bulk restore response:', response);
                 
                 // Hide the bulk restore modal
                 var modalInstance = bootstrap.Modal.getInstance(document.getElementById('bulkRestoreModal'));
@@ -803,7 +796,6 @@ function formatChanges($oldJsonStr)
     $(document).on('click', '#confirmBulkDeleteBtn', function () {
         if (!userPrivileges.canDelete || bulkDeleteIds.length === 0) return;
         
-        console.log('Sending bulk delete request for department IDs:', bulkDeleteIds);
         
         $.ajax({
             url: '../../role_manager/delete_department.php',
@@ -812,7 +804,7 @@ function formatChanges($oldJsonStr)
             dataType: 'json',
             headers: { 'X-Requested-With': 'XMLHttpRequest' },
             success: function(response) {
-                console.log('Bulk delete response:', response);
+
                 
                 // Hide bulk delete modal immediately
                 var bulkModalInstance = bootstrap.Modal.getInstance(document.getElementById('bulkDeleteModal'));

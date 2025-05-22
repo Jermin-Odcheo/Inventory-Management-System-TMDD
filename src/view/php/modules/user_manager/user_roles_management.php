@@ -579,14 +579,6 @@ $userRoleDepartments = array_values($userRoleMap);
 
                 // Get role name for display and filtering
                 const roleFilterName = roleFilter ? getRoleName(roleFilter).toLowerCase() : '';
-
-                console.log('Filtering with:', {
-                    userSearch,
-                    roleFilter,
-                    roleFilterName,
-                    deptFilter
-                });
-
                 // Show all rows first
                 $('#urTable tbody tr').show();
 
@@ -631,7 +623,6 @@ $userRoleDepartments = array_values($userRoleMap);
 
                 // Update the visibility count - THIS IS THE KEY PART
                 const visibleCount = uniqueUsernames.size;
-                console.log(`Showing ${visibleCount} unique users`);
 
                 // Update pagination info
                 $('#totalRows').text(visibleCount);
@@ -699,8 +690,6 @@ $userRoleDepartments = array_values($userRoleMap);
 
                 // Update pagination controls
                 updatePaginationControls(totalRows);
-
-                console.log('Filters cleared');
             });
 
             // Run initial filter

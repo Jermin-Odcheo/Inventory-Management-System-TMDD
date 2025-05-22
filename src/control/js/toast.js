@@ -137,7 +137,6 @@ function showToast(message, type = 'info', duration = 2800, title = null) {
             // Don't trigger if they clicked the close button
             if (event.target !== closeBtn && !closeBtn.contains(event.target)) {
                 // Custom action when toast is clicked - modify as needed
-                // Example: console.log('Toast clicked:', type, message);
             }
         });
 

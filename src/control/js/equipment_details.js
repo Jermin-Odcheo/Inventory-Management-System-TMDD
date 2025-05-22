@@ -112,17 +112,16 @@ $(document).ready(function() {
     // Add Equipment
     $('#addEquipmentForm').on('submit', function(e) {
         e.preventDefault();
-        console.log('Form submitted', $(this).serialize()); // Debug line
+    
 
         $.ajax({
             url: '../../modules/equipment_manager/equipment_details.php',
             method: 'POST',
             data: $(this).serialize(),
             success: function(response) {
-                console.log('Response:', response); // Debug line
                 try {
                     const result = JSON.parse(response);
-                    if (result.status === 'success') {54
+                    if (result.status === 'success') {
                         $('#addEquipmentModal').modal('hide');
                         location.reload();
                     } else {

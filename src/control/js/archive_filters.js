@@ -5,7 +5,6 @@
 
 // When document is ready
 $(document).ready(function() {
-    console.log("Archive filters initialized");
     
     // Store original rows on page load
     var originalRows = [];
@@ -15,7 +14,6 @@ $(document).ready(function() {
         const tbody = $('#archiveTable tbody, #archivedRolesTable tbody').get(0);
         if (tbody) {
             originalRows = $(tbody).find('tr').toArray();
-            console.log("Captured " + originalRows.length + " original rows");
         } else {
             console.warn("Could not find table body");
         }
@@ -30,8 +28,7 @@ $(document).ready(function() {
         const actionFilter = $('#filterAction').val().toLowerCase();
         const statusFilter = $('#filterStatus').val().toLowerCase();
         const searchFilter = $('#searchInput').val().toLowerCase();
-        
-        console.log("Applying filters - Action:", actionFilter, "Status:", statusFilter, "Search:", searchFilter);
+    
         
         // Get the current tbody
         const tbody = $('#archiveTable tbody, #archivedRolesTable tbody').get(0);
@@ -42,7 +39,6 @@ $(document).ready(function() {
         
         // Clone original rows
         const rows = originalRows.slice();
-        console.log("Filtering " + rows.length + " rows");
         
         // Clear tbody
         $(tbody).empty();
@@ -61,7 +57,6 @@ $(document).ready(function() {
                 if ($actionCell.length) {
                     const actionText = $actionCell.text().toLowerCase().trim();
                     showRow = actionText.includes(actionFilter);
-                    console.log("Row action:", actionText, "Match:", showRow);
                 }
             }
             
@@ -71,7 +66,6 @@ $(document).ready(function() {
                 if ($statusCell.length) {
                     const statusText = $statusCell.text().toLowerCase().trim();
                     showRow = statusText.includes(statusFilter);
-                    console.log("Row status:", statusText, "Match:", showRow);
                 }
             }
             
@@ -87,8 +81,7 @@ $(document).ready(function() {
             }
         }
         
-        console.log("Showing " + visibleCount + " rows after filtering");
-        
+            
         // Show "no results" message if needed
         if (visibleCount === 0) {
             const noResultsRow = `

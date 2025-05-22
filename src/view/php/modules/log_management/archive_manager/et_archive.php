@@ -153,8 +153,7 @@ function formatChanges($oldJsonStr)
     <!-- Custom CSS for audit logs -->
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/audit_log.css">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/pagination.css">
-    <!-- Include Toast CSS/JS (make sure showToast is defined) -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
     <style>
         .main-content {
             padding-top: 150px;
@@ -757,8 +756,6 @@ function formatChanges($oldJsonStr)
                 deleteUrl = '../../../modules/equipment_transactions/delete_charge_invoice.php';
             }
             
-            console.log('Delete URL:', deleteUrl);
-            console.log('Delete Data:', data);
             
             $.ajax({
                 url: deleteUrl,
@@ -767,7 +764,7 @@ function formatChanges($oldJsonStr)
                 dataType: 'json',
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
                 success: function(response) {
-                    console.log('Delete Response:', response);
+               
                     var modalInstance = bootstrap.Modal.getInstance(document.getElementById('deleteArchiveModal'));
                     modalInstance.hide();
                     if (response.status && response.status.toLowerCase() === 'success') {
@@ -814,9 +811,7 @@ function formatChanges($oldJsonStr)
                 deleteUrl = '../../../modules/equipment_transactions/delete_charge_invoice.php';
                 data = { ci_ids: bulkDeleteIds, permanent: 1 };
             }
-            
-            console.log('Bulk Delete URL:', deleteUrl);
-            console.log('Bulk Delete Data:', data);
+     
             
             $.ajax({
                 url: deleteUrl,
@@ -825,7 +820,7 @@ function formatChanges($oldJsonStr)
                 dataType: 'json',
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
                 success: function(response) {
-                    console.log('Bulk Delete Response:', response);
+      
                     var bulkModalInstance = bootstrap.Modal.getInstance(document.getElementById('bulkDeleteModal'));
                     bulkModalInstance.hide();
                     

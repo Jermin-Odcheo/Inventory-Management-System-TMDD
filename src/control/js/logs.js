@@ -40,21 +40,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Rebuild table body with only the rows that match the filters
 function filterTable() {
-    console.log("Filtering table..."); // Debug
     
     const searchFilter = document.getElementById('searchInput')?.value.toLowerCase() || '';
     const actionFilter = document.getElementById('filterAction')?.value.toLowerCase() || '';
     const statusFilter = document.getElementById('filterStatus')?.value.toLowerCase() || '';
     const moduleFilter = document.getElementById('filterModule')?.value.toLowerCase() || '';
     
-    console.log("Filters:", { searchFilter, actionFilter, statusFilter, moduleFilter }); // Debug
     
     // Get tableId from pagination.js if available, otherwise default to 'auditTable'
     const tableId = window.paginationConfig?.tableId || 'auditTable';
     
     // Use window.allRows if available (might be updated by other code)
     const rowsToFilter = window.allRows || allRows;
-    console.log(`Filtering ${rowsToFilter.length} rows`); // Debug
 
     // Filter rows from the original set
     const filteredRows = rowsToFilter.filter(row => {
@@ -87,7 +84,6 @@ function filterTable() {
                 // Convert both to lowercase and trim for comparison
                 matchesAction = actionText.includes(actionFilter);
                 
-                console.log(`Row action: ${actionText}, Filter: ${actionFilter}, Match: ${matchesAction}`); // Debug
             } else {
                 matchesAction = false;
             }
@@ -112,7 +108,6 @@ function filterTable() {
                     matchesStatus = statusText.includes(statusFilter);
                 }
                 
-                console.log(`Row status: ${statusText}, Filter: ${statusFilter}, Match: ${matchesStatus}`); // Debug
             } else {
                 matchesStatus = false;
             }
@@ -132,7 +127,6 @@ function filterTable() {
         return matchesSearch && matchesAction && matchesStatus && matchesModule;
     });
     
-    console.log(`Filtered to ${filteredRows.length} rows`); // Debug
 
     // Get the tbody element
     const tbody = document.getElementById(tableId);

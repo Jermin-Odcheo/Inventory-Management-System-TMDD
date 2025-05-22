@@ -732,12 +732,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
         });
 
         $(document).ready(function() {
-            // DEBUG: make sure Bootstrap.Modal exists
-            console.log('bootstrap.Modal =', typeof bootstrap.Modal);
+      
 
             $(document).on('click', '.edit-po', function(e) {
                 e.preventDefault();
-                console.log('📝 edit-po clicked', this);
+               
 
                 // Extract all data- attributes
                 const id = $(this).data('id');

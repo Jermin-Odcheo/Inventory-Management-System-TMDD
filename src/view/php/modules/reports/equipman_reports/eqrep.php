@@ -238,7 +238,6 @@ $todayDisplay = date('F j, Y');
               $buildingLocSelect.append(`<option value="${loc}">${loc}</option>`);
             });
             $buildingLocSelect.val(data.locations.includes(currentValue) ? currentValue : 'all').trigger('change');
-            console.log('Populated locations, selected:', $buildingLocSelect.val());
           } else {
             console.error('Error fetching locations:', data.error);
             alert('Failed to load locations: ' + data.error);
@@ -261,7 +260,6 @@ $todayDisplay = date('F j, Y');
               $specificAreaSelect.append(`<option value="${area}">${area}</option>`);
             });
             $specificAreaSelect.val(data.specific_areas.includes(currentValue) ? currentValue : 'all').trigger('change');
-            console.log('Populated specific areas, selected:', $specificAreaSelect.val());
           } else {
             console.error('Error fetching specific areas:', data.error);
             alert('Failed to load specific areas: ' + data.error);
@@ -276,13 +274,11 @@ $todayDisplay = date('F j, Y');
 
       $('#buildingLocSelect').on('change', function() {
         const building_loc = $(this).val();
-        console.log('Building Loc Changed:', building_loc);
         populateSpecificAreas(building_loc);
       });
 
       $('#specificAreaSelect').on('change', function() {
         const specific_area = $(this).val();
-        console.log('Specific Area Changed:', specific_area);
       });
 
       const form = document.getElementById("mainForm");
@@ -412,7 +408,6 @@ document.getElementById("repTypeSelect").addEventListener("change", function () 
       form.addEventListener("submit", (e) => {
         const building_loc = $('#buildingLocSelect').val();
         const specific_area = $('#specificAreaSelect').val();
-        console.log('Form Submit - building_loc:', building_loc, 'specific_area:', specific_area);
         if (!building_loc || !specific_area) {
           e.preventDefault();
           alert('Please select valid Location and Laboratory/Office values');
@@ -429,7 +424,6 @@ document.getElementById("repTypeSelect").addEventListener("change", function () 
         form.action = 'generate_report_preview.php';
         form.target = 'previewFrame';
         form.submit();
-        console.log('Preview Submitted - building_loc:', building_loc, 'specific_area:', specific_area);
       });
 
       downloadBtn.addEventListener("click", () => {
@@ -443,7 +437,6 @@ document.getElementById("repTypeSelect").addEventListener("change", function () 
         form.action = `generate_report.php?export_type=${type}`;
         form.target = '';
         form.submit();
-        console.log('Download Submitted - building_loc:', building_loc, 'specific_area:', specific_area);
       });
 
       exportType.addEventListener("change", () => {

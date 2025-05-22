@@ -99,7 +99,6 @@ $(document).ready(function() {
                         id: parseInt(dept.id),
                         name: dept.name
                     }));
-                    console.log("Departments loaded:", selectedDepartments);
                     updateEditDepartmentsDisplay();
                 } else {
                     console.error("Failed to load departments:", response.message);
@@ -334,8 +333,6 @@ $(document).ready(function() {
         
         if (deptId && !selectedDepartments.some(d => parseInt(d.id) === deptId)) {
             selectedDepartments.push({ id: deptId, name: deptName });
-            console.log("Department added:", { id: deptId, name: deptName });
-            console.log("Current departments:", selectedDepartments);
             updateEditDepartmentsDisplay();
         }
         
@@ -505,8 +502,6 @@ $(document).ready(function() {
         $list.empty();
         $table.empty();
         
-        console.log("Displaying departments:", selectedDepartments);
-        
         selectedDepartments.forEach(function(dept) {
             // Add badge to list
             $list.append(`
@@ -530,7 +525,6 @@ $(document).ready(function() {
         $('.remove-edit-dept').on('click', function() {
             const deptId = parseInt($(this).data('dept-id'));
             selectedDepartments = selectedDepartments.filter(d => parseInt(d.id) !== deptId);
-            console.log("Department removed, remaining:", selectedDepartments);
             updateEditDepartmentsDisplay();
         });
     }
