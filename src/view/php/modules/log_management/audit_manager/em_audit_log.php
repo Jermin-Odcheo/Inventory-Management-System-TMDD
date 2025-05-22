@@ -395,9 +395,8 @@ function getChangedFieldNames(array $oldData, array $newData)
                                 <option value="">All Actions</option>
                                 <option value="create">Create</option>
                                 <option value="modified">Modified</option>
-                                <option value="remove">Remove</option>
-                                <option value="delete">Delete</option>
-                                <option value="restored">Restored</option>
+                                <option value="remove">Removed</option>
+                                <option value="add">Add</option>
                             </select>
                         </div>
                         <div class="col-md-4 mb-2">
