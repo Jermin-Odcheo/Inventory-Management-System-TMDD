@@ -460,6 +460,8 @@ function getNormalizedAction($log)
                             <option value="remove">Remove</option>
                             <option value="delete">Delete</option>
                             <option value="restored">Restored</option>
+                            <option value="login">Login</option>
+                            <option value="logout">Logout</option>
                         </select>
                     </div>
                     <div class="col-md-4 mb-2">
