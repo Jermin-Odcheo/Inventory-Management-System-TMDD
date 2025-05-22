@@ -505,7 +505,7 @@ ob_end_clean();
                                 <th>Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="auditTable">
                             <?php if (!empty($equipmentDetails)): ?>
                                 <?php foreach ($equipmentDetails as $equipment): ?>
                                     <tr>
@@ -564,30 +564,6 @@ ob_end_clean();
                                         </div>
                                     </td>
                                 </tr>
-                            <?php endif; ?>
-                        </tbody>
-                        <tbody id="auditTable">
-                            <?php if (!empty($equipmentDetails)): ?>
-                                <?php foreach ($equipmentDetails as $equipment): ?>
-                                    <tr>
-                                        <td><?= safeHtml($equipment['id']); ?></td>
-                                        <td><?= safeHtml($equipment['asset_tag']); ?></td>
-                                        <td><?= safeHtml($equipment['asset_description_1']); ?></td>
-                                        <td><?= safeHtml($equipment['asset_description_2']); ?></td>
-                                        <td><?= safeHtml($equipment['specifications']); ?></td>
-                                        <td><?= safeHtml($equipment['brand']); ?></td>
-                                        <td><?= safeHtml($equipment['model']); ?></td>
-                                        <td><?= safeHtml($equipment['serial_number']); ?></td>
-                                        <td><?= safeHtml($equipment['date_created']); ?></td>
-                                        <td><?= !empty($equipment['date_created']) ? date('Y-m-d H:i', strtotime($equipment['date_created'])) : ''; ?></td>
-                                        <td><?= !empty($equipment['date_modified']) ? date('Y-m-d H:i', strtotime($equipment['date_modified'])) : ''; ?></td>
-                                        <td><?= safeHtml((strpos($equipment['rr_no'] ?? '', 'RR') === 0 ? $equipment['rr_no'] : ('RR' . $equipment['rr_no']))); ?></td>
-                                        <td><?= safeHtml($equipment['location']); ?></td>
-                                        <td><?= safeHtml($equipment['accountable_individual']); ?></td>
-                                        <td><?= safeHtml($equipment['remarks']); ?></td>
-                                        <td></td>
-                                    </tr>
-                                <?php endforeach; ?>
                             <?php endif; ?>
                         </tbody>
                     </table>
