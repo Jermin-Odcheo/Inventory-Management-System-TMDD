@@ -4,7 +4,7 @@ session_start();
 
 // start buffering all output (header/sidebar/footer HTML will be captured)
 ob_start();
- 
+
 include '../../general/header.php';
 include '../../general/sidebar.php';
 include '../../general/footer.php';
@@ -18,7 +18,6 @@ $userId = $_SESSION['user_id'] ?? null;
 if (!is_int($userId) && !ctype_digit((string)$userId)) {
     header('Location: ' . BASE_URL . 'index.php');
     exit;
-    
 }
 $userId = (int)$userId;
 
@@ -324,6 +323,11 @@ function safeHtml($value)
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.min.css" rel="stylesheet">
     <!-- Select2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+    <style>
+        .filtered-out {
+            display: none !important;
+        }
+    </style>
 </head>
 
 <body>
@@ -423,7 +427,7 @@ function safeHtml($value)
                                 <th>Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="auditTable">
                             <?php if (!empty($equipmentLocations)): ?>
                                 <?php foreach ($equipmentLocations as $index => $loc): ?>
                                     <tr>
@@ -479,9 +483,9 @@ function safeHtml($value)
                     <div class="row align-items-center g-3">
                         <div class="col-12 col-sm-auto">
                             <div class="text-muted">
-                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
-                                    id="totalRows">100</span>
-                                entries
+                                <?php $totalLogs = count($equipmentLocations); ?>
+                                <input type="hidden" id="total-users" value="<?= $totalLogs ?>">
+                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows"><?= $totalLogs ?></span> entries
                             </div>
                         </div>
                         <div class="col-12 col-sm-auto ms-sm-auto">
@@ -683,6 +687,86 @@ function safeHtml($value)
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
+        // Initialize pagination for equipment location page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize allRows for pagination.js
+            window.allRows = Array.from(document.querySelectorAll('#auditTable tr'));
+            
+            // Call updatePagination after a short delay to ensure pagination.js is loaded
+            setTimeout(function() {
+                if (typeof updatePagination === 'function') {
+                    updatePagination();
+                }
+            }, 100);
+            
+            // Override filter function to work with pagination
+            window.filterTable = function() {
+                const searchText = $('#eqSearch').val().toLowerCase();
+                const filterBuilding = $('#filterBuilding').val().toLowerCase();
+                const dateFilterType = $('#dateFilter').val();
+                const selectedMonth = $('#monthSelect').val();
+                const selectedYear = $('#yearSelect').val();
+                const dateFrom = $('#dateFrom').val();
+                const dateTo = $('#dateTo').val();
+                
+                const tbody = document.getElementById('auditTable');
+                const rows = Array.from(tbody.querySelectorAll('tr'));
+                
+                // Hide all rows first
+                rows.forEach(row => {
+                    const rowText = row.textContent.toLowerCase();
+                    const buildingText = row.cells[2].textContent.toLowerCase();
+                    const dateCell = row.cells[8].textContent;
+                    const date = new Date(dateCell);
+                    
+                    const searchMatch = rowText.includes(searchText);
+                    const buildingMatch = !filterBuilding || buildingText === filterBuilding;
+                    
+                    let dateMatch = true;
+                    if (dateFilterType === 'month' && selectedMonth && selectedYear) {
+                        dateMatch = (date.getMonth() + 1 === parseInt(selectedMonth)) &&
+                            (date.getFullYear() === parseInt(selectedYear));
+                    } else if (dateFilterType === 'range' && dateFrom && dateTo) {
+                        const from = new Date(dateFrom);
+                        const to = new Date(dateTo);
+                        to.setHours(23, 59, 59);
+                        dateMatch = date >= from && date <= to;
+                    }
+                    
+                    // Show or hide row based on filter match
+                    if (searchMatch && buildingMatch && dateMatch) {
+                        row.classList.remove('filtered-out');
+                    } else {
+                        row.classList.add('filtered-out');
+                    }
+                });
+                
+                // Sort if needed
+                if (dateFilterType === 'asc' || dateFilterType === 'desc') {
+                    const rowsArray = Array.from(rows).filter(r => !r.classList.contains('filtered-out'));
+                    rowsArray.sort((a, b) => {
+                        const dateA = new Date(a.cells[8].textContent);
+                        const dateB = new Date(b.cells[8].textContent);
+                        return dateFilterType === 'asc' ? dateA - dateB : dateB - dateA;
+                    });
+                    
+                    // Remove all rows and add back in sorted order
+                    rowsArray.forEach(row => tbody.appendChild(row));
+                }
+                
+                // Update allRows to only include visible rows for pagination
+                window.allRows = Array.from(tbody.querySelectorAll('tr:not(.filtered-out)'));
+                
+                // Reset to page 1 and update pagination
+                if (typeof currentPage !== 'undefined') {
+                    currentPage = 1;
+                }
+                if (typeof updatePagination === 'function') {
+                    updatePagination();
+                }
+            };
+        });
+
         document.addEventListener('DOMContentLoaded', function() {
             const searchInput = document.getElementById('eqSearch');
 
@@ -713,12 +797,12 @@ function safeHtml($value)
             // Date filter handling
             $('#dateFilter').on('change', function() {
                 const filterType = $(this).val();
-                
+
                 // Hide all containers first
                 $('#dateInputsContainer').hide();
                 $('#monthPickerContainer').hide();
                 $('#dateRangePickers').hide();
-                
+
                 // Show appropriate containers based on selection
                 if (filterType === 'month') {
                     $('#dateInputsContainer').show();
@@ -731,75 +815,28 @@ function safeHtml($value)
                     filterTable();
                 }
             });
-            
+
             // Handle month/year selection changes
             $('#monthSelect, #yearSelect').on('change', function() {
                 const month = $('#monthSelect').val();
                 const year = $('#yearSelect').val();
-                
+
                 if (month && year) {
                     filterTable();
                 }
             });
-            
+
             // Handle date range changes
             $('#dateFrom, #dateTo').on('change', function() {
                 const dateFrom = $('#dateFrom').val();
                 const dateTo = $('#dateTo').val();
-                
+
                 if (dateFrom && dateTo) {
                     filterTable();
                 }
             });
 
-            function filterTable() {
-                const searchText = $('#eqSearch').val().toLowerCase();
-                const filterBuilding = $('#filterBuilding').val().toLowerCase();
-                const dateFilterType = $('#dateFilter').val();
-                const selectedMonth = $('#monthSelect').val();
-                const selectedYear = $('#yearSelect').val();
-                const dateFrom = $('#dateFrom').val();
-                const dateTo = $('#dateTo').val();
-                
-                // First apply building filter and search text filter
-                $("#table tbody tr").each(function() {
-                    const row = $(this);
-                    const rowText = row.text().toLowerCase();
-                    const buildingText = row.find('td:eq(2)').text().toLowerCase();
-                    const dateCell = row.find('td:eq(8)').text(); // Date created column
-                    const date = new Date(dateCell);
-                    
-                    const searchMatch = rowText.includes(searchText);
-                    const buildingMatch = !filterBuilding || buildingText === filterBuilding;
-                    
-                    let dateMatch = true;
-                    if (dateFilterType === 'month' && selectedMonth && selectedYear) {
-                        dateMatch = (date.getMonth() + 1 === parseInt(selectedMonth)) && 
-                                   (date.getFullYear() === parseInt(selectedYear));
-                    } else if (dateFilterType === 'range' && dateFrom && dateTo) {
-                        const from = new Date(dateFrom);
-                        const to = new Date(dateTo);
-                        to.setHours(23, 59, 59); // Include the entire "to" day
-                        dateMatch = date >= from && date <= to;
-                    }
-                    
-                    row.toggle(searchMatch && buildingMatch && dateMatch);
-                });
-                
-                // Then handle sorting if needed
-                if (dateFilterType === 'asc' || dateFilterType === 'desc') {
-                    const tbody = $('#table tbody');
-                    const rows = tbody.find('tr').toArray();
-                    
-                    rows.sort(function(a, b) {
-                        const dateA = new Date($(a).find('td:eq(8)').text());
-                        const dateB = new Date($(b).find('td:eq(8)').text());
-                        return dateFilterType === 'asc' ? dateA - dateB : dateB - dateA;
-                    });
-                    
-                    tbody.append(rows);
-                }
-            }
+            // Note: filterTable function is now defined in the pagination section above
 
             // Delegate event for editing location
             $(document).on('click', '.edit-location', function() {
@@ -913,7 +950,7 @@ function safeHtml($value)
 
 
             // Department searchable dropdown (Add Location Modal)
-            $('#addLocationModal').on('shown.bs.modal', function () {
+            $('#addLocationModal').on('shown.bs.modal', function() {
                 $('#add_department_id').select2({
                     dropdownParent: $('#addLocationModal'),
                     width: '100%',
@@ -921,7 +958,7 @@ function safeHtml($value)
                     allowClear: true
                 });
             });
-            $('#addLocationModal').on('hidden.bs.modal', function () {
+            $('#addLocationModal').on('hidden.bs.modal', function() {
                 if ($('#add_department_id').hasClass('select2-hidden-accessible')) {
                     $('#add_department_id').select2('destroy');
                 }
@@ -965,7 +1002,7 @@ function safeHtml($value)
             });
 
             // Asset Tag Select2 for Add Location Modal
-            $('#addLocationModal').on('shown.bs.modal', function () {
+            $('#addLocationModal').on('shown.bs.modal', function() {
                 $('#add_location_asset_tag').select2({
                     tags: true,
                     placeholder: 'Select or type Asset Tag',
@@ -974,14 +1011,14 @@ function safeHtml($value)
                     dropdownParent: $('#addLocationModal')
                 });
             });
-            $('#addLocationModal').on('hidden.bs.modal', function () {
+            $('#addLocationModal').on('hidden.bs.modal', function() {
                 if ($('#add_location_asset_tag').hasClass('select2-hidden-accessible')) {
                     $('#add_location_asset_tag').select2('destroy');
                 }
                 $(this).find('form')[0].reset();
             });
             // Asset Tag Select2 for Edit Location Modal
-            $('#editLocationModal').on('shown.bs.modal', function () {
+            $('#editLocationModal').on('shown.bs.modal', function() {
                 $('#edit_location_asset_tag').select2({
                     tags: true,
                     placeholder: 'Select or type Asset Tag',
@@ -997,7 +1034,7 @@ function safeHtml($value)
                     allowClear: true
                 });
             });
-            $('#editLocationModal').on('hidden.bs.modal', function () {
+            $('#editLocationModal').on('hidden.bs.modal', function() {
                 if ($('#edit_location_asset_tag').hasClass('select2-hidden-accessible')) {
                     $('#edit_location_asset_tag').select2('destroy');
                 }
