@@ -545,10 +545,22 @@ function getNormalizedAction($log)
                                         <?php echo nl2br($changesHTML); ?>
                                     </td>
 
+                                    <?php
+                                        $statusRaw = $log['Status'] ?? '';
+                                        $statusClean = strtolower(trim($statusRaw)); // Trim and lowercase
+                                        $isSuccess = $statusClean === 'successful' || 'Success';
+                                    ?>
                                     <!-- STATUS -->
                                     <td data-label="Status">
-                                        <span class="badge <?php echo (strtolower($log['Status'] ?? '') === 'successful') ? 'bg-success' : 'bg-danger'; ?>">
-                                            <?php echo getStatusIcon($log['Status']) . ' ' . htmlspecialchars($log['Status']); ?>
+                                        <span class="badge <?php echo $isSuccess ? 'bg-success' : 'bg-danger'; ?>">
+                                            <?php
+                                                echo getStatusIcon($statusRaw) . ' ' . htmlspecialchars($statusRaw);
+
+                                                // DEBUG: Print raw status for unknown values
+                                                if (!$isSuccess) {
+                                                    echo "<!-- DEBUG: Raw Status = '" . addslashes($statusRaw) . "' -->";
+                                                }
+                                            ?>
                                         </span>
                                     </td>
 
