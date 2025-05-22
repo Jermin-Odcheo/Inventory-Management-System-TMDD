@@ -223,7 +223,7 @@ unset($role);
                     <th style="width: 250px;">Actions</th>
                 </tr>
                 </thead>
-                <tbody>
+                <tbody id="auditTable">
                 <?php if (!empty($roles)): ?>
                     <?php foreach ($roles as $roleID => $role): ?>
                         <tr data-role-id="<?php echo $roleID; ?>">
@@ -269,8 +269,8 @@ unset($role);
                 <div class="row align-items-center g-3">
                     <div class="col-12 col-sm-auto">
                         <div class="text-muted">
-                            Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
-                                    id="totalRows">100</span> entries
+                            Showing <span id="currentPage">1</span> to <span id="rowsPerPage"><?php echo min(10, count($roles)); ?></span> of <span
+                                    id="totalRows"><?php echo count($roles); ?></span> entries
                         </div>
                     </div>
                     <div class="col-12 col-sm-auto ms-sm-auto">
@@ -279,9 +279,9 @@ unset($role);
                                 <i class="bi bi-chevron-left"></i> Previous
                             </button>
                             <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                <option value="5">5</option>
                                 <option value="10" selected>10</option>
                                 <option value="20">20</option>
-                                <option value="30">30</option>
                                 <option value="50">50</option>
                             </select>
                             <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
@@ -354,6 +354,15 @@ unset($role);
     };
 
     document.addEventListener('DOMContentLoaded', function () {
+        // Remove any custom pagination functions that might interfere with pagination.js
+        // and replace with a compatible function
+        function updatePaginationControls(visibleRows) {
+            // This triggers the existing pagination.js updatePagination function
+            if (typeof updatePagination === 'function') {
+                updatePagination();
+            }
+        }
+
         // Check if Select2 is available
         if ($.fn.select2) {
             // Initialize Select2 for better dropdown experience
@@ -378,7 +387,7 @@ unset($role);
             const privilegeFilters = $('#privilegeFilter').val() || [];
 
             let visibleCount = 0;
-            $('#rolesTable tbody tr').each(function() {
+            $('#auditTable tr').each(function() {
                 const $row = $(this);
                 const roleName = $row.find('.role-name').text().toLowerCase();
                 const privilegeList = $row.find('.privilege-list');
@@ -440,14 +449,19 @@ unset($role);
                     }
                 }
 
-                $row.toggle(showRow);
-                if (showRow) visibleCount++;
+                // Instead of hiding/showing, use a data attribute that pagination.js can recognize
+                if (showRow) {
+                    $row.show();
+                    visibleCount++;
+                } else {
+                    $row.hide();
+                }
             });
 
             // Show "no results" message if no matches
             if (visibleCount === 0) {
                 if ($('#no-results-row').length === 0) {
-                    $('#rolesTable tbody').append(
+                    $('#auditTable').append(
                         '<tr id="no-results-row"><td colspan="4" class="text-center py-3">' +
                         '<div class="alert alert-info mb-0">' +
                         '<i class="bi bi-info-circle me-2"></i>No matching roles found. Try adjusting your filters.' +
@@ -458,22 +472,9 @@ unset($role);
                 $('#no-results-row').remove();
             }
 
-            // Update pagination info
-            updatePaginationInfo(visibleCount);
-        }
-
-        // Update pagination info
-        function updatePaginationInfo(visibleRows) {
-            const totalRows = $('#rolesTable tbody tr').length - ($('#no-results-row').length > 0 ? 1 : 0);
-            const rowsPerPage = parseInt($('#rowsPerPageSelect').val()) || 10;
-            
-            $('#totalRows').text(totalRows);
-            $('#rowsPerPage').text(Math.min(rowsPerPage, visibleRows));
-            $('#currentPage').text(visibleRows > 0 ? '1' : '0');
-            
-            // Update pagination controls if that function exists
-            if (typeof updatePaginationControls === 'function') {
-                updatePaginationControls(visibleRows);
+            // Update the pagination after filtering
+            if (typeof updatePagination === 'function') {
+                updatePagination();
             }
         }
 
@@ -494,6 +495,9 @@ unset($role);
             }
             filterTable();
         });
+
+        // Initialize the table (needed for pagination.js to work)
+        window.allRows = Array.from(document.querySelectorAll('#auditTable tr'));
 
         // **1. Load edit role modal content via AJAX**
         $(document).on('click', '.edit-role-btn', function () {
