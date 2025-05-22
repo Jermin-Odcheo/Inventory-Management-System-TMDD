@@ -435,6 +435,7 @@ function formatChanges($oldJsonStr)
 <!-- Include pagination script if needed -->
 <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js" defer></script>
 <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/logs.js" defer></script>
+<script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/archive_filters.js" defer></script>
 <script>
     // Pass RBAC permissions to JavaScript
     var userPrivileges = {

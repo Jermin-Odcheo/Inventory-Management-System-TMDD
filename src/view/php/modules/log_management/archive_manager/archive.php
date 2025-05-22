@@ -428,6 +428,7 @@ function formatChanges($oldJsonStr)
 <!-- Include pagination script if needed -->
 <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js" defer></script>
 <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/logs.js" defer></script>
+<script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/archive_filters.js" defer></script>
 <script>
     // Pass RBAC permissions to JavaScript
     var userPrivileges = {
@@ -435,6 +436,44 @@ function formatChanges($oldJsonStr)
         canRemove: <?php echo json_encode($canRemove); ?>,
         canDelete: <?php echo json_encode($canDelete); ?>
     };
+    
+    // Custom filtering for archive page
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log("Archive page loaded");
+        
+        // Initialize filters
+        const actionFilter = document.getElementById('filterAction');
+        const statusFilter = document.getElementById('filterStatus');
+        const searchInput = document.getElementById('searchInput');
+        
+        // Set up direct event handlers on this page
+        if (actionFilter) {
+            actionFilter.addEventListener('change', function() {
+                console.log("Action filter changed to:", this.value);
+                if (typeof filterTable === 'function') {
+                    filterTable();
+                }
+            });
+        }
+        
+        if (statusFilter) {
+            statusFilter.addEventListener('change', function() {
+                console.log("Status filter changed to:", this.value);
+                if (typeof filterTable === 'function') {
+                    filterTable();
+                }
+            });
+        }
+        
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                console.log("Search input changed to:", this.value);
+                if (typeof filterTable === 'function') {
+                    filterTable();
+                }
+            });
+        }
+    });
     
     // Initialize pagination when document is ready
     document.addEventListener('DOMContentLoaded', function() {
@@ -705,6 +744,170 @@ function formatChanges($oldJsonStr)
         });
     });
 </script>
+
+<!-- jQuery Direct Filtering -->
+<script>
+$(document).ready(function() {
+    console.log("jQuery direct filter initialized");
+    
+    // Store original table rows on page load for restoring
+    var originalRows = [];
+    
+    function initializeRows() {
+        // Get a fresh copy of all rows
+        originalRows = $('#archiveTableBody tr').toArray();
+        console.log("Stored " + originalRows.length + " original rows");
+    }
+    
+    // Initialize once page loads
+    initializeRows();
+    
+    // Function to filter rows
+    function filterTable() {
+        var actionFilter = $('#filterAction').val().toLowerCase();
+        var statusFilter = $('#filterStatus').val().toLowerCase();
+        var searchFilter = $('#searchInput').val().toLowerCase();
+        
+        console.log("Filtering with - Action: '" + actionFilter + "', Status: '" + statusFilter + "', Search: '" + searchFilter + "'");
+        
+        // Clone all original rows
+        var allRows = originalRows.slice();
+        console.log("Starting with " + allRows.length + " total rows");
+        
+        // Filter rows
+        var filteredRows = $.grep(allRows, function(row) {
+            var $row = $(row);
+            var matches = true;
+            
+            // Filter by action
+            if (actionFilter) {
+                var $actionCell = $row.find('td[data-label="Action"]');
+                var actionText = $actionCell.text().toLowerCase();
+                console.log("Action text: " + actionText);
+                
+                if (!actionText.includes(actionFilter)) {
+                    matches = false;
+                }
+            }
+            
+            // Filter by status
+            if (statusFilter && matches) {
+                var $statusCell = $row.find('td[data-label="Status"]');
+                var statusText = $statusCell.text().toLowerCase();
+                console.log("Status text: " + statusText);
+                
+                if (!statusText.includes(statusFilter)) {
+                    matches = false;
+                }
+            }
+            
+            // Filter by search
+            if (searchFilter && matches) {
+                var rowText = $row.text().toLowerCase();
+                if (!rowText.includes(searchFilter)) {
+                    matches = false;
+                }
+            }
+            
+            return matches;
+        });
+        
+        console.log("Filtered to " + filteredRows.length + " rows");
+        
+        // Clear table
+        $('#archiveTableBody').empty();
+        
+        // Show filtered rows or no results message
+        if (filteredRows.length > 0) {
+            // Add filtered rows back to table
+            $.each(filteredRows, function(i, row) {
+                $('#archiveTableBody').append(row);
+            });
+        } else {
+            // Show no results message
+            var noResultsHtml = `
+                <tr id="no-results-row">
+                    <td colspan="10" class="text-center py-4">
+                        <div class="empty-state">
+                            <i class="fas fa-search fa-3x mb-3"></i>
+                            <h4>No matching records found</h4>
+                            <p class="text-muted">Try adjusting your filter criteria.</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            $('#archiveTableBody').html(noResultsHtml);
+        }
+        
+        // Update pagination if needed
+        if (typeof updatePagination === 'function') {
+            updatePagination();
+        }
+    }
+    
+    // Attach filter handlers
+    $('#filterAction').on('change', function() {
+        filterTable();
+    });
+    
+    $('#filterStatus').on('change', function() {
+        filterTable();
+    });
+    
+    $('#searchInput').on('input', function() {
+        filterTable();
+    });
+    
+    // In case table gets updated by pagination or AJAX
+    $(document).ajaxComplete(function() {
+        // Wait a moment for DOM to update
+        setTimeout(function() {
+            initializeRows();
+        }, 100);
+    });
+    
+    // Refresh table when rows per page changes
+    $('#rowsPerPageSelect').on('change', function() {
+        // Wait for pagination to update
+        setTimeout(function() {
+            initializeRows();
+            filterTable();
+        }, 100);
+    });
+    
+    // Handle pagination button clicks
+    $('#prevPage, #nextPage, #pagination').on('click', function() {
+        // Wait for pagination to update
+        setTimeout(function() {
+            initializeRows();
+            filterTable();
+        }, 100);
+    });
+    
+    // Function to help debug - check what text is in the rows
+    window.checkRowContents = function() {
+        $('#archiveTableBody tr').each(function(i, row) {
+            var $row = $(row);
+            console.log("Row " + i + ":");
+            
+            var $actionCell = $row.find('td[data-label="Action"]');
+            if ($actionCell.length) {
+                console.log("  Action: " + $actionCell.text().trim());
+            }
+            
+            var $statusCell = $row.find('td[data-label="Status"]');
+            if ($statusCell.length) {
+                console.log("  Status: " + $statusCell.text().trim());
+            }
+        });
+    };
+    
+    // Run initial check
+    console.log("Running initial row content check:");
+    window.checkRowContents();
+});
+</script>
+
 <?php include '../../../general/footer.php'; ?>
 <!-- Bootstrap 5 JS Bundle -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
