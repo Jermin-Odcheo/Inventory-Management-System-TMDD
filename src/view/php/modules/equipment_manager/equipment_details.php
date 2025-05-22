@@ -11,7 +11,6 @@ $userId = $_SESSION['user_id'] ?? null;
 if (!is_int($userId) && !ctype_digit((string)$userId)) {
     header('Location: ' . BASE_URL . 'index.php');
     exit;
-    
 }
 $userId = (int)$userId;
 
@@ -27,8 +26,8 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
 // -------------------------
 // AJAX Request Handling
 // -------------------------
-$isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
-          strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
+$isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
+    strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
 
 if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
     if ($_POST['action'] === 'search') {
@@ -37,7 +36,9 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) 
         ini_set('display_startup_errors', 1);
         error_reporting(E_ALL);
         // Ensure no output before JSON
-        while (ob_get_level() > 0) { ob_end_clean(); }
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
         header('Content-Type: application/json');
         try {
             $userId = $_SESSION['user_id'] ?? null;
@@ -145,7 +146,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) 
                 echo json_encode($response);
                 exit;
             }
-            
+
             try {
                 $pdo->beginTransaction();
                 $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
@@ -153,19 +154,19 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) 
 
                 $date_created = date('Y-m-d H:i:s');
                 $values = [
-    $_POST['asset_tag'],
-    $_POST['asset_description_1'],
-    $_POST['asset_description_2'],
-    $_POST['specifications'],
-    $_POST['brand'] ?? null,
-    $_POST['model'] ?? null,
-    $_POST['serial_number'],
-    $_POST['location'] ?? null,
-    $_POST['accountable_individual'] ?? null,
-    (isset($_POST['rr_no']) && $_POST['rr_no'] !== '' ? (strpos($_POST['rr_no'], 'RR') === 0 ? $_POST['rr_no'] : 'RR' . $_POST['rr_no']) : null),
-    $date_created,
-    $_POST['remarks'] ?? null
-];
+                    $_POST['asset_tag'],
+                    $_POST['asset_description_1'],
+                    $_POST['asset_description_2'],
+                    $_POST['specifications'],
+                    $_POST['brand'] ?? null,
+                    $_POST['model'] ?? null,
+                    $_POST['serial_number'],
+                    $_POST['location'] ?? null,
+                    $_POST['accountable_individual'] ?? null,
+                    (isset($_POST['rr_no']) && $_POST['rr_no'] !== '' ? (strpos($_POST['rr_no'], 'RR') === 0 ? $_POST['rr_no'] : 'RR' . $_POST['rr_no']) : null),
+                    $date_created,
+                    $_POST['remarks'] ?? null
+                ];
 
                 $stmt = $pdo->prepare("INSERT INTO equipment_details (
             asset_tag, asset_description_1, asset_description_2, specifications, 
@@ -227,7 +228,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) 
                 echo json_encode($response);
                 exit;
             }
-            
+
             header('Content-Type: application/json');
             $response = ['status' => '', 'message' => ''];
             try {
@@ -240,22 +241,22 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) 
                 }
 
                 $values = [
-    $_POST['asset_tag'],
-    $_POST['asset_description_1'],
-    $_POST['asset_description_2'],
-    $_POST['specifications'],
-    $_POST['brand'],
-    $_POST['model'],
-    $_POST['serial_number'],
-    $_POST['location'],
-    $_POST['accountable_individual'],
-    (isset($_POST['rr_no']) && $_POST['rr_no'] !== '' ? (strpos($_POST['rr_no'], 'RR') === 0 ? $_POST['rr_no'] : 'RR' . $_POST['rr_no']) : null),
-    $_POST['remarks'],
-    $_POST['equipment_id']
-];
+                    $_POST['asset_tag'],
+                    $_POST['asset_description_1'],
+                    $_POST['asset_description_2'],
+                    $_POST['specifications'],
+                    $_POST['brand'],
+                    $_POST['model'],
+                    $_POST['serial_number'],
+                    $_POST['location'],
+                    $_POST['accountable_individual'],
+                    (isset($_POST['rr_no']) && $_POST['rr_no'] !== '' ? (strpos($_POST['rr_no'], 'RR') === 0 ? $_POST['rr_no'] : 'RR' . $_POST['rr_no']) : null),
+                    $_POST['remarks'],
+                    $_POST['equipment_id']
+                ];
 
                 // [Cascade Fix 2025-05-16T09:52:12+08:00] Always update date_modified when saving, even if no other fields change
-$stmt = $pdo->prepare("UPDATE equipment_details SET 
+                $stmt = $pdo->prepare("UPDATE equipment_details SET 
             asset_tag = ?, asset_description_1 = ?, asset_description_2 = ?, specifications = ?, 
             brand = ?, model = ?, serial_number = ?, location = ?, accountable_individual = ?, 
             rr_no = ?, remarks = ?, date_modified = NOW() WHERE id = ?");
@@ -309,7 +310,7 @@ $stmt = $pdo->prepare("UPDATE equipment_details SET
                 echo json_encode($response);
                 exit;
             }
-            
+
             try {
                 if (!isset($_POST['details_id'])) {
                     throw new Exception('Details ID is required');
@@ -417,9 +418,9 @@ ob_end_clean();
                     <div class="filter-container">
                         <div class="col-auto">
                             <?php if ($canCreate): ?>
-                            <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#addEquipmentModal">
-                                <i class="bi bi-plus-lg"></i> Create Equipment
-                            </button>
+                                <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#addEquipmentModal">
+                                    <i class="bi bi-plus-lg"></i> Create Equipment
+                                </button>
                             <?php endif; ?>
                         </div>
                         <div class="col-md-3">
@@ -526,29 +527,29 @@ ob_end_clean();
                                         <td>
                                             <div class="btn-group">
                                                 <?php if ($canModify): ?>
-                                                <button class="btn btn-outline-info btn-sm edit-equipment"
-                                                    data-id="<?= safeHtml($equipment['id']); ?>"
-                                                    data-asset="<?= safeHtml($equipment['asset_tag']); ?>"
-                                                    data-desc1="<?= safeHtml($equipment['asset_description_1']); ?>"
-                                                    data-desc2="<?= safeHtml($equipment['asset_description_2']); ?>"
-                                                    data-spec="<?= safeHtml($equipment['specifications']); ?>"
-                                                    data-brand="<?= safeHtml($equipment['brand']); ?>"
-                                                    data-model="<?= safeHtml($equipment['model']); ?>"
-                                                    data-serial="<?= safeHtml($equipment['serial_number']); ?>"
-                                                    data-location="<?= safeHtml($equipment['location']); ?>"
-                                                    data-accountable="<?= safeHtml($equipment['accountable_individual']); ?>"
-                                                    data-rr="<?= safeHtml($equipment['rr_no']); ?>"
-                                                    data-date="<?= safeHtml($equipment['date_created']); ?>"
-                                                    data-remarks="<?= safeHtml($equipment['remarks']); ?>">
-                                                    <i class="bi bi-pencil-square"></i>
-                                                </button>
+                                                    <button class="btn btn-outline-info btn-sm edit-equipment"
+                                                        data-id="<?= safeHtml($equipment['id']); ?>"
+                                                        data-asset="<?= safeHtml($equipment['asset_tag']); ?>"
+                                                        data-desc1="<?= safeHtml($equipment['asset_description_1']); ?>"
+                                                        data-desc2="<?= safeHtml($equipment['asset_description_2']); ?>"
+                                                        data-spec="<?= safeHtml($equipment['specifications']); ?>"
+                                                        data-brand="<?= safeHtml($equipment['brand']); ?>"
+                                                        data-model="<?= safeHtml($equipment['model']); ?>"
+                                                        data-serial="<?= safeHtml($equipment['serial_number']); ?>"
+                                                        data-location="<?= safeHtml($equipment['location']); ?>"
+                                                        data-accountable="<?= safeHtml($equipment['accountable_individual']); ?>"
+                                                        data-rr="<?= safeHtml($equipment['rr_no']); ?>"
+                                                        data-date="<?= safeHtml($equipment['date_created']); ?>"
+                                                        data-remarks="<?= safeHtml($equipment['remarks']); ?>">
+                                                        <i class="bi bi-pencil-square"></i>
+                                                    </button>
                                                 <?php endif; ?>
 
                                                 <?php if ($canDelete): ?>
-                                                <button class="btn btn-outline-danger btn-sm remove-equipment"
-                                                    data-id="<?= safeHtml($equipment['id']); ?>">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
+                                                    <button class="btn btn-outline-danger btn-sm remove-equipment"
+                                                        data-id="<?= safeHtml($equipment['id']); ?>">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
                                                 <?php endif; ?>
                                             </div>
                                         </td>
@@ -565,17 +566,40 @@ ob_end_clean();
                                 </tr>
                             <?php endif; ?>
                         </tbody>
+                        <tbody id="auditTable">
+                            <?php if (!empty($equipmentDetails)): ?>
+                                <?php foreach ($equipmentDetails as $equipment): ?>
+                                    <tr>
+                                        <td><?= safeHtml($equipment['id']); ?></td>
+                                        <td><?= safeHtml($equipment['asset_tag']); ?></td>
+                                        <td><?= safeHtml($equipment['asset_description_1']); ?></td>
+                                        <td><?= safeHtml($equipment['asset_description_2']); ?></td>
+                                        <td><?= safeHtml($equipment['specifications']); ?></td>
+                                        <td><?= safeHtml($equipment['brand']); ?></td>
+                                        <td><?= safeHtml($equipment['model']); ?></td>
+                                        <td><?= safeHtml($equipment['serial_number']); ?></td>
+                                        <td><?= safeHtml($equipment['date_created']); ?></td>
+                                        <td><?= !empty($equipment['date_created']) ? date('Y-m-d H:i', strtotime($equipment['date_created'])) : ''; ?></td>
+                                        <td><?= !empty($equipment['date_modified']) ? date('Y-m-d H:i', strtotime($equipment['date_modified'])) : ''; ?></td>
+                                        <td><?= safeHtml((strpos($equipment['rr_no'] ?? '', 'RR') === 0 ? $equipment['rr_no'] : ('RR' . $equipment['rr_no']))); ?></td>
+                                        <td><?= safeHtml($equipment['location']); ?></td>
+                                        <td><?= safeHtml($equipment['accountable_individual']); ?></td>
+                                        <td><?= safeHtml($equipment['remarks']); ?></td>
+                                        <td></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
                     </table>
                 </div>
-
                 <!-- Pagination Controls -->
                 <div class="container-fluid">
                     <div class="row align-items-center g-3">
                         <div class="col-12 col-sm-auto">
                             <div class="text-muted">
-                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
-                                    id="totalRows">100</span>
-                                entries
+                                <?php $totalLogs = count($equipmentDetails); ?>
+                                <input type="hidden" id="total-users" value="<?= $totalLogs ?>">
+                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows"><?= $totalLogs ?></span> entries
                             </div>
                         </div>
                         <div class="col-12 col-sm-auto ms-sm-auto">
@@ -594,16 +618,13 @@ ob_end_clean();
                                 </button>
                             </div>
                         </div>
-                        <div class="row mt-3">
-                            <div class="col-12">
-                                <ul class="pagination justify-content-center" id="pagination"></ul>
-                            </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <ul class="pagination justify-content-center" id="pagination"></ul>
                         </div>
                     </div>
-                </div>
-                <!-- End of Pagination Controls -->
-
-
+                </div> <!-- /.Pagination -->
             </div>
         </section>
     </div>
@@ -674,170 +695,189 @@ ob_end_clean();
                                     <input type="text" class="form-control" name="serial_number">
                                 </div>
                                 <div class="mb-3 col-md-6">
-    <label for="add_rr_no" class="form-label">RR#</label>
-    <select class="form-select rr-select2" name="rr_no" id="add_rr_no" style="width: 100%;">
-        <option value="">Select or search RR Number</option>
-        <?php
-        // Fetch active RR numbers for dropdown
-        $stmtRR = $pdo->prepare("SELECT rr_no FROM receive_report WHERE is_disabled = 0 ORDER BY rr_no DESC");
-        $stmtRR->execute();
-        $rrList = $stmtRR->fetchAll(PDO::FETCH_COLUMN);
-        foreach ($rrList as $rrNo) {
-            echo '<option value="' . htmlspecialchars($rrNo) . '">' . htmlspecialchars($rrNo) . '</option>';
-        }
-        ?>
-    </select>
-</div>
-<style>
-/* Ensure Select2 input matches form-control size and font */
-.select2-container--default .select2-selection--single {
-    height: 38px;
-    padding: 6px 12px;
-    font-size: 1rem;
-    border: 1px solid #ced4da;
-    border-radius: 0.375rem;
-    background-color: #fff;
-    box-shadow: none;
-    display: flex;
-    align-items: center;
-}
-.select2-container .select2-selection--single .select2-selection__rendered {
-    line-height: 24px;
-    color: #212529;
-}
-.select2-container--default .select2-selection--single .select2-selection__arrow {
-    height: 36px;
-    right: 10px;
-}
-.select2-container--open .select2-dropdown {
-    z-index: 9999 !important;
-}
-</style>
-<script>
-// Custom function to anchor Select2 dropdown below RR# field
-
-
-$(function() {
-    $('#add_rr_no').select2({
-        placeholder: 'Select or search RR Number',
-        allowClear: true,
-        width: '100%',
-        tags: true, // Allow new entries
-        dropdownParent: $('#addEquipmentModal'), // Attach to modal for proper positioning
-        minimumResultsForSearch: 0,
-        dropdownPosition: 'below', // Always show dropdown below input
-        createTag: function(params) {
-            // Only allow non-empty, non-duplicate RR numbers (numbers only)
-            var term = $.trim(params.term);
-            if (term === '') return null;
-            var exists = false;
-            $('#add_rr_no option').each(function() {
-                if ($(this).text().toLowerCase() === term.toLowerCase()) exists = true;
-            });
-            // Only allow numbers for new tags
-            if (!/^[0-9]+$/.test(term)) {
-                return null;
-            }
-            return exists ? null : { id: term, text: term };
-        }
-    });
-
-$('#add_rr_no').on('select2:select', function(e) {
-    var data = e.params.data;
-    if (data.selected && data.id && $(this).find('option[value="'+data.id+'"').length === 0) {
-        // New tag, send AJAX to create RR
-        $.ajax({
-            url: 'modules/equipment_transactions/receiving_report.php',
-            method: 'POST',
-            data: { action: 'create_rr_no', rr_no: data.id },
-            dataType: 'json',
-            headers: { 'X-Requested-With': 'XMLHttpRequest' },
-            success: function(response) {
-                if (response.status === 'success') {
-                    showToast('RR# '+data.id+' created!', 'success');
-                } else {
-                    showToast(response.message || 'Failed to create RR#', 'error');
-                }
-            },
-            error: function() {
-                showToast('AJAX error creating RR#', 'error');
-            }
-        });
-    }
-});
-
-// Also initialize for edit modal if present
-if ($('#edit_rr_no').length) {
-    $('#edit_rr_no').select2({
-        placeholder: 'Select or search RR Number',
-        allowClear: true,
-        width: '100%',
-        tags: true,
-        dropdownParent: $('#editEquipmentModal'),
-        minimumResultsForSearch: 0,
-        createTag: function(params) {
-            var term = $.trim(params.term);
-            if (term === '') return null;
-            var exists = false;
-            $('#edit_rr_no option').each(function() {
-                if ($(this).text().toLowerCase() === term.toLowerCase()) exists = true;
-            });
-            return exists ? null : { id: term, text: term };
-        }
-    });
-    $('#edit_rr_no').on('select2:select', function(e) {
-        var data = e.params.data;
-        if (data.selected && data.id && $(this).find('option[value="'+data.id+'"').length === 0) {
-            $.ajax({
-                url: 'modules/equipment_transactions/receiving_report.php',
-                method: 'POST',
-                data: { action: 'create_rr_no', rr_no: data.id },
-                dataType: 'json',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                success: function(response) {
-                    if (response.status === 'success') {
-                        showToast('RR# '+data.id+' created!', 'success');
-                    } else {
-                        showToast(response.message || 'Failed to create RR#', 'error');
-                    }
-                },
-                error: function() {
-                    showToast('AJAX error creating RR#', 'error');
-                }
-            });
-        }
-    });
-}
-
-});
-</script>
+                                    <label for="add_rr_no" class="form-label">RR#</label>
+                                    <select class="form-select rr-select2" name="rr_no" id="add_rr_no" style="width: 100%;">
+                                        <option value="">Select or search RR Number</option>
+                                        <?php
+                                        // Fetch active RR numbers for dropdown
+                                        $stmtRR = $pdo->prepare("SELECT rr_no FROM receive_report WHERE is_disabled = 0 ORDER BY rr_no DESC");
+                                        $stmtRR->execute();
+                                        $rrList = $stmtRR->fetchAll(PDO::FETCH_COLUMN);
+                                        foreach ($rrList as $rrNo) {
+                                            echo '<option value="' . htmlspecialchars($rrNo) . '">' . htmlspecialchars($rrNo) . '</option>';
+                                        }
+                                        ?>
+                                    </select>
                                 </div>
+                                <style>
+                                    /* Ensure Select2 input matches form-control size and font */
+                                    .select2-container--default .select2-selection--single {
+                                        height: 38px;
+                                        padding: 6px 12px;
+                                        font-size: 1rem;
+                                        border: 1px solid #ced4da;
+                                        border-radius: 0.375rem;
+                                        background-color: #fff;
+                                        box-shadow: none;
+                                        display: flex;
+                                        align-items: center;
+                                    }
+
+                                    .select2-container .select2-selection--single .select2-selection__rendered {
+                                        line-height: 24px;
+                                        color: #212529;
+                                    }
+
+                                    .select2-container--default .select2-selection--single .select2-selection__arrow {
+                                        height: 36px;
+                                        right: 10px;
+                                    }
+
+                                    .select2-container--open .select2-dropdown {
+                                        z-index: 9999 !important;
+                                    }
+                                </style>
+                                <script>
+                                    // Custom function to anchor Select2 dropdown below RR# field
+
+
+                                    $(function() {
+                                        $('#add_rr_no').select2({
+                                            placeholder: 'Select or search RR Number',
+                                            allowClear: true,
+                                            width: '100%',
+                                            tags: true, // Allow new entries
+                                            dropdownParent: $('#addEquipmentModal'), // Attach to modal for proper positioning
+                                            minimumResultsForSearch: 0,
+                                            dropdownPosition: 'below', // Always show dropdown below input
+                                            createTag: function(params) {
+                                                // Only allow non-empty, non-duplicate RR numbers (numbers only)
+                                                var term = $.trim(params.term);
+                                                if (term === '') return null;
+                                                var exists = false;
+                                                $('#add_rr_no option').each(function() {
+                                                    if ($(this).text().toLowerCase() === term.toLowerCase()) exists = true;
+                                                });
+                                                // Only allow numbers for new tags
+                                                if (!/^[0-9]+$/.test(term)) {
+                                                    return null;
+                                                }
+                                                return exists ? null : {
+                                                    id: term,
+                                                    text: term
+                                                };
+                                            }
+                                        });
+
+                                        $('#add_rr_no').on('select2:select', function(e) {
+                                            var data = e.params.data;
+                                            if (data.selected && data.id && $(this).find('option[value="' + data.id + '"').length === 0) {
+                                                // New tag, send AJAX to create RR
+                                                $.ajax({
+                                                    url: 'modules/equipment_transactions/receiving_report.php',
+                                                    method: 'POST',
+                                                    data: {
+                                                        action: 'create_rr_no',
+                                                        rr_no: data.id
+                                                    },
+                                                    dataType: 'json',
+                                                    headers: {
+                                                        'X-Requested-With': 'XMLHttpRequest'
+                                                    },
+                                                    success: function(response) {
+                                                        if (response.status === 'success') {
+                                                            showToast('RR# ' + data.id + ' created!', 'success');
+                                                        } else {
+                                                            showToast(response.message || 'Failed to create RR#', 'error');
+                                                        }
+                                                    },
+                                                    error: function() {
+                                                        showToast('AJAX error creating RR#', 'error');
+                                                    }
+                                                });
+                                            }
+                                        });
+
+                                        // Also initialize for edit modal if present
+                                        if ($('#edit_rr_no').length) {
+                                            $('#edit_rr_no').select2({
+                                                placeholder: 'Select or search RR Number',
+                                                allowClear: true,
+                                                width: '100%',
+                                                tags: true,
+                                                dropdownParent: $('#editEquipmentModal'),
+                                                minimumResultsForSearch: 0,
+                                                createTag: function(params) {
+                                                    var term = $.trim(params.term);
+                                                    if (term === '') return null;
+                                                    var exists = false;
+                                                    $('#edit_rr_no option').each(function() {
+                                                        if ($(this).text().toLowerCase() === term.toLowerCase()) exists = true;
+                                                    });
+                                                    return exists ? null : {
+                                                        id: term,
+                                                        text: term
+                                                    };
+                                                }
+                                            });
+                                            $('#edit_rr_no').on('select2:select', function(e) {
+                                                var data = e.params.data;
+                                                if (data.selected && data.id && $(this).find('option[value="' + data.id + '"').length === 0) {
+                                                    $.ajax({
+                                                        url: 'modules/equipment_transactions/receiving_report.php',
+                                                        method: 'POST',
+                                                        data: {
+                                                            action: 'create_rr_no',
+                                                            rr_no: data.id
+                                                        },
+                                                        dataType: 'json',
+                                                        headers: {
+                                                            'X-Requested-With': 'XMLHttpRequest'
+                                                        },
+                                                        success: function(response) {
+                                                            if (response.status === 'success') {
+                                                                showToast('RR# ' + data.id + ' created!', 'success');
+                                                            } else {
+                                                                showToast(response.message || 'Failed to create RR#', 'error');
+                                                            }
+                                                        },
+                                                        error: function() {
+                                                            showToast('AJAX error creating RR#', 'error');
+                                                        }
+                                                    });
+                                                }
+                                            });
+                                        }
+
+                                    });
+                                </script>
                             </div>
                         </div>
-                        <div class="mb-3">
-                            <div class="row">
-                                <div class="mb-3 col-md-6">
-                                    <label for="location" class="form-label">Location</label>
-                                    <input type="text" class="form-control" name="location">
-                                </div>
-                                <div class="mb-3 col-md-6">
-                                    <label for="accountable_individual" class="form-label">Accountable Individual</label>
-                                    <input type="text" class="form-control" name="accountable_individual">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="remarks" class="form-label">Remarks</label>
-                            <textarea class="form-control" name="remarks" rows="3"></textarea>
-                        </div>
-                        <div class="mb-3 text-end">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="margin-right: 4px;">Cancel</button>
-                            <button type="submit" class="btn btn-primary">Create Equipment</button>
-                        </div>
-                    </form>
                 </div>
+                <div class="mb-3">
+                    <div class="row">
+                        <div class="mb-3 col-md-6">
+                            <label for="location" class="form-label">Location</label>
+                            <input type="text" class="form-control" name="location">
+                        </div>
+                        <div class="mb-3 col-md-6">
+                            <label for="accountable_individual" class="form-label">Accountable Individual</label>
+                            <input type="text" class="form-control" name="accountable_individual">
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="remarks" class="form-label">Remarks</label>
+                    <textarea class="form-control" name="remarks" rows="3"></textarea>
+                </div>
+                <div class="mb-3 text-end">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="margin-right: 4px;">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Equipment</button>
+                </div>
+                </form>
             </div>
         </div>
+    </div>
     </div>
 
     <!-- Edit Equipment Modal -->
@@ -965,91 +1005,58 @@ if ($('#edit_rr_no').length) {
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
+        // Initialize pagination for equipment details page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize allRows for pagination.js
+            window.allRows = Array.from(document.querySelectorAll('#auditTable tr'));
+            
+            // Call updatePagination after a short delay to ensure pagination.js is loaded
+            setTimeout(function() {
+                if (typeof updatePagination === 'function') {
+                    updatePagination();
+                }
+            }, 100);
+        });
+
         // Override updatePagination function to properly handle empty tables
         document.addEventListener('DOMContentLoaded', function() {
-            // Keep reference to original function
-            const originalUpdatePagination = window.updatePagination;
-            
-            // Override with custom implementation that ensures empty tables have no pagination
-            window.updatePagination = function() {
-                // Get row count directly from table
-                const rowCount = document.querySelectorAll('#edTable tbody tr').length;
-                console.log('Override updatePagination called, row count:', rowCount);
-                
-                // If table is empty, hide pagination elements
-                if (rowCount === 0) {
-                    console.log('Table is empty, hiding pagination');
-                    document.getElementById('currentPage').textContent = '0';
-                    document.getElementById('rowsPerPage').textContent = '0';
-                    document.getElementById('totalRows').textContent = '0';
-                    document.getElementById('prevPage').style.display = 'none';
-                    document.getElementById('nextPage').style.display = 'none';
-                    document.getElementById('pagination').innerHTML = '';
-                    return;
-                }
-                
-                // Otherwise call original function
-                if (originalUpdatePagination) {
-                    originalUpdatePagination();
-                }
-            };
-            
-            // Initial check - directly hide pagination if table is empty
-            if (document.querySelectorAll('#edTable tbody tr').length === 0) {
-                document.getElementById('currentPage').textContent = '0';
-                document.getElementById('rowsPerPage').textContent = '0';
-                document.getElementById('totalRows').textContent = '0';
-                document.getElementById('prevPage').style.display = 'none';
-                document.getElementById('nextPage').style.display = 'none';
-                document.getElementById('pagination').innerHTML = '';
+            // Track if rows are being filtered
+            let isFiltering = false;
+            let filteredRowCount = 0;
+
+            // AJAX search handler (explicit URL)
+            function doEquipmentSearch() {
+                var query = $('#searchEquipment').val();
+                var filter = $('#filterEquipment').val();
+                $.ajax({
+                    url: window.location.pathname, // always post to this PHP file
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {
+                        action: 'search',
+                        query: query,
+                        filter: filter
+                    },
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            $('#edTable tbody').html(response.html);
+                        } else {
+                            $('#edTable tbody').html('<tr><td colspan="16" class="text-center py-4"><div class="alert alert-danger mb-0">' + (response.message || 'Search failed. Please try again.') + '</div></td></tr>');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        $('#edTable tbody').html('<tr><td colspan="16" class="text-center py-4"><div class="alert alert-danger mb-0">Search failed. Please try again.</div></td></tr>');
+                    }
+                });
             }
-        });
-        
-        $(document).ready(function() {
-    // Track if rows are being filtered
-    let isFiltering = false;
-    let filteredRowCount = 0;
 
-    // Direct approach to check for empty table
-    if ($('#edTable tbody tr').length === 0) {
-        console.log('Table is empty - hiding pagination');
-        $('#prevPage, #nextPage').css({'display': 'none', 'visibility': 'hidden'});
-        $('#currentPage, #rowsPerPage, #totalRows').text('0');
-        $('#pagination').empty();
-    }
+            // Bind search input and icon
+            $('#searchEquipment').on('input', doEquipmentSearch);
+            // Also trigger search when clicking the search icon
+            $('.input-group-text').on('click', doEquipmentSearch);
 
-    // Check if table is empty on page load and hide pagination if needed
-    const tableRows = $('.table tbody tr').length;
-
-    // AJAX search handler (explicit URL)
-    function doEquipmentSearch() {
-        var query = $('#searchEquipment').val();
-        var filter = $('#filterEquipment').val();
-        $.ajax({
-            url: window.location.pathname, // always post to this PHP file
-            type: 'POST',
-            dataType: 'json',
-            data: { action: 'search', query: query, filter: filter },
-            success: function(response) {
-                if (response.status === 'success') {
-                    $('#edTable tbody').html(response.html);
-                } else {
-                    $('#edTable tbody').html('<tr><td colspan="16" class="text-center py-4"><div class="alert alert-danger mb-0">' + (response.message || 'Search failed. Please try again.') + '</div></td></tr>');
-                }
-            },
-            error: function(xhr, status, error) {
-                $('#edTable tbody').html('<tr><td colspan="16" class="text-center py-4"><div class="alert alert-danger mb-0">Search failed. Please try again.</div></td></tr>');
-            }
-        });
-    }
-
-    // Bind search input and icon
-    $('#searchEquipment').on('input', doEquipmentSearch);
-    // Also trigger search when clicking the search icon
-    $('.input-group-text').on('click', doEquipmentSearch);
-
-    // Trigger AJAX search when filter changes
-    $('#filterEquipment').on('change', doEquipmentSearch);
+            // Trigger AJAX search when filter changes
+            $('#filterEquipment').on('change', doEquipmentSearch);
             $('#dateFilter').on('change', function() {
                 const value = $(this).val();
                 $('#dateInputsContainer, #monthPickerContainer, #dateRangePickers, #dateFrom, #dateTo').hide();
@@ -1064,13 +1071,13 @@ if ($('#edit_rr_no').length) {
                     // Apply sorting directly
                     const tbody = $('.table tbody');
                     const rows = tbody.find('tr').toArray();
-                    
+
                     rows.sort(function(a, b) {
                         const dateA = new Date($(a).find('td:eq(8)').text());
                         const dateB = new Date($(b).find('td:eq(8)').text());
                         return value === 'asc' ? dateA - dateB : dateB - dateA;
                     });
-                    
+
                     tbody.append(rows);
                 } else {
                     filterTable();
@@ -1158,7 +1165,7 @@ if ($('#edit_rr_no').length) {
                     $('#currentPage, #rowsPerPage, #totalRows').text('0');
                     $('#prevPage, #nextPage').css('display', 'none');
                     $('#pagination').empty();
-                    
+
                     // Show "No results" message if not already present
                     if ($('.table tbody tr.no-results').length === 0) {
                         $('.table tbody').append(`
@@ -1174,7 +1181,7 @@ if ($('#edit_rr_no').length) {
                 } else {
                     // Remove "No results" message if it exists
                     $('.table tbody tr.no-results').remove();
-                    
+
                     // Show pagination controls (updatePagination will properly set their visibility)
                     $('#prevPage, #nextPage').css('display', '');
 
@@ -1260,10 +1267,10 @@ if ($('#edit_rr_no').length) {
                         // Extract just the table body content from the response
                         const $responseHtml = $(response);
                         const newTbodyContent = $responseHtml.find('.table tbody').html();
-                        
+
                         // Update the table with new content
                         $('.table tbody').html(newTbodyContent);
-                        
+
                         // Remove any lingering no-results messages
                         $('.table tbody tr.no-results').remove();
 
@@ -1371,7 +1378,7 @@ if ($('#edit_rr_no').length) {
             });
 
             // Asset Tag Select2 for Add Equipment Modal
-            $('#addEquipmentModal').on('shown.bs.modal', function () {
+            $('#addEquipmentModal').on('shown.bs.modal', function() {
                 $('#add_equipment_asset_tag').select2({
                     tags: true,
                     placeholder: 'Select or type Asset Tag',
@@ -1380,14 +1387,14 @@ if ($('#edit_rr_no').length) {
                     dropdownParent: $('#addEquipmentModal')
                 });
             });
-            $('#addEquipmentModal').on('hidden.bs.modal', function () {
+            $('#addEquipmentModal').on('hidden.bs.modal', function() {
                 if ($('#add_equipment_asset_tag').hasClass('select2-hidden-accessible')) {
                     $('#add_equipment_asset_tag').select2('destroy');
                 }
                 $(this).find('form')[0].reset();
             });
             // Asset Tag Select2 for Edit Equipment Modal
-            $('#editEquipmentModal').on('shown.bs.modal', function () {
+            $('#editEquipmentModal').on('shown.bs.modal', function() {
                 $('#edit_equipment_asset_tag').select2({
                     tags: true,
                     placeholder: 'Select or type Asset Tag',
@@ -1396,7 +1403,7 @@ if ($('#edit_rr_no').length) {
                     dropdownParent: $('#editEquipmentModal')
                 });
             });
-            $('#editEquipmentModal').on('hidden.bs.modal', function () {
+            $('#editEquipmentModal').on('hidden.bs.modal', function() {
                 if ($('#edit_equipment_asset_tag').hasClass('select2-hidden-accessible')) {
                     $('#edit_equipment_asset_tag').select2('destroy');
                 }
