@@ -177,6 +177,42 @@ unset($role);
             <?php endif; ?>
         </div>
 
+        <!-- Add Filter Section -->
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" id="roleNameFilter" class="form-control" placeholder="Filter by role name...">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select id="moduleFilter" class="form-select">
+                    <option value="">All Modules</option>
+                    <?php
+                    $modules = array_unique(array_column($roleData, 'Module_Name'));
+                    foreach ($modules as $module) {
+                        echo "<option value='" . htmlspecialchars($module) . "'>" . htmlspecialchars($module) . "</option>";
+                    }
+                    ?>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select id="privilegeFilter" class="form-select" multiple>
+                    <?php
+                    $fixedPrivileges = ['Track', 'Create', 'Remove', 'Permanently Delete', 'Modify', 'View', 'Restore'];
+                    foreach ($fixedPrivileges as $privilege) {
+                        echo "<option value='" . htmlspecialchars($privilege) . "'>" . htmlspecialchars($privilege) . "</option>";
+                    }
+                    ?>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button id="clear-filters-btn" class="btn btn-outline-secondary w-100">
+                    <i class="bi bi-x-circle"></i> Clear Filters
+                </button>
+            </div>
+        </div>
+
         <div class="table-responsive" id="table">
             <table id="rolesTable" class="table table-striped table-hover align-middle">
                 <thead class="table-dark">
@@ -318,6 +354,147 @@ unset($role);
     };
 
     document.addEventListener('DOMContentLoaded', function () {
+        // Check if Select2 is available
+        if ($.fn.select2) {
+            // Initialize Select2 for better dropdown experience
+            $('#moduleFilter').select2({
+                placeholder: 'Select Module...',
+                allowClear: true,
+                width: '100%'
+            });
+
+            $('#privilegeFilter').select2({
+                placeholder: 'Select Privileges...',
+                allowClear: true,
+                width: '100%',
+                closeOnSelect: false
+            });
+        }
+
+        // Filter function
+        function filterTable() {
+            const roleNameFilter = $('#roleNameFilter').val().toLowerCase();
+            const moduleFilter = $('#moduleFilter').val();
+            const privilegeFilters = $('#privilegeFilter').val() || [];
+
+            let visibleCount = 0;
+            $('#rolesTable tbody tr').each(function() {
+                const $row = $(this);
+                const roleName = $row.find('.role-name').text().toLowerCase();
+                const privilegeList = $row.find('.privilege-list');
+                const privilegeText = privilegeList.text().toLowerCase();
+                
+                let showRow = true;
+
+                // Apply role name filter
+                if (roleNameFilter && !roleName.includes(roleNameFilter)) {
+                    showRow = false;
+                }
+
+                // Module and privilege combination filtering
+                if (moduleFilter) {
+                    // Find the specific module section
+                    let moduleFound = false;
+                    let moduleHasSelectedPrivileges = true;
+                    
+                    privilegeList.find('div').each(function() {
+                        const moduleSection = $(this).text().toLowerCase();
+                        if (moduleSection.includes(moduleFilter.toLowerCase())) {
+                            moduleFound = true;
+                            
+                            // If privileges are selected, check if this module actually has them
+                            if (privilegeFilters.length > 0) {
+                                // Check if module has "No privileges"
+                                if (moduleSection.includes("no privileges")) {
+                                    moduleHasSelectedPrivileges = false;
+                                    return false; // Break the each loop
+                                }
+                                
+                                // Check if module has ALL selected privileges
+                                const hasAllPrivileges = privilegeFilters.every(privilege => 
+                                    moduleSection.includes(privilege.toLowerCase())
+                                );
+                                
+                                if (!hasAllPrivileges) {
+                                    moduleHasSelectedPrivileges = false;
+                                    return false; // Break the each loop
+                                }
+                            }
+                            
+                            return false; // Break the each loop once we found the module
+                        }
+                    });
+                    
+                    // Don't show if module wasn't found or doesn't have the selected privileges
+                    if (!moduleFound || !moduleHasSelectedPrivileges) {
+                        showRow = false;
+                    }
+                }
+                // Only privilege filtering (no module selected)
+                else if (privilegeFilters.length > 0) {
+                    const hasAllPrivileges = privilegeFilters.every(privilege => 
+                        privilegeText.includes(privilege.toLowerCase())
+                    );
+                    if (!hasAllPrivileges) {
+                        showRow = false;
+                    }
+                }
+
+                $row.toggle(showRow);
+                if (showRow) visibleCount++;
+            });
+
+            // Show "no results" message if no matches
+            if (visibleCount === 0) {
+                if ($('#no-results-row').length === 0) {
+                    $('#rolesTable tbody').append(
+                        '<tr id="no-results-row"><td colspan="4" class="text-center py-3">' +
+                        '<div class="alert alert-info mb-0">' +
+                        '<i class="bi bi-info-circle me-2"></i>No matching roles found. Try adjusting your filters.' +
+                        '</div></td></tr>'
+                    );
+                }
+            } else {
+                $('#no-results-row').remove();
+            }
+
+            // Update pagination info
+            updatePaginationInfo(visibleCount);
+        }
+
+        // Update pagination info
+        function updatePaginationInfo(visibleRows) {
+            const totalRows = $('#rolesTable tbody tr').length - ($('#no-results-row').length > 0 ? 1 : 0);
+            const rowsPerPage = parseInt($('#rowsPerPageSelect').val()) || 10;
+            
+            $('#totalRows').text(totalRows);
+            $('#rowsPerPage').text(Math.min(rowsPerPage, visibleRows));
+            $('#currentPage').text(visibleRows > 0 ? '1' : '0');
+            
+            // Update pagination controls if that function exists
+            if (typeof updatePaginationControls === 'function') {
+                updatePaginationControls(visibleRows);
+            }
+        }
+
+        // Add event listeners for filters
+        $('#roleNameFilter').on('input', filterTable);
+        $('#moduleFilter').on('change', filterTable);
+        $('#privilegeFilter').on('change', filterTable);
+
+        // Clear filters button
+        $('#clear-filters-btn').on('click', function() {
+            $('#roleNameFilter').val('');
+            if ($.fn.select2) {
+                $('#moduleFilter').val('').trigger('change');
+                $('#privilegeFilter').val(null).trigger('change');
+            } else {
+                $('#moduleFilter').val('');
+                $('#privilegeFilter').val([]);
+            }
+            filterTable();
+        });
+
         // **1. Load edit role modal content via AJAX**
         $(document).on('click', '.edit-role-btn', function () {
             if (!userPrivileges.canModify) return;
