@@ -77,7 +77,7 @@ function updatePagination() {
 
     // Calculate which rows to show
     const startIndex = (currentPage - 1) * rowsPerPage;
-    const endIndex = Math.min(startIndex + rowsPerPage, totalRows);
+    const endIndex = Math.min(startIndex + rowsPerPage, tableRows.length);
 
     console.log(`Page ${currentPage}: Showing rows ${startIndex} to ${endIndex-1} of ${totalRows}`);
 
@@ -93,22 +93,13 @@ function updatePagination() {
     // For debugging
     console.log(`Looking to display rows from index ${startIndex} to ${endIndex-1}`);
 
-    // SIMPLIFIED APPROACH: Direct pagination without user grouping
-    // For cases where we're not grouping by user, just show rows by index
-    let displayedCount = 0;
-    let currentRowIndex = 0;
-    
-    // Skip rows until we reach our starting point
-    for (let i = 0; i < rowsArray.length && displayedCount < rowsPerPage; i++) {
-        if (currentRowIndex >= startIndex && currentRowIndex < endIndex) {
-            rowsArray[i].style.display = '';
-            displayedCount++;
-        }
-        currentRowIndex++;
+    // Show only the rows for the current page
+    for (let i = startIndex; i < endIndex; i++) {
+        if (rowsArray[i]) rowsArray[i].style.display = '';
     }
     
     // Log how many rows were displayed
-    console.log(`Displayed ${displayedCount} rows for page ${currentPage}`);
+    console.log(`Displayed ${endIndex - startIndex} rows for page ${currentPage}`);
 
     // Update pagination info text
     const displayStart = totalRows === 0 ? 0 : startIndex + 1;
@@ -349,3 +340,28 @@ function renderPagination() {
         paginationContainer.appendChild(li);
     });
 }
+
+// Find the Previous and Next buttons and attach event listeners
+function attachPaginationButtonListeners() {
+    const prevBtn = document.getElementById('prevPage');
+    const nextBtn = document.getElementById('nextPage');
+    if (prevBtn) {
+        prevBtn.onclick = function () {
+            if (currentPage > 1) {
+                currentPage--;
+                updatePagination();
+            }
+        };
+    }
+    if (nextBtn) {
+        nextBtn.onclick = function () {
+            if (currentPage < maxPages) {
+                currentPage++;
+                updatePagination();
+            }
+        };
+    }
+}
+
+// Call this after rendering pagination controls
+setTimeout(attachPaginationButtonListeners, 0);

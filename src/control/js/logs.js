@@ -2,16 +2,23 @@
 let allRows = [];
 
 // On DOMContentLoaded, capture all original table rows
+// and set up filter event listeners only
+// (Pagination is handled by pagination.js)
 document.addEventListener('DOMContentLoaded', () => {
     allRows = Array.from(document.querySelectorAll('#auditTable tr'));
-    
     // Set up module filter if it exists
     const moduleFilter = document.getElementById('filterModule');
     if (moduleFilter) {
         moduleFilter.addEventListener('change', filterTable);
     }
-    
-    updatePagination();
+    // Set up filter event listeners
+    document.getElementById('searchInput').addEventListener('keyup', filterTable);
+    document.getElementById('filterAction').addEventListener('change', filterTable);
+    if (document.getElementById('filterStatus')) {
+        document.getElementById('filterStatus').addEventListener('change', filterTable);
+    }
+    // Initial filter (pagination will be updated by pagination.js)
+    filterTable();
 });
 
 // Rebuild table body with only the rows that match the filters
@@ -26,17 +33,14 @@ function filterTable() {
         const actionCell = row.querySelector('[data-label="Action"]');
         const statusCell = row.querySelector('[data-label="Status"]');
         const moduleCell = row.querySelector('[data-label="Module"]');
-        
         const actionText = actionCell ? actionCell.textContent.toLowerCase() : '';
         const statusText = statusCell ? statusCell.textContent.toLowerCase() : '';
         const moduleText = moduleCell ? moduleCell.textContent.toLowerCase() : '';
         const rowText = row.textContent.toLowerCase();
-
         const matchesSearch = rowText.includes(searchFilter);
         const matchesAction = actionFilter === '' || actionText.includes(actionFilter);
         const matchesStatus = statusFilter === '' || statusText.includes(statusFilter);
         const matchesModule = moduleFilter === '' || moduleText.includes(moduleFilter);
-        
         return matchesSearch && matchesAction && matchesStatus && matchesModule;
     });
 
@@ -47,87 +51,8 @@ function filterTable() {
         row.style.display = ''; // ensure row is visible
         tbody.appendChild(row);
     });
-
-    // Reset current page to 1 after filtering
-    document.getElementById('currentPage').textContent = '1';
-    updatePagination();
-}
-
-// Paginate only the rows currently in the table body (the filtered rows)
-function updatePagination() {
-    const tbody = document.getElementById('auditTable');
-    const filteredRows = Array.from(tbody.querySelectorAll('tr'));
-    const totalRows = filteredRows.length;
-    const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value, 10);
-    let currentPage = parseInt(document.getElementById('currentPage').textContent, 10) || 1;
-    const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
-
-    // Ensure currentPage is within bounds
-    if (currentPage > totalPages) {
-        currentPage = totalPages;
-        document.getElementById('currentPage').textContent = currentPage;
-    }
-
-    // Update the "Showing X to Y of Z entries" display:
-    const start = (currentPage - 1) * rowsPerPage + 1;
-    const end = Math.min(currentPage * rowsPerPage, totalRows);
-    document.getElementById('rowsPerPage').textContent = end;
-    document.getElementById('totalRows').textContent = totalRows;
-
-    // Show only the rows on the current page
-    filteredRows.forEach((row, index) => {
-        if (index >= (currentPage - 1) * rowsPerPage && index < currentPage * rowsPerPage) {
-            row.style.display = '';  // Visible row
-        } else {
-            row.style.display = 'none'; // Hide this row
-        }
-    });
-
-    // Update the pagination buttons
-    document.getElementById('prevPage').disabled = (currentPage === 1);
-    document.getElementById('nextPage').disabled = (currentPage >= totalPages);
-
-    // Rebuild pagination links (optional)
-    const pagination = document.getElementById('pagination');
-    pagination.innerHTML = '';
-    for (let i = 1; i <= totalPages; i++) {
-        const li = document.createElement('li');
-        li.className = `page-item ${i === currentPage ? 'active' : ''}`;
-        li.innerHTML = `<a class="page-link" href="#">${i}</a>`;
-        li.addEventListener('click', (e) => {
-            e.preventDefault();
-            document.getElementById('currentPage').textContent = i;
-            updatePagination();
-        });
-        pagination.appendChild(li);
-    }
-}
-
-// Attach event listeners to filter inputs and pagination controls
-document.getElementById('searchInput').addEventListener('keyup', filterTable);
-document.getElementById('filterAction').addEventListener('change', filterTable);
-
-// Only attach event listener if the element exists
-if (document.getElementById('filterStatus')) {
-    document.getElementById('filterStatus').addEventListener('change', filterTable);
-}
-
-document.getElementById('rowsPerPageSelect').addEventListener('change', updatePagination);
-
-document.getElementById('prevPage').addEventListener('click', () => {
-    const currentPage = parseInt(document.getElementById('currentPage').textContent, 10);
-    if (currentPage > 1) {
-        document.getElementById('currentPage').textContent = currentPage - 1;
+    // After filtering, let pagination.js update the pagination
+    if (typeof updatePagination === 'function') {
         updatePagination();
     }
-});
-
-document.getElementById('nextPage').addEventListener('click', () => {
-    const currentPage = parseInt(document.getElementById('currentPage').textContent, 10);
-    const totalRows = parseInt(document.getElementById('totalRows').textContent, 10);
-    const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value, 10);
-    if (currentPage < Math.ceil(totalRows / rowsPerPage)) {
-        document.getElementById('currentPage').textContent = currentPage + 1;
-        updatePagination();
-    }
-});
+}
