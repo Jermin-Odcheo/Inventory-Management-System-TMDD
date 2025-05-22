@@ -83,8 +83,8 @@ if (
                     // Insert audit log
                     $auditStmt = $pdo->prepare("
                         INSERT INTO audit_log (
-                            UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                            UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status, Date_Time
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
                     ");
 
                     $auditResult = $auditStmt->execute([
@@ -196,8 +196,9 @@ if (
                             Details,
                             OldVal,
                             NewVal,
-                            Status
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                            Status,
+                            Date_Time
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
                     ");
 
                     $auditResult = $auditStmt->execute([
@@ -272,8 +273,9 @@ if (
                             Details,
                             OldVal,
                             NewVal,
-                            Status
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                            Status,
+                            Date_Time
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
                     ");
 
                     $auditStmt->execute([
@@ -396,8 +398,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                     Details,
                     OldVal,
                     NewVal,
-                    Status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    Status,
+                    Date_Time
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
             ");
 
             $auditStmt->execute([

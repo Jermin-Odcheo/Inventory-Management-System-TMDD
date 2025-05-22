@@ -223,7 +223,7 @@ function getChangedFieldNames(array $oldData, array $newData)
         <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/audit_log.css">
     </noscript>
     <meta charset="UTF-8">
-    <title>Department Audit Logs</title>
+    <title>Department Management Audit Logs</title>
 </head>
 <body>
 
@@ -234,7 +234,7 @@ function getChangedFieldNames(array $oldData, array $newData)
             <div class="card-header d-flex justify-content-between align-items-center bg-dark">
                 <h3 class="text-white">
                     <i class="fas fa-history me-2"></i>
-                    Department Audit Logs
+                    Department Management Audit Logs
                 </h3>
             </div>
 

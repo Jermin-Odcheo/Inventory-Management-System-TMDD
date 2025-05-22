@@ -18,7 +18,7 @@ $rbac = new RBACService($pdo, $_SESSION['user_id']);
 $hasAuditPermission = $rbac->hasPrivilege('Audit', 'Track');
 $hasAuditPermission = $rbac->hasPrivilege('Equipment Transactions', 'Track');
 
-// If user doesn't have permission, show an inline “no permission” page
+// If user doesn't have permission, show an inline "no permission" page
 if (!$hasAuditPermission) {
     echo '
       <div class="container d-flex justify-content-center align-items-center" 
@@ -199,7 +199,7 @@ function formatDetailsAndChanges($log)
 {
     // Normalize action to lowercase
     $action = strtolower($log['Action'] ?? '');
-
+    $module = $log['Module'] ?? '';
     // Parse JSON fields for old/new data with null checks
     $oldData = !is_null($log['OldVal']) ? json_decode($log['OldVal'], true) : [];
     $newData = !is_null($log['NewVal']) ? json_decode($log['NewVal'], true) : [];
@@ -217,6 +217,31 @@ function formatDetailsAndChanges($log)
     // Filter out system fields from both datasets before comparison
     $filteredOldData = array_diff_key($oldData, array_flip($systemFields));
     $filteredNewData = array_diff_key($newData, array_flip($systemFields));
+
+    // --- BEGIN: Custom Add Action for PO Number ---
+    if ($action === 'add' && $module === 'Charge Invoice') {
+        $poNo = $newData['po_no'] ?? 'Unknown';
+        $id = $newData['id'] ?? ($oldData['id'] ?? '');
+        $details = htmlspecialchars("Po No '{$poNo}' has been created");
+        $changes = '<ul class="list-group">'
+            . '<li class="list-group-item"><strong>Id:</strong> ' . htmlspecialchars($id) . '</li>'
+            . '<li class="list-group-item"><strong>PO Number:</strong> ' . htmlspecialchars($poNo) . '</li>'
+            . '</ul>';
+        return [$details, $changes];
+    }
+    // --- END: Custom Add Action for PO Number ---
+    // --- BEGIN: Custom Add Action for PO Number in Receiving Report ---
+    if ($action === 'add' && $module === 'Receiving Report') {
+        $poNo = $newData['po_no'] ?? 'Unknown';
+        $id = $newData['id'] ?? ($oldData['id'] ?? '');
+        $details = htmlspecialchars("Po No '{$poNo}' has been created");
+        $changes = '<ul class="list-group">'
+            . '<li class="list-group-item"><strong>Id:</strong> ' . htmlspecialchars($id) . '</li>'
+            . '<li class="list-group-item"><strong>PO Number:</strong> ' . htmlspecialchars($poNo) . '</li>'
+            . '</ul>';
+        return [$details, $changes];
+    }
+    // --- END: Custom Add Action for PO Number in Receiving Report ---
 
     switch ($action) {
         case 'create':
@@ -438,9 +463,10 @@ function getChangedFieldNames(array $oldData, array $newData)
                                                 <?php
                                                 $status = $log['status'] ?? '';
                                                 $isSuccess = (strtolower($status) === 'successful');
+                                                $statusText = $isSuccess ? 'Successful' : 'Failed';
                                                 ?>
                                                 <span class="badge <?= $isSuccess ? 'bg-success' : 'bg-danger' ?>">
-                                                    <?= getStatusIcon($status) . ' ' . htmlspecialchars($status) ?>
+                                                    <?= getStatusIcon($status) . ' ' . htmlspecialchars($statusText) ?>
                                                 </span>
                                             </td>
 

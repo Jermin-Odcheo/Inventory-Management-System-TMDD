@@ -298,7 +298,7 @@ function getChangedFieldNames(array $oldData, array $newData)
                 <div class="card-header d-flex justify-content-between align-items-center bg-dark">
                     <h3 class="text-white">
                         <i class="fas fa-history me-2"></i>
-                        Audit Logs Dashboard
+                        Equipment Management Audit Logs
                     </h3>
                 </div>
 
