@@ -136,23 +136,41 @@ function renderPaginationControls(totalPages) {
 
     if (totalPages <= 1) return;
 
-    const rangeStart = Math.max(2, currentPage - 2);
-    const rangeEnd = Math.min(totalPages - 1, currentPage + 2);
-
+    // Always show first page
     addPaginationItem(paginationContainer, 1, currentPage === 1);
 
-    if (rangeStart > 2) {
+    // Show ellipses and a window of pages around current page
+    const maxVisiblePages = 5; // Adjust to show more or fewer pages
+    const halfWindow = Math.floor(maxVisiblePages / 2);
+    
+    let startPage = Math.max(2, currentPage - halfWindow);
+    let endPage = Math.min(totalPages - 1, currentPage + halfWindow);
+    
+    // Adjust for edge cases
+    if (currentPage <= halfWindow + 1) {
+        // Near start, show more pages after current
+        endPage = Math.min(totalPages - 1, maxVisiblePages);
+    } else if (currentPage >= totalPages - halfWindow) {
+        // Near end, show more pages before current
+        startPage = Math.max(2, totalPages - maxVisiblePages);
+    }
+    
+    // Show ellipsis after first page if needed
+    if (startPage > 2) {
         addPaginationItem(paginationContainer, '...');
     }
-
-    for (let i = rangeStart; i <= rangeEnd; i++) {
+    
+    // Show pages in the window
+    for (let i = startPage; i <= endPage; i++) {
         addPaginationItem(paginationContainer, i, i === currentPage);
     }
-
-    if (rangeEnd < totalPages - 1) {
+    
+    // Show ellipsis before last page if needed
+    if (endPage < totalPages - 1) {
         addPaginationItem(paginationContainer, '...');
     }
-
+    
+    // Always show last page
     if (totalPages > 1) {
         addPaginationItem(paginationContainer, totalPages, currentPage === totalPages);
     }

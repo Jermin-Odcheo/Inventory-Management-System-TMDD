@@ -496,8 +496,83 @@ unset($role);
             filterTable();
         });
 
-        // Initialize the table (needed for pagination.js to work)
+        // Initialize the pagination system correctly
         window.allRows = Array.from(document.querySelectorAll('#auditTable tr'));
+        
+        // Override pagination rendering to use ellipsis style
+        window.renderPaginationControls = function(totalPages) {
+            const paginationContainer = document.getElementById('pagination');
+            if (!paginationContainer) return;
+
+            paginationContainer.innerHTML = '';
+
+            if (totalPages <= 1) return;
+
+            // Always show first page
+            addPaginationItem(paginationContainer, 1, currentPage === 1);
+
+            // Show ellipses and a window of pages around current page
+            const maxVisiblePages = 5; // Adjust as needed
+            const halfWindow = Math.floor(maxVisiblePages / 2);
+            
+            let startPage = Math.max(2, currentPage - halfWindow);
+            let endPage = Math.min(totalPages - 1, currentPage + halfWindow);
+            
+            // Adjust for edge cases
+            if (currentPage <= halfWindow + 1) {
+                // Near start, show more pages after current
+                endPage = Math.min(totalPages - 1, maxVisiblePages);
+            } else if (currentPage >= totalPages - halfWindow) {
+                // Near end, show more pages before current
+                startPage = Math.max(2, totalPages - maxVisiblePages);
+            }
+            
+            // Show ellipsis after first page if needed
+            if (startPage > 2) {
+                addPaginationItem(paginationContainer, '...');
+            }
+            
+            // Show pages in the window
+            for (let i = startPage; i <= endPage; i++) {
+                addPaginationItem(paginationContainer, i, currentPage === i);
+            }
+            
+            // Show ellipsis before last page if needed
+            if (endPage < totalPages - 1) {
+                addPaginationItem(paginationContainer, '...');
+            }
+            
+            // Always show last page
+            if (totalPages > 1) {
+                addPaginationItem(paginationContainer, totalPages, currentPage === totalPages);
+            }
+        };
+        
+        // Helper function to add pagination items
+        window.addPaginationItem = function(container, page, isActive = false) {
+            const li = document.createElement('li');
+            li.className = 'page-item' + (isActive ? ' active' : '');
+
+            const a = document.createElement('a');
+            a.className = 'page-link';
+            a.href = '#';
+            a.textContent = page;
+
+            if (page !== '...') {
+                a.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    window.currentPage = parseInt(page);
+                    if (typeof updatePagination === 'function') {
+                        updatePagination();
+                    }
+                });
+            } else {
+                li.classList.add('disabled');
+            }
+
+            li.appendChild(a);
+            container.appendChild(li);
+        };
 
         // **1. Load edit role modal content via AJAX**
         $(document).on('click', '.edit-role-btn', function () {
