@@ -2,35 +2,38 @@
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
 
+// Set the audit log session variables for MySQL triggers.
 if (isset($_SESSION['user_id'])) {
     $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
 } else {
     $pdo->exec("SET @current_user_id = NULL");
 }
+
+// Set IP address for logging.
 $ipAddress = $_SERVER['REMOTE_ADDR'];
 $pdo->exec("SET @current_ip = '" . $ipAddress . "'");
 
 // Function to log audit events
-function logAudit($pdo, $action, $details, $status, $oldData, $newData, $entityId = null)
+function logAudit($pdo, $action, $details, $status, $oldData, $entityId = null)
 {
     $stmt = $pdo->prepare("
         INSERT INTO audit_log (UserID, EntityID, Module, Action, Details, Status, OldVal, NewVal, Date_Time)
-        VALUES (?, ?, 'Receiving Report', ?, ?, ?, ?, ?, NOW())
+        VALUES (?, ?, 'Receiving Report', ?, ?, ?, ?, NULL, NOW())
     ");
-    $stmt->execute([$_SESSION['user_id'], $entityId, $action, $details, $status, $oldData, $newData]);
+    $stmt->execute([$_SESSION['user_id'], $entityId, $action, $details, $status, $oldData]);
 }
 
 header('Content-Type: application/json');
 header('X-Content-Type-Options: nosniff');
 
-if (isset($_POST['id'])) {
+if (isset($_POST['id']) && isset($_POST['permanent']) && $_POST['permanent'] == 1) {
     $rrId = filter_var($_POST['id'], FILTER_VALIDATE_INT);
     if ($rrId === false) {
         echo json_encode(['status' => 'error', 'message' => 'Invalid receiving report ID']);
         exit();
     }
     try {
-        // Get the data before restoration for audit
+        // First check if the record exists and is already archived
         $checkStmt = $pdo->prepare("SELECT * FROM receive_report WHERE id = ? AND is_disabled = 1");
         $checkStmt->execute([$rrId]);
         $oldData = $checkStmt->fetch(PDO::FETCH_ASSOC);
@@ -40,48 +43,43 @@ if (isset($_POST['id'])) {
             exit();
         }
         
-        $stmt = $pdo->prepare("UPDATE receive_report SET is_disabled = 0 WHERE id = ? AND is_disabled = 1");
+        // Permanently delete the receiving report
+        $stmt = $pdo->prepare("DELETE FROM receive_report WHERE id = ? AND is_disabled = 1");
         $stmt->execute([$rrId]);
         
-        // Fetch updated data for audit
-        $checkStmt = $pdo->prepare("SELECT * FROM receive_report WHERE id = ?");
-        $checkStmt->execute([$rrId]);
-        $newData = $checkStmt->fetch(PDO::FETCH_ASSOC);
-        
-        // Log the restore action
+        // Log the permanent delete action
         logAudit(
             $pdo,
-            'restored',
-            'Receiving Report "' . ($oldData['rr_no'] ?? 'ID: '.$rrId) . '" has been restored',
+            'delete',
+            'Receiving Report "' . ($oldData['rr_no'] ?? 'ID: '.$rrId) . '" has been permanently deleted',
             'Successful',
             json_encode($oldData),
-            json_encode($newData),
             $rrId
         );
         
-        echo json_encode(['status' => 'success', 'message' => 'Receiving report restored successfully']);
+        echo json_encode(['status' => 'success', 'message' => 'Receiving report permanently deleted']);
     } catch (PDOException $e) {
         // Log the error
         logAudit(
             $pdo,
-            'restored',
-            'Receiving Report ID: ' . $rrId . ' restoration failed',
+            'delete',
+            'Receiving Report ID: ' . $rrId . ' permanent deletion failed',
             'Failed',
             json_encode(['id' => $rrId, 'error' => $e->getMessage()]),
-            null,
             $rrId
         );
         echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
     }
-} else if (isset($_POST['rr_ids']) && is_array($_POST['rr_ids'])) {
-    $rrIds = array_filter(array_map('intval', $_POST['rr_ids']));
+} else if (isset($_POST['ids']) && is_array($_POST['ids']) && isset($_POST['permanent']) && $_POST['permanent'] == 1) {
+    $rrIds = array_filter(array_map('intval', $_POST['ids']));
     if(empty($rrIds)) {
         echo json_encode(['status' => 'error', 'message' => 'No valid receiving report IDs provided']);
         exit();
     }
     try {
-        // Fetch data for all IDs to be restored
         $placeholders = implode(",", array_fill(0, count($rrIds), '?'));
+        
+        // First check if the records exist and are already archived
         $checkStmt = $pdo->prepare("SELECT * FROM receive_report WHERE id IN ($placeholders) AND is_disabled = 1");
         $checkStmt->execute($rrIds);
         $oldDataRecords = $checkStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -91,51 +89,36 @@ if (isset($_POST['id'])) {
             exit();
         }
         
-        // Perform the restore
-        $stmt = $pdo->prepare("UPDATE receive_report SET is_disabled = 0 WHERE id IN ($placeholders) AND is_disabled = 1");
+        // Permanently delete the receiving reports
+        $stmt = $pdo->prepare("DELETE FROM receive_report WHERE id IN ($placeholders) AND is_disabled = 1");
         $stmt->execute($rrIds);
         
-        // Fetch updated data
-        $checkStmt = $pdo->prepare("SELECT * FROM receive_report WHERE id IN ($placeholders)");
-        $checkStmt->execute($rrIds);
-        $newDataRecords = $checkStmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        // Create a lookup array for quick access to new data
-        $newDataLookup = [];
-        foreach ($newDataRecords as $record) {
-            $newDataLookup[$record['id']] = $record;
-        }
-        
-        // Log each restoration separately for proper auditing
+        // Log each deletion separately for proper auditing
         foreach ($oldDataRecords as $oldData) {
-            $entityId = $oldData['id'];
-            $newData = $newDataLookup[$entityId] ?? null;
-            
             logAudit(
                 $pdo,
-                'restored',
-                'Receiving Report "' . ($oldData['rr_no'] ?? 'ID: '.$entityId) . '" has been restored',
+                'delete',
+                'Receiving Report "' . ($oldData['rr_no'] ?? 'ID: '.$oldData['id']) . '" has been permanently deleted',
                 'Successful',
                 json_encode($oldData),
-                json_encode($newData),
-                $entityId
+                $oldData['id']
             );
         }
         
-        echo json_encode(['status' => 'success', 'message' => 'Selected receiving reports restored successfully']);
+        echo json_encode(['status' => 'success', 'message' => 'Selected receiving reports permanently deleted']);
     } catch (PDOException $e) {
         // Log the error
         logAudit(
             $pdo,
-            'restored',
-            'Bulk Receiving Report restoration failed for IDs: ' . implode(', ', $rrIds),
+            'delete',
+            'Bulk Receiving Report deletion failed for IDs: ' . implode(', ', $rrIds),
             'Failed',
             json_encode(['ids' => implode(',', $rrIds), 'error' => $e->getMessage()]),
-            null,
             null
         );
         echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
     }
 } else {
-    echo json_encode(['status' => 'error', 'message' => 'No receiving report selected']);
-} 
+    echo json_encode(['status' => 'error', 'message' => 'Invalid request or missing permanent flag']);
+}
+?>

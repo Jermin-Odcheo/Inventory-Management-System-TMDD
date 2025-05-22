@@ -421,10 +421,82 @@ function formatChanges($oldJsonStr)
             canRemove: <?php echo json_encode($canRemove); ?>,
             canDelete: <?php echo json_encode($canDelete); ?>
         };
+        
+        // Initialize pagination when document is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize pagination with the archive table ID
+            initPagination({
+                tableId: 'archiveTableBody',
+                currentPage: 1
+            });
+            
+            // Force hide pagination buttons if no data or all fits on one page
+            function forcePaginationCheck() {
+                const totalRows = window.filteredRows ? window.filteredRows.length : 0;
+                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value);
+                const prevBtn = document.getElementById('prevPage');
+                const nextBtn = document.getElementById('nextPage');
+                const paginationEl = document.getElementById('pagination');
+
+                // Hide pagination completely if all rows fit on one page
+                if (totalRows <= rowsPerPage) {
+                    if (prevBtn) prevBtn.style.cssText = 'display: none !important';
+                    if (nextBtn) nextBtn.style.cssText = 'display: none !important';
+                    if (paginationEl) paginationEl.style.cssText = 'display: none !important';
+                } else {
+                    // Show pagination but conditionally hide prev/next buttons
+                    if (paginationEl) paginationEl.style.cssText = '';
+
+                    if (prevBtn) {
+                        if (window.currentPage <= 1) {
+                            prevBtn.style.cssText = 'display: none !important';
+                        } else {
+                            prevBtn.style.cssText = '';
+                        }
+                    }
+
+                    if (nextBtn) {
+                        const totalPages = Math.ceil(totalRows / rowsPerPage);
+                        if (window.currentPage >= totalPages) {
+                            nextBtn.style.cssText = 'display: none !important';
+                        } else {
+                            nextBtn.style.cssText = '';
+                        }
+                    }
+                }
+            }
+            
+            // Run forcePaginationCheck after pagination updates
+            const originalUpdatePagination = window.updatePagination || function() {};
+            window.updatePagination = function() {
+                // Get all rows again in case the DOM was updated
+                window.allRows = Array.from(document.querySelectorAll('#archiveTableBody tr'));
+                
+                // If filtered rows is empty or not defined, use all rows
+                if (!window.filteredRows || window.filteredRows.length === 0) {
+                    window.filteredRows = window.allRows;
+                }
+                
+                // Update total rows display
+                const totalRowsEl = document.getElementById('totalRows');
+                if (totalRowsEl) {
+                    totalRowsEl.textContent = window.filteredRows.length;
+                }
+                
+                // Call original updatePagination
+                originalUpdatePagination();
+                forcePaginationCheck();
+            };
+            
+            // Call updatePagination immediately
+            updatePagination();
+        });
 
         var deleteId = null;
         var restoreId = null;
         var bulkDeleteIds = [];
+        var restoreModule = '';
+        var deleteModule = '';
 
         // Delegated events for checkboxes
         $(document).on('change', '#select-all', function() {
@@ -466,19 +538,16 @@ function formatChanges($oldJsonStr)
             var data = {
                 id: restoreId
             };
+            
+            // Set the appropriate URL based on the module
             if (restoreModule === 'Purchase Order') {
-                restoreUrl = '../../equipment_transactions/restore_purchase_order.php';
-                redirectUrl = '../../equipment_transactions/purchase_order.php';
-            } else if (restoreModule === 'Charge Invoice') {
-                restoreUrl = '../../equipment_transactions/restore_charge_invoice.php';
-                redirectUrl = '../../equipment_transactions/charge_invoice.php';
+                restoreUrl = '../../../modules/equipment_transactions/restore_purchase_order.php';
             } else if (restoreModule === 'Receiving Report') {
-                restoreUrl = '../../equipment_transactions/restore_receiving_report.php';
-                redirectUrl = '../../equipment_transactions/receiving_report.php';
-            } else {
-                showToast('Unknown module for restore.', 'error');
-                return;
+                restoreUrl = '../../../modules/equipment_transactions/restore_receiving_report.php';
+            } else if (restoreModule === 'Charge Invoice') {
+                restoreUrl = '../../../modules/equipment_transactions/restore_charge_invoice.php';
             }
+            
             $.ajax({
                 url: restoreUrl,
                 method: 'POST',
@@ -509,42 +578,238 @@ function formatChanges($oldJsonStr)
         // --- Individual Permanent Delete ---
         $(document).on('click', '.delete-permanent-btn', function(e) {
             if (!userPrivileges.canDelete) return;
-
+            
             e.preventDefault();
             deleteId = $(this).data('id');
+            deleteModule = $(this).closest('tr').find('td[data-label="Module"]').text().trim();
             var deleteModal = new bootstrap.Modal(document.getElementById('deleteArchiveModal'));
+            $('#deleteArchiveModal').data('module', deleteModule);
             deleteModal.show();
         });
 
+        // When bulk restore button is clicked, gather selected IDs and show modal
+        $(document).on('click', '#restore-selected', function () {
+            if (!userPrivileges.canRestore) return;
+            
+            var selected = $('.select-row:checked');
+            bulkRestoreIds = [];
+            var modules = [];
+            
+            selected.each(function () {
+                var id = $(this).val();
+                var module = $(this).closest('tr').find('td[data-label="Module"]').text().trim();
+                bulkRestoreIds.push(id);
+                if (modules.indexOf(module) === -1) {
+                    modules.push(module);
+                }
+            });
+            
+            if (modules.length > 1) {
+                showToast('Cannot restore items from different modules at once. Please select items of the same type.', 'error');
+                return;
+            }
+            
+            // Store the module for later use
+            $('#bulkRestoreModal').data('module', modules[0]);
+            
+            var bulkRestoreModal = new bootstrap.Modal(document.getElementById('bulkRestoreModal'));
+            bulkRestoreModal.show();
+        });
+        
         // When confirming bulk restore in the modal, perform the AJAX call
         $(document).on('click', '#confirmBulkRestoreBtn', function() {
             if (!userPrivileges.canRestore || bulkRestoreIds.length === 0) return;
-
+            
+            // Get the module from the modal's data attribute
+            var restoreModule = $('#bulkRestoreModal').data('module');
+            if (!restoreModule) {
+                showToast('Module information missing.', 'error');
+                return;
+            }
+            
+            var restoreUrl = '';
+            var data = { ids: bulkRestoreIds };
+            
+            // Set the appropriate URL based on the module
+            if (restoreModule === 'Purchase Order') {
+                restoreUrl = '../../../modules/equipment_transactions/restore_purchase_order.php';
+                data = { po_ids: bulkRestoreIds };
+            } else if (restoreModule === 'Receiving Report') {
+                restoreUrl = '../../../modules/equipment_transactions/restore_receiving_report.php';
+                data = { rr_ids: bulkRestoreIds };
+            } else if (restoreModule === 'Charge Invoice') {
+                restoreUrl = '../../../modules/equipment_transactions/restore_charge_invoice.php';
+                data = { ci_ids: bulkRestoreIds };
+            }
+            
             $.ajax({
-                url: '../../equipment_transactions/restore_purchase_order.php',
+                url: restoreUrl,
                 method: 'POST',
-                data: {
-                    po_ids: bulkRestoreIds
-                },
+                data: data,
                 dataType: 'json',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
                 success: function(response) {
                     // Hide the bulk restore modal
                     var modalInstance = bootstrap.Modal.getInstance(document.getElementById('bulkRestoreModal'));
                     modalInstance.hide();
-                    if (response.status === 'success') {
+                    if (response.status && response.status.toLowerCase() === 'success') {
                         $('#archiveTable').load(location.href + ' #archiveTable', function() {
-                            updateBulkButtons();
+                            // Refresh pagination
+                            window.allRows = Array.from(document.querySelectorAll('#archiveTableBody tr'));
+                            window.filteredRows = window.allRows;
+                            window.currentPage = 1;
+                            updatePagination();
                             showToast(response.message, 'success');
                         });
                     } else {
-                        showToast(response.message, 'error');
+                        showToast(response.message || 'Unknown error occurred', 'error');
                     }
                 },
-                error: function() {
-                    showToast('Error processing bulk restore.', 'error');
+                error: function(xhr, status, error) {
+                    console.error('Bulk restore error:', status, error, xhr.responseText);
+                    showToast('Error processing bulk restore request: ' + error, 'error');
+                }
+            });
+        });
+        
+        // --- Bulk Delete ---
+        $(document).on('click', '#delete-selected-permanently', function () {
+            if (!userPrivileges.canDelete) return;
+            
+            var selected = $('.select-row:checked');
+            bulkDeleteIds = [];
+            var modules = [];
+            
+            selected.each(function () {
+                var id = $(this).val();
+                var module = $(this).closest('tr').find('td[data-label="Module"]').text().trim();
+                bulkDeleteIds.push(id);
+                if (modules.indexOf(module) === -1) {
+                    modules.push(module);
+                }
+            });
+            
+            if (modules.length > 1) {
+                showToast('Cannot delete items from different modules at once. Please select items of the same type.', 'error');
+                return;
+            }
+            
+            // Store the module for later use
+            $('#bulkDeleteModal').data('module', modules[0]);
+            
+            var bulkModal = new bootstrap.Modal(document.getElementById('bulkDeleteModal'));
+            bulkModal.show();
+        });
+        
+        // Individual item delete handler
+        $(document).on('click', '#confirmDeleteBtn', function () {
+            if (!userPrivileges.canDelete || !deleteId) return;
+            
+            deleteModule = $('#deleteArchiveModal').data('module');
+            if (!deleteModule) {
+                deleteModule = $('tr').find('input.select-row[value="' + deleteId + '"]').closest('tr').find('td[data-label="Module"]').text().trim();
+            }
+            
+            var deleteUrl = '';
+            var data = { id: deleteId, permanent: 1 };
+            
+            // Set the appropriate URL based on the module
+            if (deleteModule === 'Purchase Order') {
+                deleteUrl = '../../../modules/equipment_transactions/delete_purchase_order.php';
+            } else if (deleteModule === 'Receiving Report') {
+                deleteUrl = '../../../modules/equipment_transactions/delete_receiving_report.php';
+            } else if (deleteModule === 'Charge Invoice') {
+                deleteUrl = '../../../modules/equipment_transactions/delete_charge_invoice.php';
+            }
+            
+            console.log('Delete URL:', deleteUrl);
+            console.log('Delete Data:', data);
+            
+            $.ajax({
+                url: deleteUrl,
+                method: 'POST',
+                data: data,
+                dataType: 'json',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                success: function(response) {
+                    console.log('Delete Response:', response);
+                    var modalInstance = bootstrap.Modal.getInstance(document.getElementById('deleteArchiveModal'));
+                    modalInstance.hide();
+                    if (response.status && response.status.toLowerCase() === 'success') {
+                        $('#archiveTable').load(location.href + ' #archiveTable', function () {
+                            // Refresh pagination
+                            window.allRows = Array.from(document.querySelectorAll('#archiveTableBody tr'));
+                            window.filteredRows = window.allRows;
+                            window.currentPage = 1;
+                            updatePagination();
+                            showToast(response.message, 'success');
+                        });
+                    } else {
+                        showToast(response.message || 'Unknown error occurred', 'error');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Delete error:', status, error, xhr.responseText);
+                    showToast('Error processing delete request: ' + error, 'error');
+                }
+            });
+        });
+        
+        $(document).on('click', '#confirmBulkDeleteBtn', function () {
+            if (!userPrivileges.canDelete || bulkDeleteIds.length === 0) return;
+            
+            // Get the module from the modal's data attribute
+            var deleteModule = $('#bulkDeleteModal').data('module');
+            if (!deleteModule) {
+                showToast('Module information missing.', 'error');
+                return;
+            }
+            
+            var deleteUrl = '';
+            var data = { ids: bulkDeleteIds, permanent: 1 };
+            
+            // Set the appropriate URL based on the module
+            if (deleteModule === 'Purchase Order') {
+                deleteUrl = '../../../modules/equipment_transactions/delete_purchase_order.php';
+                data = { po_ids: bulkDeleteIds, permanent: 1 };
+            } else if (deleteModule === 'Receiving Report') {
+                deleteUrl = '../../../modules/equipment_transactions/delete_receiving_report.php';
+                data = { rr_ids: bulkDeleteIds, permanent: 1 };
+            } else if (deleteModule === 'Charge Invoice') {
+                deleteUrl = '../../../modules/equipment_transactions/delete_charge_invoice.php';
+                data = { ci_ids: bulkDeleteIds, permanent: 1 };
+            }
+            
+            console.log('Bulk Delete URL:', deleteUrl);
+            console.log('Bulk Delete Data:', data);
+            
+            $.ajax({
+                url: deleteUrl,
+                method: 'POST',
+                data: data,
+                dataType: 'json',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                success: function(response) {
+                    console.log('Bulk Delete Response:', response);
+                    var bulkModalInstance = bootstrap.Modal.getInstance(document.getElementById('bulkDeleteModal'));
+                    bulkModalInstance.hide();
+                    
+                    if (response.status && response.status.toLowerCase() === 'success') {
+                        $('#archiveTable').load(location.href + ' #archiveTable', function () {
+                            // Refresh pagination
+                            window.allRows = Array.from(document.querySelectorAll('#archiveTableBody tr'));
+                            window.filteredRows = window.allRows;
+                            window.currentPage = 1;
+                            updatePagination();
+                            showToast(response.message, 'success');
+                        });
+                    } else {
+                        showToast(response.message || 'Unknown error occurred', 'error');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Bulk delete error:', status, error, xhr.responseText);
+                    showToast('Error processing bulk delete request: ' + error, 'error');
                 }
             });
         });

@@ -60,7 +60,7 @@ function is_ajax_request()
  * Logs an audit entry including Details and Status.
  *
  * @param PDO    $pdo
- * @param string $action    e.g. 'Create', 'Modified', 'Delete'
+ * @param string $action    e.g. 'create', 'modified', 'remove', 'delete'
  * @param mixed  $oldVal    JSON or null
  * @param mixed  $newVal    JSON or null
  * @param int    $entityId  optional
@@ -264,11 +264,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // ------------------------
 // SOFT DELETE
 // ------------------------
-if (($_GET['action'] ?? '') === 'delete' && isset($_GET['id'])) {
+if (($_GET['action'] ?? '') === 'removed' && isset($_GET['id'])) {
     $id = $_GET['id'];
     try {
         if (!$canDelete) {
-            throw new Exception('No permission to delete invoices.');
+            throw new Exception('No permission to remove invoices.');
         }
         // fetch old
         $sel = $pdo->prepare("SELECT * FROM charge_invoice WHERE id = ?");
@@ -281,15 +281,15 @@ if (($_GET['action'] ?? '') === 'delete' && isset($_GET['id'])) {
 
             logAudit(
                 $pdo,
-                'Delete',
+                'remove',
                 json_encode($old),
                 null,
                 $id,
-                "Charge Invoice {$old['invoice_no']} deleted",
+                "Charge Invoice {$old['invoice_no']} removed",
                 'Successful'
             );
 
-            $_SESSION['success'] = "Charge Invoice deleted successfully.";
+            $_SESSION['success'] = "Charge Invoice Removed successfully.";
         } else {
             $_SESSION['errors'] = ["Charge Invoice not found for deletion."];
         }
@@ -734,7 +734,7 @@ try {
                         url: 'charge_invoice.php',
                         method: 'GET',
                         data: {
-                            action: 'delete',
+                            action: 'removed',
                             id: deleteInvoiceId
                         },
                         dataType: 'json',
