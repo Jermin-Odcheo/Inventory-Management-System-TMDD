@@ -386,9 +386,12 @@ unset($role);
             const moduleFilter = $('#moduleFilter').val();
             const privilegeFilters = $('#privilegeFilter').val() || [];
 
-            let visibleCount = 0;
-            $('#auditTable tr').each(function() {
-                const $row = $(this);
+            // Remove any "no results" message first
+            $('#no-results-row').remove();
+            
+            // Create a filtered array of rows that we'll use for pagination
+            window.filteredRows = window.allRows.filter(row => {
+                const $row = $(row);
                 const roleName = $row.find('.role-name').text().toLowerCase();
                 const privilegeList = $row.find('.privilege-list');
                 const privilegeText = privilegeList.text().toLowerCase();
@@ -449,33 +452,22 @@ unset($role);
                     }
                 }
 
-                // Instead of hiding/showing, use a data attribute that pagination.js can recognize
-                if (showRow) {
-                    $row.show();
-                    visibleCount++;
-                } else {
-                    $row.hide();
-                }
+                return showRow;
             });
 
             // Show "no results" message if no matches
-            if (visibleCount === 0) {
-                if ($('#no-results-row').length === 0) {
-                    $('#auditTable').append(
-                        '<tr id="no-results-row"><td colspan="4" class="text-center py-3">' +
-                        '<div class="alert alert-info mb-0">' +
-                        '<i class="bi bi-info-circle me-2"></i>No matching roles found. Try adjusting your filters.' +
-                        '</div></td></tr>'
-                    );
-                }
-            } else {
-                $('#no-results-row').remove();
+            if (window.filteredRows.length === 0) {
+                $('#auditTable').append(
+                    '<tr id="no-results-row"><td colspan="4" class="text-center py-3">' +
+                    '<div class="alert alert-info mb-0">' +
+                    '<i class="bi bi-info-circle me-2"></i>No matching roles found. Try adjusting your filters.' +
+                    '</div></td></tr>'
+                );
             }
 
-            // Update the pagination after filtering
-            if (typeof updatePagination === 'function') {
-                updatePagination();
-            }
+            // Reset pagination to first page and update with filtered rows
+            window.currentPage = 1;
+            updatePagination();
         }
 
         // Add event listeners for filters
@@ -486,6 +478,8 @@ unset($role);
         // Clear filters button
         $('#clear-filters-btn').on('click', function() {
             $('#roleNameFilter').val('');
+            
+            // Handle Select2 dropdowns if available
             if ($.fn.select2) {
                 $('#moduleFilter').val('').trigger('change');
                 $('#privilegeFilter').val(null).trigger('change');
@@ -493,11 +487,53 @@ unset($role);
                 $('#moduleFilter').val('');
                 $('#privilegeFilter').val([]);
             }
-            filterTable();
+            
+            // Reset to show all rows (use original allRows)
+            window.filteredRows = window.allRows;
+            window.currentPage = 1;
+            updatePagination();
+            
+            // Remove any "no results" message
+            $('#no-results-row').remove();
         });
 
         // Initialize the pagination system correctly
         window.allRows = Array.from(document.querySelectorAll('#auditTable tr'));
+        window.filteredRows = window.allRows; // Initially all rows are visible
+        
+        // Add this override for pagination.js to work with our filtered rows
+        window.updatePagination = function() {
+            const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value);
+            const totalRows = window.filteredRows.length;
+            const totalPages = Math.ceil(totalRows / rowsPerPage);
+            
+            // Update info display
+            document.getElementById('currentPage').textContent = window.currentPage;
+            document.getElementById('rowsPerPage').textContent = Math.min(rowsPerPage, totalRows);
+            document.getElementById('totalRows').textContent = totalRows;
+            
+            // Hide all rows first
+            window.allRows.forEach(row => {
+                row.style.display = 'none';
+            });
+            
+            // Show only the rows for the current page
+            const startIndex = (window.currentPage - 1) * rowsPerPage;
+            const endIndex = Math.min(startIndex + rowsPerPage, totalRows);
+            
+            for (let i = startIndex; i < endIndex; i++) {
+                if (window.filteredRows[i]) {
+                    window.filteredRows[i].style.display = '';
+                }
+            }
+            
+            // Update pagination controls
+            renderPaginationControls(totalPages);
+            
+            // Enable/disable prev/next buttons
+            document.getElementById('prevPage').disabled = window.currentPage <= 1;
+            document.getElementById('nextPage').disabled = window.currentPage >= totalPages;
+        };
         
         // Override pagination rendering to use ellipsis style
         window.renderPaginationControls = function(totalPages) {
@@ -509,20 +545,20 @@ unset($role);
             if (totalPages <= 1) return;
 
             // Always show first page
-            addPaginationItem(paginationContainer, 1, currentPage === 1);
+            addPaginationItem(paginationContainer, 1, window.currentPage === 1);
 
             // Show ellipses and a window of pages around current page
             const maxVisiblePages = 5; // Adjust as needed
             const halfWindow = Math.floor(maxVisiblePages / 2);
             
-            let startPage = Math.max(2, currentPage - halfWindow);
-            let endPage = Math.min(totalPages - 1, currentPage + halfWindow);
+            let startPage = Math.max(2, window.currentPage - halfWindow);
+            let endPage = Math.min(totalPages - 1, window.currentPage + halfWindow);
             
             // Adjust for edge cases
-            if (currentPage <= halfWindow + 1) {
+            if (window.currentPage <= halfWindow + 1) {
                 // Near start, show more pages after current
                 endPage = Math.min(totalPages - 1, maxVisiblePages);
-            } else if (currentPage >= totalPages - halfWindow) {
+            } else if (window.currentPage >= totalPages - halfWindow) {
                 // Near end, show more pages before current
                 startPage = Math.max(2, totalPages - maxVisiblePages);
             }
@@ -534,7 +570,7 @@ unset($role);
             
             // Show pages in the window
             for (let i = startPage; i <= endPage; i++) {
-                addPaginationItem(paginationContainer, i, currentPage === i);
+                addPaginationItem(paginationContainer, i, window.currentPage === i);
             }
             
             // Show ellipsis before last page if needed
@@ -544,7 +580,7 @@ unset($role);
             
             // Always show last page
             if (totalPages > 1) {
-                addPaginationItem(paginationContainer, totalPages, currentPage === totalPages);
+                addPaginationItem(paginationContainer, totalPages, window.currentPage === totalPages);
             }
         };
         
@@ -562,9 +598,7 @@ unset($role);
                 a.addEventListener('click', function (e) {
                     e.preventDefault();
                     window.currentPage = parseInt(page);
-                    if (typeof updatePagination === 'function') {
-                        updatePagination();
-                    }
+                    updatePagination();
                 });
             } else {
                 li.classList.add('disabled');
@@ -573,6 +607,33 @@ unset($role);
             li.appendChild(a);
             container.appendChild(li);
         };
+        
+        // Setup pagination controls
+        document.getElementById('prevPage').addEventListener('click', function() {
+            if (window.currentPage > 1) {
+                window.currentPage--;
+                updatePagination();
+            }
+        });
+        
+        document.getElementById('nextPage').addEventListener('click', function() {
+            const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value);
+            const totalPages = Math.ceil(window.filteredRows.length / rowsPerPage);
+            
+            if (window.currentPage < totalPages) {
+                window.currentPage++;
+                updatePagination();
+            }
+        });
+        
+        document.getElementById('rowsPerPageSelect').addEventListener('change', function() {
+            window.currentPage = 1;
+            updatePagination();
+        });
+        
+        // Initialize current page
+        window.currentPage = 1;
+        updatePagination();
 
         // **1. Load edit role modal content via AJAX**
         $(document).on('click', '.edit-role-btn', function () {
