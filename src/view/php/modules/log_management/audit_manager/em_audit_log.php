@@ -325,14 +325,14 @@ function formatDetailsAndChanges($log)
  */
 function getChangedFieldNames(array $oldData, array $newData)
 {
-    // Fields that should NOT be included in the diff
-    $systemFields = ['date_created', 'date_acquired', 'date_modified', 'is_disabled', 'department_id', 'equipment_location_id'];
+    // Fields that should NOT be included in the diff (but allow department_id for summary)
+    $systemFields = ['date_created', 'date_acquired', 'date_modified', 'is_disabled', 'equipment_location_id'];
 
     $changed = [];
     $allKeys = array_unique(array_merge(array_keys($oldData), array_keys($newData)));
 
     foreach ($allKeys as $key) {
-        // Skip system-managed fields and excluded fields
+        // Skip system-managed fields and excluded fields, but NOT department_id
         if (in_array($key, $systemFields)) {
             continue;
         }
@@ -341,7 +341,11 @@ function getChangedFieldNames(array $oldData, array $newData)
         $newVal = $newData[$key] ?? null;
 
         if ($oldVal !== $newVal) {
-            $changed[] = ucwords(str_replace('_', ' ', $key));
+            if ($key === 'department_id') {
+                $changed[] = 'Department';
+            } else {
+                $changed[] = ucwords(str_replace('_', ' ', $key));
+            }
         }
     }
 
