@@ -56,7 +56,7 @@ $todayDisplay = date('F j, Y');
 
     .select2-container--default .select2-selection--single .select2-selection__arrow {
       height: 38px;
-    }
+    } 
   </style>
 </head>
 
@@ -75,16 +75,22 @@ $todayDisplay = date('F j, Y');
             <div class="col-md-6">
               <label class="form-label">Document Type:</label>
               <select class="form-select" id="docTypeSelect" name="docTypeSelect" required>
-                <option value="summarized">Summarized Report</option>
-                <option value="detailed">Detailed Report</option>
-                <option value="custom" selected>Custom Report</option>
+  <option value="summarized">Summarized Report</option>
+  <option value="detailed">Complete Detailed Report</option>
+  <option value="custom" selected>Custom Report</option>
+  <option value="equipment_details">Equipment Details Only</option>
+  <option value="equipment_status">Equipment Status Only</option>
+  <option value="equipment_location"> Equipment Location Only</option>
+  <option value="receiving_report">Receiving Report Only</option>
+  <option value="charge_invoice">Charge Invoice Only</option>
+</select>
+
               </select>
             </div>
             <div class="col-md-6">
               <label class="form-label">Location:</label>
               <select name="building_loc" class="form-select" id="buildingLocSelect" required>
                 <option value="all">All Locations</option>
-                <!-- Options will be populated dynamically via JavaScript -->
               </select>
             </div>
             <div class="col-md-6 mt-3">
@@ -107,39 +113,65 @@ $todayDisplay = date('F j, Y');
 
         <div class="form-section">
           <h5>Generated Table Columns</h5>
-          <h6>*Select the columns you want to include*</h6>
+          <h7>Instructions: Select the columns you want to include. Asset Tag is already permanently added.</h7>
           <div class="mb-2">
             <button type="button" class="btn btn-outline-secondary btn-sm" id="clearCheckboxes">Clear All</button>
           </div>
           <div class="row" id="checkboxContainer">
-            <?php
-            $columns = [
-              'asset_tag'              => 'Asset Tag',
-              'asset_description'      => 'Asset Description 1 & 2',
-              'spec_brand_model'       => 'Specifications, Brand and Model',
-              'serial_number'          => 'Serial Number',
-              'date_acquired'          => 'Date Acquired',
-              'invoice_no'             => 'Invoice No',
-              'receiving_report'       => 'Receiving Report',
-              'building_location'       => 'Location',
-              'specific_area'          => 'Laboratory/Office',
-              'accountable_individual' => 'Accountable Individual',
-              'remarks'                => 'Remarks',
-              'date_created'           => 'Date Created',
-              'last_date_modified'     => 'Last Date Modified',
-              'equipment_status'       => 'Equipment Status',
-              'action_taken'           => 'Action Taken',
-              'status_date_creation'   => 'Status Date Creation',
-              'status_remarks'         => 'Status Remarks'
-            ];
-            foreach ($columns as $val => $label) {
-              echo '<div class="col-md-4"><div class="form-check">';
-              echo "<input class='form-check-input report-checkbox' type='checkbox' name='columns[]' value='$val' id='$val'>";
-              echo "<label class='form-check-label' for='$val'>$label</label>";
-              echo '</div></div>';
-            }
-            ?>
-          </div>
+  <?php
+  $columnGroups = [
+    'Equipment Details' => [
+      'asset_description' => 'Asset Description 1 & 2',
+      'spec_brand_model' => 'Specifications, Brand and Model',
+      'serial_number' => 'Serial Number',
+      'remarks' => 'Remarks',
+      'date_created' => 'Date Created',
+      'last_date_modified' => 'Last Date Modified',
+    ],
+    'Equipment Status' => [
+      'equipment_status' => 'Equipment Status',
+      'action_taken' => 'Action Taken',
+      'status_date_creation' => 'Status Date Creation',
+      'status_remarks' => 'Status Remarks',
+    ],
+    'Equipment Location' => [
+      'specific_area' => 'Laboratory/Office',
+    ],
+    'Receiving Report' => [
+      'receiving_report' => 'RR number',
+      'building_location' => 'Location',
+      'accountable_individual' => 'Accountable Individual',
+    ],
+    'Charge Invoice' => [
+      'date_acquired' => 'Date Acquired',
+      'invoice_no' => 'Invoice No',
+    ]
+  ];
+
+  foreach ($columnGroups as $groupTitle => $groupColumns) {
+    echo "<div class='col-md-12 mt-3'><h6 class='fw-bold'>$groupTitle</h6><div class='row'>";
+    foreach ($groupColumns as $val => $label) {
+      echo "<div class='col-md-4'><div class='form-check'>";
+  
+      if ($val === 'asset_tag') {
+        // Visible, checked, and disabled checkbox
+        echo "<input class='form-check-input report-checkbox' type='checkbox' 
+               id='$val' checked disabled>";
+        // Hidden input to actually submit the value
+        echo "<input type='hidden' name='columns[]' value='asset_tag'>";
+      } else {
+        echo "<input class='form-check-input report-checkbox' type='checkbox' 
+               name='columns[]' value='$val' id='$val'>";
+      }
+  
+      echo "<label class='form-check-label' for='$val'>$label</label>";
+      echo "</div></div>";
+    }
+    echo "</div></div>";
+  }
+  ?>
+
+</div>
         </div>
 
         <div class="form-section">
@@ -171,7 +203,7 @@ $todayDisplay = date('F j, Y');
                 <option value="word">Word</option>
               </select>
             </div>
-            < class="col-md-8 d-flex justify-content-end gap-2 mt-3">
+            <div class="col-md-8 d-flex justify-content-end gap-2 mt-3">
               <button type="button" class="btn btn-dark" id="previewBtn">Preview Report</button>
               <?php if ($rbac->hasPrivilege('Reports', 'Export')): ?>
               <button type="submit" class="btn btn-primary" id="downloadBtn">Download Report</button>
@@ -197,7 +229,6 @@ $todayDisplay = date('F j, Y');
     </div>
   </div>
 
-  <!-- JS includes -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
   <script>
@@ -286,13 +317,45 @@ $todayDisplay = date('F j, Y');
         'status_remarks'
       ];
 
+      const eqpDetailsCols = [
+        'asset_tag', 'asset_description', 'spec_brand_model', 'serial_number', 'remarks', 
+        'date_created', 'last_date_modified',
+      ];
+      
+      const eqpStatussCols = [
+        'asset_tag',  'equipment_status', 'action_taken', 'status_date_creation', 'status_remarks'
+      ];
+  
+      const eqpLocationCols = [
+        'asset_tag','specific_area'
+      ];
+
+      const RRCols = [
+        'asset_tag', 'building_location', 'accountable_individual',
+      ];
+      
+      const CICols = [
+        'asset_tag', 'date_acquired', 'invoice_no'
+      ];
+
       const applyDocTypeSelection = () => {
         const docType = docTypeSelect.value;
         if (docType === 'summarized') {
           checkboxes.forEach(cb => cb.checked = summarizedCols.includes(cb.value));
         } else if (docType === 'detailed') {
           checkboxes.forEach(cb => cb.checked = detailedCols.includes(cb.value));
-        } else {
+        }  else if (docType === 'equipment_details') {
+          checkboxes.forEach(cb => cb.checked = eqpDetailsCols.includes(cb.value));
+        } else if (docType === 'equipment_status') {
+          checkboxes.forEach(cb => cb.checked = eqpStatussCols.includes(cb.value));
+        }else if (docType === 'equipment_location') {
+          checkboxes.forEach(cb => cb.checked = eqpLocationCols.includes(cb.value));
+        }else if (docType === 'receiving_report') {
+          checkboxes.forEach(cb => cb.checked = RRCols.includes(cb.value));
+        }else if (docType === 'charge_invoice') {
+          checkboxes.forEach(cb => cb.checked = CICols.includes(cb.value));
+        }
+        else {
           checkboxes.forEach(cb => cb.checked = false);
         }
         updateDocTypeByCheckboxes();
