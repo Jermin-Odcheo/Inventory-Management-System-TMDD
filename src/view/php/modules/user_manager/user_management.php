@@ -726,8 +726,14 @@ try {
                 // Add event handlers for removal buttons
                 $('.remove-dept').on('click', function() {
                     const deptId = $(this).data('dept-id');
-                    selectedDepartments = selectedDepartments.filter(d => d.id !== deptId);
+                    
+                    console.log('Attempting to remove:', deptId);
+                    console.log('Before:', selectedDepartments);
+
+                    selectedDepartments = selectedDepartments.filter(d => String(d.id) !== String(deptId));
                     updateDepartmentsDisplay();
+                    
+                    console.log('After:', selectedDepartments);
                 });
             }
 

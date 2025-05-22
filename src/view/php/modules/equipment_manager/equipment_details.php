@@ -584,7 +584,7 @@ th.sortable.desc::after {
                             <div class="text-muted">
                                 <?php $totalLogs = count($equipmentDetails); ?>
                                 <input type="hidden" id="total-users" value="<?= $totalLogs ?>">
-                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows"><?= $totalLogs ?></span> entries
+                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span id="totalRows"><?= $totalLogs ?></span> entries
                             </div>
                         </div>
                         <div class="col-12 col-sm-auto ms-sm-auto">
@@ -989,11 +989,21 @@ th.sortable.desc::after {
     <!-- Scripts -->
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <style>
+        .filtered-out {
+            display: none !important;
+        }
+    </style>
     <script>
-        // Initialize pagination for equipment details page
         document.addEventListener('DOMContentLoaded', function() {
+            // Initialize pagination with the correct table ID
+            initPagination({
+                tableId: 'equipmentTable',
+                currentPage: 1
+            });
+            
             // Initialize allRows for pagination.js
-            window.allRows = Array.from(document.querySelectorAll('#auditTable tr'));
+            window.allRows = Array.from(document.querySelectorAll('#equipmentTable tr'));
             
             // Call updatePagination after a short delay to ensure pagination.js is loaded
             setTimeout(function() {
@@ -1001,400 +1011,73 @@ th.sortable.desc::after {
                     updatePagination();
                 }
             }, 100);
-        });
+            
+            // Force hide pagination buttons if no data or all fits on one page
+            function forcePaginationCheck() {
+                const totalRows = parseInt(document.getElementById('totalRows')?.textContent || '0');
+                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect')?.value || '10');
+                const prevBtn = document.getElementById('prevPage');
+                const nextBtn = document.getElementById('nextPage');
+                const paginationEl = document.getElementById('pagination');
 
-        // Override updatePagination function to properly handle empty tables
-        document.addEventListener('DOMContentLoaded', function() {
-            // Track if rows are being filtered
-            let isFiltering = false;
-            let filteredRowCount = 0;
-
-            // AJAX search handler (explicit URL)
-            function doEquipmentSearch() {
-                var query = $('#searchEquipment').val();
-                var filter = $('#filterEquipment').val();
-                $.ajax({
-                    url: window.location.pathname, // always post to this PHP file
-                    type: 'POST',
-                    dataType: 'json',
-                    data: {
-                        action: 'search',
-                        query: query,
-                        filter: filter
-                    },
-                    success: function(response) {
-                        if (response.status === 'success') {
-                            $('#edTable tbody').html(response.html);
-                        } else {
-                            $('#edTable tbody').html('<tr><td colspan="16" class="text-center py-4"><div class="alert alert-danger mb-0">' + (response.message || 'Search failed. Please try again.') + '</div></td></tr>');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        $('#edTable tbody').html('<tr><td colspan="16" class="text-center py-4"><div class="alert alert-danger mb-0">Search failed. Please try again.</div></td></tr>');
-                    }
-                });
+                if (totalRows <= rowsPerPage) {
+                    if (prevBtn) prevBtn.style.cssText = 'display: none !important';
+                    if (nextBtn) nextBtn.style.cssText = 'display: none !important';
+                    if (paginationEl) paginationEl.style.cssText = 'display: none !important';
+                }
+                
+                // Also check for visible rows (for when filtering is applied)
+                const visibleRows = document.querySelectorAll('#equipmentTable tr:not(.filtered-out)').length;
+                if (visibleRows <= rowsPerPage) {
+                    if (prevBtn) prevBtn.style.cssText = 'display: none !important';
+                    if (nextBtn) nextBtn.style.cssText = 'display: none !important';
+                    if (paginationEl) paginationEl.style.cssText = 'display: none !important';
+                }
             }
 
-            // Bind search input and icon
-            $('#searchEquipment').on('input', doEquipmentSearch);
-            // Also trigger search when clicking the search icon
-            $('.input-group-text').on('click', doEquipmentSearch);
-
-            // Trigger AJAX search when filter changes
-            $('#filterEquipment').on('change', doEquipmentSearch);
-            $('#dateFilter').on('change', function() {
-                const value = $(this).val();
-                $('#dateInputsContainer, #monthPickerContainer, #dateRangePickers, #dateFrom, #dateTo').hide();
-                if (value === 'month') {
-                    $('#dateInputsContainer').show();
-                    $('#monthPickerContainer').show();
-                } else if (value === 'range') {
-                    $('#dateInputsContainer').show();
-                    $('#dateRangePickers').show();
-                    $('#dateFrom, #dateTo').show();
-                } else if (value === 'asc' || value === 'desc') {
-                    // Apply sorting directly
-                    const tbody = $('.table tbody');
-                    const rows = tbody.find('tr').toArray();
-
-                    rows.sort(function(a, b) {
-                        const dateA = new Date($(a).find('td:eq(8)').text());
-                        const dateB = new Date($(b).find('td:eq(8)').text());
-                        return value === 'asc' ? dateA - dateB : dateB - dateA;
-                    });
-
-                    tbody.append(rows);
-                } else {
-                    filterTable();
-                }
-            });
-            $('#monthSelect, #yearSelect, #dateFrom, #dateTo').on('change', function() {
-                if (($('#monthSelect').val() && $('#yearSelect').val()) || ($('#dateFrom').val() && $('#dateTo').val())) {
-                    filterTable();
-                }
-            });
-
-            function filterTable() {
-                const searchText = $('#searchEquipment').val().toLowerCase();
-                const filterType = $('#filterEquipment').val();
-                const dateFilterType = $('#dateFilter').val();
-                const selectedMonth = $('#monthSelect').val();
-                const selectedYear = $('#yearSelect').val();
-                const dateFrom = $('#dateFrom').val();
-                const dateTo = $('#dateTo').val();
-
-                // Determine if any filter is active
-                const hasTextFilter = !!searchText;
-                const hasTypeFilter = !!filterType;
-                const hasDateFilter = (dateFilterType === 'month' && selectedMonth && selectedYear) ||
-                    (dateFilterType === 'range' && dateFrom && dateTo) ||
-                    dateFilterType === 'asc' || dateFilterType === 'desc';
-
-                isFiltering = hasTextFilter || hasTypeFilter || hasDateFilter;
-
-                // Reset visibility first if sorting
-                if (dateFilterType === 'asc' || dateFilterType === 'desc') {
-                    $('.table tbody tr').show();
-                    const tbody = $('.table tbody');
-                    const rows = tbody.find('tr').toArray();
-                    rows.sort((a, b) => {
-                        const dateA = new Date($(a).find('td:eq(8)').text());
-                        const dateB = new Date($(b).find('td:eq(8)').text());
-                        return dateFilterType === 'asc' ? dateA - dateB : dateB - dateA;
-                    });
-                    tbody.append(rows);
-
-                    // Update pagination after sort
-                    if (typeof updatePagination === 'function') {
-                        updatePagination();
-                    }
-                    return;
-                }
-
-                // Count rows that match filter
-                filteredRowCount = 0;
-
-                $('.table tbody tr').each(function() {
-                    const $row = $(this);
-                    const rowText = $row.text().toLowerCase();
-                    const typeCell = $row.find('td:eq(2)').text().trim();
-                    const dateCell = $row.find('td:eq(8)').text();
-                    const date = new Date(dateCell);
-
-                    const searchMatch = !searchText || rowText.includes(searchText);
-                    const typeMatch = !filterType || typeCell === filterType;
-                    let dateMatch = true;
-                    if (dateFilterType === 'month' && selectedMonth && selectedYear) {
-                        dateMatch = (date.getMonth() + 1 === parseInt(selectedMonth)) && (date.getFullYear() === parseInt(selectedYear));
-                    } else if (dateFilterType === 'range' && dateFrom && dateTo) {
-                        const from = new Date(dateFrom);
-                        const to = new Date(dateTo);
-                        to.setHours(23, 59, 59);
-                        dateMatch = date >= from && date <= to;
-                    }
-
-                    const matches = searchMatch && typeMatch && dateMatch;
-                    if (isFiltering) {
-                        // When filtering, show only matching rows
-                        $row.toggle(matches);
-                        if (matches) filteredRowCount++;
+            // Run immediately and after a short delay
+            forcePaginationCheck();
+            setTimeout(forcePaginationCheck, 200);
+            
+            // Run after any filter changes
+            const searchInput = document.getElementById('searchEquipment');
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    setTimeout(forcePaginationCheck, 100);
+                });
+            }
+            
+            // Run after rows per page changes
+            const rowsPerPageSelect = document.getElementById('rowsPerPageSelect');
+            if (rowsPerPageSelect) {
+                rowsPerPageSelect.addEventListener('change', function() {
+                    setTimeout(forcePaginationCheck, 100);
+                });
+            }
+            
+            // Handle search functionality
+            $('#searchEquipment').on('input', function() {
+                const searchText = $(this).val().toLowerCase();
+                $('#equipmentTable tr').each(function() {
+                    const rowText = $(this).text().toLowerCase();
+                    const shouldShow = rowText.includes(searchText);
+                    
+                    // Use the filtered-out class that pagination.js understands
+                    if (shouldShow) {
+                        $(this).removeClass('filtered-out');
                     } else {
-                        // When not filtering, show all rows
-                        $row.show();
+                        $(this).addClass('filtered-out');
                     }
                 });
-
-                // Update pagination information manually if filtering shows no results
-                if (isFiltering && filteredRowCount === 0) {
-                    // Hide pagination controls immediately for empty result set
-                    $('#currentPage, #rowsPerPage, #totalRows').text('0');
-                    $('#prevPage, #nextPage').css('display', 'none');
-                    $('#pagination').empty();
-
-                    // Show "No results" message if not already present
-                    if ($('.table tbody tr.no-results').length === 0) {
-                        $('.table tbody').append(`
-                            <tr class="no-results">
-                                <td colspan="16" class="text-center py-4">
-                                    <div class="alert alert-warning mb-0">
-                                        <i class="bi bi-exclamation-circle me-2"></i> No results found for the current filter criteria.
-                                    </div>
-                                </td>
-                            </tr>
-                        `);
-                    }
-                } else {
-                    // Remove "No results" message if it exists
-                    $('.table tbody tr.no-results').remove();
-
-                    // Show pagination controls (updatePagination will properly set their visibility)
-                    $('#prevPage, #nextPage').css('display', '');
-
-                    // Reset to page 1 when filtering changes results
-                    if (typeof currentPage !== 'undefined') {
-                        currentPage = 1;
-                    }
-
-                    // Update pagination
-                    if (typeof updatePagination === 'function') {
-                        updatePagination();
-                    }
+                
+                // Update pagination after filtering
+                if (typeof updatePagination === 'function') {
+                    updatePagination();
                 }
-            }
-
-            // Edit Equipment event
-            $(document).on('click', '.edit-equipment', function() {
-                const data = $(this).data();
-                $('#edit_equipment_id').val(data.id);
-                // Ensure asset tag is present in the dropdown
-                var $assetTagSelect = $('#edit_equipment_asset_tag');
-                if ($assetTagSelect.find('option[value="' + data.asset + '"]').length === 0) {
-                    $assetTagSelect.append('<option value="' + $('<div>').text(data.asset).html() + '">' + $('<div>').text(data.asset).html() + '</option>');
-                }
-                $assetTagSelect.val(data.asset).trigger('change');
-                // Ensure RR# is present in the dropdown
-                var $rrSelect = $('#edit_rr_no');
-                if (data.rr && $rrSelect.find('option[value="' + data.rr + '"]').length === 0) {
-                    $rrSelect.append('<option value="' + $('<div>').text(data.rr).html() + '">' + $('<div>').text(data.rr).html() + '</option>');
-                }
-                $rrSelect.val(data.rr).trigger('change');
-                $('#edit_asset_description_1').val(data.desc1);
-                $('#edit_asset_description_2').val(data.desc2);
-                $('#edit_specifications').val(data.spec);
-                $('#edit_brand').val(data.brand);
-                $('#edit_model').val(data.model);
-                $('#edit_serial_number').val(data.serial);
-                $('#edit_location').val(data.location);
-                $('#edit_accountable_individual').val(data.accountable);
-                $('#edit_remarks').val(data.remarks);
-                $('#editEquipmentModal').modal('show');
+                
+                // Check if pagination controls should be shown
+                forcePaginationCheck();
             });
-
-            // Remove Equipment event
-            var deleteId = null;
-            $(document).on('click', '.remove-equipment', function(e) {
-                e.preventDefault();
-                deleteId = $(this).data('id');
-                new bootstrap.Modal(document.getElementById('deleteEDModal')).show();
-            });
-
-            $('#confirmDeleteBtn').on('click', function() {
-                if (deleteId) {
-                    $.ajax({
-                        url: window.location.href,
-                        method: 'POST',
-                        data: {
-                            action: 'remove',
-                            details_id: deleteId
-                        },
-                        dataType: 'json',
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        },
-                        success: function(response) {
-                            showToast(response.message, response.status === 'success' ? 'success' : 'error');
-                            refreshEquipmentList();
-                            bootstrap.Modal.getInstance(document.getElementById('deleteEDModal')).hide();
-                            $('.modal-backdrop').remove();
-                        },
-                        error: function(xhr, status, error) {
-                            showToast('Error removing equipment: ' + error, 'error');
-                        }
-                    });
-                }
-            });
-
-            function refreshEquipmentList() {
-                $.ajax({
-                    url: window.location.href,
-                    method: 'GET',
-                    success: function(response) {
-                        // Extract just the table body content from the response
-                        const $responseHtml = $(response);
-                        const newTbodyContent = $responseHtml.find('.table tbody').html();
-
-                        // Update the table with new content
-                        $('.table tbody').html(newTbodyContent);
-
-                        // Remove any lingering no-results messages
-                        $('.table tbody tr.no-results').remove();
-
-                        // Reset filtering state
-                        isFiltering = false;
-                        filteredRowCount = 0;
-
-                        // Check if there are any rows after refresh
-                        const rowCount = $('.table tbody tr').length;
-
-                        if (rowCount === 0) {
-                            // If no rows, hide pagination elements
-                            $('#currentPage, #rowsPerPage, #totalRows').text('0');
-                            $('#prevPage, #nextPage').css('display', 'none');
-                            $('#pagination').empty();
-                        } else {
-                            // Show pagination controls (updatePagination will set proper visibility)
-                            $('#prevPage, #nextPage').css('display', '');
-
-                            // Reset to page 1 when refreshing
-                            if (typeof currentPage !== 'undefined') {
-                                currentPage = 1;
-                            }
-
-                            // Update pagination
-                            if (typeof updatePagination === 'function') {
-                                // Small delay to ensure DOM is fully updated
-                                setTimeout(updatePagination, 50);
-                            }
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('Error refreshing list:', error);
-                    }
-                });
-            }
-
-            $(document).off('submit', '#addEquipmentForm').on('submit', '#addEquipmentForm', function(e) {
-                e.preventDefault();
-                const submitBtn = $(this).find('button[type="submit"]');
-                submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Adding...');
-
-                $.ajax({
-                    url: window.location.href,
-                    method: 'POST',
-                    data: $(this).serialize(),
-                    dataType: 'json',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    success: function(response) {
-                        if (response.status === 'success') {
-                            bootstrap.Modal.getInstance(document.getElementById('addEquipmentModal')).hide();
-                            showToast(response.message, 'success');
-                            $('#addEquipmentForm')[0].reset();
-                            refreshEquipmentList();
-                        } else {
-                            showToast(response.message, 'error');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        showToast('Error creating equipment: ' + error, 'error');
-                    },
-                    complete: function() {
-                        submitBtn.prop('disabled', false).html('Create Equipment');
-                    }
-                });
-            });
-
-            $('#editEquipmentForm').off('submit').on('submit', function(e) {
-                e.preventDefault();
-                const submitBtn = $(this).find('button[type="submit"]');
-                submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...');
-                $.ajax({
-                    url: window.location.href,
-                    method: 'POST',
-                    data: $(this).serialize(),
-                    dataType: 'json',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    success: function(response) {
-                        if (response.status === 'success') {
-                            bootstrap.Modal.getInstance(document.getElementById('editEquipmentModal')).hide();
-                            showToast(response.message, 'success');
-                            refreshEquipmentList();
-                        } else {
-                            showToast(response.message, 'error');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        let errorMsg = 'Error updating equipment: ';
-                        try {
-                            const response = JSON.parse(xhr.responseText);
-                            errorMsg += response.message || error;
-                        } catch (e) {
-                            errorMsg += error;
-                        }
-                        showToast(errorMsg, 'error');
-                    },
-                    complete: function() {
-                        submitBtn.prop('disabled', false).html('Save Changes');
-                    }
-                });
-            });
-
-            // Asset Tag Select2 for Add Equipment Modal
-            $('#addEquipmentModal').on('shown.bs.modal', function() {
-                $('#add_equipment_asset_tag').select2({
-                    tags: true,
-                    placeholder: 'Select or type Asset Tag',
-                    allowClear: true,
-                    width: '100%',
-                    dropdownParent: $('#addEquipmentModal')
-                });
-            });
-            $('#addEquipmentModal').on('hidden.bs.modal', function() {
-                if ($('#add_equipment_asset_tag').hasClass('select2-hidden-accessible')) {
-                    $('#add_equipment_asset_tag').select2('destroy');
-                }
-                $(this).find('form')[0].reset();
-            });
-            // Asset Tag Select2 for Edit Equipment Modal
-            $('#editEquipmentModal').on('shown.bs.modal', function() {
-                $('#edit_equipment_asset_tag').select2({
-                    tags: true,
-                    placeholder: 'Select or type Asset Tag',
-                    allowClear: true,
-                    width: '100%',
-                    dropdownParent: $('#editEquipmentModal')
-                });
-            });
-            $('#editEquipmentModal').on('hidden.bs.modal', function() {
-                if ($('#edit_equipment_asset_tag').hasClass('select2-hidden-accessible')) {
-                    $('#edit_equipment_asset_tag').select2('destroy');
-                }
-                $(this).find('form')[0].reset();
-            });
-
         });
         document.querySelectorAll(".sortable").forEach(header => {
         header.style.cursor = "pointer";

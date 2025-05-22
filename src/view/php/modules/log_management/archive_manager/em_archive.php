@@ -18,7 +18,7 @@ $rbac->requirePrivilege('Equipment Management', 'View');
 // Check for additional privileges
 $canRestore = $rbac->hasPrivilege('Equipment Management', 'Restore');
 $canRemove = $rbac->hasPrivilege('Equipment Management', 'Remove');
-$canDelete = $rbac->hasPrivilege('Equipment Management', 'Delete');
+$canDelete = $rbac->hasPrivilege('Equipment Management', 'Permanently Delete');
 
 $query = "
 SELECT
@@ -149,7 +149,7 @@ function formatChanges($oldJsonStr)
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Custom CSS for audit logs -->
-    <link rel="stylesheet" href="/Inventory-Managment-System-TMDD/src/view/styles/css/audit_log.css">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/audit_log.css">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/pagination.css">
     <!-- Include Toast CSS/JS (make sure showToast is defined) -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -296,7 +296,8 @@ function formatChanges($oldJsonStr)
                     <div class="row align-items-center g-3">
                         <div class="col-12 col-sm-auto">
                             <div class="text-muted">
-                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows">100</span> entries
+                                <?php $totalLogs = count($logs); ?>
+                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span id="totalRows"><?= $totalLogs ?></span> entries
                             </div>
                         </div>
                         <div class="col-12 col-sm-auto ms-sm-auto">
@@ -412,6 +413,76 @@ function formatChanges($oldJsonStr)
         canRemove: <?php echo json_encode($canRemove); ?>,
         canDelete: <?php echo json_encode($canDelete); ?>
     };
+    
+    // Initialize pagination when document is ready
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize pagination with the archive table ID
+        initPagination({
+            tableId: 'archiveTableBody',
+            currentPage: 1
+        });
+        
+        // Force hide pagination buttons if no data or all fits on one page
+        function forcePaginationCheck() {
+            const totalRows = window.filteredRows ? window.filteredRows.length : 0;
+            const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value);
+            const prevBtn = document.getElementById('prevPage');
+            const nextBtn = document.getElementById('nextPage');
+            const paginationEl = document.getElementById('pagination');
+
+            // Hide pagination completely if all rows fit on one page
+            if (totalRows <= rowsPerPage) {
+                if (prevBtn) prevBtn.style.cssText = 'display: none !important';
+                if (nextBtn) nextBtn.style.cssText = 'display: none !important';
+                if (paginationEl) paginationEl.style.cssText = 'display: none !important';
+            } else {
+                // Show pagination but conditionally hide prev/next buttons
+                if (paginationEl) paginationEl.style.cssText = '';
+
+                if (prevBtn) {
+                    if (window.currentPage <= 1) {
+                        prevBtn.style.cssText = 'display: none !important';
+                    } else {
+                        prevBtn.style.cssText = '';
+                    }
+                }
+
+                if (nextBtn) {
+                    const totalPages = Math.ceil(totalRows / rowsPerPage);
+                    if (window.currentPage >= totalPages) {
+                        nextBtn.style.cssText = 'display: none !important';
+                    } else {
+                        nextBtn.style.cssText = '';
+                    }
+                }
+            }
+        }
+        
+        // Run forcePaginationCheck after pagination updates
+        const originalUpdatePagination = window.updatePagination || function() {};
+        window.updatePagination = function() {
+            // Get all rows again in case the DOM was updated
+            window.allRows = Array.from(document.querySelectorAll('#archiveTableBody tr'));
+            
+            // If filtered rows is empty or not defined, use all rows
+            if (!window.filteredRows || window.filteredRows.length === 0) {
+                window.filteredRows = window.allRows;
+            }
+            
+            // Update total rows display
+            const totalRowsEl = document.getElementById('totalRows');
+            if (totalRowsEl) {
+                totalRowsEl.textContent = window.filteredRows.length;
+            }
+            
+            // Call original updatePagination
+            originalUpdatePagination();
+            forcePaginationCheck();
+        };
+        
+        // Call updatePagination immediately
+        updatePagination();
+    });
     
     var deleteId = null;
     var restoreId = null;

@@ -172,8 +172,10 @@ function getActionIcon($action)
         return '<span class="action-badge action-modified"><i class="fas fa-pen me-1"></i> Modified</span>';
     } elseif ($action === 'create') {
         return '<span class="action-badge action-create"><i class="fas fa-plus-circle me-1"></i> Create</span>';
-    } elseif ($action === 'remove' || $action === 'delete') {
+    } elseif ($action === 'remove') {
         return '<span class="action-badge action-delete"><i class="fas fa-trash-alt me-1"></i> Removed</span>';
+    } elseif ($action === 'delete' || $action === 'permanent delete') {
+        return '<span class="action-badge action-delete"><i class="fas fa-trash-alt me-1"></i> Permanently Deleted</span>';
     } elseif ($action === 'restored') {
         return '<span class="action-badge action-restored"><i class="fas fa-trash-restore me-1"></i> Restored</span>';
     } else {
@@ -209,7 +211,16 @@ function formatDetailsAndChanges($log)
     $changes = '';
 
     //Target Entity Set to PO Number
-    $targetEntityName = $newData['po_no'] ?? $oldData['po_no'] ?? 'Unknown';
+    $targetEntityName = 'Unknown';
+    
+    // Set the correct entity name field based on module
+    if ($module === 'Purchase Order') {
+        $targetEntityName = $oldData['po_no'] ?? $newData['po_no'] ?? 'Unknown';
+    } else if ($module === 'Charge Invoice') {
+        $targetEntityName = $oldData['invoice_no'] ?? $newData['invoice_no'] ?? 'Unknown';
+    } else if ($module === 'Receiving Report') {
+        $targetEntityName = $oldData['rr_no'] ?? $newData['rr_no'] ?? 'Unknown';
+    }
 
     // List of fields that should never be shown in diff
     $systemFields = ['date_created', 'date_acquired', 'date_modified', 'is_disabled'];
@@ -266,7 +277,8 @@ function formatDetailsAndChanges($log)
             $changes = "is_deleted 0 -> 1";
             break;
         case 'delete':
-            $details = htmlspecialchars("$targetEntityName has been deleted from the database");
+        case 'permanent delete':
+            $details = htmlspecialchars("$targetEntityName has been permanently deleted");
             $changes = formatNewValue($log['OldVal']);
             break;
         default:

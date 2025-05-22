@@ -21,7 +21,7 @@ $rbac->requirePrivilege('Roles and Privileges', 'View');
 // 3) Button flags
 $canRestore = $rbac->hasPrivilege('Roles and Privileges', 'Restore');
 $canRemove = $rbac->hasPrivilege('Roles and Privileges', 'Remove');
-$canPermanentDelete = $rbac->hasPrivilege('Roles and Privileges', 'Delete');
+$canPermanentDelete = $rbac->hasPrivilege('Roles and Privileges', 'Permanently Delete');
 
 // SQL query for archived roles with audit information
 $sql = "
@@ -82,11 +82,11 @@ function getActionIcon($action)
 {
     $action = strtolower($action);
     if ($action === 'modified') {
-        return '<i class="fas fa-edit"></i>';
+        return '<i class="fas fa-user-edit"></i>';
     } elseif ($action === 'add') {
-        return '<i class="fas fa-plus"></i>';
-    } elseif ($action === 'soft delete' || $action === 'permanent delete') {
-        return '<i class="fas fa-trash-alt"></i>';
+        return '<i class="fas fa-user-plus"></i>';
+    } elseif ($action === 'delete' || $action === 'remove') {
+        return '<i class="fas fa-user-slash"></i>';
     } else {
         return '<i class="fas fa-info-circle"></i>';
     }
@@ -157,7 +157,7 @@ function formatChanges($oldJsonStr)
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" src="<?php echo BASE_URL; ?> /src/view/styles/css/audit_log.css">
-
+    
     <style>
         .wrapper {
             display: flex;
@@ -205,7 +205,7 @@ function formatChanges($oldJsonStr)
                                     <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="auditTable">
                                 <?php if (!empty($roleData)): ?>
                                     <?php foreach ($roleData as $role): ?>
                                         <tr data-role-id="<?php echo $role['role_id']; ?>">
@@ -288,7 +288,7 @@ function formatChanges($oldJsonStr)
                                     <div class="text-muted">
                                         <?php $totalRoles = count($roleData); ?>
                                         <input type="hidden" id="total-users" value="<?= $totalRoles ?>">
-                                        Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
+                                        Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span
                                             id="totalRows"><?= $totalRoles ?></span> entries
                                     </div>
                                 </div>
@@ -609,6 +609,73 @@ function formatChanges($oldJsonStr)
                     }
                 });
             });
+
+            // Initialize pagination with the archive table ID
+            initPagination({
+                tableId: 'auditTable',
+                currentPage: 1
+            });
+            
+            // Force hide pagination buttons if no data or all fits on one page
+            function forcePaginationCheck() {
+                const totalRows = window.filteredRows ? window.filteredRows.length : 0;
+                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value);
+                const prevBtn = document.getElementById('prevPage');
+                const nextBtn = document.getElementById('nextPage');
+                const paginationEl = document.getElementById('pagination');
+
+                // Hide pagination completely if all rows fit on one page
+                if (totalRows <= rowsPerPage) {
+                    if (prevBtn) prevBtn.style.cssText = 'display: none !important';
+                    if (nextBtn) nextBtn.style.cssText = 'display: none !important';
+                    if (paginationEl) paginationEl.style.cssText = 'display: none !important';
+                } else {
+                    // Show pagination but conditionally hide prev/next buttons
+                    if (paginationEl) paginationEl.style.cssText = '';
+
+                    if (prevBtn) {
+                        if (window.currentPage <= 1) {
+                            prevBtn.style.cssText = 'display: none !important';
+                        } else {
+                            prevBtn.style.cssText = '';
+                        }
+                    }
+
+                    if (nextBtn) {
+                        const totalPages = Math.ceil(totalRows / rowsPerPage);
+                        if (window.currentPage >= totalPages) {
+                            nextBtn.style.cssText = 'display: none !important';
+                        } else {
+                            nextBtn.style.cssText = '';
+                        }
+                    }
+                }
+            }
+            
+            // Run forcePaginationCheck after pagination updates
+            const originalUpdatePagination = window.updatePagination || function() {};
+            window.updatePagination = function() {
+                // Get all rows again in case the DOM was updated
+                window.allRows = Array.from(document.querySelectorAll('tbody tr'));
+                
+                // If filtered rows is empty or not defined, use all rows
+                if (!window.filteredRows || window.filteredRows.length === 0) {
+                    window.filteredRows = window.allRows;
+                }
+                
+                // Update total rows display
+                const totalRowsEl = document.getElementById('totalRows');
+                if (totalRowsEl) {
+                    totalRowsEl.textContent = window.filteredRows.length;
+                }
+                
+                // Call original updatePagination
+                originalUpdatePagination();
+                forcePaginationCheck();
+            };
+            
+            // Call updatePagination immediately
+            updatePagination();
         });
     </script>
 </body>

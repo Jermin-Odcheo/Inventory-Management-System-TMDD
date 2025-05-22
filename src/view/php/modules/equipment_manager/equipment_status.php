@@ -21,10 +21,10 @@ if (
         echo json_encode(['status' => 'error', 'message' => 'Not logged in']);
         exit;
     }
-    
+
     // Initialize RBAC
     $rbac = new RBACService($pdo, $_SESSION['user_id']);
-    
+
     // Handle POST requests
     if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
         $response = array('status' => 'error', 'message' => 'Invalid action');
@@ -36,7 +36,7 @@ if (
                     if (!$rbac->hasPrivilege('Equipment Management', 'Create')) {
                         throw new Exception('You do not have permission to add equipment status');
                     }
-                    
+
                     // Validate required fields
                     if (empty($_POST['asset_tag'])) {
                         throw new Exception('Asset Tag is required');
@@ -126,7 +126,7 @@ if (
                     if (!$rbac->hasPrivilege('Equipment Management', 'Modify')) {
                         throw new Exception('You do not have permission to modify equipment status');
                     }
-                    
+
                     // Validate required fields
                     if (empty($_POST['status_id'])) {
                         throw new Exception('Status ID is required');
@@ -238,7 +238,7 @@ if (
                     if (!$rbac->hasPrivilege('Equipment Management', 'Remove')) {
                         throw new Exception('You do not have permission to delete equipment status');
                     }
-                    
+
                     if (!isset($_POST['status_id'])) {
                         throw new Exception('Status ID is required');
                     }
@@ -365,7 +365,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
         header("Location: equipment_status.php");
         exit;
     }
-    
+
     $id = $_GET['id'];
     try {
         // Get status details before deletion for audit log
@@ -454,7 +454,7 @@ th.sortable.desc::after {
 </head>
 
 <body>
- 
+
     <div class="main-container">
         <header class="main-header">
             <h1>Equipment Status Management</h1>
@@ -470,20 +470,20 @@ th.sortable.desc::after {
                     <div class="filter-container">
                         <div class="col-auto">
                             <?php if ($canCreate): ?>
-                            <button class="btn btn-dark" id="openAddStatusModalBtn" data-bs-toggle="modal" data-bs-target="#addStatusModal">
-                                <i class="bi bi-plus-lg"></i> Add New Status
-                            </button>
+                                <button class="btn btn-dark" id="openAddStatusModalBtn" data-bs-toggle="modal" data-bs-target="#addStatusModal">
+                                    <i class="bi bi-plus-lg"></i> Add New Status
+                                </button>
                             <?php endif; ?>
                         </div>
                         <div class="col-md-3">
                             <select class="form-select" id="filterStatus">
                                 <option value="">Filter by Status</option>
-<option value="Maintenance">Maintenance</option>
-<option value="Working">Working</option>
-<option value="For Repair">For Repair</option>
-<option value="For Disposal">For Disposal</option>
-<option value="Disposed">Disposed</option>
-<option value="Condemned">Condemned</option>
+                                <option value="Maintenance">Maintenance</option>
+                                <option value="Working">Working</option>
+                                <option value="For Repair">For Repair</option>
+                                <option value="For Disposal">For Disposal</option>
+                                <option value="Disposed">Disposed</option>
+                                <option value="Condemned">Condemned</option>
                             </select>
                         </div>
                         <div class="col-md-3">
@@ -598,23 +598,18 @@ th.sortable.desc::after {
                         <div class="col-12 col-sm-auto">
                             <div class="text-muted">
                                 <?php 
-                                $totalStatus = 0;
-                                try {
-                                    $countStmt = $pdo->query("SELECT COUNT(*) FROM equipment_status WHERE is_disabled = 0");
-                                    $totalStatus = $countStmt->fetchColumn();
-                                } catch (PDOException $e) {
-                                    // Fallback to 0 if query fails
-                                }
+                                // Count total equipment status entries
+                                $statusCountStmt = $pdo->query("SELECT COUNT(*) FROM equipment_status WHERE is_disabled = 0");
+                                $totalLogs = $statusCountStmt->fetchColumn();
                                 ?>
-                                <input type="hidden" id="total-users" value="<?= $totalStatus ?>">
-                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage"><?= min($totalStatus, 10) ?></span> of <span
-                                    id="totalRows"><?= $totalStatus ?></span>
-                                entries
+                                <input type="hidden" id="total-users" value="<?= $totalLogs ?>">
+                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span id="totalRows"><?= $totalLogs ?></span> entries
                             </div>
                         </div>
                         <div class="col-12 col-sm-auto ms-sm-auto">
                             <div class="d-flex align-items-center gap-2">
-                                <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1" <?= $totalStatus <= 10 ? 'style="display:none !important;"' : '' ?>>
+                                <button id="prevPage"
+                                    class="btn btn-outline-primary d-flex align-items-center gap-1">
                                     <i class="bi bi-chevron-left"></i> Previous
                                 </button>
                                 <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
@@ -623,15 +618,16 @@ th.sortable.desc::after {
                                     <option value="30">30</option>
                                     <option value="50">50</option>
                                 </select>
-                                <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1" <?= $totalStatus <= 10 ? 'style="display:none !important;"' : '' ?>>
+                                <button id="nextPage"
+                                    class="btn btn-outline-primary d-flex align-items-center gap-1">
                                     Next <i class="bi bi-chevron-right"></i>
                                 </button>
                             </div>
                         </div>
-                        <div class="row mt-3">
-                            <div class="col-12">
-                                <ul class="pagination justify-content-center" id="pagination"></ul>
-                            </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <ul class="pagination justify-content-center" id="pagination"></ul>
                         </div>
                     </div>
                 </div>
@@ -640,139 +636,149 @@ th.sortable.desc::after {
     </div>
 
     <?php if ($canCreate): ?>
-    <!-- Add Status Modal -->
-    <div class="modal fade" id="addStatusModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Add New Equipment Status</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="addStatusForm">
-                        <input type="hidden" name="action" value="add">
-                        <div class="mb-3">
-                            <label for="asset_tag" class="form-label">Asset Tag <span class="text-danger">*</span></label>
-                            <select class="form-select asset-tag-select2" name="asset_tag" id="add_status_asset_tag" required style="width: 100%;">
-    <option value="">Select or type Asset Tag</option>
-    <?php
-    // Fetch unique asset tags from equipment_details and equipment_location
-    $assetTags = [];
-    $stmt1 = $pdo->query("SELECT DISTINCT asset_tag FROM equipment_details WHERE is_disabled = 0");
-    $assetTags = array_merge($assetTags, $stmt1->fetchAll(PDO::FETCH_COLUMN));
-    $stmt2 = $pdo->query("SELECT DISTINCT asset_tag FROM equipment_location WHERE is_disabled = 0");
-    $assetTags = array_merge($assetTags, $stmt2->fetchAll(PDO::FETCH_COLUMN));
-    $assetTags = array_unique(array_filter($assetTags));
-    sort($assetTags);
-    foreach ($assetTags as $tag) {
-        echo '<option value="' . htmlspecialchars($tag) . '">' . htmlspecialchars($tag) . '</option>';
-    }
-    ?>
-</select>
+        <!-- Add Status Modal -->
+        <div class="modal fade" id="addStatusModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add New Equipment Status</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="addStatusForm">
+                            <input type="hidden" name="action" value="add">
+                            <div class="mb-3">
+                                <label for="asset_tag" class="form-label">Asset Tag <span class="text-danger">*</span></label>
+                                <select class="form-select asset-tag-select2" name="asset_tag" id="add_status_asset_tag" required style="width: 100%;">
+                                    <option value="">Select or type Asset Tag</option>
+                                    <?php
+                                    // Fetch unique asset tags from equipment_details and equipment_location
+                                    $assetTags = [];
+                                    $stmt1 = $pdo->query("SELECT DISTINCT asset_tag FROM equipment_details WHERE is_disabled = 0");
+                                    $assetTags = array_merge($assetTags, $stmt1->fetchAll(PDO::FETCH_COLUMN));
+                                    $stmt2 = $pdo->query("SELECT DISTINCT asset_tag FROM equipment_location WHERE is_disabled = 0");
+                                    $assetTags = array_merge($assetTags, $stmt2->fetchAll(PDO::FETCH_COLUMN));
+                                    $assetTags = array_unique(array_filter($assetTags));
+                                    sort($assetTags);
+                                    foreach ($assetTags as $tag) {
+                                        echo '<option value="' . htmlspecialchars($tag) . '">' . htmlspecialchars($tag) . '</option>';
+                                    }
+                                    ?>
+                                </select>
 
-                        </div>
-                        <div class="mb-3">
-                            <label for="status" class="form-label">Status</label>
-                            <select class="form-select" name="status">
-                                <option value="">Select Status</option>
-                                <option value="Maintenance">Maintenance</option>
-                                <option value="Working">Working</option>
-                                <option value="For Repair">For Repair</option>
-                                <option value="For Disposal">For Disposal</option>
-                                <option value="Disposed">Disposed</option>
-                                <option value="Condemned">Condemned</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="action_description" class="form-label">Action</label>
-                            <input type="text" class="form-control" name="action_description">
-                        </div>
-                        <div class="mb-3">
-                            <label for="remarks" class="form-label">Remarks</label>
-                            <textarea class="form-control" name="remarks" rows="3"></textarea>
-                        </div>
-                        <div class="modal-footer border-0">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="margin-right: 4px;">Cancel</button>
-                            <button type="submit" class="btn btn-primary">Add Equipment Status</button>
-                        </div>
-                    </form>
+                            </div>
+                            <div class="mb-3">
+                                <label for="status" class="form-label">Status</label>
+                                <select class="form-select" name="status">
+                                    <option value="">Select Status</option>
+                                    <option value="Maintenance">Maintenance</option>
+                                    <option value="Working">Working</option>
+                                    <option value="For Repair">For Repair</option>
+                                    <option value="For Disposal">For Disposal</option>
+                                    <option value="Disposed">Disposed</option>
+                                    <option value="Condemned">Condemned</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="action_description" class="form-label">Action</label>
+                                <input type="text" class="form-control" name="action_description">
+                            </div>
+                            <div class="mb-3">
+                                <label for="remarks" class="form-label">Remarks</label>
+                                <textarea class="form-control" name="remarks" rows="3"></textarea>
+                            </div>
+                            <div class="modal-footer border-0">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="margin-right: 4px;">Cancel</button>
+                                <button type="submit" class="btn btn-primary">Add Equipment Status</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
     <?php endif; ?>
 
     <?php if ($canModify): ?>
-    <!-- Edit Status Modal -->
-    <div class="modal fade" id="editStatusModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Edit Equipment Status</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="edit_status_form">
-                        <input type="hidden" name="action" value="update">
-                        <input type="hidden" name="status_id" id="edit_status_id">
-                        <div class="mb-3">
-                            <label for="edit_asset_tag" class="form-label"><i class="bi bi-tag"></i> Asset Tag <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="edit_asset_tag" name="asset_tag">
-                        </div>
-                        <div class="mb-3">
-                            <label for="edit_status" class="form-label"><i class="bi bi-info-circle"></i> Status</label>
-                            <select class="form-select" id="edit_status" name="status">
-                                <option value="">Select Status</option>
-                                <option value="Maintenance">Maintenance</option>
-                                <option value="Working">Working</option>
-                                <option value="For Repair">For Repair</option>
-                                <option value="For Disposal">For Disposal</option>
-                                <option value="Disposed">Disposed</option>
-                                <option value="Condemned">Condemned</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="edit_action" class="form-label"><i class="bi bi-gear"></i> Action</label>
-                            <input type="text" class="form-control" id="edit_action" name="action_description">
-                        </div>
-                        <div class="mb-3">
-                            <label for="edit_remarks" class="form-label"><i class="bi bi-chat-left-text"></i> Remarks</label>
-                            <textarea class="form-control" id="edit_remarks" name="remarks" rows="3"></textarea>
-                        </div>
-                        <div class="d-flex justify-content-end">
-                            <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-primary">Update Status</button>
-                        </div>
-                    </form>
+        <!-- Edit Status Modal -->
+        <div class="modal fade" id="editStatusModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Edit Equipment Status</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="edit_status_form">
+                            <input type="hidden" name="action" value="update">
+                            <input type="hidden" name="status_id" id="edit_status_id">
+                            <div class="mb-3">
+                                <label for="edit_asset_tag" class="form-label"><i class="bi bi-tag"></i> Asset Tag <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="edit_asset_tag" name="asset_tag">
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_status" class="form-label"><i class="bi bi-info-circle"></i> Status</label>
+                                <select class="form-select" id="edit_status" name="status">
+                                    <option value="">Select Status</option>
+                                    <option value="Maintenance">Maintenance</option>
+                                    <option value="Working">Working</option>
+                                    <option value="For Repair">For Repair</option>
+                                    <option value="For Disposal">For Disposal</option>
+                                    <option value="Disposed">Disposed</option>
+                                    <option value="Condemned">Condemned</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_action" class="form-label"><i class="bi bi-gear"></i> Action</label>
+                                <input type="text" class="form-control" id="edit_action" name="action_description">
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_remarks" class="form-label"><i class="bi bi-chat-left-text"></i> Remarks</label>
+                                <textarea class="form-control" id="edit_remarks" name="remarks" rows="3"></textarea>
+                            </div>
+                            <div class="d-flex justify-content-end">
+                                <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-primary">Update Status</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
     <?php endif; ?>
 
     <?php if ($canDelete): ?>
-    <!--Delete Confirmation Modal-->
-    <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="deleteModalLabel">Delete Confirmation</h5>
-                    <!-- Using Bootstrap 5 close button -->
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    Are you sure you want to delete this status?
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-danger" id="confirmDelete">Delete</button>
+        <!--Delete Confirmation Modal-->
+        <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="deleteModalLabel">Delete Confirmation</h5>
+                        <!-- Using Bootstrap 5 close button -->
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        Are you sure you want to delete this status?
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-danger" id="confirmDelete">Delete</button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
     <?php endif; ?>
 
     <script src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
+    <script>
+        // Initialize pagination for equipment status
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize pagination with the status table ID
+            initPagination({
+                tableId: 'statusTbody',
+                currentPage: 1
+            });
+        });
+    </script>
 
     <script>
         $(document).ready(function() {
@@ -785,26 +791,26 @@ th.sortable.desc::after {
             function checkAndHidePagination() {
                 const totalStatus = parseInt($('#total-users').val()) || 0;
                 const rowsPerPage = parseInt($('#rowsPerPageSelect').val()) || 10;
-                
+
                 if (totalStatus <= rowsPerPage) {
                     $('#prevPage, #nextPage').css('display', 'none !important').hide();
                 }
-                
+
                 // Also check for visible rows (for when filtering is applied)
                 const visibleRows = $('#statusTable tbody tr:visible').length;
                 if (visibleRows <= rowsPerPage) {
                     $('#prevPage, #nextPage').css('display', 'none !important').hide();
                 }
             }
-            
+
             // Run on page load with a longer delay to ensure DOM is fully processed
             setTimeout(checkAndHidePagination, 300);
-            
+
             // Run after any filter changes
             $('#searchStatus, #filterStatus, #dateFilter, #monthSelect, #yearSelect, #dateFrom, #dateTo').on('change input', function() {
                 setTimeout(checkAndHidePagination, 100);
             });
-            
+
             // Run after rows per page changes
             $('#rowsPerPageSelect').on('change', function() {
                 setTimeout(checkAndHidePagination, 100);
@@ -813,12 +819,12 @@ th.sortable.desc::after {
             // Date filter handling
             $('#dateFilter').on('change', function() {
                 const filterType = $(this).val();
-                
+
                 // Hide all containers first
                 $('#dateInputsContainer').hide();
                 $('#monthPickerContainer').hide();
                 $('#dateRangePickers').hide();
-                
+
                 // Show appropriate containers based on selection
                 if (filterType === 'month') {
                     $('#dateInputsContainer').show();
@@ -831,22 +837,22 @@ th.sortable.desc::after {
                     filterTable();
                 }
             });
-            
+
             // Handle month/year selection changes
             $('#monthSelect, #yearSelect').on('change', function() {
                 const month = $('#monthSelect').val();
                 const year = $('#yearSelect').val();
-                
+
                 if (month && year) {
                     filterTable();
                 }
             });
-            
+
             // Handle date range changes
             $('#dateFrom, #dateTo').on('change', function() {
                 const dateFrom = $('#dateFrom').val();
                 const dateTo = $('#dateTo').val();
-                
+
                 if (dateFrom && dateTo) {
                     filterTable();
                 }
@@ -867,14 +873,14 @@ th.sortable.desc::after {
                     const statusCell = row.find('td:eq(2)').text().toLowerCase();
                     const dateCell = row.find('td:eq(4)').text(); // Created date column
                     const date = new Date(dateCell);
-                    
+
                     const searchMatch = rowText.indexOf(searchText) > -1;
                     const statusMatch = !filterStatus || statusCell === filterStatus;
-                    
+
                     let dateMatch = true;
                     if (dateFilterType === 'month' && selectedMonth && selectedYear) {
-                        dateMatch = (date.getMonth() + 1 === parseInt(selectedMonth)) && 
-                                   (date.getFullYear() === parseInt(selectedYear));
+                        dateMatch = (date.getMonth() + 1 === parseInt(selectedMonth)) &&
+                            (date.getFullYear() === parseInt(selectedYear));
                     } else if (dateFilterType === 'range' && dateFrom && dateTo) {
                         const from = new Date(dateFrom);
                         const to = new Date(dateTo);
@@ -884,18 +890,18 @@ th.sortable.desc::after {
 
                     row.toggle(searchMatch && statusMatch && dateMatch);
                 });
-                
+
                 // Handle sorting if needed
                 if (dateFilterType === 'asc' || dateFilterType === 'desc') {
                     const tbody = $('.table tbody');
                     const rows = tbody.find('tr').toArray();
-                    
+
                     rows.sort(function(a, b) {
                         const dateA = new Date($(a).find('td:eq(4)').text());
                         const dateB = new Date($(b).find('td:eq(4)').text());
                         return dateFilterType === 'asc' ? dateA - dateB : dateB - dateA;
                     });
-                    
+
                     tbody.append(rows);
                 }
             }
@@ -990,19 +996,19 @@ th.sortable.desc::after {
                     success: function(result) {
                         if (result.status === 'success') {
                             $('#addStatusModal').modal('hide');
-// Remove any lingering modal backdrops and reset body class if needed
-setTimeout(function() {
-    if ($('.modal-backdrop').length) {
-        $('.modal-backdrop').remove();
-    }
-    if ($('body').hasClass('modal-open') && $('.modal.show').length === 0) {
-        $('body').removeClass('modal-open');
-        $('body').css('padding-right', '');
-    }
-}, 500);
-$('#statusTable').load(location.href + ' #statusTable', function() {
-    showToast(result.message, 'success');
-});
+                            // Remove any lingering modal backdrops and reset body class if needed
+                            setTimeout(function() {
+                                if ($('.modal-backdrop').length) {
+                                    $('.modal-backdrop').remove();
+                                }
+                                if ($('body').hasClass('modal-open') && $('.modal.show').length === 0) {
+                                    $('body').removeClass('modal-open');
+                                    $('body').css('padding-right', '');
+                                }
+                            }, 500);
+                            $('#statusTable').load(location.href + ' #statusTable', function() {
+                                showToast(result.message, 'success');
+                            });
                         } else {
                             showToast(result.message, 'error');
                         }
@@ -1068,95 +1074,56 @@ $('#statusTable').load(location.href + ' #statusTable', function() {
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
     <script>
-    $(document).ready(function() {
-        $('#openAddStatusModalBtn').on('click', function() {
-            setTimeout(function() {
-                if ($('.modal-backdrop').length) {
-                    $('.modal-backdrop').remove();
-                }
-                if ($('body').hasClass('modal-open') && $('.modal.show').length === 0) {
-                    $('body').removeClass('modal-open');
-                    $('body').css('padding-right', '');
-                }
-            }, 10);
-        });
-        // Initialize Select2 for Asset Tag with tags (creatable)
-        $('#add_status_asset_tag').select2({
-            tags: true,
-            placeholder: 'Select or type Asset Tag',
-            allowClear: true,
-            width: '100%',
-            dropdownParent: $('#addStatusModal')
-        });
-    });
-    </script>
-
-<!-- Force hide pagination buttons if no data -->
-<script>
-(function() {
-    // Function to check and hide pagination
-    function forcePaginationCheck() {
-        const totalRows = parseInt(document.getElementById('total-users')?.value || '0');
-        const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect')?.value || '10');
-        const prevBtn = document.getElementById('prevPage');
-        const nextBtn = document.getElementById('nextPage');
-        
-        if (totalRows <= rowsPerPage) {
-            if (prevBtn) prevBtn.style.cssText = 'display: none !important';
-            if (nextBtn) nextBtn.style.cssText = 'display: none !important';
-        }
-    }
-    
-    // Run immediately
-    forcePaginationCheck();
-    
-    // Also run after a delay to ensure DOM is fully loaded
-    setTimeout(forcePaginationCheck, 500);
-    setTimeout(forcePaginationCheck, 1000);
-    
-    // Add event listener for DOMContentLoaded
-    document.addEventListener('DOMContentLoaded', forcePaginationCheck);
-})();
-    document.addEventListener("DOMContentLoaded", function () {
-        document.querySelectorAll(".sortable").forEach(th => {
-            th.style.cursor = "pointer";
-            th.addEventListener("click", function () {
-                const table = th.closest("table");
-                const tbody = table.querySelector("tbody");
-                const rows = Array.from(tbody.querySelectorAll("tr"));
-                const index = Array.from(th.parentNode.children).indexOf(th);
-                const type = th.dataset.sort || "string";
-                const asc = !th.classList.contains("asc");
-
-                rows.sort((a, b) => {
-                    let x = a.children[index].innerText.trim();
-                    let y = b.children[index].innerText.trim();
-
-                    if (type === "number") {
-                        x = parseFloat(x) || 0;
-                        y = parseFloat(y) || 0;
-                    } else if (type === "date") {
-                        x = new Date(x);
-                        y = new Date(y);
-                    } else {
-                        x = x.toLowerCase();
-                        y = y.toLowerCase();
+        $(document).ready(function() {
+            $('#openAddStatusModalBtn').on('click', function() {
+                setTimeout(function() {
+                    if ($('.modal-backdrop').length) {
+                        $('.modal-backdrop').remove();
                     }
-
-                    return asc ? (x > y ? 1 : -1) : (x < y ? 1 : -1);
-                });
-
-                tbody.innerHTML = "";
-                rows.forEach(row => tbody.appendChild(row));
-
-                table.querySelectorAll("th").forEach(th => th.classList.remove("asc", "desc"));
-                th.classList.add(asc ? "asc" : "desc");
+                    if ($('body').hasClass('modal-open') && $('.modal.show').length === 0) {
+                        $('body').removeClass('modal-open');
+                        $('body').css('padding-right', '');
+                    }
+                }, 10);
+            });
+            // Initialize Select2 for Asset Tag with tags (creatable)
+            $('#add_status_asset_tag').select2({
+                tags: true,
+                placeholder: 'Select or type Asset Tag',
+                allowClear: true,
+                width: '100%',
+                dropdownParent: $('#addStatusModal')
             });
         });
-    });
+    </script>
 
+    <!-- Force hide pagination buttons if no data -->
+    <script>
+        (function() {
+            // Function to check and hide pagination
+            function forcePaginationCheck() {
+                const totalRows = parseInt(document.getElementById('total-users')?.value || '0');
+                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect')?.value || '10');
+                const prevBtn = document.getElementById('prevPage');
+                const nextBtn = document.getElementById('nextPage');
 
-</script>
+                if (totalRows <= rowsPerPage) {
+                    if (prevBtn) prevBtn.style.cssText = 'display: none !important';
+                    if (nextBtn) nextBtn.style.cssText = 'display: none !important';
+                }
+            }
+
+            // Run immediately
+            forcePaginationCheck();
+
+            // Also run after a delay to ensure DOM is fully loaded
+            setTimeout(forcePaginationCheck, 500);
+            setTimeout(forcePaginationCheck, 1000);
+
+            // Add event listener for DOMContentLoaded
+            document.addEventListener('DOMContentLoaded', forcePaginationCheck);
+        })();
+    </script>
 </body>
 
 </html>
