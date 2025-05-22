@@ -72,7 +72,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
             }
-            echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+            
+            // Check if it's a duplicate entry error
+            if ($e->getCode() == '23000' && strpos($e->getMessage(), 'Duplicate entry') !== false) {
+                echo json_encode(['success' => false, 'message' => 'Role Name already exists.']);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+            }
             exit();
         }
     }
