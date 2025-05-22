@@ -547,8 +547,8 @@ function getNormalizedAction($log)
 
                                     <?php
                                         $statusRaw = $log['Status'] ?? '';
-                                        $statusClean = strtolower(trim($statusRaw)); // Trim and lowercase
-                                        $isSuccess = $statusClean === 'successful' || 'Success';
+                                        $statusClean = strtolower(trim($statusRaw)); // Normalize for comparison
+                                        $isSuccess = in_array($statusClean, ['successful', 'success']); // Accept both variants
                                     ?>
                                     <!-- STATUS -->
                                     <td data-label="Status">
