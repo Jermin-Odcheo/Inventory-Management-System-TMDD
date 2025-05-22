@@ -39,7 +39,17 @@ function filterTable() {
         const rowText = row.textContent.toLowerCase();
         const matchesSearch = rowText.includes(searchFilter);
         const matchesAction = actionFilter === '' || actionText.includes(actionFilter);
-        const matchesStatus = statusFilter === '' || statusText.includes(statusFilter);
+        let matchesStatus = true;
+        if (statusFilter !== '') {
+            const normalizedStatus = statusText.trim().toLowerCase();
+            if (statusFilter === 'successful') {
+                matchesStatus = ['successful', 'success'].includes(normalizedStatus);
+            } else if (statusFilter === 'failed') {
+                matchesStatus = ['failed', 'fail'].includes(normalizedStatus);
+            } else {
+                matchesStatus = normalizedStatus.includes(statusFilter);
+            }
+        }
         const matchesModule = moduleFilter === '' || moduleText.includes(moduleFilter);
         return matchesSearch && matchesAction && matchesStatus && matchesModule;
     });
