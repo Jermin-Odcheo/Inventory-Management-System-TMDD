@@ -93,8 +93,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAjax) {
             ]);
             $auditStmt = $pdo->prepare("
             INSERT INTO audit_log
-            (UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            (UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status, Date_Time)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
         ");
             $auditStmt->execute([
                 $_SESSION['user_id'],
@@ -148,6 +148,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAjax) {
             ]);
 
             if ($stmt->rowCount() > 0) {
+                $newLocationId = $pdo->lastInsertId();
+                $newValues = json_encode([
+                    'asset_tag'          => $assetTag,
+                    'building_loc'       => $buildingLoc,
+                    'floor_no'           => $floorNo,
+                    'specific_area'      => $specificArea,
+                    'person_responsible' => $personResponsible,
+                    'department_id'      => $departmentId,
+                    'remarks'            => $remarks
+                ]);
+                $auditStmt = $pdo->prepare("
+                    INSERT INTO audit_log
+                    (UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status, Date_Time)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                ");
+                $auditStmt->execute([
+                    $_SESSION['user_id'],
+                    $newLocationId,
+                    'Equipment Location',
+                    'Create',
+                    'New equipment location added',
+                    null,
+                    $newValues,
+                    'Successful'
+                ]);
                 $pdo->commit();
                 echo json_encode(['status' => 'success', 'message' => 'Equipment Location added successfully']);
             } else {
@@ -787,8 +812,14 @@ function safeHtml($value)
                 var departmentId = $(this).data('department');
                 var remarks = $(this).data('remarks');
 
+                // Ensure asset tag is present in the dropdown
+                var $assetTagSelect = $('#edit_location_asset_tag');
+                if ($assetTagSelect.find('option[value="' + assetTag + '"]').length === 0) {
+                    $assetTagSelect.append('<option value="' + $('<div>').text(assetTag).html() + '">' + $('<div>').text(assetTag).html() + '</option>');
+                }
+                $assetTagSelect.val(assetTag).trigger('change');
+
                 $('#edit_location_id').val(id);
-                $('#edit_location_asset_tag').val(assetTag);
                 $('#edit_building_loc').val(buildingLocation);
                 $('#edit_floor_no').val(floorNumber);
                 $('#edit_specific_area').val(specificArea);
@@ -958,10 +989,20 @@ function safeHtml($value)
                     width: '100%',
                     dropdownParent: $('#editLocationModal')
                 });
+                // Department Select2 for Edit Location Modal
+                $('#edit_department_id').select2({
+                    dropdownParent: $('#editLocationModal'),
+                    width: '100%',
+                    placeholder: 'Select Department',
+                    allowClear: true
+                });
             });
             $('#editLocationModal').on('hidden.bs.modal', function () {
                 if ($('#edit_location_asset_tag').hasClass('select2-hidden-accessible')) {
                     $('#edit_location_asset_tag').select2('destroy');
+                }
+                if ($('#edit_department_id').hasClass('select2-hidden-accessible')) {
+                    $('#edit_department_id').select2('destroy');
                 }
                 $(this).find('form')[0].reset();
             });

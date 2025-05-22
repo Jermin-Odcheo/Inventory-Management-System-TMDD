@@ -50,11 +50,23 @@ $query = "
       audit_log.TrackID DESC
 ";
 
-
-
 $stmt = $pdo->prepare($query);
 $stmt->execute();
 $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// --- Department ID to Name Map (for audit diff display) ---
+$departmentIdNameMap = [];
+try {
+    $deptStmt = $pdo->query("SELECT id, department_name FROM departments");
+    while ($row = $deptStmt->fetch(PDO::FETCH_ASSOC)) {
+        $departmentIdNameMap[$row['id']] = $row['department_name'];
+    }
+} catch (Exception $e) {}
+
+function getDepartmentName($id) {
+    global $departmentIdNameMap;
+    return isset($departmentIdNameMap[$id]) ? $departmentIdNameMap[$id] : $id;
+}
 
 /**
  * Helper function to display JSON data with <br> for new lines.
@@ -114,11 +126,14 @@ function formatAuditDiff($oldJson, $newJson)
     $keys = array_unique(array_merge(array_keys($oldData), array_keys($newData)));
     $descriptions = [];
 
+    // Exclude these fields from the diff
+    $excludeFields = ['is_deleted', 'equipment_location_id'];
+
     foreach ($keys as $key) {
         $lcKey = strtolower($key);
 
-        // Exclude is_deleted differences entirely.
-        if ($lcKey === 'is_deleted') {
+        // Exclude system and irrelevant fields
+        if (in_array($lcKey, $excludeFields)) {
             continue;
         }
 
@@ -126,6 +141,18 @@ function formatAuditDiff($oldJson, $newJson)
         if ($lcKey === 'password') {
             if (isset($oldData[$key], $newData[$key]) && $oldData[$key] !== $newData[$key]) {
                 $descriptions[] = "The password has been changed.";
+            }
+            continue;
+        }
+
+        // Special handling for department_id
+        if ($lcKey === 'department_id') {
+            $oldVal = isset($oldData[$key]) ? $oldData[$key] : '';
+            $newVal = isset($newData[$key]) ? $newData[$key] : '';
+            if ($oldVal !== $newVal) {
+                $oldDept = getDepartmentName($oldVal);
+                $newDept = getDepartmentName($newVal);
+                $descriptions[] = "The Department was changed from '<em>{$oldDept}</em>' to '<strong>{$newDept}</strong>'.";
             }
             continue;
         }
@@ -217,6 +244,47 @@ function formatDetailsAndChanges($log)
     $filteredOldData = array_diff_key($oldData, array_flip($systemFields));
     $filteredNewData = array_diff_key($newData, array_flip($systemFields));
 
+    // --- Custom Add Action for Added Fields on Edit ---
+    if ($action === 'modified') {
+        $addFields = [];
+        $addChanges = [];
+        // Merge all relevant fields for Equipment Status, Equipment Location, and Equipment Details
+        $fieldsToCheck = [
+            // Equipment Status fields
+            'status', 'action', 'remarks',
+            // Equipment Location fields
+            'building_loc', 'floor_no', 'specific_area', 'person_responsible', 'department_id',
+            // Equipment Details fields
+            'asset_description_1', 'asset_description_2', 'specifications', 'brand', 'model', 'serial_number', 'rr_no', 'location', 'accountable_individual', 'remarks'
+        ];
+        foreach ($fieldsToCheck as $field) {
+            $oldVal = isset($filteredOldData[$field]) ? trim((string)$filteredOldData[$field]) : '';
+            $newVal = isset($filteredNewData[$field]) ? trim((string)$filteredNewData[$field]) : '';
+            if (($oldVal === '' || $oldVal === null) && $newVal !== '') {
+                if ($field === 'department_id') {
+                    $label = 'Department';
+                    $displayVal = getDepartmentName($newVal);
+                } else {
+                    $label = ucwords(str_replace('_', ' ', $field));
+                    $displayVal = htmlspecialchars($newVal);
+                }
+                $addFields[] = $label;
+                $addChanges[] = "The {$label} '" . $displayVal . "' is added.";
+            }
+        }
+        if (!empty($addFields)) {
+            // Show as Add action
+            $details = 'Added Fields: ' . htmlspecialchars(implode(', ', $addFields));
+            $changes = '<ul class="list-unstyled mb-0">';
+            foreach ($addChanges as $msg) {
+                $changes .= '<li>' . $msg . '</li>';
+            }
+            $changes .= '</ul>';
+            return [$details, $changes];
+        }
+    }
+    // --- End Custom Add Action ---
+
     switch ($action) {
         case 'create':
             $details = htmlspecialchars("$targetEntityName has been created");
@@ -258,13 +326,13 @@ function formatDetailsAndChanges($log)
 function getChangedFieldNames(array $oldData, array $newData)
 {
     // Fields that should NOT be included in the diff
-    $systemFields = ['date_created', 'date_acquired', 'date_modified', 'is_disabled'];
+    $systemFields = ['date_created', 'date_acquired', 'date_modified', 'is_disabled', 'department_id', 'equipment_location_id'];
 
     $changed = [];
     $allKeys = array_unique(array_merge(array_keys($oldData), array_keys($newData)));
 
     foreach ($allKeys as $key) {
-        // Skip system-managed fields
+        // Skip system-managed fields and excluded fields
         if (in_array($key, $systemFields)) {
             continue;
         }
@@ -394,8 +462,6 @@ function getChangedFieldNames(array $oldData, array $newData)
                                             <td data-label="Action">
                                                 <?php
                                                 $actionText = !empty($log['Action']) ? $log['Action'] : 'Unknown';
-                                                echo "<!-- Debug: Action Text = $actionText -->";
-
                                                 // Check for restore action based on JSON values with null checks
                                                 if (!is_null($log['OldVal']) && !is_null($log['NewVal'])) {
                                                     $oldData = json_decode($log['OldVal'], true);
@@ -409,6 +475,12 @@ function getChangedFieldNames(array $oldData, array $newData)
                                                         }
                                                     }
                                                 }
+                                                // --- Sync Action badge with Details: if Details starts with 'Added Fields:', show Add ---
+                                                list($detailsHTML, $changesHTML) = formatDetailsAndChanges($log);
+                                                if (strtolower($log['Action'] ?? '') === 'modified' && strpos($detailsHTML, 'Added Fields:') === 0) {
+                                                    $actionText = 'Add';
+                                                }
+                                                // --- End Sync ---
                                                 echo getActionIcon($actionText);
                                                 ?>
                                             </td>

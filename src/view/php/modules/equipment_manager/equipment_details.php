@@ -675,7 +675,7 @@ ob_end_clean();
                                 </div>
                                 <div class="mb-3 col-md-6">
     <label for="add_rr_no" class="form-label">RR#</label>
-    <select class="form-select rr-select2" name="rr_no" id="add_rr_no" required style="width: 100%;">
+    <select class="form-select rr-select2" name="rr_no" id="add_rr_no" style="width: 100%;">
         <option value="">Select or search RR Number</option>
         <?php
         // Fetch active RR numbers for dropdown
@@ -1194,7 +1194,18 @@ if ($('#edit_rr_no').length) {
             $(document).on('click', '.edit-equipment', function() {
                 const data = $(this).data();
                 $('#edit_equipment_id').val(data.id);
-                $('#edit_equipment_asset_tag').val(data.asset);
+                // Ensure asset tag is present in the dropdown
+                var $assetTagSelect = $('#edit_equipment_asset_tag');
+                if ($assetTagSelect.find('option[value="' + data.asset + '"]').length === 0) {
+                    $assetTagSelect.append('<option value="' + $('<div>').text(data.asset).html() + '">' + $('<div>').text(data.asset).html() + '</option>');
+                }
+                $assetTagSelect.val(data.asset).trigger('change');
+                // Ensure RR# is present in the dropdown
+                var $rrSelect = $('#edit_rr_no');
+                if (data.rr && $rrSelect.find('option[value="' + data.rr + '"]').length === 0) {
+                    $rrSelect.append('<option value="' + $('<div>').text(data.rr).html() + '">' + $('<div>').text(data.rr).html() + '</option>');
+                }
+                $rrSelect.val(data.rr).trigger('change');
                 $('#edit_asset_description_1').val(data.desc1);
                 $('#edit_asset_description_2').val(data.desc2);
                 $('#edit_specifications').val(data.spec);
@@ -1203,7 +1214,6 @@ if ($('#edit_rr_no').length) {
                 $('#edit_serial_number').val(data.serial);
                 $('#edit_location').val(data.location);
                 $('#edit_accountable_individual').val(data.accountable);
-                $('#edit_rr_no').val(data.rr);
                 $('#edit_remarks').val(data.remarks);
                 $('#editEquipmentModal').modal('show');
             });
