@@ -460,6 +460,8 @@ function getNormalizedAction($log)
                             <option value="remove">Remove</option>
                             <option value="delete">Delete</option>
                             <option value="restored">Restored</option>
+                            <option value="login">Login</option>
+                            <option value="logout">Logout</option>
                         </select>
                     </div>
                     <div class="col-md-4 mb-2">
@@ -543,10 +545,22 @@ function getNormalizedAction($log)
                                         <?php echo nl2br($changesHTML); ?>
                                     </td>
 
+                                    <?php
+                                        $statusRaw = $log['Status'] ?? '';
+                                        $statusClean = strtolower(trim($statusRaw)); // Normalize for comparison
+                                        $isSuccess = in_array($statusClean, ['successful', 'success']); // Accept both variants
+                                    ?>
                                     <!-- STATUS -->
                                     <td data-label="Status">
-                                        <span class="badge <?php echo (strtolower($log['Status'] ?? '') === 'successful') ? 'bg-success' : 'bg-danger'; ?>">
-                                            <?php echo getStatusIcon($log['Status']) . ' ' . htmlspecialchars($log['Status']); ?>
+                                        <span class="badge <?php echo $isSuccess ? 'bg-success' : 'bg-danger'; ?>">
+                                            <?php
+                                                echo getStatusIcon($statusRaw) . ' ' . htmlspecialchars($statusRaw);
+
+                                                // DEBUG: Print raw status for unknown values
+                                                if (!$isSuccess) {
+                                                    echo "<!-- DEBUG: Raw Status = '" . addslashes($statusRaw) . "' -->";
+                                                }
+                                            ?>
                                         </span>
                                     </td>
 

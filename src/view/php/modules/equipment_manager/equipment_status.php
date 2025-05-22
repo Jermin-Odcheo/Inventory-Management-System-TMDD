@@ -730,10 +730,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                             <label for="edit_remarks" class="form-label"><i class="bi bi-chat-left-text"></i> Remarks</label>
                             <textarea class="form-control" id="edit_remarks" name="remarks" rows="3"></textarea>
                         </div>
-                        <div class="mb-3 form-check">
-                            <input type="checkbox" class="form-check-input" id="edit_is_disabled" name="is_disabled">
-                            <label class="form-check-label" for="edit_is_disabled">Disabled</label>
-                        </div>
                         <div class="d-flex justify-content-end">
                             <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
                             <button type="submit" class="btn btn-primary">Update Status</button>
