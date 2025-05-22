@@ -394,6 +394,15 @@ ob_end_clean();
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.min.css" rel="stylesheet">
     <!-- Select2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+    <style>
+        th.sortable.asc::after {
+    content: " ▲";
+}
+th.sortable.desc::after {
+    content: " ▼";
+}
+
+    </style>
 </head>
 
 <body>
@@ -485,26 +494,26 @@ ob_end_clean();
                 </div>
                 <div class="table-responsive" id="table">
                     <table class="table" id="edTable">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Asset Tag</th>
-                                <th>Desc 1</th>
-                                <th>Desc 2</th>
-                                <th>Specification</th>
-                                <th>Brand</th>
-                                <th>Model</th>
-                                <th>Serial #</th>
-                                <th>Acquired Date</th>
-                                <th>Created Date</th>
-                                <th>Modified Date</th>
-                                <th>RR #</th>
-                                <th>Location</th>
-                                <th>Accountable Individual</th>
-                                <th>Remarks</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
+                    <thead>
+    <tr>
+        <th class="sortable" data-column="0">#</th>
+        <th class="sortable" data-column="1">Asset Tag</th>
+        <th class="sortable" data-column="2">Desc 1</th>
+        <th class="sortable" data-column="3">Desc 2</th>
+        <th class="sortable" data-column="4">Specification</th>
+        <th class="sortable" data-column="5">Brand</th>
+        <th class="sortable" data-column="6">Model</th>
+        <th class="sortable" data-column="7">Serial #</th>
+        <th class="sortable" data-column="8">Acquired Date</th>
+        <th class="sortable" data-column="9">Created Date</th>
+        <th class="sortable" data-column="10">Modified Date</th>
+        <th class="sortable" data-column="11">RR #</th>
+        <th class="sortable" data-column="12">Location</th>
+        <th class="sortable" data-column="13">Accountable Individual</th>
+        <th class="sortable" data-column="14">Remarks</th>
+        <th>Actions</th>
+    </tr>
+</thead>
                         <tbody id="equipmentTable">
                             <?php if (!empty($equipmentDetails)): ?>
                                 <?php foreach ($equipmentDetails as $equipment): ?>
@@ -610,11 +619,11 @@ ob_end_clean();
     <div class="modal fade" id="addEquipmentModal" tabindex="-1" aria-labelledby="addEquipmentLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Add New Equipment</h5>
+                <div class="modal-header p-4">
+                    <h5 class="modal-title ">Add New Equipment</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body p-4">
                     <form id="addEquipmentForm">
                         <input type="hidden" name="action" value="create">
                         <div class="mb-3">
@@ -830,7 +839,7 @@ ob_end_clean();
                             </div>
                         </div>
                 </div>
-                <div class="mb-3">
+                <div class="mb-3 p-4">
                     <div class="row">
                         <div class="mb-3 col-md-6">
                             <label for="location" class="form-label">Location</label>
@@ -842,11 +851,11 @@ ob_end_clean();
                         </div>
                     </div>
                 </div>
-                <div class="mb-3">
+                <div class="mb-3 p-4">
                     <label for="remarks" class="form-label">Remarks</label>
                     <textarea class="form-control" name="remarks" rows="3"></textarea>
                 </div>
-                <div class="mb-3 text-end">
+                <div class="mb-3 text-end p-4">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="margin-right: 4px;">Cancel</button>
                     <button type="submit" class="btn btn-primary">Create Equipment</button>
                 </div>
@@ -860,11 +869,11 @@ ob_end_clean();
     <div class="modal fade" id="editEquipmentModal" tabindex="-1" data-bs-backdrop="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header">
+                <div class="modal-header p-4">
                     <h5 class="modal-title">Edit Equipment</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body p-4">
                     <form id="editEquipmentForm">
                         <input type="hidden" name="action" value="update">
                         <input type="hidden" name="equipment_id" id="edit_equipment_id">
@@ -962,14 +971,14 @@ ob_end_clean();
     <div class="modal fade" id="deleteEDModal" tabindex="-1" data-bs-backdrop="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header">
+                <div class="modal-header p-4">
                     <h5 class="modal-title">Confirm Removal</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body p-4">
                     Are you sure you want to remove this Equipment Detail?
                 </div>
-                <div class="modal-footer">
+                <div class="modal-footer p-4">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" id="confirmDeleteBtn" class="btn btn-danger">Remove</button>
                 </div>
@@ -1070,6 +1079,44 @@ ob_end_clean();
                 forcePaginationCheck();
             });
         });
+        document.querySelectorAll(".sortable").forEach(header => {
+        header.style.cursor = "pointer";
+        header.addEventListener("click", () => {
+            const table = document.querySelector("#edTable");
+            const tbody = table.querySelector("tbody");
+            const columnIndex = parseInt(header.dataset.column);
+            const ascending = !header.classList.contains("asc");
+
+            // Remove asc/desc classes from all headers
+            document.querySelectorAll(".sortable").forEach(h => h.classList.remove("asc", "desc"));
+            header.classList.add(ascending ? "asc" : "desc");
+
+            const rows = Array.from(tbody.querySelectorAll("tr")).sort((a, b) => {
+                const aText = a.children[columnIndex].textContent.trim();
+                const bText = b.children[columnIndex].textContent.trim();
+
+                const isDate = /\d{4}-\d{2}-\d{2}/.test(aText) || !isNaN(Date.parse(aText));
+                const isNumeric = !isNaN(parseFloat(aText)) && !isNaN(parseFloat(bText));
+
+                if (isNumeric) {
+                    return ascending
+                        ? parseFloat(aText) - parseFloat(bText)
+                        : parseFloat(bText) - parseFloat(aText);
+                } else if (isDate) {
+                    return ascending
+                        ? new Date(aText) - new Date(bText)
+                        : new Date(bText) - new Date(aText);
+                } else {
+                    return ascending
+                        ? aText.localeCompare(bText)
+                        : bText.localeCompare(aText);
+                }
+            });
+
+            // Append sorted rows
+            rows.forEach(row => tbody.appendChild(row));
+        });
+    });
     </script>
 </body>
 

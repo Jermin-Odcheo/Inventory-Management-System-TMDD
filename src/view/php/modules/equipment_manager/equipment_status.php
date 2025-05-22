@@ -443,7 +443,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Equipment Status Management</title>
     <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
-
+ <style>
+          th.sortable.asc::after {
+    content: " ▲";
+}
+th.sortable.desc::after {
+    content: " ▼";
+}
+ </style>
 </head>
 
 <body>
@@ -526,63 +533,65 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                 </div>
 
                 <div class="table-responsive" id="table">
-                    <table class="table" id="statusTable">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Asset Tag</th>
-                                <th>Status</th>
-                                <th>Process Action Taken</th>
-                                <th>Created Date</th>
-                                <th>Remarks</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="statusTbody">
-                            <?php
-                            try {
-                                $stmt = $pdo->query("SELECT * FROM equipment_status WHERE is_disabled = 0 ORDER BY date_created DESC");
-                                while ($row = $stmt->fetch()) {
-                                    echo "<tr>";
-                                    echo "<td>" . htmlspecialchars($row['equipment_status_id']) . "</td>";
-                                    echo "<td>" . htmlspecialchars($row['asset_tag']) . "</td>";
-                                    echo "<td>" . htmlspecialchars($row['status']) . "</td>";
-                                    echo "<td>" . htmlspecialchars($row['action']) . "</td>";
-                                    echo "<td>" . date('Y-m-d H:i', strtotime($row['date_created'])) . "</td>";
-                                    echo "<td>" . htmlspecialchars($row['remarks']) . "</td>";
-                                    echo "<td>
-                      <div class='d-flex justify-content-center gap-2'>";
-
-                                    if ($canModify) {
-                                        echo "<button class='btn btn-sm btn-outline-info edit-status' 
-                                                data-id='" . htmlspecialchars($row['equipment_status_id']) . "'
-                                                data-asset='" . htmlspecialchars($row['asset_tag']) . "'
-                                                data-status='" . htmlspecialchars($row['status']) . "'
-                                                data-action='" . htmlspecialchars($row['action']) . "'
-                                                data-remarks='" . htmlspecialchars($row['remarks']) . "'
-                                                data-disabled='" . htmlspecialchars($row['is_disabled']) . "'>
-                                              <i class='bi bi-pencil'></i>
-                                            </button>";
-                                    }
-
-                                    if ($canDelete) {
-                                        echo "<button class='btn btn-sm btn-outline-danger delete-status' 
-                                                data-id='" . htmlspecialchars($row['equipment_status_id']) . "'>
-                                              <i class='bi bi-trash'></i>
-                                            </button>";
-                                    }
-
-                                    echo "</div>
+    <table class="table" id="statusTable">
+        <thead>
+            <tr>
+                <th class="sortable" data-sort="number">#</th>
+                <th class="sortable" data-sort="string">Asset Tag</th>
+                <th class="sortable" data-sort="string">Status</th>
+                <th class="sortable" data-sort="string">Process Action Taken</th>
+                <th class="sortable" data-sort="date">Created Date</th>
+                <th class="sortable" data-sort="string">Remarks</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php
+            try {
+                $stmt = $pdo->query("SELECT * FROM equipment_status WHERE is_disabled = 0 ORDER BY date_created DESC");
+                while ($row = $stmt->fetch()) {
+                    echo "<tr>";
+                    echo "<td>" . htmlspecialchars($row['equipment_status_id']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['asset_tag']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['status']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['action']) . "</td>";
+                    echo "<td>" . date('Y-m-d H:i', strtotime($row['date_created'])) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['remarks']) . "</td>";
+                    echo "<td>
+                        <div class='d-flex justify-content-center gap-2'>";
+                    
+                    if ($canModify) {
+                        echo "<button class='btn btn-sm btn-outline-info edit-status' 
+                                data-id='" . htmlspecialchars($row['equipment_status_id']) . "'
+                                data-asset='" . htmlspecialchars($row['asset_tag']) . "'
+                                data-status='" . htmlspecialchars($row['status']) . "'
+                                data-action='" . htmlspecialchars($row['action']) . "'
+                                data-remarks='" . htmlspecialchars($row['remarks']) . "'
+                                data-disabled='" . htmlspecialchars($row['is_disabled']) . "'>
+                              <i class='bi bi-pencil'></i>
+                            </button>";
+                    }
+                    
+                    if ($canDelete) {
+                        echo "<button class='btn btn-sm btn-outline-danger delete-status' 
+                                data-id='" . htmlspecialchars($row['equipment_status_id']) . "'>
+                              <i class='bi bi-trash'></i>
+                            </button>";
+                    }
+                    
+                    echo "</div>
                     </td>";
-                                    echo "</tr>";
-                                }
-                            } catch (PDOException $e) {
-                                echo "<tr><td colspan='8' class='text-danger text-center'>Error loading equipment status: " . $e->getMessage() . "</td></tr>";
-                            }
-                            ?>
-                        </tbody>
-                    </table>
-                </div>
+                    echo "</tr>";
+                }
+            } catch (PDOException $e) {
+                echo "<tr><td colspan='8' class='text-danger text-center'>Error loading equipment status: " . $e->getMessage() . "</td></tr>";
+            }
+            ?>
+        </tbody>
+    </table>
+</div>
+
+
                 <!-- Pagination Controls -->
                 <div class="container-fluid">
                     <div class="row align-items-center g-3">

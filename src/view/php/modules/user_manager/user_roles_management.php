@@ -25,20 +25,77 @@ $canModify = $rbac->hasPrivilege('User Management', 'Modify');
 $canRemove = $rbac->hasPrivilege('User Management', 'Remove');
 $canTrack  = $rbac->hasPrivilege('User Management', 'Track');
 
-// Query active users
-$stmt = $pdo->query("SELECT id, username, email, first_name, last_name, date_created, status FROM users WHERE is_disabled = 0");
-$usersData = $stmt->fetchAll();
-// Store the actual count of users
+// --- START SORTING IMPLEMENTATION ---
+
+// Define allowed sortable columns and their corresponding database columns/aliases
+$sortMap = [
+    'username'    => 'u.username',
+    'departments' => 'departments_concat', // Alias from GROUP_CONCAT
+    'roles'       => 'roles_concat',       // Alias from GROUP_CONCAT
+];
+
+// Get sort parameters from GET request
+$sortBy = $_GET['sort_by'] ?? 'username'; // Default sort by username
+$sortDir = strtolower($_GET['sort_order'] ?? 'asc'); // Default sort order 'asc'
+
+// Validate sort by parameter against the allowed map
+if (!isset($sortMap[$sortBy])) {
+    $sortBy = 'username'; // Fallback to default if invalid
+}
+
+// Validate sort direction
+if (!in_array($sortDir, ['asc', 'desc'])) {
+    $sortDir = 'asc'; // Fallback to default if invalid
+}
+
+// Construct the ORDER BY clause dynamically
+$orderByClause = "ORDER BY " . $sortMap[$sortBy] . " " . $sortDir;
+
+// --- END SORTING IMPLEMENTATION ---
+
+// Query active users with their roles and departments for display and sorting
+// Use GROUP_CONCAT to get all departments and roles for a user in a single row
+$stmt = $pdo->query(
+    "SELECT
+        u.id,
+        u.username,
+        u.email,
+        u.first_name,
+        u.last_name,
+        u.date_created,
+        u.status,
+        GROUP_CONCAT(DISTINCT d.department_name ORDER BY d.department_name SEPARATOR ', ') AS departments_concat,
+        GROUP_CONCAT(DISTINCT r.role_name ORDER BY r.role_name SEPARATOR ', ') AS roles_concat
+    FROM
+        users u
+    LEFT JOIN
+        user_department_roles udr ON u.id = udr.user_id
+    LEFT JOIN
+        departments d ON udr.department_id = d.id
+    LEFT JOIN
+        roles r ON udr.role_id = r.id
+    WHERE
+        u.is_disabled = 0
+    GROUP BY
+        u.id, u.username, u.email, u.first_name, u.last_name, u.date_created, u.status
+    {$orderByClause}" // Apply dynamic ORDER BY clause here
+);
+$usersData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Store the actual count of users (after filtering for is_disabled)
 $totalUsers = count($usersData);
 
-// Query active roles
+// Query active roles (for dropdowns)
 $stmt = $pdo->query("SELECT id, role_name FROM roles WHERE is_disabled = 0");
 $rolesData = $stmt->fetchAll();
 
-// Query all departments
+// Query all departments (for dropdowns)
 $stmt = $pdo->query("SELECT id, department_name, abbreviation FROM departments WHERE is_disabled = 0 ORDER BY department_name");
 $departmentsData = $stmt->fetchAll();
-// Fetch all user–department–role triples
+
+// Fetch all user–department–role triples (for detailed client-side mapping in modals)
+// This is still needed as the main query above only provides concatenated strings
+// and the client-side logic needs individual department and role IDs for editing.
 $stmt = $pdo->query(
     "SELECT user_id, role_id, department_id
      FROM user_department_roles
@@ -53,7 +110,7 @@ foreach ($triples as $t) {
     $roleId = $t['role_id'] !== null ? (int)$t['role_id'] : null;
     $deptId = (int)$t['department_id'];
 
-    // Use a special key format for null roles
+    // Use a special key format for null roles to group assignments correctly
     $key = $roleId !== null ? "{$userId}-{$roleId}" : "{$userId}-null";
 
     if (!isset($userRoleMap[$key])) {
@@ -64,13 +121,13 @@ foreach ($triples as $t) {
         ];
     }
 
-    // avoid dupes if you need:
+    // Add department ID to the list for this user-role combination
     if (!in_array($deptId, $userRoleMap[$key]['departmentIds'], true)) {
         $userRoleMap[$key]['departmentIds'][] = $deptId;
     }
 }
 
-// Re-index for numeric array
+// Re-index for numeric array for JavaScript consumption
 $userRoleDepartments = array_values($userRoleMap);
 
 ?>
@@ -81,9 +138,7 @@ $userRoleDepartments = array_values($userRoleMap);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/user_module.css">
-    <!-- Select2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
     <title>User Roles Management</title>
 </head>
@@ -134,25 +189,21 @@ $userRoleDepartments = array_values($userRoleMap);
             </div>
         </div>
 
-        <!-- Table body will be built via JavaScript -->
         <div class="table-responsive" id="table">
             <table class="table table-striped table-hover" id="urTable">
                 <thead>
                     <tr>
-                        <!-- Added checkbox column header with "select all" -->
                         <th><?php if ($canRemove): ?><input type="checkbox" id="select-all"><?php endif; ?></th>
-                        <th>User <span class="sort-icon" id="sort-user">A→Z</span></th>
-                        <th>Departments</th>
-                        <th>Roles</th>
+                        <th><a href="#" class="sort-header" data-sort="username">User <i class="bi bi-caret-up-fill sort-icon"></i></a></th>
+                        <th><a href="#" class="sort-header" data-sort="departments">Departments <i class="bi bi-caret-up-fill sort-icon"></i></a></th>
+                        <th><a href="#" class="sort-header" data-sort="roles">Roles <i class="bi bi-caret-up-fill sort-icon"></i></a></th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <!-- Table rows will be dynamically populated via JavaScript -->
-                </tbody>
+                    </tbody>
             </table>
 
-            <!-- Bulk Delete Button (initially hidden) -->
             <?php if ($canRemove): ?>
                 <div class="mb-3">
                     <button type="button" id="delete-selected" class="btn btn-danger" style="display: none;" disabled>
@@ -160,12 +211,11 @@ $userRoleDepartments = array_values($userRoleMap);
                     </button>
                 </div>
             <?php endif; ?>
-            <!-- Pagination Controls -->
             <div class="container-fluid">
                 <div class="row align-items-center g-3">
                     <div class="col-12 col-sm-auto">
                         <div class="text-muted">
-                            <?php 
+                            <?php
                             // Use the actual user count, not the number of rows in the table
                             $rowsPerPage = 10; // Default rows per page
                             $displayEnd = min($rowsPerPage, $totalUsers);
@@ -202,7 +252,6 @@ $userRoleDepartments = array_values($userRoleMap);
     </div>
 
 
-<!-- Add User to Roles Modal -->
 <div id="add-user-roles-modal" class="modal">
     <div class="modal-content">
         <h2>add user to roles modal</h2>
@@ -252,7 +301,6 @@ $userRoleDepartments = array_values($userRoleMap);
                 <label>list of current users</label>
                 <table id="current-users-table">
                     <tbody>
-                    <!-- Optionally pre-populate if needed -->
                     </tbody>
                 </table>
             </div>
@@ -264,14 +312,12 @@ $userRoleDepartments = array_values($userRoleMap);
     </div>
 </div>
 
-    <!-- Add Department to Role Modal -->
     <div id="add-department-role-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
                 <h2 class="modal-title">Add Role to Department</h2>
             </div>
             <div class="modal-body">
-                <!-- Add user and department info sections at the top -->
                 <div class="form-group">
                     <label>User</label>
                     <div id="edit-user-info" class="info-field"></div>
@@ -301,8 +347,7 @@ $userRoleDepartments = array_values($userRoleMap);
                                 </tr>
                             </thead>
                             <tbody>
-                                <!-- Role rows will be added here dynamically -->
-                            </tbody>
+                                </tbody>
                         </table>
                     </div>
                 </div>
@@ -314,7 +359,6 @@ $userRoleDepartments = array_values($userRoleMap);
         </div>
     </div>
 
-    <!-- Delete Confirmation Modal -->
     <div class="modal fade" id="delete-confirm-modal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lower">
             <div class="modal-content">
@@ -333,7 +377,6 @@ $userRoleDepartments = array_values($userRoleMap);
         </div>
     </div>
 
-    <!-- Pass PHP data to JavaScript -->
     <script>
         let usersData = <?php echo json_encode($usersData); ?>;
         let rolesData = <?php echo json_encode($rolesData); ?>;
@@ -347,11 +390,13 @@ $userRoleDepartments = array_values($userRoleMap);
             canDelete: <?php echo json_encode($canRemove); ?>,
             canTrack: <?php echo json_encode($canTrack); ?>
         };
+        // Pass current sort state to JavaScript
+        var currentSortBy = "<?php echo htmlspecialchars($sortBy); ?>";
+        var currentSortOrder = "<?php echo htmlspecialchars($sortDir); ?>";
     </script>
 
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/user_roles_management.js" defer></script>
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
-    <!-- Select2 JS -->
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
         $(document).ready(function() {
@@ -388,10 +433,10 @@ $userRoleDepartments = array_values($userRoleMap);
                     if (dept) {
                         // Add the department to the selection
                         const container = document.getElementById('selected-department-container');
-                        
+
                         // Clear previous selection (only one department allowed)
                         container.innerHTML = '';
-                        
+
                         // Create the selected item element
                         const selectedItem = document.createElement('span');
                         selectedItem.className = 'selected-item';
@@ -401,19 +446,19 @@ $userRoleDepartments = array_values($userRoleMap);
                             <button class="remove-btn" data-id="${dept.id}" data-type="department">✕</button>
                         `;
                         container.appendChild(selectedItem);
-                        
+
                         // Add remove button event listener
                         selectedItem.querySelector('.remove-btn').addEventListener('click', function() {
                             // Remove the department selection
                             window.selectedDepartment = null;
                             selectedItem.remove();
                         });
-                        
+
                         // Set the selectedDepartment
                         window.selectedDepartment = dept;
                     }
                 }
-                
+
                 // Reset the select
                 $(this).val(null).trigger('change');
             });
@@ -432,12 +477,12 @@ $userRoleDepartments = array_values($userRoleMap);
                     if (role) {
                         // Add the role to the selection
                         const container = document.getElementById('selected-roles-container');
-                        
+
                         // Check if this role is already selected
                         const alreadySelected = Array.from(container.children).some(
                             child => parseInt(child.dataset.id) === roleId
                         );
-                        
+
                         if (!alreadySelected) {
                             // Create the selected item element
                             const selectedItem = document.createElement('span');
@@ -448,21 +493,21 @@ $userRoleDepartments = array_values($userRoleMap);
                                 <button class="remove-btn" data-id="${role.id}" data-type="role">✕</button>
                             `;
                             container.appendChild(selectedItem);
-                            
+
                             // Add remove button event listener
                             selectedItem.querySelector('.remove-btn').addEventListener('click', function() {
                                 // Remove from the selectedRoles array
                                 window.selectedRoles = window.selectedRoles.filter(r => r.id !== role.id);
                                 selectedItem.remove();
                             });
-                            
+
                             // Add to the selectedRoles array
                             if (!window.selectedRoles) window.selectedRoles = [];
                             window.selectedRoles.push(role);
                         }
                     }
                 }
-                
+
                 // Reset the select
                 $(this).val(null).trigger('change');
             });
@@ -481,12 +526,12 @@ $userRoleDepartments = array_values($userRoleMap);
                     if (user) {
                         // Add the user to the selection
                         const container = document.getElementById('selected-users-container');
-                        
+
                         // Check if this user is already selected
                         const alreadySelected = Array.from(container.children).some(
                             child => parseInt(child.dataset.id) === userId
                         );
-                        
+
                         if (!alreadySelected) {
                             // Create the selected item element
                             const selectedItem = document.createElement('span');
@@ -497,21 +542,21 @@ $userRoleDepartments = array_values($userRoleMap);
                                 <button class="remove-btn" data-id="${user.id}" data-type="user">✕</button>
                             `;
                             container.appendChild(selectedItem);
-                            
+
                             // Add remove button event listener
                             selectedItem.querySelector('.remove-btn').addEventListener('click', function() {
                                 // Remove from the selectedUsers array
                                 window.selectedUsers = window.selectedUsers.filter(u => u.id !== user.id);
                                 selectedItem.remove();
                             });
-                            
+
                             // Add to the selectedUsers array
                             if (!window.selectedUsers) window.selectedUsers = [];
                             window.selectedUsers.push(user);
                         }
                     }
                 }
-                
+
                 // Reset the select
                 $(this).val(null).trigger('change');
             });
@@ -583,7 +628,7 @@ $userRoleDepartments = array_values($userRoleMap);
                         uniqueUsernames.add(username);
                     }
                 });
-                
+
                 // Update the visibility count - THIS IS THE KEY PART
                 const visibleCount = uniqueUsernames.size;
                 console.log(`Showing ${visibleCount} unique users`);
@@ -602,11 +647,11 @@ $userRoleDepartments = array_values($userRoleMap);
                 // Update pagination controls
                 updatePaginationControls(visibleCount);
             }
-            
+
             // Helper to update pagination visibility
             function updatePaginationControls(visibleCount) {
                 const rowsPerPage = parseInt($('#rowsPerPageSelect').val()) || 10;
-                
+
                 if (visibleCount <= rowsPerPage) {
                     $('#prevPage, #nextPage').addClass('d-none');
                     $('#pagination').empty();
@@ -646,7 +691,7 @@ $userRoleDepartments = array_values($userRoleMap);
                         uniqueUsernames.add(username);
                     }
                 });
-                
+
                 const totalRows = uniqueUsernames.size;
                 $('#totalRows').text(totalRows);
                 $('#rowsPerPage').text(Math.min(totalRows, parseInt($('#rowsPerPageSelect').val()) || 10));
@@ -676,10 +721,10 @@ $userRoleDepartments = array_values($userRoleMap);
                     if (role) {
                         // Add the role to the table
                         const tbody = $('#assigned-roles-table tbody');
-                        
+
                         // Check if this role is already selected
                         const alreadySelected = tbody.find(`tr[data-id="${roleId}"]`).length > 0;
-                        
+
                         if (!alreadySelected) {
                             // Create the table row
                             const tr = $(`
@@ -692,24 +737,24 @@ $userRoleDepartments = array_values($userRoleMap);
                                     </td>
                                 </tr>
                             `);
-                            
+
                             // Add to table
                             tbody.append(tr);
-                            
+
                             // Add click handler for delete button
                             tr.find('.delete-btn').on('click', function() {
                                 // Remove from the selectedRoles array
                                 window.selectedRoles = window.selectedRoles.filter(r => r.id !== role.id);
                                 tr.remove();
                             });
-                            
+
                             // Add to the selectedRoles array
                             if (!window.selectedRoles) window.selectedRoles = [];
                             window.selectedRoles.push(role);
                         }
                     }
                 }
-                
+
                 // Reset the select
                 $(this).val(null).trigger('change');
             });
