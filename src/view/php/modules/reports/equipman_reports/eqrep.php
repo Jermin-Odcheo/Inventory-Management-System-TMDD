@@ -73,11 +73,11 @@ $todayDisplay = date('F j, Y');
           <h5>Document Specifications</h5>
           <div class="row">
             <div class="col-md-6">
-              <label class="form-label">Document Type:</label>
-              <select class="form-select" id="docTypeSelect" name="docTypeSelect" required>
+              <label class="form-label">Report Type:</label>
+              <select class="form-select" id="repTypeSelect" name="repTypeSelect" required>
   <option value="summarized">Summarized Report</option>
   <option value="detailed">Complete Detailed Report</option>
-  <option value="custom" selected>Custom Report</option>
+  <option value="custom" >Custom Report</option>
   <option value="equipment_details">Equipment Details Only</option>
   <option value="equipment_status">Equipment Status Only</option>
   <option value="equipment_location"> Equipment Location Only</option>
@@ -85,7 +85,6 @@ $todayDisplay = date('F j, Y');
   <option value="charge_invoice">Charge Invoice Only</option>
 </select>
 
-              </select>
             </div>
             <div class="col-md-6">
               <label class="form-label">Location:</label>
@@ -121,6 +120,7 @@ $todayDisplay = date('F j, Y');
   <?php
   $columnGroups = [
     'Equipment Details' => [
+      'asset_tag' => 'Asset Tag',
       'asset_description' => 'Asset Description 1 & 2',
       'spec_brand_model' => 'Specifications, Brand and Model',
       'serial_number' => 'Serial Number',
@@ -152,18 +152,8 @@ $todayDisplay = date('F j, Y');
     echo "<div class='col-md-12 mt-3'><h6 class='fw-bold'>$groupTitle</h6><div class='row'>";
     foreach ($groupColumns as $val => $label) {
       echo "<div class='col-md-4'><div class='form-check'>";
-  
-      if ($val === 'asset_tag') {
-        // Visible, checked, and disabled checkbox
-        echo "<input class='form-check-input report-checkbox' type='checkbox' 
-               id='$val' checked disabled>";
-        // Hidden input to actually submit the value
-        echo "<input type='hidden' name='columns[]' value='asset_tag'>";
-      } else {
-        echo "<input class='form-check-input report-checkbox' type='checkbox' 
-               name='columns[]' value='$val' id='$val'>";
-      }
-  
+      echo "<input class='form-check-input report-checkbox' type='checkbox' 
+      name='columns[]' value='$val' id='$val'>";
       echo "<label class='form-check-label' for='$val'>$label</label>";
       echo "</div></div>";
     }
@@ -211,7 +201,7 @@ $todayDisplay = date('F j, Y');
             </div>
           </div>
           <div id="docSpecsSection" class="mt-3">
-            <h6>Document Specifications (Visible for PDF/Word)</h6>
+            <h6>Document Specifications</h6>
             <label class="form-label">Paper Size:</label>
             <select name="paper_size" class="form-select" id="paperSizeSelect">
               <option value="letter">Letter (8x11")</option>
@@ -300,7 +290,7 @@ $todayDisplay = date('F j, Y');
       const docSpecs = document.getElementById("docSpecsSection");
       const checkboxes = [...document.querySelectorAll('input.report-checkbox')];
       const clearBtn = document.getElementById("clearCheckboxes");
-      const docTypeSelect = document.getElementById("docTypeSelect");
+      const repTypeSelect = document.getElementById("repTypeSelect");
       const previewBtn = document.getElementById("previewBtn");
       const downloadBtn = document.getElementById("downloadBtn");
 
@@ -322,7 +312,7 @@ $todayDisplay = date('F j, Y');
         'date_created', 'last_date_modified',
       ];
       
-      const eqpStatussCols = [
+      const eqpStatusCols = [
         'asset_tag',  'equipment_status', 'action_taken', 'status_date_creation', 'status_remarks'
       ];
   
@@ -331,15 +321,15 @@ $todayDisplay = date('F j, Y');
       ];
 
       const RRCols = [
-        'asset_tag', 'building_location', 'accountable_individual',
+        'asset_tag','receiving_report', 'building_location', 'accountable_individual',
       ];
       
       const CICols = [
         'asset_tag', 'date_acquired', 'invoice_no'
       ];
 
-      const applyDocTypeSelection = () => {
-        const docType = docTypeSelect.value;
+      const applyRepTypeSelection = () => {
+        const docType = repTypeSelect.value;
         if (docType === 'summarized') {
           checkboxes.forEach(cb => cb.checked = summarizedCols.includes(cb.value));
         } else if (docType === 'detailed') {
@@ -347,7 +337,7 @@ $todayDisplay = date('F j, Y');
         }  else if (docType === 'equipment_details') {
           checkboxes.forEach(cb => cb.checked = eqpDetailsCols.includes(cb.value));
         } else if (docType === 'equipment_status') {
-          checkboxes.forEach(cb => cb.checked = eqpStatussCols.includes(cb.value));
+          checkboxes.forEach(cb => cb.checked = eqpStatusCols.includes(cb.value));
         }else if (docType === 'equipment_location') {
           checkboxes.forEach(cb => cb.checked = eqpLocationCols.includes(cb.value));
         }else if (docType === 'receiving_report') {
@@ -371,22 +361,53 @@ $todayDisplay = date('F j, Y');
       const updateDocTypeByCheckboxes = () => {
         const selectedCols = getCheckedColumns();
         if (arraysEqual(selectedCols, detailedCols.slice().sort())) {
-          docTypeSelect.value = 'detailed';
-        } else if (arraysEqual(selectedCols, summarizedCols.slice().sort())) {
-          docTypeSelect.value = 'summarized';
-        } else {
-          docTypeSelect.value = 'custom';
+          repTypeSelect.value = 'detailed';
+        } 
+        else if (arraysEqual(selectedCols, summarizedCols.slice().sort())) {
+          repTypeSelect.value = 'summarized';
         }
+        else if (arraysEqual(selectedCols, eqpDetailsCols.slice().sort())) {
+          repTypeSelect.value = 'equipment_details';
+        }
+        else if (arraysEqual(selectedCols,  eqpStatusCols.slice().sort())) {
+          repTypeSelect.value = 'equipment_status';
+        }
+        else if (arraysEqual(selectedCols, eqpLocationCols.slice().sort())) {
+          repTypeSelect.value = 'equipment_location';
+        }
+        else if (arraysEqual(selectedCols, RRCols.slice().sort())) {
+          repTypeSelect.value = 'receiving_report';
+        }
+        else if (arraysEqual(selectedCols, CICols.slice().sort())) {
+          repTypeSelect.value = 'charge_invoice';
+        } 
+        else {
+          repTypeSelect.value = 'custom';
+        }
+
       };
 
+// Clear checkboxes automatically when "Custom Report" is selected
+document.getElementById("repTypeSelect").addEventListener("change", function () {
+  if (this.value === "custom") {
+    const checkboxes = document.querySelectorAll(".report-checkbox");
+    checkboxes.forEach(cb => {
+      if (!cb.disabled) {
+        cb.checked = false;
+      }
+    });
+  }
+});
+
+      
       clearBtn?.addEventListener("click", () => {
         checkboxes.forEach(cb => cb.checked = false);
-        docTypeSelect.value = 'custom';
+        repTypeSelect.value = 'custom';
       });
 
-      docTypeSelect?.addEventListener("change", applyDocTypeSelection);
+      repTypeSelect?.addEventListener("change", applyRepTypeSelection);
       checkboxes.forEach(cb => cb.addEventListener('change', updateDocTypeByCheckboxes));
-      applyDocTypeSelection();
+      applyRepTypeSelection();
 
       form.addEventListener("submit", (e) => {
         const building_loc = $('#buildingLocSelect').val();
@@ -432,6 +453,7 @@ $todayDisplay = date('F j, Y');
 
       exportType.dispatchEvent(new Event('change'));
     });
+    
   </script>
 </body>
 
