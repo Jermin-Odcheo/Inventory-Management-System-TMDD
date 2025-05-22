@@ -33,41 +33,41 @@ function is_ajax_request()
         strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 }
 
-    // Add this function to log audit entries
-    /**
-     * Logs an audit entry including Details and Status.
-     *
-     * @param PDO    $pdo
-     * @param string $action   e.g. 'Create', 'Modify', 'Remove'
-     * @param mixed  $oldVal   JSON or null
-     * @param mixed  $newVal   JSON or null
-     * @param int    $entityId optional PO ID
-     * @param string $details  human-readable summary
-     * @param string $status   e.g. 'Successful' or 'Failed'
-     */
-    function logAudit($pdo, $action, $oldVal, $newVal, $entityId = null, $details = '', $status = 'Successful')
-    {
-        $stmt = $pdo->prepare("
+// Add this function to log audit entries
+/**
+ * Logs an audit entry including Details and Status.
+ *
+ * @param PDO    $pdo
+ * @param string $action   e.g. 'Create', 'Modify', 'Remove'
+ * @param mixed  $oldVal   JSON or null
+ * @param mixed  $newVal   JSON or null
+ * @param int    $entityId optional PO ID
+ * @param string $details  human-readable summary
+ * @param string $status   e.g. 'Successful' or 'Failed'
+ */
+function logAudit($pdo, $action, $oldVal, $newVal, $entityId = null, $details = '', $status = 'Successful')
+{
+    $stmt = $pdo->prepare("
         INSERT INTO audit_log
           (UserID, EntityID, Module, Action, OldVal, NewVal, Details, Status, Date_Time)
         VALUES (?, ?, 'Purchase Order', ?, ?, ?, ?, ?, NOW())
     ");
-        $stmt->execute([
-            $_SESSION['user_id'],
-            $entityId,
-            $action,
-            $oldVal,
-            $newVal,
-            $details,
-            $status
-        ]);
-    }
+    $stmt->execute([
+        $_SESSION['user_id'],
+        $entityId,
+        $action,
+        $oldVal,
+        $newVal,
+        $details,
+        $status
+    ]);
+}
 
 
-    // ------------------------
-    // PROCESS FORM SUBMISSIONS (Add / Update)
-    // ------------------------
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// ------------------------
+// PROCESS FORM SUBMISSIONS (Add / Update)
+// ------------------------
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Initialize messages
     $errors = [];
     $success = "";
@@ -511,9 +511,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                                 </div>
                             </div>
                             <div class="input-group w-auto">
-                            <span class="input-group-text"><i class="bi bi-search"></i></span>
-                            <input type="text" id="searchPO" class="form-control" placeholder="Search purchase order...">
-                        </div>
+                                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                <input type="text" id="searchPO" class="form-control" placeholder="Search purchase order...">
+                            </div>
                         </div>
 
                         <div class="table-responsive" id="table">
@@ -529,7 +529,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                                         <th class="text-center">Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody id="poTable">
                                     <?php if (!empty($purchaseOrders)): ?>
                                         <?php foreach ($purchaseOrders as $po): ?>
                                             <tr>
@@ -574,8 +574,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                                 <div class="row align-items-center g-3">
                                     <div class="col-12 col-sm-auto">
                                         <div class="text-muted">
-                                            Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of
-                                            <span id="totalRows">100</span> entries
+                                            <?php $totalLogs = count($purchaseOrders); ?>
+                                            <input type="hidden" id="total-users" value="<?= $totalLogs ?>">
+                                            Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span id="totalRows"><?= $totalLogs ?></span> entries
                                         </div>
                                     </div>
                                     <div class="col-12 col-sm-auto ms-sm-auto">
@@ -1012,6 +1013,16 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
     </script>
 
     <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js" defer></script>
+    <script>
+        // Initialize pagination when document is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize pagination with the purchase table ID
+            initPagination({
+                tableId: 'poTable',
+                currentPage: 1
+            });
+        });
+    </script>
     <?php include '../../general/footer.php'; ?>
 
 </body>

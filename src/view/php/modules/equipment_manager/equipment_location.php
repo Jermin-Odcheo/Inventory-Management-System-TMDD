@@ -427,7 +427,7 @@ function safeHtml($value)
                                 <th>Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="auditTable">
+                        <tbody id="locationTbody">
                             <?php if (!empty($equipmentLocations)): ?>
                                 <?php foreach ($equipmentLocations as $index => $loc): ?>
                                     <tr>
@@ -689,15 +689,11 @@ function safeHtml($value)
     <script>
         // Initialize pagination for equipment location page
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialize allRows for pagination.js
-            window.allRows = Array.from(document.querySelectorAll('#auditTable tr'));
-            
-            // Call updatePagination after a short delay to ensure pagination.js is loaded
-            setTimeout(function() {
-                if (typeof updatePagination === 'function') {
-                    updatePagination();
-                }
-            }, 100);
+            // Use the new configurable pagination system
+            initPagination({
+                tableId: 'locationTbody',  // Use the actual ID of your table
+                currentPage: 1
+            });
             
             // Override filter function to work with pagination
             window.filterTable = function() {
@@ -709,7 +705,7 @@ function safeHtml($value)
                 const dateFrom = $('#dateFrom').val();
                 const dateTo = $('#dateTo').val();
                 
-                const tbody = document.getElementById('auditTable');
+                const tbody = document.getElementById('locationTbody');
                 const rows = Array.from(tbody.querySelectorAll('tr'));
                 
                 // Hide all rows first
@@ -757,13 +753,8 @@ function safeHtml($value)
                 // Update allRows to only include visible rows for pagination
                 window.allRows = Array.from(tbody.querySelectorAll('tr:not(.filtered-out)'));
                 
-                // Reset to page 1 and update pagination
-                if (typeof currentPage !== 'undefined') {
-                    currentPage = 1;
-                }
-                if (typeof updatePagination === 'function') {
-                    updatePagination();
-                }
+                // Update pagination
+                updatePagination();
             };
         });
 

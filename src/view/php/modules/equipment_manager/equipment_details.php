@@ -505,7 +505,7 @@ ob_end_clean();
                                 <th>Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="auditTable">
+                        <tbody id="equipmentTable">
                             <?php if (!empty($equipmentDetails)): ?>
                                 <?php foreach ($equipmentDetails as $equipment): ?>
                                     <tr>

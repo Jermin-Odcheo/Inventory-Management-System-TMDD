@@ -435,9 +435,9 @@ try {
                         </div>
                     </div>
                     <div class="input-group w-auto">
-                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="text" id="searchInvoice" class="form-control" placeholder="Search invoice...">
-                </div>
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" id="searchInvoice" class="form-control" placeholder="Search invoice...">
+                    </div>
                 </div>
 
                 <div class="table-responsive" id="table">
@@ -495,13 +495,15 @@ try {
                         <div class="row align-items-center g-3">
                             <div class="col-12 col-sm-auto">
                                 <div class="text-muted">
-                                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span
-                                        id="totalRows">100</span> entries
+                                    <?php $totalLogs = count($chargeInvoices); ?>
+                                    <input type="hidden" id="total-users" value="<?= $totalLogs ?>">
+                                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span id="totalRows"><?= $totalLogs ?></span> entries
                                 </div>
                             </div>
                             <div class="col-12 col-sm-auto ms-sm-auto">
                                 <div class="d-flex align-items-center gap-2">
-                                    <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                    <button id="prevPage"
+                                        class="btn btn-outline-primary d-flex align-items-center gap-1">
                                         <i class="bi bi-chevron-left"></i> Previous
                                     </button>
                                     <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
@@ -510,13 +512,13 @@ try {
                                         <option value="30">30</option>
                                         <option value="50">50</option>
                                     </select>
-                                    <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                    <button id="nextPage"
+                                        class="btn btn-outline-primary d-flex align-items-center gap-1">
                                         Next <i class="bi bi-chevron-right"></i>
                                     </button>
                                 </div>
                             </div>
                         </div>
-                        <!-- Pagination numbers (if using pagination.js) -->
                         <div class="row mt-3">
                             <div class="col-12">
                                 <ul class="pagination justify-content-center" id="pagination"></ul>
@@ -650,7 +652,7 @@ try {
                 placeholder: 'Type or select PO…',
                 allowClear: true
             });
-            
+
             $('#edit_po_no').select2({
                 dropdownParent: $('#editInvoiceModal'),
                 width: '100%',
@@ -971,6 +973,16 @@ try {
     </script>
 
     <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js" defer></script>
+    <script>
+        // Initialize pagination when document is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize pagination with the proper table ID
+            initPagination({
+                tableId: 'invoiceTable',
+                currentPage: 1
+            });
+        });
+    </script>
 
     <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

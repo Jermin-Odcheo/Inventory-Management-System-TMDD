@@ -1,8 +1,44 @@
 // Global variable to store the original table rows
 let allRows = [];
+// Configuration object with default values
+let paginationConfig = {
+    tableId: 'auditTable',      // Default table ID
+    currentPage: 1,             // Current page
+    rowsPerPageSelectId: 'rowsPerPageSelect',
+    currentPageId: 'currentPage',
+    rowsPerPageId: 'rowsPerPage',
+    totalRowsId: 'totalRows',
+    prevPageId: 'prevPage',
+    nextPageId: 'nextPage',
+    paginationId: 'pagination'
+};
+
+// Function to initialize pagination with a specific table
+function initPagination(config = {}) {
+    // Update config with any user-specified values
+    Object.assign(paginationConfig, config);
+    
+    // Get table rows from the specified table
+    const tableBody = document.getElementById(paginationConfig.tableId);
+    if (tableBody) {
+        allRows = Array.from(tableBody.querySelectorAll('tr'));
+    }
+    
+    // Initialize filters and set up event listeners
+    setupEventListeners();
+    
+    // Initial call to update pagination
+    updatePagination();
+    
+    return {
+        update: updatePagination,
+        getConfig: () => paginationConfig,
+        setConfig: (config) => Object.assign(paginationConfig, config)
+    };
+}
 
 document.addEventListener('DOMContentLoaded', () => {
-    const tableBody = document.getElementById('auditTable');
+    const tableBody = document.getElementById(paginationConfig.tableId);
     if (tableBody) {
         allRows = Array.from(tableBody.querySelectorAll('tr'));
     }
@@ -31,21 +67,21 @@ function setupEventListeners() {
         filterStatus.addEventListener('change', filterTable);
     }
 
-    const rowsPerPageSelect = document.getElementById('rowsPerPageSelect');
+    const rowsPerPageSelect = document.getElementById(paginationConfig.rowsPerPageSelectId);
     if (rowsPerPageSelect) {
         rowsPerPageSelect.addEventListener('change', () => {
-            currentPage = 1;
+            paginationConfig.currentPage = 1;
             updatePagination();
         });
     }
 
-    const prevButton = document.getElementById('prevPage');
-    const nextButton = document.getElementById('nextPage');
+    const prevButton = document.getElementById(paginationConfig.prevPageId);
+    const nextButton = document.getElementById(paginationConfig.nextPageId);
 
     if (prevButton) {
         prevButton.addEventListener('click', () => {
-            if (currentPage > 1) {
-                currentPage--;
+            if (paginationConfig.currentPage > 1) {
+                paginationConfig.currentPage--;
                 updatePagination();
             }
         });
@@ -54,8 +90,8 @@ function setupEventListeners() {
     if (nextButton) {
         nextButton.addEventListener('click', () => {
             const totalPages = getTotalPages();
-            if (currentPage < totalPages) {
-                currentPage++;
+            if (paginationConfig.currentPage < totalPages) {
+                paginationConfig.currentPage++;
                 updatePagination();
             }
         });
@@ -80,27 +116,30 @@ function filterTable() {
         return matchesSearch && matchesAction && matchesStatus;
     });
 
-    const tbody = document.getElementById('auditTable');
-    tbody.innerHTML = '';
-    filteredRows.forEach(row => tbody.appendChild(row));
+    const tbody = document.getElementById(paginationConfig.tableId);
+    if (tbody) {
+        tbody.innerHTML = '';
+        filteredRows.forEach(row => tbody.appendChild(row));
+    }
 
-    currentPage = 1;
+    paginationConfig.currentPage = 1;
     updatePagination();
 }
 
-let currentPage = 1;
-
 function updatePagination() {
-    const tbody = document.getElementById('auditTable');
+    const tbody = document.getElementById(paginationConfig.tableId);
+    if (!tbody) return;
+    
     const filteredRows = Array.from(tbody.querySelectorAll('tr'));
     const totalRows = filteredRows.length;
-    const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect')?.value || '10');
+    const rowsPerPageSelect = document.getElementById(paginationConfig.rowsPerPageSelectId);
+    const rowsPerPage = parseInt(rowsPerPageSelect?.value || '10');
     const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
 
-    currentPage = Math.min(currentPage, totalPages);
+    paginationConfig.currentPage = Math.min(paginationConfig.currentPage, totalPages);
 
-    const start = (currentPage - 1) * rowsPerPage;
-    const end = currentPage * rowsPerPage;
+    const start = (paginationConfig.currentPage - 1) * rowsPerPage;
+    const end = paginationConfig.currentPage * rowsPerPage;
 
     // Show/hide rows
     filteredRows.forEach((row, index) => {
@@ -108,28 +147,39 @@ function updatePagination() {
     });
 
     // Update display text
-    document.getElementById('currentPage').textContent = start + 1;
-    document.getElementById('rowsPerPage').textContent = Math.min(end, totalRows);
-    document.getElementById('totalRows').textContent = totalRows;
+    const currentPageEl = document.getElementById(paginationConfig.currentPageId);
+    if (currentPageEl) currentPageEl.textContent = start + 1;
+    
+    const rowsPerPageEl = document.getElementById(paginationConfig.rowsPerPageId);
+    if (rowsPerPageEl) rowsPerPageEl.textContent = Math.min(end, totalRows);
+    
+    const totalRowsEl = document.getElementById(paginationConfig.totalRowsId);
+    if (totalRowsEl) totalRowsEl.textContent = totalRows;
 
     // Disable buttons
-    document.getElementById('prevPage').disabled = (currentPage === 1);
-    document.getElementById('nextPage').disabled = (currentPage === totalPages);
+    const prevPageEl = document.getElementById(paginationConfig.prevPageId);
+    if (prevPageEl) prevPageEl.disabled = (paginationConfig.currentPage === 1);
+    
+    const nextPageEl = document.getElementById(paginationConfig.nextPageId);
+    if (nextPageEl) nextPageEl.disabled = (paginationConfig.currentPage === totalPages);
 
     // Render pagination links
     renderPaginationControls(totalPages);
 }
 
 function getTotalPages() {
-    const tbody = document.getElementById('auditTable');
+    const tbody = document.getElementById(paginationConfig.tableId);
+    if (!tbody) return 1;
+    
     const filteredRows = Array.from(tbody.querySelectorAll('tr'));
     const totalRows = filteredRows.length;
-    const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect')?.value || '10');
+    const rowsPerPageSelect = document.getElementById(paginationConfig.rowsPerPageSelectId);
+    const rowsPerPage = parseInt(rowsPerPageSelect?.value || '10');
     return Math.ceil(totalRows / rowsPerPage);
 }
 
 function renderPaginationControls(totalPages) {
-    const paginationContainer = document.getElementById('pagination');
+    const paginationContainer = document.getElementById(paginationConfig.paginationId);
     if (!paginationContainer) return;
 
     paginationContainer.innerHTML = '';
@@ -137,20 +187,20 @@ function renderPaginationControls(totalPages) {
     if (totalPages <= 1) return;
 
     // Always show first page
-    addPaginationItem(paginationContainer, 1, currentPage === 1);
+    addPaginationItem(paginationContainer, 1, paginationConfig.currentPage === 1);
 
     // Show ellipses and a window of pages around current page
     const maxVisiblePages = 5; // Adjust to show more or fewer pages
     const halfWindow = Math.floor(maxVisiblePages / 2);
     
-    let startPage = Math.max(2, currentPage - halfWindow);
-    let endPage = Math.min(totalPages - 1, currentPage + halfWindow);
+    let startPage = Math.max(2, paginationConfig.currentPage - halfWindow);
+    let endPage = Math.min(totalPages - 1, paginationConfig.currentPage + halfWindow);
     
     // Adjust for edge cases
-    if (currentPage <= halfWindow + 1) {
+    if (paginationConfig.currentPage <= halfWindow + 1) {
         // Near start, show more pages after current
         endPage = Math.min(totalPages - 1, maxVisiblePages);
-    } else if (currentPage >= totalPages - halfWindow) {
+    } else if (paginationConfig.currentPage >= totalPages - halfWindow) {
         // Near end, show more pages before current
         startPage = Math.max(2, totalPages - maxVisiblePages);
     }
@@ -162,7 +212,7 @@ function renderPaginationControls(totalPages) {
     
     // Show pages in the window
     for (let i = startPage; i <= endPage; i++) {
-        addPaginationItem(paginationContainer, i, i === currentPage);
+        addPaginationItem(paginationContainer, i, i === paginationConfig.currentPage);
     }
     
     // Show ellipsis before last page if needed
@@ -172,7 +222,7 @@ function renderPaginationControls(totalPages) {
     
     // Always show last page
     if (totalPages > 1) {
-        addPaginationItem(paginationContainer, totalPages, currentPage === totalPages);
+        addPaginationItem(paginationContainer, totalPages, paginationConfig.currentPage === totalPages);
     }
 }
 
@@ -188,7 +238,7 @@ function addPaginationItem(container, page, isActive = false) {
     if (page !== '...') {
         a.addEventListener('click', function (e) {
             e.preventDefault();
-            currentPage = parseInt(page);
+            paginationConfig.currentPage = parseInt(page);
             updatePagination();
         });
     } else {
