@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const searchUsersInput = document.getElementById("search-users");
   const roleFilterDropdown = document.getElementById("role-filter");
   const deptFilterDropdown = document.getElementById("dept-filter");
-  const sortUserBtn = document.getElementById("sort-user");
+  // const sortUserBtn = document.getElementById("sort-user"); // REMOVED: No longer needed for client-side sorting
   const clearFiltersBtn = document.getElementById("clear-filters-btn");
 
   // Modal elements
@@ -60,8 +60,117 @@ document.addEventListener("DOMContentLoaded", function () {
   let selectedDepartment = null; // Single department selection
   let currentEditingData = null;
 
-  // Sorting state
-  let userSortDirection = "asc"; // 'asc' or 'desc'
+  // REMOVED: No longer needed for client-side sorting
+  // let userSortDirection = "asc"; // 'asc' or 'desc'
+
+  // --- START NEW SORTING IMPLEMENTATION (Client-Side Interaction) ---
+
+  // Function to update URL with filter and sort parameters and reload the page
+  function updateUrlAndReload() {
+      const urlParams = new URLSearchParams(window.location.search);
+
+      // Get current filter values
+      const searchValue = searchUsersInput.value;
+      const roleFilterValue = roleFilterDropdown.value;
+      const deptFilterValue = deptFilterDropdown.value;
+
+      // Set/update search parameter
+      if (searchValue) {
+          urlParams.set('search', encodeURIComponent(searchValue));
+      } else {
+          urlParams.delete('search');
+      }
+
+      // Set/update role filter parameter
+      if (roleFilterValue) {
+          urlParams.set('role', encodeURIComponent(roleFilterValue));
+      } else {
+          urlParams.delete('role');
+      }
+
+      // Set/update department filter parameter
+      if (deptFilterValue) {
+          urlParams.set('department', encodeURIComponent(deptFilterValue));
+      } else {
+          urlParams.delete('department');
+      }
+
+      // Construct the new URL and navigate
+      window.location.href = window.location.pathname + '?' + urlParams.toString();
+  }
+
+  // Event listener for sort headers (delegated to document for dynamic content)
+  $(document).on('click', '.sort-header', function(e) {
+      e.preventDefault(); // Prevent default link behavior
+      const sortBy = $(this).data('sort'); // Get the column to sort by (e.g., 'username', 'departments')
+      const urlParams = new URLSearchParams(window.location.search); // Get current URL parameters
+
+      let currentSortBy = urlParams.get('sort_by');
+      let currentSortOrder = urlParams.get('sort_order');
+
+      let newSortOrder = 'asc'; // Default new sort order
+
+      // If clicking the same header, toggle sort order
+      if (sortBy === currentSortBy) {
+          newSortOrder = (currentSortOrder === 'asc') ? 'desc' : 'asc';
+      }
+
+      // Set the new sort parameters
+      urlParams.set('sort_by', sortBy);
+      urlParams.set('sort_order', newSortOrder);
+
+      // Preserve existing filters (search, role, department)
+      // This is crucial to prevent filters from being removed on sort
+      const searchValue = searchUsersInput.value;
+      const roleFilterValue = roleFilterDropdown.value;
+      const deptFilterValue = deptFilterDropdown.value;
+
+      if (searchValue) {
+          urlParams.set('search', encodeURIComponent(searchValue));
+      } else {
+          urlParams.delete('search');
+      }
+
+      if (roleFilterValue) {
+          urlParams.set('role', encodeURIComponent(roleFilterValue));
+      } else {
+          urlParams.delete('role');
+      }
+
+      if (deptFilterValue) {
+          urlParams.set('department', encodeURIComponent(deptFilterValue));
+      } else {
+          urlParams.delete('department');
+      }
+
+      // Reload the page with the new URL parameters
+      window.location.href = window.location.pathname + '?' + urlParams.toString();
+  });
+
+  // Function to update sort icons (up/down arrows) based on current URL parameters
+  function updateSortIcons() {
+      const urlParams = new URLSearchParams(window.location.search);
+      // Get current sort state, default to 'username' ascending if not set
+      const activeSortBy = urlParams.get('sort_by') || 'username';
+      const activeSortOrder = urlParams.get('sort_order') || 'asc';
+
+      // Remove all sort icons from all headers first
+      $('.sort-icon').removeClass('bi-caret-up-fill bi-caret-down-fill');
+
+      // Find the active sort header and add the correct icon
+      const activeHeader = $(`th a.sort-header[data-sort="${activeSortBy}"]`);
+      if (activeHeader.length) {
+          const icon = activeHeader.find('.sort-icon');
+          if (activeSortOrder === 'asc') {
+              icon.addClass('bi-caret-up-fill'); // Set to up arrow for ascending
+          } else {
+              icon.addClass('bi-caret-down-fill'); // Set to down arrow for descending
+          }
+      }
+  }
+
+  // --- END NEW SORTING IMPLEMENTATION (Client-Side Interaction) ---
+
   // Clear Filters Button Handler
   if (clearFiltersBtn) {
     clearFiltersBtn.addEventListener("click", function () {
@@ -70,305 +179,191 @@ document.addEventListener("DOMContentLoaded", function () {
       if (roleFilterDropdown) roleFilterDropdown.value = "";
       if (deptFilterDropdown) deptFilterDropdown.value = "";
 
-      // Reset sort direction to default
-      userSortDirection = "asc";
-      if (sortUserBtn) sortUserBtn.innerHTML = "A→Z";
-
-      // Re-render table with no filters
-      renderUserRolesTable(null, null, null, userSortDirection);
+      // Reload the page without any filter or sort parameters
+      window.location.href = window.location.pathname;
 
       // Show confirmation toast
       Toast.success("All filters cleared", 3000, "Success");
     });
   }
 
-  // Render user roles table using all active users
-  function renderUserRolesTable(
-    filterUserId = null,
-    filterRoleId = null,
-    filterDeptName = null,
-    sortDirection = null
-  ) {
+  // Render user roles table using data passed from PHP (already sorted by PHP)
+  function renderUserRolesTable() {
     const tbody = $("#urTable tbody");
     tbody.empty();
+
+    // Get current filter values from URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlSearch = urlParams.get('search');
+    const urlRole = urlParams.get('role');
+    const urlDepartment = urlParams.get('department');
+
+    // Filter usersData (which is already sorted by PHP) based on URL filters
     let filteredUsers = usersData.filter((user) => {
-      if (
-        filterUserId &&
-        !user.username.toLowerCase().includes(filterUserId.toLowerCase())
-      ) {
-        return false;
-      }
-      return true;
+        let matchesSearch = true;
+        if (urlSearch) {
+            matchesSearch = user.username.toLowerCase().includes(urlSearch.toLowerCase()) ||
+                            user.email.toLowerCase().includes(urlSearch.toLowerCase()) ||
+                            (user.first_name && user.first_name.toLowerCase().includes(urlSearch.toLowerCase())) ||
+                            (user.last_name && user.last_name.toLowerCase().includes(urlSearch.toLowerCase()));
+        }
+
+        if (!matchesSearch) return false;
+
+        let matchesRole = true;
+        if (urlRole) {
+            // Check if this user has any assignment with the selected role ID
+            matchesRole = userRoleDepartments.some(assignment =>
+                assignment.userId === user.id && assignment.roleId === parseInt(urlRole)
+            );
+        }
+        if (!matchesRole) return false;
+
+        let matchesDepartment = true;
+        if (urlDepartment) {
+            // Check if this user has any assignment in the selected department name
+            matchesDepartment = userRoleDepartments.some(assignment =>
+                assignment.userId === user.id && assignment.departmentIds.some(deptId => {
+                    const dept = getDepartmentById(deptId);
+                    return dept && dept.department_name === urlDepartment;
+                })
+            );
+        }
+        if (!matchesDepartment) return false;
+
+        return true;
     });
 
-    // Sort users if requested
-    if (sortDirection === "asc") {
-      filteredUsers.sort((a, b) => a.username.localeCompare(b.username));
-    } else if (sortDirection === "desc") {
-      filteredUsers.sort((a, b) => b.username.localeCompare(a.username));
-    }
-
-    // Track the number of unique users displayed
-    let uniqueUserCount = 0;
+    // Track the number of unique users displayed for pagination
     const uniqueUsernames = new Set();
 
     filteredUsers.forEach((user) => {
-
-      
+      // Find all assignments for this user
       let assignments = userRoleDepartments.filter(
         (assignment) => assignment.userId === user.id
       );
 
-      if (filterRoleId) {
-        assignments = assignments.filter(
-          (assignment) => assignment.roleId === parseInt(filterRoleId)
-        );
-      }
+      // Consolidate assignments by department and role for display
+      const displayData = consolidateAssignments(user, assignments);
 
-      if (filterDeptName) {
-        assignments = assignments.filter((assignment) =>
-          assignment.departmentIds.some(function (deptId) {
-            const dept = getDepartmentById(deptId);
-            return dept && dept.department_name === filterDeptName;
-          })
-        );
-      }
-
-      if ((filterRoleId || filterDeptName) && assignments.length === 0) {
-        return;
-      }
-
-      // Increment unique user count since we're displaying this user
-      uniqueUserCount++;
-      uniqueUsernames.add(user.username);
-
-      if (assignments.length === 0) {
+      if (displayData.length === 0) {
+        // If no assignments or filters caused all to be removed, display 'No Department/Role'
+        // This case handles users who might exist but have no relevant assignments after filtering
         const tr = $(`
-                  <tr>
-                    <td>${
-                      userPrivileges.canDelete && firstRole.roleId !== null
-                        ? '<input type="checkbox" class="select-row" value="' +
-                          user.id +
-                          '">'
-                        : ""
-                    }</td>
-                    <td>${user.username}</td>
-                    <td>No Department</td>
-                    <td>No Role Assigned</td>
-                    <td>
-                      ${
-                        userPrivileges.canModify
-                          ? `<button class="edit-btn" data-user-id="${user.id}" data-role-id="null">
-                        <i class="bi bi-pencil-square"></i>
-                      </button>`
-                          : ""
-                      }
-                      ${
-                        userPrivileges.canDelete
-                          ? `<button class="delete-btn" data-user-id="${user.id}" data-role-id="null">
-                        <i class="bi bi-trash"></i>
-                      </button>`
-                          : ""
-                      }
-                    </td>
-                  </tr>
-                `);
-        tbody.append(tr);
-      } else {
-        // Consolidate assignments by department
-        const deptMap = new Map(); // Map of departmentName => array of roles
-
-        assignments.forEach((assignment) => {
-          const role = getRoleById(assignment.roleId);
-
-          assignment.departmentIds.forEach((deptId) => {
-            const dept = getDepartmentById(deptId);
-            if (!dept) return;
-
-            // Skip if department name is empty
-            const deptName = dept.department_name;
-            if (!deptName) return;
-
-            if (!deptMap.has(deptName)) {
-              deptMap.set(deptName, []);
-            }
-
-            // Include roles even if null (now displays as "No Role Assigned")
-            deptMap.get(deptName).push({
-              roleName: role ? role.role_name : "No Role Assigned",
-              roleId: assignment.roleId,
-              userId: assignment.userId,
-              departmentId: deptId, // Add departmentId to the role info
-            });
-          });
-        });
-
-        // Convert the map to array for easier rendering
-        const consolidatedDepts = Array.from(deptMap).map(
-          ([deptName, roles]) => ({
-            departmentName: deptName,
-            roles: roles,
-          })
-        );
-
-        // Render the consolidated data
-        if (consolidatedDepts.length === 0) {
-          const tr = $(`
-                      <tr>
-                        <td>${
-                          userPrivileges.canDelete
-                            ? '<input type="checkbox" class="select-row" value="' +
-                              user.id +
-                              '">'
-                            : ""
-                        }</td>
-                        <td>${user.username}</td>
-                        <td>No Department</td>
-                        <td>No Role Assigned</td>
-                        <td>
-                          ${
-                            userPrivileges.canModify
-                              ? `<button class="edit-btn" data-user-id="${user.id}" data-role-id="null">
-                            <i class="bi bi-pencil-square"></i>
-                          </button>`
-                              : ""
-                          }
-                          ${
-                            userPrivileges.canDelete
-                              ? `<button class="delete-btn" data-user-id="${user.id}" data-role-id="null">
-                            <i class="bi bi-trash"></i>
-                          </button>`
-                              : ""
-                          }
-                        </td>
-                      </tr>
-                    `);
-          tbody.append(tr);
-        } else {
-          consolidatedDepts.forEach((dept, deptIndex) => {
-            // Filter out empty role names before joining with comma
-            // Also filter out "No Role Assigned" if there are other roles
-            let rolesList = dept.roles.map((r) => r.roleName);
-
-            // Check if we have real roles (not "No Role Assigned")
-            const hasRegularRoles = rolesList.some(
-              (name) => name !== "No Role Assigned" && name.trim() !== ""
-            );
-
-            // If we have regular roles, filter out the "No Role Assigned" placeholders
-            if (hasRegularRoles) {
-              rolesList = rolesList.filter(
-                (name) => name !== "No Role Assigned" && name.trim() !== ""
-              );
-            }
-
-            // Join the role names with commas
-            const roleNames = rolesList.join(", ");
-
-            // Use "No Role Assigned" when there are no roles
-            const displayRoleNames = roleNames || "No Role Assigned";
-
-            // Get the first role for the action buttons
-            const firstRole = dept.roles[0];
-
-            // Get department ID from:
-            // 1. directly from the role object if available (preferred)
-            // 2. try to find it from department name as fallback
-            let deptId = firstRole.departmentId || null;
-            if (!deptId) {
-              const deptObj = departmentsData.find(
-                (d) => d.department_name === dept.departmentName
-              );
-              deptId = deptObj ? deptObj.id : null;
-            }
-
-            // Set role ID for the button: use "null" for null roles
-            const roleIdAttr =
-              firstRole.roleId === null ? "null" : firstRole.roleId;
-
-            // Use "No Department" when department name is empty
-            const displayDeptName = dept.departmentName || "No Department";
-
-            let tr;
-            if (deptIndex === 0) {
-              tr = $(`
-                              <tr>
-                                <td rowspan="${consolidatedDepts.length}">${
+            <tr>
+              <td>${
                 userPrivileges.canDelete
                   ? '<input type="checkbox" class="select-row" value="' +
                     user.id +
                     '">'
                   : ""
               }</td>
-                                <td rowspan="${consolidatedDepts.length}">${
-                user.username
-              }</td>
-                                <td>${displayDeptName}</td>
-                                <td>${displayRoleNames}</td>
-                                <td>
-                                  ${
-                                    userPrivileges.canModify
-                                      ? `<button class="edit-btn" data-user-id="${firstRole.userId}" data-role-id="${roleIdAttr}" data-dept-id="${deptId}">
-                                    <i class="bi bi-pencil-square"></i>
-                                  </button>`
-                                      : ""
-                                  }
-                                  ${
-                                    userPrivileges.canDelete
-                                      ? `<button class="delete-btn" data-user-id="${firstRole.userId}" data-role-id="${roleIdAttr}" data-dept-id="${deptId}">
-                                    <i class="bi bi-trash"></i>
-                                  </button>`
-                                      : ""
-                                  }
-                                </td>
-                              </tr>
-                            `);
-            } else {
-              tr = $(`
-                              <tr>
-                                <td>${displayDeptName}</td>
-                                <td>${displayRoleNames}</td>
-                                <td>
-                                  ${
-                                    userPrivileges.canModify
-                                      ? `<button class="edit-btn" data-user-id="${firstRole.userId}" data-role-id="${roleIdAttr}" data-dept-id="${deptId}">
-                                    <i class="bi bi-pencil-square"></i>
-                                  </button>`
-                                      : ""
-                                  }
-                                  ${
-                                    userPrivileges.canDelete
-                                      ? `<button class="delete-btn" data-user-id="${firstRole.userId}" data-role-id="${roleIdAttr}" data-dept-id="${deptId}">
-                                    <i class="bi bi-trash"></i>
-                                  </button>`
-                                      : ""
-                                  }
-                                </td>
-                              </tr>
-                            `);
-            }
-            tbody.append(tr);
-          });
-        }
+              <td>${user.username}</td>
+              <td>No Department</td>
+              <td>No Role Assigned</td>
+              <td>
+                ${
+                  userPrivileges.canModify
+                    ? `<button class="edit-btn" data-user-id="${user.id}" data-role-id="null" data-dept-id="null">
+                  <i class="bi bi-pencil-square"></i>
+                </button>`
+                    : ""
+                }
+                ${
+                  userPrivileges.canDelete
+                    ? `<button class="delete-btn" data-user-id="${user.id}" data-role-id="null" data-dept-id="null">
+                  <i class="bi bi-trash"></i>
+                </button>`
+                    : ""
+                }
+              </td>
+            </tr>
+          `);
+        tbody.append(tr);
+        uniqueUsernames.add(user.username); // Still count the user
+      } else {
+        uniqueUsernames.add(user.username); // Count the user if they have any displayable data
+        displayData.forEach((row, rowIndex) => {
+          const roleIdAttr = row.firstRoleId === null ? "null" : row.firstRoleId;
+          const deptIdAttr = row.firstDeptId === null ? "null" : row.firstDeptId;
+
+          let tr;
+          if (rowIndex === 0) {
+            tr = $(`
+                <tr>
+                  <td rowspan="${displayData.length}">${
+                  userPrivileges.canDelete
+                    ? '<input type="checkbox" class="select-row" value="' +
+                    user.id +
+                    '">'
+                  : ""
+                }</td>
+                  <td rowspan="${displayData.length}">${user.username}</td>
+                  <td>${row.departmentName}</td>
+                  <td>${row.roleNames}</td>
+                  <td>
+                    ${
+                      userPrivileges.canModify
+                        ? `<button class="edit-btn" data-user-id="${user.id}" data-role-id="${roleIdAttr}" data-dept-id="${deptIdAttr}">
+                      <i class="bi bi-pencil-square"></i>
+                    </button>`
+                        : ""
+                    }
+                    ${
+                      userPrivileges.canDelete
+                        ? `<button class="delete-btn" data-user-id="${user.id}" data-role-id="${roleIdAttr}" data-dept-id="${deptIdAttr}">
+                      <i class="bi bi-trash"></i>
+                    </button>`
+                        : ""
+                    }
+                  </td>
+                </tr>
+              `);
+          } else {
+            tr = $(`
+                <tr>
+                  <td>${row.departmentName}</td>
+                  <td>${row.roleNames}</td>
+                  <td>
+                    ${
+                      userPrivileges.canModify
+                        ? `<button class="edit-btn" data-user-id="${user.id}" data-role-id="${roleIdAttr}" data-dept-id="${deptIdAttr}">
+                      <i class="bi bi-pencil-square"></i>
+                    </button>`
+                        : ""
+                    }
+                    ${
+                      userPrivileges.canDelete
+                        ? `<button class="delete-btn" data-user-id="${user.id}" data-role-id="${roleIdAttr}" data-dept-id="${deptIdAttr}">
+                      <i class="bi bi-trash"></i>
+                    </button>`
+                        : ""
+                    }
+                  </td>
+                </tr>
+              `);
+          }
+          tbody.append(tr);
+        });
       }
     });
-    
+
     // After rendering the table, update the pagination info
-    const totalUsers = uniqueUsernames.size;
-    $('#totalRows').text(totalUsers);
-    
+    const totalDisplayUsers = uniqueUsernames.size;
+    $('#totalRows').text(totalDisplayUsers);
+
     const rowsPerPage = parseInt($('#rowsPerPageSelect').val()) || 10;
-    $('#rowsPerPage').text(Math.min(rowsPerPage, totalUsers));
+    $('#rowsPerPage').text(Math.min(rowsPerPage, totalDisplayUsers));
     $('#currentPage').text('1');
-    
-    // Update pagination controls
+
+    // Update pagination controls (assuming pagination.js provides this function)
     if (typeof updatePaginationControls === 'function') {
-      updatePaginationControls(totalUsers);
+      updatePaginationControls(totalDisplayUsers);
     }
-    
+
     // Update the hidden input for pagination to ensure correct counting
-    document.getElementById('total-users').value = totalUsers;
-    
+    document.getElementById('total-users').value = totalDisplayUsers;
+
     if ($.trim(tbody.html()) === "") {
       const tr = $(`
               <tr>
@@ -381,11 +376,9 @@ document.addEventListener("DOMContentLoaded", function () {
               </tr>
             `);
       tbody.append(tr);
-      $("#clear-filters-btn").click(function () {
-        $("#search-users").val("");
-        $("#role-filter").val("");
-        $("#dept-filter").val("");
-        renderUserRolesTable(null, null, null, userSortDirection);
+      // Re-bind clear filters button to reload page
+      $("#clear-filters-btn").off('click').on('click', function () {
+        window.location.href = window.location.pathname; // Reload to clear URL params
       });
     }
     addEventListenersToButtons();
@@ -394,6 +387,59 @@ document.addEventListener("DOMContentLoaded", function () {
       toggleBulkDeleteButton();
     }
   }
+
+  // New function to consolidate assignments for display (copied from previous working version)
+  function consolidateAssignments(user, assignments) {
+      const deptRoleMap = new Map(); // Map: departmentId -> Set of roleIds
+
+      assignments.forEach(assignment => {
+          assignment.departmentIds.forEach(deptId => {
+              if (!deptRoleMap.has(deptId)) {
+                  deptRoleMap.set(deptId, new Set());
+              }
+              // Add roleId (or null if no role) to the set for this department
+              deptRoleMap.get(deptId).add(assignment.roleId);
+          });
+      });
+
+      const consolidatedRows = [];
+      deptRoleMap.forEach((roleIds, deptId) => {
+          const department = getDepartmentById(deptId);
+          const deptName = department ? department.department_name : 'No Department';
+
+          let rolesList = Array.from(roleIds).map(roleId => {
+              const role = getRoleById(roleId);
+              return role ? role.role_name : 'No Role Assigned';
+          });
+
+          // Filter out empty or "No Role Assigned" if other valid roles exist
+          const hasRegularRoles = rolesList.some(name => name !== "No Role Assigned" && name.trim() !== "");
+          if (hasRegularRoles) {
+              rolesList = rolesList.filter(name => name !== "No Role Assigned" && name.trim() !== "");
+          }
+
+          const displayRoleNames = rolesList.join(", ") || "No Role Assigned";
+
+          // Find the first roleId (can be null) and departmentId for action buttons
+          let firstRoleId = null;
+          let firstDeptId = deptId; // Use the department ID directly
+
+          // Try to find an actual assignment for this department to get a specific roleId for the button
+          const specificAssignment = assignments.find(a => a.departmentIds.includes(deptId));
+          if (specificAssignment) {
+              firstRoleId = specificAssignment.roleId;
+          }
+
+          consolidatedRows.push({
+              departmentName: deptName,
+              roleNames: displayRoleNames,
+              firstRoleId: firstRoleId,
+              firstDeptId: firstDeptId
+          });
+      });
+      return consolidatedRows;
+  }
+
 
   // Utility functions remain unchanged
   function getUserById(id) {
@@ -431,7 +477,7 @@ document.addEventListener("DOMContentLoaded", function () {
   // Handling selection in modals
   function addItemToSelection(containerId, item, type) {
     const container = document.getElementById(containerId);
-    
+
     // Check for duplicates based on type
     if (
       type === "role" &&
@@ -440,7 +486,7 @@ document.addEventListener("DOMContentLoaded", function () {
       Toast.info(`${item.role_name} is already selected`, 2000, "Info");
       return;
     }
-    
+
     if (
       type === "user" &&
       selectedUsers.some((u) => u.id === item.id)
@@ -448,7 +494,7 @@ document.addEventListener("DOMContentLoaded", function () {
       Toast.info(`${item.username} is already selected`, 2000, "Info");
       return;
     }
-    
+
     if (
       type === "role_for_dept" &&
       selectedRoles.some((r) => r.id === item.id)
@@ -570,7 +616,7 @@ document.addEventListener("DOMContentLoaded", function () {
               document.querySelector('#assigned-roles-table tbody').innerHTML = "";
               selectedRoles = [];
               window.selectedRoles = [];
-              
+
               // Filter valid user role assignments
               const userRoles = userRoleDepartments.filter(assignment => {
                 const role = getRoleById(assignment.roleId);
@@ -689,22 +735,22 @@ document.addEventListener("DOMContentLoaded", function () {
             window.selectedRoles = [];
 
             // Find all roles associated with this user and department
-            const userRoles = userRoleDepartments.filter(assignment => 
-              assignment.userId === userId && 
+            const userRoles = userRoleDepartments.filter(assignment =>
+              assignment.userId === userId &&
               assignment.departmentIds.includes(departmentId) &&
               getRoleById(assignment.roleId) // Make sure the role still exists
             );
-            
+
             // Log the found roles for debugging
             console.log("Found user roles for editing:", userRoles);
 
             // Add all roles to the table
             userRoles.forEach(userRole => {
               const role = getRoleById(userRole.roleId);
-              
+
               if (role && role.id !== 0) {
                 console.log("Adding role to selection:", role);
-                
+
                 // Create a new table row for the role
                 const tbody = document.querySelector('#assigned-roles-table tbody');
                 const tr = document.createElement('tr');
@@ -717,35 +763,35 @@ document.addEventListener("DOMContentLoaded", function () {
                     </button>
                   </td>
                 `;
-                
+
                 // Add to table
                 tbody.appendChild(tr);
-                
+
                 // Add click handler for delete button
                 const deleteBtn = tr.querySelector('.delete-btn');
                 deleteBtn.addEventListener('click', function(e) {
                   // Stop event propagation to prevent other handlers from firing
                   e.stopPropagation();
-                  
+
                   // Get the role ID from the button's data attribute
                   const roleId = parseInt(this.getAttribute('data-role-id'));
                   console.log('Delete button clicked for role ID:', roleId);
-                  
+
                   // Log the current state of selectedRoles before removal
                   console.log('Current selectedRoles before removal:', JSON.stringify(window.selectedRoles));
-                  
+
                   // Remove from the selectedRoles array
                   if (window.selectedRoles) {
                     window.selectedRoles = window.selectedRoles.filter(r => r.id !== roleId);
                   }
-                  
+
                   // Remove the table row
                   tr.remove();
-                  
+
                   console.log('Role removed:', roleId);
                   console.log('Updated selectedRoles after removal:', JSON.stringify(window.selectedRoles));
                 });
-                
+
                 // Add to the selectedRoles array
                 if (!window.selectedRoles) window.selectedRoles = [];
                 window.selectedRoles.push(role);
@@ -774,18 +820,18 @@ document.addEventListener("DOMContentLoaded", function () {
           // Handle roleId properly: "null" or "0" means null role
           const roleId = roleIdStr === "null" || roleIdStr === "0" ? null : parseInt(roleIdStr);
           const departmentId = parseInt(this.dataset.deptId) || null;
-    
+
           // Check if the user has actual roles in this department
           const userAssignments = userRoleDepartments.filter(
             (a) => a.userId === userId && a.departmentIds.includes(departmentId) && a.roleId !== null && a.roleId !== 0
           );
-    
+
           // If no actual roles exist, show "No Changes" message and stop
           if (!userAssignments.length) {
             Toast.info("No roles to delete for this user in this department", 5000, "No Changes");
             return;
           }
-    
+
           // Get user and department info for the confirmation message
           const user = getUserById(userId);
           let departmentName = "this department";
@@ -795,13 +841,13 @@ document.addEventListener("DOMContentLoaded", function () {
               departmentName = dept.department_name;
             }
           }
-    
+
           // Update the confirmation message
           const confirmMsg = document.querySelector('#delete-confirm-modal .modal-body p');
           if (confirmMsg && user) {
             confirmMsg.innerHTML = `Are you sure you want to remove all roles for <strong>${user.username}</strong> in <strong>${departmentName}</strong>?<br><small>The user will still be listed under this department but with no roles.</small>`;
           }
-    
+
           // Show the delete confirmation modal
           pendingDelete = { userId, roleId, departmentId };
           if (deleteModal) {
@@ -855,25 +901,25 @@ document.addEventListener("DOMContentLoaded", function () {
     departmentDropdown.addEventListener("change", function () {
       console.log("Department dropdown change event triggered");
       console.log("Selected value:", this.value);
-      
+
       const roleId = parseInt(this.value);
       if (roleId) {
         console.log("Role ID:", roleId);
         const role = getRoleById(roleId);
         console.log("Role object:", role);
-        
+
         // Check if this role is already in the table
         const tbody = document.querySelector('#assigned-roles-table tbody');
         const existingRow = Array.from(tbody.querySelectorAll('tr')).find(
           row => parseInt(row.dataset.id) === roleId
         );
-        
+
         if (existingRow) {
           console.log("Role already exists in table");
           Toast.info(`${role.role_name} is already selected`, 2000, "Info");
           return;
         }
-        
+
         // Create a new table row for the role
         const tr = document.createElement('tr');
         tr.dataset.id = role.id;
@@ -885,39 +931,39 @@ document.addEventListener("DOMContentLoaded", function () {
             </button>
           </td>
         `;
-        
+
         // Add to table
         tbody.appendChild(tr);
-        
+
         // Add click handler for delete button
         const deleteBtn = tr.querySelector('.delete-btn');
         deleteBtn.addEventListener('click', function(e) {
           // Stop event propagation to prevent other handlers from firing
           e.stopPropagation();
-          
+
           // Get the role ID from the button's data attribute
           const roleId = parseInt(this.getAttribute('data-role-id'));
           console.log('Delete button clicked for role ID:', roleId);
-          
+
           // Log the current state of selectedRoles before removal
           console.log('Current selectedRoles before removal:', JSON.stringify(window.selectedRoles));
-          
+
           // Remove from the selectedRoles array
           if (window.selectedRoles) {
             window.selectedRoles = window.selectedRoles.filter(r => r.id !== roleId);
           }
-          
+
           // Remove the table row
           tr.remove();
-          
+
           console.log('Role removed:', roleId);
           console.log('Updated selectedRoles after removal:', JSON.stringify(window.selectedRoles));
         });
-        
+
         // Add to the selectedRoles array
         if (!window.selectedRoles) window.selectedRoles = [];
         window.selectedRoles.push(role);
-        
+
         this.value = "";
         // Reset Select2 to show placeholder after selection
         $(this).val(null).trigger('change');
@@ -926,72 +972,32 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // Filter handlers
+  // Modified to use updateUrlAndReload for consistent URL-based filtering/sorting
   if (searchUsersInput) {
-    searchUsersInput.addEventListener("input", function () {
-      const filterUserId = this.value;
-      const filterRoleId = roleFilterDropdown ? roleFilterDropdown.value : null;
-      const filterDeptName = deptFilterDropdown
-        ? deptFilterDropdown.value
-        : null;
-      renderUserRolesTable(
-        filterUserId,
-        filterRoleId,
-        filterDeptName,
-        userSortDirection
-      );
-    });
+    searchUsersInput.addEventListener("input", updateUrlAndReload);
   }
 
   if (roleFilterDropdown) {
-    roleFilterDropdown.addEventListener("change", function () {
-      const filterUserId = searchUsersInput ? searchUsersInput.value : null;
-      const filterRoleId = this.value;
-      const filterDeptName = deptFilterDropdown
-        ? deptFilterDropdown.value
-        : null;
-      renderUserRolesTable(
-        filterUserId,
-        filterRoleId,
-        filterDeptName,
-        userSortDirection
-      );
-    });
+    roleFilterDropdown.addEventListener("change", updateUrlAndReload);
   }
 
   if (deptFilterDropdown) {
-    deptFilterDropdown.addEventListener("change", function () {
-      const filterUserId = searchUsersInput ? searchUsersInput.value : null;
-      const filterRoleId = roleFilterDropdown ? roleFilterDropdown.value : null;
-      const filterDeptName = this.value;
-      renderUserRolesTable(
-        filterUserId,
-        filterRoleId,
-        filterDeptName,
-        userSortDirection
-      );
-    });
+    deptFilterDropdown.addEventListener("change", updateUrlAndReload);
   }
 
-  // Sort users handler
-  if (sortUserBtn) {
-    sortUserBtn.addEventListener("click", function () {
-      userSortDirection = userSortDirection === "asc" ? "desc" : "asc";
-      // Update the sort icon
-      this.innerHTML = userSortDirection === "asc" ? "A→Z" : "Z→A";
-
-      const filterUserId = searchUsersInput ? searchUsersInput.value : null;
-      const filterRoleId = roleFilterDropdown ? roleFilterDropdown.value : null;
-      const filterDeptName = deptFilterDropdown
-        ? deptFilterDropdown.value
-        : null;
-      renderUserRolesTable(
-        filterUserId,
-        filterRoleId,
-        filterDeptName,
-        userSortDirection
-      );
-    });
-  }
+  // REMOVED: Client-side sort handler is replaced by URL-based sorting
+  // if (sortUserBtn) {
+  //   sortUserBtn.addEventListener("click", function () {
+  //     userSortDirection = userSortDirection === "asc" ? "desc" : "asc";
+  //     this.innerHTML = userSortDirection === "asc" ? "A→Z" : "Z→A";
+  //     renderUserRolesTable(
+  //       searchUsersInput ? searchUsersInput.value : null,
+  //       roleFilterDropdown ? roleFilterDropdown.value : null,
+  //       deptFilterDropdown ? deptFilterDropdown.value : null,
+  //       userSortDirection
+  //     );
+  //   });
+  // }
 
   // Modal open/close handlers
   if (addUserRoleBtn && userPrivileges.canCreate) {
@@ -1008,7 +1014,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (selectedRolesContainer) selectedRolesContainer.innerHTML = "";
       if (selectedUsersContainer) selectedUsersContainer.innerHTML = "";
       if (selectedDepartmentContainer) selectedDepartmentContainer.innerHTML = "";
-      
+
       // Clear the roles table
       if (document.querySelector('#assigned-roles-table tbody')) {
         document.querySelector('#assigned-roles-table tbody').innerHTML = "";
@@ -1031,11 +1037,11 @@ document.addEventListener("DOMContentLoaded", function () {
       if (document.querySelector('#assigned-roles-table tbody')) {
         document.querySelector('#assigned-roles-table tbody').innerHTML = "";
       }
-      
+
       // Reset role selections
       selectedRoles = [];
       window.selectedRoles = [];
-      
+
       // Hide the modal
       addDepartmentRoleModal.style.display = "none";
     });
@@ -1056,7 +1062,7 @@ document.addEventListener("DOMContentLoaded", function () {
     confirmDeleteBtn.addEventListener("click", function () {
       if (pendingDelete) {
         const { userId, departmentId } = pendingDelete;
-  
+
         if (!departmentId) {
           Toast.error(
             "No department ID provided for this assignment",
@@ -1068,16 +1074,16 @@ document.addEventListener("DOMContentLoaded", function () {
           }
           return;
         }
-  
+
         // Log that we're removing all roles for this user in this department
         console.log(`Removing all roles for user ${userId} in department ${departmentId}`);
-  
+
         // Send AJAX request to delete all assignments for this user-department
         fetch("delete_user_role.php", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
-            userId, 
+          body: JSON.stringify({
+            userId,
             departmentId,
             removeAll: true,  // New flag to indicate removing all roles for this department
             trackChanges: true  // Add flag to track changes in audit log
@@ -1103,9 +1109,9 @@ document.addEventListener("DOMContentLoaded", function () {
                   (a) => !(a.userId === userId && a.departmentIds.includes(departmentId))
                 );
               }
-  
+
               // Re-render the table with the updated data
-              renderUserRolesTable(null, null, null, userSortDirection);
+              renderUserRolesTable(); // No sortDirection needed here anymore
               Toast.success(
                 "All roles removed successfully",
                 5000,
@@ -1151,16 +1157,16 @@ document.addEventListener("DOMContentLoaded", function () {
       console.log("Selected department (local):", selectedDepartment);
       console.log("Selected users (window):", window.selectedUsers);
       console.log("Selected department (window):", window.selectedDepartment);
-      
+
       // Use window.selectedUsers and window.selectedDepartment which are set by the Select2 handlers
       const usersToSave = window.selectedUsers || selectedUsers || [];
       const departmentToSave = window.selectedDepartment || selectedDepartment;
       const rolesToSave = window.selectedRoles || selectedRoles || [];
-      
+
       console.log("Users to save:", usersToSave);
       console.log("Department to save:", departmentToSave);
       console.log("Roles to save:", rolesToSave);
-      
+
       // Changed validation: only users and department are required, roles are optional
       if (!usersToSave || usersToSave.length === 0) {
         Toast.error(
@@ -1170,7 +1176,7 @@ document.addEventListener("DOMContentLoaded", function () {
         );
         return;
       }
-      
+
       if (!departmentToSave) {
         Toast.error(
           "Please select a department",
@@ -1325,7 +1331,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             // Close modal and refresh table
             addUserRolesModal.style.display = "none";
-            renderUserRolesTable(null, null, null, userSortDirection);
+            renderUserRolesTable(); // No sortDirection needed here anymore
             Toast.success("New roles assigned successfully", 5000, "Success");
           } else {
             // Display the error message from the server
@@ -1355,7 +1361,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         // Use window.selectedRoles which is set by the Select2 handlers
         const rolesToUpdate = window.selectedRoles || selectedRoles || [];
-        
+
         // Map selected roles to their IDs
         let updatedRoles = rolesToUpdate.map((role) => role.id);
 
@@ -1392,18 +1398,18 @@ document.addEventListener("DOMContentLoaded", function () {
         console.log("Checking for changes:");
         console.log("Current role ID:", currentEditingData.roleId);
         console.log("Updated roles:", updatedRoles);
-        
+
         // Find all existing roles for this user and department
         const existingRoles = userRoleDepartments
           .filter(a => a.userId === currentEditingData.userId && a.departmentIds.includes(departmentId))
           .map(a => a.roleId);
-        
+
         console.log("Existing roles:", existingRoles);
-        
+
         // Check if there are actual changes
         const rolesAdded = updatedRoles.filter(roleId => !existingRoles.includes(roleId));
         const rolesRemoved = existingRoles.filter(roleId => !updatedRoles.includes(roleId) && roleId !== 0 && roleId !== null);
-        
+
         console.log("Roles added:", rolesAdded);
         console.log("Roles removed:", rolesRemoved);
 
@@ -1416,7 +1422,7 @@ document.addEventListener("DOMContentLoaded", function () {
           addDepartmentRoleModal.style.display = "none";
           return;
         }
-        
+
         // Ensure window.selectedRoles is properly set
         if (!window.selectedRoles) {
           window.selectedRoles = [];
@@ -1475,13 +1481,13 @@ document.addEventListener("DOMContentLoaded", function () {
               } else {
                 // Fallback - manually update local data if no assignments returned
                 console.log("No assignments returned from server, updating locally");
-                
+
                 // Remove existing roles for this user and department
-                userRoleDepartments = userRoleDepartments.filter(assignment => 
-                  !(assignment.userId === currentEditingData.userId && 
+                userRoleDepartments = userRoleDepartments.filter(assignment =>
+                  !(assignment.userId === currentEditingData.userId &&
                     assignment.departmentIds.includes(departmentId))
                 );
-                
+
                 // Add the updated roles
                 if (updatedRoles.length > 0) {
                   updatedRoles.forEach(roleId => {
@@ -1492,7 +1498,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     });
                   });
                 }
-                
+
                 console.log("Locally updated userRoleDepartments:", userRoleDepartments);
               }
 
@@ -1500,7 +1506,7 @@ document.addEventListener("DOMContentLoaded", function () {
               addDepartmentRoleModal.style.display = "none";
 
               // Completely re-render the table with fresh data
-              renderUserRolesTable(null, null, null, userSortDirection);
+              renderUserRolesTable(); // No sortDirection needed here anymore
 
               Toast.success("Roles updated successfully", 5000, "Success");
             } else {
@@ -1576,6 +1582,9 @@ document.addEventListener("DOMContentLoaded", function () {
         return;
       }
       // Confirm bulk deletion
+      // IMPORTANT: Changed from window.confirm to a custom modal if you have one.
+      // If not, you'll need to implement a custom modal or use a library.
+      // For now, I'll use a basic confirm for demonstration, but recommend a custom UI.
       if (
         confirm(
           `Are you sure you want to remove ${selected.length} selected user role(s)?`
@@ -1593,7 +1602,7 @@ document.addEventListener("DOMContentLoaded", function () {
               $(".select-row").prop("checked", false);
               toggleBulkDeleteButton();
               // Reload or re-render table
-              renderUserRolesTable(null, null, null, userSortDirection);
+              renderUserRolesTable(); // No sortDirection needed here anymore
               showToast(response.message, "success");
             } else {
               showToast(response.message, "error");
@@ -1615,19 +1624,20 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // Initial render of the table
-  renderUserRolesTable(null, null, null, userSortDirection);
-  
+  // Initial render of the table and update sort icons on page load
+  renderUserRolesTable();
+  updateSortIcons(); // Call this to set initial sort icon state
+
   // Count unique users for initial pagination
-  const uniqueUsernames = new Set(usersData.map(user => user.username));
-  const totalUsers = uniqueUsernames.size;
-  
-  $('#totalRows').text(totalUsers);
-  const rowsPerPage = parseInt($('#rowsPerPageSelect').val()) || 10;
-  const displayEnd = Math.min(rowsPerPage, totalUsers);
-  $('#rowsPerPage').text(displayEnd);
+  const uniqueUsernamesOnLoad = new Set(usersData.map(user => user.username));
+  const totalUsersOnLoad = uniqueUsernamesOnLoad.size;
+
+  $('#totalRows').text(totalUsersOnLoad);
+  const rowsPerPageOnLoad = parseInt($('#rowsPerPageSelect').val()) || 10;
+  const displayEndOnLoad = Math.min(rowsPerPageOnLoad, totalUsersOnLoad);
+  $('#rowsPerPage').text(displayEndOnLoad);
   $('#currentPage').text('1');
-  
+
   // Update the hidden input for pagination to use the correct count
-  document.getElementById('total-users').value = totalUsers;
+  document.getElementById('total-users').value = totalUsersOnLoad;
 });
