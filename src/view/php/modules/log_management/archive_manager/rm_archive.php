@@ -189,6 +189,33 @@ function formatChanges($oldJsonStr)
                     </h3>
                 </div>
                 <div class="card-body">
+                    <!-- Filter Section -->
+                    <div class="row mb-4">
+                        <div class="col-md-4 mb-2">
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                <input type="text" id="searchInput" class="form-control" placeholder="Search room archives...">
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <select id="filterAction" class="form-select">
+                                <option value="">All Actions</option>
+                                <option value="create">Create</option>
+                                <option value="modified">Modified</option>
+                                <option value="remove">Remove</option>
+                                <option value="delete">Delete</option>
+                                <option value="restored">Restored</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <select id="filterStatus" class="form-select">
+                                <option value="">All Status</option>
+                                <option value="successful">Successful</option>
+                                <option value="failed">Failed</option>
+                            </select>
+                        </div>
+                    </div>
+                    
                     <div class="table-responsive" id="table">
                         <table id="archivedRolesTable" class="table table-striped table-hover align-middle">
                             <thead class="table-dark">
@@ -322,7 +349,8 @@ function formatChanges($oldJsonStr)
     </div>
 
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
-
+    <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/logs.js" defer></script>
+    
     <!-- Modals -->
     <div class="modal fade" id="confirmRestoreModal" tabindex="-1" aria-labelledby="confirmRestoreModalLabel"
         aria-hidden="true">
@@ -401,282 +429,290 @@ function formatChanges($oldJsonStr)
             </div>
         </div>
     </div>
-
+    
     <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set the correct table ID for both pagination.js and logs.js
+        window.paginationConfig = window.paginationConfig || {};
+        window.paginationConfig.tableId = 'auditTable';
+        
+        // Store original rows for filtering
+        window.allRows = Array.from(document.querySelectorAll('#auditTable tr'));
+        
+        // Initialize Pagination
+        initPagination({
+            tableId: 'auditTable',
+            currentPage: 1
+        });
+        
+        // Event listeners for modals
         // Pass RBAC privileges to JavaScript
         const userPrivileges = {
             canRestore: <?php echo json_encode($canRestore); ?>,
             canPermanentDelete: <?php echo json_encode($canPermanentDelete); ?>
         };
 
-        document.addEventListener('DOMContentLoaded', function() {
-            // Handle select all checkbox
-            $(document).on('change', '#select-all', function() {
-                $('.select-row').prop('checked', $(this).prop('checked'));
-                updateBulkButtons();
-            });
-
-            $(document).on('change', '.select-row', updateBulkButtons);
-
-            function updateBulkButtons() {
-                var count = $('.select-row:checked').length;
-                // Show bulk actions only if 2 or more are selected
-                if (count >= 2) {
-                    $('#bulk-restore, #bulk-delete').prop('disabled', false).show();
-                } else {
-                    $('#bulk-restore, #bulk-delete').prop('disabled', true).hide();
-                }
-            }
-
-            // Handle restore role modal
-            $('#confirmRestoreModal').on('show.bs.modal', function(event) {
-                if (!userPrivileges.canRestore) {
-                    event.preventDefault();
-                    return false;
-                }
-
-                var button = $(event.relatedTarget);
-                var roleID = button.data('role-id');
-                var roleName = button.data('role-name');
-                $('#restoreRoleNamePlaceholder').text(roleName);
-                $('#confirmRestoreButton').data('role-id', roleID);
-            });
-
-            // Confirm restore role via AJAX
-            $(document).on('click', '#confirmRestoreButton', function(e) {
-                if (!userPrivileges.canRestore) return;
-
-                e.preventDefault();
-                $(this).blur();
-                var roleID = $(this).data('role-id');
-                $.ajax({
-                    type: 'POST',
-                    url: '../../rolesandprivilege_manager/role_manager/restore_role.php',
-                    data: {
-                        id: roleID
-                    },
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.success) {
-                            $('#archivedRolesTable').load(location.href + ' #archivedRolesTable', function() {
-                                updatePagination();
-                                showToast(response.message, 'success', 5000);
-                            });
-                            $('#confirmRestoreModal').modal('hide');
-                            $('.modal-backdrop').remove();
-                        } else {
-                            showToast(response.message || 'An error occurred', 'error', 5000);
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        showToast('Error restoring role: ' + error, 'error', 5000);
-                    }
-                });
-            });
-
-            // Handle permanent delete role modal
-            $('#confirmDeleteModal').on('show.bs.modal', function(event) {
-                if (!userPrivileges.canPermanentDelete) {
-                    event.preventDefault();
-                    return false;
-                }
-
-                var button = $(event.relatedTarget);
-                var roleID = button.data('role-id');
-                var roleName = button.data('role-name');
-                $('#roleNamePlaceholder').text(roleName);
-                $('#confirmDeleteButton').data('role-id', roleID);
-            });
-
-            // Confirm permanent delete role via AJAX
-            $(document).on('click', '#confirmDeleteButton', function(e) {
-                if (!userPrivileges.canPermanentDelete) return;
-
-                e.preventDefault();
-                $(this).blur();
-                var roleID = $(this).data('role-id');
-                $.ajax({
-                    type: 'POST',
-                    url: '../../rolesandprivilege_manager/permanent_delete_role.php',
-                    data: {
-                        id: roleID
-                    },
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.success) {
-                            $('#archivedRolesTable').load(location.href + ' #archivedRolesTable', function() {
-                                updatePagination();
-                                showToast(response.message, 'success', 5000);
-                            });
-                            $('#confirmDeleteModal').modal('hide');
-                            $('.modal-backdrop').remove();
-                        } else {
-                            showToast(response.message || 'An error occurred', 'error', 5000);
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        showToast('Error permanently deleting role: ' + error, 'error', 5000);
-                    }
-                });
-            });
-
-            // Bulk Restore
-            var bulkRestoreIds = [];
-
-            // When bulk restore button is clicked
-            $(document).on('click', '#bulk-restore', function() {
-                if (!userPrivileges.canRestore) return;
-
-                bulkRestoreIds = [];
-                $('.select-row:checked').each(function() {
-                    bulkRestoreIds.push($(this).val());
-                });
-
-                if (bulkRestoreIds.length > 0) {
-                    $('#bulkRestoreModal').modal('show');
-                }
-            });
-
-            // Confirm bulk restore
-            $(document).on('click', '#confirmBulkRestoreBtn', function() {
-                if (!userPrivileges.canRestore || bulkRestoreIds.length === 0) return;
-
-                $.ajax({
-                    type: 'POST',
-                    url: '../../rolesandprivilege_manager/restore_role.php',
-                    data: {
-                        ids: bulkRestoreIds
-                    },
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.success) {
-                            $('#archivedRolesTable').load(location.href + ' #archivedRolesTable', function() {
-                                updatePagination();
-                                showToast(response.message, 'success', 5000);
-                            });
-                            $('#bulkRestoreModal').modal('hide');
-                        } else {
-                            showToast(response.message || 'An error occurred', 'error', 5000);
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        showToast('Error restoring roles: ' + error, 'error', 5000);
-                    }
-                });
-            });
-
-            // Bulk Delete
-            var bulkDeleteIds = [];
-
-            // When bulk delete button is clicked
-            $(document).on('click', '#bulk-delete', function() {
-                if (!userPrivileges.canPermanentDelete) return;
-
-                bulkDeleteIds = [];
-                $('.select-row:checked').each(function() {
-                    bulkDeleteIds.push($(this).val());
-                });
-
-                if (bulkDeleteIds.length > 0) {
-                    $('#bulkDeleteModal').modal('show');
-                }
-            });
-
-            // Confirm bulk delete
-            $(document).on('click', '#confirmBulkDeleteBtn', function() {
-                if (!userPrivileges.canPermanentDelete || bulkDeleteIds.length === 0) return;
-
-                $.ajax({
-                    type: 'POST',
-                    url: '../../rolesandprivilege_manager/permanent_delete_role.php',
-                    data: {
-                        ids: bulkDeleteIds
-                    },
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.success) {
-                            $('#archivedRolesTable').load(location.href + ' #archivedRolesTable', function() {
-                                updatePagination();
-                                showToast(response.message, 'success', 5000);
-                            });
-                            $('#bulkDeleteModal').modal('hide');
-                        } else {
-                            showToast(response.message || 'An error occurred', 'error', 5000);
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        showToast('Error deleting roles: ' + error, 'error', 5000);
-                    }
-                });
-            });
-
-            // Initialize pagination with the archive table ID
-            initPagination({
-                tableId: 'auditTable',
-                currentPage: 1
-            });
-            
-            // Force hide pagination buttons if no data or all fits on one page
-            function forcePaginationCheck() {
-                const totalRows = window.filteredRows ? window.filteredRows.length : 0;
-                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value);
-                const prevBtn = document.getElementById('prevPage');
-                const nextBtn = document.getElementById('nextPage');
-                const paginationEl = document.getElementById('pagination');
-
-                // Hide pagination completely if all rows fit on one page
-                if (totalRows <= rowsPerPage) {
-                    if (prevBtn) prevBtn.style.cssText = 'display: none !important';
-                    if (nextBtn) nextBtn.style.cssText = 'display: none !important';
-                    if (paginationEl) paginationEl.style.cssText = 'display: none !important';
-                } else {
-                    // Show pagination but conditionally hide prev/next buttons
-                    if (paginationEl) paginationEl.style.cssText = '';
-
-                    if (prevBtn) {
-                        if (window.currentPage <= 1) {
-                            prevBtn.style.cssText = 'display: none !important';
-                        } else {
-                            prevBtn.style.cssText = '';
-                        }
-                    }
-
-                    if (nextBtn) {
-                        const totalPages = Math.ceil(totalRows / rowsPerPage);
-                        if (window.currentPage >= totalPages) {
-                            nextBtn.style.cssText = 'display: none !important';
-                        } else {
-                            nextBtn.style.cssText = '';
-                        }
-                    }
-                }
-            }
-            
-            // Run forcePaginationCheck after pagination updates
-            const originalUpdatePagination = window.updatePagination || function() {};
-            window.updatePagination = function() {
-                // Get all rows again in case the DOM was updated
-                window.allRows = Array.from(document.querySelectorAll('tbody tr'));
-                
-                // If filtered rows is empty or not defined, use all rows
-                if (!window.filteredRows || window.filteredRows.length === 0) {
-                    window.filteredRows = window.allRows;
-                }
-                
-                // Update total rows display
-                const totalRowsEl = document.getElementById('totalRows');
-                if (totalRowsEl) {
-                    totalRowsEl.textContent = window.filteredRows.length;
-                }
-                
-                // Call original updatePagination
-                originalUpdatePagination();
-                forcePaginationCheck();
-            };
-            
-            // Call updatePagination immediately
-            updatePagination();
+        // Handle select all checkbox
+        $(document).on('change', '#select-all', function() {
+            $('.select-row').prop('checked', $(this).prop('checked'));
+            updateBulkButtons();
         });
+
+        $(document).on('change', '.select-row', updateBulkButtons);
+
+        function updateBulkButtons() {
+            var count = $('.select-row:checked').length;
+            // Show bulk actions only if 2 or more are selected
+            if (count >= 2) {
+                $('#bulk-restore, #bulk-delete').prop('disabled', false).show();
+            } else {
+                $('#bulk-restore, #bulk-delete').prop('disabled', true).hide();
+            }
+        }
+
+        // Handle restore role modal
+        $('#confirmRestoreModal').on('show.bs.modal', function(event) {
+            if (!userPrivileges.canRestore) {
+                event.preventDefault();
+                return false;
+            }
+
+            var button = $(event.relatedTarget);
+            var roleID = button.data('role-id');
+            var roleName = button.data('role-name');
+            $('#restoreRoleNamePlaceholder').text(roleName);
+            $('#confirmRestoreButton').data('role-id', roleID);
+        });
+
+        // Confirm restore role via AJAX
+        $(document).on('click', '#confirmRestoreButton', function(e) {
+            if (!userPrivileges.canRestore) return;
+
+            e.preventDefault();
+            $(this).blur();
+            var roleID = $(this).data('role-id');
+            $.ajax({
+                type: 'POST',
+                url: '../../rolesandprivilege_manager/role_manager/restore_role.php',
+                data: {
+                    id: roleID
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        $('#archivedRolesTable').load(location.href + ' #archivedRolesTable', function() {
+                            updatePagination();
+                            showToast(response.message, 'success', 5000);
+                        });
+                        $('#confirmRestoreModal').modal('hide');
+                        $('.modal-backdrop').remove();
+                    } else {
+                        showToast(response.message || 'An error occurred', 'error', 5000);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    showToast('Error restoring role: ' + error, 'error', 5000);
+                }
+            });
+        });
+
+        // Handle permanent delete role modal
+        $('#confirmDeleteModal').on('show.bs.modal', function(event) {
+            if (!userPrivileges.canPermanentDelete) {
+                event.preventDefault();
+                return false;
+            }
+
+            var button = $(event.relatedTarget);
+            var roleID = button.data('role-id');
+            var roleName = button.data('role-name');
+            $('#roleNamePlaceholder').text(roleName);
+            $('#confirmDeleteButton').data('role-id', roleID);
+        });
+
+        // Confirm permanent delete role via AJAX
+        $(document).on('click', '#confirmDeleteButton', function(e) {
+            if (!userPrivileges.canPermanentDelete) return;
+
+            e.preventDefault();
+            $(this).blur();
+            var roleID = $(this).data('role-id');
+            $.ajax({
+                type: 'POST',
+                url: '../../rolesandprivilege_manager/permanent_delete_role.php',
+                data: {
+                    id: roleID
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        $('#archivedRolesTable').load(location.href + ' #archivedRolesTable', function() {
+                            updatePagination();
+                            showToast(response.message, 'success', 5000);
+                        });
+                        $('#confirmDeleteModal').modal('hide');
+                        $('.modal-backdrop').remove();
+                    } else {
+                        showToast(response.message || 'An error occurred', 'error', 5000);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    showToast('Error permanently deleting role: ' + error, 'error', 5000);
+                }
+            });
+        });
+
+        // Bulk Restore
+        var bulkRestoreIds = [];
+
+        // When bulk restore button is clicked
+        $(document).on('click', '#bulk-restore', function() {
+            if (!userPrivileges.canRestore) return;
+
+            bulkRestoreIds = [];
+            $('.select-row:checked').each(function() {
+                bulkRestoreIds.push($(this).val());
+            });
+
+            if (bulkRestoreIds.length > 0) {
+                $('#bulkRestoreModal').modal('show');
+            }
+        });
+
+        // Confirm bulk restore
+        $(document).on('click', '#confirmBulkRestoreBtn', function() {
+            if (!userPrivileges.canRestore || bulkRestoreIds.length === 0) return;
+
+            $.ajax({
+                type: 'POST',
+                url: '../../rolesandprivilege_manager/restore_role.php',
+                data: {
+                    ids: bulkRestoreIds
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        $('#archivedRolesTable').load(location.href + ' #archivedRolesTable', function() {
+                            updatePagination();
+                            showToast(response.message, 'success', 5000);
+                        });
+                        $('#bulkRestoreModal').modal('hide');
+                    } else {
+                        showToast(response.message || 'An error occurred', 'error', 5000);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    showToast('Error restoring roles: ' + error, 'error', 5000);
+                }
+            });
+        });
+
+        // Bulk Delete
+        var bulkDeleteIds = [];
+
+        // When bulk delete button is clicked
+        $(document).on('click', '#bulk-delete', function() {
+            if (!userPrivileges.canPermanentDelete) return;
+
+            bulkDeleteIds = [];
+            $('.select-row:checked').each(function() {
+                bulkDeleteIds.push($(this).val());
+            });
+
+            if (bulkDeleteIds.length > 0) {
+                $('#bulkDeleteModal').modal('show');
+            }
+        });
+
+        // Confirm bulk delete
+        $(document).on('click', '#confirmBulkDeleteBtn', function() {
+            if (!userPrivileges.canPermanentDelete || bulkDeleteIds.length === 0) return;
+
+            $.ajax({
+                type: 'POST',
+                url: '../../rolesandprivilege_manager/permanent_delete_role.php',
+                data: {
+                    ids: bulkDeleteIds
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        $('#archivedRolesTable').load(location.href + ' #archivedRolesTable', function() {
+                            updatePagination();
+                            showToast(response.message, 'success', 5000);
+                        });
+                        $('#bulkDeleteModal').modal('hide');
+                    } else {
+                        showToast(response.message || 'An error occurred', 'error', 5000);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    showToast('Error deleting roles: ' + error, 'error', 5000);
+                }
+            });
+        });
+
+        // Force hide pagination buttons if no data or all fits on one page
+        function forcePaginationCheck() {
+            const totalRows = window.filteredRows ? window.filteredRows.length : 0;
+            const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value);
+            const prevBtn = document.getElementById('prevPage');
+            const nextBtn = document.getElementById('nextPage');
+            const paginationEl = document.getElementById('pagination');
+
+            // Hide pagination completely if all rows fit on one page
+            if (totalRows <= rowsPerPage) {
+                if (prevBtn) prevBtn.style.cssText = 'display: none !important';
+                if (nextBtn) nextBtn.style.cssText = 'display: none !important';
+                if (paginationEl) paginationEl.style.cssText = 'display: none !important';
+            } else {
+                // Show pagination but conditionally hide prev/next buttons
+                if (paginationEl) paginationEl.style.cssText = '';
+
+                if (prevBtn) {
+                    if (window.currentPage <= 1) {
+                        prevBtn.style.cssText = 'display: none !important';
+                    } else {
+                        prevBtn.style.cssText = '';
+                    }
+                }
+
+                if (nextBtn) {
+                    const totalPages = Math.ceil(totalRows / rowsPerPage);
+                    if (window.currentPage >= totalPages) {
+                        nextBtn.style.cssText = 'display: none !important';
+                    } else {
+                        nextBtn.style.cssText = '';
+                    }
+                }
+            }
+        }
+        
+        // Run forcePaginationCheck after pagination updates
+        const originalUpdatePagination = window.updatePagination || function() {};
+        window.updatePagination = function() {
+            // Get all rows again in case the DOM was updated
+            window.allRows = Array.from(document.querySelectorAll('tbody tr'));
+            
+            // If filtered rows is empty or not defined, use all rows
+            if (!window.filteredRows || window.filteredRows.length === 0) {
+                window.filteredRows = window.allRows;
+            }
+            
+            // Update total rows display
+            const totalRowsEl = document.getElementById('totalRows');
+            if (totalRowsEl) {
+                totalRowsEl.textContent = window.filteredRows.length;
+            }
+            
+            // Call original updatePagination
+            originalUpdatePagination();
+            forcePaginationCheck();
+        };
+        
+        // Call updatePagination immediately
+        updatePagination();
+    });
     </script>
 </body>
 

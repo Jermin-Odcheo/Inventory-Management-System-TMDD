@@ -170,13 +170,13 @@ function getActionIcon($action)
 
     if ($action === 'modified') {
         return '<span class="action-badge action-modified"><i class="fas fa-pen me-1"></i> Modified</span>';
-    } elseif ($action === 'create') {
+    } elseif ($action === 'create' || $action === 'created') {
         return '<span class="action-badge action-create"><i class="fas fa-plus-circle me-1"></i> Create</span>';
-    } elseif ($action === 'remove') {
+    } elseif ($action === 'remove' || $action === 'removed') {
         return '<span class="action-badge action-delete"><i class="fas fa-trash-alt me-1"></i> Removed</span>';
     } elseif ($action === 'delete' || $action === 'permanent delete') {
-        return '<span class="action-badge action-delete"><i class="fas fa-trash-alt me-1"></i> Permanently Deleted</span>';
-    } elseif ($action === 'restored') {
+        return '<span class="action-badge action-delete"><i class="fas fa-trash-alt me-1"></i> Deleted</span>';
+    } elseif ($action === 'restored' || $action === 'restore') {
         return '<span class="action-badge action-restored"><i class="fas fa-trash-restore me-1"></i> Restored</span>';
     } else {
         return '<span class="action-badge"><i class="fas fa-info-circle me-1"></i> ' . ucfirst($action) . '</span>';

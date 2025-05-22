@@ -256,6 +256,34 @@ function formatChanges($oldJsonStr)
                         </div>
                     </div>
                 </div>
+                
+                <!-- Filter Section -->
+                <div class="row mb-4">
+                    <div class="col-md-4 mb-2">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            <input type="text" id="searchInput" class="form-control" placeholder="Search department archives...">
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <select id="filterAction" class="form-select">
+                            <option value="">All Actions</option>
+                            <option value="create">Create</option>
+                            <option value="modified">Modified</option>
+                            <option value="remove">Remove</option>
+                            <option value="delete">Delete</option>
+                            <option value="restored">Restored</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <select id="filterStatus" class="form-select">
+                            <option value="">All Status</option>
+                            <option value="successful">Successful</option>
+                            <option value="failed">Failed</option>
+                        </select>
+                    </div>
+                </div>
+                
                 <!-- Table container -->
                 <div class="table-responsive" id="table">
                     <table id="archiveTable" class="table table-hover">
@@ -484,6 +512,7 @@ function formatChanges($oldJsonStr)
 
 <!-- Include pagination script if needed -->
 <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js" defer></script>
+<script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/logs.js" defer></script>
 <!-- Add Bootstrap 5 JavaScript -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
@@ -494,9 +523,15 @@ function formatChanges($oldJsonStr)
         canDelete: <?php echo json_encode($canDelete); ?>
     };
     
-    // Initialize pagination when document is ready
     document.addEventListener('DOMContentLoaded', function() {
-        // Initialize pagination with the archive table ID
+        // Set the correct table ID for both pagination.js and logs.js
+        window.paginationConfig = window.paginationConfig || {};
+        window.paginationConfig.tableId = 'archiveTableBody';
+        
+        // Store original rows for filtering
+        window.allRows = Array.from(document.querySelectorAll('#archiveTableBody tr'));
+        
+        // Initialize Pagination
         initPagination({
             tableId: 'archiveTableBody',
             currentPage: 1
