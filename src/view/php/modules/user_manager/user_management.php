@@ -199,12 +199,6 @@ try {
     <div class="main-content container-fluid">
         <header>
             <h1>USER MANAGER</h1>
-            <?php if ($rbac->hasPrivilege('User Management', 'Modify')): ?>
-                <small>
-                    <a href="fix_role_id.php" class="text-muted">Fix Database</a> |
-                    <a href="manage_roles.php" class="text-muted">Manage Role Assignments</a>
-                </small>
-            <?php endif; ?>
         </header>
 
         <div class="filters-container">
@@ -236,6 +230,9 @@ try {
                 </button>
             </div>
             <div class="action-buttons">
+            <?php if ($rbac->hasPrivilege('User Management', 'Modify')): ?>
+                <a href="user_roles_management.php" class="btn btn-primary"> Manage Role Assignments</a>
+            <?php endif; ?>
                 <?php if ($canCreate): ?>
                     <button type="button" id="create-btn" class="btn btn-primary">
                         Create New User

@@ -451,10 +451,6 @@ if (isset($_GET["q"])) {
                     <div class="card shadow-sm">
                         <div class="card-header d-flex justify-content-between align-items-center bg-dark text-white">
                             <span><i class="bi bi-list-ul"></i> List of Departments</span>
-                            <div class="input-group w-auto" id="livesearch">
-                                <span class="input-group-text"><i class="bi bi-search"></i></span>
-                                <input type="text" class="form-control" placeholder="Search..." id="eqSearch">
-                            </div>
                         </div>
                         <div class="card-body">
                             <?php if (!empty($departments)): ?>
@@ -481,6 +477,10 @@ if (isset($_GET["q"])) {
                                                 </ul>
                                             </div>
                                         </div>
+                                        <div class="input-group w-auto" id="livesearch">
+                                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                <input type="text" class="form-control" placeholder="Search..." id="eqSearch">
+                            </div>
                                     </div>
                                     <table id="departmentTable" class="table table-striped table-hover align-middle">
                                         <thead class="table-dark">

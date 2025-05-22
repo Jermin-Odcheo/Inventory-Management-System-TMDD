@@ -144,7 +144,7 @@ function formatChanges($oldJsonStr)
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Archived Departments</title>
+    <title>Departments Archive</title>
     <!-- Bootstrap and Font Awesome CDNs -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -222,6 +222,11 @@ function formatChanges($oldJsonStr)
             }
         }
     </script>
+    <style>
+        .main-content {
+            padding-top: 150px;
+        }
+    </style>
 </head>
 <body>
 <?php include '../../../general/sidebar.php'; ?>
@@ -233,7 +238,7 @@ function formatChanges($oldJsonStr)
             <div class="card-header d-flex justify-content-between align-items-center bg-dark">
                 <h3 class="text-white">
                     <i class="fas fa-archive me-2"></i>
-                    Archived Departments
+                    Departments Archive
                 </h3>
             </div>
             <div class="card-body">

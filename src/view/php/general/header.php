@@ -16,11 +16,21 @@ if ($user_id !== null) {
 }
 
 $role = isset($_SESSION["role"]) ? $_SESSION["role"] : "";
-$email = $_SESSION['email'];
-
+$uname = $_SESSION['username'];
 $user_id = $_SESSION['user_id'] ?? null;
 
- 
+$stmt = $pdo->prepare("
+    SELECT u.username, u.profile_pic_path, r.role_name AS role
+    FROM users u
+    LEFT JOIN user_department_roles ur ON u.id = ur.user_id
+    LEFT JOIN roles r ON ur.role_id = r.id
+    WHERE u.id = ?
+    LIMIT 1
+");
+$stmt->execute([$user_id]);
+$user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+
 ?>
 
 <!DOCTYPE html>
@@ -91,9 +101,8 @@ $user_id = $_SESSION['user_id'] ?? null;
             </div>
 
             <div class="user-info">
-                <!--TO CHANGE FOR USERNAME-->
-                <div class="user-name"><?php echo $email; ?></div>
-                <div class="user-role"><?php echo $role; ?> </div>
+            <div class="user-name"><?php echo htmlspecialchars($user['username']); ?></div>
+<div class="user-role"><?= htmlspecialchars($user['role']); ?></div>
             </div>
             <div class="dropdown-menu" id="dropdownMenu">
                 <div class="settings-container">

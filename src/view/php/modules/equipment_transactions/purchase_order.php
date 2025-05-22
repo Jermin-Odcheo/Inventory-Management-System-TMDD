@@ -465,10 +465,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                 <div class="card shadow">
                     <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
                         <span><i class="bi bi-list-ul"></i> List of Purchase Orders</span>
-                        <div class="input-group w-auto">
-                            <span class="input-group-text"><i class="bi bi-search"></i></span>
-                            <input type="text" id="searchPO" class="form-control" placeholder="Search purchase order...">
-                        </div>
                     </div>
                     <div class="card-body p-3">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -514,6 +510,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                                     <input type="date" class="form-control form-control-sm" id="dateTo" placeholder="To">
                                 </div>
                             </div>
+                            <div class="input-group w-auto">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <input type="text" id="searchPO" class="form-control" placeholder="Search purchase order...">
+                        </div>
                         </div>
 
                         <div class="table-responsive" id="table">

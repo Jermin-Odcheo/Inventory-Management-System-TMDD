@@ -171,9 +171,11 @@ $todayDisplay = date('F j, Y');
                 <option value="word">Word</option>
               </select>
             </div>
-            <div class="col-md-8 d-flex justify-content-end gap-2 mt-3">
+            < class="col-md-8 d-flex justify-content-end gap-2 mt-3">
               <button type="button" class="btn btn-dark" id="previewBtn">Preview Report</button>
+              <?php if ($rbac->hasPrivilege('Reports', 'Export')): ?>
               <button type="submit" class="btn btn-primary" id="downloadBtn">Download Report</button>
+              <?php endif; ?>
             </div>
           </div>
           <div id="docSpecsSection" class="mt-3">

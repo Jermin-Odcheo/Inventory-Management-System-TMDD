@@ -66,7 +66,7 @@ foreach ($modules as $module => $paths) {
             <?php if (!empty($auditModules)): ?>
             <li class="dropdown-item">
                 <button class="dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('show')">
-                    <i class="fas fa-history"></i> Audit Logs
+                    <i class="fas fa-history"></i><span class="menu-text">Audit Logs</span>
                     <i class="fas fa-chevron-down dropdown-icon"></i>
                 </button>
                 <ul class="dropdown tree">
@@ -84,7 +84,7 @@ foreach ($modules as $module => $paths) {
             <?php if (!empty($archiveModules)): ?>
             <li class="dropdown-item">
                 <button class="dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('show')">
-                    <i class="fas fa-trash"></i> Archives
+                    <i class="fas fa-trash"></i><span class="menu-text">Archives</span> 
                     <i class="fas fa-chevron-down dropdown-icon"></i>
                 </button>
                 <ul class="dropdown tree">
@@ -101,8 +101,8 @@ foreach ($modules as $module => $paths) {
 
             <?php if ($rbac->hasPrivilege('Management', 'View')): ?>
             <li class="dropdown-item">
-            <button class="dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('show')">                    
-                <i class="fas fa-university"></i> Management
+            <button class="dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('show')">
+            <i class="fas fa-university"></i><span class="menu-text">Management</span>
                     <i class="fas fa-chevron-down dropdown-icon"></i>
                 </button>
                 <ul class="dropdown tree">
@@ -117,7 +117,8 @@ foreach ($modules as $module => $paths) {
 
             <?php if ($rbac->hasPrivilege('User Management', 'View')): ?>
             <li class="dropdown-item">
-            <button class="dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('show')">                    <i class="fa-solid fa-user"></i>
+            <button class="dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('show')">                    
+                <i class="fa-solid fa-user"></i>
                     <span class="menu-text">User Management</span>
                     <i class="fas fa-chevron-down dropdown-icon"></i>
                 </button>
@@ -138,7 +139,8 @@ foreach ($modules as $module => $paths) {
 
             <?php if ($rbac->hasPrivilege('Roles and Privileges', 'View')): ?>
             <li class="dropdown-item">
-            <button class="dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('show')">                    <i class="fa-solid fa-th-list"></i>
+            <button class="dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('show')">                    
+                <i class="fa-solid fa-th-list"></i>
                     <span class="menu-text">Roles and Privileges</span>
                     <i class="fas fa-chevron-down dropdown-icon"></i>
                 </button>
@@ -159,8 +161,10 @@ foreach ($modules as $module => $paths) {
 
             <?php if ($rbac->hasPrivilege('Equipment Management', 'View')): ?>
             <li class="dropdown-item">
-            <button class="dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('show')">                    <i class="fa-solid fa-wrench"></i> Equipment Management
-                    <i class="fas fa-chevron-down dropdown-icon"></i>
+            <button class="dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('show')">                    
+                <i class="fa-solid fa-wrench"></i>
+                <span class="menu-text">Equipment Management</span>
+            <i class="fas fa-chevron-down dropdown-icon"></i>
                 </button>
                 <ul class="dropdown tree">
                     <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_manager/equipment_details.php">Equipment Details</a></li>
@@ -173,7 +177,7 @@ foreach ($modules as $module => $paths) {
             <?php if ($rbac->hasPrivilege('Equipment Transactions', 'View')): ?>
             <li class="dropdown-item">
             <button class="dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('show')">                    
-                <i class="fa-solid fa-arrow-right-arrow-left"></i> Equipment Transaction
+                <i class="fa-solid fa-arrow-right-arrow-left"></i> <span class="menu-text">Equipment Transaction</span>
                     <i class="fas fa-chevron-down dropdown-icon"></i>
                 </button>
                 <ul class="dropdown tree">
@@ -186,12 +190,13 @@ foreach ($modules as $module => $paths) {
 
             <?php if ($rbac->hasPrivilege('Reports', 'View')): ?>
             <li class="dropdown-item">
-            <button class="dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('show')">        <i class="fas fa-flag"></i> Reports
+            <button class="dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('show')">        
+                <i class="fas fa-flag"></i> <span class="menu-text">Reports</span>
                     <i class="fas fa-chevron-down dropdown-icon"></i>
                 </button>
                 <ul class="dropdown tree">
                     <!-- <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/reports/userman_reports/usrep.php">User Management Reports 🔜 (Under Development)</a></li> -->
-                    <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/reports/equipman_reports/eqrep.php">Equipment Management Report 🔜 (Prototype)</a></li>
+                    <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/reports/equipman_reports/eqrep.php">Equipment Management Report </a></li>
                 </ul>
             </li>
             <?php endif; ?>

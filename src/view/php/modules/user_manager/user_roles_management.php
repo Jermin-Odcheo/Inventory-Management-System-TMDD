@@ -125,6 +125,9 @@ $userRoleDepartments = array_values($userRoleMap);
                 <button type="button" id="clear-filters-btn">Clear Filters</button>
             </div>
             <div class="action-buttons">
+            <?php if ($rbac->hasPrivilege('User Management', 'Modify')): ?>
+                <a href="user_management.php" class="btn btn-primary"> Manage User Accounts</a>
+            <?php endif; ?>
                 <?php if ($canCreate): ?>
                     <button type="button" id="create-btn" class="btn btn-primary">Add user to role</button>
                 <?php endif; ?>
