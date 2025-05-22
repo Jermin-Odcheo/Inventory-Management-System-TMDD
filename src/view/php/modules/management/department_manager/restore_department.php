@@ -5,8 +5,8 @@ require_once('../../../../../../config/ims-tmdd.php');
 // Define the root path to make includes more reliable
 // define('ROOT_PATH', realpath(dirname(__FILE__) . '/../../../../../'));
 
-// Add the RBAC service include with a more reliable path
-require_once(ROOT_PATH . '/src/control/RBACService.php');
+// Fix the path for RBAC service
+require_once(__DIR__ . '/../../../../../../src/control/RBACService.php');
 
 header('Content-Type: application/json');
 

@@ -2,8 +2,8 @@
 session_start();
 require_once('../../../../../../config/ims-tmdd.php');
 
-// Add the RBAC service include with a more reliable path
-require_once(BASE_URL . '/src/control/RBACService.php');
+// Fix the path for RBAC service
+require_once(__DIR__ . '/../../../../../../src/control/RBACService.php');
 
 header('Content-Type: application/json');
 

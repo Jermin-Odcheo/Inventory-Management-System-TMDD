@@ -331,6 +331,10 @@ if (isset($_GET["q"])) {
 <html lang="en">
 
 <head>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+      <!-- Include Toast CSS/JS (make sure showToast is defined) -->
+      <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <meta charset="UTF-8">
     <title>Department Management</title>
     <style>
@@ -525,11 +529,10 @@ if (isset($_GET["q"])) {
                                     <div class="container-fluid">
                                         <div class="row align-items-center g-3">
                                             <div class="col-12 col-sm-auto">
-                                                <div class="text-muted">
-                                                    Showing <span id="currentPage">1</span> to <span
-                                                        id="rowsPerPage">10</span> of
-                                                    <span id="totalRows">100</span> entries
-                                                </div>
+                                            <div class="text-muted">
+                                                <?php $totalLogs = count($department); ?>
+                                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span id="totalRows"><?= $totalLogs ?></span> entries
+                                            </div>
                                             </div>
                                             <div class="col-12 col-sm-auto ms-sm-auto">
                                                 <div class="d-flex align-items-center gap-2">

@@ -1,19 +1,19 @@
 /**
  * Archive Filtering Solution
- * This script provides filtering for all archive pages in the system
+ * This script provides filtering for all archive pages in the system.
+ * Vanilla JavaScript version (no jQuery dependency)
  */
 
 // When document is ready
-$(document).ready(function() {
-    
+document.addEventListener('DOMContentLoaded', function() {
     // Store original rows on page load
-    var originalRows = [];
+    let originalRows = [];
     
     function captureRows() {
         // Get rows from the table body (works with any table ID structure)
-        const tbody = $('#archiveTable tbody, #archivedRolesTable tbody').get(0);
+        const tbody = document.querySelector('#archiveTableBody, #archivedRolesTable tbody');
         if (tbody) {
-            originalRows = $(tbody).find('tr').toArray();
+            originalRows = Array.from(tbody.querySelectorAll('tr'));
         } else {
             console.warn("Could not find table body");
         }
@@ -25,13 +25,12 @@ $(document).ready(function() {
     // Apply filters to rows
     function applyFilters() {
         // Get filter values
-        const actionFilter = $('#filterAction').val().toLowerCase();
-        const statusFilter = $('#filterStatus').val().toLowerCase();
-        const searchFilter = $('#searchInput').val().toLowerCase();
+        const actionFilter = document.getElementById('filterAction')?.value.toLowerCase() || '';
+        const statusFilter = document.getElementById('filterStatus')?.value.toLowerCase() || '';
+        const searchFilter = document.getElementById('searchInput')?.value.toLowerCase() || '';
     
-        
         // Get the current tbody
-        const tbody = $('#archiveTable tbody, #archivedRolesTable tbody').get(0);
+        const tbody = document.querySelector('#archiveTableBody, #archivedRolesTable tbody');
         if (!tbody) {
             console.warn("Table body not found for filtering");
             return;
@@ -41,87 +40,103 @@ $(document).ready(function() {
         const rows = originalRows.slice();
         
         // Clear tbody
-        $(tbody).empty();
+        tbody.innerHTML = '';
         
         // Counter for visible rows
         let visibleCount = 0;
         
         // Filter and add rows
         for (let i = 0; i < rows.length; i++) {
-            const $row = $(rows[i]);
+            const row = rows[i];
             let showRow = true;
             
             // Action filter
             if (actionFilter && showRow) {
-                const $actionCell = $row.find('[data-label="Action"], .action');
-                if ($actionCell.length) {
-                    const actionText = $actionCell.text().toLowerCase().trim();
+                const actionCell = row.querySelector('[data-label="Action"], .action');
+                if (actionCell) {
+                    const actionText = actionCell.textContent.toLowerCase().trim();
                     showRow = actionText.includes(actionFilter);
                 }
             }
             
             // Status filter
             if (statusFilter && showRow) {
-                const $statusCell = $row.find('[data-label="Status"], .status');
-                if ($statusCell.length) {
-                    const statusText = $statusCell.text().toLowerCase().trim();
+                const statusCell = row.querySelector('[data-label="Status"], .status');
+                if (statusCell) {
+                    const statusText = statusCell.textContent.toLowerCase().trim();
                     showRow = statusText.includes(statusFilter);
                 }
             }
             
             // Search filter
             if (searchFilter && showRow) {
-                showRow = $row.text().toLowerCase().includes(searchFilter);
+                showRow = row.textContent.toLowerCase().includes(searchFilter);
             }
             
             // Add row if it passes all filters
             if (showRow) {
-                $(tbody).append($row);
+                tbody.appendChild(row.cloneNode(true));
                 visibleCount++;
             }
         }
         
-            
         // Show "no results" message if needed
         if (visibleCount === 0) {
-            const noResultsRow = `
-                <tr id="no-results-row">
-                    <td colspan="10">
-                        <div class="empty-state text-center py-4">
-                            <i class="fas fa-search fa-3x mb-3"></i>
-                            <h4>No matching records found</h4>
-                            <p class="text-muted">Try adjusting your filter criteria.</p>
-                        </div>
-                    </td>
-                </tr>
+            const noResultsRow = document.createElement('tr');
+            noResultsRow.id = 'no-results-row';
+            noResultsRow.innerHTML = `
+                <td colspan="10">
+                    <div class="empty-state text-center py-4">
+                        <i class="fas fa-search fa-3x mb-3"></i>
+                        <h4>No matching records found</h4>
+                        <p class="text-muted">Try adjusting your filter criteria.</p>
+                    </div>
+                </td>
             `;
-            $(tbody).html(noResultsRow);
+            tbody.appendChild(noResultsRow);
         }
         
         // Update pagination if it exists
         if (typeof updatePagination === 'function') {
-            window.filteredRows = $(tbody).find('tr').toArray();
+            window.filteredRows = Array.from(tbody.querySelectorAll('tr'));
             updatePagination();
         }
     }
     
     // Wire up event handlers
-    $('#filterAction').on('change', applyFilters);
-    $('#filterStatus').on('change', applyFilters);
-    $('#searchInput').on('input', applyFilters);
+    const filterAction = document.getElementById('filterAction');
+    if (filterAction) {
+        filterAction.addEventListener('change', applyFilters);
+    }
     
-    // Handle pagination button clicks (recapture rows when page changes)
-    $('#prevPage, #nextPage, #pagination').on('click', function() {
-        setTimeout(captureRows, 100);
-    });
+    const filterStatus = document.getElementById('filterStatus');
+    if (filterStatus) {
+        filterStatus.addEventListener('change', applyFilters);
+    }
+    
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', applyFilters);
+    }
+    
+    // Handle pagination button clicks
+    const prevPage = document.getElementById('prevPage');
+    const nextPage = document.getElementById('nextPage');
+    const pagination = document.getElementById('pagination');
+    
+    if (prevPage) prevPage.addEventListener('click', () => setTimeout(captureRows, 100));
+    if (nextPage) nextPage.addEventListener('click', () => setTimeout(captureRows, 100));
+    if (pagination) pagination.addEventListener('click', () => setTimeout(captureRows, 100));
     
     // Handle rows per page changes
-    $('#rowsPerPageSelect').on('change', function() {
-        setTimeout(captureRows, 100);
-    });
+    const rowsPerPageSelect = document.getElementById('rowsPerPageSelect');
+    if (rowsPerPageSelect) {
+        rowsPerPageSelect.addEventListener('change', () => setTimeout(captureRows, 100));
+    }
     
-    // Handle DOM updates via AJAX
-    $(document).ajaxComplete(function() {
-        setTimeout(captureRows, 100);
-    });
+    // Make functions available globally for AJAX callbacks
+    window.archiveFilters = {
+        captureRows: captureRows,
+        applyFilters: applyFilters
+    };
 }); 

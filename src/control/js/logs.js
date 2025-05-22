@@ -1,5 +1,8 @@
 // Global variable to store the original table rows
-let allRows = [];
+// Only declare if it doesn't exist yet
+if (typeof window.allRows === 'undefined') {
+    window.allRows = [];
+}
 
 // On DOMContentLoaded, capture all original table rows
 // and set up filter event listeners only
@@ -8,9 +11,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Use tableId from pagination.js if available, otherwise default to 'auditTable'
     const tableId = window.paginationConfig?.tableId || 'auditTable';
     
-    // Store all rows for filtering
-    allRows = Array.from(document.querySelectorAll(`#${tableId} tr`));
-    window.allRows = allRows; // Make it accessible globally
+    // Store all rows for filtering if not already populated
+    if (!window.allRows.length) {
+        window.allRows = Array.from(document.querySelectorAll(`#${tableId} tr`));
+    }
     
     // Set up module filter if it exists
     const moduleFilter = document.getElementById('filterModule');
@@ -50,8 +54,8 @@ function filterTable() {
     // Get tableId from pagination.js if available, otherwise default to 'auditTable'
     const tableId = window.paginationConfig?.tableId || 'auditTable';
     
-    // Use window.allRows if available (might be updated by other code)
-    const rowsToFilter = window.allRows || allRows;
+    // Use window.allRows for filtering
+    const rowsToFilter = window.allRows || [];
 
     // Filter rows from the original set
     const filteredRows = rowsToFilter.filter(row => {
