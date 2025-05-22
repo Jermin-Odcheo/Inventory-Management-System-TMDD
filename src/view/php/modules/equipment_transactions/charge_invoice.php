@@ -186,19 +186,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $upd->execute([$invoice_no, $date_of_purchase, $po_no, $id]);
 
             if ($upd->rowCount() > 0) {
-                logAudit(
-                    $pdo,
-                    'Modified',
-                    json_encode($old),
-                    json_encode([
-                        'invoice_no'       => $invoice_no,
-                        'date_of_purchase' => $date_of_purchase,
-                        'po_no'            => $po_no
-                    ]),
-                    $id,
-                    "Charge Invoice {$invoice_no} updated",
-                    'Successful'
-                );
+                $oldPoNo = $old['po_no'] ?? null;
+                $newPoNo = $po_no;
+                $logAdd = false;
+                $logModified = false;
+
+                if ((empty($oldPoNo) || $oldPoNo === null) && !empty($newPoNo)) {
+                    // PO Number is being added
+                    $logAdd = true;
+                } elseif (!empty($oldPoNo) && $oldPoNo !== $newPoNo && !empty($newPoNo)) {
+                    // PO Number is being changed
+                    $logModified = true;
+                } elseif (
+                    ($old['invoice_no'] !== $invoice_no) ||
+                    ($old['date_of_purchase'] !== $date_of_purchase) ||
+                    ($oldPoNo !== $newPoNo)
+                ) {
+                    // Other fields changed (or PO number changed)
+                    $logModified = true;
+                }
+
+                if ($logAdd) {
+                    logAudit(
+                        $pdo,
+                        'Add',
+                        json_encode(['id' => $id]),
+                        json_encode(['id' => $id, 'po_no' => $newPoNo]),
+                        $id,
+                        "Po No '{$newPoNo}' has been created",
+                        'Successful'
+                    );
+                } else if ($logModified) {
+                    logAudit(
+                        $pdo,
+                        'Modified',
+                        json_encode($old),
+                        json_encode([
+                            'invoice_no'       => $invoice_no,
+                            'date_of_purchase' => $date_of_purchase,
+                            'po_no'            => $po_no
+                        ]),
+                        $id,
+                        "Charge Invoice {$invoice_no} updated",
+                        'Successful'
+                    );
+                }
 
                 header('Content-Type: application/json');
                 echo json_encode(['status' => 'success', 'message' => 'Charge Invoice updated successfully.']);

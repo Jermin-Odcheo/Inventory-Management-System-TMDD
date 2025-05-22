@@ -333,6 +333,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $oldData = $stmt->fetch(PDO::FETCH_ASSOC);
     
             if ($oldData) {
+                $oldPoNo = $oldData['po_no'] ?? null;
+                $newPoNo = $po_no;
+                $logAdd = false;
+                $logModified = false;
+
+                if ((empty($oldPoNo) || $oldPoNo === null) && !empty($newPoNo)) {
+                    // PO Number is being added
+                    $logAdd = true;
+                } elseif (!empty($oldPoNo) && $oldPoNo !== $newPoNo && !empty($newPoNo)) {
+                    // PO Number is being changed
+                    $logModified = true;
+                } elseif (
+                    ($oldData['rr_no'] !== $rr_no) ||
+                    ($oldData['accountable_individual'] !== $accountable_individual) ||
+                    ($oldData['ai_loc'] !== $ai_loc) ||
+                    ($oldData['date_created'] !== $date_created)
+                ) {
+                    // Other fields changed
+                    $logModified = true;
+                }
+
                 $stmt = $pdo->prepare("
                     UPDATE receive_report
                     SET rr_no = ?, accountable_individual = ?, po_no = ?, ai_loc = ?, date_created = ?, is_disabled = ?
@@ -342,21 +363,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['success'] = "Receiving Report has been updated successfully.";
                 $response['status'] = 'success';
                 $response['message'] = $_SESSION['success'];
-                logAudit(
-                    $pdo,
-                    'modified',
-                    'Receiving Report has been Updated',
-                    'Successful',
-                    json_encode($oldData),
-                    json_encode([
-                        'rr_no' => $rr_no,
-                        'accountable_individual' => $accountable_individual,
-                        'po_no' => $po_no,
-                        'ai_loc' => $ai_loc,
-                        'date_created' => $date_created
-                    ]),
-                    $id // Use the ID as EntityID
-                );
+
+                if ($logAdd) {
+                    logAudit(
+                        $pdo,
+                        'Add',
+                        "Po No '{$newPoNo}' has been created",
+                        'Successful',
+                        json_encode(['id' => $id]),
+                        json_encode(['id' => $id, 'po_no' => $newPoNo]),
+                        $id
+                    );
+                } else if ($logModified) {
+                    logAudit(
+                        $pdo,
+                        'modified',
+                        'Receiving Report has been Updated',
+                        'Successful',
+                        json_encode($oldData),
+                        json_encode([
+                            'rr_no' => $rr_no,
+                            'accountable_individual' => $accountable_individual,
+                            'po_no' => $po_no,
+                            'ai_loc' => $ai_loc,
+                            'date_created' => $date_created
+                        ]),
+                        $id // Use the ID as EntityID
+                    );
+                }
             } else {
                 $response['status'] = 'error';
                 $response['message'] = "Receiving Report not found.";
