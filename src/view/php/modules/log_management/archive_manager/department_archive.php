@@ -18,7 +18,7 @@ $rbac->requirePrivilege('Roles and Privileges', 'View');
 // Check for additional privileges
 $canRestore = $rbac->hasPrivilege('Roles and Privileges', 'Restore');
 $canRemove = $rbac->hasPrivilege('Roles and Privileges', 'Remove');
-$canDelete = $rbac->hasPrivilege('Roles and Privileges', 'Delete');
+$canDelete = $rbac->hasPrivilege('Roles and Privileges', 'Permanently Delete');
 
 // Fetch archived departments (is_disabled = 1)
 $query = "

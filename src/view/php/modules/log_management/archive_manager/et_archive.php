@@ -18,7 +18,7 @@ $rbac->requirePrivilege('Equipment Management', 'View');
 // Check for additional privileges
 $canRestore = $rbac->hasPrivilege('Equipment Management', 'Restore');
 $canRemove = $rbac->hasPrivilege('Equipment Management', 'Remove');
-$canDelete = $rbac->hasPrivilege('Equipment Management', 'Delete');
+$canDelete = $rbac->hasPrivilege('Equipment Management', 'Permanently Delete');
 
 $query = "
 SELECT
@@ -97,7 +97,7 @@ function getActionIcon($action)
         return '<i class="fas fa-user-edit"></i>';
     } elseif ($action === 'add') {
         return '<i class="fas fa-user-plus"></i>';
-    } elseif ($action === 'soft delete' || $action === 'permanent delete') {
+    } elseif ($action === 'delete' || $action === 'remove') {
         return '<i class="fas fa-user-slash"></i>';
     } else {
         return '<i class="fas fa-info-circle"></i>';
@@ -143,6 +143,7 @@ function formatChanges($oldJsonStr)
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Equipment Transaction Archives</title>
@@ -150,7 +151,7 @@ function formatChanges($oldJsonStr)
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Custom CSS for audit logs -->
-    <link rel="stylesheet" href="/Inventory-Managment-System-TMDD/src/view/styles/css/audit_log.css">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/audit_log.css">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/pagination.css">
     <!-- Include Toast CSS/JS (make sure showToast is defined) -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -160,383 +161,397 @@ function formatChanges($oldJsonStr)
         }
     </style>
 </head>
+
 <body>
-<?php include '../../../general/sidebar.php'; ?>
+    <?php include '../../../general/sidebar.php'; ?>
 
-<div class="main-content">
-    <div class="container-fluid">
-        <div class="card">
-            <!-- Card header -->
-            <div class="card-header d-flex justify-content-between align-items-center bg-dark">
-                <h3 class="text-white">
-                    <i class="fas fa-archive me-2"></i>
-                    Equipment Transaction Archives
-                </h3>
-            </div>
-            <div class="card-body">
-                <!-- Bulk action buttons -->
-                <div class="row mb-3">
-                    <div class="col-md-12">
-                        <div class="bulk-actions mb-3">
-                            <!-- Bulk actions only show if 2 or more are selected -->
-                            <?php if ($canRestore): ?>
-                            <button type="button" id="restore-selected" class="btn btn-success" disabled style="display: none;">Restore Selected</button>
-                            <?php endif; ?>
-                            <?php if ($canDelete): ?>
-                            <button type="button" id="delete-selected-permanently" class="btn btn-danger" disabled style="display: none;">Delete Selected Permanently</button>
-                            <?php endif; ?>
+    <div class="main-content">
+        <div class="container-fluid">
+            <div class="card">
+                <!-- Card header -->
+                <div class="card-header d-flex justify-content-between align-items-center bg-dark">
+                    <h3 class="text-white">
+                        <i class="fas fa-archive me-2"></i>
+                        Equipment Transaction Archives
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <!-- Bulk action buttons -->
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <div class="bulk-actions mb-3">
+                                <!-- Bulk actions only show if 2 or more are selected -->
+                                <?php if ($canRestore): ?>
+                                    <button type="button" id="restore-selected" class="btn btn-success" disabled style="display: none;">Restore Selected</button>
+                                <?php endif; ?>
+                                <?php if ($canDelete): ?>
+                                    <button type="button" id="delete-selected-permanently" class="btn btn-danger" disabled style="display: none;">Delete Selected Permanently</button>
+                                <?php endif; ?>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <!-- Table container -->
-                <div class="table-responsive" id="table">
-                    <table id="archiveTable" class="table table-hover">
-                        <colgroup>
-                            <col class="checkbox">
-                            <col class="track">
-                            <col class="user">
-                            <col class="module">
-                            <col class="action">
-                            <col class="details">
-                            <col class="changes">
-                            <col class="status">
-                            <col class="date">
-                            <col class="actions">
-                        </colgroup>
-                        <thead class="table-light">
-                        <tr>
-                            <th><input type="checkbox" id="select-all"></th>
-                            <th>#</th>
-                            <th>User</th>
-                            <th>Module</th>
-                            <th>Action</th>
-                            <th>Details</th>
-                            <th>Changes</th>
-                            <th>Status</th>
-                            <th>Date &amp; Time</th>
-                            <th>Actions</th>
-                        </tr>
-                        </thead>
-                        <tbody id="archiveTableBody">
-                        <?php if (!empty($logs)): ?>
-                            <?php foreach ($logs as $log): ?>
+                    <!-- Table container -->
+                    <div class="table-responsive" id="table">
+                        <table id="archiveTable" class="table table-hover">
+                            <colgroup>
+                                <col class="checkbox">
+                                <col class="track">
+                                <col class="user">
+                                <col class="module">
+                                <col class="action">
+                                <col class="details">
+                                <col class="changes">
+                                <col class="status">
+                                <col class="date">
+                                <col class="actions">
+                            </colgroup>
+                            <thead class="table-light">
                                 <tr>
-                                    <td data-label="Select">
-                                        <input type="checkbox" class="select-row" value="<?php echo $log['deleted_entity_id']; ?>">
-                                    </td>
-                                    <td data-label="Track ID">
-                                        <span class="badge bg-secondary"><?php echo htmlspecialchars($log['track_id']); ?></span>
-                                    </td>
-                                    <td data-label="Operator">
-                                        <div class="d-flex align-items-center">
-                                            <i class="fas fa-user-circle me-2"></i>
-                                            <small><?php echo htmlspecialchars($log['operator_email']); ?></small>
-                                        </div>
-                                    </td>
-                                    <td data-label="Module">
-                                        <?php echo !empty($log['module']) ? htmlspecialchars(trim((string)$log['module'])) : '<em class="text-muted">N/A</em>'; ?>
-                                    </td>
-                                    <td data-label="Action">
-                                        <?php
-                                        $actionText = !empty($log['action']) ? $log['action'] : 'Unknown';
-                                        echo '<span class="action-badge action-' . strtolower($actionText) . '">';
-                                        echo getActionIcon($actionText) . ' ' . htmlspecialchars((string)$actionText);
-                                        echo '</span>';
-                                        ?>
-                                    </td>
-                                    <td data-label="Details">
-                                        <?php echo nl2br(htmlspecialchars((string)($log['details'] ?? ''))); ?>
-                                    </td>
-                                    <td data-label="Changes">
-                                        <?php echo formatChanges($log['old_val']); ?>
-                                    </td>
-                                    <td data-label="Status">
-                                        <span class="badge <?php echo (strtolower((string)$log['status']) === 'successful') ? 'bg-success' : 'bg-danger'; ?>">
-                                            <?php echo getStatusIcon($log['status']) . ' ' . htmlspecialchars((string)($log['status'] ?? '')); ?>
-                                        </span>
-                                    </td>
-                                    <td data-label="Date &amp; Time">
-                                        <div class="d-flex align-items-center">
-                                            <i class="far fa-clock me-2"></i>
-                                            <?php echo htmlspecialchars((string)($log['date_time'] ?? '')); ?>
-                                        </div>
-                                    </td>
-                                    <td data-label="Actions">
-                                        <div class="btn-group-vertical gap-1">
-                                            <!-- Individual restore now triggers a confirmation modal -->
-                                            <?php if ($canRestore): ?>
-                                            <button type="button" class="btn btn-success restore-btn" data-id="<?php echo $log['deleted_entity_id']; ?>">
-                                                <i class="fas fa-undo me-1"></i> Restore
-                                            </button>
-                                            <?php endif; ?>
-                                            <?php if ($canDelete): ?>
-                                            <button type="button" class="btn btn-danger delete-permanent-btn" data-id="<?php echo $log['deleted_entity_id']; ?>">
-                                                <i class="fas fa-trash me-1"></i> Delete
-                                            </button>
-                                            <?php endif; ?>
-                                        </div>
-                                    </td>
+                                    <th><input type="checkbox" id="select-all"></th>
+                                    <th>#</th>
+                                    <th>User</th>
+                                    <th>Module</th>
+                                    <th>Action</th>
+                                    <th>Details</th>
+                                    <th>Changes</th>
+                                    <th>Status</th>
+                                    <th>Date &amp; Time</th>
+                                    <th>Actions</th>
                                 </tr>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <tr>
-                                <td colspan="10">
-                                    <div class="empty-state text-center py-4">
-                                        <i class="fas fa-inbox fa-3x mb-3"></i>
-                                        <h4>No Archived Users Found</h4>
-                                        <p class="text-muted">There are no archived users to display.</p>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php endif; ?>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody id="archiveTableBody">
+                                <?php if (!empty($logs)): ?>
+                                    <?php foreach ($logs as $log): ?>
+                                        <tr>
+                                            <td data-label="Select">
+                                                <input type="checkbox" class="select-row" value="<?php echo $log['deleted_entity_id']; ?>">
+                                            </td>
+                                            <td data-label="Track ID">
+                                                <span class="badge bg-secondary"><?php echo htmlspecialchars($log['track_id']); ?></span>
+                                            </td>
+                                            <td data-label="Operator">
+                                                <div class="d-flex align-items-center">
+                                                    <i class="fas fa-user-circle me-2"></i>
+                                                    <small><?php echo htmlspecialchars($log['operator_email']); ?></small>
+                                                </div>
+                                            </td>
+                                            <td data-label="Module">
+                                                <?php echo !empty($log['module']) ? htmlspecialchars(trim((string)$log['module'])) : '<em class="text-muted">N/A</em>'; ?>
+                                            </td>
+                                            <td data-label="Action">
+                                                <?php
+                                                $rawAction   = !empty($log['action']) ? $log['action'] : 'Unknown';
+                                                // make everything lowercase then uppercase only the first character
+                                                $actionText  = ucfirst(strtolower($rawAction));
+
+                                                echo '<span class="action-badge action-' . strtolower($actionText) . '">';
+                                                echo getActionIcon($actionText) . ' ' . htmlspecialchars($actionText);
+                                                echo '</span>';
+                                                ?>
+                                            </td>
+
+                                            <td data-label="Details">
+                                                <?php echo nl2br(htmlspecialchars((string)($log['details'] ?? ''))); ?>
+                                            </td>
+                                            <td data-label="Changes">
+                                                <?php echo formatChanges($log['old_val']); ?>
+                                            </td>
+                                            <td data-label="Status">
+                                                <span class="badge <?php echo (strtolower((string)$log['status']) === 'successful') ? 'bg-success' : 'bg-danger'; ?>">
+                                                    <?php echo getStatusIcon($log['status']) . ' ' . htmlspecialchars((string)($log['status'] ?? '')); ?>
+                                                </span>
+                                            </td>
+                                            <td data-label="Date &amp; Time">
+                                                <div class="d-flex align-items-center">
+                                                    <i class="far fa-clock me-2"></i>
+                                                    <?php echo htmlspecialchars((string)($log['date_time'] ?? '')); ?>
+                                                </div>
+                                            </td>
+                                            <td data-label="Actions">
+                                                <div class="btn-group-vertical gap-1">
+                                                    <!-- Individual restore now triggers a confirmation modal -->
+                                                    <?php if ($canRestore): ?>
+                                                        <button type="button" class="btn btn-success restore-btn" data-id="<?php echo $log['deleted_entity_id']; ?>">
+                                                            <i class="fas fa-undo me-1"></i> Restore
+                                                        </button>
+                                                    <?php endif; ?>
+                                                    <?php if ($canDelete): ?>
+                                                        <button type="button" class="btn btn-danger delete-permanent-btn" data-id="<?php echo $log['deleted_entity_id']; ?>">
+                                                            <i class="fas fa-trash me-1"></i> Delete
+                                                        </button>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="10">
+                                            <div class="empty-state text-center py-4">
+                                                <i class="fas fa-inbox fa-3x mb-3"></i>
+                                                <h4>No Archived Users Found</h4>
+                                                <p class="text-muted">There are no archived users to display.</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Pagination Controls -->
+                    <div class="container-fluid">
+                        <div class="row align-items-center g-3">
+                            <div class="col-12 col-sm-auto">
+                                <div class="text-muted">
+                                    <?php $totalLogs = count($logs); ?>
+                                    <input type="hidden" id="total-users" value="<?= $totalLogs ?>">
+                                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows"><?= $totalLogs ?></span> entries
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-auto ms-sm-auto">
+                                <div class="d-flex align-items-center gap-2">
+                                    <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                        <i class="bi bi-chevron-left"></i> Previous
+                                    </button>
+                                    <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                        <option value="10" selected>10</option>
+                                        <option value="20">20</option>
+                                        <option value="30">30</option>
+                                        <option value="50">50</option>
+                                    </select>
+                                    <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                        Next <i class="bi bi-chevron-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <ul class="pagination justify-content-center" id="pagination"></ul>
+                            </div>
+                        </div>
+                    </div> <!-- /.End of Pagination -->
                 </div>
-                <!-- Pagination Controls -->
-                <div class="container-fluid">
-                    <div class="row align-items-center g-3">
-                        <div class="col-12 col-sm-auto">
-                            <div class="text-muted">
-                                <?php $totalLogs = count($logs); ?>
-                                <input type="hidden" id="total-users" value="<?= $totalLogs ?>">
-                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows"><?= $totalLogs ?></span> entries
-                            </div>
-                        </div>
-                        <div class="col-12 col-sm-auto ms-sm-auto">
-                            <div class="d-flex align-items-center gap-2">
-                                <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                    <i class="bi bi-chevron-left"></i> Previous
-                                </button>
-                                <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
-                                    <option value="10" selected>10</option>
-                                    <option value="20">20</option>
-                                    <option value="30">30</option>
-                                    <option value="50">50</option>
-                                </select>
-                                <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                    Next <i class="bi bi-chevron-right"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <ul class="pagination justify-content-center" id="pagination"></ul>
-                        </div>
-                    </div>
-                </div> <!-- /.End of Pagination -->
+            </div>
+        </div>
+    </div> <!-- /.End of Main Content -->
+
+    <!-- Delete Archive Modal (for individual deletion) -->
+    <div class="modal fade" id="deleteArchiveModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Deletion</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to permanently delete this record?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" id="confirmDeleteBtn" class="btn btn-danger">Delete</button>
+                </div>
             </div>
         </div>
     </div>
-</div> <!-- /.End of Main Content -->
 
-<!-- Delete Archive Modal (for individual deletion) -->
-<div class="modal fade" id="deleteArchiveModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Confirm Deletion</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                Are you sure you want to permanently delete this record?
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" id="confirmDeleteBtn" class="btn btn-danger">Delete</button>
+    <!-- Restore Archive Modal (for individual restore) -->
+    <div class="modal fade" id="restoreArchiveModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Restore</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to restore this record?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" id="confirmRestoreBtn" class="btn btn-success">Restore</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Restore Archive Modal (for individual restore) -->
-<div class="modal fade" id="restoreArchiveModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Confirm Restore</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                Are you sure you want to restore this record?
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" id="confirmRestoreBtn" class="btn btn-success">Restore</button>
+    <!-- Bulk Delete Modal -->
+    <div class="modal fade" id="bulkDeleteModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Bulk Deletion</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to permanently delete the selected users?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" id="confirmBulkDeleteBtn" class="btn btn-danger">Delete</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Bulk Delete Modal -->
-<div class="modal fade" id="bulkDeleteModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Confirm Bulk Deletion</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                Are you sure you want to permanently delete the selected users?
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" id="confirmBulkDeleteBtn" class="btn btn-danger">Delete</button>
+    <!-- Bulk Restore Modal -->
+    <div class="modal fade" id="bulkRestoreModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Bulk Restore</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to restore the selected users?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" id="confirmBulkRestoreBtn" class="btn btn-success">Restore</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Bulk Restore Modal -->
-<div class="modal fade" id="bulkRestoreModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Confirm Bulk Restore</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                Are you sure you want to restore the selected users?
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" id="confirmBulkRestoreBtn" class="btn btn-success">Restore</button>
-            </div>
-        </div>
-    </div>
-</div>
+    <!-- Include pagination script if needed -->
+    <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js" defer></script>
+    <script>
+        // Pass RBAC permissions to JavaScript
+        var userPrivileges = {
+            canRestore: <?php echo json_encode($canRestore); ?>,
+            canRemove: <?php echo json_encode($canRemove); ?>,
+            canDelete: <?php echo json_encode($canDelete); ?>
+        };
 
-<!-- Include pagination script if needed -->
-<script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js" defer></script>
-<script>
-    // Pass RBAC permissions to JavaScript
-    var userPrivileges = {
-        canRestore: <?php echo json_encode($canRestore); ?>,
-        canRemove: <?php echo json_encode($canRemove); ?>,
-        canDelete: <?php echo json_encode($canDelete); ?>
-    };
-    
-    var deleteId = null;
-    var restoreId = null;
-    var bulkDeleteIds = [];
+        var deleteId = null;
+        var restoreId = null;
+        var bulkDeleteIds = [];
 
-    // Delegated events for checkboxes
-    $(document).on('change', '#select-all', function () {
-        $('.select-row').prop('checked', $(this).prop('checked'));
-        updateBulkButtons();
-    });
-    $(document).on('change', '.select-row', updateBulkButtons);
-    function updateBulkButtons() {
-        var count = $('.select-row:checked').length;
-        // Show bulk actions only if 2 or more are selected
-        if (count >= 2) {
-            if (userPrivileges.canRestore) {
-                $('#restore-selected').prop('disabled', false).show();
-            }
-            if (userPrivileges.canDelete) {
-                $('#delete-selected-permanently').prop('disabled', false).show();
-            }
-        } else {
-            $('#restore-selected, #delete-selected-permanently').prop('disabled', true).hide();
-        }
-    }
-
-    // --- Individual Restore (with modal) ---
-    $(document).on('click', '.restore-btn', function (e) {
-        if (!userPrivileges.canRestore) return;
-        
-        e.preventDefault();
-        restoreId = $(this).data('id');
-        restoreModule = $(this).closest('tr').find('td[data-label="Module"]').text().trim();
-        var restoreModal = new bootstrap.Modal(document.getElementById('restoreArchiveModal'));
-        restoreModal.show();
-    });
-    $(document).on('click', '#confirmRestoreBtn', function () {
-        if (!userPrivileges.canRestore || !restoreId || !restoreModule) return;
-        
-        var restoreUrl = '';
-        var redirectUrl = '';
-        var data = { id: restoreId };
-        if (restoreModule === 'Purchase Order') {
-            restoreUrl = '../../equipment_transactions/restore_purchase_order.php';
-            redirectUrl = '../../equipment_transactions/purchase_order.php';
-        } else if (restoreModule === 'Charge Invoice') {
-            restoreUrl = '../../equipment_transactions/restore_charge_invoice.php';
-            redirectUrl = '../../equipment_transactions/charge_invoice.php';
-        } else if (restoreModule === 'Receiving Report') {
-            restoreUrl = '../../equipment_transactions/restore_receiving_report.php';
-            redirectUrl = '../../equipment_transactions/receiving_report.php';
-        } else {
-            showToast('Unknown module for restore.', 'error');
-            return;
-        }
-        $.ajax({
-            url: restoreUrl,
-            method: 'POST',
-            data: data,
-            dataType: 'json',
-            headers: { 'X-Requested-With': 'XMLHttpRequest' },
-            success: function(response) {
-                var modalInstance = bootstrap.Modal.getInstance(document.getElementById('restoreArchiveModal'));
-                modalInstance.hide();
-                if (response.status && response.status.toLowerCase() === 'success') {
-                    showToast(response.message, 'success');
-                    setTimeout(function() {
-                        window.location.href = redirectUrl;
-                    }, 1500);
-                } else {
-                    showToast(response.message, 'error');
-                }
-            },
-            error: function() {
-                showToast('Error processing restore request.', 'error');
-            }
+        // Delegated events for checkboxes
+        $(document).on('change', '#select-all', function() {
+            $('.select-row').prop('checked', $(this).prop('checked'));
+            updateBulkButtons();
         });
-    });
+        $(document).on('change', '.select-row', updateBulkButtons);
 
+        function updateBulkButtons() {
+            var count = $('.select-row:checked').length;
+            // Show bulk actions only if 2 or more are selected
+            if (count >= 2) {
+                if (userPrivileges.canRestore) {
+                    $('#restore-selected').prop('disabled', false).show();
+                }
+                if (userPrivileges.canDelete) {
+                    $('#delete-selected-permanently').prop('disabled', false).show();
+                }
+            } else {
+                $('#restore-selected, #delete-selected-permanently').prop('disabled', true).hide();
+            }
+        }
 
-    // --- Individual Permanent Delete ---
-    $(document).on('click', '.delete-permanent-btn', function(e) {
-        if (!userPrivileges.canDelete) return;
-        
-        e.preventDefault();
-        deleteId = $(this).data('id');
-        var deleteModal = new bootstrap.Modal(document.getElementById('deleteArchiveModal'));
-        deleteModal.show();
-    });
+        // --- Individual Restore (with modal) ---
+        $(document).on('click', '.restore-btn', function(e) {
+            if (!userPrivileges.canRestore) return;
 
-    // When confirming bulk restore in the modal, perform the AJAX call
-    $(document).on('click', '#confirmBulkRestoreBtn', function () {
-        if (!userPrivileges.canRestore || bulkRestoreIds.length === 0) return;
-        
-        $.ajax({
-            url: '../../equipment_transactions/restore_purchase_order.php',
-            method: 'POST',
-            data: { po_ids: bulkRestoreIds },
-            dataType: 'json',
-            headers: { 'X-Requested-With': 'XMLHttpRequest' },
-            success: function(response) {
-                // Hide the bulk restore modal
-                var modalInstance = bootstrap.Modal.getInstance(document.getElementById('bulkRestoreModal'));
-                modalInstance.hide();
-                if (response.status === 'success') {
-                    $('#archiveTable').load(location.href + ' #archiveTable', function () {
-                        updateBulkButtons();
+            e.preventDefault();
+            restoreId = $(this).data('id');
+            restoreModule = $(this).closest('tr').find('td[data-label="Module"]').text().trim();
+            var restoreModal = new bootstrap.Modal(document.getElementById('restoreArchiveModal'));
+            restoreModal.show();
+        });
+        $(document).on('click', '#confirmRestoreBtn', function() {
+            if (!userPrivileges.canRestore || !restoreId || !restoreModule) return;
+
+            var restoreUrl = '';
+            var redirectUrl = '';
+            var data = {
+                id: restoreId
+            };
+            if (restoreModule === 'Purchase Order') {
+                restoreUrl = '../../equipment_transactions/restore_purchase_order.php';
+                redirectUrl = '../../equipment_transactions/purchase_order.php';
+            } else if (restoreModule === 'Charge Invoice') {
+                restoreUrl = '../../equipment_transactions/restore_charge_invoice.php';
+                redirectUrl = '../../equipment_transactions/charge_invoice.php';
+            } else if (restoreModule === 'Receiving Report') {
+                restoreUrl = '../../equipment_transactions/restore_receiving_report.php';
+                redirectUrl = '../../equipment_transactions/receiving_report.php';
+            } else {
+                showToast('Unknown module for restore.', 'error');
+                return;
+            }
+            $.ajax({
+                url: restoreUrl,
+                method: 'POST',
+                data: data,
+                dataType: 'json',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                success: function(response) {
+                    var modalInstance = bootstrap.Modal.getInstance(document.getElementById('restoreArchiveModal'));
+                    modalInstance.hide();
+                    if (response.status && response.status.toLowerCase() === 'success') {
                         showToast(response.message, 'success');
-                    });
-                } else {
-                    showToast(response.message, 'error');
+                        setTimeout(function() {
+                            window.location.href = redirectUrl;
+                        }, 1500);
+                    } else {
+                        showToast(response.message, 'error');
+                    }
+                },
+                error: function() {
+                    showToast('Error processing restore request.', 'error');
                 }
-            },
-            error: function() {
-                showToast('Error processing bulk restore.', 'error');
-            }
+            });
         });
-    });
 
-</script>
-<?php include '../../../general/footer.php'; ?>
-<!-- Bootstrap 5 JS Bundle -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+        // --- Individual Permanent Delete ---
+        $(document).on('click', '.delete-permanent-btn', function(e) {
+            if (!userPrivileges.canDelete) return;
+
+            e.preventDefault();
+            deleteId = $(this).data('id');
+            var deleteModal = new bootstrap.Modal(document.getElementById('deleteArchiveModal'));
+            deleteModal.show();
+        });
+
+        // When confirming bulk restore in the modal, perform the AJAX call
+        $(document).on('click', '#confirmBulkRestoreBtn', function() {
+            if (!userPrivileges.canRestore || bulkRestoreIds.length === 0) return;
+
+            $.ajax({
+                url: '../../equipment_transactions/restore_purchase_order.php',
+                method: 'POST',
+                data: {
+                    po_ids: bulkRestoreIds
+                },
+                dataType: 'json',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                success: function(response) {
+                    // Hide the bulk restore modal
+                    var modalInstance = bootstrap.Modal.getInstance(document.getElementById('bulkRestoreModal'));
+                    modalInstance.hide();
+                    if (response.status === 'success') {
+                        $('#archiveTable').load(location.href + ' #archiveTable', function() {
+                            updateBulkButtons();
+                            showToast(response.message, 'success');
+                        });
+                    } else {
+                        showToast(response.message, 'error');
+                    }
+                },
+                error: function() {
+                    showToast('Error processing bulk restore.', 'error');
+                }
+            });
+        });
+    </script>
+    <?php include '../../../general/footer.php'; ?>
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
+
 </html>

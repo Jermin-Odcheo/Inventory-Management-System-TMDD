@@ -18,7 +18,7 @@ $rbac->requirePrivilege('User Management', 'View');
 // Check for additional privileges
 $canRestore = $rbac->hasPrivilege('User Management', 'Restore');
 $canRemove = $rbac->hasPrivilege('User Management', 'Remove');
-$canDelete = $rbac->hasPrivilege('User Management', 'Delete');
+$canDelete = $rbac->hasPrivilege('User Management', 'Permanently Delete');
 
 $query = "
  
@@ -86,15 +86,14 @@ function formatNewValue($jsonStr)
 function getActionIcon($action)
 {
     $action = strtolower($action);
-    if ($action === 'modified') {
-        return '<i class="fas fa-user-edit"></i>';
-    } elseif ($action === 'add') {
-        return '<i class="fas fa-user-plus"></i>';
-    } elseif ($action === 'soft delete' || $action === 'permanent delete') {
-        return '<i class="fas fa-user-slash"></i>';
-    } else {
-        return '<i class="fas fa-info-circle"></i>';
-    }
+    $icons = [
+        'modified' => '<i class="fas fa-user-edit"></i>',
+        'create'   => '<i class="fas fa-user-plus"></i>',
+        'remove'   => '<i class="fas fa-user-slash"></i>',
+        'delete'   => '<i class="fas fa-user-slash"></i>',
+        'restored' => '<i class="fas fa-undo"></i>'
+    ];
+    return $icons[$action] ?? '<i class="fas fa-info-circle"></i>';
 }
 
 /**
@@ -142,7 +141,7 @@ function formatChanges($oldJsonStr)
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Custom CSS for audit logs -->
-    <link rel="stylesheet" href="/Inventory-Managment-System-TMDD/src/view/styles/css/audit_log.css">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/audit_log.css">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/pagination.css">
     <!-- Include Toast CSS/JS (make sure showToast is defined) -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>

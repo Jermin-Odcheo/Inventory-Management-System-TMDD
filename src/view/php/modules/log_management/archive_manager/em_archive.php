@@ -18,7 +18,7 @@ $rbac->requirePrivilege('Equipment Management', 'View');
 // Check for additional privileges
 $canRestore = $rbac->hasPrivilege('Equipment Management', 'Restore');
 $canRemove = $rbac->hasPrivilege('Equipment Management', 'Remove');
-$canDelete = $rbac->hasPrivilege('Equipment Management', 'Delete');
+$canDelete = $rbac->hasPrivilege('Equipment Management', 'Permanently Delete');
 
 $query = "
 SELECT
@@ -149,7 +149,7 @@ function formatChanges($oldJsonStr)
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Custom CSS for audit logs -->
-    <link rel="stylesheet" href="/Inventory-Managment-System-TMDD/src/view/styles/css/audit_log.css">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/audit_log.css">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/pagination.css">
     <!-- Include Toast CSS/JS (make sure showToast is defined) -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>

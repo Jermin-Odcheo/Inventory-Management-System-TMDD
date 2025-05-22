@@ -552,10 +552,10 @@ unset($role);
                 // Show ellipses and a window of pages around current page
                 const maxVisiblePages = 5; // Adjust as needed
                 const halfWindow = Math.floor(maxVisiblePages / 2);
-
+                
                 let startPage = Math.max(2, window.currentPage - halfWindow);
                 let endPage = Math.min(totalPages - 1, window.currentPage + halfWindow);
-
+                
                 // Adjust for edge cases
                 if (window.currentPage <= halfWindow + 1) {
                     // Near start, show more pages after current
@@ -564,28 +564,28 @@ unset($role);
                     // Near end, show more pages before current
                     startPage = Math.max(2, totalPages - maxVisiblePages);
                 }
-
+                
                 // Show ellipsis after first page if needed
                 if (startPage > 2) {
                     addPaginationItem(paginationContainer, '...');
                 }
-
+                
                 // Show pages in the window
                 for (let i = startPage; i <= endPage; i++) {
                     addPaginationItem(paginationContainer, i, window.currentPage === i);
                 }
-
+                
                 // Show ellipsis before last page if needed
                 if (endPage < totalPages - 1) {
                     addPaginationItem(paginationContainer, '...');
                 }
-
+                
                 // Always show last page
                 if (totalPages > 1) {
                     addPaginationItem(paginationContainer, totalPages, window.currentPage === totalPages);
                 }
             };
-
+            
             // Helper function to add pagination items
             window.addPaginationItem = function(container, page, isActive = false) {
                 const li = document.createElement('li');
@@ -609,7 +609,19 @@ unset($role);
                 li.appendChild(a);
                 container.appendChild(li);
             };
-
+            
+            // Function to refresh row data after any table modifications
+            function refreshTableRowData() {
+                // Update the allRows and filteredRows arrays
+                window.allRows = Array.from(document.querySelectorAll('#auditTable tr'));
+                // Apply any active filters
+                filterTable();
+                // Reset to page 1
+                window.currentPage = 1;
+                // Update pagination
+                updatePagination();
+            }
+            
             // Setup pagination controls
             document.getElementById('prevPage').addEventListener('click', function() {
                 if (window.currentPage > 1) {
@@ -617,74 +629,21 @@ unset($role);
                     updatePagination();
                 }
             });
-
+            
             document.getElementById('nextPage').addEventListener('click', function() {
                 const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value);
                 const totalPages = Math.ceil(window.filteredRows.length / rowsPerPage);
-
+                
                 if (window.currentPage < totalPages) {
                     window.currentPage++;
                     updatePagination();
                 }
             });
-
+            
             document.getElementById('rowsPerPageSelect').addEventListener('change', function() {
                 window.currentPage = 1;
                 updatePagination();
             });
-
-            // Function to force hide pagination buttons when not needed
-            function forcePaginationCheck() {
-                const totalRows = window.filteredRows ? window.filteredRows.length : 0;
-                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value);
-                const prevBtn = document.getElementById('prevPage');
-                const nextBtn = document.getElementById('nextPage');
-                const paginationEl = document.getElementById('pagination');
-
-                // Hide pagination completely if all rows fit on one page
-                if (totalRows <= rowsPerPage) {
-                    if (prevBtn) prevBtn.style.cssText = 'display: none !important';
-                    if (nextBtn) nextBtn.style.cssText = 'display: none !important';
-                    if (paginationEl) paginationEl.style.cssText = 'display: none !important';
-                } else {
-                    // Show pagination but conditionally hide prev/next buttons
-                    if (paginationEl) paginationEl.style.cssText = '';
-
-                    if (prevBtn) {
-                        if (window.currentPage <= 1) {
-                            prevBtn.style.cssText = 'display: none !important';
-                        } else {
-                            prevBtn.style.cssText = '';
-                        }
-                    }
-
-                    if (nextBtn) {
-                        const totalPages = Math.ceil(totalRows / rowsPerPage);
-                        if (window.currentPage >= totalPages) {
-                            nextBtn.style.cssText = 'display: none !important';
-                        } else {
-                            nextBtn.style.cssText = '';
-                        }
-                    }
-                }
-            }
-
-            // Add forcePaginationCheck to updatePagination
-            const originalUpdatePagination = window.updatePagination;
-            window.updatePagination = function() {
-                originalUpdatePagination();
-                forcePaginationCheck();
-            };
-
-            // Run immediately and after any filtering
-            forcePaginationCheck();
-            $('#roleNameFilter, #moduleFilter, #privilegeFilter').on('input change', function() {
-                setTimeout(forcePaginationCheck, 100);
-            });
-
-            // Initialize current page
-            window.currentPage = 1;
-            updatePagination();
 
             // **1. Load edit role modal content via AJAX**
             $(document).on('click', '.edit-role-btn', function() {
@@ -743,6 +702,10 @@ unset($role);
                     success: function(response) {
                         if (response.success) {
                             $('#rolesTable').load(location.href + ' #rolesTable', function() {
+                                // Refresh all rows after table is loaded
+                                window.allRows = Array.from(document.querySelectorAll('#auditTable tr'));
+                                window.filteredRows = window.allRows;
+                                window.currentPage = 1;
                                 updatePagination();
                                 showToast(response.message, 'success', 5000);
                             });
@@ -789,6 +752,10 @@ unset($role);
                     success: function(response) {
                         if (response.success) {
                             $('#rolesTable').load(location.href + ' #rolesTable', function() {
+                                // Refresh all rows after table is loaded
+                                window.allRows = Array.from(document.querySelectorAll('#auditTable tr'));
+                                window.filteredRows = window.allRows;
+                                window.currentPage = 1;
                                 updatePagination();
                                 showToast(response.message, 'success', 5000);
                             });
@@ -813,6 +780,10 @@ unset($role);
                     success: function(response) {
                         if (response.success) {
                             $('#rolesTable').load(location.href + ' #rolesTable', function() {
+                                // Refresh all rows after table is loaded
+                                window.allRows = Array.from(document.querySelectorAll('#auditTable tr'));
+                                window.filteredRows = window.allRows;
+                                window.currentPage = 1;
                                 updatePagination();
                                 showToast(response.message, 'success', 5000);
                             });
@@ -825,6 +796,67 @@ unset($role);
                     }
                 });
             });
+
+            // Function to force hide pagination buttons when not needed
+            function forcePaginationCheck() {
+                const totalRows = window.filteredRows ? window.filteredRows.length : 0;
+                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value);
+                const prevBtn = document.getElementById('prevPage');
+                const nextBtn = document.getElementById('nextPage');
+                const paginationEl = document.getElementById('pagination');
+
+                // Hide pagination completely if all rows fit on one page
+                if (totalRows <= rowsPerPage) {
+                    if (prevBtn) prevBtn.style.cssText = 'display: none !important';
+                    if (nextBtn) nextBtn.style.cssText = 'display: none !important';
+                    if (paginationEl) paginationEl.style.cssText = 'display: none !important';
+                } else {
+                    // Show pagination but conditionally hide prev/next buttons
+                    if (paginationEl) paginationEl.style.cssText = '';
+
+                    if (prevBtn) {
+                        if (window.currentPage <= 1) {
+                            prevBtn.style.cssText = 'display: none !important';
+                        } else {
+                            prevBtn.style.cssText = '';
+                        }
+                    }
+
+                    if (nextBtn) {
+                        const totalPages = Math.ceil(totalRows / rowsPerPage);
+                        if (window.currentPage >= totalPages) {
+                            nextBtn.style.cssText = 'display: none !important';
+                        } else {
+                            nextBtn.style.cssText = '';
+                        }
+                    }
+                }
+            }
+
+            // Add forcePaginationCheck to updatePagination
+            const originalUpdatePagination = window.updatePagination;
+            window.updatePagination = function() {
+                // Get all rows again in case the DOM was updated
+                window.allRows = Array.from(document.querySelectorAll('#auditTable tr'));
+                
+                // If filtered rows is empty or not defined, use all rows
+                if (!window.filteredRows || window.filteredRows.length === 0) {
+                    window.filteredRows = window.allRows;
+                }
+                
+                originalUpdatePagination();
+                forcePaginationCheck();
+            };
+
+            // Run immediately and after any filtering
+            forcePaginationCheck();
+            $('#roleNameFilter, #moduleFilter, #privilegeFilter').on('input change', function() {
+                setTimeout(forcePaginationCheck, 100);
+            });
+
+            // Initialize current page
+            window.currentPage = 1;
+            updatePagination();
         });
     </script>
 </body>

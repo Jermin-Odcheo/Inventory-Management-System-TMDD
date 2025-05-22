@@ -21,7 +21,7 @@ $rbac->requirePrivilege('Roles and Privileges', 'View');
 // 3) Button flags
 $canRestore = $rbac->hasPrivilege('Roles and Privileges', 'Restore');
 $canRemove = $rbac->hasPrivilege('Roles and Privileges', 'Remove');
-$canPermanentDelete = $rbac->hasPrivilege('Roles and Privileges', 'Delete');
+$canPermanentDelete = $rbac->hasPrivilege('Roles and Privileges', 'Permanently Delete');
 
 // SQL query for archived roles with audit information
 $sql = "
@@ -82,11 +82,11 @@ function getActionIcon($action)
 {
     $action = strtolower($action);
     if ($action === 'modified') {
-        return '<i class="fas fa-edit"></i>';
+        return '<i class="fas fa-user-edit"></i>';
     } elseif ($action === 'add') {
-        return '<i class="fas fa-plus"></i>';
-    } elseif ($action === 'soft delete' || $action === 'permanent delete') {
-        return '<i class="fas fa-trash-alt"></i>';
+        return '<i class="fas fa-user-plus"></i>';
+    } elseif ($action === 'delete' || $action === 'remove') {
+        return '<i class="fas fa-user-slash"></i>';
     } else {
         return '<i class="fas fa-info-circle"></i>';
     }
@@ -157,7 +157,7 @@ function formatChanges($oldJsonStr)
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" src="<?php echo BASE_URL; ?> /src/view/styles/css/audit_log.css">
-
+    
     <style>
         .wrapper {
             display: flex;
