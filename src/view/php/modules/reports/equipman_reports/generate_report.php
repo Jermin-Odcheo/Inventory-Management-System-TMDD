@@ -7,7 +7,8 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpWord\IOFactory;
-
+use PhpOffice\PhpWord\Style\Paper;
+use PhpOffice\PhpWord\Settings;
 function exportEquipmentReport(array $data, PDO $pdo, string $exportType = 'pdf'): void
 {
 
@@ -22,6 +23,7 @@ function exportEquipmentReport(array $data, PDO $pdo, string $exportType = 'pdf'
     $role_department = htmlspecialchars($data['role_department'] ?? '');
     $prep_date = htmlspecialchars($data['prepared_date'] ?? '');
     $export_type = $_GET['export_type'] ?? 'pdf';
+    $paper_size = trim($data['paper_size'] ?? 'letter'); // Default to letter if not specified
 
     // Debug POST data
     error_log("POST data: " . json_encode($_POST));
@@ -236,7 +238,14 @@ function exportEquipmentReport(array $data, PDO $pdo, string $exportType = 'pdf'
 
             $dompdf = new Dompdf(['isHtml5ParserEnabled' => true, 'isRemoteEnabled' => true]);
             $dompdf->loadHtml($html);
-            $dompdf->setPaper($data['paper_size'] ?? 'letter', $data['orientation'] ?? 'landscape');
+            
+            // Set proper paper size dimensions
+            if ($paper_size === 'legal') {
+                $dompdf->setPaper('legal', 'landscape'); // 8.5" x 14"
+            } else {
+                $dompdf->setPaper('letter', 'landscape'); // 8.5" x 11"
+            }
+            
             $dompdf->render();
             $dompdf->stream("Equipment_Report_" . date('Ymd') . ".pdf", ["Attachment" => true]);
             break;
@@ -244,12 +253,43 @@ function exportEquipmentReport(array $data, PDO $pdo, string $exportType = 'pdf'
         case 'excel':
             $spreadsheet = new Spreadsheet();
             $sheet = $spreadsheet->getActiveSheet();
+            
+            // Add report header information
+            $sheet->setCellValue('A1', 'Equipment Report');
+            $sheet->setCellValue('A2', 'Office/Laboratory:');
+            $sheet->setCellValue('B2', $specific_area === 'all' ? 'All Areas' : $specific_area);
+            $sheet->setCellValue('A3', 'Location:');
+            $sheet->setCellValue('B3', $building_loc === 'all' ? 'All Locations' : $building_loc);
+            $sheet->setCellValue('A4', 'Date Range:');
+            $sheet->setCellValue('B4', $date_filter_active ? 
+                ($date_from_valid && $date_to_valid ? "$date_from to $date_to" : 
+                ($date_from_valid ? "From $date_from" : "Until $date_to")) : 
+                "All dates");
+            $sheet->setCellValue('A5', 'Prepared By:');
+            $sheet->setCellValue('B5', $prepared_by);
+            $sheet->setCellValue('A6', $role_department);
+            $sheet->setCellValue('A7', 'Date Prepared:');
+            $sheet->setCellValue('B7', $prep_date);
+            
+            // Format header
+            $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+            $sheet->getStyle('A2:A7')->getFont()->setBold(true);
+            
+            // Add table headers at row 9
+            $rowIndex = 9;
             $colIndex = 1;
             foreach ($columns as $col) {
-                $sheet->setCellValueByColumnAndRow($colIndex, 1, ucwords(str_replace('_', ' ', $col)));
+                $sheet->setCellValueByColumnAndRow($colIndex, $rowIndex, ucwords(str_replace('_', ' ', $col)));
                 $colIndex++;
             }
-            $rowIndex = 2;
+            
+            // Style the header row
+            $headerRange = 'A' . $rowIndex . ':' . \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($columns)) . $rowIndex;
+            $sheet->getStyle($headerRange)->getFont()->setBold(true);
+            $sheet->getStyle($headerRange)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('CCCCCC');
+            
+            // Add data starting at row 10
+            $rowIndex++;
             foreach ($results as $row) {
                 $colIndex = 1;
                 foreach ($columns as $col) {
@@ -258,6 +298,12 @@ function exportEquipmentReport(array $data, PDO $pdo, string $exportType = 'pdf'
                 }
                 $rowIndex++;
             }
+            
+            // Auto-size columns for better readability
+            foreach (range(1, count($columns)) as $col) {
+                $sheet->getColumnDimensionByColumn($col)->setAutoSize(true);
+            }
+
             header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
             header('Content-Disposition: attachment;filename="Equipment_Report.xlsx"');
             header('Cache-Control: max-age=0');
@@ -267,7 +313,11 @@ function exportEquipmentReport(array $data, PDO $pdo, string $exportType = 'pdf'
 
         case 'word':
             $phpWord = new PhpWord();
-            $section = $phpWord->addSection();
+
+            $section = $phpWord->addSection([
+                'paperSize'   => ucfirst($paper_size),   // "Letter" or "Legal"
+                'orientation' => 'landscape',
+            ]);
             $section->addText("Equipment Report", ['bold' => true, 'size' => 16]);
             $section->addText("Office/Laboratory: " . htmlspecialchars($specific_area === 'all' ? 'All Areas' : $specific_area));
             $section->addText("Location: " . htmlspecialchars($building_loc === 'all' ? 'All Locations' : $building_loc));
@@ -280,25 +330,45 @@ function exportEquipmentReport(array $data, PDO $pdo, string $exportType = 'pdf'
             $section->addText("Role/Department: $role_department");
             $section->addText("Date Prepared: $prep_date");
             $section->addTextBreak(1);
-            $tableStyle = ['borderSize' => 6, 'borderColor' => '999999', 'cellMargin' => 50];
+            
+            // Calculate optimal column width based on page width and number of columns
+            $pageWidth = 9072; // Width of landscape A4 page in twips (excluding margins)
+            $marginSpace = 1440; // Typical margins (720 points per side)
+            $availableWidth = $pageWidth - $marginSpace;
+            $columnCount = count($columns);
+            
+            $tableStyle = [
+                'borderSize' => 6, 
+                'borderColor' => '999999', 
+                'cellMargin' => 100,
+                'width' => 100, // 100% of page width
+                'unit' => 'pct'
+            ];
             $firstRowStyle = ['bgColor' => 'CCCCCC'];
             $phpWord->addTableStyle('Equipment Table', $tableStyle, $firstRowStyle);
             $table = $section->addTable('Equipment Table');
+            
+            // Add header row
             $table->addRow();
             foreach ($columns as $col) {
-                $table->addCell(1750)->addText(ucwords(str_replace('_', ' ', $col)), ['bold' => true]);
+                $cell = $table->addCell(null, ['width' => 100 / $columnCount . '%']);
+                $cell->addText(ucwords(str_replace('_', ' ', $col)), ['bold' => true]);
             }
+            
+            // Add data rows
             if (!empty($results)) {
                 foreach ($results as $row) {
                     $table->addRow();
                     foreach ($columns as $col) {
-                        $table->addCell(1750)->addText($row[$col] ?? '');
+                        $cell = $table->addCell(null, ['width' => 100 / $columnCount . '%']);
+                        $cell->addText($row[$col] ?? '');
                     }
                 }
             } else {
                 $table->addRow();
-                $table->addCell(1750 * count($columns))->addText("No data found.", ['italic' => true]);
+                $table->addCell(null, ['gridSpan' => $columnCount])->addText("No data found.", ['italic' => true]);
             }
+
             header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
             header('Content-Disposition: attachment;filename="Equipment_Report.docx"');
             header('Cache-Control: max-age=0');
