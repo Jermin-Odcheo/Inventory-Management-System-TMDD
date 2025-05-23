@@ -576,10 +576,78 @@ switch ($privNameLower) {
         return false;
     }
     
+    // Function to get the "View" privilege checkbox for a specific module
+    function getViewCheckboxForModule(moduleId) {
+        // Find all privilege checkboxes for this module
+        const checkboxes = $(`input[name="privileges[]"][id^="priv_${moduleId}_"]`);
+        let viewCheckbox = null;
+        
+        // Find the one with "view" in its label
+        checkboxes.each(function() {
+            const label = $(`label[for="${$(this).attr('id')}"]`).text().trim().toLowerCase();
+            if (label === 'view') {
+                viewCheckbox = $(this);
+                return false; // Break the loop
+            }
+        });
+        
+        return viewCheckbox;
+    }
+    
+    // Function to handle privilege checkbox changes
+    function handlePrivilegeChange() {
+        // Get the module ID from the checkbox ID
+        const checkboxId = $(this).attr('id');
+        const moduleId = checkboxId.split('_')[1];
+        const checkboxLabel = $(`label[for="${checkboxId}"]`).text().trim().toLowerCase();
+        
+        // Skip this logic if the current checkbox is "View"
+        if (checkboxLabel === 'view') {
+            return;
+        }
+        
+        // Find the View checkbox for this module
+        const viewCheckbox = getViewCheckboxForModule(moduleId);
+        
+        if (viewCheckbox) {
+            // If this checkbox is checked and it's not View, make sure View is checked too
+            if ($(this).prop('checked')) {
+                viewCheckbox.prop('checked', true);
+            } else {
+                // If this checkbox is unchecked, check if any other non-View privileges are checked
+                const otherChecked = $(`input[name="privileges[]"][id^="priv_${moduleId}_"]:checked`).filter(function() {
+                    const label = $(`label[for="${$(this).attr('id')}"]`).text().trim().toLowerCase();
+                    return label !== 'view';
+                }).length > 0;
+                
+                // Only allow unchecking View if no other privileges are checked
+                if (!otherChecked) {
+                    // All other privileges are unchecked, so View can be unchecked
+                    // Do nothing, allow View to be unchecked manually
+                }
+            }
+        }
+    }
+    
     // Capture initial state when document is ready
     $(document).ready(function() {
         originalFormState = captureFormState();
         console.log('Original form state captured:', originalFormState);
+        
+        // Add event listener to all privilege checkboxes
+        $('input[name="privileges[]"]').on('change', handlePrivilegeChange);
+        
+        // Run once on page load to ensure initial state is correct
+        $('input[name="privileges[]"]:checked').each(function() {
+            const checkboxId = $(this).attr('id');
+            const checkboxLabel = $(`label[for="${checkboxId}"]`).text().trim().toLowerCase();
+            
+            // Skip if this is the View checkbox
+            if (checkboxLabel !== 'view') {
+                // Trigger the change handler to ensure View is checked if needed
+                $(this).trigger('change');
+            }
+        });
     });
 
     // Handle the Edit Role form submission via AJAX.
@@ -591,6 +659,39 @@ switch ($privNameLower) {
             showToast('No changes were made to the role.', 'info');
             return false;
         }
+        
+        // Ensure all modules with any privileges have View checked
+        let moduleIds = [];
+        
+        // Get all unique module IDs from checkboxes
+        $('input[name="privileges[]"]').each(function() {
+            const id = $(this).attr('id');
+            const moduleId = id.split('_')[1];
+            if (!moduleIds.includes(moduleId)) {
+                moduleIds.push(moduleId);
+            }
+        });
+        
+        // For each module, check if any non-View privileges are checked
+        moduleIds.forEach(function(moduleId) {
+            // Check if any non-View privileges are checked for this module
+            const hasNonViewChecked = $(`input[name="privileges[]"][id^="priv_${moduleId}_"]:checked`).filter(function() {
+                const label = $(`label[for="${$(this).attr('id')}"]`).text().trim().toLowerCase();
+                return label !== 'view';
+            }).length > 0;
+            
+            // If any non-View privileges are checked, ensure View is checked too
+            if (hasNonViewChecked) {
+                const viewCheckbox = getViewCheckboxForModule(moduleId);
+                if (viewCheckbox && !viewCheckbox.prop('checked')) {
+                    viewCheckbox.prop('checked', true);
+                    
+                    // Get the module name for the notification
+                    const moduleName = $(`button[data-bs-target="#module-${moduleId}"]`).text().trim();
+                    showToast(`"View" privilege automatically added for ${moduleName} module`, 'info');
+                }
+            }
+        });
         
         const submitBtn = $('button[type="submit"]', this);
 
