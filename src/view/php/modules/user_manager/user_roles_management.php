@@ -171,7 +171,7 @@ $userRoleDepartments = array_values($userRoleMap);
                     <option value="" selected>All Departments</option>
                     <?php foreach ($departmentsData as $dept): ?>
                         <option value="<?php echo htmlspecialchars($dept['department_name']); ?>">
-                            <?php echo htmlspecialchars($dept['department_name']); ?>
+                            <?php echo '(' . htmlspecialchars($dept['abbreviation']) . ') ' . htmlspecialchars($dept['department_name']); ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
@@ -261,7 +261,7 @@ $userRoleDepartments = array_values($userRoleMap);
                 <select id="search-department-dropdown">
                     <option value="">Select one department</option>
                     <?php foreach ($departmentsData as $dept): ?>
-                        <option value="<?php echo $dept['id']; ?>"><?php echo htmlspecialchars($dept['department_name']); ?></option>
+                        <option value="<?php echo $dept['id']; ?>"><?php echo '(' . htmlspecialchars($dept['abbreviation']) . ') ' . htmlspecialchars($dept['department_name']); ?></option>
                     <?php endforeach; ?>
                 </select>
                 <small class="text-muted">Department is required</small>
@@ -404,9 +404,28 @@ $userRoleDepartments = array_values($userRoleMap);
             $('#dept-filter').select2({
                 placeholder: 'All Departments',
                 allowClear: true,
-
                 minimumResultsForSearch: 5,
-                dropdownParent: $('body') // Attach to body for proper z-index handling
+                dropdownParent: $('body'), // Attach to body for proper z-index handling
+                matcher: function(params, data) {
+                    // If there are no search terms, return all of the data
+                    if ($.trim(params.term) === '') {
+                        return data;
+                    }
+                    
+                    // Search in both department name and abbreviation
+                    if (data.text.toLowerCase().indexOf(params.term.toLowerCase()) > -1) {
+                        return data;
+                    }
+                    
+                    // Try to extract abbreviation from the data text (format: "(ABBR) Department Name")
+                    const abbr = data.text.match(/^\(([^)]+)\)/);
+                    if (abbr && abbr[1].toLowerCase().indexOf(params.term.toLowerCase()) > -1) {
+                        return data;
+                    }
+                    
+                    // Return `null` if the term should not be displayed
+                    return null;
+                }
             });
 
             // Initialize Select2 for role filter
@@ -423,7 +442,27 @@ $userRoleDepartments = array_values($userRoleMap);
                 placeholder: 'Select Department',
                 allowClear: true,
                 width: '100%',
-                dropdownParent: $('#add-user-roles-modal .modal-body')
+                dropdownParent: $('#add-user-roles-modal .modal-body'),
+                matcher: function(params, data) {
+                    // If there are no search terms, return all of the data
+                    if ($.trim(params.term) === '') {
+                        return data;
+                    }
+                    
+                    // Search in both department name and abbreviation
+                    if (data.text.toLowerCase().indexOf(params.term.toLowerCase()) > -1) {
+                        return data;
+                    }
+                    
+                    // Try to extract abbreviation from the data text (format: "(ABBR) Department Name")
+                    const abbr = data.text.match(/^\(([^)]+)\)/);
+                    if (abbr && abbr[1].toLowerCase().indexOf(params.term.toLowerCase()) > -1) {
+                        return data;
+                    }
+                    
+                    // Return `null` if the term should not be displayed
+                    return null;
+                }
             }).on('select2:select', function(e) {
                 // Get the selected department ID
                 const deptId = parseInt($(this).val());
