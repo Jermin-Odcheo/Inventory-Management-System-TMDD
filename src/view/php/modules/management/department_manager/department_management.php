@@ -152,6 +152,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         try {
+            // Check if department with same name already exists
+            $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM departments WHERE department_name = ? AND is_disabled = 0");
+            $checkStmt->execute([$DepartmentName]);
+            if ($checkStmt->fetchColumn() > 0) {
+                $response['status'] = 'error';
+                $response['message'] = "Department '{$DepartmentName}' already exists.";
+                echo json_encode($response);
+                exit;
+            }
+            
+            // Check if department with same acronym already exists
+            $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM departments WHERE abbreviation = ? AND is_disabled = 0");
+            $checkStmt->execute([$DepartmentAcronym]);
+            if ($checkStmt->fetchColumn() > 0) {
+                $response['status'] = 'error';
+                $response['message'] = "Department acronym '{$DepartmentAcronym}' already exists.";
+                echo json_encode($response);
+                exit;
+            }
+
             $pdo->beginTransaction();
 
             // Insert department without specifying an ID
@@ -189,9 +209,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
             }
+            
+            // Provide a more user-friendly error message
+            if (strpos($e->getMessage(), 'Duplicate entry') !== false && strpos($e->getMessage(), 'department_name') !== false) {
+                $response['message'] = "Department name '{$DepartmentName}' already exists.";
+            } else if (strpos($e->getMessage(), 'Duplicate entry') !== false && strpos($e->getMessage(), 'abbreviation') !== false) {
+                $response['message'] = "Department acronym '{$DepartmentAcronym}' already exists.";
+            } else {
+                $response['message'] = 'Error creating department: ' . $e->getMessage();
+            }
+            
             $response['status'] = 'error';
-            $response['message'] = 'Error Created Department: ' . $e->getMessage();
-            $_SESSION['errors'] = ["Error Created Department: " . $e->getMessage()];
+            $_SESSION['errors'] = [$response['message']];
         }
         echo json_encode($response);
         exit;
@@ -210,8 +239,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $DepartmentName = trim($_POST['DepartmentName']);
 
         try {
-            $pdo->beginTransaction();
-
+            // Get current department data
             $stmt = $pdo->prepare("SELECT * FROM departments WHERE id = ?");
             $stmt->execute([$id]);
             $oldDepartment = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -219,6 +247,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$oldDepartment) {
                 throw new Exception('Department not found.');
             }
+            
+            // Check if any changes were made
+            if ($oldDepartment['abbreviation'] === $DepartmentAcronym && 
+                $oldDepartment['department_name'] === $DepartmentName) {
+                echo json_encode([
+                    'status' => 'info',
+                    'message' => 'No changes were made to the department.'
+                ]);
+                exit;
+            }
+            
+            // Check if department name already exists (for another department)
+            if ($oldDepartment['department_name'] !== $DepartmentName) {
+                $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM departments WHERE department_name = ? AND id != ? AND is_disabled = 0");
+                $checkStmt->execute([$DepartmentName, $id]);
+                if ($checkStmt->fetchColumn() > 0) {
+                    echo json_encode([
+                        'status' => 'error',
+                        'message' => "Department name '{$DepartmentName}' already exists."
+                    ]);
+                    exit;
+                }
+            }
+            
+            // Check if acronym already exists (for another department)
+            if ($oldDepartment['abbreviation'] !== $DepartmentAcronym) {
+                $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM departments WHERE abbreviation = ? AND id != ? AND is_disabled = 0");
+                $checkStmt->execute([$DepartmentAcronym, $id]);
+                if ($checkStmt->fetchColumn() > 0) {
+                    echo json_encode([
+                        'status' => 'error',
+                        'message' => "Department acronym '{$DepartmentAcronym}' already exists."
+                    ]);
+                    exit;
+                }
+            }
+
+            $pdo->beginTransaction();
 
             $stmtUpdate = $pdo->prepare("
                 UPDATE departments SET 
@@ -331,10 +397,12 @@ if (isset($_GET["q"])) {
 <html lang="en">
 
 <head>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-      <!-- Include Toast CSS/JS (make sure showToast is defined) -->
-      <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Include jQuery and Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <meta charset="UTF-8">
     <title>Department Management</title>
     <style>
@@ -422,13 +490,15 @@ if (isset($_GET["q"])) {
             border-color: #212529 !important;
             box-shadow: none !important;
         }
+
         #sortFilter .dropdown-menu.sort-dropdown-menu {
             background: #fff !important;
             color: #212529 !important;
             min-width: 220px;
             z-index: 1055;
-            box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15);
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, .15);
         }
+
         #sortFilter .dropdown-menu.sort-dropdown-menu .dropdown-item,
         #sortFilter .dropdown-menu.sort-dropdown-menu .dropdown-item:active,
         #sortFilter .dropdown-menu.sort-dropdown-menu .dropdown-item.active,
@@ -437,8 +507,11 @@ if (isset($_GET["q"])) {
             color: #212529 !important;
             background: #fff !important;
         }
+
         /* Prevent clipping by making .table-responsive position: static */
-        .table-responsive { position: static !important; }
+        .table-responsive {
+            position: static !important;
+        }
     </style>
 
 </head>
@@ -482,9 +555,9 @@ if (isset($_GET["q"])) {
                                             </div>
                                         </div>
                                         <div class="input-group w-auto" id="livesearch">
-                                <span class="input-group-text"><i class="bi bi-search"></i></span>
-                                <input type="text" class="form-control" placeholder="Search..." id="eqSearch">
-                            </div>
+                                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                            <input type="text" class="form-control" placeholder="Search..." id="eqSearch">
+                                        </div>
                                     </div>
                                     <table id="departmentTable" class="table table-striped table-hover align-middle">
                                         <thead class="table-dark">
@@ -529,10 +602,10 @@ if (isset($_GET["q"])) {
                                     <div class="container-fluid">
                                         <div class="row align-items-center g-3">
                                             <div class="col-12 col-sm-auto">
-                                            <div class="text-muted">
-                                                <?php $totalLogs = count($department); ?>
-                                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span id="totalRows"><?= $totalLogs ?></span> entries
-                                            </div>
+                                                <div class="text-muted">
+                                                    <?php $totalLogs = count($department); ?>
+                                                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span id="totalRows"><?= $totalLogs ?></span> entries
+                                                </div>
                                             </div>
                                             <div class="col-12 col-sm-auto ms-sm-auto">
                                                 <div class="d-flex align-items-center gap-2">
@@ -570,9 +643,9 @@ if (isset($_GET["q"])) {
         </div>
     </div>
 
-    <!-- Load your pagination script if needed -->
-    <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
-
+    <!-- Load department-specific pagination script -->
+    <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/department_pagination.js" defer></script>
+ 
     <!-- Add Department Modal -->
     <div class="modal fade" id="addDepartmentModal" tabindex="-1">
         <div class="modal-dialog">
@@ -672,17 +745,8 @@ if (isset($_GET["q"])) {
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Live search filtering
-            const searchInput = document.getElementById('eqSearch');
-            if (searchInput) {
-                searchInput.addEventListener('keyup', function() {
-                    const searchValue = searchInput.value.toLowerCase();
-                    const rows = document.querySelectorAll('#table tbody tr');
-                    rows.forEach(function(row) {
-                        row.style.display = row.textContent.toLowerCase().indexOf(searchValue) > -1 ? '' : 'none';
-                    });
-                });
-            }
+            // Live search filtering is now handled by department_pagination.js
+            // No need for this duplicate event listener
 
             // Check for success or error messages from PHP session
             <?php if (!empty($success)): ?>
@@ -706,13 +770,21 @@ if (isset($_GET["q"])) {
                     dataType: 'json',
                     success: function(response) {
                         if (response.status === 'success') {
-                            $('#departmentTable').load(location.href + ' #departmentTable', function() {
-                                updatePagination();
-
-                            });
                             // Close modal first to prevent backdrop issues
                             $('#addDepartmentModal').modal('hide');
-                            showToast(response.message, 'success', 5000);
+                            
+                            // Use a timeout to ensure modal backdrop is removed
+                            setTimeout(function() {
+                                // Only update the table, not the whole page
+                                $('#departmentTable').load(location.href + ' #departmentTable > *', function() {
+                                    // Initialize pagination after table is reloaded
+                                    initDepartmentPagination();
+                                    showToast(response.message, 'success', 5000);
+                                });
+                                
+                                // Clear modal inputs
+                                $('#addDepartmentForm')[0].reset();
+                            }, 300);
                         } else {
                             showToast(response.message || 'An error occurred', 'error', 5000);
                         }
@@ -736,6 +808,21 @@ if (isset($_GET["q"])) {
             // AJAX: Edit Department form submission
             $('#editDepartmentForm').on('submit', function(e) {
                 e.preventDefault();
+                
+                // Store original values for comparison
+                const originalAcronym = $('#edit_department_acronym').data('original-value');
+                const originalName = $('#edit_department_name').data('original-value');
+                
+                // Get current values
+                const currentAcronym = $('#edit_department_acronym').val();
+                const currentName = $('#edit_department_name').val();
+                
+                // Check if anything changed
+                if (originalAcronym === currentAcronym && originalName === currentName) {
+                    showToast('No changes were made to the department.', 'info', 5000);
+                    $('#editDepartmentModal').modal('hide');
+                    return;
+                }
 
                 $.ajax({
                     url: 'department_management.php',
@@ -743,14 +830,21 @@ if (isset($_GET["q"])) {
                     data: $(this).serialize(),
                     dataType: 'json',
                     success: function(response) {
+                        // Close modal first to prevent backdrop issues
+                        $('#editDepartmentModal').modal('hide');
+                        
                         if (response.status === 'success') {
-                            $('#departmentTable').load(location.href + ' #departmentTable', function() {
-                                updatePagination();
-
-                            });
-                            // Close modal first to prevent backdrop issues
-                            $('#editDepartmentModal').modal('hide');
-                            showToast(response.message, 'success', 5000);
+                            // Use a timeout to ensure modal backdrop is removed
+                            setTimeout(function() {
+                                // Only update the table, not the whole page
+                                $('#departmentTable').load(location.href + ' #departmentTable > *', function() {
+                                    // Initialize pagination after table is reloaded
+                                    initDepartmentPagination();
+                                    showToast(response.message, 'success', 5000);
+                                });
+                            }, 300);
+                        } else if (response.status === 'info') {
+                            showToast(response.message, 'info', 5000);
                         } else {
                             showToast(response.message || 'An error occurred', 'error', 5000);
                         }
@@ -778,8 +872,8 @@ if (isset($_GET["q"])) {
                 var deptName = $(this).data('department-name');
                 $('#edit_department_hidden_id').val(id);
                 $('#edit_department_id').val(id);
-                $('#edit_department_acronym').val(deptAcronym);
-                $('#edit_department_name').val(deptName);
+                $('#edit_department_acronym').val(deptAcronym).data('original-value', deptAcronym);
+                $('#edit_department_name').val(deptName).data('original-value', deptName);
                 $('#editDepartmentModal').modal('show');
             });
 
@@ -797,11 +891,20 @@ if (isset($_GET["q"])) {
             $('#confirmDeleteLink').on('click', function() {
                 // Close the modal when delete is confirmed
                 $('#deleteDepartmentModal').modal('hide');
-                
-       });
- 
+            });
+
+            // Reset form when add modal is closed
             $('#addDepartmentModal').on('hidden.bs.modal', function() {
                 $(this).find('form')[0].reset();
+            });
+            
+            // Ensure modal backdrop is removed when modal is hidden
+            $('.modal').on('hidden.bs.modal', function() {
+                if ($('.modal.show').length > 0) {
+                    $('body').addClass('modal-open');
+                } else {
+                    $('.modal-backdrop').remove();
+                }
             });
 
             // Sorting functionality for Department Name (dropdown version)
@@ -824,11 +927,20 @@ if (isset($_GET["q"])) {
                 // Update button label
                 var label = sortOrder === 'asc' ? 'Department Name (A–Z) ▼' : 'Department Name (Z–A) ▼';
                 $('#sortNameBtn').text(label);
-                updatePagination();
+                // Re-initialize pagination after sorting
+                initDepartmentPagination();
             });
 
+            // Initialize department pagination
+            if (typeof window.initDepartmentPagination === 'function') {
+                window.initDepartmentPagination();
+                console.log('Department pagination initialized');
+            } else {
+                console.error('Department pagination function not found');
+            }
         });
     </script>
+
 
 </body>
 
