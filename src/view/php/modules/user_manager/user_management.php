@@ -119,6 +119,7 @@ try {
     <!-- Bootstrap 5 bundle (includes Popper & the native Modal/Data API) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
     <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <!-- Select2 JS -->
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <!-- Bootstrap Icons -->
@@ -725,10 +726,14 @@ try {
                 // Add event handlers for removal buttons
                 $('.remove-dept').on('click', function() {
                     const deptId = $(this).data('dept-id');
-    
+                    
+                    console.log('Attempting to remove:', deptId);
+                    console.log('Before:', selectedDepartments);
+
                     selectedDepartments = selectedDepartments.filter(d => String(d.id) !== String(deptId));
                     updateDepartmentsDisplay();
-
+                    
+                    console.log('After:', selectedDepartments);
                 });
             }
 
@@ -809,7 +814,12 @@ try {
             // Direct client-side filtering function
             function filterTable() {
                 const searchText = $('#search-filters').val().toLowerCase();
-                const deptFilter = $('#department-filter').val(); 
+                const deptFilter = $('#department-filter').val();
+
+                console.log('Filtering with:', {
+                    searchText,
+                    deptFilter
+                });
 
                 // Show all rows first
                 $('#umTable tbody tr').show();
@@ -836,7 +846,8 @@ try {
 
                 // Update the visibility count
                 const visibleCount = $('#umTable tbody tr:visible').length;
-                const totalCount = $('#umTable tbody tr').length; 
+                const totalCount = $('#umTable tbody tr').length;
+                console.log(`Showing ${visibleCount} of ${totalCount} rows`);
 
                 // Update pagination info
                 $('#totalRows').text(visibleCount);
@@ -910,7 +921,9 @@ try {
                     $('#currentPage').text('1');
 
                     // Update pagination controls
-                    updatePaginationControls(totalRows); 
+                    updatePaginationControls(totalRows);
+
+                    console.log('Filters cleared');
                 });
 
                 // Handle rows per page changes
@@ -964,14 +977,20 @@ try {
                 if (selectedDepartments.length > 0) {
                     formData.append('department', selectedDepartments[0].id);
                 }
-    
+                
+                // Log all form data for debugging
+                for (let pair of formData.entries()) {
+                    console.log(pair[0] + ': ' + pair[1]);
+                }
+                
                 $.ajax({
                     url: form.attr('action'),
                     type: 'POST',
                     data: formData,
                     processData: false,
                     contentType: false,
-                    success: function(response) { 
+                    success: function(response) {
+                        console.log("Server response:", response);
                         try {
                             const result = typeof response === 'string' ? JSON.parse(response) : response;
                             if (result.success) {
@@ -998,7 +1017,9 @@ try {
                             }
                         }
                     },
-                    error: function(xhr, status, error) { 
+                    error: function(xhr, status, error) {
+                        console.log("AJAX error:", status, error);
+                        console.log("Response:", xhr.responseText);
                         try {
                             // First try to extract JSON from the response if it contains HTML errors
                             let jsonStr = xhr.responseText;
@@ -1047,12 +1068,17 @@ try {
                 // Clear any existing department values to avoid duplicates
                 formData.delete('departments[]');
                 formData.delete('department');
-    
+                
+                // Debug info
+                console.log("Department rows found:", departmentRows.length);
+                
+                // Try two approaches to ensure departments are sent:
                 
                 // Approach 1: Set single department (for compatibility with older code)
                 // Get the first department ID from the table
                 const firstDeptId = departmentRows.first().data('department-id');
                 if (firstDeptId) {
+                    console.log("Setting department ID:", firstDeptId);
                     formData.append('department', firstDeptId);
                 }
                 
@@ -1060,13 +1086,21 @@ try {
                 departmentRows.each(function() {
                     const deptId = $(this).data('department-id') || $(this).find('td:first').data('department-id');
                     const deptName = $(this).find('td:first').text().trim();
-                    const cleanDeptName = deptName.replace(/^"+|"+$/g, '').trim();
+                    const cleanDeptName = deptName
+                        .replace(/\(.*?\)/g, '')  // remove acronym like (OIA)
+                        .replace(/^"+|"+$/g, '')  // remove extra quotes
+                        .trim();
+
+
+                    console.log("Row department:", deptName, "ID:", deptId);
+                    
                     if (deptId) {
                         formData.append('departments[]', deptId);
                     } else {
                         // Try to find department ID by name v1
                         <?php foreach($departments as $id => $dept): ?>
                         if (cleanDeptName === <?= json_encode($dept['department_name']) ?>) {
+                            console.log("Found department by name:", cleanDeptName, "ID:", <?= $id ?>);
                             formData.append('departments[]', <?= $id ?>);
                         }
                         <?php endforeach; ?>
@@ -1075,6 +1109,7 @@ try {
                 
                 // Log all form data for debugging
                 for (let pair of formData.entries()) {
+                    console.log(pair[0] + ': ' + pair[1]);
                 }
                 
                 $.ajax({
@@ -1084,6 +1119,7 @@ try {
                     processData: false,
                     contentType: false,
                     success: function(response) {
+                        console.log("Server response:", response);
                         try {
                             const result = typeof response === 'string' ? JSON.parse(response) : response;
                             if (result.success) {
@@ -1111,6 +1147,8 @@ try {
                         }
                     },
                     error: function(xhr, status, error) {
+                        console.log("AJAX error:", status, error);
+                        console.log("Response:", xhr.responseText);
                         try {
                             // First try to extract JSON from the response if it contains HTML errors
                             let jsonStr = xhr.responseText;
