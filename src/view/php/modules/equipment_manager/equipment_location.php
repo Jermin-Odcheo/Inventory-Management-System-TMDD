@@ -633,10 +633,10 @@ function safeHtml($value)
                         <div class="mb-3">
                             <label class="form-label">Device State</label>
                             <select class="form-select" id="devState" name="device_state" required>
-                                <option value="summarized">Inventory</option>
-                                <option value="detailed">Transffered</option>
-                                <option value="custom">Borrowed</option>
-                                <option value="equipment_details">Returned</option>
+                                <option value="inventory">Inventory</option>
+                                <option value="transffered">Transffered</option>
+                                <option value="borrowed">Borrowed</option>
+                                <option value="returned">Returned</option>
                             </select>
                         </div>
                         
@@ -722,10 +722,10 @@ function safeHtml($value)
                         <div class="mb-3">
                             <label class="form-label">Device State</label>
                             <select class="form-select" id="devState" name="device_state" required>
-                                <option value="summarized">Inventory</option>
-                                <option value="detailed">Transffered</option>
-                                <option value="custom">Borrowed</option>
-                                <option value="equipment_details">Returned</option>
+                            <option value="inventory">Inventory</option>
+                                <option value="transffered">Transffered</option>
+                                <option value="borrowed">Borrowed</option>
+                                <option value="returned">Returned</option>
                             </select>
                         </div>
 
