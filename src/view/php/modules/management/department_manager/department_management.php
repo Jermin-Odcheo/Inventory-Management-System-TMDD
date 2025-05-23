@@ -403,6 +403,26 @@ if (isset($_GET["q"])) {
     <!-- Include jQuery and Bootstrap JS -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Disable default pagination for this page -->
+    <script>
+        // Set flag to prevent the default pagination from initializing
+        window.paginationInitialized = true;
+        
+        // Override the default pagination functions to prevent conflicts
+        window.initPagination = function() { 
+            console.log('Default pagination disabled for department management page');
+            return {
+                update: function() {},
+                getConfig: function() { return {}; },
+                setConfig: function() {}
+            };
+        };
+        
+        // Override updatePagination to prevent conflicts
+        window.updatePagination = function() {
+            console.log('Using department-specific pagination instead of default');
+        };
+    </script>
     <meta charset="UTF-8">
     <title>Department Management</title>
     <style>
@@ -645,7 +665,13 @@ if (isset($_GET["q"])) {
 
     <!-- Load department-specific pagination script -->
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/department_pagination.js" defer></script>
- 
+    <script>
+        console.log('Department management page loaded. Pagination script should initialize on DOMContentLoaded.');
+        
+        // Prevent the default pagination from initializing for this page
+        window.paginationInitialized = true;
+    </script>
+
     <!-- Add Department Modal -->
     <div class="modal fade" id="addDepartmentModal" tabindex="-1">
         <div class="modal-dialog">
@@ -777,8 +803,10 @@ if (isset($_GET["q"])) {
                             setTimeout(function() {
                                 // Only update the table, not the whole page
                                 $('#departmentTable').load(location.href + ' #departmentTable > *', function() {
-                                    // Initialize pagination after table is reloaded
-                                    initDepartmentPagination();
+                                    // Initialize department pagination after table is reloaded
+                                    if (typeof window.initDepartmentPagination === 'function') {
+                                        window.initDepartmentPagination();
+                                    }
                                     showToast(response.message, 'success', 5000);
                                 });
                                 
@@ -838,8 +866,10 @@ if (isset($_GET["q"])) {
                             setTimeout(function() {
                                 // Only update the table, not the whole page
                                 $('#departmentTable').load(location.href + ' #departmentTable > *', function() {
-                                    // Initialize pagination after table is reloaded
-                                    initDepartmentPagination();
+                                    // Initialize department pagination after table is reloaded
+                                    if (typeof window.initDepartmentPagination === 'function') {
+                                        window.initDepartmentPagination();
+                                    }
                                     showToast(response.message, 'success', 5000);
                                 });
                             }, 300);
@@ -928,13 +958,21 @@ if (isset($_GET["q"])) {
                 var label = sortOrder === 'asc' ? 'Department Name (A–Z) ▼' : 'Department Name (Z–A) ▼';
                 $('#sortNameBtn').text(label);
                 // Re-initialize pagination after sorting
-                initDepartmentPagination();
+                if (typeof window.initDepartmentPagination === 'function') {
+                    window.initDepartmentPagination();
+                }
             });
 
             // Initialize department pagination
             if (typeof window.initDepartmentPagination === 'function') {
-                window.initDepartmentPagination();
-                console.log('Department pagination initialized');
+                // Ensure we're using the department-specific pagination
+                window.paginationInitialized = true;
+                
+                // Initialize with a slight delay to ensure DOM is fully loaded
+                setTimeout(function() {
+                    window.initDepartmentPagination();
+                    console.log('Department pagination initialized from document ready');
+                }, 100);
             } else {
                 console.error('Department pagination function not found');
             }

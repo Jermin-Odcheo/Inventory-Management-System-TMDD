@@ -19,7 +19,7 @@ const departmentPaginationConfig = {
 
 // Initialize pagination for department table
 function initDepartmentPagination() {
- 
+    console.log('department_pagination.js: Initializing department pagination');
     
     // Get all rows from the department table (excluding header row)
     const tableBody = document.querySelector('#departmentTable tbody');
@@ -35,7 +35,8 @@ function initDepartmentPagination() {
         
         // Perform initial pagination
         updateDepartmentPagination();
-       
+        
+        console.log('department_pagination.js: Initialization completed');
     } else {
         console.error('department_pagination.js: Department table body not found');
     }
@@ -43,7 +44,7 @@ function initDepartmentPagination() {
 
 // Set up event listeners for department table
 function setupDepartmentEventListeners() {
-   
+    console.log('department_pagination.js: Setting up event listeners');
     
     // Search input listener
     const searchInput = document.getElementById('eqSearch');
@@ -51,51 +52,65 @@ function setupDepartmentEventListeners() {
         searchInput.addEventListener('input', function() {
             filterDepartmentTable(this.value.toLowerCase());
         });
-        
+        console.log('department_pagination.js: Added listener to search input');
     }
     
     // Rows per page select listener
     const rowsPerPageSelect = document.getElementById(departmentPaginationConfig.rowsPerPageSelectId);
     if (rowsPerPageSelect) {
         rowsPerPageSelect.addEventListener('change', () => {
-            
+            console.log('department_pagination.js: Rows per page changed');
             departmentPaginationConfig.currentPage = 1; // Reset to first page
             updateDepartmentPagination();
         });
-     
+        console.log('department_pagination.js: Added listener to rows per page select');
     }
     
-    // Previous page button listener
+    // Previous page button listener - Remove any existing listeners first
     const prevButton = document.getElementById(departmentPaginationConfig.prevPageId);
     if (prevButton) {
-        prevButton.addEventListener('click', (e) => {
+        // Clone the button to remove all event listeners
+        const newPrevButton = prevButton.cloneNode(true);
+        prevButton.parentNode.replaceChild(newPrevButton, prevButton);
+        
+        // Add our event listener
+        newPrevButton.addEventListener('click', (e) => {
             e.preventDefault();
+            e.stopPropagation(); // Prevent event bubbling
+            console.log('department_pagination.js: Previous button clicked');
             if (departmentPaginationConfig.currentPage > 1) {
                 departmentPaginationConfig.currentPage--;
                 updateDepartmentPagination();
             }
         });
-    
+        console.log('department_pagination.js: Added listener to previous button');
     }
     
-    // Next page button listener
+    // Next page button listener - Remove any existing listeners first
     const nextButton = document.getElementById(departmentPaginationConfig.nextPageId);
     if (nextButton) {
-        nextButton.addEventListener('click', (e) => {
+        // Clone the button to remove all event listeners
+        const newNextButton = nextButton.cloneNode(true);
+        nextButton.parentNode.replaceChild(newNextButton, nextButton);
+        
+        // Add our event listener
+        newNextButton.addEventListener('click', (e) => {
             e.preventDefault();
+            e.stopPropagation(); // Prevent event bubbling
+            console.log('department_pagination.js: Next button clicked');
             const totalPages = getDepartmentTotalPages();
             if (departmentPaginationConfig.currentPage < totalPages) {
                 departmentPaginationConfig.currentPage++;
                 updateDepartmentPagination();
             }
         });
-  
+        console.log('department_pagination.js: Added listener to next button');
     }
 }
 
 // Filter department table based on search input
 function filterDepartmentTable(searchTerm = '') {
- 
+    console.log('department_pagination.js: Filtering department table');
     
     if (searchTerm === '') {
         // If no search term, show all rows
@@ -108,7 +123,7 @@ function filterDepartmentTable(searchTerm = '') {
         });
     }
     
-   
+    console.log(`department_pagination.js: Filtered to ${filteredDepartmentRows.length} rows`);
     
     // Reset to first page after filtering
     departmentPaginationConfig.currentPage = 1;
@@ -126,6 +141,14 @@ function updateDepartmentPagination() {
     const rowsPerPage = parseInt(rowsPerPageSelect?.value || '10');
     const totalRows = filteredDepartmentRows.length;
     const totalPages = getDepartmentTotalPages();
+    
+    // Ensure current page is within valid range
+    if (departmentPaginationConfig.currentPage > totalPages) {
+        departmentPaginationConfig.currentPage = totalPages;
+    }
+    if (departmentPaginationConfig.currentPage < 1) {
+        departmentPaginationConfig.currentPage = 1;
+    }
     
     // Calculate start and end indices for current page
     const startIndex = (departmentPaginationConfig.currentPage - 1) * rowsPerPage;
@@ -150,7 +173,7 @@ function updateDepartmentPagination() {
     const rowsPerPageSpan = document.getElementById(departmentPaginationConfig.rowsPerPageId);
     const totalRowsSpan = document.getElementById(departmentPaginationConfig.totalRowsId);
     
-    if (currentPageSpan) currentPageSpan.textContent = startIndex + 1;
+    if (currentPageSpan) currentPageSpan.textContent = totalRows > 0 ? startIndex + 1 : 0;
     if (rowsPerPageSpan) rowsPerPageSpan.textContent = Math.min(endIndex, totalRows);
     if (totalRowsSpan) totalRowsSpan.textContent = totalRows;
     
@@ -162,12 +185,14 @@ function updateDepartmentPagination() {
     const nextButton = document.getElementById(departmentPaginationConfig.nextPageId);
     
     if (prevButton) {
-        prevButton.disabled = departmentPaginationConfig.currentPage === 1;
+        prevButton.disabled = departmentPaginationConfig.currentPage <= 1;
     }
     
     if (nextButton) {
-        nextButton.disabled = departmentPaginationConfig.currentPage === totalPages;
+        nextButton.disabled = departmentPaginationConfig.currentPage >= totalPages;
     }
+    
+    console.log(`department_pagination.js: Pagination updated. Current page: ${departmentPaginationConfig.currentPage}, Total pages: ${totalPages}`);
 }
 
 // Get total number of pages
@@ -188,12 +213,21 @@ function renderDepartmentPaginationControls(totalPages) {
     if (totalPages <= 1) return;
     
     // Determine which page numbers to show
-    let startPage = Math.max(1, departmentPaginationConfig.currentPage - 2);
-    let endPage = Math.min(totalPages, startPage + 4);
+    let startPage = Math.max(1, departmentPaginationConfig.currentPage - 1);
+    let endPage = Math.min(totalPages, startPage + 2);
     
     // Adjust start page if end page is at max
     if (endPage === totalPages) {
-        startPage = Math.max(1, endPage - 4);
+        startPage = Math.max(1, endPage - 2);
+    }
+    
+    // Ensure we always show at least 3 pages if available
+    if (endPage - startPage + 1 < 3 && totalPages >= 3) {
+        if (startPage === 1) {
+            endPage = Math.min(totalPages, 3);
+        } else if (endPage === totalPages) {
+            startPage = Math.max(1, totalPages - 2);
+        }
     }
     
     // First page
@@ -224,6 +258,8 @@ function renderDepartmentPaginationControls(totalPages) {
         }
         addDepartmentPaginationItem(paginationContainer, totalPages);
     }
+    
+    console.log(`department_pagination.js: Rendered pagination controls. Start page: ${startPage}, End page: ${endPage}, Total pages: ${totalPages}`);
 }
 
 // Add a pagination item (page number)
@@ -238,6 +274,8 @@ function addDepartmentPaginationItem(container, page, isActive = false) {
     
     link.addEventListener('click', (e) => {
         e.preventDefault();
+        e.stopPropagation(); // Prevent event bubbling
+        console.log(`department_pagination.js: Page ${page} clicked`);
         departmentPaginationConfig.currentPage = page;
         updateDepartmentPagination();
     });
@@ -247,7 +285,13 @@ function addDepartmentPaginationItem(container, page, isActive = false) {
 }
 
 // Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', initDepartmentPagination);
+document.addEventListener('DOMContentLoaded', function() {
+    // Set flag to prevent the default pagination from initializing
+    window.paginationInitialized = true;
+    
+    // Initialize our department pagination
+    initDepartmentPagination();
+});
 
 // Export function for manual initialization
 window.updateDepartmentPagination = updateDepartmentPagination;
