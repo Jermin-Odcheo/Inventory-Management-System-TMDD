@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 22, 2025 at 07:29 AM
+-- Generation Time: May 23, 2025 at 06:58 AM
 -- Server version: 10.4.32-MariaDB
--- PHP Version: 8.0.30
+-- PHP Version: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -1379,6 +1379,7 @@ CREATE TABLE `equipment_location` (
   `specific_area` text DEFAULT NULL,
   `person_responsible` varchar(255) DEFAULT NULL,
   `department_id` int(11) DEFAULT NULL,
+  `device_state` varchar(250) DEFAULT NULL,
   `remarks` text DEFAULT NULL,
   `date_created` datetime DEFAULT current_timestamp(),
   `is_disabled` tinyint(1) NOT NULL DEFAULT 0
@@ -1388,31 +1389,25 @@ CREATE TABLE `equipment_location` (
 -- Dumping data for table `equipment_location`
 --
 
-INSERT INTO `equipment_location` (`equipment_location_id`, `asset_tag`, `building_loc`, `floor_no`, `specific_area`, `person_responsible`, `department_id`, `remarks`, `date_created`, `is_disabled`) VALUES
-(1, '2222333111', 'Silang', '2', 'S231', 'Tester', 1, 'N/A', '2010-03-17 15:57:42', 0),
-(4, '00001244-TMD', 'Diego Silang', '', 'Basement - TMDD DATA CENTER', 'Network Administrators', NULL, '', '2025-05-19 14:54:36', 0),
-(5, '00001245-TMD', 'Diego Silang', '', 'Basement - FINANCE MEZZANINE', 'Network Administrators', NULL, 'Borrowed by Finance', '2025-05-19 15:03:04', 0),
-(6, '00001246-TMD', 'Diego Silang', '', 'Basement - TMDD DATA CENTER', 'Network Administrators', NULL, '', '2025-05-19 15:09:28', 0),
-(7, '00001247-TMD', 'Rizal', '1', 'Tuklas Lunas', 'Network Administrators', NULL, 'Borrowed by Tuklas Lunas', '2025-05-19 15:10:31', 0),
-(8, '00001248-TMD', 'Diego Silang', '', 'Basement - TMDD', 'Network Administrators', NULL, '', '2025-05-19 15:11:53', 0),
-(9, '00001249-TMD', 'Diego Silang', '', 'Basement - TMDD', 'Network Administrators', NULL, '', '2025-05-19 15:13:06', 0),
-(10, '00001250-TMD', 'Diego Silang', '', 'Basement - TMDD', 'Network Administrators', NULL, '', '2025-05-19 15:14:41', 0),
-(12, '00001251-TMD', 'Diego Silang', '', 'Basement - TMDD DATA CENTER', 'Network Administrators', NULL, '', '2025-05-19 15:17:07', 0),
-(13, '00001252-TMD', 'Diego Silang', '', 'Basement - TMDD', 'Network Administrators', NULL, '', '2025-05-19 15:17:46', 0),
-(14, '00001253-TMD', 'Diego Silang', '', 'Basement', 'Network Administrators', NULL, '', '2025-05-19 15:18:49', 0),
-(15, '00001254-TMD', 'Diego Silang', '', 'Basement - TMDD DATA CENTER', 'Network Administrators', NULL, '', '2025-05-19 15:19:22', 0),
-(17, '00001255-TMD', 'Diego Silang', '', 'Basement', 'Network Administrators', NULL, '', '2025-05-19 15:21:13', 0),
-(18, '00001256-TMD', 'Diego Silang', '', 'Basement - TMDD', 'Network Administrators', NULL, '', '2025-05-19 15:22:00', 0),
-(19, '00001257-TMD', 'Diego Silang', '', 'Basement - TMDD', 'Network Administrators', NULL, '', '2025-05-19 15:23:08', 0),
-(20, '00001871-TMD', 'Diego Silang', '2', 'Silang Lobby', 'TMDD Team', NULL, 'for university employees', '2025-05-19 15:24:42', 0),
-(21, '00001872-TMD', 'Diego Silang', '2', 'Silang', 'TMDD Team', NULL, 'for university employees', '2025-05-19 15:25:33', 0),
-(22, '00001873-TMD', 'Diego Silang', '2', 'Silang Lobby', 'TMDD Team', NULL, 'for university employees', '2025-05-19 15:26:25', 0),
-(23, '00001874-TMD', 'Diego Silang', '2', 'Silang Lobby', 'TMDD Team', NULL, 'for university employees', '2025-05-19 15:27:01', 0),
-(24, 'asdfasdf', 'fasdf', '2', 'sdfasdf', 'asdfsdf', 23, '', '2025-05-20 08:34:27', 1),
-(25, '567123123', '51235123', '123', '1', '123', 28, '1231', '2025-05-20 14:18:12', 0),
-(26, '3125123512', '12315123', '1235123', '1231', 'Tester', 23, '125123', '2025-05-20 14:18:23', 0),
-(27, '00001', '0001', '0001', '0001', '0001', 23, '0001', '2025-05-20 14:46:25', 1),
-(28, 'sdfgh', 'szdfgf', '23456', 'fdbgh', 'dsfgnh', 23, '', '2025-05-21 11:23:49', 0);
+INSERT INTO `equipment_location` (`equipment_location_id`, `asset_tag`, `building_loc`, `floor_no`, `specific_area`, `person_responsible`, `department_id`, `device_state`, `remarks`, `date_created`, `is_disabled`) VALUES
+(4, '00001244-TMD', 'Diego Silang', '', 'Basement - TMDD DATA CENTER', 'Network Administrators', NULL, NULL, '', '2025-05-19 14:54:36', 0),
+(5, '00001245-TMD', 'Diego Silang', '', 'Basement - FINANCE MEZZANINE', 'Network Administrators', NULL, NULL, 'Borrowed by Finance', '2025-05-19 15:03:04', 0),
+(6, '00001246-TMD', 'Diego Silang', '', 'Basement - TMDD DATA CENTER', 'Network Administrators', NULL, NULL, '', '2025-05-19 15:09:28', 0),
+(7, '00001247-TMD', 'Rizal', '1', 'Tuklas Lunas', 'Network Administrators', NULL, NULL, 'Borrowed by Tuklas Lunas', '2025-05-19 15:10:31', 0),
+(8, '00001248-TMD', 'Diego Silang', '', 'Basement - TMDD', 'Network Administrators', NULL, NULL, '', '2025-05-19 15:11:53', 0),
+(9, '00001249-TMD', 'Diego Silang', '', 'Basement - TMDD', 'Network Administrators', NULL, NULL, '', '2025-05-19 15:13:06', 0),
+(10, '00001250-TMD', 'Diego Silang', '', 'Basement - TMDD', 'Network Administrators', NULL, NULL, '', '2025-05-19 15:14:41', 0),
+(12, '00001251-TMD', 'Diego Silang', '', 'Basement - TMDD DATA CENTER', 'Network Administrators', NULL, NULL, '', '2025-05-19 15:17:07', 0),
+(13, '00001252-TMD', 'Diego Silang', '', 'Basement - TMDD', 'Network Administrators', NULL, NULL, '', '2025-05-19 15:17:46', 0),
+(14, '00001253-TMD', 'Diego Silang', '', 'Basement', 'Network Administrators', NULL, NULL, '', '2025-05-19 15:18:49', 0),
+(15, '00001254-TMD', 'Diego Silang', '', 'Basement - TMDD DATA CENTER', 'Network Administrators', NULL, NULL, '', '2025-05-19 15:19:22', 0),
+(17, '00001255-TMD', 'Diego Silang', '', 'Basement', 'Network Administrators', NULL, NULL, '', '2025-05-19 15:21:13', 0),
+(18, '00001256-TMD', 'Diego Silang', '', 'Basement - TMDD', 'Network Administrators', NULL, NULL, '', '2025-05-19 15:22:00', 0),
+(19, '00001257-TMD', 'Diego Silang', '', 'Basement - TMDD', 'Network Administrators', NULL, NULL, '', '2025-05-19 15:23:08', 0),
+(20, '00001871-TMD', 'Diego Silang', '2', 'Silang Lobby', 'TMDD Team', NULL, NULL, 'for university employees', '2025-05-19 15:24:42', 0),
+(21, '00001872-TMD', 'Diego Silang', '2', 'Silang', 'TMDD Team', NULL, NULL, 'for university employees', '2025-05-19 15:25:33', 0),
+(22, '00001873-TMD', 'Diego Silang', '2', 'Silang Lobby', 'TMDD Team', NULL, NULL, 'for university employees', '2025-05-19 15:26:25', 0),
+(23, '00001874-TMD', 'Diego Silang', '2', 'Silang Lobby', 'TMDD Team', NULL, NULL, 'for university employees', '2025-05-19 15:27:01', 0);
 
 -- --------------------------------------------------------
 
