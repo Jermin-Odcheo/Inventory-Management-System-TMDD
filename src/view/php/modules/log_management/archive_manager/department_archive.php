@@ -898,8 +898,7 @@ function formatChanges($oldJsonStr)
     useJQuery(function($) {
         $(document).on('click', '#confirmBulkDeleteBtn', function () {
             if (!userPrivileges.canDelete || bulkDeleteIds.length === 0) return;
-            
-            
+        
             $.ajax({
                 url: '../../management/department_manager/delete_department.php',
                 method: 'POST',

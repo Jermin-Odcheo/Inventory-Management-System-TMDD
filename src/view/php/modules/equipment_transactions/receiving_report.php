@@ -826,6 +826,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
             </div>
         </div>
     <?php endif; ?>
+
+    <?php include('../../general/footer.php'); ?>
     <script>
         // Instantiate modals
         const addModal = new bootstrap.Modal(document.getElementById('addReportModal'));
@@ -1246,7 +1248,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                 tableId: 'rrTable',
                 currentPage: 1
             });
-            
+
             // Force hide pagination buttons if no data or all fits on one page
             function forcePaginationCheck() {
                 const totalRows = parseInt(document.getElementById('totalRows')?.textContent || '0');
@@ -1260,7 +1262,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                     if (nextBtn) nextBtn.style.cssText = 'display: none !important';
                     if (paginationEl) paginationEl.style.cssText = 'display: none !important';
                 }
-                
+
                 // Also check for visible rows (for when filtering is applied)
                 const visibleRows = document.querySelectorAll('#rrTable tr:not(.filtered-out)').length;
                 if (visibleRows <= rowsPerPage) {
@@ -1273,7 +1275,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
             // Run immediately and after a short delay
             forcePaginationCheck();
             setTimeout(forcePaginationCheck, 200);
-            
+
             // Run after any filter changes
             const searchInput = document.getElementById('searchRR');
             if (searchInput) {
@@ -1281,7 +1283,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                     setTimeout(forcePaginationCheck, 100);
                 });
             }
-            
+
             // Run after rows per page changes
             const rowsPerPageSelect = document.getElementById('rowsPerPageSelect');
             if (rowsPerPageSelect) {
@@ -1291,8 +1293,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
             }
         });
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <?php include('../../general/footer.php'); ?>
 </body>
 
 </html>

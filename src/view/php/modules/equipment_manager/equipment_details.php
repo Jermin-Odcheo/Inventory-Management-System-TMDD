@@ -396,12 +396,12 @@ ob_end_clean();
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
     <style>
         th.sortable.asc::after {
-    content: " ▲";
-}
-th.sortable.desc::after {
-    content: " ▼";
-}
+            content: " ▲";
+        }
 
+        th.sortable.desc::after {
+            content: " ▼";
+        }
     </style>
 </head>
 
@@ -494,26 +494,26 @@ th.sortable.desc::after {
                 </div>
                 <div class="table-responsive" id="table">
                     <table class="table" id="edTable">
-                    <thead>
-    <tr>
-        <th class="sortable" data-column="0">#</th>
-        <th class="sortable" data-column="1">Asset Tag</th>
-        <th class="sortable" data-column="2">Desc 1</th>
-        <th class="sortable" data-column="3">Desc 2</th>
-        <th class="sortable" data-column="4">Specification</th>
-        <th class="sortable" data-column="5">Brand</th>
-        <th class="sortable" data-column="6">Model</th>
-        <th class="sortable" data-column="7">Serial #</th>
-        <th class="sortable" data-column="8">Acquired Date</th>
-        <th class="sortable" data-column="9">Created Date</th>
-        <th class="sortable" data-column="10">Modified Date</th>
-        <th class="sortable" data-column="11">RR #</th>
-        <th class="sortable" data-column="12">Location</th>
-        <th class="sortable" data-column="13">Accountable Individual</th>
-        <th class="sortable" data-column="14">Remarks</th>
-        <th>Actions</th>
-    </tr>
-</thead>
+                        <thead>
+                            <tr>
+                                <th class="sortable" data-column="0">#</th>
+                                <th class="sortable" data-column="1">Asset Tag</th>
+                                <th class="sortable" data-column="2">Desc 1</th>
+                                <th class="sortable" data-column="3">Desc 2</th>
+                                <th class="sortable" data-column="4">Specification</th>
+                                <th class="sortable" data-column="5">Brand</th>
+                                <th class="sortable" data-column="6">Model</th>
+                                <th class="sortable" data-column="7">Serial #</th>
+                                <th class="sortable" data-column="8">Acquired Date</th>
+                                <th class="sortable" data-column="9">Created Date</th>
+                                <th class="sortable" data-column="10">Modified Date</th>
+                                <th class="sortable" data-column="11">RR #</th>
+                                <th class="sortable" data-column="12">Location</th>
+                                <th class="sortable" data-column="13">Accountable Individual</th>
+                                <th class="sortable" data-column="14">Remarks</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
                         <tbody id="equipmentTable">
                             <?php if (!empty($equipmentDetails)): ?>
                                 <?php foreach ($equipmentDetails as $equipment): ?>
@@ -1001,17 +1001,17 @@ th.sortable.desc::after {
                 tableId: 'equipmentTable',
                 currentPage: 1
             });
-            
+
             // Initialize allRows for pagination.js
             window.allRows = Array.from(document.querySelectorAll('#equipmentTable tr'));
-            
+
             // Call updatePagination after a short delay to ensure pagination.js is loaded
             setTimeout(function() {
                 if (typeof updatePagination === 'function') {
                     updatePagination();
                 }
             }, 100);
-            
+
             // Force hide pagination buttons if no data or all fits on one page
             function forcePaginationCheck() {
                 const totalRows = parseInt(document.getElementById('totalRows')?.textContent || '0');
@@ -1025,7 +1025,7 @@ th.sortable.desc::after {
                     if (nextBtn) nextBtn.style.cssText = 'display: none !important';
                     if (paginationEl) paginationEl.style.cssText = 'display: none !important';
                 }
-                
+
                 // Also check for visible rows (for when filtering is applied)
                 const visibleRows = document.querySelectorAll('#equipmentTable tr:not(.filtered-out)').length;
                 if (visibleRows <= rowsPerPage) {
@@ -1038,7 +1038,7 @@ th.sortable.desc::after {
             // Run immediately and after a short delay
             forcePaginationCheck();
             setTimeout(forcePaginationCheck, 200);
-            
+
             // Run after any filter changes
             const searchInput = document.getElementById('searchEquipment');
             if (searchInput) {
@@ -1046,7 +1046,7 @@ th.sortable.desc::after {
                     setTimeout(forcePaginationCheck, 100);
                 });
             }
-            
+
             // Run after rows per page changes
             const rowsPerPageSelect = document.getElementById('rowsPerPageSelect');
             if (rowsPerPageSelect) {
@@ -1054,14 +1054,14 @@ th.sortable.desc::after {
                     setTimeout(forcePaginationCheck, 100);
                 });
             }
-            
+
             // Handle search functionality
             $('#searchEquipment').on('input', function() {
                 const searchText = $(this).val().toLowerCase();
                 $('#equipmentTable tr').each(function() {
                     const rowText = $(this).text().toLowerCase();
                     const shouldShow = rowText.includes(searchText);
-                    
+
                     // Use the filtered-out class that pagination.js understands
                     if (shouldShow) {
                         $(this).removeClass('filtered-out');
@@ -1069,55 +1069,205 @@ th.sortable.desc::after {
                         $(this).addClass('filtered-out');
                     }
                 });
-                
+
                 // Update pagination after filtering
                 if (typeof updatePagination === 'function') {
                     updatePagination();
                 }
-                
+
                 // Check if pagination controls should be shown
                 forcePaginationCheck();
             });
         });
         document.querySelectorAll(".sortable").forEach(header => {
-        header.style.cursor = "pointer";
-        header.addEventListener("click", () => {
-            const table = document.querySelector("#edTable");
-            const tbody = table.querySelector("tbody");
-            const columnIndex = parseInt(header.dataset.column);
-            const ascending = !header.classList.contains("asc");
+            header.style.cursor = "pointer";
+            header.addEventListener("click", () => {
+                const table = document.querySelector("#edTable");
+                const tbody = table.querySelector("tbody");
+                const columnIndex = parseInt(header.dataset.column);
+                const ascending = !header.classList.contains("asc");
 
-            // Remove asc/desc classes from all headers
-            document.querySelectorAll(".sortable").forEach(h => h.classList.remove("asc", "desc"));
-            header.classList.add(ascending ? "asc" : "desc");
+                // Remove asc/desc classes from all headers
+                document.querySelectorAll(".sortable").forEach(h => h.classList.remove("asc", "desc"));
+                header.classList.add(ascending ? "asc" : "desc");
 
-            const rows = Array.from(tbody.querySelectorAll("tr")).sort((a, b) => {
-                const aText = a.children[columnIndex].textContent.trim();
-                const bText = b.children[columnIndex].textContent.trim();
+                const rows = Array.from(tbody.querySelectorAll("tr")).sort((a, b) => {
+                    const aText = a.children[columnIndex].textContent.trim();
+                    const bText = b.children[columnIndex].textContent.trim();
 
-                const isDate = /\d{4}-\d{2}-\d{2}/.test(aText) || !isNaN(Date.parse(aText));
-                const isNumeric = !isNaN(parseFloat(aText)) && !isNaN(parseFloat(bText));
+                    const isDate = /\d{4}-\d{2}-\d{2}/.test(aText) || !isNaN(Date.parse(aText));
+                    const isNumeric = !isNaN(parseFloat(aText)) && !isNaN(parseFloat(bText));
 
-                if (isNumeric) {
-                    return ascending
-                        ? parseFloat(aText) - parseFloat(bText)
-                        : parseFloat(bText) - parseFloat(aText);
-                } else if (isDate) {
-                    return ascending
-                        ? new Date(aText) - new Date(bText)
-                        : new Date(bText) - new Date(aText);
-                } else {
-                    return ascending
-                        ? aText.localeCompare(bText)
-                        : bText.localeCompare(aText);
+                    if (isNumeric) {
+                        return ascending ?
+                            parseFloat(aText) - parseFloat(bText) :
+                            parseFloat(bText) - parseFloat(aText);
+                    } else if (isDate) {
+                        return ascending ?
+                            new Date(aText) - new Date(bText) :
+                            new Date(bText) - new Date(aText);
+                    } else {
+                        return ascending ?
+                            aText.localeCompare(bText) :
+                            bText.localeCompare(aText);
+                    }
+                });
+
+                // Append sorted rows
+                rows.forEach(row => tbody.appendChild(row));
+            });
+        });
+        $(function() {
+            // 1) EDIT button handler
+            $(document).on('click', '.edit-equipment', function() {
+                const d = $(this).data();
+                $('#edit_equipment_id').val(d.id);
+                // make sure the asset-tag exists in the dropdown
+                const $asset = $('#edit_equipment_asset_tag');
+                if (!$asset.find(`option[value="${d.asset}"]`).length) {
+                    $asset.append(`<option value="${d.asset}">${d.asset}</option>`);
                 }
+                $asset.val(d.asset).trigger('change');
+
+                // same for RR#
+                const $rr = $('#edit_rr_no');
+                if (d.rr && !$rr.find(`option[value="${d.rr}"]`).length) {
+                    $rr.append(`<option value="${d.rr}">${d.rr}</option>`);
+                }
+                $rr.val(d.rr).trigger('change');
+
+                // populate the rest of the fields
+                $('#edit_asset_description_1').val(d.desc1);
+                $('#edit_asset_description_2').val(d.desc2);
+                $('#edit_specifications').val(d.spec);
+                $('#edit_brand').val(d.brand);
+                $('#edit_model').val(d.model);
+                $('#edit_serial_number').val(d.serial);
+                $('#edit_location').val(d.location);
+                $('#edit_accountable_individual').val(d.accountable);
+                $('#edit_remarks').val(d.remarks);
+
+                // show the modal
+                $('#editEquipmentModal').modal('show');
             });
 
-            // Append sorted rows
-            rows.forEach(row => tbody.appendChild(row));
+            // 2) REMOVE button handler
+            let deleteId = null;
+            $(document).on('click', '.remove-equipment', function(e) {
+                e.preventDefault();
+                deleteId = $(this).data('id');
+                $('#deleteEDModal').modal('show');
+            });
+
+            $('#confirmDeleteBtn').on('click', function() {
+                if (!deleteId) return;
+                $.ajax({
+                    url: window.location.href,
+                    method: 'POST',
+                    data: {
+                        action: 'remove',
+                        details_id: deleteId
+                    },
+                    dataType: 'json',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    success(resp) {
+                        showToast(resp.message, resp.status === 'success' ? 'success' : 'error');
+                        refreshEquipmentList();
+                        $('#deleteEDModal').modal('hide');
+                        $('.modal-backdrop').remove();
+                    },
+                    error(xhr, _, err) {
+                        showToast(`Error removing equipment: ${err}`, 'error');
+                    }
+                });
+            });
+
+            // 3) Refresh the list (after any CRUD) via AJAX GET
+            function refreshEquipmentList() {
+                $.get(window.location.href, function(html) {
+                    const newTbody = $(html).find('#equipmentTable').html();
+                    $('#equipmentTable').html(newTbody);
+                    initPagination({
+                        tableId: 'equipmentTable',
+                        currentPage: 1
+                    });
+                });
+            }
+
+            // 4) CREATE form submit
+            $('#addEquipmentForm').on('submit', function(e) {
+                e.preventDefault();
+                const btn = $(this).find('button[type=submit]').prop('disabled', true)
+                    .html('<span class="spinner-border spinner-border-sm"></span> Adding…');
+                $.ajax({
+                    url: window.location.href,
+                    method: 'POST',
+                    data: $(this).serialize(),
+                    dataType: 'json',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    success(resp) {
+                        if (resp.status === 'success') {
+                            $('#addEquipmentModal').modal('hide');
+                            showToast(resp.message, 'success');
+                            $('#addEquipmentForm')[0].reset();
+                            refreshEquipmentList();
+                        } else {
+                            showToast(resp.message, 'error');
+                        }
+                    },
+                    error() {
+                        showToast('Error creating equipment', 'error');
+                    },
+                    complete() {
+                        btn.prop('disabled', false).text('Create Equipment');
+                    }
+                });
+            });
+
+            // 5) UPDATE form submit
+            $('#editEquipmentForm').on('submit', function(e) {
+                e.preventDefault();
+                const btn = $(this).find('button[type=submit]').prop('disabled', true)
+                    .html('<span class="spinner-border spinner-border-sm"></span> Saving…');
+                $.ajax({
+                    url: window.location.href,
+                    method: 'POST',
+                    data: $(this).serialize(),
+                    dataType: 'json',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    success(resp) {
+                        if (resp.status === 'success') {
+                            $('#editEquipmentModal').modal('hide');
+                            showToast(resp.message, 'success');
+                            refreshEquipmentList();
+                        } else {
+                            showToast(resp.message, 'error');
+                        }
+                    },
+                    error(xhr) {
+                        let msg = 'Error updating equipment: ';
+                        try {
+                            msg += JSON.parse(xhr.responseText).message
+                        } catch (e) {
+                            msg += e
+                        }
+                        showToast(msg, 'error');
+                    },
+                    complete() {
+                        btn.prop('disabled', false).text('Save Changes');
+                    }
+                });
+            });
         });
-    });
     </script>
+
+
 </body>
 
 </html>
