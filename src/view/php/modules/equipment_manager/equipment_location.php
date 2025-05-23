@@ -1,13 +1,7 @@
 <?php
 require_once '../../../../../config/ims-tmdd.php';
+require_once '../../../../control/RBACService.php'; // adjust path as needed
 session_start();
-
-// start buffering all output (header/sidebar/footer HTML will be captured)
-ob_start();
-
-include '../../general/header.php';
-include '../../general/sidebar.php';
-include '../../general/footer.php';
 
 // detect AJAX
 $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH'])
@@ -16,8 +10,14 @@ $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH'])
 // 1) Auth guard (always run, AJAX or not)
 $userId = $_SESSION['user_id'] ?? null;
 if (!is_int($userId) && !ctype_digit((string)$userId)) {
-    header('Location: ' . BASE_URL . 'index.php');
-    exit;
+    if ($isAjax) {
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'error', 'message' => 'Session expired. Please log in again.']);
+        exit;
+    } else {
+        header('Location: ' . BASE_URL . 'index.php');
+        exit;
+    }
 }
 $userId = (int)$userId;
 
@@ -55,6 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAjax) {
         $personResponsible = $_POST['person_responsible'];
         // make department_id nullable
         $departmentId      = !empty($_POST['department_id']) ? $_POST['department_id'] : null;
+        $deviceState       = $_POST['device_state'];
         $remarks           = $_POST['remarks'];
 
         // transaction & audit
@@ -65,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAjax) {
 
         $updateStmt = $pdo->prepare("
         UPDATE equipment_location
-        SET asset_tag = ?, building_loc = ?, floor_no = ?, specific_area = ?, person_responsible = ?, department_id = ?, remarks = ?
+        SET asset_tag = ?, building_loc = ?, floor_no = ?, specific_area = ?, person_responsible = ?, department_id = ?, device_state = ?, remarks = ?
         WHERE equipment_location_id = ?
     ");
         $updateStmt->execute([
@@ -75,6 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAjax) {
             $specificArea,
             $personResponsible,
             $departmentId,    // will be NULL if user left it blank
+            $deviceState,
             $remarks,
             $id
         ]);
@@ -88,6 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAjax) {
                 'specific_area'      => $specificArea,
                 'person_responsible' => $personResponsible,
                 'department_id'      => $departmentId,
+                'device_state'       => $deviceState,
                 'remarks'            => $remarks
             ]);
             $auditStmt = $pdo->prepare("
@@ -126,6 +129,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAjax) {
             $specificArea      = trim($_POST['specific_area']);
             $personResponsible = trim($_POST['person_responsible']);
             $departmentId      = !empty($_POST['department_id']) ? $_POST['department_id'] : null;
+            $deviceState       = trim($_POST['device_state']);
             $remarks           = trim($_POST['remarks']);
 
             error_log(print_r($_POST, true));
@@ -133,8 +137,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAjax) {
 
             $stmt = $pdo->prepare("
                 INSERT INTO equipment_location
-                (asset_tag, building_loc, floor_no, specific_area, person_responsible, department_id, remarks)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                (asset_tag, building_loc, floor_no, specific_area, person_responsible, department_id, device_state, remarks)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ");
             $stmt->execute([
                 $assetTag,
@@ -143,6 +147,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAjax) {
                 $specificArea,
                 $personResponsible,
                 $departmentId,
+                $deviceState,
                 $remarks
             ]);
 
@@ -155,6 +160,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAjax) {
                     'specific_area'      => $specificArea,
                     'person_responsible' => $personResponsible,
                     'department_id'      => $departmentId,
+                    'device_state'       => $deviceState,
                     'remarks'            => $remarks
                 ]);
                 $auditStmt = $pdo->prepare("
@@ -216,6 +222,7 @@ if (
                 'specific_area'      => $locationData['specific_area'],
                 'person_responsible' => $locationData['person_responsible'],
                 'department_id'      => $locationData['department_id'],
+                'device_state'       => $locationData['device_state'],
                 'remarks'            => $locationData['remarks']
             ]);
             $stmt = $pdo->prepare("UPDATE equipment_location SET is_disabled = 1 WHERE equipment_location_id = ?");
@@ -250,6 +257,11 @@ if (
     exit;
 }
 
+// Only include HTML templates for non-AJAX requests
+include '../../general/header.php';
+include '../../general/sidebar.php';
+include '../../general/footer.php';
+
 // ------------------------
 // Normal (non-AJAX) Page Logic
 // ------------------------
@@ -268,24 +280,28 @@ if (isset($_SESSION['errors'])) {
 // Live search
 $q = $_GET['q'] ?? '';
 if (strlen($q) > 0) {
-    $safeQ = $conn->real_escape_string($q);
-    $sql = "
-        SELECT asset_tag, building_loc, floor_no, specific_area, person_responsible, remarks
-        FROM equipment_location
-        WHERE asset_tag LIKE '%{$safeQ}%'
-          OR building_loc LIKE '%{$safeQ}%'
-          OR specific_area LIKE '%{$safeQ}%'
-          OR person_responsible LIKE '%{$safeQ}%'
-          OR remarks LIKE '%{$safeQ}%'
-        LIMIT 10
-    ";
-    $result = $conn->query($sql);
-    while ($row = $result->fetch_assoc()) {
+    $stmt = $pdo->prepare("
+    SELECT asset_tag, building_loc, floor_no, specific_area, person_responsible, device_state, remarks
+    FROM equipment_location
+    WHERE asset_tag LIKE :q
+       OR building_loc LIKE :q
+       OR floor_no LIKE :q
+       OR specific_area LIKE :q
+       OR person_responsible LIKE :q
+       OR device_state LIKE :q
+       OR remarks LIKE :q
+    LIMIT 10
+");
+$likeQ = "%$q%";
+$stmt->execute(['q' => $likeQ]);
+
+while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         echo "<div class='result-item'>"
             . "<strong>Asset Tag:</strong> " . htmlspecialchars($row['asset_tag']) . " - "
             . "<strong>Building:</strong> " . htmlspecialchars($row['building_loc']) . " - "
             . "<strong>Area:</strong> " . htmlspecialchars($row['specific_area']) . " - "
             . "<strong>Person:</strong> " . htmlspecialchars($row['person_responsible']) . " - "
+            . "<strong>Device State:</strong> " . htmlspecialchars($row['device_state']) . " - "
             . "<strong>Remarks:</strong> " . htmlspecialchars($row['remarks'])
             . "</div>";
     }
@@ -327,12 +343,14 @@ function safeHtml($value)
         .filtered-out {
             display: none !important;
         }
+
         th.sortable.asc::after {
-    content: " ▲";
-}
-th.sortable.desc::after {
-    content: " ▼";
-}
+            content: " ▲";
+        }
+
+        th.sortable.desc::after {
+            content: " ▼";
+        }
     </style>
 </head>
 
@@ -418,70 +436,73 @@ th.sortable.desc::after {
                 </div>
 
                 <div class="table-responsive" id="table">
-    <table class="table" id="elTable">
-        <thead>
-            <tr>
-                <th class="sortable" data-sort="number">#</th>
-                <th class="sortable" data-sort="string">Asset Tag</th>
-                <th class="sortable" data-sort="string">Building</th>
-                <th class="sortable" data-sort="string">Floor</th>
-                <th class="sortable" data-sort="string">Area</th>
-                <th class="sortable" data-sort="string">Person Responsible</th>
-                <th class="sortable" data-sort="string">Department</th>
-                <th class="sortable" data-sort="string">Remarks</th>
-                <th class="sortable" data-sort="date">Date Created</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody id="locationTbody">
-            <?php if (!empty($equipmentLocations)): ?>
-                <?php foreach ($equipmentLocations as $index => $loc): ?>
-                    <tr>
-                        <td><?= $index + 1 ?></td>
-                        <td><?= htmlspecialchars($loc['asset_tag'] ?? '') ?></td>
-                        <td><?= htmlspecialchars($loc['building_loc'] ?? '') ?></td>
-                        <td><?= htmlspecialchars($loc['floor_no'] ?? '') ?></td>
-                        <td><?= htmlspecialchars($loc['specific_area'] ?? '') ?></td>
-                        <td><?= htmlspecialchars($loc['person_responsible'] ?? '') ?></td>
-                        <td><?= htmlspecialchars($loc['department_name'] ?? '') ?></td>
-                        <td><?= htmlspecialchars($loc['remarks'] ?? '') ?></td>
-                        <td><?= date('Y-m-d H:i', strtotime($loc['date_created'])) ?></td>
-                        <td>
-                            <?php if ($canModify): ?>
-                                <button class="btn btn-sm btn-outline-info edit-location"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#editLocationModal"
-                                    data-id="<?= $loc['equipment_location_id'] ?>"
-                                    data-asset="<?= htmlspecialchars($loc['asset_tag'] ?? '') ?>"
-                                    data-building="<?= htmlspecialchars($loc['building_loc'] ?? '') ?>"
-                                    data-floor="<?= htmlspecialchars($loc['floor_no'] ?? '') ?>"
-                                    data-area="<?= htmlspecialchars($loc['specific_area'] ?? '') ?>"
-                                    data-person="<?= htmlspecialchars($loc['person_responsible'] ?? '') ?>"
-                                    data-department="<?= htmlspecialchars($loc['department_id'] ?? '') ?>"
-                                    data-remarks="<?= htmlspecialchars($loc['remarks'] ?? '') ?>">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                            <?php endif; ?>
+                    <table class="table" id="elTable">
+                        <thead>
+                            <tr>
+                                <th class="sortable" data-sort="number">#</th>
+                                <th class="sortable" data-sort="string">Asset Tag</th>
+                                <th class="sortable" data-sort="string">Building</th>
+                                <th class="sortable" data-sort="string">Floor</th>
+                                <th class="sortable" data-sort="string">Area</th>
+                                <th class="sortable" data-sort="string">Person Responsible</th>
+                                <th class="sortable" data-sort="string">Department</th>
+                                <th class="sortable" data-sort="string">Device State</th>
+                                <th class="sortable" data-sort="string">Remarks</th>
+                                <th class="sortable" data-sort="date">Date Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="locationTbody">
+                            <?php if (!empty($equipmentLocations)): ?>
+                                <?php foreach ($equipmentLocations as $index => $loc): ?>
+                                    <tr>
+                                        <td><?= $index + 1 ?></td>
+                                        <td><?= htmlspecialchars($loc['asset_tag'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($loc['building_loc'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($loc['floor_no'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($loc['specific_area'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($loc['person_responsible'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($loc['department_name'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($loc['device_state'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($loc['remarks'] ?? '') ?></td>
+                                        <td><?= date('Y-m-d H:i', strtotime($loc['date_created'])) ?></td>
+                                        <td>
+                                            <?php if ($canModify): ?>
+                                                <button class="btn btn-sm btn-outline-info edit-location"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#editLocationModal"
+                                                    data-id="<?= $loc['equipment_location_id'] ?>"
+                                                    data-asset="<?= htmlspecialchars($loc['asset_tag'] ?? '') ?>"
+                                                    data-building="<?= htmlspecialchars($loc['building_loc'] ?? '') ?>"
+                                                    data-floor="<?= htmlspecialchars($loc['floor_no'] ?? '') ?>"
+                                                    data-area="<?= htmlspecialchars($loc['specific_area'] ?? '') ?>"
+                                                    data-person="<?= htmlspecialchars($loc['person_responsible'] ?? '') ?>"
+                                                    data-department="<?= htmlspecialchars($loc['department_id'] ?? '') ?>"
+                                                    data-device-state="<?= htmlspecialchars($loc['device_state'] ?? '') ?>"
+                                                    data-remarks="<?= htmlspecialchars($loc['remarks'] ?? '') ?>">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                            <?php endif; ?>
 
-                            <?php if ($canDelete): ?>
-                                <button class="btn btn-sm btn-outline-danger delete-location"
-                                    data-id="<?= $loc['equipment_location_id'] ?>">
-                                    <i class="bi bi-trash"></i>
-                                </button>
+                                            <?php if ($canDelete): ?>
+                                                <button class="btn btn-sm btn-outline-danger delete-location"
+                                                    data-id="<?= $loc['equipment_location_id'] ?>">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <td colspan="16" class="text-center py-4">
+                                    <div class="alert alert-info mb-0">
+                                        <i class="bi bi-info-circle me-2"></i> No Equipment Location found. Click on "Create Equipment" to add a new entry.
+                                    </div>
+                                </td>
                             <?php endif; ?>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-            <?php else: ?>
-                <td colspan="16" class="text-center py-4">
-                    <div class="alert alert-info mb-0">
-                        <i class="bi bi-info-circle me-2"></i> No Equipment Location found. Click on "Create Equipment" to add a new entry.
-                    </div>
-                </td>
-            <?php endif; ?>
-        </tbody>
-    </table>
-</div>
+                        </tbody>
+                    </table>
+                </div>
 
 
                 <!-- Pagination Controls -->
@@ -552,22 +573,27 @@ th.sortable.desc::after {
                                 ?>
                             </select>
                         </div>
+
                         <div class="mb-3">
                             <label for="building_loc" class="form-label">Building Location</label>
                             <input type="text" class="form-control" name="building_loc">
                         </div>
+                        
                         <div class="mb-3">
                             <label for="floor_no" class="form-label">Floor Number</label>
                             <input type="number" min="1" class="form-control" name="floor_no">
                         </div>
+                        
                         <div class="mb-3">
                             <label for="specific_area" class="form-label">Specific Area</label>
                             <input type="text" class="form-control" name="specific_area">
                         </div>
+                        
                         <div class="mb-3">
                             <label for="person_responsible" class="form-label">Person Responsible</label>
                             <input type="text" class="form-control" name="person_responsible">
                         </div>
+                        
                         <div class="mb-3">
                             <label for="add_department_id" class="form-label">Department</label>
                             <select class="form-control" id="add_department_id" name="department_id">
@@ -585,10 +611,40 @@ th.sortable.desc::after {
                                 ?>
                             </select>
                         </div>
+                        
+                        <div class="mb-3">
+                            <label for="edit_department_id" class="form-label"><i class="bi bi-building"></i> Department</label>
+                            <select class="form-control" id="edit_department_id" name="department_id">
+                                <option value="">Select Department</option>
+                                <?php
+                                try {
+                                    $deptStmt = $pdo->query("SELECT id, department_name FROM departments ORDER BY department_name");
+                                    $departments = $deptStmt->fetchAll();
+                                    foreach ($departments as $department) {
+                                        echo "<option value='" . htmlspecialchars($department['id']) . "'>" . htmlspecialchars($department['department_name']) . "</option>";
+                                    }
+                                } catch (PDOException $e) {
+                                    // Handle error if needed
+                                }
+                                ?>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Device State</label>
+                            <select class="form-select" id="devState" name="device_state" required>
+                                <option value="summarized">Inventory</option>
+                                <option value="detailed">Transffered</option>
+                                <option value="custom">Borrowed</option>
+                                <option value="equipment_details">Returned</option>
+                            </select>
+                        </div>
+                        
                         <div class="mb-3">
                             <label for="remarks" class="form-label">Remarks</label>
                             <textarea class="form-control" name="remarks" rows="3"></textarea>
                         </div>
+                        
                         <div class="modal-footer border-0">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="margin-right: 4px;">Cancel</button>
                             <button type="submit" class="btn btn-primary">Add Equipment Location</button>
@@ -607,6 +663,7 @@ th.sortable.desc::after {
                     <h5 class="modal-title">Edit Location</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
+                
                 <div class="modal-body">
                     <form id="editLocationForm" method="post">
                         <input type="hidden" name="action" value="update">
@@ -624,22 +681,27 @@ th.sortable.desc::after {
                                 ?>
                             </select>
                         </div>
+                        
                         <div class="mb-3">
                             <label for="edit_building_loc" class="form-label"><i class="bi bi-building"></i> Building Location</label>
                             <input type="text" class="form-control" id="edit_building_loc" name="building_loc">
                         </div>
+                        
                         <div class="mb-3">
                             <label for="edit_floor_no" class="form-label"><i class="bi bi-layers"></i> Floor Number</label>
                             <input type="number" min="1" class="form-control" id="edit_floor_no" name="floor_no">
                         </div>
+                        
                         <div class="mb-3">
                             <label for="edit_specific_area" class="form-label"><i class="bi bi-pin-map"></i> Specific Area</label>
                             <input type="text" class="form-control" id="edit_specific_area" name="specific_area">
                         </div>
+                        
                         <div class="mb-3">
                             <label for="edit_person_responsible" class="form-label"><i class="bi bi-person"></i> Person Responsible</label>
                             <input type="text" class="form-control" id="edit_person_responsible" name="person_responsible">
                         </div>
+                        
                         <div class="mb-3">
                             <label for="edit_department_id" class="form-label"><i class="bi bi-building"></i> Department</label>
                             <select class="form-control" id="edit_department_id" name="department_id">
@@ -658,10 +720,21 @@ th.sortable.desc::after {
                             </select>
                         </div>
                         <div class="mb-3">
+                            <label class="form-label">Device State</label>
+                            <select class="form-select" id="devState" name="device_state" required>
+                                <option value="summarized">Inventory</option>
+                                <option value="detailed">Transffered</option>
+                                <option value="custom">Borrowed</option>
+                                <option value="equipment_details">Returned</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
                             <label for="edit_remarks" class="form-label"><i class="bi bi-chat-left-text"></i>
                                 Remarks</label>
                             <textarea class="form-control" id="edit_remarks" name="remarks" rows="3"></textarea>
                         </div>
+
                         <div class="d-flex justify-content-end">
                             <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
                             <button type="submit" class="btn btn-primary">Update Location</button>
@@ -697,10 +770,10 @@ th.sortable.desc::after {
         document.addEventListener('DOMContentLoaded', function() {
             // Use the new configurable pagination system
             initPagination({
-                tableId: 'locationTbody',  // Use the actual ID of your table
+                tableId: 'locationTbody', // Use the actual ID of your table
                 currentPage: 1
             });
-            
+
             // Force hide pagination buttons if no data or all fits on one page
             function forcePaginationCheck() {
                 const totalRows = parseInt(document.getElementById('totalRows')?.textContent || '0');
@@ -714,7 +787,7 @@ th.sortable.desc::after {
                     if (nextBtn) nextBtn.style.cssText = 'display: none !important';
                     if (paginationEl) paginationEl.style.cssText = 'display: none !important';
                 }
-                
+
                 // Also check for visible rows (for when filtering is applied)
                 const visibleRows = document.querySelectorAll('#locationTbody tr:not(.filtered-out)').length;
                 if (visibleRows <= rowsPerPage) {
@@ -727,7 +800,7 @@ th.sortable.desc::after {
             // Run immediately and after a short delay
             forcePaginationCheck();
             setTimeout(forcePaginationCheck, 200);
-            
+
             // Run after any filter changes
             const searchInput = document.getElementById('eqSearch');
             if (searchInput) {
@@ -735,7 +808,7 @@ th.sortable.desc::after {
                     setTimeout(forcePaginationCheck, 100);
                 });
             }
-            
+
             // Run after rows per page changes
             const rowsPerPageSelect = document.getElementById('rowsPerPageSelect');
             if (rowsPerPageSelect) {
@@ -743,7 +816,7 @@ th.sortable.desc::after {
                     setTimeout(forcePaginationCheck, 100);
                 });
             }
-            
+
             // Override filter function to work with pagination
             window.filterTable = function() {
                 const searchText = $('#eqSearch').val().toLowerCase();
@@ -753,20 +826,20 @@ th.sortable.desc::after {
                 const selectedYear = $('#yearSelect').val();
                 const dateFrom = $('#dateFrom').val();
                 const dateTo = $('#dateTo').val();
-                
+
                 const tbody = document.getElementById('locationTbody');
                 const rows = Array.from(tbody.querySelectorAll('tr'));
-                
+
                 // Hide all rows first
                 rows.forEach(row => {
                     const rowText = row.textContent.toLowerCase();
                     const buildingText = row.cells[2].textContent.toLowerCase();
                     const dateCell = row.cells[8].textContent;
                     const date = new Date(dateCell);
-                    
+
                     const searchMatch = rowText.includes(searchText);
                     const buildingMatch = !filterBuilding || buildingText === filterBuilding;
-                    
+
                     let dateMatch = true;
                     if (dateFilterType === 'month' && selectedMonth && selectedYear) {
                         dateMatch = (date.getMonth() + 1 === parseInt(selectedMonth)) &&
@@ -777,7 +850,7 @@ th.sortable.desc::after {
                         to.setHours(23, 59, 59);
                         dateMatch = date >= from && date <= to;
                     }
-                    
+
                     // Show or hide row based on filter match
                     if (searchMatch && buildingMatch && dateMatch) {
                         row.classList.remove('filtered-out');
@@ -785,7 +858,7 @@ th.sortable.desc::after {
                         row.classList.add('filtered-out');
                     }
                 });
-                
+
                 // Sort if needed
                 if (dateFilterType === 'asc' || dateFilterType === 'desc') {
                     const rowsArray = Array.from(rows).filter(r => !r.classList.contains('filtered-out'));
@@ -794,14 +867,14 @@ th.sortable.desc::after {
                         const dateB = new Date(b.cells[8].textContent);
                         return dateFilterType === 'asc' ? dateA - dateB : dateB - dateA;
                     });
-                    
+
                     // Remove all rows and add back in sorted order
                     rowsArray.forEach(row => tbody.appendChild(row));
                 }
-                
+
                 // Update allRows to only include visible rows for pagination
                 window.allRows = Array.from(tbody.querySelectorAll('tr:not(.filtered-out)'));
-                
+
                 // Update pagination
                 updatePagination();
             };
@@ -974,6 +1047,24 @@ th.sortable.desc::after {
 
                         if (result.status === 'success') {
                             $('#addLocationModal').modal('hide');
+                            setTimeout(function() {
+                                // Remove lingering modal-backdrop and modal-open
+                                if ($('.modal-backdrop').length) {
+                                    $('.modal-backdrop').remove();
+                                }
+                                if ($('body').hasClass('modal-open') && $('.modal.show').length === 0) {
+                                    $('body').removeClass('modal-open');
+                                    $('body').css('padding-right', '');
+                                }
+                                // Reset the form and Select2 fields
+                                $('#addLocationForm')[0].reset();
+                                if ($('#add_location_asset_tag').hasClass('select2-hidden-accessible')) {
+                                    $('#add_location_asset_tag').val('').trigger('change');
+                                }
+                                if ($('#add_department_id').hasClass('select2-hidden-accessible')) {
+                                    $('#add_department_id').val('').trigger('change');
+                                }
+                            }, 500);
                             $('#elTable').load(location.href + ' #elTable', function() {
                                 showToast(result.message, 'success');
                             });
@@ -1085,44 +1176,44 @@ th.sortable.desc::after {
             });
 
         });
-    document.addEventListener("DOMContentLoaded", function () {
-        document.querySelectorAll(".sortable").forEach(th => {
-            th.style.cursor = "pointer";
-            th.addEventListener("click", function () {
-                const table = th.closest("table");
-                const tbody = table.querySelector("tbody");
-                const rows = Array.from(tbody.querySelectorAll("tr"));
-                const index = Array.from(th.parentNode.children).indexOf(th);
-                const type = th.dataset.sort || "string";
-                const asc = !th.classList.contains("asc");
+       
+        document.addEventListener("DOMContentLoaded", function() {
+            document.querySelectorAll(".sortable").forEach(th => {
+                th.style.cursor = "pointer";
+                th.addEventListener("click", function() {
+                    const table = th.closest("table");
+                    const tbody = table.querySelector("tbody");
+                    const rows = Array.from(tbody.querySelectorAll("tr"));
+                    const index = Array.from(th.parentNode.children).indexOf(th);
+                    const type = th.dataset.sort || "string";
+                    const asc = !th.classList.contains("asc");
 
-                rows.sort((a, b) => {
-                    let x = a.children[index].innerText.trim();
-                    let y = b.children[index].innerText.trim();
+                    rows.sort((a, b) => {
+                        let x = a.children[index].innerText.trim();
+                        let y = b.children[index].innerText.trim();
 
-                    if (type === "number") {
-                        x = parseFloat(x) || 0;
-                        y = parseFloat(y) || 0;
-                    } else if (type === "date") {
-                        x = new Date(x);
-                        y = new Date(y);
-                    } else {
-                        x = x.toLowerCase();
-                        y = y.toLowerCase();
-                    }
+                        if (type === "number") {
+                            x = parseFloat(x) || 0;
+                            y = parseFloat(y) || 0;
+                        } else if (type === "date") {
+                            x = new Date(x);
+                            y = new Date(y);
+                        } else {
+                            x = x.toLowerCase();
+                            y = y.toLowerCase();
+                        }
 
-                    return asc ? (x > y ? 1 : -1) : (x < y ? 1 : -1);
+                        return asc ? (x > y ? 1 : -1) : (x < y ? 1 : -1);
+                    });
+
+                    tbody.innerHTML = "";
+                    rows.forEach(row => tbody.appendChild(row));
+
+                    table.querySelectorAll("th").forEach(th => th.classList.remove("asc", "desc"));
+                    th.classList.add(asc ? "asc" : "desc");
                 });
-
-                tbody.innerHTML = "";
-                rows.forEach(row => tbody.appendChild(row));
-
-                table.querySelectorAll("th").forEach(th => th.classList.remove("asc", "desc"));
-                th.classList.add(asc ? "asc" : "desc");
             });
         });
-    });
-
     </script>
 </body>
 
