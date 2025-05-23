@@ -783,6 +783,15 @@ ob_end_clean();
                                             }
                                         });
 
+                                        //select2 for filtering equipment
+                                        $('#filterEquipment').select2({
+                                            placeholder: 'Filter Equipment Type',
+                                            allowClear: true,
+                                            width: '100%',
+                                            dropdownAutoWidth: true,
+                                            minimumResultsForSearch: 0, // always show search box
+                                            dropdownParent: $('#filterEquipment').parent() // helps with z-index issues
+                                        });
                                         // Also initialize for edit modal if present
                                         if ($('#edit_rr_no').length) {
                                             $('#edit_rr_no').select2({
