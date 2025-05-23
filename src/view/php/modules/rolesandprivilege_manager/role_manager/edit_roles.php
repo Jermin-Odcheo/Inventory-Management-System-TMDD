@@ -557,36 +557,19 @@ switch ($privNameLower) {
             dataType: 'json',
             success: function (response) {
                 if (response.success) {
-                    // Update table row with new role name and privileges
-                    const row = $('tr[data-role-id="' + response.role_id + '"]');
-                    row.find('.role-name').text(response.role_name);
-
-                    const privilegeCell = row.find('.privilege-list');
-                    privilegeCell.empty();
-
-                    // Group privileges by module name for display
-                    const grouped = {};
-                    response.privileges.forEach(function (item) {
-                        if (!grouped[item.module_name]) {
-                            grouped[item.module_name] = [];
-                        }
-                        grouped[item.module_name].push(item.priv_name);
-                    });
-                    Object.keys(grouped).forEach(function (moduleName) {
-                        privilegeCell.append(
-                            $('<div class="mb-1">').html('<b>' + moduleName + ':</b> ' + grouped[moduleName].join(', '))
-                        );
-                    });
-
                     submitBtn.blur();
-                    // Hide the modal using Bootstrap's modal method.
+                    // Hide the modal using Bootstrap's modal method
                     $('#editRoleModal').modal('hide');
-
-                    // Reload roles table and show toast message
-                    $('#rolesTable').load(location.href + ' #rolesTable', function () {
-                        updatePagination();
-                        showToast(response.message, 'success');
-                    });
+                    $('body').removeClass('modal-open');
+                    $('body').css('overflow', '');
+                    $('body').css('padding-right', '');
+                    $('.modal-backdrop').remove();
+                    
+                    // Show success message
+                    showToast(response.message, 'success');
+                    
+                    // Refresh the table without reloading the whole page
+                    window.parent.refreshRolesTable();
                 } else {
                     showToast(response.message || 'An error occurred while updating the role', 'error');
                 }
@@ -604,7 +587,11 @@ switch ($privNameLower) {
 
     // Remove lingering modal backdrop when any modal is hidden.
     $('#editRoleModal, #addRoleModal, #confirmDeleteModal').on('hidden.bs.modal', function () {
-        $('body').removeClass('modal-open');
-        $('.modal-backdrop').remove();
+        setTimeout(function() {
+            $('body').removeClass('modal-open');
+            $('body').css('overflow', '');
+            $('body').css('padding-right', '');
+            $('.modal-backdrop').remove();
+        }, 100);
     });
 </script>

@@ -109,11 +109,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             success: function(response) {
                 if(response.success) {
                     showToast(response.message, 'success', 5000);
-                    $('#rolesTable').load(location.href + ' #rolesTable', function() {
-                        updatePagination();
-                    });
+                    // Close the modal before refreshing table
                     $('#addRoleModal').modal('hide');
+                    $('body').removeClass('modal-open');
+                    $('body').css('overflow', '');
+                    $('body').css('padding-right', '');
                     $('.modal-backdrop').remove();
+                    
+                    // Refresh the table without reloading the whole page
+                    window.parent.refreshRolesTable();
                 } else {
                     showToast(response.message, 'error');
                 }
