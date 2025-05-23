@@ -439,7 +439,7 @@ try {
                             <div class="col-md-6">
                                 <label for="password" class="form-label">Password</label>
                                 <div class="input-group">
-                                    <input type="password" name="password" id="password" class="form-control" required>
+                                    <input type="password" name="password" id="password" class="form-control" autocomplete="new-password" placeholder="Leave a blank to keep current password" required>
                                     <button class="btn btn-outline-secondary toggle-password" type="button">
                                         <i class="bi bi-eye"></i>
                                     </button>
@@ -517,7 +517,11 @@ try {
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="editUserForm" method="POST" action="update_user.php">
+                    <form
+                        id="editUserForm"
+                        method="POST"
+                        action="update_user.php"
+                        autocomplete="off">
                         <input type="hidden" name="user_id" id="editUserID">
                         <div class="row g-3">
                             <div class="col-md-12">
@@ -770,6 +774,14 @@ try {
             $(this).find('.select2-container').css('width', '100%');
             $(this).find('select').trigger('change.select2');
         });
+        $('#editUserModal').on('shown.bs.modal', function() {
+            // your existing Select2 width fix…
+            $(this).find('.select2-container').css('width', '100%');
+            $(this).find('select').trigger('change.select2');
+
+            // CLEAR password field so browser autofill is removed
+            $('#editPassword').val('');
+        });
 
         // Sorting variables
         let currentSort = 'id';
@@ -1008,28 +1020,28 @@ try {
             }
 
             $.ajax({
-                    url: form.attr('action'),
-                    type: 'POST',
-                    data: formData,
-                    processData: false,
-                    contentType: false,
-                    success: function(response) {
-                        const result = (typeof response === 'string') ? JSON.parse(response) : response;
-                        if (result.success) {
-                            Toast.success('User created successfully');
+                url: form.attr('action'),
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    const result = (typeof response === 'string') ? JSON.parse(response) : response;
+                    if (result.success) {
+                        Toast.success('User created successfully');
 
-                            // only now clear everything:
-                            form[0].reset();
-                            selectedDepartments = [];
-                            $('#modal_department').val(null).trigger('change');
-                            $('#createAssignedDepartmentsTable tbody').empty();
-                            // reset your password-strength UI & toggle-icon here too…
+                        // only now clear everything:
+                        form[0].reset();
+                        selectedDepartments = [];
+                        $('#modal_department').val(null).trigger('change');
+                        $('#createAssignedDepartmentsTable tbody').empty();
+                        // reset your password-strength UI & toggle-icon here too…
 
-                            $('#createUserModal').modal('hide');
-                        } else {
-                            Toast.error(result.message || 'Failed to create user');
-                        }
-                    },
+                        $('#createUserModal').modal('hide');
+                    } else {
+                        Toast.error(result.message || 'Failed to create user');
+                    }
+                },
                 error: function(xhr, status, error) {
                     try {
                         // First try to extract JSON from the response if it contains HTML errors
