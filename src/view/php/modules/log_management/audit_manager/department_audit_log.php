@@ -259,7 +259,6 @@ function getDisplayAction($action) {
             </div>
 
             <div class="card-body">
-                <!-- Permission Info Banner -->
                 <div class="alert alert-info mb-4">
                     <i class="fas fa-shield-alt me-2"></i>
                     <?php if (!$hasAuditPermission): ?>
@@ -269,7 +268,6 @@ function getDisplayAction($action) {
                     <?php endif; ?>
                 </div>
 
-                <!-- Filter Section -->
                 <div class="row mb-4">
                     <div class="col-md-4 mb-2">
                         <div class="input-group">
@@ -296,7 +294,6 @@ function getDisplayAction($action) {
                     </div>
                 </div>
 
-                <!-- Table container -->
                 <div class="table-responsive" id="table">
                     <table class="table table-hover">
                         <colgroup>
@@ -328,14 +325,12 @@ function getDisplayAction($action) {
                                 list($detailsHTML, $changesHTML) = formatDetailsAndChanges($log);
                                 ?>
                                 <tr>
-                                    <!-- TRACK ID -->
                                     <td data-label="Track ID">
                                         <span class="badge bg-secondary">
                                             <?php echo htmlspecialchars($log['TrackID']); ?>
                                         </span>
                                     </td>
 
-                                    <!-- USER -->
                                     <td data-label="User">
                                         <div class="d-flex align-items-center">
                                             <i class="fas fa-user-circle me-2"></i>
@@ -343,12 +338,10 @@ function getDisplayAction($action) {
                                         </div>
                                     </td>
 
-                                    <!-- MODULE -->
                                     <td data-label="Module">
                                         <?php echo !empty($log['Module']) ? htmlspecialchars(trim($log['Module'])) : '<em class="text-muted">N/A</em>'; ?>
                                     </td>
 
-                                    <!-- ACTION -->
                                     <td data-label="Action">
                                         <?php
                                         $actionText = getDisplayAction($normalizedAction);
@@ -358,12 +351,10 @@ function getDisplayAction($action) {
                                         ?>
                                     </td>
 
-                                    <!-- DETAILS -->
                                     <td data-label="Details" class="data-container">
                                         <?php echo nl2br($detailsHTML); ?>
                                     </td>
 
-                                    <!-- CHANGES -->
                                     <td data-label="Changes" class="data-container">
                                         <?php echo $changesHTML; ?>
                                     </td>
@@ -373,14 +364,12 @@ function getDisplayAction($action) {
                                         $statusClean = strtolower(trim($statusRaw)); // Normalize for comparison
                                         $isSuccess = in_array($statusClean, ['successful', 'success']); // Accept both variants
                                     ?>
-                                    <!-- STATUS -->
                                     <td data-label="Status">
                                         <span class="badge <?php echo $isSuccess ? 'bg-success' : 'bg-danger'; ?>">
                                             <?php echo getStatusIcon($statusRaw) . ' ' . htmlspecialchars($statusRaw); ?>
                                         </span>
                                     </td>
 
-                                    <!-- DATE & TIME -->
                                     <td data-label="Date & Time">
                                         <div class="d-flex align-items-center">
                                             <i class="far fa-clock me-2"></i>
@@ -403,7 +392,6 @@ function getDisplayAction($action) {
                         </tbody>
                     </table>
 
-                    <!-- Pagination Controls -->
                     <div class="container-fluid">
                         <div class="row align-items-center g-3">
                             <div class="col-12 col-sm-auto">
@@ -435,93 +423,21 @@ function getDisplayAction($action) {
                                 <ul class="pagination justify-content-center" id="pagination"></ul>
                             </div>
                         </div>
-                    </div> <!-- /.Pagination -->
-                </div><!-- /.table-responsive -->
-            </div><!-- /.card-body -->
-        </div><!-- /.card -->
-    </div><!-- /.container-fluid -->
-</div><!-- /.main-content -->
-
-<script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/logs.js" defer></script>
+                    </div> </div></div></div></div></div><script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/logs.js" defer></script>
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Set up pagination
-    window.paginationConfig = window.paginationConfig || {};
-    window.paginationConfig.tableId = 'auditTable';
-    
-    // Initialize pagination with the audit table ID
+    // Set a flag to indicate that this page explicitly initializes pagination
+    window.paginationInitialized = true; // NEW LINE ADDED HERE
+    // Initialize pagination with the audit table ID.
+    // The initPagination function in pagination.js will now handle
+    // capturing all rows, setting up filter event listeners,
+    // and performing the initial updatePagination call.
     initPagination({
-        tableId: 'auditTable',
-        currentPage: 1
+        tableId: 'auditTable'
     });
-    
-    // Store original rows for filtering
-    window.allRows = Array.from(document.querySelectorAll('#auditTable tr'));
-    
-    // Filter function
-    function filterTable() {
-        const actionFilter = document.getElementById('filterAction').value.toLowerCase();
-        const statusFilter = document.getElementById('filterStatus').value.toLowerCase();
-        const searchFilter = document.getElementById('searchInput').value.toLowerCase();
-        
-        const tableRows = document.querySelectorAll('#auditTable tr');
-        let visibleCount = 0;
-        
-        tableRows.forEach(row => {
-            const actionCell = row.querySelector('td[data-label="Action"]');
-            const statusCell = row.querySelector('td[data-label="Status"]');
-            const allCells = row.querySelectorAll('td');
-            let rowText = '';
-            allCells.forEach(cell => rowText += ' ' + cell.textContent.toLowerCase());
-            
-            const actionMatch = !actionFilter || (actionCell && actionCell.textContent.toLowerCase().includes(actionFilter));
-            const statusMatch = !statusFilter || (statusCell && statusCell.textContent.toLowerCase().includes(statusFilter));
-            const searchMatch = !searchFilter || rowText.includes(searchFilter);
-            
-            if (actionMatch && statusMatch && searchMatch) {
-                row.style.display = '';
-                visibleCount++;
-            } else {
-                row.style.display = 'none';
-            }
-        });
-        
-        // Show no results message if needed
-        const noResults = document.getElementById('no-results-row');
-        if (visibleCount === 0) {
-            if (!noResults) {
-                const tbody = document.getElementById('auditTable');
-                const noResultsRow = document.createElement('tr');
-                noResultsRow.id = 'no-results-row';
-                noResultsRow.innerHTML = `
-                    <td colspan="8" class="text-center py-4">
-                        <div class="empty-state">
-                            <i class="fas fa-search fa-3x mb-3"></i>
-                            <h4>No matching records found</h4>
-                            <p class="text-muted">Try adjusting your filter criteria.</p>
-                        </div>
-                    </td>
-                `;
-                tbody.appendChild(noResultsRow);
-            }
-        } else if (noResults) {
-            noResults.remove();
-        }
-        
-        // Update pagination
-        if (typeof updatePagination === 'function') {
-            updatePagination();
-        }
-    }
-    
-    // Set up filter event listeners
-    document.getElementById('filterAction').addEventListener('change', filterTable);
-    document.getElementById('filterStatus').addEventListener('change', filterTable);
-    document.getElementById('searchInput').addEventListener('input', filterTable);
 });
 </script>
 </body>
-</html> 
-
+</html>
