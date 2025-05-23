@@ -119,6 +119,7 @@ try {
     <!-- Bootstrap 5 bundle (includes Popper & the native Modal/Data API) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
     <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <!-- Select2 JS -->
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <!-- Bootstrap Icons -->
@@ -616,11 +617,11 @@ try {
             </div>
         </div>
     </div>
-    
+
     <script>
         $(document).ready(function() {
             const originalUpdatePagination = window.updatePagination || function() {};
-            
+
             // Add forcePaginationCheck function
             function forcePaginationCheck() {
                 const totalRows = window.filteredRows ? window.filteredRows.length : 0;
@@ -843,6 +844,11 @@ try {
             const searchText = $('#search-filters').val().toLowerCase();
             const deptFilter = $('#department-filter').val();
 
+            console.log('Filtering with:', {
+                searchText,
+                deptFilter
+            });
+
             // Show all rows first
             $('#umTable tbody tr').show();
 
@@ -869,6 +875,7 @@ try {
             // Update the visibility count
             const visibleCount = $('#umTable tbody tr:visible').length;
             const totalCount = $('#umTable tbody tr').length;
+            console.log(`Showing ${visibleCount} of ${totalCount} rows`);
 
             // Update pagination info
             $('#totalRows').text(visibleCount);
@@ -1001,31 +1008,28 @@ try {
             }
 
             $.ajax({
-                url: form.attr('action'),
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function(response) {
-                    try {
-                        const result = typeof response === 'string' ? JSON.parse(response) : response;
+                    url: form.attr('action'),
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        const result = (typeof response === 'string') ? JSON.parse(response) : response;
                         if (result.success) {
                             Toast.success('User created successfully');
+
+                            // only now clear everything:
+                            form[0].reset();
+                            selectedDepartments = [];
+                            $('#modal_department').val(null).trigger('change');
+                            $('#createAssignedDepartmentsTable tbody').empty();
+                            // reset your password-strength UI & toggle-icon here too…
+
                             $('#createUserModal').modal('hide');
                         } else {
                             Toast.error(result.message || 'Failed to create user');
                         }
-                    } catch (e) {
-                        // Handle non-JSON responses which might still indicate success
-                        if (typeof response === 'string' && response.includes('success')) {
-                            Toast.success('User created successfully');
-                            $('#createUserModal').modal('hide');
-                        } else {
-                            Toast.error('Error processing response');
-                            console.error('Error parsing response:', e, response);
-                        }
-                    }
-                },
+                    },
                 error: function(xhr, status, error) {
                     try {
                         // First try to extract JSON from the response if it contains HTML errors
@@ -1095,6 +1099,7 @@ try {
                     // Try to find department ID by name v1
                     <?php foreach ($departments as $id => $dept): ?>
                         if (cleanDeptName === <?= json_encode($dept['department_name']) ?>) {
+                            console.log("Found department by name:", cleanDeptName, "ID:", <?= $id ?>);
                             formData.append('departments[]', <?= $id ?>);
                         }
                     <?php endforeach; ?>
@@ -1179,37 +1184,36 @@ try {
 
         // Reset selectedDepartments when the modal is closed
         $('#createUserModal').on('hidden.bs.modal', function() {
-        const $modal = $(this);
+            const $modal = $(this);
 
-        // 1) Reset the entire form (clears all <input>, <select>, etc.)
-        $modal.find('form')[0].reset();
+            // 1) Reset the entire form (clears all <input>, <select>, etc.)
+            $modal.find('form')[0].reset();
 
-        // 2) If you're using Select2 on #modal_department, clear it
-        const $dept = $modal.find('#modal_department');
-        if ($dept.hasClass('select2-hidden-accessible')) {
-            $dept.val(null).trigger('change');
-        }
+            // 2) If you're using Select2 on #modal_department, clear it
+            const $dept = $modal.find('#modal_department');
+            if ($dept.hasClass('select2-hidden-accessible')) {
+                $dept.val(null).trigger('change');
+            }
 
-        // 3) Hide & clear your "custom department" text field
-        const $custom = $modal.find('#modal_custom_department');
-        $custom.val('').hide();
+            // 3) Hide & clear your "custom department" text field
+            const $custom = $modal.find('#modal_custom_department');
+            $custom.val('').hide();
 
-        // 4) Empty the Assigned Departments table
-        $modal.find('#createAssignedDepartmentsTable tbody').empty();
+            // 4) Empty the Assigned Departments table
+            $modal.find('#createAssignedDepartmentsTable tbody').empty();
 
-        // 5) Reset selectedDepartments array
-        selectedDepartments = [];
+            // 5) Reset selectedDepartments array
+            selectedDepartments = [];
 
-        // 6) (Optional) Reset any password-strength UI or other bits
-        $modal.find('.password-strength').addClass('d-none');
-        $modal.find('.progress-bar')
-            .css('width', '0%')
-            .attr('aria-valuenow', '0');
-        const $pwdToggleIcon = $modal.find('.toggle-password i');
-        $modal.find('#password').attr('type', 'password');
-        $pwdToggleIcon.removeClass('bi-eye-slash').addClass('bi-eye');
+            // 6) (Optional) Reset any password-strength UI or other bits
+            $modal.find('.password-strength').addClass('d-none');
+            $modal.find('.progress-bar')
+                .css('width', '0%')
+                .attr('aria-valuenow', '0');
+            const $pwdToggleIcon = $modal.find('.toggle-password i');
+            $modal.find('#password').attr('type', 'password');
+            $pwdToggleIcon.removeClass('bi-eye-slash').addClass('bi-eye');
         });
-     
     </script>
 </body>
 
