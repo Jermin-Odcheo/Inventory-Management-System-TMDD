@@ -541,11 +541,11 @@ switch ($privNameLower) {
 </style>
 
 <script>
-    // Variable to store original form state
-    let originalFormState = {};
+    // Use window-scoped variables to avoid redeclaration issues when the modal is reopened
+    window.editRoleHelpers = window.editRoleHelpers || {};
     
     // Function to capture the initial form state
-    function captureFormState() {
+    window.editRoleHelpers.captureFormState = function() {
         const roleName = $('#role_name').val();
         const checkedPrivileges = [];
         
@@ -557,27 +557,27 @@ switch ($privNameLower) {
             roleName: roleName,
             privileges: checkedPrivileges.sort().join(',')
         };
-    }
+    };
     
     // Function to compare form states and detect changes
-    function hasFormChanged() {
-        const currentState = captureFormState();
+    window.editRoleHelpers.hasFormChanged = function() {
+        const currentState = window.editRoleHelpers.captureFormState();
         
         // Compare role name
-        if (currentState.roleName !== originalFormState.roleName) {
+        if (currentState.roleName !== window.editRoleHelpers.originalFormState.roleName) {
             return true;
         }
         
         // Compare privileges
-        if (currentState.privileges !== originalFormState.privileges) {
+        if (currentState.privileges !== window.editRoleHelpers.originalFormState.privileges) {
             return true;
         }
         
         return false;
-    }
+    };
     
     // Function to get the "View" privilege checkbox for a specific module
-    function getViewCheckboxForModule(moduleId) {
+    window.editRoleHelpers.getViewCheckboxForModule = function(moduleId) {
         // Find all privilege checkboxes for this module
         const checkboxes = $(`input[name="privileges[]"][id^="priv_${moduleId}_"]`);
         let viewCheckbox = null;
@@ -592,10 +592,10 @@ switch ($privNameLower) {
         });
         
         return viewCheckbox;
-    }
+    };
     
     // Function to handle privilege checkbox changes
-    function handlePrivilegeChange() {
+    window.editRoleHelpers.handlePrivilegeChange = function() {
         // Get the module ID from the checkbox ID
         const checkboxId = $(this).attr('id');
         const moduleId = checkboxId.split('_')[1];
@@ -607,7 +607,7 @@ switch ($privNameLower) {
         }
         
         // Find the View checkbox for this module
-        const viewCheckbox = getViewCheckboxForModule(moduleId);
+        const viewCheckbox = window.editRoleHelpers.getViewCheckboxForModule(moduleId);
         
         if (viewCheckbox) {
             // If this checkbox is checked and it's not View, make sure View is checked too
@@ -627,15 +627,19 @@ switch ($privNameLower) {
                 }
             }
         }
-    }
+    };
     
-    // Capture initial state when document is ready
+    // Initialize the form when loaded
     $(document).ready(function() {
-        originalFormState = captureFormState();
-        console.log('Original form state captured:', originalFormState);
+        // Remove any previously bound handlers to prevent duplicates
+        $('input[name="privileges[]"]').off('change', window.editRoleHelpers.handlePrivilegeChange);
+        
+        // Capture initial state
+        window.editRoleHelpers.originalFormState = window.editRoleHelpers.captureFormState();
+        console.log('Original form state captured:', window.editRoleHelpers.originalFormState);
         
         // Add event listener to all privilege checkboxes
-        $('input[name="privileges[]"]').on('change', handlePrivilegeChange);
+        $('input[name="privileges[]"]').on('change', window.editRoleHelpers.handlePrivilegeChange);
         
         // Run once on page load to ensure initial state is correct
         $('input[name="privileges[]"]:checked').each(function() {
@@ -655,7 +659,7 @@ switch ($privNameLower) {
         e.preventDefault();
         
         // Check if form has changed
-        if (!hasFormChanged()) {
+        if (!window.editRoleHelpers.hasFormChanged()) {
             showToast('No changes were made to the role.', 'info');
             return false;
         }
@@ -682,7 +686,7 @@ switch ($privNameLower) {
             
             // If any non-View privileges are checked, ensure View is checked too
             if (hasNonViewChecked) {
-                const viewCheckbox = getViewCheckboxForModule(moduleId);
+                const viewCheckbox = window.editRoleHelpers.getViewCheckboxForModule(moduleId);
                 if (viewCheckbox && !viewCheckbox.prop('checked')) {
                     viewCheckbox.prop('checked', true);
                     
