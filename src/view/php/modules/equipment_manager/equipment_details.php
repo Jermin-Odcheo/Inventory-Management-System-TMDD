@@ -4,7 +4,6 @@ date_default_timezone_set('Asia/Manila');
 ob_start();
 require_once('../../../../../config/ims-tmdd.php'); // Adjust path as needed
 include '../../general/header.php';
-
 // -------------------------
 // Auth and RBAC Setup
 // -------------------------
@@ -23,44 +22,6 @@ $rbac->requirePrivilege('Equipment Management', 'View');
 $canCreate = $rbac->hasPrivilege('Equipment Management', 'Create');
 $canModify = $rbac->hasPrivilege('Equipment Management', 'Modify');
 $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
-
-// -------------------------
-// Fetch data for dropdowns
-// -------------------------
-$equipmentLocationsData = [];
-$accountableIndividualsData = [];
-try {
-    $stmt = $pdo->query("SELECT equipment_location_id, building_loc, floor_no, specific_area, person_responsible FROM equipment_location WHERE is_disabled = 0 ORDER BY building_loc, specific_area");
-    $equipmentLocationsData = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    // Prepare data for location dropdown (Building - Area), ensuring unique display values
-    $locationOptions = [];
-    foreach ($equipmentLocationsData as $loc) {
-        $displayLocation = htmlspecialchars($loc['building_loc']);
-        if (!empty($loc['specific_area'])) {
-            $displayLocation .= ' - ' . htmlspecialchars($loc['specific_area']);
-        }
-        // Use the display string as the key to prevent duplicates
-        $locationOptions[$displayLocation] = $displayLocation;
-    }
-    // Sort the unique locations alphabetically
-    asort($locationOptions);
-
-
-    // Prepare data for accountable individual dropdown (Person Responsible)
-    $accountableIndividualsOptions = [];
-    foreach ($equipmentLocationsData as $loc) {
-        if (!empty($loc['person_responsible'])) {
-            $accountableIndividualsOptions[htmlspecialchars($loc['person_responsible'])] = htmlspecialchars($loc['person_responsible']);
-        }
-    }
-    $accountableIndividualsOptions = array_unique($accountableIndividualsOptions); // Ensure unique names
-    asort($accountableIndividualsOptions); // Sort alphabetically
-} catch (PDOException $e) {
-    // Handle error if needed
-    error_log("Error fetching equipment location data: " . $e->getMessage());
-}
-
 
 // -------------------------
 // AJAX Request Handling
@@ -200,15 +161,15 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) 
                     $_POST['brand'] ?? null,
                     $_POST['model'] ?? null,
                     $_POST['serial_number'],
-                    $_POST['location'] ?? null, // Now comes from select
-                    $_POST['accountable_individual'] ?? null, // Now comes from select
+                    $_POST['location'] ?? null,
+                    $_POST['accountable_individual'] ?? null,
                     (isset($_POST['rr_no']) && $_POST['rr_no'] !== '' ? (strpos($_POST['rr_no'], 'RR') === 0 ? $_POST['rr_no'] : 'RR' . $_POST['rr_no']) : null),
                     $date_created,
                     $_POST['remarks'] ?? null
                 ];
 
                 $stmt = $pdo->prepare("INSERT INTO equipment_details (
-            asset_tag, asset_description_1, asset_description_2, specifications,
+            asset_tag, asset_description_1, asset_description_2, specifications, 
             brand, model, serial_number, location, accountable_individual, rr_no, date_created, remarks
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 $stmt->execute($values);
@@ -287,17 +248,17 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) 
                     $_POST['brand'],
                     $_POST['model'],
                     $_POST['serial_number'],
-                    $_POST['location'], // Now comes from select
-                    $_POST['accountable_individual'], // Now comes from select
+                    $_POST['location'],
+                    $_POST['accountable_individual'],
                     (isset($_POST['rr_no']) && $_POST['rr_no'] !== '' ? (strpos($_POST['rr_no'], 'RR') === 0 ? $_POST['rr_no'] : 'RR' . $_POST['rr_no']) : null),
                     $_POST['remarks'],
                     $_POST['equipment_id']
                 ];
 
                 // [Cascade Fix 2025-05-16T09:52:12+08:00] Always update date_modified when saving, even if no other fields change
-                $stmt = $pdo->prepare("UPDATE equipment_details SET
-            asset_tag = ?, asset_description_1 = ?, asset_description_2 = ?, specifications = ?,
-            brand = ?, model = ?, serial_number = ?, location = ?, accountable_individual = ?,
+                $stmt = $pdo->prepare("UPDATE equipment_details SET 
+            asset_tag = ?, asset_description_1 = ?, asset_description_2 = ?, specifications = ?, 
+            brand = ?, model = ?, serial_number = ?, location = ?, accountable_individual = ?, 
             rr_no = ?, remarks = ?, date_modified = NOW() WHERE id = ?");
                 $stmt->execute($values);
 
@@ -431,6 +392,7 @@ ob_end_clean();
     <title>Equipment Details Management</title>
     <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- Select2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
     <style>
         th.sortable.asc::after {
@@ -461,6 +423,7 @@ ob_end_clean();
             </div>
             <div class="card-body">
                 <div class="container-fluid px-0">
+                    <!-- Toolbar Row -->
                     <div class="filter-container">
                         <div class="col-auto">
                             <?php if ($canCreate): ?>
@@ -501,6 +464,7 @@ ob_end_clean();
                         </div>
                     </div>
 
+                    <!-- Date Inputs Row -->
                     <div id="dateInputsContainer" class="date-inputs-container">
                         <div class="month-picker-container" id="monthPickerContainer">
                             <select class="form-select" id="monthSelect">
@@ -613,6 +577,7 @@ ob_end_clean();
                         </tbody>
                     </table>
                 </div>
+                <!-- Pagination Controls -->
                 <div class="container-fluid">
                     <div class="row align-items-center g-3">
                         <div class="col-12 col-sm-auto">
@@ -644,10 +609,13 @@ ob_end_clean();
                             <ul class="pagination justify-content-center" id="pagination"></ul>
                         </div>
                     </div>
-                </div> </div>
+                </div> <!-- /.Pagination -->
+            </div>
         </section>
     </div>
 
+    <!-- Modals -->
+    <!-- Add Equipment Modal -->
     <div class="modal fade" id="addEquipmentModal" tabindex="-1" aria-labelledby="addEquipmentLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -874,22 +842,12 @@ ob_end_clean();
                 <div class="mb-3 p-4">
                     <div class="row">
                         <div class="mb-3 col-md-6">
-                            <label for="add_location" class="form-label">Location</label>
-                            <select class="form-select" name="location" id="add_location" style="width: 100%;">
-                                <option value="">Select Location</option>
-                                <?php foreach ($locationOptions as $display): // Iterate directly over values ?>
-                                    <option value="<?= $display ?>"><?= $display ?></option>
-                                <?php endforeach; ?>
-                            </select>
+                            <label for="location" class="form-label">Location</label>
+                            <input type="text" class="form-control" name="location">
                         </div>
                         <div class="mb-3 col-md-6">
-                            <label for="add_accountable_individual" class="form-label">Accountable Individual</label>
-                            <select class="form-select" name="accountable_individual" id="add_accountable_individual" style="width: 100%;">
-                                <option value="">Select Accountable Individual</option>
-                                <?php foreach ($accountableIndividualsOptions as $person): ?>
-                                    <option value="<?= $person ?>"><?= $person ?></option>
-                                <?php endforeach; ?>
-                            </select>
+                            <label for="accountable_individual" class="form-label">Accountable Individual</label>
+                            <input type="text" class="form-control" name="accountable_individual">
                         </div>
                     </div>
                 </div>
@@ -907,6 +865,7 @@ ob_end_clean();
     </div>
     </div>
 
+    <!-- Edit Equipment Modal -->
     <div class="modal fade" id="editEquipmentModal" tabindex="-1" data-bs-backdrop="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -987,21 +946,11 @@ ob_end_clean();
                             <div class="row">
                                 <div class="mb-3 col-md-6">
                                     <label for="edit_location" class="form-label">Location</label>
-                                    <select class="form-select" name="location" id="edit_location" style="width: 100%;">
-                                        <option value="">Select Location</option>
-                                        <?php foreach ($locationOptions as $display): // Iterate directly over values ?>
-                                            <option value="<?= $display ?>"><?= $display ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
+                                    <input type="text" class="form-control" name="location" id="edit_location">
                                 </div>
                                 <div class="mb-3 col-md-6">
                                     <label for="edit_accountable_individual" class="form-label">Accountable Individual</label>
-                                    <select class="form-select" name="accountable_individual" id="edit_accountable_individual" style="width: 100%;">
-                                        <option value="">Select Accountable Individual</option>
-                                        <?php foreach ($accountableIndividualsOptions as $person): ?>
-                                            <option value="<?= $person ?>"><?= $person ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
+                                    <input type="text" class="form-control" name="accountable_individual" id="edit_accountable_individual">
                                 </div>
                             </div>
                         </div>
@@ -1009,8 +958,7 @@ ob_end_clean();
                             <label for="edit_remarks" class="form-label">Remarks</label>
                             <textarea class="form-control" name="remarks" id="edit_remarks" rows="3"></textarea>
                         </div>
-                        <div class="mb-3 text-end">
-                            <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
+                        <div class="mb-3">
                             <button type="submit" class="btn btn-primary">Save Changes</button>
                         </div>
                     </form>
@@ -1019,6 +967,7 @@ ob_end_clean();
         </div>
     </div>
 
+    <!-- Remove Equipment Modal -->
     <div class="modal fade" id="deleteEDModal" tabindex="-1" data-bs-backdrop="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -1037,6 +986,7 @@ ob_end_clean();
         </div>
     </div>
 
+    <!-- Scripts -->
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <style>
@@ -1186,22 +1136,6 @@ ob_end_clean();
                 }
                 $rr.val(d.rr).trigger('change');
 
-                // Populate new location and accountable individual dropdowns
-                const $editLocation = $('#edit_location');
-                // Check if the current location value exists in the dropdown, if not, add it
-                if (d.location && !$editLocation.find(`option[value="${d.location}"]`).length) {
-                    $editLocation.append(`<option value="${d.location}">${d.location}</option>`);
-                }
-                $editLocation.val(d.location).trigger('change');
-
-                const $editAccountable = $('#edit_accountable_individual');
-                // Check if the current accountable individual value exists in the dropdown, if not, add it
-                if (d.accountable && !$editAccountable.find(`option[value="${d.accountable}"]`).length) {
-                    $editAccountable.append(`<option value="${d.accountable}">${d.accountable}</option>`);
-                }
-                $editAccountable.val(d.accountable).trigger('change');
-
-
                 // populate the rest of the fields
                 $('#edit_asset_description_1').val(d.desc1);
                 $('#edit_asset_description_2').val(d.desc2);
@@ -1209,8 +1143,8 @@ ob_end_clean();
                 $('#edit_brand').val(d.brand);
                 $('#edit_model').val(d.model);
                 $('#edit_serial_number').val(d.serial);
-                // $('#edit_location').val(d.location); // This is now a select
-                // $('#edit_accountable_individual').val(d.accountable); // This is now a select
+                $('#edit_location').val(d.location);
+                $('#edit_accountable_individual').val(d.accountable);
                 $('#edit_remarks').val(d.remarks);
 
                 // show the modal
@@ -1330,91 +1264,6 @@ ob_end_clean();
                     }
                 });
             });
-
-            // Select2 for new dropdowns in Add Equipment Modal
-            $('#addEquipmentModal').on('shown.bs.modal', function() {
-                $('#add_location').select2({
-                    placeholder: 'Select Location',
-                    allowClear: true,
-                    width: '100%',
-                    dropdownParent: $('#addEquipmentModal')
-                });
-                $('#add_accountable_individual').select2({
-                    placeholder: 'Select Accountable Individual',
-                    allowClear: true,
-                    width: '100%',
-                    dropdownParent: $('#addEquipmentModal')
-                });
-            });
-
-            $('#addEquipmentModal').on('hidden.bs.modal', function() {
-                if ($('#add_location').hasClass('select2-hidden-accessible')) {
-                    $('#add_location').select2('destroy');
-                }
-                if ($('#add_accountable_individual').hasClass('select2-hidden-accessible')) {
-                    $('#add_accountable_individual').select2('destroy');
-                }
-                $(this).find('form')[0].reset();
-            });
-
-            // Select2 for new dropdowns in Edit Equipment Modal
-            $('#editEquipmentModal').on('shown.bs.modal', function() {
-                $('#edit_location').select2({
-                    placeholder: 'Select Location',
-                    allowClear: true,
-                    width: '100%',
-                    dropdownParent: $('#editEquipmentModal')
-                });
-                $('#edit_accountable_individual').select2({
-                    placeholder: 'Select Accountable Individual',
-                    allowClear: true,
-                    width: '100%',
-                    dropdownParent: $('#editEquipmentModal')
-                });
-            });
-
-            $('#editEquipmentModal').on('hidden.bs.modal', function() {
-                if ($('#edit_location').hasClass('select2-hidden-accessible')) {
-                    $('#edit_location').select2('destroy');
-                }
-                if ($('#edit_accountable_individual').hasClass('select2-hidden-accessible')) {
-                    $('#edit_accountable_individual').select2('destroy');
-                }
-                $(this).find('form')[0].reset();
-            });
-
-            // Asset Tag Select2 for Add Equipment Modal
-            $('#addEquipmentModal').on('shown.bs.modal', function() {
-                $('#add_equipment_asset_tag').select2({
-                    tags: true,
-                    placeholder: 'Select or type Asset Tag',
-                    allowClear: true,
-                    width: '100%',
-                    dropdownParent: $('#addEquipmentModal')
-                });
-            });
-            $('#addEquipmentModal').on('hidden.bs.modal', function() {
-                if ($('#add_equipment_asset_tag').hasClass('select2-hidden-accessible')) {
-                    $('#add_equipment_asset_tag').select2('destroy');
-                }
-            });
-
-            // Asset Tag Select2 for Edit Equipment Modal
-            $('#editEquipmentModal').on('shown.bs.modal', function() {
-                $('#edit_equipment_asset_tag').select2({
-                    tags: true,
-                    placeholder: 'Select or type Asset Tag',
-                    allowClear: true,
-                    width: '100%',
-                    dropdownParent: $('#editEquipmentModal')
-                });
-            });
-            $('#editEquipmentModal').on('hidden.bs.modal', function() {
-                if ($('#edit_equipment_asset_tag').hasClass('select2-hidden-accessible')) {
-                    $('#edit_equipment_asset_tag').select2('destroy');
-                }
-            });
-
         });
     </script>
 
