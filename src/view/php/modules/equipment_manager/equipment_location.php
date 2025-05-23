@@ -189,7 +189,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAjax) {
             }
             error_log('Error: ' . $e->getMessage());
             http_response_code(400);
-            echo json_encode(['status' => 'error', 'message' => 'Error: ' . $e->getMessage()]);
+            echo json_encode(['status' => 'error', 'message' => 'Error: ' . $e->getMessage(), 'debug' => $_POST]);
         }
         exit;
     }
@@ -581,7 +581,7 @@ function safeHtml($value)
                         
                         <div class="mb-3">
                             <label for="floor_no" class="form-label">Floor Number</label>
-                            <input type="number" min="1" class="form-control" name="floor_no">
+                            <input type="text" class="form-control" name="floor_no" autocomplete="off">
                         </div>
                         
                         <div class="mb-3">
@@ -689,7 +689,7 @@ function safeHtml($value)
                         
                         <div class="mb-3">
                             <label for="edit_floor_no" class="form-label"><i class="bi bi-layers"></i> Floor Number</label>
-                            <input type="number" min="1" class="form-control" id="edit_floor_no" name="floor_no">
+                            <input type="text" class="form-control" id="edit_floor_no" name="floor_no" autocomplete="off">
                         </div>
                         
                         <div class="mb-3">
@@ -953,6 +953,23 @@ function safeHtml($value)
 
             // Delegate event for editing location
             $(document).on('click', '.edit-location', function() {
+                // Always clean up before showing modal
+                if ($('.modal-backdrop').length) {
+                    $('.modal-backdrop').remove();
+                }
+                if ($('body').hasClass('modal-open') && $('.modal.show').length === 0) {
+                    $('body').removeClass('modal-open');
+                    $('body').css('padding-right', '');
+                }
+                // Reset the form and destroy Select2 before populating
+                if ($('#edit_location_asset_tag').hasClass('select2-hidden-accessible')) {
+                    $('#edit_location_asset_tag').select2('destroy');
+                }
+                if ($('#edit_department_id').hasClass('select2-hidden-accessible')) {
+                    $('#edit_department_id').select2('destroy');
+                }
+                $('#editLocationForm')[0].reset();
+
                 var id = $(this).data('id');
                 var assetTag = $(this).data('asset');
                 var buildingLocation = $(this).data('building');
@@ -974,10 +991,23 @@ function safeHtml($value)
                 $('#edit_floor_no').val(floorNumber);
                 $('#edit_specific_area').val(specificArea);
                 $('#edit_person_responsible').val(personResponsible);
-                $('#edit_department_id').val(departmentId);
+                $('#edit_department_id').val(departmentId).trigger('change');
                 $('#edit_remarks').val(remarks);
 
-                $('#editLocationModal').modal('show');
+                // Move modal to body to ensure backdrop always works
+                var modalEl = document.getElementById('editLocationModal');
+                if (modalEl) {
+                    // Remove any previous modal instance
+                    if (modalEl._bootstrapModal) {
+                        modalEl._bootstrapModal.hide();
+                        modalEl._bootstrapModal.dispose();
+                    }
+                    // Move modal to body
+                    document.body.appendChild(modalEl);
+                    var editModal = new bootstrap.Modal(modalEl, {backdrop: true});
+                    modalEl._bootstrapModal = editModal;
+                    editModal.show();
+                }
             });
 
             // Global variable for deletion
@@ -1118,6 +1148,17 @@ function safeHtml($value)
                         // Regardless of changes, show a success toast.
                         if (result.status === 'success') {
                             $('#editLocationModal').modal('hide');
+                            setTimeout(function() {
+                                // Remove lingering modal-backdrop and modal-open
+                                if ($('.modal-backdrop').length > 1) {
+                                    $('.modal-backdrop').not(':last').remove();
+                                }
+                                if ($('body').hasClass('modal-open') && $('.modal.show').length === 0) {
+                                    $('body').removeClass('modal-open');
+                                    $('body').css('padding-right', '');
+                                }
+                                // Do NOT reset the form or Select2 fields here
+                            }, 500);
                             $('#elTable').load(location.href + ' #elTable', function() {
                                 showToast(result.message, 'success');
                             });
@@ -1150,29 +1191,25 @@ function safeHtml($value)
             });
             // Asset Tag Select2 for Edit Location Modal
             $('#editLocationModal').on('shown.bs.modal', function() {
-                $('#edit_location_asset_tag').select2({
-                    tags: true,
-                    placeholder: 'Select or type Asset Tag',
-                    allowClear: true,
-                    width: '100%',
-                    dropdownParent: $('#editLocationModal')
-                });
-                // Department Select2 for Edit Location Modal
-                $('#edit_department_id').select2({
-                    dropdownParent: $('#editLocationModal'),
-                    width: '100%',
-                    placeholder: 'Select Department',
-                    allowClear: true
-                });
+                // Remove any lingering modal-backdrop and modal-open after showing
+                if ($('.modal-backdrop').length > 1) {
+                    $('.modal-backdrop').not(':last').remove();
+                }
+                if ($('body').hasClass('modal-open') && $('.modal.show').length === 0) {
+                    $('body').removeClass('modal-open');
+                    $('body').css('padding-right', '');
+                }
             });
             $('#editLocationModal').on('hidden.bs.modal', function() {
-                if ($('#edit_location_asset_tag').hasClass('select2-hidden-accessible')) {
-                    $('#edit_location_asset_tag').select2('destroy');
+                // Remove any lingering modal-backdrop and modal-open after hiding
+                if ($('.modal-backdrop').length) {
+                    $('.modal-backdrop').remove();
                 }
-                if ($('#edit_department_id').hasClass('select2-hidden-accessible')) {
-                    $('#edit_department_id').select2('destroy');
+                if ($('body').hasClass('modal-open') && $('.modal.show').length === 0) {
+                    $('body').removeClass('modal-open');
+                    $('body').css('padding-right', '');
                 }
-                $(this).find('form')[0].reset();
+                // Do NOT reset form or destroy Select2 here
             });
 
         });
