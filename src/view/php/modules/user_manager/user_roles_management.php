@@ -333,6 +333,7 @@ $userRoleDepartments = array_values($userRoleMap);
                         <?php foreach ($rolesData as $role): ?>
                             <option value="<?php echo $role['id']; ?>"><?php echo htmlspecialchars($role['role_name']); ?></option>
                         <?php endforeach; ?>
+                        
                     </select>
                     <small class="form-text text-muted">You can save without adding any roles</small>
                 </div>

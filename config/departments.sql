@@ -2,10 +2,10 @@
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
--- Host: 127.0.0.1:3306
--- Generation Time: May 16, 2025 at 07:24 AM
--- Server version: 8.4.3
--- PHP Version: 8.2.13
+-- Host: 127.0.0.1
+-- Generation Time: May 23, 2025 at 06:14 PM
+-- Server version: 10.4.32-MariaDB
+-- PHP Version: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -27,16 +27,14 @@ SET time_zone = "+00:00";
 -- Table structure for table `departments`
 --
 
-DROP TABLE IF EXISTS `departments`;
-CREATE TABLE IF NOT EXISTS `departments` (
-  `id` int NOT NULL AUTO_INCREMENT,
+CREATE TABLE `departments` (
+  `id` int(11) NOT NULL,
   `department_name` varchar(191) NOT NULL,
   `abbreviation` varchar(50) NOT NULL,
-  `is_disabled` tinyint(1) NOT NULL DEFAULT '0',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `department_name` (`department_name`),
-  UNIQUE KEY `abbreviation` (`abbreviation`)
-) ENGINE=InnoDB AUTO_INCREMENT=47 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `is_disabled` tinyint(1) NOT NULL DEFAULT 0,
+  `name_active` varchar(191) GENERATED ALWAYS AS (case when `is_disabled` = 0 then `department_name` else NULL end) STORED,
+  `abbr_active` varchar(50) GENERATED ALWAYS AS (case when `is_disabled` = 0 then `abbreviation` else NULL end) STORED
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `departments`
@@ -79,7 +77,31 @@ INSERT INTO `departments` (`id`, `department_name`, `abbreviation`, `is_disabled
 (34, 'Students\' Residence Hall', 'SRH', 0),
 (35, 'Medical Clinic', 'MC', 0),
 (36, 'Office for Legal Affairs', 'OLA', 0),
-(46, '57877', '9876', 1);
+(46, '5777', '9876', 0),
+(48, '123', '123', 0),
+(49, '321', '321', 1),
+(53, '321', '321', 1);
+
+--
+-- Indexes for dumped tables
+--
+
+--
+-- Indexes for table `departments`
+--
+ALTER TABLE `departments`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_dept_active` (`name_active`,`abbr_active`);
+
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `departments`
+--
+ALTER TABLE `departments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=54;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

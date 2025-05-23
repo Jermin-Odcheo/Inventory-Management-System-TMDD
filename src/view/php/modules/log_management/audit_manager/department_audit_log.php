@@ -175,7 +175,7 @@ function formatDetailsAndChanges($log)
             break;
 
         case 'remove':
-            $changes = "is_disabled 0 -> 1";
+            $changes = formatNewValue($log['NewVal']);
             break;
 
         case 'delete':
