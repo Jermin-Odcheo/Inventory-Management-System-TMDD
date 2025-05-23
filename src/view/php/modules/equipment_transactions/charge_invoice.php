@@ -639,6 +639,7 @@ try {
         </div>
     <?php endif; ?>
 
+    <?php include '../../general/footer.php'; ?>
     <!-- JavaScript for functionality -->
     <script>
         var deleteInvoiceId = null;
@@ -863,7 +864,7 @@ try {
                     },
                     error: function(xhr, status, error) {
                         console.error('Ajax error:', error);
-                       
+
                         showToast('Error processing request. Please try again.', 'error');
 
                         // Remove modal backdrop in case of error
@@ -979,7 +980,7 @@ try {
                 tableId: 'invoiceTable',
                 currentPage: 1
             });
-            
+
             // Force hide pagination buttons if no data or all fits on one page
             function forcePaginationCheck() {
                 const totalRows = parseInt(document.getElementById('totalRows')?.textContent || '0');
@@ -993,7 +994,7 @@ try {
                     if (nextBtn) nextBtn.style.cssText = 'display: none !important';
                     if (paginationEl) paginationEl.style.cssText = 'display: none !important';
                 }
-                
+
                 // Also check for visible rows (for when filtering is applied)
                 const visibleRows = document.querySelectorAll('#invoiceTable tr:not(.filtered-out)').length;
                 if (visibleRows <= rowsPerPage) {
@@ -1006,7 +1007,7 @@ try {
             // Run immediately and after a short delay
             forcePaginationCheck();
             setTimeout(forcePaginationCheck, 200);
-            
+
             // Run after any filter changes
             const searchInput = document.getElementById('searchInvoice');
             if (searchInput) {
@@ -1014,7 +1015,7 @@ try {
                     setTimeout(forcePaginationCheck, 100);
                 });
             }
-            
+
             // Run after rows per page changes
             const rowsPerPageSelect = document.getElementById('rowsPerPageSelect');
             if (rowsPerPageSelect) {
@@ -1025,10 +1026,7 @@ try {
         });
     </script>
 
-    <!-- Bootstrap JS Bundle with Popper -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    <?php include '../../general/footer.php'; ?>
 </body>
 
 </html>
