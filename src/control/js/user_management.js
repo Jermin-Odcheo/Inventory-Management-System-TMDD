@@ -391,15 +391,21 @@ $(document).ready(function() {
             data: { user_ids: userIds },
             dataType: 'json',
             success: function(response) {
-                if (response.success) {
-                    // Remove the rows from the table
-                    userIds.forEach(function(id) {
-                        $(`tr:has(.select-row[value="${id}"])`).remove();
-                    });
-                    showToast('Selected users removed successfully', 'success');
-                    $('#delete-selected').hide().prop('disabled', true);
+                if (
+                  response.status &&
+                  response.status.toLowerCase() === "success"
+                ) {
+                  // Remove the rows from the table
+                  userIds.forEach(function (id) {
+                    $(`tr:has(.select-row[value="${id}"])`).remove();
+                  });
+                  showToast("Selected users removed successfully", "success");
+                  $("#delete-selected").hide().prop("disabled", true);
                 } else {
-                    showToast(response.message || 'Failed to remove users', 'error');
+                  showToast(
+                    response.message || "Failed to remove users",
+                    "error"
+                  );
                 }
             },
             error: function() {

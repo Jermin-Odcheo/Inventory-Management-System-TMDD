@@ -229,31 +229,43 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 'departments' => $deptStr
             ];
             
-            // Insert audit log entry
-            $auditStmt = $pdo->prepare("
-                INSERT INTO audit_log (
-                    UserID,
-                    EntityID,
-                    Action,
-                    Details,
-                    OldVal,
-                    NewVal,
-                    Module,
-                    `Status`,
-                    Date_Time
-                )
-                VALUES (?, ?, 'create', ?, NULL, ?, 'User Management', 'Successful', NOW())
+            // Check if there's already an audit log entry for this user creation
+            $checkAuditStmt = $pdo->prepare("
+                SELECT COUNT(*) FROM audit_log 
+                WHERE EntityID = ? AND Action = 'create' AND Module = 'User Management'
+                AND Date_Time >= DATE_SUB(NOW(), INTERVAL 5 SECOND)
             ");
+            $checkAuditStmt->execute([$userID]);
+            $hasExistingLog = $checkAuditStmt->fetchColumn() > 0;
             
-            $details = "Created new user with departments: " . $deptStr;
-            $newValJson = json_encode($newUserData);
-            
-            $auditStmt->execute([
-                $_SESSION['user_id'],
-                $userID,
-                $details,
-                $newValJson
-            ]);
+            // Only create an audit log if there isn't already one from a trigger
+            if (!$hasExistingLog) {
+                // Insert audit log entry
+                $auditStmt = $pdo->prepare("
+                    INSERT INTO audit_log (
+                        UserID,
+                        EntityID,
+                        Action,
+                        Details,
+                        OldVal,
+                        NewVal,
+                        Module,
+                        `Status`,
+                        Date_Time
+                    )
+                    VALUES (?, ?, 'create', ?, NULL, ?, 'User Management', 'Successful', NOW())
+                ");
+                
+                $details = "Created new user with departments: " . $deptStr;
+                $newValJson = json_encode($newUserData);
+                
+                $auditStmt->execute([
+                    $_SESSION['user_id'],
+                    $userID,
+                    $details,
+                    $newValJson
+                ]);
+            }
         } catch (Exception $auditEx) {
             // Just log any errors with the audit, don't throw
             error_log("Error creating audit log: " . $auditEx->getMessage());

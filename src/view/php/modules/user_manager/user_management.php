@@ -134,11 +134,12 @@ try {
         .select2-container--default {
             z-index: 9999 !important;
         }
-        
+
         .modal-content {
-            overflow: hidden; /* Prevent content from showing through */
+            overflow: hidden;
+            /* Prevent content from showing through */
         }
-        
+
         .modal-footer {
             border-top: 1px solid #dee2e6;
             background-color: #fff;
@@ -149,25 +150,26 @@ try {
             align-items: center;
             gap: 0.5rem;
         }
-        
+
         /* Fix for Department select dropdown in modals */
         .select2-dropdown {
-            z-index: 9999 !important; /* Ensure dropdown appears over other elements */
+            z-index: 9999 !important;
+            /* Ensure dropdown appears over other elements */
         }
-        
+
         .select2-container--open .select2-dropdown {
             margin-top: 2px;
         }
-        
+
         /* Additional fixes from user_roles_management.php */
         .select2-container {
             width: 100% !important;
         }
-        
+
         body.modal-open {
             overflow: hidden;
         }
-        
+
         .modal {
             display: none;
             position: fixed;
@@ -179,7 +181,7 @@ try {
             overflow: auto;
             background-color: rgba(0, 0, 0, 0.4);
         }
-        
+
         /* Toast notification styles */
         .toast-container {
             position: fixed;
@@ -187,7 +189,7 @@ try {
             right: 20px;
             z-index: 10000;
         }
-        
+
         .toast {
             min-width: 300px;
         }
@@ -234,9 +236,9 @@ try {
                 </button>
             </div>
             <div class="action-buttons">
-            <?php if ($rbac->hasPrivilege('User Management', 'Modify')): ?>
-                <a href="user_roles_management.php" class="btn btn-primary"> Manage Role Assignments</a>
-            <?php endif; ?>
+                <?php if ($rbac->hasPrivilege('User Management', 'Modify')): ?>
+                    <a href="user_roles_management.php" class="btn btn-primary"> Manage Role Assignments</a>
+                <?php endif; ?>
                 <?php if ($canCreate): ?>
                     <button type="button" id="create-btn" class="btn btn-primary">
                         Create New User
@@ -462,10 +464,10 @@ try {
                                     <option value="">Select Department</option>
                                     <?php foreach ($departments as $code => $d): ?>
                                         <?php
-                                            // DEBUG dump
-                                            echo '<!-- DEBUG: ';
-                                            var_dump($d);
-                                            echo ' -->';
+                                        // DEBUG dump
+                                        echo '<!-- DEBUG: ';
+                                        var_dump($d);
+                                        echo ' -->';
                                         ?>
                                         <option value="<?= htmlspecialchars(strval($code)) ?>">
                                             (<?= htmlspecialchars($d['abbreviation']) ?>) <?= htmlspecialchars($d['department_name']) ?>
@@ -549,10 +551,10 @@ try {
                                     <option value="">Select departments</option>
                                     <?php foreach ($departments as $dept_id => $d): ?>
                                         <?php
-                                            // DEBUG: Show full array content in HTML comment
-                                            echo '<!-- DEBUG: ';
-                                            var_dump($d);
-                                            echo ' -->';
+                                        // DEBUG: Show full array content in HTML comment
+                                        echo '<!-- DEBUG: ';
+                                        var_dump($d);
+                                        echo ' -->';
                                         ?>
                                         <option value="<?= htmlspecialchars(strval($dept_id)) ?>">
                                             (<?= htmlspecialchars($d['abbreviation']) ?>) <?= htmlspecialchars($d['department_name']) ?>
@@ -614,103 +616,133 @@ try {
             </div>
         </div>
     </div>
+    
     <script>
         $(document).ready(function() {
-            // Initialize selectedDepartments array for the global scope
-            let selectedDepartments = [];
+            const originalUpdatePagination = window.updatePagination || function() {};
             
-            // Email validation function
-            function validateEmail(email) {
-                const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-                return regex.test(email);
-            }
-            
-            // Function to show toast notifications
-            function showToast(message, type = 'info') {
-                // Create toast container if it doesn't exist
-                if ($('.toast-container').length === 0) {
-                    $('body').append('<div class="toast-container"></div>');
+            // Add forcePaginationCheck function
+            function forcePaginationCheck() {
+                const totalRows = window.filteredRows ? window.filteredRows.length : 0;
+                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value);
+                const prevBtn = document.getElementById('prevPage');
+                const nextBtn = document.getElementById('nextPage');
+                const paginationEl = document.getElementById('pagination');
+
+                // Hide pagination completely if all rows fit on one page
+                if (totalRows <= rowsPerPage) {
+                    if (prevBtn) prevBtn.style.cssText = 'display: none !important';
+                    if (nextBtn) nextBtn.style.cssText = 'display: none !important';
+                    if (paginationEl) paginationEl.style.cssText = 'display: none !important';
+                } else {
+                    // Show pagination but conditionally hide prev/next buttons
+                    if (paginationEl) paginationEl.style.cssText = '';
+
+                    if (prevBtn) {
+                        if (window.currentPage <= 1) {
+                            prevBtn.style.cssText = 'display: none !important';
+                        } else {
+                            prevBtn.style.cssText = '';
+                        }
+                    }
+
+                    if (nextBtn) {
+                        const totalPages = Math.ceil(totalRows / rowsPerPage);
+                        if (window.currentPage >= totalPages) {
+                            nextBtn.style.cssText = 'display: none !important';
+                        } else {
+                            nextBtn.style.cssText = '';
+                        }
+                    }
                 }
-                
-                // Create toast with appropriate styling
-                const toastClass = type === 'error' ? 'bg-danger text-white' : 
-                                  type === 'success' ? 'bg-success text-white' : 
-                                  'bg-info text-white';
-                                  
-                const toast = `
-                    <div class="toast ${toastClass}" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="5000">
-                        <div class="toast-header">
-                            <strong class="me-auto">${type.charAt(0).toUpperCase() + type.slice(1)}</strong>
-                            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-                        </div>
-                        <div class="toast-body">
-                            ${message}
-                        </div>
-                    </div>
-                `;
-                
-                // Add toast to container and show it
-                $('.toast-container').append(toast);
-                const toastEl = $('.toast').last();
-                const bsToast = new bootstrap.Toast(toastEl);
-                bsToast.show();
-                
-                // Remove toast after it's hidden
-                toastEl.on('hidden.bs.toast', function() {
-                    $(this).remove();
+            }
+
+            window.updatePagination = function() {
+                // Get all rows again in case the DOM was updated
+                window.allRows = Array.from(document.querySelectorAll('#umTable tbody tr'));
+
+                // If filtered rows is empty or not defined, use all rows
+                if (!window.filteredRows || window.filteredRows.length === 0) {
+                    window.filteredRows = window.allRows;
+                }
+
+                // Update total rows display
+                const totalRowsEl = document.getElementById('totalRows');
+                if (totalRowsEl) {
+                    totalRowsEl.textContent = window.filteredRows.length;
+                }
+
+                // Call original updatePagination
+                originalUpdatePagination();
+                forcePaginationCheck();
+            };
+
+            // Call updatePagination immediately
+            updatePagination();
+        });
+
+        // Initialize selectedDepartments array for the global scope
+        let selectedDepartments = [];
+
+        // Email validation function
+        function validateEmail(email) {
+            const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            return regex.test(email);
+        }
+
+        // Initialize Select2 for department filter with custom positioning
+        $('#department-filter').select2({
+            placeholder: 'All Departments',
+            allowClear: true,
+            minimumResultsForSearch: 5,
+            dropdownParent: $('body') // Attach to body for proper z-index handling
+        });
+
+        // Initialize Select2 for modal department dropdown
+        $('#modal_department').select2({
+            dropdownParent: $('#createUserModal'),
+            placeholder: 'Select Department',
+            allowClear: true,
+            width: '100%'
+        });
+
+        // Initialize Select2 for edit department dropdown
+        $('#editDepartments').select2({
+            dropdownParent: $('#editUserModal'),
+            placeholder: 'Select Department',
+            allowClear: true,
+            width: '100%'
+        });
+
+        // Add department selection handler
+        $('#modal_department').on('change', function() {
+            const deptId = $(this).val();
+            if (!deptId) return; // Skip if no department selected
+
+            const deptName = $(this).find('option:selected').text();
+
+            if (deptId && !selectedDepartments.some(d => d.id === deptId)) {
+                selectedDepartments.push({
+                    id: deptId,
+                    name: deptName
                 });
+                updateDepartmentsDisplay();
             }
-            
-            // Initialize Select2 for department filter with custom positioning
-            $('#department-filter').select2({
-                placeholder: 'All Departments',
-                allowClear: true,
-                minimumResultsForSearch: 5,
-                dropdownParent: $('body') // Attach to body for proper z-index handling
-            });
 
-            // Initialize Select2 for modal department dropdown
-            $('#modal_department').select2({
-                dropdownParent: $('#createUserModal'),
-                placeholder: 'Select Department',
-                allowClear: true,
-                width: '100%'
-            });
+            // Reset selection
+            $(this).val(null).trigger('change');
+        });
 
-            // Initialize Select2 for edit department dropdown
-            $('#editDepartments').select2({
-                dropdownParent: $('#editUserModal'),
-                placeholder: 'Select Department',
-                allowClear: true,
-                width: '100%'
-            });
-            
-            // Add department selection handler
-            $('#modal_department').on('change', function() {
-                const deptId = $(this).val();
-                if (!deptId) return; // Skip if no department selected
-                
-                const deptName = $(this).find('option:selected').text();
-                
-                if (deptId && !selectedDepartments.some(d => d.id === deptId)) {
-                    selectedDepartments.push({ id: deptId, name: deptName });
-                    updateDepartmentsDisplay();
-                }
-                
-                // Reset selection
-                $(this).val(null).trigger('change');
-            });
-            
-            // Function to update departments display table
-            function updateDepartmentsDisplay() {
-                // Update create user departments display
-                const $table = $('#createAssignedDepartmentsTable tbody');
-                
-                $table.empty();
-                
-                selectedDepartments.forEach(function(dept) {
-                    // Add row to table
-                    $table.append(`
+        // Function to update departments display table
+        function updateDepartmentsDisplay() {
+            // Update create user departments display
+            const $table = $('#createAssignedDepartmentsTable tbody');
+
+            $table.empty();
+
+            selectedDepartments.forEach(function(dept) {
+                // Add row to table
+                $table.append(`
                         <tr data-department-id="${dept.id}">
                             <td>${dept.name}</td>
                             <td class="text-end">
@@ -720,469 +752,464 @@ try {
                             </td>
                         </tr>
                     `);
-                });
-                
-                // Add event handlers for removal buttons
-                $('.remove-dept').on('click', function() {
-                    const deptId = $(this).data('dept-id');
-    
-                    selectedDepartments = selectedDepartments.filter(d => String(d.id) !== String(deptId));
-                    updateDepartmentsDisplay();
-
-                });
-            }
-
-            // Fix Select2 dropdown positioning in modals
-            $('.modal').on('shown.bs.modal', function() {
-                $(this).find('.select2-container').css('width', '100%');
-                $(this).find('select').trigger('change.select2');
             });
 
-            // Sorting variables
-            let currentSort = 'id';
-            let currentSortDir = 'asc';
+            // Add event handlers for removal buttons
+            $('.remove-dept').on('click', function() {
+                const deptId = $(this).data('dept-id');
 
-            // Client-side sorting function
-            function sortTable(column) {
-                // Update sort direction if clicking the same column
-                if (column === currentSort) {
-                    currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
-                } else {
-                    currentSort = column;
-                    currentSortDir = 'asc';
-                }
+                selectedDepartments = selectedDepartments.filter(d => String(d.id) !== String(deptId));
+                updateDepartmentsDisplay();
 
-                // Update sort icons
-                $('.sort-icon').removeClass('bi-caret-up-fill bi-caret-down-fill');
-                const iconClass = currentSortDir === 'asc' ? 'bi-caret-up-fill' : 'bi-caret-down-fill';
-                $(`.sort-header[data-sort="${column}"] .sort-icon`).addClass(iconClass);
+            });
+        }
 
-                // Get column index based on column name
-                let colIndex;
-                switch (column) {
-                    case 'id':
-                        colIndex = 1;
-                        break;
-                    case 'email':
-                        colIndex = 2;
-                        break;
-                    case 'username':
-                        colIndex = 4;
-                        break;
-                    case 'department':
-                        colIndex = 5;
-                        break;
-                    case 'status':
-                        colIndex = 6;
-                        break;
-                    default:
-                        colIndex = 1;
-                }
+        // Fix Select2 dropdown positioning in modals
+        $('.modal').on('shown.bs.modal', function() {
+            $(this).find('.select2-container').css('width', '100%');
+            $(this).find('select').trigger('change.select2');
+        });
 
-                // Sort the table rows
-                const rows = $('#umTable tbody tr').get();
-                rows.sort(function(a, b) {
-                    const aValue = $(a).children('td').eq(colIndex).text().trim().toLowerCase();
-                    const bValue = $(b).children('td').eq(colIndex).text().trim().toLowerCase();
+        // Sorting variables
+        let currentSort = 'id';
+        let currentSortDir = 'asc';
 
-                    // Handle numeric sorting for IDs
-                    if (column === 'id') {
-                        return currentSortDir === 'asc' ?
-                            parseInt(aValue) - parseInt(bValue) :
-                            parseInt(bValue) - parseInt(aValue);
-                    }
-
-                    // String comparison for other columns
-                    if (aValue < bValue) return currentSortDir === 'asc' ? -1 : 1;
-                    if (aValue > bValue) return currentSortDir === 'asc' ? 1 : -1;
-                    return 0;
-                });
-
-                // Re-append sorted rows to the table
-                $.each(rows, function(index, row) {
-                    $('#umTable tbody').append(row);
-                });
-
-                // Do NOT call filterTable() here - this caused multiple calls
+        // Client-side sorting function
+        function sortTable(column) {
+            // Update sort direction if clicking the same column
+            if (column === currentSort) {
+                currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort = column;
+                currentSortDir = 'asc';
             }
 
-            // Direct client-side filtering function
-            function filterTable() {
-                const searchText = $('#search-filters').val().toLowerCase();
-                const deptFilter = $('#department-filter').val(); 
+            // Update sort icons
+            $('.sort-icon').removeClass('bi-caret-up-fill bi-caret-down-fill');
+            const iconClass = currentSortDir === 'asc' ? 'bi-caret-up-fill' : 'bi-caret-down-fill';
+            $(`.sort-header[data-sort="${column}"] .sort-icon`).addClass(iconClass);
 
-                // Show all rows first
+            // Get column index based on column name
+            let colIndex;
+            switch (column) {
+                case 'id':
+                    colIndex = 1;
+                    break;
+                case 'email':
+                    colIndex = 2;
+                    break;
+                case 'username':
+                    colIndex = 4;
+                    break;
+                case 'department':
+                    colIndex = 5;
+                    break;
+                case 'status':
+                    colIndex = 6;
+                    break;
+                default:
+                    colIndex = 1;
+            }
+
+            // Sort the table rows
+            const rows = $('#umTable tbody tr').get();
+            rows.sort(function(a, b) {
+                const aValue = $(a).children('td').eq(colIndex).text().trim().toLowerCase();
+                const bValue = $(b).children('td').eq(colIndex).text().trim().toLowerCase();
+
+                // Handle numeric sorting for IDs
+                if (column === 'id') {
+                    return currentSortDir === 'asc' ?
+                        parseInt(aValue) - parseInt(bValue) :
+                        parseInt(bValue) - parseInt(aValue);
+                }
+
+                // String comparison for other columns
+                if (aValue < bValue) return currentSortDir === 'asc' ? -1 : 1;
+                if (aValue > bValue) return currentSortDir === 'asc' ? 1 : -1;
+                return 0;
+            });
+
+            // Re-append sorted rows to the table
+            $.each(rows, function(index, row) {
+                $('#umTable tbody').append(row);
+            });
+
+            // Do NOT call filterTable() here - this caused multiple calls
+        }
+
+        // Direct client-side filtering function
+        function filterTable() {
+            const searchText = $('#search-filters').val().toLowerCase();
+            const deptFilter = $('#department-filter').val();
+
+            // Show all rows first
+            $('#umTable tbody tr').show();
+
+            // Apply search filter if present
+            if (searchText) {
+                $('#umTable tbody tr').each(function() {
+                    const rowText = $(this).text().toLowerCase();
+                    if (!rowText.includes(searchText)) {
+                        $(this).hide();
+                    }
+                });
+            }
+
+            // Apply department filter if selected
+            if (deptFilter && deptFilter !== 'all') {
+                $('#umTable tbody tr:visible').each(function() {
+                    const deptCell = $(this).find('td:nth-child(6)').text().toLowerCase();
+                    if (!deptCell.includes(deptFilter.toLowerCase())) {
+                        $(this).hide();
+                    }
+                });
+            }
+
+            // Update the visibility count
+            const visibleCount = $('#umTable tbody tr:visible').length;
+            const totalCount = $('#umTable tbody tr').length;
+
+            // Update pagination info
+            $('#totalRows').text(visibleCount);
+            if (visibleCount > 0) {
+                const rowsPerPage = parseInt($('#rowsPerPageSelect').val()) || 10;
+                $('#rowsPerPage').text(Math.min(rowsPerPage, visibleCount));
+                $('#currentPage').text('1');
+            } else {
+                $('#rowsPerPage').text('0');
+                $('#currentPage').text('0');
+            }
+
+            // Update pagination controls
+            updatePaginationControls(visibleCount);
+        }
+
+        // Helper to update pagination visibility
+        function updatePaginationControls(visibleCount) {
+            const rowsPerPage = parseInt($('#rowsPerPageSelect').val()) || 10;
+
+            if (visibleCount <= rowsPerPage) {
+                $('#prevPage, #nextPage').addClass('d-none');
+                $('#pagination').empty();
+            } else {
+                $('#prevPage, #nextPage').removeClass('d-none');
+                // If you have a pagination function, call it here
+            }
+        }
+
+        // Bind sort headers
+        $('.sort-header').off('click').on('click', function(e) {
+            e.preventDefault();
+            const column = $(this).data('sort');
+            sortTable(column);
+            filterTable(); // Apply filtering after sorting
+        });
+
+
+        // Use the nested function structure as preferred by user
+        $(function() {
+            // remove any other handlers (e.g. leftover from user_management.js)
+            $('#search-filters').off('input');
+
+            // re-bind your client-side filter
+            $('#search-filters').on('input', function(e) {
+                filterTable(); // your existing function
+            });
+
+            // prevent ENTER from accidentally submitting anything
+            $('#search-filters').on('keydown', function(e) {
+                if (e.key === 'Enter') e.preventDefault();
+            });
+
+            // Bind to department select changes
+            $('#department-filter').off('change').on('change', function() {
+                filterTable();
+            });
+
+            // Clear filters button
+            $('#clear-filters-btn').off('click').on('click', function() {
+                // Clear both filters safely
+                $('#search-filters').val('');
+                $('#department-filter').val('all').trigger('change');
+
+                // Show all rows and update the pagination counts
                 $('#umTable tbody tr').show();
 
-                // Apply search filter if present
-                if (searchText) {
-                    $('#umTable tbody tr').each(function() {
-                        const rowText = $(this).text().toLowerCase();
-                        if (!rowText.includes(searchText)) {
-                            $(this).hide();
-                        }
-                    });
-                }
-
-                // Apply department filter if selected
-                if (deptFilter && deptFilter !== 'all') {
-                    $('#umTable tbody tr:visible').each(function() {
-                        const deptCell = $(this).find('td:nth-child(6)').text().toLowerCase();
-                        if (!deptCell.includes(deptFilter.toLowerCase())) {
-                            $(this).hide();
-                        }
-                    });
-                }
-
-                // Update the visibility count
-                const visibleCount = $('#umTable tbody tr:visible').length;
-                const totalCount = $('#umTable tbody tr').length; 
-
-                // Update pagination info
-                $('#totalRows').text(visibleCount);
-                if (visibleCount > 0) {
-                    const rowsPerPage = parseInt($('#rowsPerPageSelect').val()) || 10;
-                    $('#rowsPerPage').text(Math.min(rowsPerPage, visibleCount));
-                    $('#currentPage').text('1');
-                } else {
-                    $('#rowsPerPage').text('0');
-                    $('#currentPage').text('0');
-                }
+                const totalRows = $('#umTable tbody tr').length;
+                $('#totalRows').text(totalRows);
+                $('#rowsPerPage').text(Math.min(totalRows, parseInt($('#rowsPerPageSelect').val()) || 10));
+                $('#currentPage').text('1');
 
                 // Update pagination controls
-                updatePaginationControls(visibleCount);
+                updatePaginationControls(totalRows);
+            });
+
+            // Handle rows per page changes
+            $('#rowsPerPageSelect').off('change').on('change', function() {
+                filterTable();
+            });
+
+            // Initial sort/filter (done only once)
+            sortTable('id');
+        });
+
+        // Handle create user form submission
+        $('#submitCreateUser').on('click', function() {
+            const form = $('#createUserForm');
+            const formData = new FormData(form[0]);
+
+            // Validate email has domain
+            const email = $('#email').val();
+            if (!validateEmail(email)) {
+                $('#email').addClass('is-invalid');
+                return;
+            } else {
+                $('#email').removeClass('is-invalid');
             }
 
-            // Helper to update pagination visibility
-            function updatePaginationControls(visibleCount) {
-                const rowsPerPage = parseInt($('#rowsPerPageSelect').val()) || 10;
-
-                if (visibleCount <= rowsPerPage) {
-                    $('#prevPage, #nextPage').addClass('d-none');
-                    $('#pagination').empty();
+            // Check if departments have been added
+            if (selectedDepartments.length === 0) {
+                // Try to get from dropdown directly as a fallback
+                const selectedDept = $('#modal_department').val();
+                if (selectedDept) {
+                    const deptName = $('#modal_department option:selected').text();
+                    selectedDepartments.push({
+                        id: selectedDept,
+                        name: deptName
+                    });
+                    updateDepartmentsDisplay();
                 } else {
-                    $('#prevPage, #nextPage').removeClass('d-none');
-                    // If you have a pagination function, call it here
-                }
-            }
-
-            // Bind sort headers
-            $('.sort-header').off('click').on('click', function(e) {
-                e.preventDefault();
-                const column = $(this).data('sort');
-                sortTable(column);
-                filterTable(); // Apply filtering after sorting
-            });
- 
-
-            // Use the nested function structure as preferred by user
-            $(function() {
-                // remove any other handlers (e.g. leftover from user_management.js)
-                $('#search-filters').off('input');
-
-                // re-bind your client-side filter
-                $('#search-filters').on('input', function(e) {
-                    filterTable(); // your existing function
-                });
-
-                // prevent ENTER from accidentally submitting anything
-                $('#search-filters').on('keydown', function(e) {
-                    if (e.key === 'Enter') e.preventDefault();
-                });
-                
-                // Bind to department select changes
-                $('#department-filter').off('change').on('change', function() {
-                    filterTable();
-                });
-
-                // Clear filters button
-                $('#clear-filters-btn').off('click').on('click', function() {
-                    // Clear both filters safely
-                    $('#search-filters').val('');
-                    $('#department-filter').val('all').trigger('change');
-
-                    // Show all rows and update the pagination counts
-                    $('#umTable tbody tr').show();
-
-                    const totalRows = $('#umTable tbody tr').length;
-                    $('#totalRows').text(totalRows);
-                    $('#rowsPerPage').text(Math.min(totalRows, parseInt($('#rowsPerPageSelect').val()) || 10));
-                    $('#currentPage').text('1');
-
-                    // Update pagination controls
-                    updatePaginationControls(totalRows); 
-                });
-
-                // Handle rows per page changes
-                $('#rowsPerPageSelect').off('change').on('change', function() {
-                    filterTable();
-                });
-
-                // Initial sort/filter (done only once)
-                sortTable('id');
-            });
-            
-            // Handle create user form submission
-            $('#submitCreateUser').on('click', function() {
-                const form = $('#createUserForm');
-                const formData = new FormData(form[0]);
-                
-                // Validate email has domain
-                const email = $('#email').val();
-                if (!validateEmail(email)) {
-                    $('#email').addClass('is-invalid');
-                    return;
-                } else {
-                    $('#email').removeClass('is-invalid');
-                }
-                
-                // Check if departments have been added
-                if (selectedDepartments.length === 0) {
-                    // Try to get from dropdown directly as a fallback
-                    const selectedDept = $('#modal_department').val();
-                    if (selectedDept) {
-                        const deptName = $('#modal_department option:selected').text();
-                        selectedDepartments.push({ id: selectedDept, name: deptName });
-                        updateDepartmentsDisplay();
-                    } else {
-                        // No departments selected
-                        Toast.error('At least one department must be assigned');
-                        return;
-                    }
-                }
-                
-                // Clear any existing department values to avoid duplicates
-                formData.delete('departments[]');
-                formData.delete('department');
-                
-                // Add all departments as array
-                selectedDepartments.forEach((dept, index) => {
-                    formData.append(`departments[${index}]`, dept.id);
-                });
-                
-                // Set a single department for compatibility with older backend code
-                if (selectedDepartments.length > 0) {
-                    formData.append('department', selectedDepartments[0].id);
-                }
-    
-                $.ajax({
-                    url: form.attr('action'),
-                    type: 'POST',
-                    data: formData,
-                    processData: false,
-                    contentType: false,
-                    success: function(response) { 
-                        try {
-                            const result = typeof response === 'string' ? JSON.parse(response) : response;
-                            if (result.success) {
-                                Toast.success('User created successfully');
-                                $('#createUserModal').modal('hide');
-                                // Reload page after successful creation
-                                setTimeout(function() {
-                                    window.location.reload();
-                                }, 1500);
-                            } else {
-                                Toast.error(result.message || 'Failed to create user');
-                            }
-                        } catch (e) {
-                            // Handle non-JSON responses which might still indicate success
-                            if (typeof response === 'string' && response.includes('success')) {
-                                Toast.success('User created successfully');
-                                $('#createUserModal').modal('hide');
-                                setTimeout(function() {
-                                    window.location.reload();
-                                }, 1500);
-                            } else {
-                                Toast.error('Error processing response');
-                                console.error('Error parsing response:', e, response);
-                            }
-                        }
-                    },
-                    error: function(xhr, status, error) { 
-                        try {
-                            // First try to extract JSON from the response if it contains HTML errors
-                            let jsonStr = xhr.responseText;
-                            if (jsonStr.includes('{') && jsonStr.includes('}')) {
-                                jsonStr = jsonStr.substring(jsonStr.indexOf('{'), jsonStr.lastIndexOf('}')+1);
-                                const result = JSON.parse(jsonStr);
-                                alert('Error: ' + (result.message || 'Failed to create user'));
-                            } else {
-                                const result = JSON.parse(xhr.responseText);
-                                alert('Error: ' + (result.message || 'Failed to create user'));
-                            }
-                        } catch (e) {
-                            // If there's a username error in the response text, extract and show it
-                            if (xhr.responseText.includes('username is already taken')) {
-                                alert('Error: Username is already taken. Please try a different username.');
-                            } else {
-                                alert('Server error occurred. Please try again.');
-                            }
-                            console.error('Parse error:', e);
-                        }
-                    }
-                });
-            });
-            
-            // Handle edit user form submission
-            $('#submitEditUser').on('click', function() {
-                const form = $('#editUserForm');
-                const formData = new FormData(form[0]);
-                
-                // Validate email has domain
-                const email = $('#editEmail').val();
-                if (!validateEmail(email)) {
-                    $('#editEmail').addClass('is-invalid');
-                    return;
-                } else {
-                    $('#editEmail').removeClass('is-invalid');
-                }
-                
-                // Check if departments are selected from the assigned departments table
-                const departmentRows = $('#assignedDepartmentsTable tbody tr');
-                if (departmentRows.length === 0) {
+                    // No departments selected
                     Toast.error('At least one department must be assigned');
                     return;
                 }
-                
-                // Clear any existing department values to avoid duplicates
-                formData.delete('departments[]');
-                formData.delete('department');
-    
-                
-                // Approach 1: Set single department (for compatibility with older code)
-                // Get the first department ID from the table
-                const firstDeptId = departmentRows.first().data('department-id');
-                if (firstDeptId) {
-                    formData.append('department', firstDeptId);
+            }
+
+            // Clear any existing department values to avoid duplicates
+            formData.delete('departments[]');
+            formData.delete('department');
+
+            // Add all departments as array
+            selectedDepartments.forEach((dept, index) => {
+                formData.append(`departments[${index}]`, dept.id);
+            });
+
+            // Set a single department for compatibility with older backend code
+            if (selectedDepartments.length > 0) {
+                formData.append('department', selectedDepartments[0].id);
+            }
+
+            $.ajax({
+                url: form.attr('action'),
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    try {
+                        const result = typeof response === 'string' ? JSON.parse(response) : response;
+                        if (result.success) {
+                            Toast.success('User created successfully');
+                            $('#createUserModal').modal('hide');
+                        } else {
+                            Toast.error(result.message || 'Failed to create user');
+                        }
+                    } catch (e) {
+                        // Handle non-JSON responses which might still indicate success
+                        if (typeof response === 'string' && response.includes('success')) {
+                            Toast.success('User created successfully');
+                            $('#createUserModal').modal('hide');
+                        } else {
+                            Toast.error('Error processing response');
+                            console.error('Error parsing response:', e, response);
+                        }
+                    }
+                },
+                error: function(xhr, status, error) {
+                    try {
+                        // First try to extract JSON from the response if it contains HTML errors
+                        let jsonStr = xhr.responseText;
+                        if (jsonStr.includes('{') && jsonStr.includes('}')) {
+                            jsonStr = jsonStr.substring(jsonStr.indexOf('{'), jsonStr.lastIndexOf('}') + 1);
+                            const result = JSON.parse(jsonStr);
+                            alert('Error: ' + (result.message || 'Failed to create user'));
+                        } else {
+                            const result = JSON.parse(xhr.responseText);
+                            alert('Error: ' + (result.message || 'Failed to create user'));
+                        }
+                    } catch (e) {
+                        // If there's a username error in the response text, extract and show it
+                        if (xhr.responseText.includes('username is already taken')) {
+                            alert('Error: Username is already taken. Please try a different username.');
+                        } else {
+                            alert('Server error occurred. Please try again.');
+                        }
+                        console.error('Parse error:', e);
+                    }
                 }
-                
-                // Approach 2: Add all departments as array
-                departmentRows.each(function() {
-                    const deptId = $(this).data('department-id') || $(this).find('td:first').data('department-id');
-                    const deptName = $(this).find('td:first').text().trim();
-                    const cleanDeptName = deptName.replace(/^"+|"+$/g, '').trim();
-                    if (deptId) {
-                        formData.append('departments[]', deptId);
-                    } else {
-                        // Try to find department ID by name v1
-                        <?php foreach($departments as $id => $dept): ?>
+            });
+        });
+
+        // Handle edit user form submission
+        $('#submitEditUser').on('click', function() {
+            const form = $('#editUserForm');
+            const formData = new FormData(form[0]);
+
+            // Validate email has domain
+            const email = $('#editEmail').val();
+            if (!validateEmail(email)) {
+                $('#editEmail').addClass('is-invalid');
+                return;
+            } else {
+                $('#editEmail').removeClass('is-invalid');
+            }
+
+            // Check if departments are selected from the assigned departments table
+            const departmentRows = $('#assignedDepartmentsTable tbody tr');
+            if (departmentRows.length === 0) {
+                Toast.error('At least one department must be assigned');
+                return;
+            }
+
+            // Clear any existing department values to avoid duplicates
+            formData.delete('departments[]');
+            formData.delete('department');
+
+
+            // Approach 1: Set single department (for compatibility with older code)
+            // Get the first department ID from the table
+            const firstDeptId = departmentRows.first().data('department-id');
+            if (firstDeptId) {
+                formData.append('department', firstDeptId);
+            }
+
+            // Approach 2: Add all departments as array
+            departmentRows.each(function() {
+                const deptId = $(this).data('department-id') || $(this).find('td:first').data('department-id');
+                const deptName = $(this).find('td:first').text().trim();
+                const cleanDeptName = deptName.replace(/^"+|"+$/g, '').trim();
+                if (deptId) {
+                    formData.append('departments[]', deptId);
+                } else {
+                    // Try to find department ID by name v1
+                    <?php foreach ($departments as $id => $dept): ?>
                         if (cleanDeptName === <?= json_encode($dept['department_name']) ?>) {
                             formData.append('departments[]', <?= $id ?>);
                         }
-                        <?php endforeach; ?>
-                    }
-                });
-                
-                // Log all form data for debugging
-                for (let pair of formData.entries()) {
+                    <?php endforeach; ?>
                 }
-                
-                $.ajax({
-                    url: form.attr('action'),
-                    type: 'POST',
-                    data: formData,
-                    processData: false,
-                    contentType: false,
-                    success: function(response) {
-                        try {
-                            const result = typeof response === 'string' ? JSON.parse(response) : response;
-                            if (result.success) {
-                                Toast.success('User updated successfully');
-                                $('#editUserModal').modal('hide');
-                                // Reload page after successful update
-                                setTimeout(function() {
-                                    window.location.reload();
-                                }, 1500);
-                            } else {
-                                Toast.error(result.message || 'Failed to update user');
-                            }
-                        } catch (e) {
-                            // Handle non-JSON responses which might still indicate success
-                            if (typeof response === 'string' && response.includes('success')) {
-                                Toast.success('User updated successfully');
-                                $('#editUserModal').modal('hide');
-                                setTimeout(function() {
-                                    window.location.reload();
-                                }, 1500);
-                            } else {
-                                Toast.error('Error processing response');
-                                console.error('Error parsing response:', e, response);
-                            }
+            });
+
+            // Log all form data for debugging
+            for (let pair of formData.entries()) {}
+
+            $.ajax({
+                url: form.attr('action'),
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    try {
+                        const result = typeof response === 'string' ? JSON.parse(response) : response;
+                        if (result.success) {
+                            Toast.success('User updated successfully');
+                            $('#editUserModal').modal('hide');
+                            // Reload page after successful update
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 1500);
+                        } else {
+                            Toast.error(result.message || 'Failed to update user');
                         }
-                    },
-                    error: function(xhr, status, error) {
-                        try {
-                            // First try to extract JSON from the response if it contains HTML errors
-                            let jsonStr = xhr.responseText;
-                            if (jsonStr.includes('{') && jsonStr.includes('}')) {
-                                jsonStr = jsonStr.substring(jsonStr.indexOf('{'), jsonStr.lastIndexOf('}')+1);
-                                const result = JSON.parse(jsonStr);
-                                alert('Error: ' + (result.message || 'Failed to update user'));
-                            } else {
-                                const result = JSON.parse(xhr.responseText);
-                                alert('Error: ' + (result.message || 'Failed to update user'));
-                            }
-                        } catch (e) {
-                            // If there's a username error in the response text, extract and show it
-                            if (xhr.responseText.includes('username is already taken')) {
-                                alert('Error: Username is already taken. Please try a different username.');
-                            } else {
-                                alert('Server error occurred. Please try again.');
-                            }
-                            console.error('Parse error:', e);
+                    } catch (e) {
+                        // Handle non-JSON responses which might still indicate success
+                        if (typeof response === 'string' && response.includes('success')) {
+                            Toast.success('User updated successfully');
+                            $('#editUserModal').modal('hide');
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 1500);
+                        } else {
+                            Toast.error('Error processing response');
+                            console.error('Error parsing response:', e, response);
                         }
                     }
-                });
-            });
-
-            // Email input validation on change/input
-            $('#email').on('input', function() {
-                const email = $(this).val();
-                if (validateEmail(email)) {
-                    $(this).removeClass('is-invalid');
+                },
+                error: function(xhr, status, error) {
+                    try {
+                        // First try to extract JSON from the response if it contains HTML errors
+                        let jsonStr = xhr.responseText;
+                        if (jsonStr.includes('{') && jsonStr.includes('}')) {
+                            jsonStr = jsonStr.substring(jsonStr.indexOf('{'), jsonStr.lastIndexOf('}') + 1);
+                            const result = JSON.parse(jsonStr);
+                            alert('Error: ' + (result.message || 'Failed to update user'));
+                        } else {
+                            const result = JSON.parse(xhr.responseText);
+                            alert('Error: ' + (result.message || 'Failed to update user'));
+                        }
+                    } catch (e) {
+                        // If there's a username error in the response text, extract and show it
+                        if (xhr.responseText.includes('username is already taken')) {
+                            alert('Error: Username is already taken. Please try a different username.');
+                        } else {
+                            alert('Server error occurred. Please try again.');
+                        }
+                        console.error('Parse error:', e);
+                    }
                 }
-            });
-            
-            $('#editEmail').on('input', function() {
-                const email = $(this).val();
-                if (validateEmail(email)) {
-                    $(this).removeClass('is-invalid');
-                }
-            });
-
-            // Reset selectedDepartments when the modal is closed
-            $('#createUserModal').on('hidden.bs.modal', function() {
-                const $modal = $(this);
-
-                // 1) Reset the entire form (clears all <input>, <select>, etc.)
-                $modal.find('form')[0].reset();
-
-                // 2) If you're using Select2 on #modal_department, clear it
-                const $dept = $modal.find('#modal_department');
-                if ($dept.hasClass('select2-hidden-accessible')) {
-                    $dept.val(null).trigger('change');
-                }
-
-                // 3) Hide & clear your "custom department" text field
-                const $custom = $modal.find('#modal_custom_department');
-                $custom.val('').hide();
-
-                // 4) Empty the Assigned Departments table
-                $modal.find('#createAssignedDepartmentsTable tbody').empty();
-                
-                // 5) Reset selectedDepartments array
-                selectedDepartments = [];
-
-                // 6) (Optional) Reset any password-strength UI or other bits
-                $modal.find('.password-strength').addClass('d-none');
-                $modal.find('.progress-bar')
-                    .css('width', '0%')
-                    .attr('aria-valuenow', '0');
-                const $pwdToggleIcon = $modal.find('.toggle-password i');
-                $modal.find('#password').attr('type', 'password');
-                $pwdToggleIcon.removeClass('bi-eye-slash').addClass('bi-eye');
             });
         });
+
+        // Email input validation on change/input
+        $('#email').on('input', function() {
+            const email = $(this).val();
+            if (validateEmail(email)) {
+                $(this).removeClass('is-invalid');
+            }
+        });
+
+        $('#editEmail').on('input', function() {
+            const email = $(this).val();
+            if (validateEmail(email)) {
+                $(this).removeClass('is-invalid');
+            }
+        });
+
+        // Reset selectedDepartments when the modal is closed
+        $('#createUserModal').on('hidden.bs.modal', function() {
+        const $modal = $(this);
+
+        // 1) Reset the entire form (clears all <input>, <select>, etc.)
+        $modal.find('form')[0].reset();
+
+        // 2) If you're using Select2 on #modal_department, clear it
+        const $dept = $modal.find('#modal_department');
+        if ($dept.hasClass('select2-hidden-accessible')) {
+            $dept.val(null).trigger('change');
+        }
+
+        // 3) Hide & clear your "custom department" text field
+        const $custom = $modal.find('#modal_custom_department');
+        $custom.val('').hide();
+
+        // 4) Empty the Assigned Departments table
+        $modal.find('#createAssignedDepartmentsTable tbody').empty();
+
+        // 5) Reset selectedDepartments array
+        selectedDepartments = [];
+
+        // 6) (Optional) Reset any password-strength UI or other bits
+        $modal.find('.password-strength').addClass('d-none');
+        $modal.find('.progress-bar')
+            .css('width', '0%')
+            .attr('aria-valuenow', '0');
+        const $pwdToggleIcon = $modal.find('.toggle-password i');
+        $modal.find('#password').attr('type', 'password');
+        $pwdToggleIcon.removeClass('bi-eye-slash').addClass('bi-eye');
+        });
+     
     </script>
 </body>
 

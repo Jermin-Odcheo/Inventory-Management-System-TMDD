@@ -318,7 +318,7 @@ function formatChanges($oldJsonStr)
                         <div class="col-12 col-sm-auto">
                             <div class="text-muted">
                                 <?php $totalLogs = count($logs); ?>
-                                <input type="hidden" id="total-users" value="<?= $totalLogs ?>">
+                                <input type="hidden" id="total-users" value="<?= $totalLogs?>">
                                 Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span id="totalRows"><?= $totalLogs ?></span> entries
                             </div>
                         </div>
@@ -642,10 +642,10 @@ function formatChanges($oldJsonStr)
                 if (response.status && response.status.toLowerCase() === 'success') {
                     $('#archiveTable').load(location.href + ' #archiveTable', function () {
                         updateBulkButtons();
-                        showToast(response.message, 'success');
+                        showToast(response.message, 'success', 5000, 'Success');
                     });
                 } else {
-                    showToast(response.message, 'error');
+                    showToast(response.message, 'error', 5000, 'Error');
                 }
             },
             error: function() {
@@ -684,13 +684,13 @@ function formatChanges($oldJsonStr)
                 // Hide the bulk restore modal
                 var modalInstance = bootstrap.Modal.getInstance(document.getElementById('bulkRestoreModal'));
                 modalInstance.hide();
-                if (response.status === 'success') {
+                if (response.status && response.status.toLowerCase() === 'success') {
                     $('#archiveTable').load(location.href + ' #archiveTable', function () {
                         updateBulkButtons();
-                        showToast(response.message, 'success');
+                        showToast(response.message, 'success', 5000, 'Success');
                     });
                 } else {
-                    showToast(response.message, 'error');
+                    showToast(response.message, 'error', 5000, 'Error');
                 }
             },
             error: function() {
@@ -726,13 +726,13 @@ function formatChanges($oldJsonStr)
                 var bulkModalInstance = bootstrap.Modal.getInstance(document.getElementById('bulkDeleteModal'));
                 bulkModalInstance.hide();
 
-                if (response.status === 'success') {
+                if (response.status && response.status.toLowerCase() === 'success') {
                     $('#archiveTable').load(location.href + ' #archiveTable', function () {
                         updateBulkButtons();
-                        showToast(response.message, 'success');
+                        showToast(response.message, 'success', 5000, 'Success');
                     });
                 } else {
-                    showToast(response.message, 'error');
+                    showToast(response.message, 'error', 5000, 'Error');
                 }
             },
             error: function() {
