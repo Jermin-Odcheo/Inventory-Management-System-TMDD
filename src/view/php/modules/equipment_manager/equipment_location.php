@@ -1251,6 +1251,30 @@ function safeHtml($value)
                 });
             });
         });
+
+        $(document).on('click', '[data-bs-target="#addLocationModal"]', function() {
+            // Always clean up before showing modal
+            if ($('.modal-backdrop').length) {
+                $('.modal-backdrop').remove();
+            }
+            if ($('body').hasClass('modal-open') && $('.modal.show').length === 0) {
+                $('body').removeClass('modal-open');
+                $('body').css('padding-right', '');
+            }
+            // Move modal to body to ensure backdrop always works
+            var modalEl = document.getElementById('addLocationModal');
+            if (modalEl) {
+                // Remove any previous modal instance
+                if (modalEl._bootstrapModal) {
+                    modalEl._bootstrapModal.hide();
+                    modalEl._bootstrapModal.dispose();
+                }
+                document.body.appendChild(modalEl);
+                var addModal = new bootstrap.Modal(modalEl, {backdrop: true});
+                modalEl._bootstrapModal = addModal;
+                addModal.show();
+            }
+        });
     </script>
 </body>
 
