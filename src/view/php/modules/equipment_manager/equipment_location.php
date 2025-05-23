@@ -7,12 +7,17 @@ session_start();
 $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH'])
     && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 
-
 // 1) Auth guard (always run, AJAX or not)
 $userId = $_SESSION['user_id'] ?? null;
 if (!is_int($userId) && !ctype_digit((string)$userId)) {
-    header('Location: ' . BASE_URL . 'index.php');
-    exit;
+    if ($isAjax) {
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'error', 'message' => 'Session expired. Please log in again.']);
+        exit;
+    } else {
+        header('Location: ' . BASE_URL . 'index.php');
+        exit;
+    }
 }
 $userId = (int)$userId;
 
@@ -251,6 +256,11 @@ if (
     }
     exit;
 }
+
+// Only include HTML templates for non-AJAX requests
+include '../../general/header.php';
+include '../../general/sidebar.php';
+include '../../general/footer.php';
 
 // ------------------------
 // Normal (non-AJAX) Page Logic
@@ -622,7 +632,7 @@ function safeHtml($value)
 
                         <div class="mb-3">
                             <label class="form-label">Device State</label>
-                            <select class="form-select" id="devState" name="devState" required>
+                            <select class="form-select" id="devState" name="device_state" required>
                                 <option value="summarized">Inventory</option>
                                 <option value="detailed">Transffered</option>
                                 <option value="custom">Borrowed</option>
@@ -711,7 +721,7 @@ function safeHtml($value)
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Device State</label>
-                            <select class="form-select" id="devState" name="devState" required>
+                            <select class="form-select" id="devState" name="device_state" required>
                                 <option value="summarized">Inventory</option>
                                 <option value="detailed">Transffered</option>
                                 <option value="custom">Borrowed</option>
@@ -1037,6 +1047,24 @@ function safeHtml($value)
 
                         if (result.status === 'success') {
                             $('#addLocationModal').modal('hide');
+                            setTimeout(function() {
+                                // Remove lingering modal-backdrop and modal-open
+                                if ($('.modal-backdrop').length) {
+                                    $('.modal-backdrop').remove();
+                                }
+                                if ($('body').hasClass('modal-open') && $('.modal.show').length === 0) {
+                                    $('body').removeClass('modal-open');
+                                    $('body').css('padding-right', '');
+                                }
+                                // Reset the form and Select2 fields
+                                $('#addLocationForm')[0].reset();
+                                if ($('#add_location_asset_tag').hasClass('select2-hidden-accessible')) {
+                                    $('#add_location_asset_tag').val('').trigger('change');
+                                }
+                                if ($('#add_department_id').hasClass('select2-hidden-accessible')) {
+                                    $('#add_department_id').val('').trigger('change');
+                                }
+                            }, 500);
                             $('#elTable').load(location.href + ' #elTable', function() {
                                 showToast(result.message, 'success');
                             });
