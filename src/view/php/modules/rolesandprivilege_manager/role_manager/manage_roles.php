@@ -727,6 +727,9 @@ unset($role);
                     success: function(response) {
                         $('#editRoleContent').html(response);
                         $('#roleID').val(roleID);
+                        
+                        // Form is loaded in modal content, no need for parent window access
+                        // The script in edit_roles.php will handle capturing the original state
                     },
                     error: function(xhr, status, error) {
                         console.error('AJAX Error:', status, error);

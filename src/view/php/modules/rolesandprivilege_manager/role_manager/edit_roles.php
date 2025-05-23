@@ -541,9 +541,57 @@ switch ($privNameLower) {
 </style>
 
 <script>
+    // Variable to store original form state
+    let originalFormState = {};
+    
+    // Function to capture the initial form state
+    function captureFormState() {
+        const roleName = $('#role_name').val();
+        const checkedPrivileges = [];
+        
+        $('input[name="privileges[]"]:checked').each(function() {
+            checkedPrivileges.push($(this).val());
+        });
+        
+        return {
+            roleName: roleName,
+            privileges: checkedPrivileges.sort().join(',')
+        };
+    }
+    
+    // Function to compare form states and detect changes
+    function hasFormChanged() {
+        const currentState = captureFormState();
+        
+        // Compare role name
+        if (currentState.roleName !== originalFormState.roleName) {
+            return true;
+        }
+        
+        // Compare privileges
+        if (currentState.privileges !== originalFormState.privileges) {
+            return true;
+        }
+        
+        return false;
+    }
+    
+    // Capture initial state when document is ready
+    $(document).ready(function() {
+        originalFormState = captureFormState();
+        console.log('Original form state captured:', originalFormState);
+    });
+
     // Handle the Edit Role form submission via AJAX.
     $(document).off('submit', '#editRoleForm').on('submit', '#editRoleForm', function (e) {
         e.preventDefault();
+        
+        // Check if form has changed
+        if (!hasFormChanged()) {
+            showToast('No changes were made to the role.', 'info');
+            return false;
+        }
+        
         const submitBtn = $('button[type="submit"]', this);
 
         // Disable button and show loading state
