@@ -1109,6 +1109,15 @@ function safeHtml($value)
                 });
             });
 
+            //building location serachable dropdown
+            $('#filterBuilding').select2({
+                placeholder: 'Filter by Building',
+                allowClear: true,
+                width: '100%',
+                dropdownAutoWidth: true,
+                minimumResultsForSearch: 0, // always show search box
+                dropdownParent: $('#filterBuilding').parent()
+            });
 
             // Department searchable dropdown (Add Location Modal)
             $('#addLocationModal').on('shown.bs.modal', function() {
