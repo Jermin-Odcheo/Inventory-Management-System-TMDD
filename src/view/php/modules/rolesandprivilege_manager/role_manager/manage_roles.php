@@ -355,6 +355,60 @@ unset($role);
             canViewArchive: <?php echo json_encode($canViewArchive); ?>
         };
 
+        // Function to refresh the roles table without page reload
+        function refreshRolesTable() {
+            // Store current scroll position
+            const scrollPosition = window.scrollY || document.documentElement.scrollTop;
+            
+            // Ensure modals are properly cleaned up
+            $('.modal').modal('hide');
+            $('body').removeClass('modal-open');
+            $('.modal-backdrop').remove();
+            
+            $.ajax({
+                url: location.href,
+                type: 'GET',
+                success: function(response) {
+                    // Extract just the table HTML from the response
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(response, 'text/html');
+                    const newTable = doc.querySelector('#rolesTable');
+                    
+                    if (newTable) {
+                        // Replace the current table with the new one
+                        $('#rolesTable').replaceWith(newTable);
+                        
+                        // Reset the global arrays for pagination
+                        window.allRows = Array.from(document.querySelectorAll('#auditTable tr'));
+                        window.filteredRows = window.allRows;
+                        window.currentPage = 1;
+                        
+                        // Reinitialize pagination
+                        if (typeof updatePagination === 'function') {
+                            updatePagination();
+                            setTimeout(forcePaginationCheck, 100);
+                        }
+                        
+                        // Restore scroll position after everything is loaded
+                        setTimeout(function() {
+                            window.scrollTo(0, scrollPosition);
+                            
+                            // Double check that modal classes are removed
+                            $('body').removeClass('modal-open');
+                            $('body').css('overflow', '');
+                            $('body').css('padding-right', '');
+                        }, 150);
+                    } else {
+                        console.error('Could not find table in response');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error refreshing table:', error);
+                    showToast('Failed to refresh data. Please reload the page.', 'error', 5000);
+                }
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             // Remove any custom pagination functions that might interfere with pagination.js
             // and replace with a compatible function
@@ -364,6 +418,16 @@ unset($role);
                     updatePagination();
                 }
             }
+
+            // Ensure scrolling is properly restored when any modal is closed
+            $('.modal').on('hidden.bs.modal', function () {
+                setTimeout(function() {
+                    $('body').removeClass('modal-open');
+                    $('body').css('overflow', '');
+                    $('body').css('padding-right', '');
+                    $('.modal-backdrop').remove();
+                }, 100);
+            });
 
             // Check if Select2 is available
             if ($.fn.select2) {
@@ -552,10 +616,10 @@ unset($role);
                 // Show ellipses and a window of pages around current page
                 const maxVisiblePages = 5; // Adjust as needed
                 const halfWindow = Math.floor(maxVisiblePages / 2);
-                
+
                 let startPage = Math.max(2, window.currentPage - halfWindow);
                 let endPage = Math.min(totalPages - 1, window.currentPage + halfWindow);
-                
+
                 // Adjust for edge cases
                 if (window.currentPage <= halfWindow + 1) {
                     // Near start, show more pages after current
@@ -564,28 +628,28 @@ unset($role);
                     // Near end, show more pages before current
                     startPage = Math.max(2, totalPages - maxVisiblePages);
                 }
-                
+
                 // Show ellipsis after first page if needed
                 if (startPage > 2) {
                     addPaginationItem(paginationContainer, '...');
                 }
-                
+
                 // Show pages in the window
                 for (let i = startPage; i <= endPage; i++) {
                     addPaginationItem(paginationContainer, i, window.currentPage === i);
                 }
-                
+
                 // Show ellipsis before last page if needed
                 if (endPage < totalPages - 1) {
                     addPaginationItem(paginationContainer, '...');
                 }
-                
+
                 // Always show last page
                 if (totalPages > 1) {
                     addPaginationItem(paginationContainer, totalPages, window.currentPage === totalPages);
                 }
             };
-            
+
             // Helper function to add pagination items
             window.addPaginationItem = function(container, page, isActive = false) {
                 const li = document.createElement('li');
@@ -609,7 +673,7 @@ unset($role);
                 li.appendChild(a);
                 container.appendChild(li);
             };
-            
+
             // Function to refresh row data after any table modifications
             function refreshTableRowData() {
                 // Update the allRows and filteredRows arrays
@@ -621,7 +685,7 @@ unset($role);
                 // Update pagination
                 updatePagination();
             }
-            
+
             // Setup pagination controls
             document.getElementById('prevPage').addEventListener('click', function() {
                 if (window.currentPage > 1) {
@@ -629,17 +693,17 @@ unset($role);
                     updatePagination();
                 }
             });
-            
+
             document.getElementById('nextPage').addEventListener('click', function() {
                 const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value);
                 const totalPages = Math.ceil(window.filteredRows.length / rowsPerPage);
-                
+
                 if (window.currentPage < totalPages) {
                     window.currentPage++;
                     updatePagination();
                 }
             });
-            
+
             document.getElementById('rowsPerPageSelect').addEventListener('change', function() {
                 window.currentPage = 1;
                 updatePagination();
@@ -663,6 +727,9 @@ unset($role);
                     success: function(response) {
                         $('#editRoleContent').html(response);
                         $('#roleID').val(roleID);
+                        
+                        // Form is loaded in modal content, no need for parent window access
+                        // The script in edit_roles.php will handle capturing the original state
                     },
                     error: function(xhr, status, error) {
                         console.error('AJAX Error:', status, error);
@@ -701,16 +768,16 @@ unset($role);
                     dataType: 'json',
                     success: function(response) {
                         if (response.success) {
-                            $('#rolesTable').load(location.href + ' #rolesTable', function() {
-                                // Refresh all rows after table is loaded
-                                window.allRows = Array.from(document.querySelectorAll('#auditTable tr'));
-                                window.filteredRows = window.allRows;
-                                window.currentPage = 1;
-                                updatePagination();
-                                showToast(response.message, 'success', 5000);
-                            });
+                            // Close modal first to avoid UI issues
                             $('#confirmDeleteModal').modal('hide');
+                            $('body').removeClass('modal-open');
+                            $('body').css('overflow', '');
+                            $('body').css('padding-right', '');
                             $('.modal-backdrop').remove();
+                            
+                            // Refresh the table without reloading the whole page
+                            refreshRolesTable();
+                            showToast(response.message, 'success', 5000);
                         } else {
                             showToast(response.message || 'An error occurred', 'error', 5000);
                         }
@@ -751,14 +818,9 @@ unset($role);
                     dataType: 'json',
                     success: function(response) {
                         if (response.success) {
-                            $('#rolesTable').load(location.href + ' #rolesTable', function() {
-                                // Refresh all rows after table is loaded
-                                window.allRows = Array.from(document.querySelectorAll('#auditTable tr'));
-                                window.filteredRows = window.allRows;
-                                window.currentPage = 1;
-                                updatePagination();
-                                showToast(response.message, 'success', 5000);
-                            });
+                            // Refresh the table without reloading the whole page
+                            refreshRolesTable();
+                            showToast(response.message, 'success', 5000);
                         } else {
                             showToast(response.message || 'An error occurred', 'error', 5000);
                         }
@@ -779,14 +841,9 @@ unset($role);
                     dataType: 'json',
                     success: function(response) {
                         if (response.success) {
-                            $('#rolesTable').load(location.href + ' #rolesTable', function() {
-                                // Refresh all rows after table is loaded
-                                window.allRows = Array.from(document.querySelectorAll('#auditTable tr'));
-                                window.filteredRows = window.allRows;
-                                window.currentPage = 1;
-                                updatePagination();
-                                showToast(response.message, 'success', 5000);
-                            });
+                            // Refresh the table without reloading the whole page
+                            refreshRolesTable();
+                            showToast(response.message, 'success', 5000);
                         } else {
                             showToast(response.message || 'An error occurred', 'error', 5000);
                         }
@@ -838,12 +895,12 @@ unset($role);
             window.updatePagination = function() {
                 // Get all rows again in case the DOM was updated
                 window.allRows = Array.from(document.querySelectorAll('#auditTable tr'));
-                
+
                 // If filtered rows is empty or not defined, use all rows
                 if (!window.filteredRows || window.filteredRows.length === 0) {
                     window.filteredRows = window.allRows;
                 }
-                
+
                 originalUpdatePagination();
                 forcePaginationCheck();
             };
@@ -858,6 +915,80 @@ unset($role);
             window.currentPage = 1;
             updatePagination();
         });
+
+        function updatePagination() {
+            console.log('pagination.js: updatePagination called. Current Page:', paginationConfig.currentPage);
+
+            // 1) Grab the tbody where rows get injected
+            const tbody = document.getElementById(paginationConfig.tableId);
+            if (!tbody) {
+                console.error(`Could not find tbody with ID ${paginationConfig.tableId}`);
+                return;
+            }
+            tbody.innerHTML = ''; // clear out any existing rows
+
+            // 2) Compute slicing indexes
+            const rowsToPaginate = window.filteredRows || [];
+            const totalRows = rowsToPaginate.length;
+            const rowsPerPage = parseInt(
+                document.getElementById(paginationConfig.rowsPerPageSelectId)?.value || '10',
+                10
+            );
+            const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
+            const start = (paginationConfig.currentPage - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+
+            // 3) Render rows or "no results"
+            if (totalRows === 0) {
+                const noResultsRow = document.createElement('tr');
+                noResultsRow.innerHTML = `
+      <td colspan="10">
+        <div class="empty-state text-center py-4">
+          <i class="fas fa-search fa-3x mb-3"></i>
+          <h4>No matching records found</h4>
+          <p class="text-muted">Try adjusting your search or filter criteria.</p>
+        </div>
+      </td>
+    `;
+                tbody.appendChild(noResultsRow);
+            } else {
+                rowsToPaginate.slice(start, end).forEach(row => {
+                    tbody.appendChild(row.cloneNode(true));
+                });
+            }
+
+            // 4) Update "Showing X to Y of Z" text
+            const currentPageEl = document.getElementById(paginationConfig.currentPageId);
+            const rowsPerPageEl = document.getElementById(paginationConfig.rowsPerPageId);
+            const totalRowsEl = document.getElementById(paginationConfig.totalRowsId);
+
+            if (currentPageEl) currentPageEl.textContent = totalRows === 0 ? 0 : (start + 1);
+            if (rowsPerPageEl) rowsPerPageEl.textContent = Math.min(end, totalRows);
+            if (totalRowsEl) totalRowsEl.textContent = totalRows;
+
+            // 5) Enable/disable Prev & Next
+            const prevPageEl = document.getElementById(paginationConfig.prevPageId);
+            const nextPageEl = document.getElementById(paginationConfig.nextPageId);
+            if (prevPageEl) prevPageEl.disabled = (paginationConfig.currentPage <= 1);
+            if (nextPageEl) nextPageEl.disabled = (paginationConfig.currentPage >= totalPages);
+
+            // 6) **Show/Hide** Prev & Next buttons
+            if (prevPageEl) {
+                prevPageEl.style.display = (paginationConfig.currentPage > 1) ? '' : 'none';
+            }
+            if (nextPageEl) {
+                nextPageEl.style.display = (paginationConfig.currentPage < totalPages) ? '' : 'none';
+            }
+
+            // 7) Hide the page-number links entirely when there's only one page
+            const paginationContainer = document.getElementById(paginationConfig.paginationId);
+            if (paginationContainer) {
+                paginationContainer.style.display = (totalPages > 1) ? '' : 'none';
+            }
+
+            // 8) Re-render the numbered page links
+            renderPaginationControls(totalPages);
+        }
     </script>
 </body>
 
