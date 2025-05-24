@@ -158,6 +158,27 @@ try {
         throw new Exception("No department ID provided");
     }
 } 
+catch (PDOException $e) {
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+    
+    // Check for the specific duplicate entry error for departments
+    if ($e->getCode() == 23000 && 
+        strpos($e->getMessage(), 'Duplicate entry') !== false && 
+        strpos($e->getMessage(), 'uq_dept_active') !== false) {
+        
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'A department with the same abbreviation is already active. Please check existing departments before restoring.'
+        ]);
+    } else {
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Database error: ' . $e->getMessage()
+        ]);
+    }
+}
 catch (Exception $e) {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
