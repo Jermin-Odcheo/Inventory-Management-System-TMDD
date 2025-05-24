@@ -394,6 +394,9 @@ ob_end_clean();
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.min.css" rel="stylesheet">
     <!-- Select2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+    <!-- jQuery (loaded in header for RR autofill) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+ 
     <style>
         th.sortable.asc::after {
             content: " ▲";
@@ -401,6 +404,23 @@ ob_end_clean();
 
         th.sortable.desc::after {
             content: " ▼";
+        }
+        
+        /* Styling for autofilled fields */
+        input[data-autofill="true"] {
+            background-color: #f8f9fa !important;  /* Light gray background */
+            border-color: #ced4da !important;      /* Standard border color */
+            cursor: not-allowed;                   /* Not-allowed cursor */
+            color: #6c757d !important;             /* Darker text for better contrast */
+        }
+        
+        /* Add a small indicator that the field was autofilled */
+        input[data-autofill="true"]::after {
+            content: "Autofilled";
+            position: absolute;
+            right: 10px;
+            font-size: 0.8em;
+            color: #6c757d;
         }
     </style>
 </head>
@@ -723,9 +743,6 @@ ob_end_clean();
                                     }
                                 </style>
                                 <script>
-                                    // Custom function to anchor Select2 dropdown below RR# field
-
-
                                     $(function() {
                                         $('#add_rr_no').select2({
                                             placeholder: 'Select or search RR Number',
@@ -780,6 +797,46 @@ ob_end_clean();
                                                         showToast('AJAX error creating RR#', 'error');
                                                     }
                                                 });
+                                            }
+                                            
+                                            // Reset fields before fetching new RR info
+                                            const $accountableField = $('input[name="accountable_individual"]');
+                                            const $locationField = $('input[name="location"]');
+                                            
+                                            // If fields were previously autofilled, reset them first
+                                            if ($accountableField.attr('data-autofill') === 'true') {
+                                                $accountableField.val('').prop('readonly', false);
+                                            }
+                                            
+                                            if ($locationField.attr('data-autofill') === 'true') {
+                                                $locationField.val('').prop('readonly', false);
+                                            }
+                                            
+                                            // Add autofill functionality here
+                                            fetchRRInfo(data.id, 'add', true);
+                                        });
+
+                                        // Handle RR# being cleared
+                                        $('#add_rr_no').on('select2:clear', function() {
+                                            // Reset the Location and Accountable Individual fields
+                                            const $accountableField = $('input[name="accountable_individual"]');
+                                            const $locationField = $('input[name="location"]');
+                                            
+                                            if ($accountableField.attr('data-autofill') === 'true') {
+                                                $accountableField.val('').prop('readonly', false).attr('data-autofill', 'false').removeClass('bg-light');
+                                            }
+                                            
+                                            if ($locationField.attr('data-autofill') === 'true') {
+                                                $locationField.val('').prop('readonly', false).attr('data-autofill', 'false').removeClass('bg-light');
+                                            }
+                                        });
+
+                                        // Check if RR# is already selected when modal opens
+                                        $('#addEquipmentModal').on('shown.bs.modal', function() {
+                                            const rrValue = $('#add_rr_no').val();
+                                            if (rrValue) {
+                                                // If an RR# is already selected, trigger the autofill without notification
+                                                fetchRRInfo(rrValue, 'add', false);
                                             }
                                         });
 
@@ -840,6 +897,46 @@ ob_end_clean();
                                                         }
                                                     });
                                                 }
+                                                
+                                                // Reset fields before fetching new RR info
+                                                const $accountableField = $('#edit_accountable_individual');
+                                                const $locationField = $('#edit_location');
+                                                
+                                                // If fields were previously autofilled, reset them first
+                                                if ($accountableField.attr('data-autofill') === 'true') {
+                                                    $accountableField.val('').prop('readonly', false);
+                                                }
+                                                
+                                                if ($locationField.attr('data-autofill') === 'true') {
+                                                    $locationField.val('').prop('readonly', false);
+                                                }
+                                                
+                                                // Add autofill functionality here
+                                                fetchRRInfo(data.id, 'edit', true);
+                                            });
+                                            
+                                            // Handle RR# being cleared
+                                            $('#edit_rr_no').on('select2:clear', function() {
+                                                // Reset the Location and Accountable Individual fields
+                                                const $accountableField = $('#edit_accountable_individual');
+                                                const $locationField = $('#edit_location');
+                                                
+                                                if ($accountableField.attr('data-autofill') === 'true') {
+                                                    $accountableField.val('').prop('readonly', false).attr('data-autofill', 'false').removeClass('bg-light');
+                                                }
+                                                
+                                                if ($locationField.attr('data-autofill') === 'true') {
+                                                    $locationField.val('').prop('readonly', false).attr('data-autofill', 'false').removeClass('bg-light');
+                                                }
+                                            });
+                                            
+                                            // Check if RR# is already selected when modal opens
+                                            $('#editEquipmentModal').on('shown.bs.modal', function() {
+                                                const rrValue = $('#edit_rr_no').val();
+                                                if (rrValue) {
+                                                    // If an RR# is already selected, trigger the autofill without notification
+                                                    fetchRRInfo(rrValue, 'edit', false);
+                                                }
                                             });
                                         }
 
@@ -852,11 +949,13 @@ ob_end_clean();
                     <div class="row">
                         <div class="mb-3 col-md-6">
                             <label for="location" class="form-label">Location</label>
-                            <input type="text" class="form-control" name="location">
+                            <input type="text" class="form-control" name="location" data-autofill="false">
+                            <small class="text-muted">This field will be autofilled when an RR# is selected</small>
                         </div>
                         <div class="mb-3 col-md-6">
                             <label for="accountable_individual" class="form-label">Accountable Individual</label>
-                            <input type="text" class="form-control" name="accountable_individual">
+                            <input type="text" class="form-control" name="accountable_individual" data-autofill="false">
+                            <small class="text-muted">This field will be autofilled when an RR# is selected</small>
                         </div>
                     </div>
                 </div>
@@ -955,11 +1054,13 @@ ob_end_clean();
                             <div class="row">
                                 <div class="mb-3 col-md-6">
                                     <label for="edit_location" class="form-label">Location</label>
-                                    <input type="text" class="form-control" name="location" id="edit_location">
+                                    <input type="text" class="form-control" name="location" id="edit_location" data-autofill="false">
+                                    <small class="text-muted">This field will be autofilled when an RR# is selected</small>
                                 </div>
                                 <div class="mb-3 col-md-6">
                                     <label for="edit_accountable_individual" class="form-label">Accountable Individual</label>
-                                    <input type="text" class="form-control" name="accountable_individual" id="edit_accountable_individual">
+                                    <input type="text" class="form-control" name="accountable_individual" id="edit_accountable_individual" data-autofill="false">
+                                    <small class="text-muted">This field will be autofilled when an RR# is selected</small>
                                 </div>
                             </div>
                         </div>
@@ -1155,6 +1256,12 @@ ob_end_clean();
                 $('#edit_location').val(d.location);
                 $('#edit_accountable_individual').val(d.accountable);
                 $('#edit_remarks').val(d.remarks);
+                
+                // Check if RR# exists and apply readonly state to Location and Accountable Individual fields
+                if (d.rr) {
+                    // Call fetchRRInfo directly with showNotification set to false
+                    fetchRRInfo(d.rr, 'edit', false);
+                }
 
                 // show the modal
                 $('#editEquipmentModal').modal('show');
@@ -1274,9 +1381,76 @@ ob_end_clean();
                 });
             });
         });
+        
+        function fetchRRInfo(rrNo, formType, showNotification = true) {
+    $.ajax({
+        url: 'get_rr_info.php',
+        method: 'GET',
+        data: { rr_no: rrNo },
+        dataType: 'json',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        success: function(response) {
+            if (response.status === 'success' && response.data) {
+                if (formType === 'edit') {
+                    // For edit form
+                    const $accountableField = $('#edit_accountable_individual');
+                    const $locationField = $('#edit_location');
+                    
+                    // Get current values
+                    const currentAccountable = $accountableField.val();
+                    const currentLocation = $locationField.val();
+                    
+                    // Only update if empty or matches RR data
+                    if (!currentAccountable || currentAccountable === response.data.accountable_individual) {
+                    $accountableField.val(response.data.accountable_individual || '');
+                    }
+                    
+                    if (!currentLocation || currentLocation === response.data.location) {
+                    $locationField.val(response.data.location || '');
+                    }
+                    
+                    // Make fields readonly and mark as autofilled regardless
+                    $accountableField.prop('readonly', true).attr('data-autofill', 'true').addClass('bg-light');
+                    $locationField.prop('readonly', true).attr('data-autofill', 'true').addClass('bg-light');
+                } else {
+                    // For add form
+                    const $accountableField = $('input[name="accountable_individual"]');
+                    const $locationField = $('input[name="location"]');
+                    
+                    // Get current values
+                    const currentAccountable = $accountableField.val();
+                    const currentLocation = $locationField.val();
+                    
+                    // Only update if empty or matches RR data
+                    if (!currentAccountable || currentAccountable === response.data.accountable_individual) {
+                    $accountableField.val(response.data.accountable_individual || '');
+                    }
+                    
+                    if (!currentLocation || currentLocation === response.data.location) {
+                    $locationField.val(response.data.location || '');
+                    }
+                    
+                    // Make fields readonly and mark as autofilled regardless
+                    $accountableField.prop('readonly', true).attr('data-autofill', 'true').addClass('bg-light');
+                    $locationField.prop('readonly', true).attr('data-autofill', 'true').addClass('bg-light');
+                }
+                
+                // Only show notification if requested
+                if (showNotification) {
+                    showToast('Location and Accountable Individual autofilled from RR data', 'info');
+                }
+            }
+        },
+        error: function() {
+            if (showNotification) {
+                showToast('Error fetching RR information', 'error');
+            }
+        }
+    });
+} 
     </script>
-
-
 </body>
 
 </html>
