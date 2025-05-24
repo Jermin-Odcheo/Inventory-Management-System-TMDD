@@ -1347,6 +1347,58 @@ ob_end_clean();
             // 5) UPDATE form submit
             $('#editEquipmentForm').on('submit', function(e) {
                 e.preventDefault();
+                
+                // Get the original values from data attributes
+                const $form = $(this);
+                const $editBtn = $('.edit-equipment[data-id="' + $('#edit_equipment_id').val() + '"]');
+                const originalValues = {
+                    asset_tag: $editBtn.data('asset'),
+                    asset_description_1: $editBtn.data('desc1'),
+                    asset_description_2: $editBtn.data('desc2'),
+                    specifications: $editBtn.data('spec'),
+                    brand: $editBtn.data('brand'),
+                    model: $editBtn.data('model'),
+                    serial_number: $editBtn.data('serial'),
+                    location: $editBtn.data('location'),
+                    accountable_individual: $editBtn.data('accountable'),
+                    rr_no: $editBtn.data('rr'),
+                    remarks: $editBtn.data('remarks')
+                };
+                
+                // Get current form values
+                const currentValues = {
+                    asset_tag: $('#edit_equipment_asset_tag').val(),
+                    asset_description_1: $('#edit_asset_description_1').val(),
+                    asset_description_2: $('#edit_asset_description_2').val(),
+                    specifications: $('#edit_specifications').val(),
+                    brand: $('#edit_brand').val(),
+                    model: $('#edit_model').val(),
+                    serial_number: $('#edit_serial_number').val(),
+                    location: $('#edit_location').val(),
+                    accountable_individual: $('#edit_accountable_individual').val(),
+                    rr_no: $('#edit_rr_no').val(),
+                    remarks: $('#edit_remarks').val()
+                };
+                
+                // Check if any values changed
+                let hasChanges = false;
+                for (const key in originalValues) {
+                    // Handle null/undefined/empty string consistently
+                    const origVal = originalValues[key] || '';
+                    const currVal = currentValues[key] || '';
+                    if (origVal.toString().trim() !== currVal.toString().trim()) {
+                        hasChanges = true;
+                        break;
+                    }
+                }
+                
+                // If no changes, show notification and don't submit
+                if (!hasChanges) {
+                    showToast('No changes detected', 'info');
+                    $('#editEquipmentModal').modal('hide');
+                    return;
+                }
+                
                 const btn = $(this).find('button[type=submit]').prop('disabled', true)
                     .html('<span class="spinner-border spinner-border-sm"></span> Saving…');
                 $.ajax({
