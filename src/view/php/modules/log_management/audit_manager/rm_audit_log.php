@@ -265,12 +265,17 @@ function formatDetailsAndChanges($log)
             });
             break;
 
-        case 'delete':
-            $defaultMessage = htmlspecialchars("Role '$roleName' has been permanently deleted");
-            list($details, $changes) = processStatusMessage($defaultMessage, $log, function () use ($log) {
-                return formatNewValue($log['OldVal']);
-            });
-            break;
+            case 'delete':
+                // build your “permanently deleted” message
+                $defaultMessage = htmlspecialchars("Role '{$roleName}' has been permanently deleted");
+            
+                // details column is just the message
+                $details = $defaultMessage;
+            
+                // changes column is the fully-decoded OldVal JSON (role_name, role_id, modules_and_privileges)
+                $changes = formatNewValue($log['OldVal']);
+            
+                break;
 
         default:
             // Use the details from the log or generate a default message

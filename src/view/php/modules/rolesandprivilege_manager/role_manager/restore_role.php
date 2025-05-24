@@ -129,12 +129,33 @@ try {
         $pdo->rollBack();
         echo json_encode(['success' => false, 'message' => 'Failed to restore the role. Please try again.']);
     }
-} catch (PDOException $e) {
+} 
+catch (PDOException $e) {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
     }
-    echo json_encode(['success' => false, 'message' => "Database error: " . $e->getMessage()]);
+    
+    // Check for the specific duplicate entry error for roles
+    if ($e->getCode() == 23000 && strpos($e->getMessage(), 'uq_roles_active') !== false) {
+        
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'A role with the same name is already active. Please check existing roles before restoring.'
+        ]);
+    } else {
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Database error: ' . $e->getMessage()
+        ]);
+    }
 }
-
-exit();
-?> 
+catch (Exception $e) {
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+    
+    echo json_encode([
+        'status' => 'error',
+        'message' => $e->getMessage()
+    ]);
+} 

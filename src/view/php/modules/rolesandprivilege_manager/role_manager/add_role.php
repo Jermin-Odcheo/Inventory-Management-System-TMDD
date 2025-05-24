@@ -16,71 +16,96 @@ $ipAddress = $_SERVER['REMOTE_ADDR'];
 $pdo->exec("SET @current_ip = '" . $ipAddress . "'");
 
 // Process form submission via POST and return JSON response.
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
-    $role_name = trim($_POST['role_name']);
+    $userId   = $_SESSION['user_id'] ?? null;
+    $roleName = trim($_POST['role_name']);
 
-    if (empty($role_name)) {
+    if (empty($roleName)) {
         echo json_encode(['success' => false, 'message' => 'Role name is required.']);
         exit();
-    } else {
-        try {
-            // Start transaction
-            $pdo->beginTransaction();
-            
-            $stmt = $pdo->prepare("SELECT COUNT(*) FROM roles WHERE Role_Name = ? AND is_disabled = 0");
-            $stmt->execute([$role_name]);
-            if ($stmt->fetchColumn() > 0) {
-                echo json_encode(['success' => false, 'message' => 'Role already exists.']);
-                exit();
-            } else {
-                $stmt = $pdo->prepare("INSERT INTO roles (Role_Name, is_disabled) VALUES (?, 0)");
-                if ($stmt->execute([$role_name])) {
-                    $roleID = $pdo->lastInsertId();
+    }
 
-                    // Get the new role data for audit log
-                    $stmt = $pdo->prepare("SELECT * FROM roles WHERE id = ?");
-                    $stmt->execute([$roleID]);
-                    $newRole = $stmt->fetch(PDO::FETCH_ASSOC);
-                    $newValue = json_encode($newRole);
+    try {
+        // 1) Start transaction
+        $pdo->beginTransaction();
 
-                    // Log to audit_log table
-                    $stmt = $pdo->prepare("INSERT INTO audit_log 
-                        (UserID, EntityID, Action, Details, OldVal, NewVal, Module, Date_Time, Status) 
-                        VALUES (?, ?, 'Create', ?, NULL, ?, 'Roles and Privileges', NOW(), 'Successful')");
-                    $stmt->execute([
-                        $userId,
-                        $roleID,
-                        "Role '{$role_name}' has been created",
-                        $newValue
-                    ]);
-
-                    // Log the action in the role_changes table (keep for compatibility)
-                    $stmt = $pdo->prepare("INSERT INTO role_changes (UserID, RoleID, Action, NewRoleName) VALUES (?, ?, 'Add', ?)");
-                    $stmt->execute([$userId, $roleID, $role_name]);
-
-                    $pdo->commit();
-                    echo json_encode(['success' => true, 'message' => 'Role created successfully.']);
-                    exit();
-                } else {
-                    $pdo->rollBack();
-                    echo json_encode(['success' => false, 'message' => 'Error inserting role. Please try again.']);
-                    exit();
-                }
-            }
-        } catch (PDOException $e) {
-            if ($pdo->inTransaction()) {
-                $pdo->rollBack();
-            }
-            
-            // Check if it's a duplicate entry error
-            if ($e->getCode() == '23000' && strpos($e->getMessage(), 'Duplicate entry') !== false) {
-                echo json_encode(['success' => false, 'message' => 'Role Name already exists.']);
-            } else {
-                echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
-            }
+        // 2) Check for duplicate
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM roles WHERE Role_Name = ? AND is_disabled = 0");
+        $stmt->execute([$roleName]);
+        if ($stmt->fetchColumn() > 0) {
+            echo json_encode(['success' => false, 'message' => 'Role already exists.']);
             exit();
         }
+
+        // 3) Insert new role
+        $stmt = $pdo->prepare("INSERT INTO roles (Role_Name, is_disabled) VALUES (?, 0)");
+        if (!$stmt->execute([$roleName])) {
+            throw new Exception('Error inserting role.');
+        }
+        $roleID = $pdo->lastInsertId();
+
+        // 4) Fetch the freshly inserted row (only the columns we need)
+        $stmt    = $pdo->prepare("SELECT id, Role_Name FROM roles WHERE id = ?");
+        $stmt->execute([$roleID]);
+        $newRole = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // 5) Build the audit payload in the exact shape formatNewValue() expects
+        $newValueArray = [
+            'role_id'                => $newRole['id'],
+            'role_name'              => $newRole['Role_Name'],
+            // if you have default privileges on create, fetch them here; otherwise leave empty
+            'modules_and_privileges' => []
+        ];
+        $newValue = json_encode($newValueArray);
+
+        // 6) Insert into audit_log
+        $detailsMessage = "Role '{$roleName}' has been created";
+        $stmt = $pdo->prepare("
+            INSERT INTO audit_log
+              (UserID, EntityID, Action, Details, OldVal, NewVal, Module, Date_Time, Status)
+            VALUES
+              (?, ?, 'Create', ?, NULL, ?, 'Roles and Privileges', NOW(), 'Successful')
+        ");
+        $stmt->execute([
+            $userId,
+            $roleID,
+            $detailsMessage,
+            $newValue
+        ]);
+
+        // 7) (Optional) legacy role_changes table
+        $stmt = $pdo->prepare("
+            INSERT INTO role_changes (UserID, RoleID, Action, NewRoleName)
+            VALUES (?, ?, 'Add', ?)
+        ");
+        $stmt->execute([$userId, $roleID, $roleName]);
+
+        // 8) Commit & respond
+        $pdo->commit();
+        echo json_encode(['success' => true, 'message' => 'Role created successfully.']);
+        exit();
+
+    } catch (PDOException $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+
+        // Duplicate-entry check
+        if ($e->getCode() === '23000' && strpos($e->getMessage(), 'Duplicate entry') !== false) {
+            $errMsg = 'Role Name already exists.';
+        } else {
+            $errMsg = 'Database error: ' . $e->getMessage();
+        }
+        echo json_encode(['success' => false, 'message' => $errMsg]);
+        exit();
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        exit();
     }
 }
 ?>
