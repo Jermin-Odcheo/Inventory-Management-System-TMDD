@@ -79,7 +79,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
          * Check email uniqueness
          * Creating a user with existing email address will log and mark the status as 'Failed'
          */
-        $stmt = $pdo->prepare("SELECT id, username FROM users WHERE email = ?");
+        $stmt = $pdo->prepare("SELECT id, username FROM users WHERE email = ? and is_disabled = 0");
         $stmt->execute([$email]);
         if ($stmt->rowCount() > 0) {
             // Get the existing user record (the conflicting record)
@@ -118,7 +118,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
 
         // Check for duplicate username
-        $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ?");
+        $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ? and is_disabled = 0");
         $stmt->execute([$username]);
         if ($stmt->rowCount() > 0) {
             // Log the duplicate username attempt

@@ -29,7 +29,18 @@ if (isset($_POST['id'])) {
         $stmt->execute([$userId]);
         echo json_encode(['status' => 'success', 'message' => 'User restored successfully']);
     } catch (PDOException $e) {
-        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        // Check for the specific duplicate entry error for username unique constraint
+        if ($e->getCode() == 23000 && 
+            strpos($e->getMessage(), 'Duplicate entry') !== false && 
+            strpos($e->getMessage(), 'uq_users_username_active') !== false) {
+            
+            echo json_encode([
+                'status' => 'error', 
+                'message' => 'A user with this username is already active in the system. Please check existing users before restoring.'
+            ]);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Database error: ' . $e->getMessage()]);
+        }
     }
 } else if (isset($_POST['user_ids']) && is_array($_POST['user_ids'])) {
     $userIds = array_filter(array_map('intval', $_POST['user_ids']));
@@ -43,7 +54,18 @@ if (isset($_POST['id'])) {
         $stmt->execute($userIds);
         echo json_encode(['status' => 'success', 'message' => 'Selected users restored successfully']);
     } catch (PDOException $e) {
-        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        // Check for the specific duplicate entry error for username unique constraint
+        if ($e->getCode() == 23000 && 
+            strpos($e->getMessage(), 'Duplicate entry') !== false && 
+            strpos($e->getMessage(), 'uq_users_username_active') !== false) {
+            
+            echo json_encode([
+                'status' => 'error', 
+                'message' => 'One or more users cannot be restored because their usernames are already in use by active users.'
+            ]);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Database error: ' . $e->getMessage()]);
+        }
     }
 } else {
     echo json_encode(['status' => 'error', 'message' => 'No user selected']);

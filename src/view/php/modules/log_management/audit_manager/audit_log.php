@@ -267,10 +267,22 @@ function formatDetailsAndChanges($log)
             break;
 
         case 'restored':
-            $details = htmlspecialchars("$targetEntityName has been restored");
-            $changes = "is_deleted 1 -> 0";
+            $defaultMessage = htmlspecialchars("$targetEntityName has been restored");
+            list($details, $changes) = processStatusMessage(
+                $defaultMessage,
+                $log,
+                function () use ($log) {
+                    // 1) decode
+                    $old = json_decode($log['OldVal'], true);
+                    // 2) remove the is_disabled flag
+                    unset($old['is_disabled']);
+                    unset($old['is_disabled']);
+                    // 3) re-encode & hand it off to your existing formatter
+                    return formatNewValue(json_encode($old));
+                }
+            );
             break;
-
+        
         case 'remove':
             // First check for our new format with roles array
             if (isset($oldData['roles']) && is_array($oldData['roles'])) {
@@ -292,8 +304,20 @@ function formatDetailsAndChanges($log)
             } 
             // Default case for user removal
             else {
-                $details = htmlspecialchars("$targetName has been removed");
-                $changes = "is_deleted 0 -> 1";
+                $defaultMessage = htmlspecialchars("$targetEntityName has been removed");
+            list($details, $changes) = processStatusMessage(
+                $defaultMessage,
+                $log,
+                function () use ($log) {
+                    // 1) decode
+                    $old = json_decode($log['OldVal'], true);
+                    // 2) remove the is_disabled flag and status
+                    unset($old['is_disabled']);
+                    unset($old['status']);
+                    // 3) re-encode & hand it off to your existing formatter
+                    return formatNewValue(json_encode($old));
+                }
+            );
             }
             break;
 
@@ -311,7 +335,7 @@ function formatDetailsAndChanges($log)
                 // If we have old role data, treat it as a modification
                 if (isset($oldData['role']) && $oldData['role'] !== $role) {
                     $oldRole = $oldData['role'];
-                    $details = htmlspecialchars("Modified role for $targetEntityName: $oldRole -> $role");
+                    $details = htmlspecialchars("Modified role for: $targetEntityName: $oldRole -> $role");
                     $changes = htmlspecialchars("$oldRole -> $role");
                 }
                 // Otherwise it's a standard role addition
