@@ -782,6 +782,13 @@ th.sortable.desc::after {
 
     <script>
         $(document).ready(function() {
+            // Ensure we have proper Bootstrap modal instances
+            const addStatusModal = new bootstrap.Modal(document.getElementById('addStatusModal'), {
+                backdrop: true,
+                keyboard: true,
+                focus: true
+            });
+            
             // Real-time search & filter
             $('#searchStatus, #filterStatus').on('input change', function() {
                 filterTable();
@@ -996,16 +1003,6 @@ th.sortable.desc::after {
                     success: function(result) {
                         if (result.status === 'success') {
                             $('#addStatusModal').modal('hide');
-                            // Remove any lingering modal backdrops and reset body class if needed
-                            setTimeout(function() {
-                                if ($('.modal-backdrop').length) {
-                                    $('.modal-backdrop').remove();
-                                }
-                                if ($('body').hasClass('modal-open') && $('.modal.show').length === 0) {
-                                    $('body').removeClass('modal-open');
-                                    $('body').css('padding-right', '');
-                                }
-                            }, 500);
                             $('#statusTable').load(location.href + ' #statusTable', function() {
                                 showToast(result.message, 'success');
                             });
@@ -1072,17 +1069,6 @@ th.sortable.desc::after {
 
     <script>
         $(document).ready(function() {
-            $('#openAddStatusModalBtn').on('click', function() {
-                setTimeout(function() {
-                    if ($('.modal-backdrop').length) {
-                        $('.modal-backdrop').remove();
-                    }
-                    if ($('body').hasClass('modal-open') && $('.modal.show').length === 0) {
-                        $('body').removeClass('modal-open');
-                        $('body').css('padding-right', '');
-                    }
-                }, 10);
-            });
             // Initialize Select2 for Asset Tag with tags (creatable)
             $('#add_status_asset_tag').select2({
                 tags: true,
@@ -1090,6 +1076,17 @@ th.sortable.desc::after {
                 allowClear: true,
                 width: '100%',
                 dropdownParent: $('#addStatusModal')
+            });
+            
+            // Proper management of modal backdrops when closing a modal
+            $('#addStatusModal').on('hidden.bs.modal', function() {
+                $(this).find('form')[0].reset();
+                // Only remove backdrop if no other modals are open
+                if (!$('.modal.show').length) {
+                    $('body').removeClass('modal-open');
+                    $('body').css('padding-right', '');
+                    $('.modal-backdrop').remove();
+                }
             });
         });
     </script>
