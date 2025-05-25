@@ -599,7 +599,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                                     <th class="text-center">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="rrTableBody">
                                 <?php if (!empty($receivingReports)): ?>
                                     <?php foreach ($receivingReports as $rr): ?>
                                         <tr>
@@ -894,7 +894,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
             // Search filter for reports
             $('#searchReport').on('input', function() {
                 var searchText = $(this).val().toLowerCase();
-                $("#table tbody tr").filter(function() {
+                $("#rrTableBody tr").filter(function() {
                     $(this).toggle($(this).text().toLowerCase().indexOf(searchText) > -1);
                 });
             });
@@ -903,7 +903,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
             $('#searchReport, #filterLocation').on('input change', function() {
                 const searchText = $('#searchReport').val().toLowerCase();
                 const filterLoc = $('#filterLocation').val().toLowerCase();
-                $('#table tbody tr').each(function() {
+                $('#rrTableBody tr').each(function() {
                     const row = $(this);
                     const textMatched = row.text().toLowerCase().includes(searchText);
                     const locMatched = !filterLoc || row.find('td:nth-child(5)').text().toLowerCase() === filterLoc;
@@ -1245,7 +1245,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
         document.addEventListener('DOMContentLoaded', function() {
             // Initialize pagination with this table's ID
             initPagination({
-                tableId: 'rrTable',
+                tableId: 'rrTableBody',
                 currentPage: 1
             });
 
@@ -1264,7 +1264,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                 }
 
                 // Also check for visible rows (for when filtering is applied)
-                const visibleRows = document.querySelectorAll('#rrTable tr:not(.filtered-out)').length;
+                const visibleRows = document.querySelectorAll('#rrTableBody tr:not(.filtered-out)').length;
                 if (visibleRows <= rowsPerPage) {
                     if (prevBtn) prevBtn.style.cssText = 'display: none !important';
                     if (nextBtn) nextBtn.style.cssText = 'display: none !important';
