@@ -103,25 +103,59 @@ if (!empty($filters['search'])) {
 $stmt->execute();
 $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
-
-<!-- Styles & Scripts -->
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
-<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Equipment Location Management</title>
+    <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+<!-- DataTables Responsive JS -->
+ <!-- DataTables Responsive CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
 <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
-
 <style>
     .btn-group .btn.active {
         background-color: #0d6efd;
         color: white;
     }
+    
+    th.sortable.asc::after {
+            content: " ▲";
+        }
+
+        th.sortable.desc::after {
+            content: " ▼";
+        }
 </style>
 
 <div class="container-fluid" style="margin-left: 270px; padding-top: 100px; padding-left: 100px;">
     <h2 class="mb-4">Equipment Location Audit Logs</h2>
+<div class="container-fluid">
+</head> 
+<body>
+<div class="main-container">
+        <header class="main-header">
+            <h1> Equipment Location Change Logs</h1>
+        </header>
 
     <!-- Filter Form -->
     <form method="GET" class="row g-3 mb-4">
+        <section class="card">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <h2><i class="bi bi-list-task"></i> List of Equipment Locations</h2>
+            </div>
+            <div class="card-body">
+                <div class="container-fluid px-0">
+                    <div class="filter-container" id="filterContainer">
+                        
+                    <!-- Filter Form -->
+                     <form method="GET" class="row g-3 mb-4">
         <div class="col-md-2">
             <input type="text" name="search" class="form-control" placeholder="Asset/Person" value="<?= htmlspecialchars($filters['search']) ?>">
         </div>
@@ -145,6 +179,7 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
         <div class="col-md-2 d-grid">
             <a href="equipment_location.php" class="btn btn-secondary">Edit Equipment Location</a>
+            <a href="equipment_location.php" class="btn btn-primary">Edit Equipment Location</a>
         </div>
     </form>
 
@@ -152,6 +187,9 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <div class="table-responsive">
         <table id="auditLogTable" class="table table-bordered table-hover">
             <thead class="table-light">
+    <div class="table-responsive" id="table">
+        <table id="elTable" class ="table">
+            <thead>
                 <tr>
                     <?php foreach ($fieldsToShow as $label): ?>
                         <th><?= htmlspecialchars($label) ?></th>
@@ -162,13 +200,30 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <tbody>
                 <?php foreach ($auditLogs as $log): ?>
                     <?php $newValues = json_decode($log['NewVal'], true); ?>
+                <?php if (!empty($auditLogs)): ?>
+                    <?php foreach ($auditLogs as $log): ?>
+                        <?php $newValues = json_decode($log['NewVal'], true); ?>
+                        <tr>
+                            <?php foreach ($fieldsToShow as $key => $label): ?>
+                                <td><?= isset($newValues[$key]) ? htmlspecialchars($newValues[$key]) : '' ?></td>
+                            <?php endforeach; ?>
+                            <td><?= date("Y-m-d H:i:s", strtotime($log['Date_Time'])) ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php else: ?>
                     <tr>
                         <?php foreach ($fieldsToShow as $key => $label): ?>
                             <td><?= isset($newValues[$key]) ? htmlspecialchars($newValues[$key]) : '' ?></td>
                         <?php endforeach; ?>
                         <td><?= date("Y-m-d H:i:s", strtotime($log['Date_Time'])) ?></td>
+                        <td colspan="16" class="text-center py-4">
+                            <div class="alert alert-info mb-0">
+                                <i class="bi bi-info-circle me-2"></i> No Equipment Location found. Click on "Create Equipment" to add a new entry.
+                            </div>
+                        </td>
                     </tr>
                 <?php endforeach; ?>
+                <?php endif; ?>
             </tbody>
         </table>
     </div>
