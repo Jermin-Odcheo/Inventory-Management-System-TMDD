@@ -151,6 +151,13 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <!-- Filter Form -->
     <form method="GET" class="row g-3 mb-4">
 >>>>>>> parent of 71e0b6a (EL, ED, EL Channel log Edits)
+=======
+<div class="container-fluid" style="margin-left: 270px; padding-top: 100px; padding-left: 100px;">
+    <h2 class="mb-4">Equipment Location Audit Logs</h2>
+
+    <!-- Filter Form -->
+    <form method="GET" class="row g-3 mb-4">
+>>>>>>> parent of 71e0b6a (EL, ED, EL Channel log Edits)
         <div class="col-md-2">
             <input type="text" name="search" class="form-control" placeholder="Asset/Person" value="<?= htmlspecialchars($filters['search']) ?>">
         </div>
@@ -182,15 +189,24 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 =======
             <a href="equipment_location.php" class="btn btn-secondary">Edit Equipment Location</a>
 >>>>>>> parent of 71e0b6a (EL, ED, EL Channel log Edits)
+=======
+            <a href="equipment_location.php" class="btn btn-secondary">Edit Equipment Location</a>
+>>>>>>> parent of 71e0b6a (EL, ED, EL Channel log Edits)
         </div>
     </form>
 
     <!-- Table -->
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     <div class="table-responsive" id="table">
         <table id="elTable" class ="table">
             <thead>
+=======
+    <div class="table-responsive">
+        <table id="auditLogTable" class="table table-bordered table-hover">
+            <thead class="table-light">
+>>>>>>> parent of 71e0b6a (EL, ED, EL Channel log Edits)
 =======
     <div class="table-responsive">
         <table id="auditLogTable" class="table table-bordered table-hover">
@@ -209,6 +225,7 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 </tr>
             </thead>
             <tbody>
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
                 <?php if (!empty($auditLogs)): ?>
@@ -230,6 +247,17 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         </td>
                     </tr>
                 <?php endif; ?>
+=======
+                <?php foreach ($auditLogs as $log): ?>
+                    <?php $newValues = json_decode($log['NewVal'], true); ?>
+                    <tr>
+                        <?php foreach ($fieldsToShow as $key => $label): ?>
+                            <td><?= isset($newValues[$key]) ? htmlspecialchars($newValues[$key]) : '' ?></td>
+                        <?php endforeach; ?>
+                        <td><?= date("Y-m-d H:i:s", strtotime($log['Date_Time'])) ?></td>
+                    </tr>
+                <?php endforeach; ?>
+>>>>>>> parent of 71e0b6a (EL, ED, EL Channel log Edits)
 =======
                 <?php foreach ($auditLogs as $log): ?>
                     <?php $newValues = json_decode($log['NewVal'], true); ?>
