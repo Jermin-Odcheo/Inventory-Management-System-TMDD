@@ -351,6 +351,52 @@ function safeHtml($value)
         th.sortable.desc::after {
             content: " ▼";
         }
+        
+        /* Select2 custom styling to match other filter elements */
+        .select2-container--default .select2-selection--single {
+            height: 38px;
+            padding: 5px;
+            border: 1px solid #ced4da;
+            border-radius: 0.25rem;
+        }
+        
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 36px;
+        }
+        
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: 24px;
+            color: #212529;
+            padding-left: 8px;
+        }
+    
+        /* Make all filter elements have consistent height */
+        .filter-container select, 
+        .filter-container input,
+        .filter-container .select2-container {
+            height: calc(1.5em + 0.75rem + 2px);
+        }
+
+        /* Style the filter container elements for consistent spacing */
+        .filter-container > div {
+            padding: 0 8px;
+        }
+        
+        /* Ensure Select2 container is properly aligned */
+        .filter-container .select2-container--default .select2-selection--single {
+            display: flex;
+            align-items: center;
+        }
+        
+        /* Match Select2 dropdown to Bootstrap form-select style */
+        .select2-dropdown {
+            border-color: #ced4da;
+        }
+        
+        /* Match dropdown item styling */
+        .select2-container--default .select2-results__option {
+            padding: 6px 12px;
+        }
     </style>
 </head>
 
@@ -1130,7 +1176,15 @@ function safeHtml($value)
                         allowClear: true,
                         width: '100%',
                         dropdownAutoWidth: true,
-                        minimumResultsForSearch: 0
+                        minimumResultsForSearch: 0,
+                        dropdownParent: $('#filterBuilding').parent(),
+                        templateResult: function(data) {
+                            if (!data.id) return data.text;
+                            return $('<span>').text(data.text).addClass('py-1');
+                        },
+                        templateSelection: function(data) {
+                            return $('<span>').text(data.text).addClass('py-1');
+                        }
                     });
                     
                     // Set default value and ensure it's reflected in the UI
@@ -1425,6 +1479,7 @@ function safeHtml($value)
             });
 
             //building location serachable dropdown
+            /* This initialization is now handled earlier - removing to avoid duplication
             $('#filterBuilding').select2({
                 placeholder: 'Filter by Building',
                 allowClear: true,
@@ -1433,6 +1488,7 @@ function safeHtml($value)
                 minimumResultsForSearch: 0, // always show search box
                 dropdownParent: $('#filterBuilding').parent()
             });
+            */
 
             // Department searchable dropdown (Add Location Modal)
             $('#addLocationModal').on('shown.bs.modal', function() {

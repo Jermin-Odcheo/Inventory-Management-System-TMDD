@@ -437,19 +437,6 @@ rel="stylesheet">
             content: " â–¼";
         }
         
-        /* Styling for autofilled fields - removed greyed effect */
-        input[data-autofill="true"] {
-            /* No special styling for autofilled fields */
-        }
-        
-        /* Remove the autofill indicator */
-        /* input[data-autofill="true"]::after {
-            content: "Autofilled";
-            position: absolute;
-            right: 10px;
-            font-size: 0.8em;
-            color: #6c757d;
-        } */
         
         /* Pagination styling */
         .pagination {
