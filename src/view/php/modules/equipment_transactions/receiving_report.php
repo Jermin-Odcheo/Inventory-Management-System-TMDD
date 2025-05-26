@@ -512,7 +512,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
 ?>
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <title>Receiving Report Management</title>
@@ -641,6 +640,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                             </tbody>
                         </table>
                     </div>
+
                     <!-- Pagination Controls (optional) -->
                     <div class="container-fluid">
                         <div class="row align-items-center g-3">
@@ -722,14 +722,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                                 <label class="form-label">Location <span class="text-danger">*</span></label>
                                 <input type="text" name="ai_loc" class="form-control" required>
                             </div>
-
-                            <div class="mb-3">
-                                <label class="form-label">Date Created <span class="text-danger">*</span></label>
-                                <input type="datetime-local" name="date_created"
-                                    id="date_created" class="form-control" required
-                                    value="<?= date('Y-m-d\TH:i') ?>">
-                            </div>
-
                             <div class="text-end">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                                     Cancel

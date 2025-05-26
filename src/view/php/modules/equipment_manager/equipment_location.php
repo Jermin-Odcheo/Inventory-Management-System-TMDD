@@ -487,10 +487,11 @@ function safeHtml($value)
                     <table class="table" id="elTable">
                         <thead>
                             <tr>
+                                <th class="sortable" data-sort="number">#</th>
                                 <th class="sortable" data-sort="string">Asset Tag</th>
                                 <th class="sortable" data-sort="string">Building</th>
                                 <th class="sortable" data-sort="string">Floor</th>
-                                <th class="sortable" data-sort="string">Specific Area</th>
+                                <th class="sortable" data-sort="string">Area</th>
                                 <th class="sortable" data-sort="string">Person Responsible</th>
                                 <th class="sortable" data-sort="string">Department</th>
                                 <th class="sortable" data-sort="string">Device State</th>
@@ -503,6 +504,7 @@ function safeHtml($value)
                             <?php if (!empty($equipmentLocations)): ?>
                                 <?php foreach ($equipmentLocations as $index => $loc): ?>
                                     <tr>
+                                        <td><?= $index + 1 ?></td>
                                         <td><?= htmlspecialchars($loc['asset_tag'] ?? '') ?></td>
                                         <td><?= htmlspecialchars($loc['building_loc'] ?? '') ?></td>
                                         <td><?= htmlspecialchars($loc['floor_no'] ?? '') ?></td>

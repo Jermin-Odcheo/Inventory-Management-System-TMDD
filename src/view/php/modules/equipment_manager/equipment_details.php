@@ -1300,9 +1300,7 @@ Asset Tag is selected</small>
                             <textarea class="form-control" name="remarks" id="edit_remarks" 
 rows="3"></textarea>
                         </div>
-                        <div class="mb-3 text-end p-4">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" 
-style="margin-right: 4px;">Cancel</button>
+                        <div class="mb-3">
                             <button type="submit" class="btn btn-primary">Save Changes</button>
                         </div>
                     </form>
