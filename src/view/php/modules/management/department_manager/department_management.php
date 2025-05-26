@@ -574,7 +574,6 @@ if (isset($_GET["q"])) {
                                     <table id="departmentTable" class="table table-striped table-hover align-middle">
                                         <thead class="table-dark">
                                             <tr>
-                                                <th>#</th>
                                                 <th>Department Acronym</th>
                                                 <th>Department Name</th>
                                                 <th class="text-center">Actions</th>
@@ -583,7 +582,6 @@ if (isset($_GET["q"])) {
                                         <tbody>
                                             <?php foreach ($departments as $department): ?>
                                                 <tr>
-                                                    <td><?php echo htmlspecialchars($department['id']); ?></td>
                                                     <td><?php echo htmlspecialchars($department['abbreviation']); ?></td>
                                                     <td><?php echo htmlspecialchars($department['department_name']); ?></td>
                                                     <td class="text-center">
@@ -710,11 +708,6 @@ if (isset($_GET["q"])) {
                         <input type="hidden" name="action" value="update">
                         <input type="hidden" name="id" id="edit_department_hidden_id">
                         <div class="mb-3">
-                            <label for="edit_department_id" class="form-label">
-                                <i class="bi bi-tag"></i> Department ID <span class="text-danger">*</span>
-                            </label>
-                            <input type="number" min="1" class="form-control" id="edit_department_id" name="DepartmentID"
-                                readonly>
                         </div>
                         <div class="mb-3">
                             <label for="edit_department_acronym" class="form-label">
