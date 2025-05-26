@@ -404,6 +404,7 @@ function safeHtml($value)
                                 <span class="input-group-text"><i class="bi bi-search"></i></span>
                             </div>
                         </div>
+                        <a href="equipLoc_change_log.php" class="btn btn-primary"> View Equipment Changes</a>
                     </div>
 
                     <!-- Date Inputs Row -->
