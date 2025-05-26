@@ -771,6 +771,28 @@ ob_end_clean();
                                             }
                                         });
 
+                                        // Initialize Select2 for asset tag dropdown in the add modal
+                                        $('#add_equipment_asset_tag').select2({
+                                            placeholder: 'Select or type Asset Tag',
+                                            allowClear: true,
+                                            tags: true, // Allow typing new values
+                                            width: '100%',
+                                            dropdownParent: $('#addEquipmentModal'),
+                                            minimumResultsForSearch: 0,
+                                            createTag: function(params) {
+                                                var term = $.trim(params.term);
+                                                if (term === '') return null;
+                                                var exists = false;
+                                                $('#add_equipment_asset_tag option').each(function() {
+                                                    if ($(this).text().toLowerCase() === term.toLowerCase()) exists = true;
+                                                });
+                                                return exists ? null : {
+                                                    id: term,
+                                                    text: term
+                                                };
+                                            }
+                                        });
+
                                         $('#add_rr_no').on('select2:select', function(e) {
                                             var data = e.params.data;
                                             if (data.selected && data.id && $(this).find('option[value="' + data.id + '"').length === 0) {
@@ -936,6 +958,28 @@ ob_end_clean();
                                                 if (rrValue) {
                                                     // If an RR# is already selected, trigger the autofill without notification
                                                     fetchRRInfo(rrValue, 'edit', false);
+                                                }
+                                            });
+
+                                            // Initialize Select2 for asset tag dropdown in edit modal
+                                            $('#edit_equipment_asset_tag').select2({
+                                                placeholder: 'Select or type Asset Tag',
+                                                allowClear: true,
+                                                tags: true, // Allow typing new values
+                                                width: '100%',
+                                                dropdownParent: $('#editEquipmentModal'),
+                                                minimumResultsForSearch: 0,
+                                                createTag: function(params) {
+                                                    var term = $.trim(params.term);
+                                                    if (term === '') return null;
+                                                    var exists = false;
+                                                    $('#edit_equipment_asset_tag option').each(function() {
+                                                        if ($(this).text().toLowerCase() === term.toLowerCase()) exists = true;
+                                                    });
+                                                    return exists ? null : {
+                                                        id: term,
+                                                        text: term
+                                                    };
                                                 }
                                             });
                                         }
