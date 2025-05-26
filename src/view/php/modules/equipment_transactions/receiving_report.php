@@ -595,7 +595,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                                     <th>PO Number</th>
                                     <th>Location</th>
                                     <th>Created Date</th>
-                                    <th>Status</th>
                                     <th class="text-center">Actions</th>
                                 </tr>
                             </thead>
@@ -609,12 +608,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                                             <td><?= htmlspecialchars($rr['po_no']) ?></td>
                                             <td><?= htmlspecialchars($rr['ai_loc']) ?></td>
                                             <td><?= date('Y-m-d H:i', strtotime($rr['date_created'])) ?></td>
-                                            <td>
-                                                <?= $rr['is_disabled'] == 1
-                                                    ? '<span class="badge bg-danger">Disabled</span>'
-                                                    : '<span class="badge bg-success">Active</span>'
-                                                ?>
-                                            </td>
                                             <td class="text-center">
                                                 <div class="btn-group" role="group">
                                                     <?php if ($canModify): ?>
