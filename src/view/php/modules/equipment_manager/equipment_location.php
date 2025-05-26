@@ -368,7 +368,7 @@ function safeHtml($value)
 
             <div class="card-body">
                 <div class="container-fluid px-0">
-                    <div class="filter-container">
+                    <div class="filter-container" id="filterContainer">
                         <div class="col-auto">
                             <?php if ($canCreate): ?>
                                 <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#addLocationModal">
@@ -379,6 +379,7 @@ function safeHtml($value)
                         <div class="col-md-3">
                             <select class="form-select" id="filterBuilding">
                                 <option value="">Filter by Building</option>
+                                <option value="all">All Buildings</option>
                                 <?php
                                 if (!empty($equipmentLocations)) {
                                     $buildings = array_unique(array_column($equipmentLocations, 'building_loc'));
@@ -788,6 +789,9 @@ function safeHtml($value)
                 currentPage: 1
             });
 
+            // Initialize allRows for pagination.js
+            window.allRows = Array.from(document.querySelectorAll('#locationTbody tr'));
+
             // Force hide pagination buttons if no data or all fits on one page
             function forcePaginationCheck() {
                 const totalRows = parseInt(document.getElementById('totalRows')?.textContent || '0');
@@ -815,120 +819,217 @@ function safeHtml($value)
             forcePaginationCheck();
             setTimeout(forcePaginationCheck, 200);
 
-            // Run after any filter changes
-            const searchInput = document.getElementById('eqSearch');
-            if (searchInput) {
-                searchInput.addEventListener('input', function() {
-                    setTimeout(forcePaginationCheck, 100);
-                });
-            }
-
-            // Run after rows per page changes
-            const rowsPerPageSelect = document.getElementById('rowsPerPageSelect');
-            if (rowsPerPageSelect) {
-                rowsPerPageSelect.addEventListener('change', function() {
-                    setTimeout(forcePaginationCheck, 100);
-                });
-            }
-
-            // Override filter function to work with pagination
+            // Custom filterTable function for equipment location - FIXED VERSION
             window.filterTable = function() {
-                const searchText = $('#eqSearch').val().toLowerCase();
-                const filterBuilding = $('#filterBuilding').val().toLowerCase();
-                const dateFilterType = $('#dateFilter').val();
-                const selectedMonth = $('#monthSelect').val();
-                const selectedYear = $('#yearSelect').val();
-                const dateFrom = $('#dateFrom').val();
-                const dateTo = $('#dateTo').val();
+                // Get filter values
+                const searchText = $('#eqSearch').val() || '';
+                const filterBuilding = $('#filterBuilding').val() || '';
+                const dateFilterType = $('#dateFilter').val() || '';
+                const selectedMonth = $('#monthSelect').val() || '';
+                const selectedYear = $('#yearSelect').val() || '';
+                const dateFrom = $('#dateFrom').val() || '';
+                const dateTo = $('#dateTo').val() || '';
+                
+                // Debug output
+                console.log('FILTER VALUES:', {
+                    searchText: searchText,
+                    filterBuilding: filterBuilding,
+                    dateFilterType: dateFilterType,
+                    selectedMonth: selectedMonth,
+                    selectedYear: selectedYear,
+                    dateFrom: dateFrom,
+                    dateTo: dateTo
+                });
 
-                const tbody = document.getElementById('locationTbody');
-                const rows = Array.from(tbody.querySelectorAll('tr'));
+                // Get all rows directly from the DOM
+                const allTableRows = Array.from(document.querySelectorAll('#locationTbody tr:not(#noResultsMessage)'));
+                console.log('Total rows to filter:', allTableRows.length);
+                
+                // Reset filteredRows array
+                window.filteredRows = [];
 
-                // Hide all rows first
-                rows.forEach(row => {
-                    const rowText = row.textContent.toLowerCase();
-                    const buildingText = row.cells[2].textContent.toLowerCase();
-                    const dateCell = row.cells[8].textContent;
-                    const date = new Date(dateCell);
+                // Filter each row
+                allTableRows.forEach(row => {
+                    // Get text content for filtering
+                    const rowText = row.textContent || '';
+                    
+                    // Get building column (3rd column, index 2)
+                    const buildingCell = row.cells && row.cells.length > 2 ? row.cells[2] : null;
+                    const buildingText = buildingCell ? buildingCell.textContent || '' : '';
+                    
+                    // Get date column (10th column, index 9)
+                    const dateCell = row.cells && row.cells.length > 9 ? row.cells[9] : null;
+                    const dateText = dateCell ? dateCell.textContent || '' : '';
+                    const date = dateText ? new Date(dateText) : null;
 
-                    const searchMatch = rowText.includes(searchText);
-                    const buildingMatch = !filterBuilding || buildingText === filterBuilding;
-
+                    // Debug each row's building value
+                    console.log('Row building value:', buildingText, 'Filter value:', filterBuilding);
+                    
+                    // Apply search filter (case insensitive)
+                    const searchMatch = !searchText || rowText.toLowerCase().includes(searchText.toLowerCase());
+                    
+                    // Apply building filter (case insensitive, exact match)
+                    let buildingMatch = true;
+                    if (filterBuilding && filterBuilding !== 'all' && filterBuilding.toLowerCase() !== 'filter by building') {
+                        // Trim and compare case-insensitive
+                        buildingMatch = buildingText.trim().toLowerCase() === filterBuilding.trim().toLowerCase();
+                        console.log('Building match?', buildingMatch, 'for', buildingText, 'vs', filterBuilding);
+                    }
+                    
+                    // Apply date filter
                     let dateMatch = true;
-                    if (dateFilterType === 'month' && selectedMonth && selectedYear) {
-                        dateMatch = (date.getMonth() + 1 === parseInt(selectedMonth)) &&
-                            (date.getFullYear() === parseInt(selectedYear));
-                    } else if (dateFilterType === 'range' && dateFrom && dateTo) {
-                        const from = new Date(dateFrom);
-                        const to = new Date(dateTo);
-                        to.setHours(23, 59, 59);
-                        dateMatch = date >= from && date <= to;
+                    if (date && dateFilterType) {
+                        if (dateFilterType === 'month' && selectedMonth && selectedYear) {
+                            dateMatch = (date.getMonth() + 1 === parseInt(selectedMonth)) && 
+                                       (date.getFullYear() === parseInt(selectedYear));
+                        } else if (dateFilterType === 'range' && dateFrom && dateTo) {
+                            const from = new Date(dateFrom);
+                            const to = new Date(dateTo);
+                            to.setHours(23, 59, 59); // End of day
+                            dateMatch = date >= from && date <= to;
+                        }
                     }
 
                     // Show or hide row based on filter match
-                    if (searchMatch && buildingMatch && dateMatch) {
+                    const shouldShow = searchMatch && buildingMatch && dateMatch;
+                    if (shouldShow) {
                         row.classList.remove('filtered-out');
+                        window.filteredRows.push(row);
                     } else {
                         row.classList.add('filtered-out');
                     }
+                    
+                    // Debug the filter results for this row
+                    console.log('Row filtering:', {
+                        searchMatch: searchMatch,
+                        buildingMatch: buildingMatch,
+                        dateMatch: dateMatch,
+                        shouldShow: shouldShow
+                    });
                 });
 
                 // Sort if needed
                 if (dateFilterType === 'asc' || dateFilterType === 'desc') {
-                    const rowsArray = Array.from(rows).filter(r => !r.classList.contains('filtered-out'));
-                    rowsArray.sort((a, b) => {
-                        const dateA = new Date(a.cells[8].textContent);
-                        const dateB = new Date(b.cells[8].textContent);
+                    window.filteredRows.sort((a, b) => {
+                        const dateA = a.cells && a.cells[9] ? new Date(a.cells[9].textContent) : new Date(0);
+                        const dateB = b.cells && b.cells[9] ? new Date(b.cells[9].textContent) : new Date(0);
                         return dateFilterType === 'asc' ? dateA - dateB : dateB - dateA;
                     });
 
                     // Remove all rows and add back in sorted order
-                    rowsArray.forEach(row => tbody.appendChild(row));
+                    const tbody = document.getElementById('locationTbody');
+                    if (tbody) {
+                        window.filteredRows.forEach(row => tbody.appendChild(row));
+                    }
                 }
 
-                // Update allRows to only include visible rows for pagination
-                window.allRows = Array.from(tbody.querySelectorAll('tr:not(.filtered-out)'));
-
-                // Update pagination
-                updatePagination();
-            };
-        });
-
-        document.addEventListener('DOMContentLoaded', function() {
-            const searchInput = document.getElementById('eqSearch');
-
-            if (searchInput) {
-                searchInput.addEventListener('keyup', function() {
-                    const searchValue = searchInput.value.trim();
-
-                    if (searchValue.length > 0) {
-                        fetch(`search_equipment_location.php?q=${encodeURIComponent(searchValue)}`)
-                            .then(response => response.text())
-                            .then(data => {
-                                document.getElementById('liveSearchResults').innerHTML = data;
-                            })
-                            .catch(error => console.error('Error:', error));
+                // Reset to page 1 and update pagination
+                if (typeof paginationConfig !== 'undefined') {
+                    paginationConfig.currentPage = 1;
+                }
+                
+                if (typeof updatePagination === 'function') {
+                    updatePagination();
+                }
+                
+                // Check if pagination controls should be shown
+                setTimeout(forcePaginationCheck, 50);
+                
+                // Show a message if no results found
+                const noResultsMessage = document.getElementById('noResultsMessage');
+                if (noResultsMessage) {
+                    if (window.filteredRows.length === 0) {
+                        noResultsMessage.style.display = 'table-row';
                     } else {
-                        document.getElementById('liveSearchResults').innerHTML = "";
+                        noResultsMessage.style.display = 'none';
                     }
-                });
-            }
-        });
+                } else if (window.filteredRows.length === 0) {
+                    // Create and insert a "no results" message if it doesn't exist
+                    const tbody = document.getElementById('locationTbody');
+                    if (tbody) {
+                        const noResultsRow = document.createElement('tr');
+                        noResultsRow.id = 'noResultsMessage';
+                        noResultsRow.innerHTML = `
+                            <td colspan="11" class="text-center py-4">
+                                <div class="alert alert-warning mb-0">
+                                    <i class="bi bi-exclamation-circle me-2"></i> No results found for the current filter criteria.
+                                </div>
+                            </td>
+                        `;
+                        tbody.appendChild(noResultsRow);
+                    }
+                }
+                
+                console.log('Filtered rows:', window.filteredRows.length);
+            };
 
-        $(document).ready(function() {
-            // Real-time search & filter
-            $('#eqSearch, #filterBuilding').on('input change', function() {
+            // Add a reset button to clear all filters
+            $('#filterContainer').append('<button id="resetFilters" class="btn btn-outline-secondary ms-2">Reset Filters</button>');
+            
+            // Set up event listeners for filtering
+            $('#eqSearch').on('input', filterTable);
+            
+            // Simple change handler for building filter
+            $('#filterBuilding').on('change', function() {
+                console.log('Building filter changed to:', $(this).val());
+                
+                // Reset date filters when building filter changes
+                if ($(this).val() && $(this).val() !== 'all') {
+                    $('#dateFilter').val('');
+                    $('#monthSelect').val('');
+                    $('#yearSelect').val('');
+                    $('#dateFrom').val('');
+                    $('#dateTo').val('');
+                    $('#dateInputsContainer').hide();
+                }
+                
                 filterTable();
             });
-
-            // Date filter handling
+            
+            // Reset filters button handler
+            $(document).on('click', '#resetFilters', function() {
+                // Reset all filter inputs
+                $('#eqSearch').val('');
+                
+                // Set select value first
+                $('#filterBuilding').val('all');
+                
+                // Then update Select2 UI if it exists
+                if ($('#filterBuilding').data('select2')) {
+                    $('#filterBuilding').trigger('change.select2');
+                }
+                
+                // Reset other filters
+                $('#dateFilter').val('');
+                $('#monthSelect').val('');
+                $('#yearSelect').val('');
+                $('#dateFrom').val('');
+                $('#dateTo').val('');
+                $('#dateInputsContainer').hide();
+                
+                // Apply the filter reset
+                filterTable();
+            });
+            
             $('#dateFilter').on('change', function() {
                 const filterType = $(this).val();
+                console.log('Date filter changed to:', filterType);
 
                 // Hide all containers first
                 $('#dateInputsContainer').hide();
                 $('#monthPickerContainer').hide();
                 $('#dateRangePickers').hide();
+                
+                // Reset building filter if date filter is applied
+                if (filterType) {
+                    // Set select value first
+                    $('#filterBuilding').val('all');
+                    
+                    // Then update Select2 UI if it exists
+                    if ($('#filterBuilding').data('select2')) {
+                        $('#filterBuilding').trigger('change.select2');
+                    }
+                }
 
                 // Show appropriate containers based on selection
                 if (filterType === 'month') {
@@ -962,9 +1063,174 @@ function safeHtml($value)
                     filterTable();
                 }
             });
+            
+            // Run initial filter to make sure everything is displayed correctly
+            setTimeout(filterTable, 100);
+        });
 
-            // Note: filterTable function is now defined in the pagination section above
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('eqSearch');
 
+            if (searchInput) {
+                searchInput.addEventListener('keyup', function() {
+                    const searchValue = searchInput.value.trim();
+
+                    if (searchValue.length > 0) {
+                        fetch(`search_equipment_location.php?q=${encodeURIComponent(searchValue)}`)
+                            .then(response => response.text())
+                            .then(data => {
+                                document.getElementById('liveSearchResults').innerHTML = data;
+                            })
+                            .catch(error => console.error('Error:', error));
+                    } else {
+                        document.getElementById('liveSearchResults').innerHTML = "";
+                    }
+                });
+            }
+        });
+
+        $(document).ready(function() {
+            // Initialize pagination with the correct table ID
+            initPagination({
+                tableId: 'locationTbody',
+                currentPage: 1
+            });
+
+            // Initialize allRows for pagination.js
+            window.allRows = Array.from(document.querySelectorAll('#locationTbody tr'));
+
+            // First set up the standard event handlers
+            $('#filterBuilding').on('change', function() {
+                console.log('Building filter changed to:', $(this).val());
+                
+                // Reset date filters when building filter changes
+                if ($(this).val() && $(this).val() !== 'all') {
+                    $('#dateFilter').val('');
+                    $('#monthSelect').val('');
+                    $('#yearSelect').val('');
+                    $('#dateFrom').val('');
+                    $('#dateTo').val('');
+                    $('#dateInputsContainer').hide();
+                }
+                
+                filterTable();
+            });
+            
+            // Then initialize Select2 with the proper configuration
+            if ($.fn.select2) {
+                try {
+                    // First destroy any existing instance
+                    if ($('#filterBuilding').data('select2')) {
+                        $('#filterBuilding').select2('destroy');
+                    }
+                    
+                    // Initialize with proper settings
+                    $('#filterBuilding').select2({
+                        placeholder: 'Filter by Building',
+                        allowClear: true,
+                        width: '100%',
+                        dropdownAutoWidth: true,
+                        minimumResultsForSearch: 0
+                    });
+                    
+                    // Set default value and ensure it's reflected in the UI
+                    $('#filterBuilding').val('all').trigger('change');
+                } catch (e) {
+                    console.error('Error initializing Select2:', e);
+                }
+            }
+            
+            // Add reset button if it doesn't exist
+            if ($('#resetFilters').length === 0) {
+                $('.filter-container').append('<button id="resetFilters" class="btn btn-outline-secondary ms-2">Reset Filters</button>');
+            }
+            
+            // Set up event listeners for filtering
+            $('#eqSearch').on('input', filterTable);
+            
+            // Reset filters button handler
+            $(document).on('click', '#resetFilters', function() {
+                // Reset all filter inputs
+                $('#eqSearch').val('');
+                
+                // Set select value first
+                $('#filterBuilding').val('all');
+                
+                // Then update Select2 UI if it exists
+                if ($('#filterBuilding').data('select2')) {
+                    $('#filterBuilding').trigger('change.select2');
+                }
+                
+                // Reset other filters
+                $('#dateFilter').val('');
+                $('#monthSelect').val('');
+                $('#yearSelect').val('');
+                $('#dateFrom').val('');
+                $('#dateTo').val('');
+                $('#dateInputsContainer').hide();
+                
+                // Apply the filter reset
+                filterTable();
+            });
+            
+            $('#dateFilter').on('change', function() {
+                const filterType = $(this).val();
+                console.log('Date filter changed to:', filterType);
+
+                // Hide all containers first
+                $('#dateInputsContainer').hide();
+                $('#monthPickerContainer').hide();
+                $('#dateRangePickers').hide();
+                
+                // Reset building filter if date filter is applied
+                if (filterType) {
+                    // Set select value first
+                    $('#filterBuilding').val('all');
+                    
+                    // Then update Select2 UI if it exists
+                    if ($('#filterBuilding').data('select2')) {
+                        $('#filterBuilding').trigger('change.select2');
+                    }
+                }
+
+                // Show appropriate containers based on selection
+                if (filterType === 'month') {
+                    $('#dateInputsContainer').show();
+                    $('#monthPickerContainer').show();
+                } else if (filterType === 'range') {
+                    $('#dateInputsContainer').show();
+                    $('#dateRangePickers').show();
+                } else if (filterType === 'desc' || filterType === 'asc') {
+                    // Apply sorting without showing date inputs
+                    filterTable();
+                }
+            });
+
+            // Handle month/year selection changes
+            $('#monthSelect, #yearSelect').on('change', function() {
+                const month = $('#monthSelect').val();
+                const year = $('#yearSelect').val();
+
+                if (month && year) {
+                    filterTable();
+                }
+            });
+
+            // Handle date range changes
+            $('#dateFrom, #dateTo').on('change', function() {
+                const dateFrom = $('#dateFrom').val();
+                const dateTo = $('#dateTo').val();
+
+                if (dateFrom && dateTo) {
+                    filterTable();
+                }
+            });
+            
+            // Run initial filter to make sure everything is displayed correctly
+            setTimeout(filterTable, 100);
+        });
+
+        $(document).ready(function() {
             // Delegate event for editing location
             $(document).on('click', '.edit-location', function() {
                 // Always clean up before showing modal
@@ -1053,6 +1319,19 @@ function safeHtml($value)
                             if (response.status === 'success') {
                                 $('#elTable').load(location.href + ' #elTable', function() {
                                     showToast(response.message, 'success');
+                                    
+                                    // Update allRows and filteredRows for pagination
+                                    window.allRows = Array.from(document.querySelectorAll('#locationTbody tr'));
+                                    window.filteredRows = [...window.allRows];
+                                    
+                                    // Re-initialize pagination
+                                    initPagination({
+                                        tableId: 'locationTbody',
+                                        currentPage: 1
+                                    });
+                                    
+                                    // Apply any active filters
+                                    filterTable();
                                 });
                             } else {
                                 showToast(response.message, 'error');
@@ -1117,6 +1396,19 @@ function safeHtml($value)
                             }, 500);
                             $('#elTable').load(location.href + ' #elTable', function() {
                                 showToast(result.message, 'success');
+                                
+                                // Update allRows and filteredRows for pagination
+                                window.allRows = Array.from(document.querySelectorAll('#locationTbody tr'));
+                                window.filteredRows = [...window.allRows];
+                                
+                                // Re-initialize pagination
+                                initPagination({
+                                    tableId: 'locationTbody',
+                                    currentPage: 1
+                                });
+                                
+                                // Apply any active filters
+                                filterTable();
                                 
                                 // Directly update equipment details with captured form values
                                 directUpdateEquipmentDetails(assetTag, buildingLoc, specificArea, personResponsible);
@@ -1200,6 +1492,19 @@ function safeHtml($value)
                             $('#elTable').load(location.href + ' #elTable', function() {
                                 showToast(result.message, 'success');
                                 
+                                // Update allRows and filteredRows for pagination
+                                window.allRows = Array.from(document.querySelectorAll('#locationTbody tr'));
+                                window.filteredRows = [...window.allRows];
+                                
+                                // Re-initialize pagination
+                                initPagination({
+                                    tableId: 'locationTbody',
+                                    currentPage: 1
+                                });
+                                
+                                // Apply any active filters
+                                filterTable();
+                                
                                 // Directly update equipment details with captured form values
                                 directUpdateEquipmentDetails(assetTag, buildingLoc, specificArea, personResponsible);
                             });
@@ -1270,7 +1575,7 @@ function safeHtml($value)
                 th.addEventListener("click", function() {
                     const table = th.closest("table");
                     const tbody = table.querySelector("tbody");
-                    const rows = Array.from(tbody.querySelectorAll("tr"));
+                    const rows = Array.from(tbody.querySelectorAll("tr:not(.filtered-out)"));
                     const index = Array.from(th.parentNode.children).indexOf(th);
                     const type = th.dataset.sort || "string";
                     const asc = !th.classList.contains("asc");
@@ -1298,6 +1603,13 @@ function safeHtml($value)
 
                     table.querySelectorAll("th").forEach(th => th.classList.remove("asc", "desc"));
                     th.classList.add(asc ? "asc" : "desc");
+                    
+                    // Update filteredRows for pagination
+                    window.filteredRows = rows;
+                    
+                    // Reset to page 1 and update pagination
+                    paginationConfig.currentPage = 1;
+                    updatePagination();
                 });
             });
         });

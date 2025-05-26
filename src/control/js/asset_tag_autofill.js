@@ -218,6 +218,43 @@ function updateEquipmentDetailsFromLocation(assetTag, buildingLoc, specificArea,
     });
 }
 
+// Add a helper function for initializing Select2 dropdowns with proper event handling
+function initFilterSelect2(selector, placeholder) {
+    // Destroy any existing Select2 instance
+    if ($(selector).data('select2')) {
+        $(selector).select2('destroy');
+    }
+    
+    // Initialize Select2 with proper settings
+    $(selector).select2({
+        placeholder: placeholder || 'Select an option',
+        allowClear: true,
+        width: '100%',
+        dropdownAutoWidth: true,
+        minimumResultsForSearch: 0
+    }).on('select2:select', function() {
+        // Explicitly trigger the change event after selection
+        $(this).trigger('change');
+    }).on('select2:clear', function() {
+        // Set to default value and trigger change
+        $(this).val('all').trigger('change');
+    });
+}
+
+// Function to safely handle filter changes
+function safeFilterChange(selector, value) {
+    // Set the value directly first
+    $(selector).val(value);
+    
+    // If using Select2, update the UI properly
+    if ($(selector).data('select2')) {
+        $(selector).trigger('change.select2');
+    }
+    
+    // Always trigger the standard change event
+    $(selector).trigger('change');
+}
+
 // Add event listeners based on which page we're on
 $(document).ready(function() {
     // Check if we're on the equipment location page
