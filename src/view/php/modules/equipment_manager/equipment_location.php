@@ -593,24 +593,7 @@ function safeHtml($value)
                             <label for="person_responsible" class="form-label">Person Responsible</label>
                             <input type="text" class="form-control" name="person_responsible">
                         </div>
-                        
-                        <div class="mb-3">
-                            <label for="add_department_id" class="form-label">Department</label>
-                            <select class="form-control" id="add_department_id" name="department_id">
-                                <option value="">Select Department</option>
-                                <?php
-                                try {
-                                    $deptStmt = $pdo->query("SELECT id, department_name, abbreviation FROM departments ORDER BY department_name");
-                                    $departments = $deptStmt->fetchAll();
-                                    foreach ($departments as $department) {
-                                        echo "<option value='" . htmlspecialchars($department['id']) . "'>" . htmlspecialchars($department['department_name']) . " (" . htmlspecialchars($department['abbreviation']) . ")</option>";
-                                    }
-                                } catch (PDOException $e) {
-                                    // fallback: empty
-                                }
-                                ?>
-                            </select>
-                        </div>
+                    
                         
                         <div class="mb-3">
                             <label for="edit_department_id" class="form-label"><i class="bi bi-building"></i> Department</label>
