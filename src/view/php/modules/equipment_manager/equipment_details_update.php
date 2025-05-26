@@ -117,6 +117,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     'Successful'
                 ]);
                 
+                // Set a session flag to indicate that equipment details have been updated
+                // This will be used to force a refresh on the equipment_details.php page
+                $_SESSION['equipment_details_updated'] = true;
+                $_SESSION['updated_asset_tag'] = $assetTag;
+                
                 // Commit transaction
                 $pdo->commit();
                 
@@ -126,7 +131,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     'changes' => [
                         'location' => $locationChanged,
                         'accountable_individual' => $accountableChanged
-                    ]
+                    ],
+                    'refresh_needed' => true
                 ]);
             } else {
                 // No changes needed

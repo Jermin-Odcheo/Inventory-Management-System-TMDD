@@ -383,6 +383,17 @@ $errors = $_SESSION['errors'] ?? [];
 $success = $_SESSION['success'] ?? '';
 unset($_SESSION['errors'], $_SESSION['success']);
 
+// Check if equipment details have been updated from equipment_location.php
+$forceRefresh = false;
+if (isset($_SESSION['equipment_details_updated']) && $_SESSION['equipment_details_updated'] === true) {
+    $forceRefresh = true;
+    $updatedAssetTag = $_SESSION['updated_asset_tag'] ?? '';
+    // Clear the session flags
+    unset($_SESSION['equipment_details_updated'], $_SESSION['updated_asset_tag']);
+    // Add success message
+    $success = 'Equipment details updated successfully from location changes.';
+}
+
 try {
     $stmt = $pdo->query("SELECT id, asset_tag, asset_description_1, asset_description_2,
                          specifications, brand, model, serial_number, location, 
@@ -1277,6 +1288,17 @@ defer></script>
         .filtered-out {
             display: none !important;
         }
+        
+        /* Style for highlighting updated rows */
+        .updated-row {
+            animation: highlight-row 3s ease-in-out;
+        }
+        
+        @keyframes highlight-row {
+            0% { background-color: rgba(255, 255, 0, 0.5); }
+            70% { background-color: rgba(255, 255, 0, 0.5); }
+            100% { background-color: transparent; }
+        }
     </style>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -1295,6 +1317,31 @@ defer></script>
                     updatePagination();
                 }
             }, 100);
+            
+            // Check if we need to highlight updated rows
+            <?php if ($forceRefresh && !empty($updatedAssetTag)): ?>
+            setTimeout(function() {
+                const updatedAssetTag = "<?= htmlspecialchars($updatedAssetTag) ?>";
+                const rows = document.querySelectorAll('#equipmentTable tr');
+                
+                rows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length > 1) {
+                        const assetTagCell = cells[1]; // Asset tag is in the second column
+                        if (assetTagCell.textContent.trim() === updatedAssetTag) {
+                            // Scroll to the row
+                            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            // Add highlight class
+                            row.classList.add('updated-row');
+                            // Show toast notification
+                            if (typeof showToast === 'function') {
+                                showToast('Equipment details for asset tag ' + updatedAssetTag + ' have been updated from location changes', 'success');
+                            }
+                        }
+                    }
+                });
+            }, 500); // Short delay to ensure DOM is ready
+            <?php endif; ?>
 
             // Force hide pagination buttons if no data or all fits on one page
             function forcePaginationCheck() {

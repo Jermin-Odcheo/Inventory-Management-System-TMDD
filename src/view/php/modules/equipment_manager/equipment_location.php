@@ -733,6 +733,52 @@ function safeHtml($value)
     <script src="<?php echo BASE_URL; ?>src/control/js/toast.js"></script>
     <script src="<?php echo BASE_URL; ?>src/control/js/asset_tag_autofill.js"></script>
     <script>
+        // Function to directly update equipment details after successful form submission
+        function directUpdateEquipmentDetails(assetTag, buildingLoc, specificArea, personResponsible) {
+            console.log('Directly updating equipment details with:', {
+                assetTag, buildingLoc, specificArea, personResponsible
+            });
+            
+            // Format location as "Building, Area" if both are available
+            let location = '';
+            if (buildingLoc && specificArea) {
+                location = buildingLoc + ', ' + specificArea;
+            } else if (buildingLoc) {
+                location = buildingLoc;
+            } else if (specificArea) {
+                location = specificArea;
+            }
+            
+            // Make AJAX request to update equipment details
+            $.ajax({
+                url: window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/')) + '/equipment_details_update.php',
+                method: 'POST',
+                data: {
+                    action: 'update_from_location',
+                    asset_tag: assetTag,
+                    location: location,
+                    accountable_individual: personResponsible
+                },
+                dataType: 'json',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                success: function(response) {
+                    console.log('Direct equipment details update response:', response);
+                    if (response.status === 'success') {
+                        showToast('Equipment details updated successfully', 'success');
+                    } else if (response.status === 'warning') {
+                        console.warn(response.message);
+                    } else {
+                        console.error('Failed to update equipment details:', response.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error updating equipment details:', error);
+                }
+            });
+        }
+        
         // Initialize pagination for equipment location page
         document.addEventListener('DOMContentLoaded', function() {
             // Use the new configurable pagination system
@@ -1030,6 +1076,12 @@ function safeHtml($value)
                 submitBtn.data('original-text', originalBtnText);
                 submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Adding...');
 
+                // Capture form values before submission
+                const assetTag = $('#add_location_asset_tag').val();
+                const buildingLoc = $('#addLocationForm input[name="building_loc"]').val();
+                const specificArea = $('#addLocationForm input[name="specific_area"]').val();
+                const personResponsible = $('#addLocationForm input[name="person_responsible"]').val();
+
                 $.ajax({
                     url: window.location.href,
                     method: 'POST',
@@ -1064,6 +1116,9 @@ function safeHtml($value)
                             }, 500);
                             $('#elTable').load(location.href + ' #elTable', function() {
                                 showToast(result.message, 'success');
+                                
+                                // Directly update equipment details with captured form values
+                                directUpdateEquipmentDetails(assetTag, buildingLoc, specificArea, personResponsible);
                             });
                         } else {
                             showToast(result.message, 'error');
@@ -1109,6 +1164,12 @@ function safeHtml($value)
                 const originalBtnText = submitBtn.text();
                 submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Updating...');
 
+                // Capture form values before submission
+                const assetTag = $('#edit_location_asset_tag').val();
+                const buildingLoc = $('#edit_building_loc').val();
+                const specificArea = $('#edit_specific_area').val();
+                const personResponsible = $('#edit_person_responsible').val();
+
                 $.ajax({
                     url: window.location.href,
                     method: 'POST',
@@ -1137,6 +1198,9 @@ function safeHtml($value)
                             }, 500);
                             $('#elTable').load(location.href + ' #elTable', function() {
                                 showToast(result.message, 'success');
+                                
+                                // Directly update equipment details with captured form values
+                                directUpdateEquipmentDetails(assetTag, buildingLoc, specificArea, personResponsible);
                             });
                         } else {
                             showToast(result.message, 'error');

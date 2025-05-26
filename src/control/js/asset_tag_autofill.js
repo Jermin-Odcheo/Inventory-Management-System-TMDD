@@ -138,7 +138,17 @@ function updateEquipmentLocationFromDetails(assetTag, location, accountableIndiv
  * @param {string} personResponsible - The person responsible (accountable individual)
  */
 function updateEquipmentDetailsFromLocation(assetTag, buildingLoc, specificArea, personResponsible) {
-    if (!assetTag) return;
+    if (!assetTag) {
+        console.error('Cannot update equipment details: Asset tag is missing');
+        return;
+    }
+    
+    console.log('Updating equipment details from location:', {
+        assetTag,
+        buildingLoc,
+        specificArea,
+        personResponsible
+    });
     
     // Format location as "Building, Area" if both are available
     let location = '';
@@ -149,6 +159,8 @@ function updateEquipmentDetailsFromLocation(assetTag, buildingLoc, specificArea,
     } else if (specificArea) {
         location = specificArea;
     }
+    
+    console.log('Formatted location value:', location);
     
     // Make AJAX request to update equipment details
     $.ajax({
@@ -165,14 +177,43 @@ function updateEquipmentDetailsFromLocation(assetTag, buildingLoc, specificArea,
             'X-Requested-With': 'XMLHttpRequest'
         },
         success: function(response) {
+            console.log('Equipment details update response:', response);
             if (response.status === 'success') {
                 console.log('Equipment details updated successfully from location change');
+                
+                // If we're on the equipment_details.php page, handle the update
+                if (window.location.href.indexOf('equipment_details.php') > -1) {
+                    if (response.refresh_needed) {
+                        // Force a page reload to show the updated data
+                        window.location.reload();
+                    } else {
+                        // Use the existing refresh function if available
+                        if (typeof refreshEquipmentList === 'function') {
+                            refreshEquipmentList();
+                        } else {
+                            // Fallback: reload the table via AJAX
+                            $.get(window.location.href, function(html) {
+                                const newTbody = $(html).find('#equipmentTable').html();
+                                $('#equipmentTable').html(newTbody);
+                                // Re-initialize pagination if needed
+                                if (typeof initPagination === 'function') {
+                                    initPagination({
+                                        tableId: 'equipmentTable',
+                                        currentPage: 1
+                                    });
+                                }
+                            });
+                        }
+                    }
+                }
             } else {
                 console.error('Failed to update equipment details:', response.message);
             }
         },
         error: function(xhr, status, error) {
             console.error('Error updating equipment details:', error);
+            console.error('XHR status:', status);
+            console.error('XHR object:', xhr);
         }
     });
 }
@@ -184,30 +225,56 @@ $(document).ready(function() {
         
         // Add event listener for the add location form submission
         $('#addLocationForm').on('submit', function() {
-            const assetTag = $('#add_location_asset_tag').val();
-            const buildingLoc = $('input[name="building_loc"]').val();
-            const specificArea = $('input[name="specific_area"]').val();
-            const personResponsible = $('input[name="person_responsible"]').val();
-            
-            // Store the values to be used after successful form submission
-            sessionStorage.setItem('updated_asset_tag', assetTag);
-            sessionStorage.setItem('updated_building_loc', buildingLoc);
-            sessionStorage.setItem('updated_specific_area', specificArea);
-            sessionStorage.setItem('updated_person_responsible', personResponsible);
+            try {
+                // Get values directly from form fields at submission time
+                const assetTag = $('#add_location_asset_tag').val();
+                // Use more specific selectors to get the correct form fields
+                const buildingLoc = $('#addLocationForm input[name="building_loc"]').val();
+                const specificArea = $('#addLocationForm input[name="specific_area"]').val();
+                const personResponsible = $('#addLocationForm input[name="person_responsible"]').val();
+                
+                console.log('Form submission - captured values:', {
+                    assetTag,
+                    buildingLoc,
+                    specificArea,
+                    personResponsible
+                });
+                
+                // Store the values to be used after successful form submission
+                sessionStorage.setItem('updated_asset_tag', assetTag);
+                sessionStorage.setItem('updated_building_loc', buildingLoc);
+                sessionStorage.setItem('updated_specific_area', specificArea);
+                sessionStorage.setItem('updated_person_responsible', personResponsible);
+            } catch (error) {
+                console.error('Error capturing form data:', error);
+            }
         });
         
         // Add event listener for the edit location form submission
         $('#editLocationForm').on('submit', function() {
-            const assetTag = $('#edit_location_asset_tag').val();
-            const buildingLoc = $('#edit_building_loc').val();
-            const specificArea = $('#edit_specific_area').val();
-            const personResponsible = $('#edit_person_responsible').val();
-            
-            // Store the values to be used after successful form submission
-            sessionStorage.setItem('updated_asset_tag', assetTag);
-            sessionStorage.setItem('updated_building_loc', buildingLoc);
-            sessionStorage.setItem('updated_specific_area', specificArea);
-            sessionStorage.setItem('updated_person_responsible', personResponsible);
+            try {
+                // Get values directly from form fields at submission time
+                const assetTag = $('#edit_location_asset_tag').val();
+                // Use more specific selectors to get the correct form fields
+                const buildingLoc = $('#editLocationForm #edit_building_loc').val();
+                const specificArea = $('#editLocationForm #edit_specific_area').val();
+                const personResponsible = $('#editLocationForm #edit_person_responsible').val();
+                
+                console.log('Edit form submission - captured values:', {
+                    assetTag,
+                    buildingLoc,
+                    specificArea,
+                    personResponsible
+                });
+                
+                // Store the values to be used after successful form submission
+                sessionStorage.setItem('updated_asset_tag', assetTag);
+                sessionStorage.setItem('updated_building_loc', buildingLoc);
+                sessionStorage.setItem('updated_specific_area', specificArea);
+                sessionStorage.setItem('updated_person_responsible', personResponsible);
+            } catch (error) {
+                console.error('Error capturing form data:', error);
+            }
         });
         
         // Listen for AJAX success responses to detect when forms are successfully submitted
@@ -225,6 +292,19 @@ $(document).ready(function() {
                         const specificArea = sessionStorage.getItem('updated_specific_area');
                         const personResponsible = sessionStorage.getItem('updated_person_responsible');
                         
+                        console.log('AJAX success - using stored values:', {
+                            assetTag,
+                            buildingLoc,
+                            specificArea,
+                            personResponsible
+                        });
+                        
+                        // Validate that we have the necessary data
+                        if (!assetTag) {
+                            console.error('Missing asset tag in stored data, cannot update equipment details');
+                            return;
+                        }
+                        
                         // Update equipment details
                         updateEquipmentDetailsFromLocation(assetTag, buildingLoc, specificArea, personResponsible);
                         
@@ -236,6 +316,7 @@ $(document).ready(function() {
                     }
                 } catch (error) {
                     console.error('Error parsing AJAX response:', error);
+                    console.error('Raw response text:', xhr.responseText);
                 }
             }
         });
