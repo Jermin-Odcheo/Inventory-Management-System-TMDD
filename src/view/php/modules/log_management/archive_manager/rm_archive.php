@@ -123,21 +123,12 @@ function formatChanges($oldJsonStr)
                         <ul class="list-group mt-2">';
 
             foreach ($value as $module => $privileges) {
-                if (is_array($privileges)) {
-                    $privilegesStr = implode(', ', $privileges);
-                } elseif (is_scalar($privileges)) {
-                    $privilegesStr = (string)$privileges;
-                } else {
-                    $privilegesStr = '[unreadable]';
-                }
-
                 $html .= '<li class="list-group-item d-flex justify-content-between align-items-center">
                             <strong>' . htmlspecialchars($module) . ':</strong>
                             <span class="old-value text-danger"><i class="fas fa-history me-1"></i> ' .
-                    htmlspecialchars($privilegesStr) . '</span>
-                        </li>';
+                    htmlspecialchars($privileges) . '</span>
+                          </li>';
             }
-
 
             $html .= '</ul></li>';
         } else {
