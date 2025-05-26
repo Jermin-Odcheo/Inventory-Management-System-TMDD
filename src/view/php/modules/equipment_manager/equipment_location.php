@@ -557,7 +557,7 @@ function safeHtml($value)
                         <div class="mb-3">
                             <label for="asset_tag" class="form-label">Asset Tag <span class="text-danger">*</span></label>
                             <select class="form-select" name="asset_tag" id="add_location_asset_tag" required style="width: 100%;">
-                                <option value="">Select or type Asset Tag</option>
+                                <option value="">Select Asset Tag</option>
                                 <?php
                                 // Fetch unique asset tags from equipment_details and equipment_status
                                 $assetTags = [];
@@ -593,43 +593,8 @@ function safeHtml($value)
                             <label for="person_responsible" class="form-label">Person Responsible</label>
                             <input type="text" class="form-control" name="person_responsible">
                         </div>
+                    
                         
-                        <div class="mb-3">
-                            <label for="add_department_id" class="form-label">Department</label>
-                            <select class="form-control" id="add_department_id" name="department_id">
-                                <option value="">Select Department</option>
-                                <?php
-                                try {
-                                    $deptStmt = $pdo->query("SELECT id, department_name, abbreviation FROM departments ORDER BY department_name");
-                                    $departments = $deptStmt->fetchAll();
-                                    foreach ($departments as $department) {
-                                        echo "<option value='" . htmlspecialchars($department['id']) . "'>" . htmlspecialchars($department['department_name']) . " (" . htmlspecialchars($department['abbreviation']) . ")</option>";
-                                    }
-                                } catch (PDOException $e) {
-                                    // fallback: empty
-                                }
-                                ?>
-                            </select>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="edit_department_id" class="form-label"><i class="bi bi-building"></i> Department</label>
-                            <select class="form-control" id="edit_department_id" name="department_id">
-                                <option value="">Select Department</option>
-                                <?php
-                                try {
-                                    $deptStmt = $pdo->query("SELECT id, department_name FROM departments ORDER BY department_name");
-                                    $departments = $deptStmt->fetchAll();
-                                    foreach ($departments as $department) {
-                                        echo "<option value='" . htmlspecialchars($department['id']) . "'>" . htmlspecialchars($department['department_name']) . "</option>";
-                                    }
-                                } catch (PDOException $e) {
-                                    // Handle error if needed
-                                }
-                                ?>
-                            </select>
-                        </div>
-
                         <div class="mb-3">
                             <label class="form-label">Device State</label>
                             <select class="form-select" id="devState" name="device_state" required>
@@ -672,7 +637,7 @@ function safeHtml($value)
                         <div class="mb-3">
                             <label for="edit_asset_tag" class="form-label"><i class="bi bi-tag"></i> Asset Tag <span class="text-danger">*</span></label>
                             <select class="form-select" name="asset_tag" id="edit_location_asset_tag" required style="width: 100%;">
-                                <option value="">Select or type Asset Tag</option>
+                                <option value="">Select Asset Tag</option>
                                 <?php
                                 // Use the same $assetTags as above
                                 foreach ($assetTags as $tag) {
@@ -1185,8 +1150,8 @@ function safeHtml($value)
             // Asset Tag Select2 for Add Location Modal
             $('#addLocationModal').on('shown.bs.modal', function() {
                 $('#add_location_asset_tag').select2({
-                    tags: true,
-                    placeholder: 'Select or type Asset Tag',
+                    tags: false,
+                    placeholder: 'Select Asset Tag',
                     allowClear: true,
                     width: '100%',
                     dropdownParent: $('#addLocationModal')
@@ -1208,6 +1173,15 @@ function safeHtml($value)
                     $('body').removeClass('modal-open');
                     $('body').css('padding-right', '');
                 }
+                
+                // Initialize Select2 for the asset tag in edit modal
+                $('#edit_location_asset_tag').select2({
+                    tags: false,
+                    placeholder: 'Select Asset Tag',
+                    allowClear: true,
+                    width: '100%',
+                    dropdownParent: $('#editLocationModal')
+                });
             });
             $('#editLocationModal').on('hidden.bs.modal', function() {
                 // Remove any lingering modal-backdrop and modal-open after hiding
