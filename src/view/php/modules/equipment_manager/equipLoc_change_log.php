@@ -103,21 +103,6 @@ if (!empty($filters['search'])) {
 $stmt->execute();
 $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Equipment Location Management</title>
-    <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.min.css" rel="stylesheet">
-    <!-- Select2 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
-<!-- DataTables Responsive JS -->
- <!-- DataTables Responsive CSS -->
-<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
-<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
-<script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
 
 <!-- Styles & Scripts -->
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
@@ -130,16 +115,9 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
         background-color: #0d6efd;
         color: white;
     }
-    
-    th.sortable.asc::after {
-            content: " ▲";
-        }
-
-        th.sortable.desc::after {
-            content: " ▼";
-        }
 </style>
 
+<<<<<<< HEAD
 <div class="container-fluid">
 </head> 
 <body>
