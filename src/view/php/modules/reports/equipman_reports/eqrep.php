@@ -77,12 +77,12 @@ $todayDisplay = date('F j, Y');
               <select class="form-select" id="repTypeSelect" name="repTypeSelect" required>
   <option value="summarized">Summarized Report</option>
   <option value="detailed">Complete Detailed Report</option>
-  <option value="custom" >Custom Report</option>
   <option value="equipment_details">Equipment Details Only</option>
   <option value="equipment_status">Equipment Status Only</option>
   <option value="equipment_location"> Equipment Location Only</option>
   <option value="receiving_report">Receiving Report Only</option>
   <option value="charge_invoice">Charge Invoice Only</option>
+  <option value="custom" >Custom Report</option>
 </select>
 
             </div>
@@ -135,12 +135,12 @@ $todayDisplay = date('F j, Y');
       'status_remarks' => 'Status Remarks',
     ],
     'Equipment Location' => [
+      'building_location' => 'Location',
+      'accountable_individual' => 'Person Responsible',
       'specific_area' => 'Laboratory/Office',
     ],
     'Receiving Report' => [
       'receiving_report' => 'RR number',
-      'building_location' => 'Location',
-      'accountable_individual' => 'Accountable Individual',
     ],
     'Charge Invoice' => [
       'date_acquired' => 'Date Acquired',
@@ -312,11 +312,11 @@ $todayDisplay = date('F j, Y');
       ];
   
       const eqpLocationCols = [
-        'asset_tag','specific_area'
+        'asset_tag', 'specific_area', 'building_location', 'accountable_individual'
       ];
 
       const RRCols = [
-        'asset_tag','receiving_report', 'building_location', 'accountable_individual',
+        'asset_tag','receiving_report'
       ];
       
       const CICols = [
@@ -393,7 +393,6 @@ document.getElementById("repTypeSelect").addEventListener("change", function () 
     });
   }
 });
-
       
       clearBtn?.addEventListener("click", () => {
         checkboxes.forEach(cb => cb.checked = false);
