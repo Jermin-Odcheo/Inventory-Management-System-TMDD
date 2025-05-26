@@ -494,12 +494,51 @@ input[readonly] {
                         <div class="col-md-3">
                             <select class="form-select" id="filterStatus">
                                 <option value="">Filter by Status</option>
-                                <option value="Maintenance">Maintenance</option>
-                                <option value="Working">Working</option>
-                                <option value="For Repair">For Repair</option>
-                                <option value="For Disposal">For Disposal</option>
-                                <option value="Disposed">Disposed</option>
-                                <option value="Condemned">Condemned</option>
+                                <?php 
+                                // Get unique status values from the database
+                                try {
+                                    // First, let's check for any problematic values for debugging
+                                    $debugQuery = $pdo->query("SELECT equipment_status_id, asset_tag, status, LENGTH(status) as status_length FROM equipment_status WHERE is_disabled = 0 ORDER BY status");
+                                    $debugResults = $debugQuery->fetchAll(PDO::FETCH_ASSOC);
+                                    
+                                    // Log the raw status values with detailed info
+                                    foreach ($debugResults as $row) {
+                                        $statusValue = $row['status'];
+                                        $hexChars = '';
+                                        for ($i = 0; $i < strlen($statusValue); $i++) {
+                                            $hexChars .= '0x' . dechex(ord($statusValue[$i])) . ' ';
+                                        }
+                                        error_log("Status ID {$row['equipment_status_id']} (Asset: {$row['asset_tag']}): '{$statusValue}' - Length: {$row['status_length']} - Hex: {$hexChars}");
+                                    }
+                                    
+                                    // Now get the distinct values for the dropdown, excluding empty values
+                                    $statusOptions = $pdo->query("SELECT DISTINCT status FROM equipment_status WHERE is_disabled = 0 AND status IS NOT NULL AND TRIM(status) != '' ORDER BY status")->fetchAll(PDO::FETCH_COLUMN);
+                                    
+                                    // Debug - print status values
+                                    error_log("Equipment Status Values: " . print_r($statusOptions, true));
+                                    
+                                    foreach($statusOptions as $status) {
+                                        // Normalize the status value to remove any extra whitespace
+                                        $normalizedStatus = trim(preg_replace('/\s+/', ' ', $status));
+                                        
+                                        // Skip empty values
+                                        if (empty($normalizedStatus)) {
+                                            continue;
+                                        }
+                                        
+                                        echo "<option value=\"" . htmlspecialchars($normalizedStatus) . "\">" . htmlspecialchars($normalizedStatus) . "</option>";
+                                    }
+                                } catch (PDOException $e) {
+                                    error_log("Error retrieving status options: " . $e->getMessage());
+                                    // If query fails, fallback to static options
+                                    echo "<option value=\"Maintenance\">Maintenance</option>";
+                                    echo "<option value=\"Working\">Working</option>";
+                                    echo "<option value=\"For Repair\">For Repair</option>";
+                                    echo "<option value=\"For Disposal\">For Disposal</option>";
+                                    echo "<option value=\"Disposed\">Disposed</option>";
+                                    echo "<option value=\"Condemned\">Condemned</option>";
+                                }
+                                ?>
                             </select>
                         </div>
                         <div class="col-md-3">
@@ -552,16 +591,16 @@ input[readonly] {
     <table class="table" id="statusTable">
         <thead>
             <tr>
-                <th class="sortable" data-sort="number">#</th>
-                <th class="sortable" data-sort="string">Asset Tag</th>
-                <th class="sortable" data-sort="string">Status</th>
-                <th class="sortable" data-sort="string">Process Action Taken</th>
-                <th class="sortable" data-sort="date">Created Date</th>
-                <th class="sortable" data-sort="string">Remarks</th>
+                <th class="sortable" data-sort="number" data-column="1">#</th>
+                <th class="sortable" data-sort="string" data-column="2">Asset Tag</th>
+                <th class="sortable" data-sort="string" data-column="3">Status</th>
+                <th class="sortable" data-sort="string" data-column="4">Process Action Taken</th>
+                <th class="sortable" data-sort="date" data-column="5">Created Date</th>
+                <th class="sortable" data-sort="string" data-column="6">Remarks</th>
                 <th>Actions</th>
             </tr>
         </thead>
-        <tbody>
+        <tbody id="statusTbody">
             <?php
             try {
                 $stmt = $pdo->query("SELECT * FROM equipment_status WHERE is_disabled = 0 ORDER BY date_created DESC");
@@ -788,11 +827,46 @@ input[readonly] {
     <script>
         // Initialize pagination for equipment status
         document.addEventListener('DOMContentLoaded', function() {
+            // Store all table rows for pagination
+            const statusRows = Array.from(document.querySelectorAll('#statusTbody tr'));
+            window.allRows = statusRows;
+            window.filteredRows = statusRows;
+            window.paginationInitialized = true;
+            
             // Initialize pagination with the status table ID
             initPagination({
                 tableId: 'statusTbody',
                 currentPage: 1
             });
+            
+            // Diagnostic function to analyze all status values
+            function analyzeStatusValues() {
+                console.log("--- ANALYZING ALL STATUS VALUES ---");
+                const statusValues = {};
+                const statusCells = document.querySelectorAll('#statusTbody tr td:nth-child(3)');
+                statusCells.forEach((cell, index) => {
+                    const statusText = cell.textContent.trim();
+                    const normalizedStatus = statusText.replace(/\s+/g, ' ').trim();
+                    
+                    if (!statusValues[normalizedStatus]) {
+                        statusValues[normalizedStatus] = [];
+                    }
+                    statusValues[normalizedStatus].push(index + 1);
+                    
+                    // Log each status with detailed info
+                    console.log(`Row ${index+1} Status: "${statusText}"`);
+                    console.log(`  - Length: ${statusText.length}`);
+                    console.log(`  - Character codes: [${Array.from(statusText).map(c => c.charCodeAt(0))}]`);
+                });
+                
+                console.log("--- STATUS VALUE SUMMARY ---");
+                for (const [status, rows] of Object.entries(statusValues)) {
+                    console.log(`Status "${status}" appears in ${rows.length} rows: ${rows.join(', ')}`);
+                }
+            }
+            
+            // Run the analysis once the page is loaded
+            setTimeout(analyzeStatusValues, 1000);
         });
     </script>
 
@@ -807,8 +881,70 @@ input[readonly] {
             
             // Real-time search & filter
             $('#searchStatus, #filterStatus').on('input change', function() {
-                filterTable();
+                filterStatusTable();
             });
+            
+            // Table sorting
+            $('.sortable').on('click', function(event) {
+                const sortField = $(this).data('sort');
+                const currentClass = $(this).hasClass('asc') ? 'asc' : ($(this).hasClass('desc') ? 'desc' : '');
+                const columnIndex = $(this).data('column');
+                
+                // Remove sort indicators from all headers
+                $('.sortable').removeClass('asc desc');
+                
+                // Set new sort direction
+                let newDirection = 'asc';
+                if (currentClass === 'asc') {
+                    newDirection = 'desc';
+                    $(this).addClass('desc');
+                } else {
+                    $(this).addClass('asc');
+                }
+                
+                // Sort the rows
+                sortTable(sortField, newDirection, columnIndex);
+            });
+            
+            // Function to sort the table
+            function sortTable(field, direction, columnIndex) {
+                // Use the allRows array as the source
+                const sortedRows = [...window.allRows];
+                
+                sortedRows.sort((a, b) => {
+                    let valueA, valueB;
+                    
+                    switch (field) {
+                        case 'number':
+                            valueA = parseInt(a.querySelector(`td:nth-child(${columnIndex})`).textContent.trim()) || 0;
+                            valueB = parseInt(b.querySelector(`td:nth-child(${columnIndex})`).textContent.trim()) || 0;
+                            break;
+                        case 'string':
+                            valueA = a.querySelector(`td:nth-child(${columnIndex})`).textContent.toLowerCase().trim();
+                            valueB = b.querySelector(`td:nth-child(${columnIndex})`).textContent.toLowerCase().trim();
+                            break;
+                        case 'date':
+                            valueA = new Date(a.querySelector(`td:nth-child(${columnIndex})`).textContent.trim());
+                            valueB = new Date(b.querySelector(`td:nth-child(${columnIndex})`).textContent.trim());
+                            break;
+                        default:
+                            return 0;
+                    }
+                    
+                    // Compare values based on direction
+                    if (direction === 'asc') {
+                        return valueA > valueB ? 1 : (valueA < valueB ? -1 : 0);
+                    } else {
+                        return valueA < valueB ? 1 : (valueA > valueB ? -1 : 0);
+                    }
+                });
+                
+                // Update the filteredRows with the sorted rows
+                window.filteredRows = sortedRows;
+                
+                // Update the pagination
+                updatePagination();
+            }
 
             // Force hide pagination buttons if no rows or all fit on one page
             function checkAndHidePagination() {
@@ -825,14 +961,6 @@ input[readonly] {
                     $('#prevPage, #nextPage').css('display', 'none !important').hide();
                 }
             }
-
-            // Run on page load with a longer delay to ensure DOM is fully processed
-            setTimeout(checkAndHidePagination, 300);
-
-            // Run after any filter changes
-            $('#searchStatus, #filterStatus, #dateFilter, #monthSelect, #yearSelect, #dateFrom, #dateTo').on('change input', function() {
-                setTimeout(checkAndHidePagination, 100);
-            });
 
             // Run after rows per page changes
             $('#rowsPerPageSelect').on('change', function() {
@@ -857,7 +985,7 @@ input[readonly] {
                     $('#dateRangePickers').show();
                 } else if (filterType === 'desc' || filterType === 'asc') {
                     // Apply sorting without showing date inputs
-                    filterTable();
+                filterStatusTable();
                 }
             });
 
@@ -867,7 +995,7 @@ input[readonly] {
                 const year = $('#yearSelect').val();
 
                 if (month && year) {
-                    filterTable();
+                    filterStatusTable();
                 }
             });
 
@@ -877,29 +1005,47 @@ input[readonly] {
                 const dateTo = $('#dateTo').val();
 
                 if (dateFrom && dateTo) {
-                    filterTable();
+                    filterStatusTable();
                 }
             });
 
-            function filterTable() {
+            // Custom filter function for this page that works with the pagination system
+            function filterStatusTable() {
                 const searchText = $('#searchStatus').val().toLowerCase();
-                const filterStatus = $('#filterStatus').val().toLowerCase();
+                const filterStatus = $('#filterStatus').val();
                 const dateFilterType = $('#dateFilter').val();
                 const selectedMonth = $('#monthSelect').val();
                 const selectedYear = $('#yearSelect').val();
                 const dateFrom = $('#dateFrom').val();
                 const dateTo = $('#dateTo').val();
 
-                $(".table tbody tr").each(function() {
-                    const row = $(this);
-                    const rowText = row.text().toLowerCase();
-                    const statusCell = row.find('td:eq(2)').text().toLowerCase();
-                    const dateCell = row.find('td:eq(4)').text(); // Created date column
+                console.log("Filtering by status:", filterStatus, "Length:", filterStatus ? filterStatus.length : 0);
+
+                // Filter the rows based on search text and status
+                window.filteredRows = window.allRows.filter(row => {
+                    // Get text content for search
+                    const rowText = row.textContent.toLowerCase();
+                    
+                    // Get status cell text - ensuring we normalize whitespace
+                    const statusCell = row.querySelector('td:nth-child(3)');
+                    // Normalize whitespace by trimming and removing extra spaces
+                    const statusText = statusCell ? statusCell.textContent.replace(/\s+/g, ' ').trim() : '';
+                    
+                    // Get date info
+                    const dateCell = row.querySelector('td:nth-child(5)').textContent;
                     const date = new Date(dateCell);
-
-                    const searchMatch = rowText.indexOf(searchText) > -1;
-                    const statusMatch = !filterStatus || statusCell === filterStatus;
-
+                    
+                    // Text search match
+                    const searchMatch = rowText.includes(searchText);
+                    
+                    // Status filtering - checking for selected value with flexible matching
+                    let statusMatch = true;
+                    if (filterStatus && filterStatus.trim() !== '') {
+                        // Only do status filtering if we have a real value selected
+                        statusMatch = statusText.toLowerCase() === filterStatus.toLowerCase();
+                    }
+                    
+                    // Date filtering
                     let dateMatch = true;
                     if (dateFilterType === 'month' && selectedMonth && selectedYear) {
                         dateMatch = (date.getMonth() + 1 === parseInt(selectedMonth)) &&
@@ -910,23 +1056,27 @@ input[readonly] {
                         to.setHours(23, 59, 59); // Include the entire "to" day
                         dateMatch = date >= from && date <= to;
                     }
-
-                    row.toggle(searchMatch && statusMatch && dateMatch);
+                    
+                    return searchMatch && statusMatch && dateMatch;
                 });
-
+                
                 // Handle sorting if needed
                 if (dateFilterType === 'asc' || dateFilterType === 'desc') {
-                    const tbody = $('.table tbody');
-                    const rows = tbody.find('tr').toArray();
-
-                    rows.sort(function(a, b) {
-                        const dateA = new Date($(a).find('td:eq(4)').text());
-                        const dateB = new Date($(b).find('td:eq(4)').text());
+                    window.filteredRows.sort(function(a, b) {
+                        const dateA = new Date(a.querySelector('td:nth-child(5)').textContent);
+                        const dateB = new Date(b.querySelector('td:nth-child(5)').textContent);
                         return dateFilterType === 'asc' ? dateA - dateB : dateB - dateA;
                     });
-
-                    tbody.append(rows);
                 }
+                
+                // Update total count in the UI
+                $('#totalRows').text(window.filteredRows.length);
+                
+                // Update pagination with filtered rows
+                updatePagination();
+                
+                // After pagination updates, check if we need to hide pagination controls
+                setTimeout(checkAndHidePagination, 100);
             }
 
             // Delegate event for editing status
@@ -975,9 +1125,8 @@ input[readonly] {
                         },
                         success: function(response) {
                             if (response.status === 'success') {
-                                $('#statusTable').load(location.href + ' #statusTable', function() {
-                                    showToast(response.message, 'success');
-                                });
+                                // Reload the page to refresh data after successful deletion
+                                location.reload();
                             } else {
                                 showToast(response.message, 'error');
                             }
@@ -1019,9 +1168,8 @@ input[readonly] {
                     success: function(result) {
                         if (result.status === 'success') {
                             $('#addStatusModal').modal('hide');
-                            $('#statusTable').load(location.href + ' #statusTable', function() {
-                                showToast(result.message, 'success');
-                            });
+                            // Reload the page to refresh data after successful addition
+                            location.reload();
                         } else {
                             showToast(result.message, 'error');
                         }
@@ -1061,9 +1209,8 @@ input[readonly] {
                         // Regardless of changes, show a success toast.
                         if (result.status === 'success') {
                             $('#editStatusModal').modal('hide');
-                            $('#statusTable').load(location.href + ' #statusTable', function() {
-                                showToast(result.message, 'success');
-                            });
+                            // Reload the page to refresh data after successful update
+                            location.reload();
                         } else {
                             showToast(result.message, 'error');
                         }
@@ -1078,6 +1225,9 @@ input[readonly] {
             $('#editStatusModal').on('hidden.bs.modal', function() {
                 $(this).find('form')[0].reset();
             });
+            
+            // Run on page load with a longer delay to ensure DOM is fully processed
+            setTimeout(checkAndHidePagination, 300);
         });
     </script>
     <!-- Select2 JS -->

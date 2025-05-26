@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 26, 2025 at 02:04 AM
+-- Generation Time: May 26, 2025 at 06:55 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -1163,7 +1163,47 @@ INSERT INTO `audit_log` (`TrackID`, `UserID`, `EntityID`, `Action`, `Details`, `
 (1214, 1, 148, 'modified', 'Updated user information: username: FAILED ATTEMPT! → nope', '{\"username\":\"FAILED ATTEMPT!\"}', '{\"username\":\"nope\"}', 'User Management', 'Success', '2025-05-22 13:22:30'),
 (1215, 1, 148, 'Remove', 'User has been removed', '{\"id\": 148, \"username\": \"nope\", \"email\": \"regularuser@example.com\", \"first_name\": \"asdad\", \"last_name\": \"asdas\", \"status\": \"\", \"date_created\": \"2025-05-22 10:08:08\", \"is_disabled\": 0}', '', 'User Management', 'Successful', '2025-05-22 13:22:34'),
 (1216, 1, 48, 'Remove', 'Department \'123\' has been moved to archive', '{\"id\":48,\"abbreviation\":\"123\",\"department_name\":\"123\"}', '{\"id\":48,\"abbreviation\":\"123\",\"department_name\":\"123\"}', 'Department Management', 'Successful', '2025-05-26 08:04:10'),
-(1217, 1, 54, 'Create', 'Department \'123\' has been created', NULL, '{\"id\":54,\"abbreviation\":\"123\",\"department_name\":\"123\"}', 'Department Management', 'Successful', '2025-05-26 08:04:14');
+(1217, 1, 54, 'Create', 'Department \'123\' has been created', NULL, '{\"id\":54,\"abbreviation\":\"123\",\"department_name\":\"123\"}', 'Department Management', 'Successful', '2025-05-26 08:04:14'),
+(1218, 1, 83, 'Delete', 'Equipment details have been removed (soft delete)', '{\"id\":83,\"asset_tag\":\"0987654\",\"asset_description_1\":\"Computer - Desktop \",\"asset_description_2\":\"Monitor\",\"specifications\":\"\",\"brand\":\"Acer\",\"model\":\"V226HQL\",\"serial_number\":\"MMLY7SS0227480954D858B\",\"date_acquired\":\"2025-05-21 11:59:23\",\"invoice_no\":null,\"rr_no\":null,\"location\":\"\",\"accountable_individual\":\"\",\"remarks\":\"\",\"date_created\":\"2025-05-21 11:59:23\",\"is_disabled\":0,\"date_modified\":\"2025-05-26 19:04:10\",\"asset_tag_active\":\"0987654\"}', '{\"id\":83,\"asset_tag\":\"0987654\",\"asset_description_1\":\"Computer - Desktop \",\"asset_description_2\":\"Monitor\",\"specifications\":\"\",\"brand\":\"Acer\",\"model\":\"V226HQL\",\"serial_number\":\"MMLY7SS0227480954D858B\",\"date_acquired\":\"2025-05-21 11:59:23\",\"invoice_no\":null,\"rr_no\":null,\"location\":\"\",\"accountable_individual\":\"\",\"remarks\":\"\",\"date_created\":\"2025-05-21 11:59:23\",\"is_disabled\":1,\"date_modified\":\"2025-05-26 19:04:10\",\"asset_tag_active\":\"0987654\"}', 'Equipment Details', 'Successful', '2025-05-26 19:04:30'),
+(1219, 1, 87, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"0987654\",\"asset_description_1\":\"1312\",\"asset_description_2\":\"3123123\",\"specifications\":\"123123\",\"brand\":\"123123\",\"model\":\"12312\",\"serial_number\":\"3123\",\"location\":\"123123\",\"accountable_individual\":\"123123\",\"rr_no\":\"\",\"date_created\":\"2025-05-26 19:04:43\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-26 19:04:43'),
+(1220, 1, 29, 'Create', 'Equipment location created from details', NULL, '{\"asset_tag\":\"0987654\",\"building_loc\":\"123123\",\"floor_no\":\"\",\"specific_area\":\"\",\"person_responsible\":\"123123\",\"department_id\":null,\"device_state\":\"inventory\",\"remarks\":\"\"}', 'Equipment Location', 'Successful', '2025-05-26 19:04:43'),
+(1221, 1, 87, 'Delete', 'Equipment details have been removed (soft delete)', '{\"id\":87,\"asset_tag\":\"0987654\",\"asset_description_1\":\"1312\",\"asset_description_2\":\"3123123\",\"specifications\":\"123123\",\"brand\":\"123123\",\"model\":\"12312\",\"serial_number\":\"3123\",\"date_acquired\":\"2025-05-26 19:04:43\",\"invoice_no\":null,\"rr_no\":null,\"location\":\"123123\",\"accountable_individual\":\"123123\",\"remarks\":\"\",\"date_created\":\"2025-05-26 19:04:43\",\"is_disabled\":0,\"date_modified\":\"2025-05-26 19:04:43\",\"asset_tag_active\":\"0987654\"}', '{\"id\":87,\"asset_tag\":\"0987654\",\"asset_description_1\":\"1312\",\"asset_description_2\":\"3123123\",\"specifications\":\"123123\",\"brand\":\"123123\",\"model\":\"12312\",\"serial_number\":\"3123\",\"date_acquired\":\"2025-05-26 19:04:43\",\"invoice_no\":null,\"rr_no\":null,\"location\":\"123123\",\"accountable_individual\":\"123123\",\"remarks\":\"\",\"date_created\":\"2025-05-26 19:04:43\",\"is_disabled\":1,\"date_modified\":\"2025-05-26 19:04:43\",\"asset_tag_active\":\"0987654\"}', 'Equipment Details', 'Successful', '2025-05-26 19:04:59'),
+(1222, 1, 29, 'Modified', 'Equipment location modified', '{\"equipment_location_id\":29,\"asset_tag\":\"0987654\",\"building_loc\":\"123123\",\"floor_no\":\"\",\"specific_area\":\"\",\"person_responsible\":\"123123\",\"department_id\":null,\"device_state\":\"inventory\",\"remarks\":\"\",\"date_created\":\"2025-05-26 19:04:43\",\"is_disabled\":0}', '{\"asset_tag\":\"0987654\",\"building_loc\":\"123123\",\"floor_no\":\"\",\"specific_area\":\"\",\"person_responsible\":\"123123\",\"department_id\":null,\"device_state\":\"Inventory\",\"remarks\":\"\"}', 'Equipment Location', 'Successful', '2025-05-26 19:05:18'),
+(1223, 1, 88, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"0987654\",\"asset_description_1\":\"\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"\",\"model\":\"\",\"serial_number\":\"\",\"location\":\"123123\",\"accountable_individual\":\"123123\",\"rr_no\":\"\",\"date_created\":\"2025-05-26 19:42:31\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-26 19:42:31'),
+(1224, 1, 88, 'Delete', 'Equipment details have been removed (soft delete)', '{\"id\":88,\"asset_tag\":\"0987654\",\"asset_description_1\":\"\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"\",\"model\":\"\",\"serial_number\":\"\",\"date_acquired\":\"2025-05-26 19:42:31\",\"invoice_no\":null,\"rr_no\":null,\"location\":\"123123\",\"accountable_individual\":\"123123\",\"remarks\":\"\",\"date_created\":\"2025-05-26 19:42:31\",\"is_disabled\":0,\"date_modified\":\"2025-05-26 19:42:31\",\"asset_tag_active\":\"0987654\"}', '{\"id\":88,\"asset_tag\":\"0987654\",\"asset_description_1\":\"\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"\",\"model\":\"\",\"serial_number\":\"\",\"date_acquired\":\"2025-05-26 19:42:31\",\"invoice_no\":null,\"rr_no\":null,\"location\":\"123123\",\"accountable_individual\":\"123123\",\"remarks\":\"\",\"date_created\":\"2025-05-26 19:42:31\",\"is_disabled\":1,\"date_modified\":\"2025-05-26 19:42:31\",\"asset_tag_active\":\"0987654\"}', 'Equipment Details', 'Successful', '2025-05-26 19:42:34'),
+(1225, 1, 89, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"AT213\",\"asset_description_1\":\"123123\",\"asset_description_2\":\"123123\",\"specifications\":\"\",\"brand\":\"\",\"model\":\"\",\"serial_number\":\"\",\"location\":\"\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"date_created\":\"2025-05-26 20:51:48\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-26 20:51:48'),
+(1226, 1, 30, 'Create', 'Equipment location created from details', NULL, '{\"asset_tag\":\"AT213\",\"building_loc\":\"\",\"floor_no\":\"\",\"specific_area\":\"\",\"person_responsible\":\"\",\"department_id\":null,\"device_state\":\"inventory\",\"remarks\":\"\"}', 'Equipment Location', 'Successful', '2025-05-26 20:51:48'),
+(1227, 1, 89, 'Delete', 'Equipment details have been removed (soft delete)', '{\"id\":89,\"asset_tag\":\"AT213\",\"asset_description_1\":\"123123\",\"asset_description_2\":\"123123\",\"specifications\":\"\",\"brand\":\"\",\"model\":\"\",\"serial_number\":\"\",\"date_acquired\":\"2025-05-26 20:51:48\",\"invoice_no\":null,\"rr_no\":null,\"location\":\"\",\"accountable_individual\":\"\",\"remarks\":\"\",\"date_created\":\"2025-05-26 20:51:48\",\"is_disabled\":0,\"date_modified\":\"2025-05-26 20:51:48\",\"asset_tag_active\":\"AT213\"}', '{\"id\":89,\"asset_tag\":\"AT213\",\"asset_description_1\":\"123123\",\"asset_description_2\":\"123123\",\"specifications\":\"\",\"brand\":\"\",\"model\":\"\",\"serial_number\":\"\",\"date_acquired\":\"2025-05-26 20:51:48\",\"invoice_no\":null,\"rr_no\":null,\"location\":\"\",\"accountable_individual\":\"\",\"remarks\":\"\",\"date_created\":\"2025-05-26 20:51:48\",\"is_disabled\":1,\"date_modified\":\"2025-05-26 20:51:48\",\"asset_tag_active\":\"AT213\"}', 'Equipment Details', 'Successful', '2025-05-26 20:51:51'),
+(1228, 1, 89, 'Delete', 'Equipment status entries for asset tag AT213 have been removed (cascaded delete)', '{\"asset_tag\":\"AT213\",\"rows_affected\":1}', NULL, 'Equipment Status', 'Successful', '2025-05-26 20:51:51'),
+(1229, 1, 89, 'Delete', 'Equipment location entries for asset tag AT213 have been removed (cascaded delete)', '{\"asset_tag\":\"AT213\",\"rows_affected\":1}', NULL, 'Equipment Location', 'Successful', '2025-05-26 20:51:51'),
+(1230, 1, 6, 'Modified', 'Equipment status modified', '{\"asset_tag\":\"2134567890\",\"status\":\"For Disposal\",\"action\":\"123\",\"remarks\":\"dfghj\",\"date_created\":\"2025-05-21 15:35:37\",\"is_disabled\":0}', '{\"asset_tag\":\"2134567890\",\"status\":\"For Disposal\",\"action\":\"123\",\"remarks\":\"dfghj\",\"is_disabled\":0}', 'Equipment Status', 'Successful', '2025-05-26 20:52:02'),
+(1231, 1, 89, 'Restored', 'Equipment details have been restored', '{\"id\":89,\"asset_tag\":\"AT213\",\"asset_description_1\":\"123123\",\"asset_description_2\":\"123123\",\"specifications\":\"\",\"brand\":\"\",\"model\":\"\",\"serial_number\":\"\",\"date_acquired\":\"2025-05-26 20:51:48\",\"invoice_no\":null,\"rr_no\":null,\"location\":\"\",\"accountable_individual\":\"\",\"remarks\":\"\",\"date_created\":\"2025-05-26 20:51:48\",\"is_disabled\":1,\"date_modified\":\"2025-05-26 20:51:51\",\"asset_tag_active\":null}', '{\"id\":89,\"asset_tag\":\"AT213\",\"asset_description_1\":\"123123\",\"asset_description_2\":\"123123\",\"specifications\":\"\",\"brand\":\"\",\"model\":\"\",\"serial_number\":\"\",\"date_acquired\":\"2025-05-26 20:51:48\",\"invoice_no\":null,\"rr_no\":null,\"location\":\"\",\"accountable_individual\":\"\",\"remarks\":\"\",\"date_created\":\"2025-05-26 20:51:48\",\"is_disabled\":0,\"date_modified\":\"2025-05-26 20:52:33\",\"asset_tag_active\":\"AT213\"}', 'Equipment Details', 'Successful', '2025-05-26 20:52:33'),
+(1232, 1, 89, 'Delete', 'Equipment details have been removed (soft delete)', '{\"id\":89,\"asset_tag\":\"AT213\",\"asset_description_1\":\"123123\",\"asset_description_2\":\"123123\",\"specifications\":\"\",\"brand\":\"\",\"model\":\"\",\"serial_number\":\"\",\"date_acquired\":\"2025-05-26 20:51:48\",\"invoice_no\":null,\"rr_no\":null,\"location\":\"\",\"accountable_individual\":\"\",\"remarks\":\"\",\"date_created\":\"2025-05-26 20:51:48\",\"is_disabled\":0,\"date_modified\":\"2025-05-26 20:52:33\",\"asset_tag_active\":\"AT213\"}', '{\"id\":89,\"asset_tag\":\"AT213\",\"asset_description_1\":\"123123\",\"asset_description_2\":\"123123\",\"specifications\":\"\",\"brand\":\"\",\"model\":\"\",\"serial_number\":\"\",\"date_acquired\":\"2025-05-26 20:51:48\",\"invoice_no\":null,\"rr_no\":null,\"location\":\"\",\"accountable_individual\":\"\",\"remarks\":\"\",\"date_created\":\"2025-05-26 20:51:48\",\"is_disabled\":1,\"date_modified\":\"2025-05-26 20:52:33\",\"asset_tag_active\":\"AT213\"}', 'Equipment Details', 'Successful', '2025-05-26 21:09:03'),
+(1233, 1, 90, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"AT213\",\"asset_description_1\":\"\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"\",\"model\":\"\",\"serial_number\":\"\",\"location\":\"\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"date_created\":\"2025-05-26 21:09:11\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-26 21:09:11'),
+(1234, 1, 8, 'Create', 'New equipment status added', NULL, '{\"asset_tag\":\"00001245-TMD\",\"status\":\"For Disposal\",\"action\":\"\",\"remarks\":\"\",\"is_disabled\":0}', 'Equipment Status', 'Successful', '2025-05-26 22:46:05'),
+(1235, 1, 9, 'Create', 'New equipment status added', NULL, '{\"asset_tag\":\"AT213\",\"status\":\"For Disposal\",\"action\":\"123123\",\"remarks\":\"\",\"is_disabled\":0}', 'Equipment Status', 'Successful', '2025-05-26 22:46:17'),
+(1236, 1, 9, 'Delete', 'Equipment status has been deleted', '{\"equipment_status_id\":9,\"asset_tag\":\"AT213\",\"status\":\"For Disposal\",\"remarks\":\"\"}', NULL, 'Equipment Status', 'Successful', '2025-05-26 22:46:22'),
+(1237, 1, 9, 'Delete', 'Equipment details for asset tag AT213 have been removed (cascaded delete)', '{\"asset_tag\":\"AT213\",\"rows_affected\":1}', NULL, 'Equipment Details', 'Successful', '2025-05-26 22:46:22'),
+(1238, 1, 10, 'Create', 'New equipment status added', NULL, '{\"asset_tag\":\"AT213\",\"status\":\"\",\"action\":\"123123\",\"remarks\":\"\",\"is_disabled\":0}', 'Equipment Status', 'Successful', '2025-05-26 22:46:25'),
+(1239, 1, 10, 'Modified', 'Equipment status modified', '{\"asset_tag\":\"AT213\",\"status\":\"\",\"action\":\"123123\",\"remarks\":\"\",\"date_created\":\"2025-05-26 22:46:25\",\"is_disabled\":0}', '{\"asset_tag\":\"AT213\",\"status\":\"\",\"action\":\"123123\",\"remarks\":\"\",\"is_disabled\":0}', 'Equipment Status', 'Successful', '2025-05-26 22:46:40'),
+(1240, 1, 10, 'Delete', 'Equipment status has been deleted', '{\"equipment_status_id\":10,\"asset_tag\":\"AT213\",\"status\":\"\",\"remarks\":\"\"}', NULL, 'Equipment Status', 'Successful', '2025-05-26 22:46:56'),
+(1241, 1, 45, 'Create', 'New equipment location added', NULL, '{\"asset_tag\":\"00016387-TMD\",\"building_loc\":\"\",\"floor_no\":\"\",\"specific_area\":\"\",\"person_responsible\":\"\",\"department_id\":null,\"device_state\":\"Inventory\",\"remarks\":\"\"}', 'Equipment Location', 'Successful', '2025-05-26 22:47:46'),
+(1242, 1, 48, 'Create', 'New equipment location added', NULL, '{\"asset_tag\":\"00016384-TMD\",\"building_loc\":\"\",\"floor_no\":\"\",\"specific_area\":\"\",\"person_responsible\":\"\",\"department_id\":null,\"device_state\":\"Inventory\",\"remarks\":\"\"}', 'Equipment Location', 'Successful', '2025-05-26 22:47:57'),
+(1243, 1, 51, 'Create', 'New equipment location added', NULL, '{\"asset_tag\":\"00016390-TMD\",\"building_loc\":\"\",\"floor_no\":\"\",\"specific_area\":\"\",\"person_responsible\":\"\",\"department_id\":null,\"device_state\":\"Inventory\",\"remarks\":\"\"}', 'Equipment Location', 'Successful', '2025-05-26 23:07:32'),
+(1244, 1, 91, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"123123123\",\"asset_description_1\":\"\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"\",\"model\":\"\",\"serial_number\":\"\",\"location\":\"\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"date_created\":\"2025-05-26 23:16:46\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-26 23:16:46'),
+(1245, 1, 52, 'Create', 'Equipment location created from details', NULL, '{\"asset_tag\":\"123123123\",\"building_loc\":\"\",\"floor_no\":\"\",\"specific_area\":\"\",\"person_responsible\":\"\",\"department_id\":null,\"device_state\":\"inventory\",\"remarks\":\"\"}', 'Equipment Location', 'Successful', '2025-05-26 23:16:47'),
+(1246, 1, 11, 'Create', 'New equipment status added', NULL, '{\"asset_tag\":\"123123123\",\"status\":\"\",\"action\":\"\",\"remarks\":\"\",\"is_disabled\":0}', 'Equipment Status', 'Successful', '2025-05-26 23:16:54'),
+(1247, 1, 11, 'Delete', 'Equipment status has been deleted', '{\"equipment_status_id\":11,\"asset_tag\":\"123123123\",\"status\":\"\",\"remarks\":\"\"}', NULL, 'Equipment Status', 'Successful', '2025-05-26 23:16:58'),
+(1248, 1, 12, 'Create', 'New equipment status added', NULL, '{\"asset_tag\":\"123123123\",\"status\":\"\",\"action\":\"\",\"remarks\":\"\",\"is_disabled\":0}', 'Equipment Status', 'Successful', '2025-05-26 23:17:06'),
+(1249, 1, 12, 'Delete', 'Equipment status has been deleted', '{\"equipment_status_id\":12,\"asset_tag\":\"123123123\",\"status\":\"\",\"remarks\":\"\"}', NULL, 'Equipment Status', 'Successful', '2025-05-26 23:17:10'),
+(1250, 1, 52, 'Delete', 'Equipment location deleted', '{\"asset_tag\":\"123123123\",\"building_loc\":\"\",\"floor_no\":\"\",\"specific_area\":\"\",\"person_responsible\":\"\",\"department_id\":null,\"device_state\":\"inventory\",\"remarks\":\"\"}', NULL, 'Equipment Location', 'Successful', '2025-05-26 23:17:24'),
+(1251, 1, 56, 'Create', 'New equipment location added', NULL, '{\"asset_tag\":\"123123123\",\"building_loc\":\"\",\"floor_no\":\"\",\"specific_area\":\"\",\"person_responsible\":\"\",\"department_id\":null,\"device_state\":\"Inventory\",\"remarks\":\"\"}', 'Equipment Location', 'Successful', '2025-05-26 23:22:25'),
+(1252, 1, 56, 'Delete', 'Equipment location deleted', '{\"asset_tag\":\"123123123\",\"building_loc\":\"\",\"floor_no\":\"\",\"specific_area\":\"\",\"person_responsible\":\"\",\"department_id\":null,\"device_state\":\"Inventory\",\"remarks\":\"\"}', NULL, 'Equipment Location', 'Successful', '2025-05-26 23:22:27'),
+(1253, 1, 13, 'Create', 'New equipment status added', NULL, '{\"asset_tag\":\"00016397-TMD\",\"status\":\"\",\"action\":\"\",\"remarks\":\"\",\"is_disabled\":0}', 'Equipment Status', 'Successful', '2025-05-26 23:23:01'),
+(1254, 1, 14, 'Create', 'New equipment status added', NULL, '{\"asset_tag\":\"00016406-TMD\",\"status\":\"\",\"action\":\"\",\"remarks\":\"\",\"is_disabled\":0}', 'Equipment Status', 'Successful', '2025-05-26 23:23:04'),
+(1255, 1, 15, 'Create', 'New equipment status added', NULL, '{\"asset_tag\":\"00001871-TMD\",\"status\":\"\",\"action\":\"\",\"remarks\":\"\",\"is_disabled\":0}', 'Equipment Status', 'Successful', '2025-05-26 23:23:07'),
+(1256, 1, 16, 'Create', 'New equipment status added', NULL, '{\"asset_tag\":\"00001257-TMD\",\"status\":\"\",\"action\":\"\",\"remarks\":\"\",\"is_disabled\":0}', 'Equipment Status', 'Successful', '2025-05-26 23:23:11'),
+(1257, 1, 17, 'Create', 'New equipment status added', NULL, '{\"asset_tag\":\"00001257-TMD\",\"status\":\"\",\"action\":\"\",\"remarks\":\"\",\"is_disabled\":0}', 'Equipment Status', 'Successful', '2025-05-26 23:23:14');
 
 -- --------------------------------------------------------
 
@@ -1285,7 +1325,8 @@ CREATE TABLE `equipment_details` (
   `remarks` text DEFAULT NULL,
   `date_created` datetime NOT NULL DEFAULT current_timestamp(),
   `is_disabled` tinyint(1) NOT NULL DEFAULT 0,
-  `date_modified` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `date_modified` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `asset_tag_active` varchar(50) GENERATED ALWAYS AS (case when `is_disabled` = 0 then `asset_tag` else NULL end) STORED
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -1364,9 +1405,14 @@ INSERT INTO `equipment_details` (`id`, `asset_tag`, `asset_description_1`, `asse
 (80, '00016419-TMD', 'UPS', '', '', 'APC', 'BVX650I-PH', '9B2224A06535', '2025-05-21 11:20:16', NULL, NULL, '', '', '', '2025-05-21 11:20:16', 0, '2025-05-21 11:20:16'),
 (81, '00016420-TMD', 'UPS', '', '', 'APC', 'BVX650I-PH', '9B2224A06536', '2025-05-21 11:20:38', NULL, NULL, '', '', '', '2025-05-21 11:20:38', 0, '2025-05-21 11:20:38'),
 (82, '00016657-TMD', 'Computer - Desktop ', 'CPU', '', 'Acer', 'Veriton M2640G', 'DTVPPSP052805035279600', '2025-05-21 11:38:19', NULL, NULL, '', '', '', '2025-05-21 11:38:19', 0, '2025-05-21 11:38:19'),
-(83, '00016557-TMD', 'Computer - Desktop ', 'Monitor', '', 'Acer', 'V226HQL', 'MMLY7SS0227480954D858B', '2025-05-21 11:59:23', NULL, NULL, '', '', '', '2025-05-21 11:59:23', 0, '2025-05-21 11:59:23'),
-(84, '00016658-TMD', 'Computer - Desktop ', 'CPU', '', 'Acer', 'Veriton M2640G', 'DTVPPSPO52805035899600', '2025-05-21 16:00:00', NULL, NULL, '', '', '', '2025-05-21 16:00:00', 0, '2025-05-21 16:00:00'),
-(86, '0987654', 'wsed', 'asfgh', 'sdfg', 'asdfg', 'sdfg', 'asdfg', '2025-05-21 16:34:17', NULL, 'RR098765432', 'asdfg', 'asdfgh', 'sdfghn', '2025-05-21 16:34:17', 0, '2025-05-21 16:34:17');
+(83, '0987654', 'Computer - Desktop ', 'Monitor', '', 'Acer', 'V226HQL', 'MMLY7SS0227480954D858B', '2025-05-21 11:59:23', NULL, NULL, '', '', '', '2025-05-21 11:59:23', 1, '2025-05-26 19:04:30'),
+(84, '0987654', 'Computer - Desktop ', 'CPU', '', 'Acer', 'Veriton M2640G', 'DTVPPSPO52805035899600', '2025-05-21 16:00:00', NULL, NULL, '', '', '', '2025-05-21 16:00:00', 1, '2025-05-26 19:04:05'),
+(86, '0987654', 'wsed', 'asfgh', 'sdfg', 'asdfg', 'sdfg', 'asdfg', '2025-05-21 16:34:17', NULL, 'RR098765432', 'asdfg', 'asdfgh', 'sdfghn', '2025-05-21 16:34:17', 1, '2025-05-26 19:03:50'),
+(87, '0987654', '1312', '3123123', '123123', '123123', '12312', '3123', '2025-05-26 19:04:43', NULL, NULL, '123123', '123123', '', '2025-05-26 19:04:43', 1, '2025-05-26 19:04:59'),
+(88, '0987654', '', '', '', '', '', '', '2025-05-26 19:42:31', NULL, NULL, '123123', '123123', '', '2025-05-26 19:42:31', 1, '2025-05-26 19:42:34'),
+(89, 'AT213', '123123', '123123', '', '', '', '', '2025-05-26 20:51:48', NULL, NULL, '', '', '', '2025-05-26 20:51:48', 1, '2025-05-26 21:09:03'),
+(90, 'AT213', '', '', '', '', '', '', '2025-05-26 21:09:11', NULL, NULL, '', '', '', '2025-05-26 21:09:11', 1, '2025-05-26 22:46:22'),
+(91, '123123123', '', '', '', '', '', '', '2025-05-26 23:16:46', NULL, NULL, '', '', '', '2025-05-26 23:16:46', 0, '2025-05-26 23:16:46');
 
 -- --------------------------------------------------------
 
@@ -1385,7 +1431,8 @@ CREATE TABLE `equipment_location` (
   `device_state` varchar(250) DEFAULT NULL,
   `remarks` text DEFAULT NULL,
   `date_created` datetime DEFAULT current_timestamp(),
-  `is_disabled` tinyint(1) NOT NULL DEFAULT 0
+  `is_disabled` tinyint(1) NOT NULL DEFAULT 0,
+  `asset_tag_active` varchar(50) GENERATED ALWAYS AS (case when `is_disabled` = 0 then `asset_tag` else NULL end) STORED
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -1410,7 +1457,14 @@ INSERT INTO `equipment_location` (`equipment_location_id`, `asset_tag`, `buildin
 (20, '00001871-TMD', 'Diego Silang', '2', 'Silang Lobby', 'TMDD Team', NULL, NULL, 'for university employees', '2025-05-19 15:24:42', 0),
 (21, '00001872-TMD', 'Diego Silang', '2', 'Silang', 'TMDD Team', NULL, NULL, 'for university employees', '2025-05-19 15:25:33', 0),
 (22, '00001873-TMD', 'Diego Silang', '2', 'Silang Lobby', 'TMDD Team', NULL, NULL, 'for university employees', '2025-05-19 15:26:25', 0),
-(23, '00001874-TMD', 'Diego Silang', '2', 'Silang Lobby', 'TMDD Team', NULL, NULL, 'for university employees', '2025-05-19 15:27:01', 0);
+(23, '00001874-TMD', 'Diego Silang', '2', 'Silang Lobby', 'TMDD Team', NULL, NULL, 'for university employees', '2025-05-19 15:27:01', 0),
+(29, '0987654', '123123', '', '', '123123', NULL, 'Inventory', '', '2025-05-26 19:04:43', 0),
+(30, 'AT213', '', '', '', '', NULL, 'inventory', '', '2025-05-26 20:51:48', 1),
+(45, '00016387-TMD', '', '', '', '', NULL, 'Inventory', '', '2025-05-26 22:47:46', 0),
+(48, '00016384-TMD', '', '', '', '', NULL, 'Inventory', '', '2025-05-26 22:47:57', 0),
+(51, '00016390-TMD', '', '', '', '', NULL, 'Inventory', '', '2025-05-26 23:07:32', 0),
+(52, '123123123', '', '', '', '', NULL, 'inventory', '', '2025-05-26 23:16:47', 1),
+(56, '123123123', '', '', '', '', NULL, 'Inventory', '', '2025-05-26 23:22:25', 1);
 
 -- --------------------------------------------------------
 
@@ -1439,7 +1493,17 @@ INSERT INTO `equipment_status` (`equipment_status_id`, `asset_tag`, `status`, `a
 (4, '5556233', 'Working', 'Collection', 'asdasd', '2025-05-21 10:45:09', 0),
 (5, '1234567', 'Maintenance', 'qewrytu', 'ewryu', '2025-05-21 15:24:50', 0),
 (6, '2134567890', 'For Disposal', '123', 'dfghj', '2025-05-21 15:35:37', 0),
-(7, 'AT213', 'Maintenance', '', '', '2025-05-22 10:41:09', 0);
+(7, 'AT213', 'Maintenance', '', '', '2025-05-22 10:41:09', 1),
+(8, '00001245-TMD', 'For Disposal', '', '', '2025-05-26 22:46:05', 0),
+(9, 'AT213', 'For Disposal', '123123', '', '2025-05-26 22:46:17', 1),
+(10, 'AT213', '', '123123', '', '2025-05-26 22:46:25', 1),
+(11, '123123123', '', '', '', '2025-05-26 23:16:54', 1),
+(12, '123123123', '', '', '', '2025-05-26 23:17:06', 1),
+(13, '00016397-TMD', '', '', '', '2025-05-26 23:23:01', 0),
+(14, '00016406-TMD', '', '', '', '2025-05-26 23:23:04', 0),
+(15, '00001871-TMD', '', '', '', '2025-05-26 23:23:07', 0),
+(16, '00001257-TMD', '', '', '', '2025-05-26 23:23:11', 0),
+(17, '00001257-TMD', '', '', '', '2025-05-26 23:23:14', 0);
 
 -- --------------------------------------------------------
 
@@ -2530,7 +2594,7 @@ ALTER TABLE `departments`
 --
 ALTER TABLE `equipment_details`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `asset_tag` (`asset_tag`),
+  ADD UNIQUE KEY `uq_asset_tag_active` (`asset_tag_active`),
   ADD KEY `invoice_no` (`invoice_no`);
 
 --
@@ -2538,7 +2602,7 @@ ALTER TABLE `equipment_details`
 --
 ALTER TABLE `equipment_location`
   ADD PRIMARY KEY (`equipment_location_id`),
-  ADD UNIQUE KEY `asset_tag` (`asset_tag`),
+  ADD UNIQUE KEY `uq_equiploc_tag_active` (`asset_tag_active`),
   ADD KEY `department_id` (`department_id`);
 
 --
@@ -2623,7 +2687,7 @@ ALTER TABLE `user_department_roles`
 -- AUTO_INCREMENT for table `audit_log`
 --
 ALTER TABLE `audit_log`
-  MODIFY `TrackID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1218;
+  MODIFY `TrackID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1258;
 
 --
 -- AUTO_INCREMENT for table `charge_invoice`
@@ -2641,19 +2705,19 @@ ALTER TABLE `departments`
 -- AUTO_INCREMENT for table `equipment_details`
 --
 ALTER TABLE `equipment_details`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=87;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=92;
 
 --
 -- AUTO_INCREMENT for table `equipment_location`
 --
 ALTER TABLE `equipment_location`
-  MODIFY `equipment_location_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
+  MODIFY `equipment_location_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=57;
 
 --
 -- AUTO_INCREMENT for table `equipment_status`
 --
 ALTER TABLE `equipment_status`
-  MODIFY `equipment_status_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `equipment_status_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `modules`
