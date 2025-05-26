@@ -435,13 +435,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>Purchase Order Management</title>
-    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Custom Styles -->
     <link href="../../../styles/css/equipment-transactions.css" rel="stylesheet">
-    <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 
@@ -450,7 +446,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
         <div class="main-content">
             <div class="container-fluid">
                 <?php include '../../general/sidebar.php'; ?>
-                <!-- Display Error Messages -->
                 <?php if (!empty($errors)): ?>
                     <div class="alert alert-danger alert-dismissible fade show" role="alert">
                         <?php foreach ($errors as $err): ?>
@@ -476,7 +471,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                             <?php else: ?>
                                 <div></div>
                             <?php endif; ?>
-                            <!-- Optionally add date filters -->
                             <select class="form-select form-select-sm" id="dateFilter" style="width: auto;">
                                 <option value="">Filter by Date</option>
                                 <option value="desc">Newest to Oldest</option>
@@ -569,7 +563,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                                     <?php endif; ?>
                                 </tbody>
                             </table>
-                            <!-- Pagination Controls (optional) -->
                             <div class="container-fluid">
                                 <div class="row align-items-center g-3">
                                     <div class="col-12 col-sm-auto">
@@ -608,11 +601,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                     </div>
                 </div>
             </div>
-        </div> <!-- End main-content -->
-    </div> <!-- End wrapper -->
-
-    <?php if ($canRemove): ?>
-        <!-- Remove Purchase Order Modal -->
+        </div> </div> <?php if ($canRemove): ?>
         <div class="modal fade" id="removePOModal" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
@@ -637,7 +626,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
 
 
     <?php if ($canCreate): ?>
-        <!-- Add Purchase Order Modal -->
         <div class="modal fade" id="addPOModal" tabindex="-1">
             <div class="modal-dialog">
                 <div class="modal-content">
@@ -683,7 +671,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
     <?php endif; ?>
 
     <?php if ($canModify): ?>
-        <!-- Edit Purchase Order Modal -->
         <div class="modal fade" id="editPOModal" tabindex="-1">
             <div class="modal-dialog">
                 <div class="modal-content">
@@ -721,8 +708,33 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
         </div>
     <?php endif; ?>
 
-    <!-- JavaScript for functionality -->
     <script>
+        // Placeholder for showToast function if not defined elsewhere
+        function showToast(message, type) {
+            console.log(`Toast (${type}): ${message}`);
+            // In a real application, you'd show a Bootstrap toast here
+            // Example:
+            // const toastEl = document.getElementById('liveToast');
+            // const toastBody = toastEl.querySelector('.toast-body');
+            // toastBody.textContent = message;
+            // toastEl.classList.remove('text-bg-success', 'text-bg-danger');
+            // toastEl.classList.add(type === 'success' ? 'text-bg-success' : 'text-bg-danger');
+            // const toast = new bootstrap.Toast(toastEl);
+            // toast.show();
+        }
+
+        // Function to ensure modal backdrop is removed
+        function removeModalBackdrop() {
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            backdrops.forEach(backdrop => {
+                backdrop.remove();
+            });
+            // Also ensure body scrolling is re-enabled if Bootstrap failed to do so
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+        }
+
         // Use event delegation so new elements get bound events
         $(document).on('input', '#searchPO', function() {
             var searchText = $(this).val().toLowerCase();
@@ -832,6 +844,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                         var addModal = bootstrap.Modal.getInstance(addModalEl);
                         if (addModal) {
                             addModal.hide();
+                            // Listen for the hidden event to ensure backdrop is gone
+                            $(addModalEl).on('hidden.bs.modal', function () {
+                                removeModalBackdrop(); // Call this to clean up
+                                $(this).off('hidden.bs.modal'); // Remove listener to prevent multiple calls
+                            });
+                        } else {
+                            // If modal instance wasn't found, force backdrop removal anyway
+                            removeModalBackdrop();
                         }
                     } else {
                         showToast(response.message, 'error');
@@ -871,6 +891,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                         var editModal = bootstrap.Modal.getInstance(editModalEl);
                         if (editModal) {
                             editModal.hide();
+                            // Listen for the hidden event to ensure backdrop is gone
+                            $(editModalEl).on('hidden.bs.modal', function () {
+                                removeModalBackdrop(); // Call this to clean up
+                                $(this).off('hidden.bs.modal'); // Remove listener to prevent multiple calls
+                            });
+                        } else {
+                            // If modal instance wasn't found, force backdrop removal anyway
+                            removeModalBackdrop();
                         }
                     } else {
                         showToast(response.message, 'error');
@@ -1011,7 +1039,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
         });
     </script>
 
-    <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js" defer></script>
+    <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js"></script>
     <script>
         // Initialize pagination when document is ready
         document.addEventListener('DOMContentLoaded', function() {
