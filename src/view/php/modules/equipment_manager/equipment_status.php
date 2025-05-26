@@ -450,6 +450,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 th.sortable.desc::after {
     content: " ▼";
 }
+
+/* Styling for read-only fields */
+input[readonly] {
+    background-color: #e9ecef;
+    opacity: 0.65;
+    cursor: not-allowed;
+}
  </style>
 </head>
 
@@ -650,7 +657,7 @@ th.sortable.desc::after {
                             <div class="mb-3">
                                 <label for="asset_tag" class="form-label">Asset Tag <span class="text-danger">*</span></label>
                                 <select class="form-select asset-tag-select2" name="asset_tag" id="add_status_asset_tag" required style="width: 100%;">
-                                    <option value="">Select or type Asset Tag</option>
+                                    <option value="">Select Asset Tag</option>
                                     <?php
                                     // Fetch unique asset tags from equipment_details and equipment_location
                                     $assetTags = [];
@@ -713,7 +720,7 @@ th.sortable.desc::after {
                             <input type="hidden" name="status_id" id="edit_status_id">
                             <div class="mb-3">
                                 <label for="edit_asset_tag" class="form-label"><i class="bi bi-tag"></i> Asset Tag <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="edit_asset_tag" name="asset_tag">
+                                <input type="text" class="form-control" id="edit_asset_tag" name="asset_tag" readonly>
                             </div>
                             <div class="mb-3">
                                 <label for="edit_status" class="form-label"><i class="bi bi-info-circle"></i> Status</label>
@@ -1071,8 +1078,8 @@ th.sortable.desc::after {
         $(document).ready(function() {
             // Initialize Select2 for Asset Tag with tags (creatable)
             $('#add_status_asset_tag').select2({
-                tags: true,
-                placeholder: 'Select or type Asset Tag',
+                tags: false,
+                placeholder: 'Select Asset Tag',
                 allowClear: true,
                 width: '100%',
                 dropdownParent: $('#addStatusModal')
