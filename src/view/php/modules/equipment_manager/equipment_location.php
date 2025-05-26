@@ -490,7 +490,6 @@ function safeHtml($value)
                                 <th class="sortable" data-sort="string">Asset Tag</th>
                                 <th class="sortable" data-sort="string">Building</th>
                                 <th class="sortable" data-sort="string">Floor</th>
-                                <th class="sortable" data-sort="string">Specific Area</th>
                                 <th class="sortable" data-sort="string">Person Responsible</th>
                                 <th class="sortable" data-sort="string">Department</th>
                                 <th class="sortable" data-sort="string">Device State</th>
