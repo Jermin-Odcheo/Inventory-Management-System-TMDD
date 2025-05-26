@@ -599,10 +599,11 @@ function safeHtml($value)
                         <div class="mb-3">
                             <label class="form-label">Device State</label>
                             <select class="form-select" id="devState" name="device_state" required>
-                                <option value="inventory">Inventory</option>
-                                <option value="transffered">Transffered</option>
-                                <option value="borrowed">Borrowed</option>
-                                <option value="returned">Returned</option>
+                            <option value="Inventory">Inventory</option>
+                                <option value="Transffered">Transffered</option>
+                                <option value="Borrowed">Borrowed</option>
+                                <option value="Returned">Returned</option>
+                                <option value="Stationed">Stationed</option>
                             </select>
                         </div>
                         
@@ -688,10 +689,11 @@ function safeHtml($value)
                         <div class="mb-3">
                             <label class="form-label">Device State</label>
                             <select class="form-select" id="devState" name="device_state" required>
-                            <option value="inventory">Inventory</option>
-                                <option value="transffered">Transffered</option>
-                                <option value="borrowed">Borrowed</option>
-                                <option value="returned">Returned</option>
+                            <option value="Inventory">Inventory</option>
+                                <option value="Transffered">Transffered</option>
+                                <option value="Borrowed">Borrowed</option>
+                                <option value="Returned">Returned</option>
+                                <option value="Stationed">Stationed</option>
                             </select>
                         </div>
 
@@ -731,8 +733,6 @@ function safeHtml($value)
     </div>
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="<?php echo BASE_URL; ?>src/control/js/toast.js"></script>
-    <script src="<?php echo BASE_URL; ?>src/control/js/asset_tag_autofill.js"></script>
     <script>
         // Function to directly update equipment details after successful form submission
         function directUpdateEquipmentDetails(assetTag, buildingLoc, specificArea, personResponsible) {
