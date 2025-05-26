@@ -383,6 +383,17 @@ $errors = $_SESSION['errors'] ?? [];
 $success = $_SESSION['success'] ?? '';
 unset($_SESSION['errors'], $_SESSION['success']);
 
+// Check if equipment details have been updated from equipment_location.php
+$forceRefresh = false;
+if (isset($_SESSION['equipment_details_updated']) && $_SESSION['equipment_details_updated'] === true) {
+    $forceRefresh = true;
+    $updatedAssetTag = $_SESSION['updated_asset_tag'] ?? '';
+    // Clear the session flags
+    unset($_SESSION['equipment_details_updated'], $_SESSION['updated_asset_tag']);
+    // Add success message
+    $success = 'Equipment details updated successfully from location changes.';
+}
+
 try {
     $stmt = $pdo->query("SELECT id, asset_tag, asset_description_1, asset_description_2,
                          specifications, brand, model, serial_number, location, 
@@ -426,19 +437,70 @@ rel="stylesheet">
             content: " â–¼";
         }
         
-        /* Styling for autofilled fields - removed greyed effect */
-        input[data-autofill="true"] {
-            /* No special styling for autofilled fields */
+        
+        /* Pagination styling */
+        .pagination {
+            display: flex;
+            padding-left: 0;
+            list-style: none;
+            border-radius: 0.25rem;
         }
         
-        /* Remove the autofill indicator */
-        /* input[data-autofill="true"]::after {
-            content: "Autofilled";
-            position: absolute;
-            right: 10px;
-            font-size: 0.8em;
+        .page-item:first-child .page-link {
+            margin-left: 0;
+            border-top-left-radius: 0.25rem;
+            border-bottom-left-radius: 0.25rem;
+        }
+        
+        .page-item:last-child .page-link {
+            border-top-right-radius: 0.25rem;
+            border-bottom-right-radius: 0.25rem;
+        }
+        
+        .page-item.active .page-link {
+            z-index: 3;
+            color: #fff;
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+        }
+        
+        .page-item.disabled .page-link {
             color: #6c757d;
-        } */
+            pointer-events: none;
+            background-color: #fff;
+            border-color: #dee2e6;
+        }
+        
+        .page-link {
+            position: relative;
+            display: block;
+            padding: 0.5rem 0.75rem;
+            margin-left: -1px;
+            line-height: 1.25;
+            color: #0d6efd;
+            background-color: #fff;
+            border: 1px solid #dee2e6;
+            text-decoration: none;
+        }
+        
+        .page-link:hover {
+            z-index: 2;
+            color: #0056b3;
+            text-decoration: none;
+            background-color: #e9ecef;
+            border-color: #dee2e6;
+        }
+        
+        .page-link:focus {
+            z-index: 3;
+            outline: 0;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+        
+        /* Hide pagination when no results or only one page */
+        .pagination:empty {
+            display: none;
+        }
     </style>
 </head>
 
@@ -462,7 +524,7 @@ align-items-center">
             <div class="card-body">
                 <div class="container-fluid px-0">
                     <!-- Toolbar Row -->
-                    <div class="filter-container">
+                    <div class="filter-container" id="filterContainer">
                         <div class="col-auto">
                             <?php if ($canCreate): ?>
                                 <button class="btn btn-dark" data-bs-toggle="modal" 
@@ -474,6 +536,7 @@ data-bs-target="#addEquipmentModal">
                         <div class="col-md-3">
                             <select class="form-select" id="filterEquipment">
                                 <option value="">Filter Equipment Type</option>
+                                <option value="all">All Equipment Types</option>
                                 <?php
                                 $equipmentTypes = array_unique(array_column($equipmentDetails, 
 'asset_description_1'));
@@ -1237,7 +1300,9 @@ Asset Tag is selected</small>
                             <textarea class="form-control" name="remarks" id="edit_remarks" 
 rows="3"></textarea>
                         </div>
-                        <div class="mb-3">
+                        <div class="mb-3 text-end p-4">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" 
+style="margin-right: 4px;">Cancel</button>
                             <button type="submit" class="btn btn-primary">Save Changes</button>
                         </div>
                     </form>
@@ -1277,9 +1342,268 @@ defer></script>
         .filtered-out {
             display: none !important;
         }
+        
+        /* Style for highlighting updated rows */
+        .updated-row {
+            animation: highlight-row 3s ease-in-out;
+        }
+        
+        @keyframes highlight-row {
+            0% { background-color: rgba(255, 255, 0, 0.5); }
+            70% { background-color: rgba(255, 255, 0, 0.5); }
+            100% { background-color: transparent; }
+        }
     </style>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        // Force hide pagination buttons if no data or all fits on one page
+        function forcePaginationCheck() {
+            const totalRows = parseInt(document.getElementById('totalRows')?.textContent || '0');
+            const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect')?.value || '10');
+            const prevBtn = document.getElementById('prevPage');
+            const nextBtn = document.getElementById('nextPage');
+            const paginationEl = document.getElementById('pagination');
+
+            if (totalRows <= rowsPerPage) {
+                if (prevBtn) prevBtn.style.cssText = 'display: none !important';
+                if (nextBtn) nextBtn.style.cssText = 'display: none !important';
+                if (paginationEl) paginationEl.style.cssText = 'display: none !important';
+            }
+
+            // Also check for visible rows (for when filtering is applied)
+            const visibleRows = document.querySelectorAll('#equipmentTable tr:not(.filtered-out)').length;
+            if (visibleRows <= rowsPerPage) {
+                if (prevBtn) prevBtn.style.cssText = 'display: none !important';
+                if (nextBtn) nextBtn.style.cssText = 'display: none !important';
+                if (paginationEl) paginationEl.style.cssText = 'display: none !important';
+            }
+        }
+        
+        // Ensure renderPaginationControls is available
+        if (typeof renderPaginationControls !== 'function') {
+            function renderPaginationControls(totalPages) {
+                const paginationContainer = document.getElementById('pagination');
+                if (!paginationContainer) return;
+            
+                // Clear existing pagination items
+                paginationContainer.innerHTML = '';
+            
+                // Don't render pagination if there's only one page
+                if (totalPages <= 1) {
+                    paginationContainer.style.display = 'none';
+                    return;
+                } else {
+                    paginationContainer.style.display = '';
+                }
+            
+                const currentPage = window.paginationConfig?.currentPage || 1;
+                const maxPagesToShow = 5; // Maximum number of page numbers to show
+            
+                let startPage, endPage;
+                if (totalPages <= maxPagesToShow) {
+                    // Show all pages if there are fewer than maxPagesToShow
+                    startPage = 1;
+                    endPage = totalPages;
+                } else {
+                    // Calculate start and end pages to show
+                    if (currentPage <= Math.ceil(maxPagesToShow / 2)) {
+                        startPage = 1;
+                        endPage = maxPagesToShow;
+                    } else if (currentPage + Math.floor(maxPagesToShow / 2) >= totalPages) {
+                        startPage = totalPages - maxPagesToShow + 1;
+                        endPage = totalPages;
+                    } else {
+                        startPage = currentPage - Math.floor(maxPagesToShow / 2);
+                        endPage = currentPage + Math.floor(maxPagesToShow / 2);
+                    }
+                }
+            
+                // Add "First" page if not starting from page 1
+                if (startPage > 1) {
+                    addPaginationItem(paginationContainer, 1);
+                    if (startPage > 2) {
+                        // Add ellipsis if there's a gap
+                        const ellipsis = document.createElement('li');
+                        ellipsis.className = 'page-item disabled';
+                        ellipsis.innerHTML = '<span class="page-link">...</span>';
+                        paginationContainer.appendChild(ellipsis);
+                    }
+                }
+            
+                // Add page numbers
+                for (let i = startPage; i <= endPage; i++) {
+                    addPaginationItem(paginationContainer, i, i === currentPage);
+                }
+            
+                // Add "Last" page if not ending at the last page
+                if (endPage < totalPages) {
+                    if (endPage < totalPages - 1) {
+                        // Add ellipsis if there's a gap
+                        const ellipsis = document.createElement('li');
+                        ellipsis.className = 'page-item disabled';
+                        ellipsis.innerHTML = '<span class="page-link">...</span>';
+                        paginationContainer.appendChild(ellipsis);
+                    }
+                    addPaginationItem(paginationContainer, totalPages);
+                }
+            }
+            
+            function addPaginationItem(container, page, isActive = false) {
+                const li = document.createElement('li');
+                li.className = `page-item${isActive ? ' active' : ''}`;
+                
+                const a = document.createElement('a');
+                a.className = 'page-link';
+                a.href = '#';
+                a.textContent = page;
+                
+                a.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (window.paginationConfig) {
+                        window.paginationConfig.currentPage = page;
+                    } else if (window.paginationConfig === undefined) {
+                        window.paginationConfig = { currentPage: page };
+                    }
+                    updatePagination();
+                });
+                
+                li.appendChild(a);
+                container.appendChild(li);
+            }
+        }
+
+        // Custom filterTable function for equipment details
+        window.filterTable = function() {
+            console.log('Running filterTable function');
+            // Get filter values
+            const searchText = $('#searchEquipment').val() || '';
+            const filterEquipment = $('#filterEquipment').val() || '';
+            const dateFilterType = $('#dateFilter').val() || '';
+            const selectedMonth = $('#monthSelect').val() || '';
+            const selectedYear = $('#yearSelect').val() || '';
+            const dateFrom = $('#dateFrom').val() || '';
+            const dateTo = $('#dateTo').val() || '';
+
+            // Debug output
+            console.log('FILTER VALUES:', {
+                searchText: searchText,
+                filterEquipment: filterEquipment,
+                dateFilterType: dateFilterType,
+                selectedMonth: selectedMonth,
+                selectedYear: selectedYear,
+                dateFrom: dateFrom,
+                dateTo: dateTo
+            });
+
+            // Make sure we have allRows populated
+            if (!window.allRows || window.allRows.length === 0) {
+                window.allRows = Array.from(document.querySelectorAll('#equipmentTable tr:not(#noResultsMessage)'));
+            }
+            
+            // Reset filteredRows array
+            window.filteredRows = [];
+
+            // Filter each row
+            window.allRows.forEach(row => {
+                // Get text content for filtering
+                const rowText = row.textContent || '';
+                
+                // Get equipment type column (3rd column, index 2)
+                const equipmentTypeCell = row.cells && row.cells.length > 2 ? row.cells[2] : null;
+                const equipmentTypeText = equipmentTypeCell ? equipmentTypeCell.textContent.trim() || '' : '';
+                
+                // Get date column (10th column, index 9 - created date)
+                const dateCell = row.cells && row.cells.length > 9 ? row.cells[9] : null;
+                const dateText = dateCell ? dateCell.textContent.trim() || '' : '';
+                const date = dateText ? new Date(dateText) : null;
+                
+                // Apply search filter (case insensitive)
+                const searchMatch = !searchText || rowText.toLowerCase().includes(searchText.toLowerCase());
+                
+                // Apply equipment type filter (case insensitive, exact match)
+                let equipmentMatch = true;
+                if (filterEquipment && filterEquipment !== 'all' && filterEquipment.toLowerCase() !== 'filter equipment type') {
+                    equipmentMatch = equipmentTypeText.toLowerCase() === filterEquipment.trim().toLowerCase();
+                }
+                
+                // Apply date filter
+                let dateMatch = true;
+                if (dateFilterType && date) {
+                    if (dateFilterType === 'month' && selectedMonth && selectedYear) {
+                        dateMatch = (date.getMonth() + 1 === parseInt(selectedMonth)) && 
+                                   (date.getFullYear() === parseInt(selectedYear));
+                    } else if (dateFilterType === 'range' && dateFrom && dateTo) {
+                        const from = new Date(dateFrom);
+                        const to = new Date(dateTo);
+                        to.setHours(23, 59, 59); // End of day
+                        dateMatch = date >= from && date <= to;
+                    }
+                }
+
+                // Show or hide row based on filter match
+                const shouldShow = searchMatch && equipmentMatch && dateMatch;
+                if (shouldShow) {
+                    window.filteredRows.push(row);
+                }
+                
+                // Always add the filtered-out class - updatePagination will remove it for visible rows
+                row.classList.add('filtered-out');
+            });
+
+            // Sort if needed
+            if (dateFilterType === 'asc' || dateFilterType === 'desc') {
+                window.filteredRows.sort((a, b) => {
+                    const dateA = a.cells && a.cells[9] ? new Date(a.cells[9].textContent) : new Date(0);
+                    const dateB = b.cells && b.cells[9] ? new Date(b.cells[9].textContent) : new Date(0);
+                    return dateFilterType === 'asc' ? dateA - dateB : dateB - dateA;
+                });
+
+                // Remove all rows and add back in sorted order
+                const tbody = document.getElementById('equipmentTable');
+                if (tbody) {
+                    window.filteredRows.forEach(row => tbody.appendChild(row));
+                }
+            }
+
+            // Reset to page 1 and update pagination
+            if (typeof paginationConfig !== 'undefined') {
+                paginationConfig.currentPage = 1;
+            }
+            
+            // Update pagination to show/hide rows based on current page
+            if (typeof updatePagination === 'function') {
+                updatePagination();
+            }
+            
+            // Show a message if no results found
+            const noResultsMessage = document.getElementById('noResultsMessage');
+            if (window.filteredRows.length === 0) {
+                if (!noResultsMessage) {
+                    // Create and insert a "no results" message if it doesn't exist
+                    const tbody = document.getElementById('equipmentTable');
+                    if (tbody) {
+                        const noResultsRow = document.createElement('tr');
+                        noResultsRow.id = 'noResultsMessage';
+                        noResultsRow.innerHTML = `
+                            <td colspan="16" class="text-center py-4">
+                                <div class="alert alert-warning mb-0">
+                                    <i class="bi bi-exclamation-circle me-2"></i> No results found for the current filter criteria.
+                                </div>
+                            </td>
+                        `;
+                        tbody.appendChild(noResultsRow);
+                    }
+                } else {
+                    noResultsMessage.style.display = 'table-row';
+                }
+            } else if (noResultsMessage) {
+                noResultsMessage.style.display = 'none';
+            }
+            
+            console.log('Filtered rows:', window.filteredRows.length);
+        };
+
+        // Set up event listeners for filtering
+        $(document).ready(function() {
             // Initialize pagination with the correct table ID
             initPagination({
                 tableId: 'equipmentTable',
@@ -1287,83 +1611,202 @@ defer></script>
             });
 
             // Initialize allRows for pagination.js
-            window.allRows = Array.from(document.querySelectorAll('#equipmentTable tr'));
+            window.allRows = Array.from(document.querySelectorAll('#equipmentTable tr:not(#noResultsMessage)'));
+            window.filteredRows = [...window.allRows];
+            
+            // Make sure pagination is visible
+            const totalRows = window.allRows.length;
+            const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || '10');
+            const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
+            
+            if (totalPages > 1) {
+                // Force render pagination controls
+                renderPaginationControls(totalPages);
+                $('#pagination').show();
+            }
 
-            // Call updatePagination after a short delay to ensure pagination.js is loaded
+            // First set up the standard event handlers
+            $('#filterEquipment').on('change', function() {
+                console.log('Equipment filter changed to:', $(this).val());
+                
+                // Reset date filters when equipment filter changes
+                if ($(this).val() && $(this).val() !== 'all') {
+                    $('#dateFilter').val('');
+                    $('#monthSelect').val('');
+                    $('#yearSelect').val('');
+                    $('#dateFrom').val('');
+                    $('#dateTo').val('');
+                    $('#dateInputsContainer').hide();
+                }
+                
+                filterTable();
+            });
+            
+            // Then initialize Select2 with the proper configuration
+            if ($.fn.select2) {
+                try {
+                    // First destroy any existing instance
+                    if ($('#filterEquipment').data('select2')) {
+                        $('#filterEquipment').select2('destroy');
+                    }
+                    
+                    // Initialize with proper settings
+                    $('#filterEquipment').select2({
+                        placeholder: 'Filter Equipment Type',
+                        allowClear: true,
+                        width: '100%',
+                        dropdownAutoWidth: true,
+                        minimumResultsForSearch: 0
+                    });
+                    
+                    // Set default value and ensure it's reflected in the UI
+                    $('#filterEquipment').val('all').trigger('change');
+                } catch (e) {
+                    console.error('Error initializing Select2:', e);
+                }
+            }
+            
+            // Add reset button if it doesn't exist
+            if ($('#resetFilters').length === 0) {
+                $('.filter-container').append('<button id="resetFilters" class="btn btn-outline-secondary ms-2">Reset Filters</button>');
+            }
+            
+            // Set up event listeners for filtering
+            $('#searchEquipment').on('input', filterTable);
+            
+            // Reset filters button handler
+            $(document).on('click', '#resetFilters', function() {
+                // Reset all filter inputs
+                $('#searchEquipment').val('');
+                
+                // Set select value first
+                $('#filterEquipment').val('all');
+                
+                // Then update Select2 UI if it exists
+                if ($('#filterEquipment').data('select2')) {
+                    $('#filterEquipment').trigger('change.select2');
+                }
+                
+                // Reset other filters
+                $('#dateFilter').val('');
+                $('#monthSelect').val('');
+                $('#yearSelect').val('');
+                $('#dateFrom').val('');
+                $('#dateTo').val('');
+                $('#dateInputsContainer').hide();
+                
+                // Apply the filter reset
+                filterTable();
+            });
+            
+            $('#dateFilter').on('change', function() {
+                const filterType = $(this).val();
+                console.log('Date filter changed to:', filterType);
+
+                // Hide all containers first
+                $('#dateInputsContainer').hide();
+                $('#monthPickerContainer').hide();
+                $('#dateRangePickers').hide();
+                
+                // Reset equipment filter if date filter is applied
+                if (filterType) {
+                    // Set select value first
+                    $('#filterEquipment').val('all');
+                    
+                    // Then update Select2 UI if it exists
+                    if ($('#filterEquipment').data('select2')) {
+                        $('#filterEquipment').trigger('change.select2');
+                    }
+                }
+
+                // Show appropriate containers based on selection
+                if (filterType === 'month') {
+                    $('#dateInputsContainer').show();
+                    $('#monthPickerContainer').show();
+                } else if (filterType === 'range') {
+                    $('#dateInputsContainer').show();
+                    $('#dateRangePickers').show();
+                } else if (filterType === 'desc' || filterType === 'asc') {
+                    // Apply sorting without showing date inputs
+                    filterTable();
+                }
+            });
+
+            // Handle month/year selection changes
+            $('#monthSelect, #yearSelect').on('change', function() {
+                const month = $('#monthSelect').val();
+                const year = $('#yearSelect').val();
+
+                if (month && year) {
+                    filterTable();
+                }
+            });
+
+            // Handle date range changes
+            $('#dateFrom, #dateTo').on('change', function() {
+                const dateFrom = $('#dateFrom').val();
+                const dateTo = $('#dateTo').val();
+
+                if (dateFrom && dateTo) {
+                    filterTable();
+                }
+            });
+            
+            // Check if we need to highlight updated rows
+            <?php if ($forceRefresh && !empty($updatedAssetTag)): ?>
             setTimeout(function() {
-                if (typeof updatePagination === 'function') {
-                    updatePagination();
-                }
-            }, 100);
-
-            // Force hide pagination buttons if no data or all fits on one page
-            function forcePaginationCheck() {
-                const totalRows = parseInt(document.getElementById('totalRows')?.textContent || '0');
-                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect')?.value || 
-'10');
-                const prevBtn = document.getElementById('prevPage');
-                const nextBtn = document.getElementById('nextPage');
-                const paginationEl = document.getElementById('pagination');
-
-                if (totalRows <= rowsPerPage) {
-                    if (prevBtn) prevBtn.style.cssText = 'display: none !important';
-                    if (nextBtn) nextBtn.style.cssText = 'display: none !important';
-                    if (paginationEl) paginationEl.style.cssText = 'display: none !important';
-                }
-
-                // Also check for visible rows (for when filtering is applied)
-                const visibleRows = document.querySelectorAll('#equipmentTable tr:not(.filtered-out)').length;
-                if (visibleRows <= rowsPerPage) {
-                    if (prevBtn) prevBtn.style.cssText = 'display: none !important';
-                    if (nextBtn) nextBtn.style.cssText = 'display: none !important';
-                    if (paginationEl) paginationEl.style.cssText = 'display: none !important';
-                }
-            }
-
-            // Run immediately and after a short delay
-            forcePaginationCheck();
-            setTimeout(forcePaginationCheck, 200);
-
-            // Run after any filter changes
-            const searchInput = document.getElementById('searchEquipment');
-            if (searchInput) {
-                searchInput.addEventListener('input', function() {
-                    setTimeout(forcePaginationCheck, 100);
-                });
-            }
-
-            // Run after rows per page changes
-            const rowsPerPageSelect = document.getElementById('rowsPerPageSelect');
-            if (rowsPerPageSelect) {
-                rowsPerPageSelect.addEventListener('change', function() {
-                    setTimeout(forcePaginationCheck, 100);
-                });
-            }
-
-            // Handle search functionality
-            $('#searchEquipment').on('input', function() {
-                const searchText = $(this).val().toLowerCase();
-                $('#equipmentTable tr').each(function() {
-                    const rowText = $(this).text().toLowerCase();
-                    const shouldShow = rowText.includes(searchText);
-
-                    // Use the filtered-out class that pagination.js understands
-                    if (shouldShow) {
-                        $(this).removeClass('filtered-out');
-                    } else {
-                        $(this).addClass('filtered-out');
+                const updatedAssetTag = "<?= htmlspecialchars($updatedAssetTag) ?>";
+                const rows = document.querySelectorAll('#equipmentTable tr');
+                
+                rows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length > 1) {
+                        const assetTagCell = cells[1]; // Asset tag is in the second column
+                        if (assetTagCell.textContent.trim() === updatedAssetTag) {
+                            // Scroll to the row
+                            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            // Add highlight class
+                            row.classList.add('updated-row');
+                            // Show toast notification
+                            if (typeof showToast === 'function') {
+                                showToast('Equipment details for asset tag ' + updatedAssetTag + ' have been updated from location changes', 'success');
+                            }
+                        }
                     }
                 });
-
-                // Update pagination after filtering
-                if (typeof updatePagination === 'function') {
-                    updatePagination();
+            }, 500); // Short delay to ensure DOM is ready
+            <?php endif; ?>
+            
+            // Run initial filter to make sure everything is displayed correctly
+            setTimeout(filterTable, 100);
+            
+            // Make sure pagination is initialized properly
+            setTimeout(function() {
+                // Check if pagination controls are rendered
+                if (document.getElementById('pagination') && document.getElementById('pagination').children.length === 0) {
+                    const totalRows = window.allRows.length;
+                    const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || '10');
+                    const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
+                    
+                    if (totalPages > 1) {
+                        renderPaginationControls(totalPages);
+                        $('#pagination').show();
+                    }
                 }
-
-                // Check if pagination controls should be shown
-                forcePaginationCheck();
-            });
+                
+                // Make sure the current page display is correct
+                if (document.getElementById('currentPage')) {
+                    document.getElementById('currentPage').textContent = window.paginationConfig?.currentPage || 1;
+                }
+                
+                // Make sure the rows per page display is correct
+                if (document.getElementById('rowsPerPage')) {
+                    const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || '10');
+                    document.getElementById('rowsPerPage').textContent = Math.min(rowsPerPage, window.filteredRows.length);
+                }
+            }, 500);
         });
+        
         document.querySelectorAll(".sortable").forEach(header => {
             header.style.cursor = "pointer";
             header.addEventListener("click", () => {
@@ -1373,13 +1816,12 @@ defer></script>
                 const ascending = !header.classList.contains("asc");
 
                 // Remove asc/desc classes from all headers
-                document.querySelectorAll(".sortable").forEach(h => h.classList.remove("asc", 
-"desc"));
+                document.querySelectorAll(".sortable").forEach(h => h.classList.remove("asc", "desc"));
                 header.classList.add(ascending ? "asc" : "desc");
 
-                const rows = Array.from(tbody.querySelectorAll("tr")).sort((a, b) => {
-                    const aText = a.children[columnIndex].textContent.trim();
-                    const bText = b.children[columnIndex].textContent.trim();
+                const rows = Array.from(tbody.querySelectorAll("tr:not(.filtered-out)")).sort((a, b) => {
+                    const aText = a.children[columnIndex] ? a.children[columnIndex].textContent.trim() : '';
+                    const bText = b.children[columnIndex] ? b.children[columnIndex].textContent.trim() : '';
 
                     const isDate = /\d{4}-\d{2}-\d{2}/.test(aText) || !isNaN(Date.parse(aText));
                     const isNumeric = !isNaN(parseFloat(aText)) && !isNaN(parseFloat(bText));
@@ -1401,8 +1843,16 @@ defer></script>
 
                 // Append sorted rows
                 rows.forEach(row => tbody.appendChild(row));
+                
+                // Update filteredRows for pagination
+                window.filteredRows = rows;
+                
+                // Reset to page 1 and update pagination
+                paginationConfig.currentPage = 1;
+                updatePagination();
             });
         });
+        
         $(function() {
             // 1) EDIT button handler
             $(document).on('click', '.edit-equipment', function() {
@@ -1482,10 +1932,26 @@ defer></script>
                 $.get(window.location.href, function(html) {
                     const newTbody = $(html).find('#equipmentTable').html();
                     $('#equipmentTable').html(newTbody);
+                    
+                    // Update allRows and filteredRows for pagination
+                    window.allRows = Array.from(document.querySelectorAll('#equipmentTable tr:not(#noResultsMessage)'));
+                    window.filteredRows = [...window.allRows];
+                    
+                    // Re-initialize pagination
                     initPagination({
                         tableId: 'equipmentTable',
                         currentPage: 1
                     });
+                    
+                    // Apply any active filters
+                    filterTable();
+                    
+                    // Update the total count
+                    const totalRows = window.allRows.length;
+                    $('#totalRows').text(totalRows);
+                    
+                    // Show toast notification
+                    showToast('Equipment list refreshed successfully', 'success');
                 });
             }
 
@@ -1493,7 +1959,7 @@ defer></script>
             $('#addEquipmentForm').on('submit', function(e) {
                 e.preventDefault();
                 const btn = $(this).find('button[type=submit]').prop('disabled', true)
-                    .html('<span class="spinner-border spinner-border-sm"></span> Addingâ€¦');
+                    .html('<span class="spinner-border spinner-border-sm"></span> Adding…');
                 $.ajax({
                     url: window.location.href,
                     method: 'POST',
@@ -1527,8 +1993,7 @@ defer></script>
                 
                 // Get the original values from data attributes
                 const $form = $(this);
-                const $editBtn = $('.edit-equipment[data-id="' + $('#edit_equipment_id').val() + 
-'"]');
+                const $editBtn = $('.edit-equipment[data-id="' + $('#edit_equipment_id').val() + '"]');
                 const originalValues = {
                     asset_tag: $editBtn.data('asset'),
                     asset_description_1: $editBtn.data('desc1'),
@@ -1578,7 +2043,7 @@ defer></script>
                 }
                 
                 const btn = $(this).find('button[type=submit]').prop('disabled', true)
-                    .html('<span class="spinner-border spinner-border-sm"></span> Savingâ€¦');
+                    .html('<span class="spinner-border spinner-border-sm"></span> Saving…');
                 $.ajax({
                     url: window.location.href,
                     method: 'POST',
@@ -1611,6 +2076,125 @@ defer></script>
                 });
             });
         });
+
+        // Ensure updatePagination is available
+        if (typeof updatePagination !== 'function') {
+            function updatePagination() {
+                console.log('Local updatePagination called');
+                const tbody = document.getElementById('equipmentTable');
+                if (!tbody) {
+                    console.error('Could not find tbody with ID equipmentTable');
+                    return;
+                }
+                
+                // Use window.filteredRows for pagination
+                const rowsToPaginate = window.filteredRows || [];
+                const totalRows = rowsToPaginate.length;
+                const rowsPerPageSelect = document.getElementById('rowsPerPageSelect');
+                const rowsPerPage = parseInt(rowsPerPageSelect?.value || '10');
+                const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
+                
+                // Make sure current page is in valid range
+                if (!window.paginationConfig) {
+                    window.paginationConfig = { currentPage: 1 };
+                } else if (window.paginationConfig.currentPage > totalPages) {
+                    window.paginationConfig.currentPage = totalPages;
+                } else if (window.paginationConfig.currentPage < 1) {
+                    window.paginationConfig.currentPage = 1;
+                }
+            
+                // Calculate start and end indices for current page
+                const startIndex = (window.paginationConfig.currentPage - 1) * rowsPerPage;
+                const endIndex = Math.min(startIndex + rowsPerPage, totalRows);
+            
+                // First, hide all rows by adding filtered-out class
+                const allTableRows = Array.from(tbody.querySelectorAll('tr:not(#noResultsMessage)'));
+                allTableRows.forEach(row => {
+                    row.classList.add('filtered-out');
+                });
+            
+                // Then, show only the rows for the current page
+                for (let i = startIndex; i < endIndex; i++) {
+                    if (rowsToPaginate[i]) {
+                        rowsToPaginate[i].classList.remove('filtered-out');
+                    }
+                }
+            
+                // Update pagination controls
+                const currentPageSpan = document.getElementById('currentPage');
+                if (currentPageSpan) {
+                    currentPageSpan.textContent = totalRows === 0 ? 0 : window.paginationConfig.currentPage;
+                }
+            
+                const rowsPerPageSpan = document.getElementById('rowsPerPage');
+                if (rowsPerPageSpan) {
+                    rowsPerPageSpan.textContent = totalRows === 0 ? 0 : Math.min(endIndex, totalRows);
+                }
+            
+                const totalRowsSpan = document.getElementById('totalRows');
+                if (totalRowsSpan) {
+                    totalRowsSpan.textContent = totalRows;
+                }
+            
+                // Enable/disable prev/next buttons based on current page
+                const prevButton = document.getElementById('prevPage');
+                const nextButton = document.getElementById('nextPage');
+            
+                if (prevButton) {
+                    prevButton.disabled = window.paginationConfig.currentPage <= 1;
+                    prevButton.classList.toggle('disabled', window.paginationConfig.currentPage <= 1);
+                    
+                    // Show/hide prev button based on current page
+                    prevButton.style.display = (window.paginationConfig.currentPage <= 1 || totalRows <= rowsPerPage) ? 'none' : '';
+                }
+            
+                if (nextButton) {
+                    nextButton.disabled = window.paginationConfig.currentPage >= totalPages;
+                    nextButton.classList.toggle('disabled', window.paginationConfig.currentPage >= totalPages);
+                    
+                    // Show/hide next button based on current page
+                    nextButton.style.display = (window.paginationConfig.currentPage >= totalPages || totalRows <= rowsPerPage) ? 'none' : '';
+                }
+            
+                // Update pagination numbers
+                renderPaginationControls(totalPages);
+                
+                // Show/hide pagination container based on total pages
+                const paginationContainer = document.getElementById('pagination');
+                if (paginationContainer) {
+                    paginationContainer.style.display = (totalPages <= 1 || totalRows <= rowsPerPage) ? 'none' : '';
+                }
+            }
+            
+            // Set up event listeners for pagination
+            document.getElementById('prevPage')?.addEventListener('click', function() {
+                if (window.paginationConfig && window.paginationConfig.currentPage > 1) {
+                    window.paginationConfig.currentPage--;
+                    updatePagination();
+                }
+            });
+            
+            document.getElementById('nextPage')?.addEventListener('click', function() {
+                const rowsToPaginate = window.filteredRows || [];
+                const totalRows = rowsToPaginate.length;
+                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect')?.value || '10');
+                const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
+                
+                if (window.paginationConfig && window.paginationConfig.currentPage < totalPages) {
+                    window.paginationConfig.currentPage++;
+                    updatePagination();
+                }
+            });
+            
+            document.getElementById('rowsPerPageSelect')?.addEventListener('change', function() {
+                if (window.paginationConfig) {
+                    window.paginationConfig.currentPage = 1;
+                }
+                updatePagination();
+            });
+        }
+
+        // Ensure renderPaginationControls is available
     </script>
 </body>
 
