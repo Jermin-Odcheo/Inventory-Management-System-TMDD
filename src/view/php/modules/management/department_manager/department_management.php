@@ -785,18 +785,19 @@ if (isset($_GET["q"])) {
                             
                             // Use a timeout to ensure modal backdrop is removed
                             setTimeout(function() {
-                                // Only update the table, not the whole page
-                                $('#departmentTable').load(location.href + ' #departmentTable > *', function() {
-                                    // Initialize department pagination after table is reloaded
+                                // Only update the table container, not the whole page
+                                $('#table').load(location.href + ' #table > *', function() {
+                                    // Initialize department pagination after container is reloaded
                                     if (typeof window.initDepartmentPagination === 'function') {
                                         window.initDepartmentPagination();
                                     }
                                     showToast(response.message, 'success', 5000);
                                 });
-                                
+
                                 // Clear modal inputs
                                 $('#addDepartmentForm')[0].reset();
                             }, 300);
+
                         } else {
                             showToast(response.message || 'An error occurred', 'error', 5000);
                         }
@@ -848,15 +849,19 @@ if (isset($_GET["q"])) {
                         if (response.status === 'success') {
                             // Use a timeout to ensure modal backdrop is removed
                             setTimeout(function() {
-                                // Only update the table, not the whole page
-                                $('#departmentTable').load(location.href + ' #departmentTable > *', function() {
-                                    // Initialize department pagination after table is reloaded
+                                // Only update the table container, not the whole page
+                                $('#table').load(location.href + ' #table > *', function() {
+                                    // Initialize department pagination after container is reloaded
                                     if (typeof window.initDepartmentPagination === 'function') {
                                         window.initDepartmentPagination();
                                     }
                                     showToast(response.message, 'success', 5000);
                                 });
+
+                                // Clear modal inputs
+                                $('#addDepartmentForm')[0].reset();
                             }, 300);
+
                         } else if (response.status === 'info') {
                             showToast(response.message, 'info', 5000);
                         } else {
