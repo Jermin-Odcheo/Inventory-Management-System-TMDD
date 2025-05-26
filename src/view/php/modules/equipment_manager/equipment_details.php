@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 date_default_timezone_set('Asia/Manila');
 ob_start();
@@ -47,7 +47,9 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) 
             $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
             $search = trim($_POST['query'] ?? '');
             $filter = trim($_POST['filter'] ?? '');
-            $sql = "SELECT id, asset_tag, asset_description_1, asset_description_2, specifications, brand, model, serial_number, location, accountable_individual, rr_no, remarks, date_created, date_modified FROM equipment_details WHERE is_disabled = 0 AND ("
+            $sql = "SELECT id, asset_tag, asset_description_1, asset_description_2, specifications, 
+brand, model, serial_number, location, accountable_individual, rr_no, remarks, date_created, 
+date_modified FROM equipment_details WHERE is_disabled = 0 AND ("
                 . "asset_tag LIKE ? OR "
                 . "asset_description_1 LIKE ? OR "
                 . "asset_description_2 LIKE ? OR "
@@ -80,10 +82,14 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) 
                     echo '<td>' . safeHtml($equipment['brand']) . '</td>';
                     echo '<td>' . safeHtml($equipment['model']) . '</td>';
                     echo '<td>' . safeHtml($equipment['serial_number']) . '</td>';
-                    echo '<td>' . (!empty($equipment['date_created']) ? date('Y-m-d H:i', strtotime($equipment['date_created'])) : '') . '</td>';
-                    echo '<td>' . (!empty($equipment['date_created']) ? date('Y-m-d H:i', strtotime($equipment['date_created'])) : '') . '</td>';
-                    echo '<td>' . (!empty($equipment['date_modified']) ? date('Y-m-d H:i', strtotime($equipment['date_modified'])) : '') . '</td>';
-                    echo '<td>' . safeHtml((strpos($equipment['rr_no'] ?? '', 'RR') === 0 ? $equipment['rr_no'] : ('RR' . $equipment['rr_no']))) . '</td>';
+                    echo '<td>' . (!empty($equipment['date_created']) ? date('Y-m-d H:i', 
+strtotime($equipment['date_created'])) : '') . '</td>';
+                    echo '<td>' . (!empty($equipment['date_created']) ? date('Y-m-d H:i', 
+strtotime($equipment['date_created'])) : '') . '</td>';
+                    echo '<td>' . (!empty($equipment['date_modified']) ? date('Y-m-d H:i', 
+strtotime($equipment['date_modified'])) : '') . '</td>';
+                    echo '<td>' . safeHtml((strpos($equipment['rr_no'] ?? '', 'RR') === 0 ? 
+$equipment['rr_no'] : ('RR' . $equipment['rr_no']))) . '</td>';
                     echo '<td>' . safeHtml($equipment['location']) . '</td>';
                     echo '<td>' . safeHtml($equipment['accountable_individual']) . '</td>';
                     echo '<td>' . safeHtml($equipment['remarks']) . '</td>';
@@ -100,7 +106,8 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) 
                             . ' data-model="' . safeHtml($equipment['model']) . '"'
                             . ' data-serial="' . safeHtml($equipment['serial_number']) . '"'
                             . ' data-location="' . safeHtml($equipment['location']) . '"'
-                            . ' data-accountable="' . safeHtml($equipment['accountable_individual']) . '"'
+                            . ' data-accountable="' . safeHtml($equipment['accountable_individual']) 
+. '"'
                             . ' data-rr="' . safeHtml($equipment['rr_no']) . '"'
                             . ' data-date="' . safeHtml($equipment['date_created']) . '"'
                             . ' data-remarks="' . safeHtml($equipment['remarks']) . '">
@@ -108,20 +115,24 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) 
                         </button>';
                     }
                     if ($canDelete) {
-                        echo '<button class="btn btn-outline-danger btn-sm remove-equipment" data-id="' . safeHtml($equipment['id']) . '"><i class="bi bi-trash"></i></button>';
+                        echo '<button class="btn btn-outline-danger btn-sm remove-equipment" 
+data-id="' . safeHtml($equipment['id']) . '"><i class="bi bi-trash"></i></button>';
                     }
                     echo '</div>';
                     echo '</td>';
                     echo '</tr>';
                 }
             } else {
-                echo '<tr><td colspan="16" class="text-center py-4"><div class="alert alert-warning mb-0"><i class="bi bi-exclamation-circle me-2"></i> No results found for the current filter criteria.</div></td></tr>';
+                echo '<tr><td colspan="16" class="text-center py-4"><div class="alert alert-warning 
+mb-0"><i class="bi bi-exclamation-circle me-2"></i> No results found for the current filter 
+criteria.</div></td></tr>';
             }
             $html = ob_get_clean();
             echo json_encode(['status' => 'success', 'html' => $html]);
         } catch (Throwable $e) {
             error_log('AJAX Search Error: ' . $e->getMessage());
-            echo json_encode(['status' => 'error', 'message' => 'AJAX Search Error: ' . $e->getMessage()]);
+            echo json_encode(['status' => 'error', 'message' => 'AJAX Search Error: ' . 
+$e->getMessage()]);
         }
         exit;
     }
@@ -163,14 +174,16 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) 
                     $_POST['serial_number'],
                     $_POST['location'] ?? null,
                     $_POST['accountable_individual'] ?? null,
-                    (isset($_POST['rr_no']) && $_POST['rr_no'] !== '' ? (strpos($_POST['rr_no'], 'RR') === 0 ? $_POST['rr_no'] : 'RR' . $_POST['rr_no']) : null),
+                    (isset($_POST['rr_no']) && $_POST['rr_no'] !== '' ? (strpos($_POST['rr_no'], 
+'RR') === 0 ? $_POST['rr_no'] : 'RR' . $_POST['rr_no']) : null),
                     $date_created,
                     $_POST['remarks'] ?? null
                 ];
 
                 $stmt = $pdo->prepare("INSERT INTO equipment_details (
             asset_tag, asset_description_1, asset_description_2, specifications, 
-            brand, model, serial_number, location, accountable_individual, rr_no, date_created, remarks
+            brand, model, serial_number, location, accountable_individual, rr_no, date_created, 
+remarks
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 $stmt->execute($values);
                 $newEquipmentId = $pdo->lastInsertId();
@@ -210,7 +223,8 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) 
                 if ($pdo->inTransaction()) {
                     $pdo->rollBack();
                 }
-                if ($e instanceof PDOException && isset($e->errorInfo[1]) && $e->errorInfo[1] == 1062 && strpos($e->getMessage(), 'asset_tag') !== false) {
+                if ($e instanceof PDOException && isset($e->errorInfo[1]) && $e->errorInfo[1] == 1062 
+&& strpos($e->getMessage(), 'asset_tag') !== false) {
                     $response['status'] = 'error';
                     $response['message'] = 'Asset tag already exists. Please use a unique asset tag.';
                 } else {
@@ -250,7 +264,8 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) 
                     $_POST['serial_number'],
                     $_POST['location'],
                     $_POST['accountable_individual'],
-                    (isset($_POST['rr_no']) && $_POST['rr_no'] !== '' ? (strpos($_POST['rr_no'], 'RR') === 0 ? $_POST['rr_no'] : 'RR' . $_POST['rr_no']) : null),
+                    (isset($_POST['rr_no']) && $_POST['rr_no'] !== '' ? (strpos($_POST['rr_no'], 
+'RR') === 0 ? $_POST['rr_no'] : 'RR' . $_POST['rr_no']) : null),
                     $_POST['remarks'],
                     $_POST['equipment_id']
                 ];
@@ -262,7 +277,8 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) 
             rr_no = ?, remarks = ?, date_modified = NOW() WHERE id = ?");
                 $stmt->execute($values);
 
-                unset($oldEquipment['id'], $oldEquipment['is_disabled'], $oldEquipment['date_created']);
+                unset($oldEquipment['id'], $oldEquipment['is_disabled'], 
+$oldEquipment['date_created']);
                 $oldValue = json_encode($oldEquipment);
                 $newValues = json_encode([
                     'asset_tag' => $_POST['asset_tag'],
@@ -369,8 +385,10 @@ unset($_SESSION['errors'], $_SESSION['success']);
 
 try {
     $stmt = $pdo->query("SELECT id, asset_tag, asset_description_1, asset_description_2,
-                         specifications, brand, model, serial_number, location, accountable_individual, rr_no,
-                         remarks, date_created, date_modified FROM equipment_details WHERE is_disabled = 0 ORDER BY id DESC");
+                         specifications, brand, model, serial_number, location, 
+accountable_individual, rr_no,
+                         remarks, date_created, date_modified FROM equipment_details WHERE 
+is_disabled = 0 ORDER BY id DESC");
     $equipmentDetails = $stmt->fetchAll();
 } catch (PDOException $e) {
     $errors[] = "Error retrieving Equipment Details: " . $e->getMessage();
@@ -391,37 +409,36 @@ ob_end_clean();
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Equipment Details Management</title>
     <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.min.css" 
+rel="stylesheet">
     <!-- Select2 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" 
+rel="stylesheet">
     <!-- jQuery (loaded in header for RR autofill) -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
  
     <style>
         th.sortable.asc::after {
-            content: " ▲";
+            content: " â–²";
         }
 
         th.sortable.desc::after {
-            content: " ▼";
+            content: " â–¼";
         }
         
-        /* Styling for autofilled fields */
+        /* Styling for autofilled fields - removed greyed effect */
         input[data-autofill="true"] {
-            background-color: #f8f9fa !important;  /* Light gray background */
-            border-color: #ced4da !important;      /* Standard border color */
-            cursor: not-allowed;                   /* Not-allowed cursor */
-            color: #6c757d !important;             /* Darker text for better contrast */
+            /* No special styling for autofilled fields */
         }
         
-        /* Add a small indicator that the field was autofilled */
-        input[data-autofill="true"]::after {
+        /* Remove the autofill indicator */
+        /* input[data-autofill="true"]::after {
             content: "Autofilled";
             position: absolute;
             right: 10px;
             font-size: 0.8em;
             color: #6c757d;
-        }
+        } */
     </style>
 </head>
 
@@ -438,7 +455,8 @@ ob_end_clean();
         </header>
 
         <section class="card">
-            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+            <div class="card-header bg-dark text-white d-flex justify-content-between 
+align-items-center">
                 <h2><i class="bi bi-list-task"></i> List of Equipment Details</h2>
             </div>
             <div class="card-body">
@@ -447,7 +465,8 @@ ob_end_clean();
                     <div class="filter-container">
                         <div class="col-auto">
                             <?php if ($canCreate): ?>
-                                <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#addEquipmentModal">
+                                <button class="btn btn-dark" data-bs-toggle="modal" 
+data-bs-target="#addEquipmentModal">
                                     <i class="bi bi-plus-lg"></i> Create Equipment
                                 </button>
                             <?php endif; ?>
@@ -456,10 +475,12 @@ ob_end_clean();
                             <select class="form-select" id="filterEquipment">
                                 <option value="">Filter Equipment Type</option>
                                 <?php
-                                $equipmentTypes = array_unique(array_column($equipmentDetails, 'asset_description_1'));
+                                $equipmentTypes = array_unique(array_column($equipmentDetails, 
+'asset_description_1'));
                                 foreach ($equipmentTypes as $type) {
                                     if (!empty($type)) {
-                                        echo "<option value='" . safeHtml($type) . "'>" . safeHtml($type) . "</option>";
+                                        echo "<option value='" . safeHtml($type) . "'>" . 
+safeHtml($type) . "</option>";
                                     }
                                 }
                                 ?>
@@ -490,9 +511,11 @@ ob_end_clean();
                             <select class="form-select" id="monthSelect">
                                 <option value="">Select Month</option>
                                 <?php
-                                $months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                                $months = ['January', 'February', 'March', 'April', 'May', 'June', 
+'July', 'August', 'September', 'October', 'November', 'December'];
                                 foreach ($months as $index => $month) {
-                                    echo "<option value='" . ($index + 1) . "'>" . $month . "</option>";
+                                    echo "<option value='" . ($index + 1) . "'>" . $month . 
+"</option>";
                                 }
                                 ?>
                             </select>
@@ -547,35 +570,53 @@ ob_end_clean();
                                         <td><?= safeHtml($equipment['model']); ?></td>
                                         <td><?= safeHtml($equipment['serial_number']); ?></td>
                                         <td><?= safeHtml($equipment['date_created']); ?></td>
-                                        <td><?= !empty($equipment['date_created']) ? date('Y-m-d H:i', strtotime($equipment['date_created'])) : ''; ?></td>
-                                        <td><?= !empty($equipment['date_modified']) ? date('Y-m-d H:i', strtotime($equipment['date_modified'])) : ''; ?></td>
-                                        <td><?= safeHtml((strpos($equipment['rr_no'] ?? '', 'RR') === 0 ? $equipment['rr_no'] : ('RR' . $equipment['rr_no']))); ?></td>
+                                        <td><?= !empty($equipment['date_created']) ? date('Y-m-d 
+H:i', strtotime($equipment['date_created'])) : ''; ?></td>
+                                        <td><?= !empty($equipment['date_modified']) ? date('Y-m-d 
+H:i', strtotime($equipment['date_modified'])) : ''; ?></td>
+                                        <td><?= safeHtml((strpos($equipment['rr_no'] ?? '', 'RR') === 
+0 ? $equipment['rr_no'] : ('RR' . $equipment['rr_no']))); ?></td>
                                         <td><?= safeHtml($equipment['location']); ?></td>
-                                        <td><?= safeHtml($equipment['accountable_individual']); ?></td>
+                                        <td><?= safeHtml($equipment['accountable_individual']); 
+?></td>
                                         <td><?= safeHtml($equipment['remarks']); ?></td>
                                         <td>
                                             <div class="btn-group">
                                                 <?php if ($canModify): ?>
-                                                    <button class="btn btn-outline-info btn-sm edit-equipment"
+                                                    <button class="btn btn-outline-info btn-sm 
+edit-equipment"
                                                         data-id="<?= safeHtml($equipment['id']); ?>"
-                                                        data-asset="<?= safeHtml($equipment['asset_tag']); ?>"
-                                                        data-desc1="<?= safeHtml($equipment['asset_description_1']); ?>"
-                                                        data-desc2="<?= safeHtml($equipment['asset_description_2']); ?>"
-                                                        data-spec="<?= safeHtml($equipment['specifications']); ?>"
-                                                        data-brand="<?= safeHtml($equipment['brand']); ?>"
-                                                        data-model="<?= safeHtml($equipment['model']); ?>"
-                                                        data-serial="<?= safeHtml($equipment['serial_number']); ?>"
-                                                        data-location="<?= safeHtml($equipment['location']); ?>"
-                                                        data-accountable="<?= safeHtml($equipment['accountable_individual']); ?>"
-                                                        data-rr="<?= safeHtml($equipment['rr_no']); ?>"
-                                                        data-date="<?= safeHtml($equipment['date_created']); ?>"
-                                                        data-remarks="<?= safeHtml($equipment['remarks']); ?>">
+                                                        data-asset="<?= 
+safeHtml($equipment['asset_tag']); ?>"
+                                                        data-desc1="<?= 
+safeHtml($equipment['asset_description_1']); ?>"
+                                                        data-desc2="<?= 
+safeHtml($equipment['asset_description_2']); ?>"
+                                                        data-spec="<?= 
+safeHtml($equipment['specifications']); ?>"
+                                                        data-brand="<?= 
+safeHtml($equipment['brand']); ?>"
+                                                        data-model="<?= 
+safeHtml($equipment['model']); ?>"
+                                                        data-serial="<?= 
+safeHtml($equipment['serial_number']); ?>"
+                                                        data-location="<?= 
+safeHtml($equipment['location']); ?>"
+                                                        data-accountable="<?= 
+safeHtml($equipment['accountable_individual']); ?>"
+                                                        data-rr="<?= safeHtml($equipment['rr_no']); 
+?>"
+                                                        data-date="<?= 
+safeHtml($equipment['date_created']); ?>"
+                                                        data-remarks="<?= 
+safeHtml($equipment['remarks']); ?>">
                                                         <i class="bi bi-pencil-square"></i>
                                                     </button>
                                                 <?php endif; ?>
 
                                                 <?php if ($canDelete): ?>
-                                                    <button class="btn btn-outline-danger btn-sm remove-equipment"
+                                                    <button class="btn btn-outline-danger btn-sm 
+remove-equipment"
                                                         data-id="<?= safeHtml($equipment['id']); ?>">
                                                         <i class="bi bi-trash"></i>
                                                     </button>
@@ -589,7 +630,8 @@ ob_end_clean();
                                 <tr>
                                     <td colspan="16" class="text-center py-4">
                                         <div class="alert alert-info mb-0">
-                                            <i class="bi bi-info-circle me-2"></i> No Equipment Details found. Click on "Create Equipment" to add a new entry.
+                                            <i class="bi bi-info-circle me-2"></i> No Equipment 
+Details found. Click on "Create Equipment" to add a new entry.
                                         </div>
                                     </td>
                                 </tr>
@@ -604,21 +646,25 @@ ob_end_clean();
                             <div class="text-muted">
                                 <?php $totalLogs = count($equipmentDetails); ?>
                                 <input type="hidden" id="total-users" value="<?= $totalLogs ?>">
-                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span id="totalRows"><?= $totalLogs ?></span> entries
+                                Showing <span id="currentPage">1</span> to <span 
+id="rowsPerPage">10</span> of <span id="totalRows"><?= $totalLogs ?></span> entries
                             </div>
                         </div>
                         <div class="col-12 col-sm-auto ms-sm-auto">
                             <div class="d-flex align-items-center gap-2">
-                                <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                <button id="prevPage" class="btn btn-outline-primary d-flex 
+align-items-center gap-1">
                                     <i class="bi bi-chevron-left"></i> Previous
                                 </button>
-                                <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                <select id="rowsPerPageSelect" class="form-select" style="width: 
+auto;">
                                     <option value="10" selected>10</option>
                                     <option value="20">20</option>
                                     <option value="30">30</option>
                                     <option value="50">50</option>
                                 </select>
-                                <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                <button id="nextPage" class="btn btn-outline-primary d-flex 
+align-items-center gap-1">
                                     Next <i class="bi bi-chevron-right"></i>
                                 </button>
                             </div>
@@ -636,31 +682,40 @@ ob_end_clean();
 
     <!-- Modals -->
     <!-- Add Equipment Modal -->
-    <div class="modal fade" id="addEquipmentModal" tabindex="-1" aria-labelledby="addEquipmentLabel" aria-hidden="true">
+    <div class="modal fade" id="addEquipmentModal" tabindex="-1" aria-labelledby="addEquipmentLabel" 
+aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header p-4">
                     <h5 class="modal-title ">Add New Equipment</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" 
+aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
                     <form id="addEquipmentForm">
                         <input type="hidden" name="action" value="create">
                         <div class="mb-3">
-                            <label for="asset_tag" class="form-label">Asset Tag <span style="color: red;">*</span></label>
-                            <select class="form-select" name="asset_tag" id="add_equipment_asset_tag" required style="width: 100%;">
+                            <label for="asset_tag" class="form-label">Asset Tag <span style="color: 
+red;">*</span></label>
+                            <select class="form-select" name="asset_tag" id="add_equipment_asset_tag" 
+required style="width: 100%;">
                                 <option value="">Select or type Asset Tag</option>
                                 <?php
                                 // Fetch unique asset tags from equipment_location and equipment_status
                                 $assetTags = [];
-                                $stmt1 = $pdo->query("SELECT DISTINCT asset_tag FROM equipment_location WHERE is_disabled = 0");
-                                $assetTags = array_merge($assetTags, $stmt1->fetchAll(PDO::FETCH_COLUMN));
-                                $stmt2 = $pdo->query("SELECT DISTINCT asset_tag FROM equipment_status WHERE is_disabled = 0");
-                                $assetTags = array_merge($assetTags, $stmt2->fetchAll(PDO::FETCH_COLUMN));
+                                $stmt1 = $pdo->query("SELECT DISTINCT asset_tag FROM 
+equipment_location WHERE is_disabled = 0");
+                                $assetTags = array_merge($assetTags, 
+$stmt1->fetchAll(PDO::FETCH_COLUMN));
+                                $stmt2 = $pdo->query("SELECT DISTINCT asset_tag FROM equipment_status 
+WHERE is_disabled = 0");
+                                $assetTags = array_merge($assetTags, 
+$stmt2->fetchAll(PDO::FETCH_COLUMN));
                                 $assetTags = array_unique(array_filter($assetTags));
                                 sort($assetTags);
                                 foreach ($assetTags as $tag) {
-                                    echo '<option value="' . htmlspecialchars($tag) . '">' . htmlspecialchars($tag) . '</option>';
+                                    echo '<option value="' . htmlspecialchars($tag) . '">' . 
+htmlspecialchars($tag) . '</option>';
                                 }
                                 ?>
                             </select>
@@ -668,12 +723,16 @@ ob_end_clean();
                         <div class="mb-3">
                             <div class="row">
                                 <div class="mb-3 col-md-6">
-                                    <label for="asset_description_1" class="form-label">Asset Description 1</label>
-                                    <input type="text" class="form-control" name="asset_description_1">
+                                    <label for="asset_description_1" class="form-label">Asset 
+Description 1</label>
+                                    <input type="text" class="form-control" 
+name="asset_description_1">
                                 </div>
                                 <div class="mb-3 col-md-6">
-                                    <label for="asset_description_2" class="form-label">Asset Description 2</label>
-                                    <input type="text" class="form-control" name="asset_description_2">
+                                    <label for="asset_description_2" class="form-label">Asset 
+Description 2</label>
+                                    <input type="text" class="form-control" 
+name="asset_description_2">
                                 </div>
                             </div>
                         </div>
@@ -696,20 +755,24 @@ ob_end_clean();
                         <div class="mb-3">
                             <div class="row">
                                 <div class="mb-3 col-md-6">
-                                    <label for="serial_number" class="form-label">Serial Number </label>
+                                    <label for="serial_number" class="form-label">Serial Number 
+</label>
                                     <input type="text" class="form-control" name="serial_number">
                                 </div>
                                 <div class="mb-3 col-md-6">
                                     <label for="add_rr_no" class="form-label">RR#</label>
-                                    <select class="form-select rr-select2" name="rr_no" id="add_rr_no" style="width: 100%;">
+                                    <select class="form-select rr-select2" name="rr_no" 
+id="add_rr_no" style="width: 100%;">
                                         <option value="">Select or search RR Number</option>
                                         <?php
                                         // Fetch active RR numbers for dropdown
-                                        $stmtRR = $pdo->prepare("SELECT rr_no FROM receive_report WHERE is_disabled = 0 ORDER BY rr_no DESC");
+                                        $stmtRR = $pdo->prepare("SELECT rr_no FROM receive_report 
+WHERE is_disabled = 0 ORDER BY rr_no DESC");
                                         $stmtRR->execute();
                                         $rrList = $stmtRR->fetchAll(PDO::FETCH_COLUMN);
                                         foreach ($rrList as $rrNo) {
-                                            echo '<option value="' . htmlspecialchars($rrNo) . '">' . htmlspecialchars($rrNo) . '</option>';
+                                            echo '<option value="' . htmlspecialchars($rrNo) . '">' . 
+htmlspecialchars($rrNo) . '</option>';
                                         }
                                         ?>
                                     </select>
@@ -728,12 +791,14 @@ ob_end_clean();
                                         align-items: center;
                                     }
 
-                                    .select2-container .select2-selection--single .select2-selection__rendered {
+                                    .select2-container .select2-selection--single 
+.select2-selection__rendered {
                                         line-height: 24px;
                                         color: #212529;
                                     }
 
-                                    .select2-container--default .select2-selection--single .select2-selection__arrow {
+                                    .select2-container--default .select2-selection--single 
+.select2-selection__arrow {
                                         height: 36px;
                                         right: 10px;
                                     }
@@ -784,81 +849,64 @@ ob_end_clean();
                                                 if (term === '') return null;
                                                 var exists = false;
                                                 $('#add_equipment_asset_tag option').each(function() {
-                                                    if ($(this).text().toLowerCase() === term.toLowerCase()) exists = true;
+                                                    if ($(this).text().toLowerCase() === 
+term.toLowerCase()) exists = true;
                                                 });
                                                 return exists ? null : {
                                                     id: term,
                                                     text: term
                                                 };
                                             }
-                                        });
-
-                                        $('#add_rr_no').on('select2:select', function(e) {
-                                            var data = e.params.data;
-                                            if (data.selected && data.id && $(this).find('option[value="' + data.id + '"').length === 0) {
-                                                // New tag, send AJAX to create RR
-                                                $.ajax({
-                                                    url: 'modules/equipment_transactions/receiving_report.php',
-                                                    method: 'POST',
-                                                    data: {
-                                                        action: 'create_rr_no',
-                                                        rr_no: data.id
-                                                    },
-                                                    dataType: 'json',
-                                                    headers: {
-                                                        'X-Requested-With': 'XMLHttpRequest'
-                                                    },
-                                                    success: function(response) {
-                                                        if (response.status === 'success') {
-                                                            showToast('RR# ' + data.id + ' created!', 'success');
-                                                        } else {
-                                                            showToast(response.message || 'Failed to create RR#', 'error');
-                                                        }
-                                                    },
-                                                    error: function() {
-                                                        showToast('AJAX error creating RR#', 'error');
-                                                    }
-                                                });
-                                            }
+                                        }).on('select2:select', function(e) {
+                                            console.log('Asset tag selected:', e.params.data.id);
+                                            var assetTag = e.params.data.id;
                                             
-                                            // Reset fields before fetching new RR info
-                                            const $accountableField = $('input[name="accountable_individual"]');
+                                            // Reset fields before fetching new asset tag info
+                                            const $accountableField = 
+$('input[name="accountable_individual"]');
                                             const $locationField = $('input[name="location"]');
                                             
                                             // If fields were previously autofilled, reset them first
                                             if ($accountableField.attr('data-autofill') === 'true') {
-                                                $accountableField.val('').prop('readonly', false);
+                                                $accountableField.val('').prop('readonly', 
+false).attr('data-autofill', 'false').removeClass('bg-light');
                                             }
                                             
                                             if ($locationField.attr('data-autofill') === 'true') {
-                                                $locationField.val('').prop('readonly', false);
+                                                $locationField.val('').prop('readonly', 
+false).attr('data-autofill', 'false').removeClass('bg-light');
                                             }
                                             
-                                            // Add autofill functionality here
-                                            fetchRRInfo(data.id, 'add', true);
+                                            // Fetch and autofill data based on asset tag
+                                            fetchAssetTagInfo(assetTag, 'add', true);
                                         });
 
-                                        // Handle RR# being cleared
-                                        $('#add_rr_no').on('select2:clear', function() {
+                                        // Handle asset tag being cleared
+                                        $('#add_equipment_asset_tag').on('select2:clear', function() {
                                             // Reset the Location and Accountable Individual fields
-                                            const $accountableField = $('input[name="accountable_individual"]');
+                                            const $accountableField = 
+$('input[name="accountable_individual"]');
                                             const $locationField = $('input[name="location"]');
                                             
                                             if ($accountableField.attr('data-autofill') === 'true') {
-                                                $accountableField.val('').prop('readonly', false).attr('data-autofill', 'false').removeClass('bg-light');
+                                                $accountableField.val('').prop('readonly', 
+false).attr('data-autofill', 'false').removeClass('bg-light');
                                             }
                                             
                                             if ($locationField.attr('data-autofill') === 'true') {
-                                                $locationField.val('').prop('readonly', false).attr('data-autofill', 'false').removeClass('bg-light');
+                                                $locationField.val('').prop('readonly', 
+false).attr('data-autofill', 'false').removeClass('bg-light');
                                             }
                                         });
 
-                                        // Check if RR# is already selected when modal opens
+                                        // Check if asset tag is already selected when add modal opens
                                         $('#addEquipmentModal').on('shown.bs.modal', function() {
-                                            const rrValue = $('#add_rr_no').val();
-                                            if (rrValue) {
-                                                // If an RR# is already selected, trigger the autofill without notification
-                                                fetchRRInfo(rrValue, 'add', false);
+                                            // Check if asset tag is already selected
+                                            const assetTagValue = $('#add_equipment_asset_tag').val();
+                                            if (assetTagValue) {
+                                                console.log('Add modal opened with asset tag already selected:', assetTagValue);
+                                                // If an asset tag is already selected, trigger the autofill without notification
+                                                fetchAssetTagInfo(assetTagValue, 'add', false);
                                             }
                                         });
 
@@ -885,7 +933,8 @@ ob_end_clean();
                                                     if (term === '') return null;
                                                     var exists = false;
                                                     $('#edit_rr_no option').each(function() {
-                                                        if ($(this).text().toLowerCase() === term.toLowerCase()) exists = true;
+                                                        if ($(this).text().toLowerCase() === 
+term.toLowerCase()) exists = true;
                                                     });
                                                     return exists ? null : {
                                                         id: term,
@@ -895,9 +944,11 @@ ob_end_clean();
                                             });
                                             $('#edit_rr_no').on('select2:select', function(e) {
                                                 var data = e.params.data;
-                                                if (data.selected && data.id && $(this).find('option[value="' + data.id + '"').length === 0) {
+                                                if (data.selected && data.id && 
+$(this).find('option[value="' + data.id + '"').length === 0) {
                                                     $.ajax({
-                                                        url: 'modules/equipment_transactions/receiving_report.php',
+                                                        url: 
+'modules/equipment_transactions/receiving_report.php',
                                                         method: 'POST',
                                                         data: {
                                                             action: 'create_rr_no',
@@ -915,17 +966,21 @@ ob_end_clean();
                                                             }
                                                         },
                                                         error: function() {
-                                                            showToast('AJAX error creating RR#', 'error');
+                                                            showToast('AJAX error creating RR#', 
+'error');
                                                         }
                                                     });
                                                 }
                                                 
                                                 // Reset fields before fetching new RR info
-                                                const $accountableField = $('#edit_accountable_individual');
+                                                const $accountableField = 
+$('#edit_accountable_individual');
                                                 const $locationField = $('#edit_location');
                                                 
-                                                // If fields were previously autofilled, reset them first
-                                                if ($accountableField.attr('data-autofill') === 'true') {
+                                                // If fields were previously autofilled, reset them 
+first
+                                                if ($accountableField.attr('data-autofill') === 
+'true') {
                                                     $accountableField.val('').prop('readonly', false);
                                                 }
                                                 
@@ -934,34 +989,10 @@ ob_end_clean();
                                                 }
                                                 
                                                 // Add autofill functionality here
-                                                fetchRRInfo(data.id, 'edit', true);
+                                                
                                             });
                                             
-                                            // Handle RR# being cleared
-                                            $('#edit_rr_no').on('select2:clear', function() {
-                                                // Reset the Location and Accountable Individual fields
-                                                const $accountableField = $('#edit_accountable_individual');
-                                                const $locationField = $('#edit_location');
-                                                
-                                                if ($accountableField.attr('data-autofill') === 'true') {
-                                                    $accountableField.val('').prop('readonly', false).attr('data-autofill', 'false').removeClass('bg-light');
-                                                }
-                                                
-                                                if ($locationField.attr('data-autofill') === 'true') {
-                                                    $locationField.val('').prop('readonly', false).attr('data-autofill', 'false').removeClass('bg-light');
-                                                }
-                                            });
-                                            
-                                            // Check if RR# is already selected when modal opens
-                                            $('#editEquipmentModal').on('shown.bs.modal', function() {
-                                                const rrValue = $('#edit_rr_no').val();
-                                                if (rrValue) {
-                                                    // If an RR# is already selected, trigger the autofill without notification
-                                                    fetchRRInfo(rrValue, 'edit', false);
-                                                }
-                                            });
-
-                                            // Initialize Select2 for asset tag dropdown in edit modal
+                                            // Initialize Select2 for asset tag dropdown in the edit modal
                                             $('#edit_equipment_asset_tag').select2({
                                                 placeholder: 'Select or type Asset Tag',
                                                 allowClear: true,
@@ -982,6 +1013,73 @@ ob_end_clean();
                                                     };
                                                 }
                                             });
+                                            
+                                            // Add event handler for asset tag selection in edit modal
+                                            $('#edit_equipment_asset_tag').on('select2:select', 
+function(e) {
+                                                try {
+                                                    console.log('Edit modal - Asset tag selected:', e.params.data.id);
+                                                    var assetTag = e.params.data.id;
+                                                    
+                                                    // Reset fields before fetching new asset tag info
+                                                    const $accountableField = 
+$('#edit_accountable_individual');
+                                                    const $locationField = $('#edit_location');
+                                                    
+                                                    // If fields were previously autofilled, reset them
+                                                    if ($accountableField.attr('data-autofill') === 
+'true') {
+                                                        $accountableField.val('').attr('data-autofill', 'false');
+                                                    }
+                                                    
+                                                    if ($locationField.attr('data-autofill') === 'true') {
+                                                        $locationField.val('').attr('data-autofill', 'false');
+                                                    }
+                                                    
+                                                    // Fetch and autofill data based on asset tag
+                                                    fetchAssetTagInfo(assetTag, 'edit', true);
+                                                } catch (error) {
+                                                    console.error('Error in select2:select handler:', error);
+                                                }
+                                            });
+                                            
+                                            // Handle asset tag being cleared in edit modal
+                                            $('#edit_equipment_asset_tag').on('select2:clear', 
+function() {
+                                                try {
+                                                    // Reset the Location and Accountable Individual fields
+                                                    const $accountableField = 
+$('#edit_accountable_individual');
+                                                    const $locationField = $('#edit_location');
+                                                    
+                                                    if ($accountableField.attr('data-autofill') === 
+'true') {
+                                                        $accountableField.val('').attr('data-autofill', 'false');
+                                                    }
+                                                    
+                                                    if ($locationField.attr('data-autofill') === 'true') {
+                                                        $locationField.val('').attr('data-autofill', 'false');
+                                                    }
+                                                } catch (error) {
+                                                    console.error('Error in select2:clear handler:', error);
+                                                }
+                                            });
+                                            
+                                            // Check if asset tag is already selected when edit modal opens
+                                            $('#editEquipmentModal').on('shown.bs.modal', function() {
+                                                try {
+                                                    // Check if asset tag is already selected
+                                                    const assetTagValue = 
+$('#edit_equipment_asset_tag').val();
+                                                    if (assetTagValue) {
+                                                        console.log('Edit modal opened with asset tag already selected:', assetTagValue);
+                                                        // If an asset tag is already selected, trigger the autofill without notification
+                                                        fetchAssetTagInfo(assetTagValue, 'edit', false);
+                                                    }
+                                                } catch (error) {
+                                                    console.error('Error in modal shown handler:', error);
+                                                }
+                                            });
                                         }
 
                                     });
@@ -993,13 +1091,18 @@ ob_end_clean();
                     <div class="row">
                         <div class="mb-3 col-md-6">
                             <label for="location" class="form-label">Location</label>
-                            <input type="text" class="form-control" name="location" data-autofill="false">
-                            <small class="text-muted">This field will be autofilled when an RR# is selected</small>
+                            <input type="text" class="form-control" name="location" 
+data-autofill="false">
+                            <small class="text-muted">This field will be autofilled when an Asset Tag 
+is selected</small>
                         </div>
                         <div class="mb-3 col-md-6">
-                            <label for="accountable_individual" class="form-label">Accountable Individual</label>
-                            <input type="text" class="form-control" name="accountable_individual" data-autofill="false">
-                            <small class="text-muted">This field will be autofilled when an RR# is selected</small>
+                            <label for="accountable_individual" class="form-label">Accountable 
+Individual</label>
+                            <input type="text" class="form-control" name="accountable_individual" 
+data-autofill="false">
+                            <small class="text-muted">This field will be autofilled when an Asset Tag 
+is selected</small>
                         </div>
                     </div>
                 </div>
@@ -1008,7 +1111,8 @@ ob_end_clean();
                     <textarea class="form-control" name="remarks" rows="3"></textarea>
                 </div>
                 <div class="mb-3 text-end p-4">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="margin-right: 4px;">Cancel</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" 
+style="margin-right: 4px;">Cancel</button>
                     <button type="submit" class="btn btn-primary">Create Equipment</button>
                 </div>
                 </form>
@@ -1023,20 +1127,24 @@ ob_end_clean();
             <div class="modal-content">
                 <div class="modal-header p-4">
                     <h5 class="modal-title">Edit Equipment</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" 
+aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
                     <form id="editEquipmentForm">
                         <input type="hidden" name="action" value="update">
                         <input type="hidden" name="equipment_id" id="edit_equipment_id">
                         <div class="mb-3">
-                            <label for="edit_asset_tag" class="form-label">Asset Tag <span style="color: red;">*</span></label>
-                            <select class="form-select" name="asset_tag" id="edit_equipment_asset_tag" required style="width: 100%;">
+                            <label for="edit_asset_tag" class="form-label">Asset Tag <span 
+style="color: red;">*</span></label>
+                            <select class="form-select" name="asset_tag" 
+id="edit_equipment_asset_tag" required style="width: 100%;">
                                 <option value="">Select or type Asset Tag</option>
                                 <?php
                                 // Use the same $assetTags as above
                                 foreach ($assetTags as $tag) {
-                                    echo '<option value="' . htmlspecialchars($tag) . '">' . htmlspecialchars($tag) . '</option>';
+                                    echo '<option value="' . htmlspecialchars($tag) . '">' . 
+htmlspecialchars($tag) . '</option>';
                                 }
                                 ?>
                             </select>
@@ -1044,36 +1152,45 @@ ob_end_clean();
                         <div class="mb-3">
                             <div class="row">
                                 <div class="mb-3 col-md-6">
-                                    <label for="edit_asset_description_1" class="form-label">Description 1</label>
-                                    <input type="text" class="form-control" name="asset_description_1" id="edit_asset_description_1">
+                                    <label for="edit_asset_description_1" 
+class="form-label">Description 1</label>
+                                    <input type="text" class="form-control" 
+name="asset_description_1" id="edit_asset_description_1">
                                 </div>
                                 <div class="mb-3 col-md-6">
-                                    <label for="edit_asset_description_2" class="form-label">Description 2</label>
-                                    <input type="text" class="form-control" name="asset_description_2" id="edit_asset_description_2">
+                                    <label for="edit_asset_description_2" 
+class="form-label">Description 2</label>
+                                    <input type="text" class="form-control" 
+name="asset_description_2" id="edit_asset_description_2">
                                 </div>
                             </div>
                         </div>
                         <div class="mb-3">
                             <label for="edit_specifications" class="form-label">Specification</label>
-                            <textarea class="form-control" name="specifications" id="edit_specifications" rows="3"></textarea>
+                            <textarea class="form-control" name="specifications" 
+id="edit_specifications" rows="3"></textarea>
                         </div>
                         <div class="mb-3">
                             <div class="row">
                                 <div class="mb-3 col-md-6">
                                     <label for="edit_brand" class="form-label">Brand</label>
-                                    <input type="text" class="form-control" name="brand" id="edit_brand">
+                                    <input type="text" class="form-control" name="brand" 
+id="edit_brand">
                                 </div>
                                 <div class="mb-3 col-md-6">
                                     <label for="edit_model" class="form-label">Model</label>
-                                    <input type="text" class="form-control" name="model" id="edit_model">
+                                    <input type="text" class="form-control" name="model" 
+id="edit_model">
                                 </div>
                             </div>
                         </div>
                         <div class="mb-3">
                             <div class="row">
                                 <div class="mb-3 col-md-6">
-                                    <label for="edit_serial_number" class="form-label">Serial Number</label>
-                                    <input type="text" class="form-control" name="serial_number" id="edit_serial_number">
+                                    <label for="edit_serial_number" class="form-label">Serial 
+Number</label>
+                                    <input type="text" class="form-control" name="serial_number" 
+id="edit_serial_number">
                                 </div>
                                 <div class="mb-3 col-md-6">
                                     <label for="edit_rr_no" class="form-label">RR#</label>
@@ -1082,12 +1199,14 @@ ob_end_clean();
                                         <?php
                                         // Fetch active RR numbers for dropdown (reuse $rrList if already set, else fetch)
                                         if (!isset($rrList)) {
-                                            $stmtRR = $pdo->prepare("SELECT rr_no FROM receive_report WHERE is_disabled = 0 ORDER BY rr_no DESC");
+                                            $stmtRR = $pdo->prepare("SELECT rr_no FROM receive_report 
+WHERE is_disabled = 0 ORDER BY rr_no DESC");
                                             $stmtRR->execute();
                                             $rrList = $stmtRR->fetchAll(PDO::FETCH_COLUMN);
                                         }
                                         foreach ($rrList as $rrNo) {
-                                            echo '<option value="' . htmlspecialchars($rrNo) . '">' . htmlspecialchars($rrNo) . '</option>';
+                                            echo '<option value="' . htmlspecialchars($rrNo) . '">' . 
+htmlspecialchars($rrNo) . '</option>';
                                         }
                                         ?>
                                     </select>
@@ -1098,19 +1217,25 @@ ob_end_clean();
                             <div class="row">
                                 <div class="mb-3 col-md-6">
                                     <label for="edit_location" class="form-label">Location</label>
-                                    <input type="text" class="form-control" name="location" id="edit_location" data-autofill="false">
-                                    <small class="text-muted">This field will be autofilled when an RR# is selected</small>
+                                    <input type="text" class="form-control" name="location" 
+id="edit_location" data-autofill="false">
+                                    <small class="text-muted">This field will be autofilled when an 
+Asset Tag is selected</small>
                                 </div>
                                 <div class="mb-3 col-md-6">
-                                    <label for="edit_accountable_individual" class="form-label">Accountable Individual</label>
-                                    <input type="text" class="form-control" name="accountable_individual" id="edit_accountable_individual" data-autofill="false">
-                                    <small class="text-muted">This field will be autofilled when an RR# is selected</small>
+                                    <label for="edit_accountable_individual" 
+class="form-label">Accountable Individual</label>
+                                    <input type="text" class="form-control" 
+name="accountable_individual" id="edit_accountable_individual" data-autofill="false">
+                                    <small class="text-muted">This field will be autofilled when an 
+Asset Tag is selected</small>
                                 </div>
                             </div>
                         </div>
                         <div class="mb-3">
                             <label for="edit_remarks" class="form-label">Remarks</label>
-                            <textarea class="form-control" name="remarks" id="edit_remarks" rows="3"></textarea>
+                            <textarea class="form-control" name="remarks" id="edit_remarks" 
+rows="3"></textarea>
                         </div>
                         <div class="mb-3">
                             <button type="submit" class="btn btn-primary">Save Changes</button>
@@ -1127,13 +1252,15 @@ ob_end_clean();
             <div class="modal-content">
                 <div class="modal-header p-4">
                     <h5 class="modal-title">Confirm Removal</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" 
+aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
                     Are you sure you want to remove this Equipment Detail?
                 </div>
                 <div class="modal-footer p-4">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-secondary" 
+data-bs-dismiss="modal">Cancel</button>
                     <button type="button" id="confirmDeleteBtn" class="btn btn-danger">Remove</button>
                 </div>
             </div>
@@ -1141,8 +1268,11 @@ ob_end_clean();
     </div>
 
     <!-- Scripts -->
-    <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
+    <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" 
+defer></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="<?php echo BASE_URL; ?>src/control/js/toast.js"></script>
+    <script src="<?php echo BASE_URL; ?>src/control/js/asset_tag_autofill.js"></script>
     <style>
         .filtered-out {
             display: none !important;
@@ -1169,7 +1299,8 @@ ob_end_clean();
             // Force hide pagination buttons if no data or all fits on one page
             function forcePaginationCheck() {
                 const totalRows = parseInt(document.getElementById('totalRows')?.textContent || '0');
-                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect')?.value || '10');
+                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect')?.value || 
+'10');
                 const prevBtn = document.getElementById('prevPage');
                 const nextBtn = document.getElementById('nextPage');
                 const paginationEl = document.getElementById('pagination');
@@ -1242,7 +1373,8 @@ ob_end_clean();
                 const ascending = !header.classList.contains("asc");
 
                 // Remove asc/desc classes from all headers
-                document.querySelectorAll(".sortable").forEach(h => h.classList.remove("asc", "desc"));
+                document.querySelectorAll(".sortable").forEach(h => h.classList.remove("asc", 
+"desc"));
                 header.classList.add(ascending ? "asc" : "desc");
 
                 const rows = Array.from(tbody.querySelectorAll("tr")).sort((a, b) => {
@@ -1274,41 +1406,42 @@ ob_end_clean();
         $(function() {
             // 1) EDIT button handler
             $(document).on('click', '.edit-equipment', function() {
-                const d = $(this).data();
-                $('#edit_equipment_id').val(d.id);
-                // make sure the asset-tag exists in the dropdown
-                const $asset = $('#edit_equipment_asset_tag');
-                if (!$asset.find(`option[value="${d.asset}"]`).length) {
-                    $asset.append(`<option value="${d.asset}">${d.asset}</option>`);
-                }
-                $asset.val(d.asset).trigger('change');
+                try {
+                    const d = $(this).data();
+                    $('#edit_equipment_id').val(d.id);
+                    // make sure the asset-tag exists in the dropdown
+                    const $asset = $('#edit_equipment_asset_tag');
+                    if (!$asset.find(`option[value="${d.asset}"]`).length) {
+                        $asset.append(`<option value="${d.asset}">${d.asset}</option>`);
+                    }
+                    
+                    // First populate all fields from the data attributes
+                    $('#edit_asset_description_1').val(d.desc1);
+                    $('#edit_asset_description_2').val(d.desc2);
+                    $('#edit_specifications').val(d.spec);
+                    $('#edit_brand').val(d.brand);
+                    $('#edit_model').val(d.model);
+                    $('#edit_serial_number').val(d.serial);
+                    $('#edit_location').val(d.location);
+                    $('#edit_accountable_individual').val(d.accountable);
+                    $('#edit_remarks').val(d.remarks);
 
-                // same for RR#
-                const $rr = $('#edit_rr_no');
-                if (d.rr && !$rr.find(`option[value="${d.rr}"]`).length) {
-                    $rr.append(`<option value="${d.rr}">${d.rr}</option>`);
-                }
-                $rr.val(d.rr).trigger('change');
+                    // same for RR#
+                    const $rr = $('#edit_rr_no');
+                    if (d.rr && !$rr.find(`option[value="${d.rr}"]`).length) {
+                        $rr.append(`<option value="${d.rr}">${d.rr}</option>`);
+                    }
+                    $rr.val(d.rr).trigger('change');
+                    
+                    // Set the asset tag value last and trigger change to activate autofill
+                    $asset.val(d.asset).trigger('change');
 
-                // populate the rest of the fields
-                $('#edit_asset_description_1').val(d.desc1);
-                $('#edit_asset_description_2').val(d.desc2);
-                $('#edit_specifications').val(d.spec);
-                $('#edit_brand').val(d.brand);
-                $('#edit_model').val(d.model);
-                $('#edit_serial_number').val(d.serial);
-                $('#edit_location').val(d.location);
-                $('#edit_accountable_individual').val(d.accountable);
-                $('#edit_remarks').val(d.remarks);
-                
-                // Check if RR# exists and apply readonly state to Location and Accountable Individual fields
-                if (d.rr) {
-                    // Call fetchRRInfo directly with showNotification set to false
-                    fetchRRInfo(d.rr, 'edit', false);
+                    // show the modal
+                    $('#editEquipmentModal').modal('show');
+                } catch (error) {
+                    console.error('Error in edit-equipment handler:', error);
+                    showToast('Error opening edit form. Please try again.', 'error');
                 }
-
-                // show the modal
-                $('#editEquipmentModal').modal('show');
             });
 
             // 2) REMOVE button handler
@@ -1360,7 +1493,7 @@ ob_end_clean();
             $('#addEquipmentForm').on('submit', function(e) {
                 e.preventDefault();
                 const btn = $(this).find('button[type=submit]').prop('disabled', true)
-                    .html('<span class="spinner-border spinner-border-sm"></span> Adding…');
+                    .html('<span class="spinner-border spinner-border-sm"></span> Addingâ€¦');
                 $.ajax({
                     url: window.location.href,
                     method: 'POST',
@@ -1394,7 +1527,8 @@ ob_end_clean();
                 
                 // Get the original values from data attributes
                 const $form = $(this);
-                const $editBtn = $('.edit-equipment[data-id="' + $('#edit_equipment_id').val() + '"]');
+                const $editBtn = $('.edit-equipment[data-id="' + $('#edit_equipment_id').val() + 
+'"]');
                 const originalValues = {
                     asset_tag: $editBtn.data('asset'),
                     asset_description_1: $editBtn.data('desc1'),
@@ -1444,7 +1578,7 @@ ob_end_clean();
                 }
                 
                 const btn = $(this).find('button[type=submit]').prop('disabled', true)
-                    .html('<span class="spinner-border spinner-border-sm"></span> Saving…');
+                    .html('<span class="spinner-border spinner-border-sm"></span> Savingâ€¦');
                 $.ajax({
                     url: window.location.href,
                     method: 'POST',
@@ -1477,76 +1611,9 @@ ob_end_clean();
                 });
             });
         });
-        
-        function fetchRRInfo(rrNo, formType, showNotification = true) {
-    $.ajax({
-        url: 'get_rr_info.php',
-        method: 'GET',
-        data: { rr_no: rrNo },
-        dataType: 'json',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        success: function(response) {
-            if (response.status === 'success' && response.data) {
-                if (formType === 'edit') {
-                    // For edit form
-                    const $accountableField = $('#edit_accountable_individual');
-                    const $locationField = $('#edit_location');
-                    
-                    // Get current values
-                    const currentAccountable = $accountableField.val();
-                    const currentLocation = $locationField.val();
-                    
-                    // Only update if empty or matches RR data
-                    if (!currentAccountable || currentAccountable === response.data.accountable_individual) {
-                    $accountableField.val(response.data.accountable_individual || '');
-                    }
-                    
-                    if (!currentLocation || currentLocation === response.data.location) {
-                    $locationField.val(response.data.location || '');
-                    }
-                    
-                    // Make fields readonly and mark as autofilled regardless
-                    $accountableField.prop('readonly', true).attr('data-autofill', 'true').addClass('bg-light');
-                    $locationField.prop('readonly', true).attr('data-autofill', 'true').addClass('bg-light');
-                } else {
-                    // For add form
-                    const $accountableField = $('input[name="accountable_individual"]');
-                    const $locationField = $('input[name="location"]');
-                    
-                    // Get current values
-                    const currentAccountable = $accountableField.val();
-                    const currentLocation = $locationField.val();
-                    
-                    // Only update if empty or matches RR data
-                    if (!currentAccountable || currentAccountable === response.data.accountable_individual) {
-                    $accountableField.val(response.data.accountable_individual || '');
-                    }
-                    
-                    if (!currentLocation || currentLocation === response.data.location) {
-                    $locationField.val(response.data.location || '');
-                    }
-                    
-                    // Make fields readonly and mark as autofilled regardless
-                    $accountableField.prop('readonly', true).attr('data-autofill', 'true').addClass('bg-light');
-                    $locationField.prop('readonly', true).attr('data-autofill', 'true').addClass('bg-light');
-                }
-                
-                // Only show notification if requested
-                if (showNotification) {
-                    showToast('Location and Accountable Individual autofilled from RR data', 'info');
-                }
-            }
-        },
-        error: function() {
-            if (showNotification) {
-                showToast('Error fetching RR information', 'error');
-            }
-        }
-    });
-} 
     </script>
 </body>
 
 </html>
+
+
