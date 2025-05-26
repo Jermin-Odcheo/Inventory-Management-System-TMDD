@@ -146,10 +146,9 @@ function formatChanges($oldJsonStr)
 <head>
     <meta charset="UTF-8">
     <title>Equipment Management Archives</title>
-    <!-- Bootstrap and Font Awesome CDNs -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Custom CSS for audit logs -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/audit_log.css">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/pagination.css">
     <style>
@@ -165,7 +164,6 @@ function formatChanges($oldJsonStr)
     <div class="main-content">
         <div class="container-fluid">
             <div class="card">
-                <!-- Card header -->
                 <div class="card-header d-flex justify-content-between align-items-center bg-dark">
                     <h3 class="text-white">
                         <i class="fas fa-archive me-2"></i>
@@ -173,11 +171,9 @@ function formatChanges($oldJsonStr)
                     </h3>
                 </div>
                 <div class="card-body">
-                    <!-- Bulk action buttons -->
                     <div class="row mb-3">
                         <div class="col-md-12">
                             <div class="bulk-actions mb-3">
-                                <!-- Bulk actions only show if 2 or more are selected -->
                                 <?php if ($canRestore): ?>
                                     <button type="button" id="restore-selected" class="btn btn-success" disabled style="display: none;">Restore Selected</button>
                                 <?php endif; ?>
@@ -188,7 +184,6 @@ function formatChanges($oldJsonStr)
                         </div>
                     </div>
 
-                    <!-- Filter Section -->
                     <div class="row mb-4">
                         <div class="col-md-4 mb-2">
                             <div class="input-group">
@@ -215,7 +210,6 @@ function formatChanges($oldJsonStr)
                         </div>
                     </div>
 
-                    <!-- Table container -->
                     <div class="table-responsive" id="table">
                         <table id="archiveTable" class="table table-hover">
                             <colgroup>
@@ -290,7 +284,6 @@ function formatChanges($oldJsonStr)
                                             </td>
                                             <td data-label="Actions">
                                                 <div class="btn-group-vertical gap-1">
-                                                    <!-- Individual restore now triggers a confirmation modal -->
                                                     <?php if ($canRestore): ?>
                                                         <button type="button" class="btn btn-success restore-btn" data-id="<?php echo $log['deleted_entity_id']; ?>">
                                                             <i class="fas fa-undo me-1"></i> Restore
@@ -319,7 +312,6 @@ function formatChanges($oldJsonStr)
                             </tbody>
                         </table>
                     </div>
-                    <!-- Pagination Controls -->
                     <div class="container-fluid">
                         <div class="row align-items-center g-3">
                             <div class="col-12 col-sm-auto">
@@ -350,14 +342,10 @@ function formatChanges($oldJsonStr)
                                 <ul class="pagination justify-content-center" id="pagination"></ul>
                             </div>
                         </div>
-                    </div> <!-- /.End of Pagination -->
-                </div>
+                    </div> </div>
             </div>
         </div>
-    </div> <!-- /.End of Main Content -->
-
-    <!-- Delete Archive Modal (for individual deletion) -->
-    <div class="modal fade" id="deleteArchiveModal" tabindex="-1">
+    </div> <div class="modal fade" id="deleteArchiveModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
@@ -375,7 +363,6 @@ function formatChanges($oldJsonStr)
         </div>
     </div>
 
-    <!-- Restore Archive Modal (for individual restore) -->
     <div class="modal fade" id="restoreArchiveModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -394,7 +381,6 @@ function formatChanges($oldJsonStr)
         </div>
     </div>
 
-    <!-- Bulk Delete Modal -->
     <div class="modal fade" id="bulkDeleteModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -413,7 +399,6 @@ function formatChanges($oldJsonStr)
         </div>
     </div>
 
-    <!-- Bulk Restore Modal -->
     <div class="modal fade" id="bulkRestoreModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -432,9 +417,8 @@ function formatChanges($oldJsonStr)
         </div>
     </div>
 
-    <!-- Include pagination script if needed -->
-    <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js" defer></script>
     <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/logs.js" defer></script>
+    <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js" defer></script>
     <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/archive_filters.js" defer></script>
     <?php include '../../../general/footer.php'; ?>
     <script>
@@ -445,227 +429,333 @@ function formatChanges($oldJsonStr)
             canDelete: <?php echo json_encode($canDelete); ?>
         };
 
+        // DOMContentLoaded listener for initial setup
         document.addEventListener('DOMContentLoaded', function() {
             // Set the correct table ID for both pagination.js and logs.js
             window.paginationConfig = window.paginationConfig || {};
             window.paginationConfig.tableId = 'archiveTableBody';
 
-            // Store original rows for filtering
+            // Populate window.allRows with all rows from the table body.
+            // This is the full dataset that pagination.js and archive_filters.js will operate on.
             window.allRows = Array.from(document.querySelectorAll('#archiveTableBody tr'));
+            console.log(`em_archive.php: Initial window.allRows populated with ${window.allRows.length} rows.`);
 
             // Initialize Pagination
-            initPagination({
-                tableId: 'archiveTableBody',
-                currentPage: 1
+            // This will set up pagination.js with the correct table ID.
+            if (typeof initPagination === 'function' && !window.paginationInitialized) {
+                initPagination({
+                    tableId: 'archiveTableBody',
+                    currentPage: 1
+                });
+                window.paginationInitialized = true; // Prevent double initialization
+                console.log('em_archive.php: initPagination called.');
+            } else if (window.paginationInitialized) {
+                console.log('em_archive.php: Pagination already initialized. Skipping initPagination.');
+            } else {
+                console.error('em_archive.php: initPagination function not found.');
+            }
+
+            // After initial setup, apply filters to ensure the table starts in a filtered state
+            // and pagination is correctly applied to the filtered data.
+            // This will also trigger updatePagination internally.
+            if (window.archiveFilters && typeof window.archiveFilters.applyFilters === 'function') {
+                window.archiveFilters.applyFilters();
+                console.log('em_archive.php: Initial applyFilters called.');
+            } else {
+                console.error('em_archive.php: window.archiveFilters.applyFilters function not found. Initial filtering might not work.');
+            }
+        });
+
+        // jQuery document ready block for bulk actions and AJAX callbacks
+        $(document).ready(function() {
+            var deleteId = null;
+            var restoreId = null;
+            var bulkDeleteIds = [];
+            var restoreModule = null; // Added for module-specific restore
+            var deleteModule = null; // Added for module-specific delete
+
+            // Delegated events for checkboxes
+            $(document).on('change', '#select-all', function() {
+                $('.select-row').prop('checked', $(this).prop('checked'));
+                updateBulkButtons();
             });
+            $(document).on('change', '.select-row', updateBulkButtons);
 
-            // Force hide pagination buttons if no data or all fits on one page
-            function forcePaginationCheck() {
-                const totalRows = window.filteredRows ? window.filteredRows.length : 0;
-                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value);
-                const prevBtn = document.getElementById('prevPage');
-                const nextBtn = document.getElementById('nextPage');
-                const paginationEl = document.getElementById('pagination');
-
-                // Hide pagination completely if all rows fit on one page
-                if (totalRows <= rowsPerPage) {
-                    if (prevBtn) prevBtn.style.cssText = 'display: none !important';
-                    if (nextBtn) nextBtn.style.cssText = 'display: none !important';
-                    if (paginationEl) paginationEl.style.cssText = 'display: none !important';
+            function updateBulkButtons() {
+                var count = $('.select-row:checked').length;
+                // Show bulk actions only if 2 or more are selected
+                if (count >= 2) {
+                    if (userPrivileges.canRestore) {
+                        $('#restore-selected').prop('disabled', false).show();
+                    }
+                    if (userPrivileges.canDelete) {
+                        $('#delete-selected-permanently').prop('disabled', false).show();
+                    }
                 } else {
-                    // Show pagination but conditionally hide prev/next buttons
-                    if (paginationEl) paginationEl.style.cssText = '';
+                    $('#restore-selected, #delete-selected-permanently').prop('disabled', true).hide();
+                }
+            }
 
-                    if (prevBtn) {
-                        if (window.currentPage <= 1) {
-                            prevBtn.style.cssText = 'display: none !important';
+            // --- Individual Restore (with modal) ---
+            $(document).on('click', '.restore-btn', function(e) {
+                if (!userPrivileges.canRestore) return;
+
+                e.preventDefault();
+                restoreId = $(this).data('id');
+                restoreModule = $(this).closest('tr').find('td[data-label="Module"]').text().trim();
+                var restoreModal = new bootstrap.Modal(document.getElementById('restoreArchiveModal'));
+                restoreModal.show();
+            });
+            $(document).on('click', '#confirmRestoreBtn', function() {
+                if (!userPrivileges.canRestore || !restoreId || !restoreModule) return;
+
+                var restoreUrl = '';
+                var data = {
+                    id: restoreId
+                };
+                // Determine the correct restore URL based on the module
+                if (restoreModule === 'Equipment Location') {
+                    restoreUrl = '../../equipment_manager/restore_equipment_location.php';
+                } else if (restoreModule === 'Equipment Status') {
+                    restoreUrl = '../../equipment_manager/restore_equipment_status.php';
+                } else if (restoreModule === 'Equipment Details') {
+                    restoreUrl = '../../equipment_manager/restore_equipment_details.php';
+                } else {
+                    showToast('Unknown module for restore.', 'error');
+                    return;
+                }
+
+                $.ajax({
+                    url: restoreUrl,
+                    method: 'POST',
+                    data: data,
+                    dataType: 'json',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    success: function(response) {
+                        var modalInstance = bootstrap.Modal.getInstance(document.getElementById('restoreArchiveModal'));
+                        modalInstance.hide();
+                        if (response.status && response.status.toLowerCase() === 'success') {
+                            // Reload only the tbody content to avoid full page refresh
+                            $('#archiveTableBody').load(location.href + ' #archiveTableBody > *', function() {
+                                // After content is loaded, re-capture all rows for filtering and pagination
+                                if (window.archiveFilters && typeof window.archiveFilters.captureRows === 'function') {
+                                    window.archiveFilters.captureRows();
+                                } else {
+                                    console.error('window.archiveFilters.captureRows function not available after AJAX reload.');
+                                }
+                                // Then re-apply filters and update pagination based on the new data
+                                if (window.archiveFilters && typeof window.archiveFilters.applyFilters === 'function') {
+                                    window.archiveFilters.applyFilters();
+                                } else {
+                                    console.error('window.archiveFilters.applyFilters function not available after AJAX reload.');
+                                }
+                                updateBulkButtons();
+                                showToast(response.message, 'success');
+                            });
                         } else {
-                            prevBtn.style.cssText = '';
+                            showToast(response.message, 'error');
                         }
+                    },
+                    error: function() {
+                        showToast('Error processing restore request.', 'error');
                     }
+                });
+            });
 
-                    if (nextBtn) {
-                        const totalPages = Math.ceil(totalRows / rowsPerPage);
-                        if (window.currentPage >= totalPages) {
-                            nextBtn.style.cssText = 'display: none !important';
+
+            // --- Individual Permanent Delete ---
+            $(document).on('click', '.delete-permanent-btn', function(e) {
+                if (!userPrivileges.canDelete) return;
+
+                e.preventDefault();
+                deleteId = $(this).data('id');
+                deleteModule = $(this).closest('tr').find('td[data-label="Module"]').text().trim();
+                var deleteModal = new bootstrap.Modal(document.getElementById('deleteArchiveModal'));
+                deleteModal.show();
+            });
+
+            $(document).on('click', '#confirmDeleteBtn', function() {
+                if (!userPrivileges.canDelete || !deleteId || !deleteModule) return;
+
+                var deleteUrl = '../../equipment_manager/delete_equipment.php'; // Generic delete endpoint
+                var data = {
+                    id: deleteId,
+                    permanent: 1,
+                    module: deleteModule // Pass module to the delete script
+                };
+                $.ajax({
+                    url: deleteUrl,
+                    method: 'POST',
+                    data: data,
+                    dataType: 'json',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    success: function(response) {
+                        var modalInstance = bootstrap.Modal.getInstance(document.getElementById('deleteArchiveModal'));
+                        modalInstance.hide();
+                        if (response.status && response.status.toLowerCase() === 'success') {
+                            // Reload only the tbody content
+                            $('#archiveTableBody').load(location.href + ' #archiveTableBody > *', function() {
+                                // After content is loaded, re-capture all rows for filtering and pagination
+                                if (window.archiveFilters && typeof window.archiveFilters.captureRows === 'function') {
+                                    window.archiveFilters.captureRows();
+                                } else {
+                                    console.error('window.archiveFilters.captureRows function not available after AJAX reload.');
+                                }
+                                // Then re-apply filters and update pagination based on the new data
+                                if (window.archiveFilters && typeof window.archiveFilters.applyFilters === 'function') {
+                                    window.archiveFilters.applyFilters();
+                                } else {
+                                    console.error('window.archiveFilters.applyFilters function not available after AJAX reload.');
+                                }
+                                updateBulkButtons();
+                                showToast(response.message, 'success');
+                            });
                         } else {
-                            nextBtn.style.cssText = '';
+                            showToast(response.message, 'error');
                         }
+                    },
+                    error: function() {
+                        showToast('Error processing request.', 'error');
                     }
-                }
-            }
+                });
+            });
 
-            // Run forcePaginationCheck after pagination updates
-            const originalUpdatePagination = window.updatePagination || function() {};
-            window.updatePagination = function() {
-                // Get all rows again in case the DOM was updated
-                window.allRows = Array.from(document.querySelectorAll('#archiveTableBody tr'));
 
-                // If filtered rows is empty or not defined, use all rows
-                if (!window.filteredRows || window.filteredRows.length === 0) {
-                    window.filteredRows = window.allRows;
-                }
+            var bulkRestoreIds = [];
 
-                // Update total rows display
-                const totalRowsEl = document.getElementById('totalRows');
-                if (totalRowsEl) {
-                    totalRowsEl.textContent = window.filteredRows.length;
-                }
+            // When bulk restore button is clicked, gather selected IDs and show modal
+            $(document).on('click', '#restore-selected', function() {
+                if (!userPrivileges.canRestore) return;
 
-                // Call original updatePagination
-                originalUpdatePagination();
-                forcePaginationCheck();
-            };
+                var selected = $('.select-row:checked');
+                bulkRestoreIds = [];
+                selected.each(function() {
+                    bulkRestoreIds.push($(this).val());
+                });
+                var bulkRestoreModal = new bootstrap.Modal(document.getElementById('bulkRestoreModal'));
+                bulkRestoreModal.show();
+            });
 
-            // Call updatePagination immediately
-            updatePagination();
-        });
+            // When confirming bulk restore in the modal, perform the AJAX call
+            $(document).on('click', '#confirmBulkRestoreBtn', function() {
+                if (!userPrivileges.canRestore || bulkRestoreIds.length === 0) return;
 
-        var deleteId = null;
-        var restoreId = null;
-        var bulkDeleteIds = [];
+                // For bulk restore, we'll need to send module information if the restore script requires it.
+                // Assuming a generic bulk restore endpoint that can handle different modules or
+                // a single module type for all selected. For simplicity, we'll assume the backend
+                // can infer the module from the entity IDs or it's a single type of entity.
+                // If not, you'd need to collect module info for each selected item.
+                var bulkRestoreUrl = '../../equipment_manager/restore_equipment_bulk.php'; // Example bulk endpoint
+                var data = {
+                    entity_ids: bulkRestoreIds // Send an array of IDs
+                };
 
-        // Delegated events for checkboxes
-        $(document).on('change', '#select-all', function() {
-            $('.select-row').prop('checked', $(this).prop('checked'));
-            updateBulkButtons();
-        });
-        $(document).on('change', '.select-row', updateBulkButtons);
-
-        function updateBulkButtons() {
-            var count = $('.select-row:checked').length;
-            // Show bulk actions only if 2 or more are selected
-            if (count >= 2) {
-                if (userPrivileges.canRestore) {
-                    $('#restore-selected').prop('disabled', false).show();
-                }
-                if (userPrivileges.canDelete) {
-                    $('#delete-selected-permanently').prop('disabled', false).show();
-                }
-            } else {
-                $('#restore-selected, #delete-selected-permanently').prop('disabled', true).hide();
-            }
-        }
-
-        // --- Individual Restore (with modal) ---
-        $(document).on('click', '.restore-btn', function(e) {
-            if (!userPrivileges.canRestore) return;
-
-            e.preventDefault();
-            restoreId = $(this).data('id');
-            restoreModule = $(this).closest('tr').find('td[data-label="Module"]').text().trim();
-            var restoreModal = new bootstrap.Modal(document.getElementById('restoreArchiveModal'));
-            restoreModal.show();
-        });
-        $(document).on('click', '#confirmRestoreBtn', function() {
-            if (!userPrivileges.canRestore || !restoreId || !restoreModule) return;
-
-            var restoreUrl = '';
-            var data = {
-                id: restoreId
-            };
-            if (restoreModule === 'Equipment Location') {
-                restoreUrl = '../../equipment_manager/restore_equipment_location.php';
-            } else if (restoreModule === 'Equipment Status') {
-                restoreUrl = '../../equipment_manager/restore_equipment_status.php';
-            } else if (restoreModule === 'Equipment Details') {
-                restoreUrl = '../../equipment_manager/restore_equipment_details.php';
-            } else {
-                showToast('Unknown module for restore.', 'error');
-                return;
-            }
-            $.ajax({
-                url: restoreUrl,
-                method: 'POST',
-                data: data,
-                dataType: 'json',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                success: function(response) {
-                    var modalInstance = bootstrap.Modal.getInstance(document.getElementById('restoreArchiveModal'));
-                    modalInstance.hide();
-                    if (response.status && response.status.toLowerCase() === 'success') {
-                        // Reload the archive table so the restored row disappears
-                        $('#archiveTable').load(location.href + ' #archiveTable', function() {
-                            updateBulkButtons();
-                            showToast(response.message, 'success');
-                        });
-                    } else {
-                        showToast(response.message, 'error');
+                $.ajax({
+                    url: bulkRestoreUrl,
+                    method: 'POST',
+                    data: data,
+                    dataType: 'json',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    success: function(response) {
+                        var modalInstance = bootstrap.Modal.getInstance(document.getElementById('bulkRestoreModal'));
+                        modalInstance.hide();
+                        if (response.status && response.status.toLowerCase() === 'success') {
+                            // Reload only the tbody content
+                            $('#archiveTableBody').load(location.href + ' #archiveTableBody > *', function() {
+                                // After content is loaded, re-capture all rows for filtering and pagination
+                                if (window.archiveFilters && typeof window.archiveFilters.captureRows === 'function') {
+                                    window.archiveFilters.captureRows();
+                                } else {
+                                    console.error('window.archiveFilters.captureRows function not available after AJAX reload.');
+                                }
+                                // Then re-apply filters and update pagination based on the new data
+                                if (window.archiveFilters && typeof window.archiveFilters.applyFilters === 'function') {
+                                    window.archiveFilters.applyFilters();
+                                } else {
+                                    console.error('window.archiveFilters.applyFilters function not available after AJAX reload.');
+                                }
+                                updateBulkButtons();
+                                showToast(response.message, 'success');
+                            });
+                        } else {
+                            showToast(response.message, 'error');
+                        }
+                    },
+                    error: function() {
+                        showToast('Error processing bulk restore.', 'error');
                     }
-                },
-                error: function() {
-                    showToast('Error processing restore request.', 'error');
-                }
+                });
             });
-        });
 
 
-        // --- Individual Permanent Delete ---
-        $(document).on('click', '.delete-permanent-btn', function(e) {
-            if (!userPrivileges.canDelete) return;
+            // --- Bulk Delete ---
+            $(document).on('click', '#delete-selected-permanently', function() {
+                if (!userPrivileges.canDelete) return;
 
-            e.preventDefault();
-            deleteId = $(this).data('id');
-            deleteModule = $(this).closest('tr').find('td[data-label="Module"]').text().trim();
-            var deleteModal = new bootstrap.Modal(document.getElementById('deleteArchiveModal'));
-            deleteModal.show();
-        });
+                var selected = $('.select-row:checked');
+                bulkDeleteIds = [];
+                selected.each(function() {
+                    bulkDeleteIds.push($(this).val());
+                });
+                var bulkModal = new bootstrap.Modal(document.getElementById('bulkDeleteModal'));
+                bulkModal.show();
+            });
+            $(document).on('click', '#confirmBulkDeleteBtn', function() {
+                if (!userPrivileges.canDelete || bulkDeleteIds.length === 0) return;
 
-        $(document).on('click', '#confirmDeleteBtn', function() {
-            if (!userPrivileges.canDelete || !deleteId || !deleteModule) return;
+                var bulkDeleteUrl = '../../equipment_manager/delete_equipment_bulk.php'; // Example bulk delete endpoint
+                var data = {
+                    entity_ids: bulkDeleteIds, // Send an array of IDs
+                    permanent: 1
+                };
 
-            var deleteUrl = '../../equipment_manager/delete_equipment.php';
-            var data = {
-                id: deleteId,
-                permanent: 1,
-                module: deleteModule
-            };
-            $.ajax({
-                url: deleteUrl,
-                method: 'POST',
-                data: data,
-                dataType: 'json',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                success: function(response) {
-                    var modalInstance = bootstrap.Modal.getInstance(document.getElementById('deleteArchiveModal'));
-                    modalInstance.hide();
-                    if (response.status && response.status.toLowerCase() === 'success') {
-                        $('#archiveTable').load(location.href + ' #archiveTable', function() {
-                            updateBulkButtons();
-                            showToast(response.message, 'success');
-                        });
-                    } else {
-                        showToast(response.message, 'error');
+                $.ajax({
+                    url: bulkDeleteUrl,
+                    method: 'POST',
+                    data: data,
+                    dataType: 'json',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    success: function(response) {
+                        var bulkModalInstance = bootstrap.Modal.getInstance(document.getElementById('bulkDeleteModal'));
+                        bulkModalInstance.hide();
+
+                        if (response.status && response.status.toLowerCase() === 'success') {
+                            // Reload only the tbody content
+                            $('#archiveTableBody').load(location.href + ' #archiveTableBody > *', function() {
+                                // After content is loaded, re-capture all rows for filtering and pagination
+                                if (window.archiveFilters && typeof window.archiveFilters.captureRows === 'function') {
+                                    window.archiveFilters.captureRows();
+                                } else {
+                                    console.error('window.archiveFilters.captureRows function not available after AJAX reload.');
+                                }
+                                // Then re-apply filters and update pagination based on the new data
+                                if (window.archiveFilters && typeof window.archiveFilters.applyFilters === 'function') {
+                                    window.archiveFilters.applyFilters();
+                                } else {
+                                    console.error('window.archiveFilters.applyFilters function not available after AJAX reload.');
+                                }
+                                updateBulkButtons();
+                                showToast(response.message, 'success');
+                            });
+                        } else {
+                            showToast(response.message, 'error');
+                        }
+                    },
+                    error: function() {
+                        showToast('Error processing bulk delete.', 'error');
                     }
-                },
-                error: function() {
-                    showToast('Error processing request.', 'error');
-                }
+                });
             });
-        });
-
-
-        var bulkRestoreIds = [];
-
-        // When bulk restore button is clicked, gather selected IDs and show modal
-        $(document).on('click', '#restore-selected', function() {
-            if (!userPrivileges.canRestore) return;
-
-            var selected = $('.select-row:checked');
-            bulkRestoreIds = [];
-            selected.each(function() {
-                bulkRestoreIds.push($(this).val());
-            });
-            var bulkRestoreModal = new bootstrap.Modal(document.getElementById('bulkRestoreModal'));
-            bulkRestoreModal.show();
-        });
+        }); // End of jQuery document ready
     </script>
-
-
 </body>
 
 </html>
