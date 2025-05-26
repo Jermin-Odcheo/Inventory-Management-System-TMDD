@@ -4,7 +4,7 @@ let allRows = window.allRows || [];
 
 // Global variable to store the currently filtered rows.
 // This will be updated by filterTable and used by updatePagination.
-window.filteredRows = window.filteredRows || [];
+window.filteredRows = [];
 
 // Configuration object with default values
 let paginationConfig = {
@@ -32,17 +32,11 @@ function initPagination(config = {}) {
     if (tableBody) {
         if (!window.allRows || window.allRows.length === 0) {
              // Fallback if logs.js hasn't populated it yet (less likely with defer, but good to have)
-             window.allRows = Array.from(tableBody.querySelectorAll('tr:not(#noResultsMessage)'));
+             window.allRows = Array.from(tableBody.querySelectorAll('tr'));
              console.log(`pagination.js: Populated window.allRows as fallback with ${window.allRows.length} rows.`);
         }
         allRows = window.allRows; // pagination.js uses its local allRows reference
         console.log(`pagination.js: Local allRows synchronized, total ${allRows.length} rows.`);
-        
-        // Initialize filteredRows to all rows if not already set
-        if (!window.filteredRows || window.filteredRows.length === 0) {
-            window.filteredRows = [...allRows];
-            console.log(`pagination.js: Initialized filteredRows with ${window.filteredRows.length} rows.`);
-        }
     } else {
         console.error(`pagination.js: Table body with ID ${paginationConfig.tableId} not found during initPagination.`);
     }
@@ -51,18 +45,13 @@ function initPagination(config = {}) {
     setupEventListeners();
     
     // Perform an initial filter and update pagination
-    if (typeof filterTable === 'function') {
-        filterTable(); // Call filterTable to apply initial filters and populate filteredRows
-    } else {
-        updatePagination(); // If no filterTable function, just update pagination
-    }
+    filterTable(); // Call filterTable to apply initial filters and populate filteredRows
     
     console.log('pagination.js: initPagination completed.');
     return {
         update: updatePagination,
         getConfig: () => paginationConfig,
-        setConfig: (config) => Object.assign(paginationConfig, config),
-        resetFilters: resetAllFilters
+        setConfig: (config) => Object.assign(paginationConfig, config)
     };
 }
 
@@ -81,8 +70,31 @@ document.addEventListener('DOMContentLoaded', () => {
 // Sets up event listeners for all filter inputs and pagination controls.
 function setupEventListeners() {
     console.log('pagination.js: setupEventListeners called.');
-    
-    // Row per page change handler
+    const searchInput = document.getElementById('searchInput');
+    const filterAction = document.getElementById('filterAction');
+    const filterStatus = document.getElementById('filterStatus');
+    const filterModule = document.getElementById('filterModule'); // Added module filter listener
+
+    if (searchInput) {
+        searchInput.addEventListener('input', filterTable);
+        console.log('pagination.js: Added listener to searchInput.');
+    }
+
+    if (filterAction) {
+        filterAction.addEventListener('change', filterTable);
+        console.log('pagination.js: Added listener to filterAction.');
+    }
+
+    if (filterStatus) {
+        filterStatus.addEventListener('change', filterTable);
+        console.log('pagination.js: Added listener to filterStatus.');
+    }
+
+    if (filterModule) { // Added module filter listener
+        filterModule.addEventListener('change', filterTable);
+        console.log('pagination.js: Added listener to filterModule.');
+    }
+
     const rowsPerPageSelect = document.getElementById(paginationConfig.rowsPerPageSelectId);
     if (rowsPerPageSelect) {
         rowsPerPageSelect.addEventListener('change', () => {
@@ -93,7 +105,6 @@ function setupEventListeners() {
         console.log('pagination.js: Added listener to rowsPerPageSelect.');
     }
 
-    // Pagination navigation buttons
     const prevButton = document.getElementById(paginationConfig.prevPageId);
     const nextButton = document.getElementById(paginationConfig.nextPageId);
 
@@ -121,57 +132,102 @@ function setupEventListeners() {
     }
 }
 
-// Function to reset all filters to their default state
-function resetAllFilters() {
-    console.log('pagination.js: resetAllFilters called');
+// Rebuilds the table body with only the rows that match the filters.
+// This function now centralizes all filtering logic.
+function filterTable() {
+    console.log('pagination.js: filterTable called.');
+    const searchFilter = document.getElementById('searchInput')?.value.toLowerCase() || '';
+    const actionFilter = document.getElementById('filterAction')?.value.toLowerCase() || '';
+    const statusFilter = document.getElementById('filterStatus')?.value.toLowerCase() || '';
+    const moduleFilter = document.getElementById('filterModule')?.value.toLowerCase() || '';
     
-    // Reset search inputs
-    const searchInputs = document.querySelectorAll('input[type="text"][id*="search"], input[type="search"]');
-    searchInputs.forEach(input => {
-        input.value = '';
-    });
-    
-    // Reset select dropdowns
-    const selectDropdowns = document.querySelectorAll('select[id*="filter"]');
-    selectDropdowns.forEach(select => {
-        if (select.querySelector('option[value="all"]')) {
-            select.value = 'all';
-        } else {
-            select.value = '';
+    // Use window.allRows (the original, unfiltered rows) for filtering
+    const rowsToFilter = window.allRows || [];
+    console.log(`filterTable: Filtering from ${rowsToFilter.length} total rows.`);
+
+    // Filter rows from the original set
+    const filteredRows = rowsToFilter.filter(row => {
+        // For debugging purposes
+        if (!row) return false;
+        
+        // Skip header row if it somehow gets into allRows
+        if (row.querySelector('th')) return false;
+        
+        let matchesSearch = true;
+        let matchesAction = true;
+        let matchesStatus = true;
+        let matchesModule = true;
+        
+        // Search filter (applies to all cells)
+        if (searchFilter) {
+            matchesSearch = row.textContent.toLowerCase().includes(searchFilter);
         }
         
-        // If it's a Select2 dropdown, trigger the change event
-        if (window.jQuery && window.jQuery(select).data('select2')) {
-            window.jQuery(select).trigger('change.select2');
+        // Action filter
+        if (actionFilter) {
+            const actionCell = row.querySelector('[data-label="Action"]');
+            if (actionCell) {
+                // Get text from the action badge, which contains the action name
+                const actionBadge = actionCell.querySelector('.action-badge');
+                const actionText = actionBadge ? 
+                    actionBadge.textContent.toLowerCase().trim() : 
+                    actionCell.textContent.toLowerCase().trim();
+                
+                // Convert both to lowercase and trim for comparison
+                matchesAction = actionText.includes(actionFilter);
+                
+            } else {
+                matchesAction = false;
+            }
         }
+        
+        // Status filter
+        if (statusFilter) {
+            const statusCell = row.querySelector('[data-label="Status"]');
+            if (statusCell) {
+                // Get text from the status badge
+                const statusBadge = statusCell.querySelector('.badge');
+                const statusText = statusBadge ? 
+                    statusBadge.textContent.toLowerCase().trim() : 
+                    statusCell.textContent.toLowerCase().trim();
+                
+                // Handle status cases
+                if (statusFilter === 'successful') {
+                    matchesStatus = statusText.includes('successful');
+                } else if (statusFilter === 'failed') {
+                    matchesStatus = statusText.includes('failed');
+                } else {
+                    matchesStatus = statusText.includes(statusFilter);
+                }
+                
+            } else {
+                matchesStatus = false;
+            }
+        }
+        
+        // Module filter (specific to logs.js original implementation)
+        if (moduleFilter) {
+            const moduleCell = row.querySelector('[data-label="Module"]');
+            if (moduleCell) {
+                const moduleText = moduleCell.textContent.toLowerCase().trim();
+                matchesModule = moduleText.includes(moduleFilter);
+            } else {
+                matchesModule = false;
+            }
+        }
+        
+        return matchesSearch && matchesAction && matchesStatus && matchesModule;
     });
     
-    // Reset date inputs
-    const dateInputs = document.querySelectorAll('input[type="date"]');
-    dateInputs.forEach(input => {
-        input.value = '';
-    });
+    // Store filtered rows in window for pagination to use
+    window.filteredRows = filteredRows;
+    console.log(`filterTable: Filtered down to ${window.filteredRows.length} rows.`);
     
-    // Hide date containers if they exist
-    const dateContainers = document.querySelectorAll('[id*="dateInputs"], [id*="datePicker"]');
-    dateContainers.forEach(container => {
-        container.style.display = 'none';
-    });
-    
-    // Reset to show all rows
-    if (window.allRows) {
-        window.filteredRows = [...window.allRows];
-    }
-    
-    // Reset pagination to first page
+    // Reset to the first page after filtering
     paginationConfig.currentPage = 1;
     
-    // Update the UI
-    if (typeof filterTable === 'function') {
-        filterTable();
-    } else {
-        updatePagination();
-    }
+    // Update pagination based on the new filtered set
+    updatePagination();
 }
 
 // Updates the display of table rows and pagination controls based on current page and filters.
@@ -192,111 +248,68 @@ function updatePagination() {
 
     console.log(`updatePagination: Total Rows: ${totalRows}, Rows Per Page: ${rowsPerPage}, Total Pages: ${totalPages}`);
 
-    // Make sure current page is in valid range
-    if (paginationConfig.currentPage > totalPages) {
-        paginationConfig.currentPage = totalPages;
-    } else if (paginationConfig.currentPage < 1) {
+    // Adjust current page if it's out of bounds after filtering
+    paginationConfig.currentPage = Math.min(paginationConfig.currentPage, totalPages);
+    if (paginationConfig.currentPage < 1 && totalPages >= 1) {
         paginationConfig.currentPage = 1;
+    } else if (totalPages === 0) {
+        paginationConfig.currentPage = 0; // No pages if no rows
     }
+    console.log('updatePagination: Adjusted Current Page:', paginationConfig.currentPage);
 
-    // Calculate start and end indices for current page
-    const startIndex = (paginationConfig.currentPage - 1) * rowsPerPage;
-    const endIndex = Math.min(startIndex + rowsPerPage, totalRows);
 
-    // First, remove any existing "no results" message or create it if needed
-    let noResultsMessage = document.getElementById('noResultsMessage');
+    const start = (paginationConfig.currentPage - 1) * rowsPerPage;
+    const end = paginationConfig.currentPage * rowsPerPage;
+    console.log(`updatePagination: Displaying rows from index ${start} to ${end}.`);
+
+    // Clear the tbody before adding the current page's rows
+    tbody.innerHTML = '';
     
-    // If no results and no message exists, create one
-    if (totalRows === 0 && !noResultsMessage) {
-        noResultsMessage = document.createElement('tr');
-        noResultsMessage.id = 'noResultsMessage';
-        const colSpan = tbody.querySelector('tr')?.children?.length || 5;
-        noResultsMessage.innerHTML = `
-            <td colspan="${colSpan}" class="text-center py-4">
-                <div class="alert alert-warning mb-0">
-                    <i class="bi bi-exclamation-circle me-2"></i> No results found for the current filter criteria.
+    // If no filtered rows, show a "no results" message
+    if (totalRows === 0) {
+        const noResultsRow = document.createElement('tr');
+        noResultsRow.innerHTML = `
+            <td colspan="10">
+                <div class="empty-state text-center py-4">
+                    <i class="fas fa-search fa-3x mb-3"></i>
+                    <h4>No matching records found</h4>
+                    <p class="text-muted">Try adjusting your search or filter criteria.</p>
                 </div>
             </td>
         `;
-        tbody.appendChild(noResultsMessage);
+        tbody.appendChild(noResultsRow);
+        console.log('updatePagination: Displaying "No matching records found".');
+    } else {
+        // Add only the rows for the current page
+        rowsToPaginate.slice(start, end).forEach(row => {
+            tbody.appendChild(row.cloneNode(true)); // Append a clone to avoid moving nodes
+        });
+        console.log(`updatePagination: Appended ${rowsToPaginate.slice(start, end).length} rows to tbody.`);
     }
+
+    // Update display text for "Showing X to Y of Z entries"
+    const currentPageEl = document.getElementById(paginationConfig.currentPageId);
+    if (currentPageEl) currentPageEl.textContent = totalRows === 0 ? 0 : start + 1;
     
-    // Show/hide the message based on results
-    if (noResultsMessage) {
-        noResultsMessage.style.display = totalRows === 0 ? 'table-row' : 'none';
-    }
+    const rowsPerPageEl = document.getElementById(paginationConfig.rowsPerPageId);
+    if (rowsPerPageEl) rowsPerPageEl.textContent = Math.min(end, totalRows);
+    
+    const totalRowsEl = document.getElementById(paginationConfig.totalRowsId);
+    if (totalRowsEl) totalRowsEl.textContent = totalRows;
 
-    // First, hide all rows by adding filtered-out class
-    const allTableRows = Array.from(tbody.querySelectorAll('tr:not(#noResultsMessage)'));
-    allTableRows.forEach(row => {
-        row.classList.add('filtered-out');
-    });
+    // Disable/enable Prev/Next buttons
+    const prevPageEl = document.getElementById(paginationConfig.prevPageId);
+    if (prevPageEl) prevPageEl.disabled = (paginationConfig.currentPage <= 1);
+    
+    const nextPageEl = document.getElementById(paginationConfig.nextPageId);
+    if (nextPageEl) nextPageEl.disabled = (paginationConfig.currentPage >= totalPages);
 
-    // Then, show only the rows for the current page
-    for (let i = startIndex; i < endIndex; i++) {
-        if (rowsToPaginate[i]) {
-            rowsToPaginate[i].classList.remove('filtered-out');
-        }
-    }
-
-    // Update pagination controls
-    const currentPageSpan = document.getElementById(paginationConfig.currentPageId);
-    if (currentPageSpan) {
-        currentPageSpan.textContent = totalRows === 0 ? 0 : paginationConfig.currentPage;
-    }
-
-    const rowsPerPageSpan = document.getElementById(paginationConfig.rowsPerPageId);
-    if (rowsPerPageSpan) {
-        rowsPerPageSpan.textContent = totalRows === 0 ? 0 : Math.min(endIndex, totalRows);
-    }
-
-    const totalRowsSpan = document.getElementById(paginationConfig.totalRowsId);
-    if (totalRowsSpan) {
-        totalRowsSpan.textContent = totalRows;
-    }
-
-    // Enable/disable prev/next buttons based on current page
-    const prevButton = document.getElementById(paginationConfig.prevPageId);
-    const nextButton = document.getElementById(paginationConfig.nextPageId);
-
-    if (prevButton) {
-        prevButton.disabled = paginationConfig.currentPage <= 1;
-        prevButton.classList.toggle('disabled', paginationConfig.currentPage <= 1);
-        
-        // Hide prev button if on first page or no data
-        if (paginationConfig.currentPage <= 1 || totalRows <= rowsPerPage) {
-            prevButton.style.display = 'none';
-        } else {
-            prevButton.style.display = '';
-        }
-    }
-
-    if (nextButton) {
-        nextButton.disabled = paginationConfig.currentPage >= totalPages;
-        nextButton.classList.toggle('disabled', paginationConfig.currentPage >= totalPages);
-        
-        // Hide next button if on last page or no data
-        if (paginationConfig.currentPage >= totalPages || totalRows <= rowsPerPage) {
-            nextButton.style.display = 'none';
-        } else {
-            nextButton.style.display = '';
-        }
-    }
-
-    // Update pagination numbers
+    // Render pagination links (1, 2, 3, ..., N)
     renderPaginationControls(totalPages);
-    
-    // Hide pagination container if only one page
-    const paginationContainer = document.getElementById(paginationConfig.paginationId);
-    if (paginationContainer) {
-        if (totalPages <= 1 || totalRows <= rowsPerPage) {
-            paginationContainer.style.display = 'none';
-        } else {
-            paginationContainer.style.display = '';
-        }
-    }
+    console.log('updatePagination: Finished rendering pagination controls.');
 }
 
+// Calculates the total number of pages based on filtered rows and rows per page.
 function getTotalPages() {
     const rowsToPaginate = window.filteredRows || [];
     const totalRows = rowsToPaginate.length;
@@ -305,88 +318,84 @@ function getTotalPages() {
     return Math.ceil(totalRows / rowsPerPage) || 1;
 }
 
+// Renders the pagination links (e.g., 1, 2, ..., 5, 6).
 function renderPaginationControls(totalPages) {
+    console.log('pagination.js: renderPaginationControls called. Total Pages:', totalPages);
     const paginationContainer = document.getElementById(paginationConfig.paginationId);
-    if (!paginationContainer) return;
-
-    // Clear existing pagination items
-    paginationContainer.innerHTML = '';
-
-    // Don't render pagination if there's only one page
-    if (totalPages <= 1) {
-        paginationContainer.style.display = 'none';
+    if (!paginationContainer) {
+        console.error(`Could not find pagination container with ID ${paginationConfig.paginationId}`);
         return;
-    } else {
-        paginationContainer.style.display = '';
     }
 
-    const currentPage = paginationConfig.currentPage;
-    const maxPagesToShow = 5; // Maximum number of page numbers to show
+    paginationContainer.innerHTML = ''; // Clear existing pagination links
 
-    let startPage, endPage;
-    if (totalPages <= maxPagesToShow) {
-        // Show all pages if there are fewer than maxPagesToShow
-        startPage = 1;
-        endPage = totalPages;
-    } else {
-        // Calculate start and end pages to show
-        if (currentPage <= Math.ceil(maxPagesToShow / 2)) {
-            startPage = 1;
-            endPage = maxPagesToShow;
-        } else if (currentPage + Math.floor(maxPagesToShow / 2) >= totalPages) {
-            startPage = totalPages - maxPagesToShow + 1;
-            endPage = totalPages;
-        } else {
-            startPage = currentPage - Math.floor(maxPagesToShow / 2);
-            endPage = currentPage + Math.floor(maxPagesToShow / 2);
-        }
+    if (totalPages <= 1) {
+        console.log('renderPaginationControls: Only one page, no pagination links needed.');
+        return; // No pagination needed for 1 or fewer pages
     }
 
-    // Add "First" page if not starting from page 1
-    if (startPage > 1) {
-        addPaginationItem(paginationContainer, 1);
-        if (startPage > 2) {
-            // Add ellipsis if there's a gap
-            const ellipsis = document.createElement('li');
-            ellipsis.className = 'page-item disabled';
-            ellipsis.innerHTML = '<span class="page-link">...</span>';
-            paginationContainer.appendChild(ellipsis);
-        }
-    }
+    // Always show first page
+    addPaginationItem(paginationContainer, 1, paginationConfig.currentPage === 1);
 
-    // Add page numbers
+    // Show ellipses and a window of pages around current page
+    const maxVisiblePages = 5; // Adjust to show more or fewer pages in the control
+    const halfWindow = Math.floor(maxVisiblePages / 2);
+    
+    let startPage = Math.max(2, paginationConfig.currentPage - halfWindow);
+    let endPage = Math.min(totalPages - 1, paginationConfig.currentPage + halfWindow);
+    
+    // Adjust start and end to ensure 'maxVisiblePages' are shown if possible
+    if (paginationConfig.currentPage <= halfWindow + 1) {
+        endPage = Math.min(totalPages - 1, maxVisiblePages);
+    } else if (paginationConfig.currentPage >= totalPages - halfWindow) {
+        startPage = Math.max(2, totalPages - maxVisiblePages);
+    }
+    
+    // Show ellipsis after first page if needed
+    if (startPage > 2) {
+        addPaginationItem(paginationContainer, '...');
+    }
+    
+    // Show pages in the window
     for (let i = startPage; i <= endPage; i++) {
-        addPaginationItem(paginationContainer, i, i === currentPage);
+        addPaginationItem(paginationContainer, i, i === paginationConfig.currentPage);
     }
-
-    // Add "Last" page if not ending at the last page
-    if (endPage < totalPages) {
-        if (endPage < totalPages - 1) {
-            // Add ellipsis if there's a gap
-            const ellipsis = document.createElement('li');
-            ellipsis.className = 'page-item disabled';
-            ellipsis.innerHTML = '<span class="page-link">...</span>';
-            paginationContainer.appendChild(ellipsis);
-        }
-        addPaginationItem(paginationContainer, totalPages);
+    
+    // Show ellipsis before last page if needed
+    if (endPage < totalPages - 1) {
+        addPaginationItem(paginationContainer, '...');
     }
+    
+    // Always show last page if more than 1 page
+    if (totalPages > 1) {
+        addPaginationItem(paginationContainer, totalPages, paginationConfig.currentPage === totalPages);
+    }
+    console.log('renderPaginationControls: Pagination links rendered.');
 }
 
+// Helper function to add a single pagination item (page number or ellipsis).
 function addPaginationItem(container, page, isActive = false) {
     const li = document.createElement('li');
-    li.className = `page-item${isActive ? ' active' : ''}`;
-    
+    li.className = 'page-item' + (isActive ? ' active' : '');
+
     const a = document.createElement('a');
     a.className = 'page-link';
     a.href = '#';
     a.textContent = page;
-    
-    a.addEventListener('click', function(e) {
-        e.preventDefault();
-        paginationConfig.currentPage = page;
-        updatePagination();
-    });
-    
+
+    if (page !== '...') {
+        a.addEventListener('click', function (e) {
+            e.preventDefault(); // Prevent default link behavior
+            console.log(`addPaginationItem: Page link clicked - ${page}.`);
+            paginationConfig.currentPage = parseInt(page);
+            updatePagination(); // Update pagination when a page number is clicked
+        });
+    } else {
+        // Disable ellipsis links
+        a.setAttribute('disabled', true);
+        li.classList.add('disabled');
+    }
+
     li.appendChild(a);
     container.appendChild(li);
 }
