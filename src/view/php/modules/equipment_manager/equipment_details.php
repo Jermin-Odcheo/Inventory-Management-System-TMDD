@@ -339,15 +339,32 @@ $oldEquipment['date_created']);
                 }
                 $pdo->beginTransaction();
 
+                // Get the asset tag from the equipment details
+                $assetTag = $detailsData['asset_tag'];
+
                 $oldValue = json_encode($detailsData);
+                
+                // 1. Update equipment_details to set is_disabled = 1
                 $stmt = $pdo->prepare("UPDATE equipment_details SET is_disabled = 1 WHERE id = ?");
                 $stmt->execute([$_POST['details_id']]);
                 $detailsData['is_disabled'] = 1;
                 $newValue = json_encode($detailsData);
 
+                // 2. Update equipment_status to set is_disabled = 1 for the same asset tag
+                $statusStmt = $pdo->prepare("UPDATE equipment_status SET is_disabled = 1 WHERE asset_tag = ?");
+                $statusStmt->execute([$assetTag]);
+                $statusRowsAffected = $statusStmt->rowCount();
+
+                // 3. Update equipment_location to set is_disabled = 1 for the same asset tag
+                $locationStmt = $pdo->prepare("UPDATE equipment_location SET is_disabled = 1 WHERE asset_tag = ?");
+                $locationStmt->execute([$assetTag]);
+                $locationRowsAffected = $locationStmt->rowCount();
+
+                // Log the main equipment details deletion
                 $auditStmt = $pdo->prepare("INSERT INTO audit_log (
             UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status, Date_Time
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+                
                 $auditStmt->execute([
                     $_SESSION['user_id'],
                     $detailsData['id'],
@@ -359,9 +376,36 @@ $oldEquipment['date_created']);
                     'Successful'
                 ]);
 
+                // Log the cascaded deletions if any rows were affected
+                if ($statusRowsAffected > 0) {
+                    $auditStmt->execute([
+                        $_SESSION['user_id'],
+                        $detailsData['id'],
+                        'Equipment Status',
+                        'Delete',
+                        'Equipment status entries for asset tag ' . $assetTag . ' have been removed (cascaded delete)',
+                        json_encode(['asset_tag' => $assetTag, 'rows_affected' => $statusRowsAffected]),
+                        null,
+                        'Successful'
+                    ]);
+                }
+
+                if ($locationRowsAffected > 0) {
+                    $auditStmt->execute([
+                        $_SESSION['user_id'],
+                        $detailsData['id'],
+                        'Equipment Location',
+                        'Delete',
+                        'Equipment location entries for asset tag ' . $assetTag . ' have been removed (cascaded delete)',
+                        json_encode(['asset_tag' => $assetTag, 'rows_affected' => $locationRowsAffected]),
+                        null,
+                        'Successful'
+                    ]);
+                }
+
                 $pdo->commit();
                 $response['status'] = 'success';
-                $response['message'] = 'Equipment Details removed successfully.';
+                $response['message'] = 'Equipment Details and related records removed successfully.';
             } catch (Exception $e) {
                 if ($pdo->inTransaction()) {
                     $pdo->rollBack();
@@ -410,6 +454,167 @@ function safeHtml($value)
     return htmlspecialchars($value ?? 'N/A');
 }
 ob_end_clean();
+
+// Regular page load continues here...
+include('../../general/header.php');
+
+// Initialize RBAC
+$userId = $_SESSION['user_id'] ?? null;
+if (!is_int($userId) && !ctype_digit((string)$userId)) {
+    header('Location: ' . BASE_URL . 'index.php');
+    exit;
+}
+$userId = (int)$userId;
+
+// Init RBAC & enforce "View"
+$rbac = new RBACService($pdo, $_SESSION['user_id']);
+$rbac->requirePrivilege('Equipment Management', 'View');
+
+// Button flags
+$canCreate = $rbac->hasPrivilege('Equipment Management', 'Create');
+$canModify = $rbac->hasPrivilege('Equipment Management', 'Modify');
+$canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
+
+// Initialize response array
+$response = array('status' => '', 'message' => '');
+
+// Initialize messages
+$errors = [];
+$success = "";
+
+// Retrieve any session messages from previous requests
+if (isset($_SESSION['errors'])) {
+    $errors = $_SESSION['errors'];
+    unset($_SESSION['errors']);
+}
+if (isset($_SESSION['success'])) {
+    $success = $_SESSION['success'];
+    unset($_SESSION['success']);
+}
+
+// GET deletion (if applicable)
+if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
+    // Check if user has Remove privilege
+    if (!$rbac->hasPrivilege('Equipment Management', 'Remove')) {
+        $_SESSION['errors'] = ["You do not have permission to delete equipment details"];
+        header("Location: equipment_details.php");
+        exit;
+    }
+
+    $id = $_GET['id'];
+    try {
+        // Get status details before deletion for audit log
+        $stmt = $pdo->prepare("SELECT * FROM equipment_details WHERE id = ?");
+        $stmt->execute([$id]);
+        $detailsData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($detailsData) {
+            // Begin transaction
+            $pdo->beginTransaction();
+
+            // Get the asset tag from the equipment details
+            $assetTag = $detailsData['asset_tag'];
+
+            // Set current user for audit logging
+            $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
+
+            // Prepare audit log data for equipment details
+            $oldValue = json_encode([
+                'equipment_details_id' => $detailsData['id'],
+                'asset_tag' => $detailsData['asset_tag'],
+                'asset_description_1' => $detailsData['asset_description_1'],
+                'asset_description_2' => $detailsData['asset_description_2'],
+                'specifications' => $detailsData['specifications'],
+                'brand' => $detailsData['brand'],
+                'model' => $detailsData['model'],
+                'serial_number' => $detailsData['serial_number'],
+                'location' => $detailsData['location'],
+                'accountable_individual' => $detailsData['accountable_individual'],
+                'rr_no' => $detailsData['rr_no'],
+                'remarks' => $detailsData['remarks']
+            ]);
+
+            // Insert into audit_log for equipment details
+            $auditStmt = $pdo->prepare("
+                INSERT INTO audit_log (
+                    UserID,
+                    EntityID,
+                    Module,
+                    Action,
+                    Details,
+                    OldVal,
+                    NewVal,
+                    Status,
+                    Date_Time
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            ");
+
+            $auditStmt->execute([
+                $_SESSION['user_id'],
+                $detailsData['id'],
+                'Equipment Management',
+                'Delete',
+                'Equipment details has been deleted',
+                $oldValue,
+                null,
+                'Successful'
+            ]);
+
+            // 1. Update equipment_details to set is_disabled = 1
+            $stmt = $pdo->prepare("UPDATE equipment_details SET is_disabled = 1 WHERE id = ?");
+            $stmt->execute([$id]);
+
+            // 2. Update equipment_status to set is_disabled = 1 for the same asset tag
+            $statusStmt = $pdo->prepare("UPDATE equipment_status SET is_disabled = 1 WHERE asset_tag = ?");
+            $statusStmt->execute([$assetTag]);
+            $statusRowsAffected = $statusStmt->rowCount();
+
+            // 3. Update equipment_location to set is_disabled = 1 for the same asset tag
+            $locationStmt = $pdo->prepare("UPDATE equipment_location SET is_disabled = 1 WHERE asset_tag = ?");
+            $locationStmt->execute([$assetTag]);
+            $locationRowsAffected = $locationStmt->rowCount();
+
+            // Log the cascaded deletions if any rows were affected
+            if ($statusRowsAffected > 0) {
+                $auditStmt->execute([
+                    $_SESSION['user_id'],
+                    $detailsData['id'],
+                    'Equipment Status',
+                    'Delete',
+                    'Equipment status entries for asset tag ' . $assetTag . ' have been removed (cascaded delete)',
+                    json_encode(['asset_tag' => $assetTag, 'rows_affected' => $statusRowsAffected]),
+                    null,
+                    'Successful'
+                ]);
+            }
+
+            if ($locationRowsAffected > 0) {
+                $auditStmt->execute([
+                    $_SESSION['user_id'],
+                    $detailsData['id'],
+                    'Equipment Location',
+                    'Delete',
+                    'Equipment location entries for asset tag ' . $assetTag . ' have been removed (cascaded delete)',
+                    json_encode(['asset_tag' => $assetTag, 'rows_affected' => $locationRowsAffected]),
+                    null,
+                    'Successful'
+                ]);
+            }
+
+            // Commit transaction
+            $pdo->commit();
+
+            $_SESSION['success'] = "Equipment Details and related records deleted successfully.";
+        }
+    } catch (PDOException $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        $_SESSION['error'] = "Error deleting Equipment Details: " . $e->getMessage();
+    }
+    header("Location: equipment_details.php");
+    exit;
+}
 ?>
 
 <!DOCTYPE html>

@@ -132,6 +132,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAjax) {
             $deviceState       = trim($_POST['device_state']);
             $remarks           = trim($_POST['remarks']);
 
+            // Validate required fields
+            if (empty($assetTag)) {
+                throw new Exception('Asset tag is required');
+            }
+            
+            if (empty($deviceState)) {
+                throw new Exception('Device state is required');
+            }
+
             error_log(print_r($_POST, true));
             $pdo->beginTransaction();
 
@@ -215,6 +224,9 @@ if (
         $locationData = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($locationData) {
+            // Get the asset tag from the location data
+            $assetTag = $locationData['asset_tag'];
+            
             $oldValues = json_encode([
                 'asset_tag'          => $locationData['asset_tag'],
                 'building_loc'       => $locationData['building_loc'],
@@ -225,9 +237,12 @@ if (
                 'device_state'       => $locationData['device_state'],
                 'remarks'            => $locationData['remarks']
             ]);
+            
+            // 1. Update equipment_location to set is_disabled = 1
             $stmt = $pdo->prepare("UPDATE equipment_location SET is_disabled = 1 WHERE equipment_location_id = ?");
             $stmt->execute([$id]);
 
+            // Log the equipment location deletion
             $auditStmt = $pdo->prepare("
                 INSERT INTO audit_log
                 (UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status, Date_Time)
@@ -243,8 +258,13 @@ if (
                 null,
                 'Successful'
             ]);
-            $pdo->commit();
+            
+            // Since equipment_location is the parent of Asset Tag, we don't cascade the deletion
+            // to equipment_details or equipment_status
+            
             echo json_encode(['status' => 'success', 'message' => 'Equipment Location deleted successfully']);
+            
+            $pdo->commit();
         } else {
             echo json_encode(['status' => 'error', 'message' => 'Location not found']);
         }
@@ -642,6 +662,23 @@ function safeHtml($value)
                             <input type="text" class="form-control" name="person_responsible">
                         </div>
                     
+                        <div class="mb-3">
+                            <label for="department_id" class="form-label">Department</label>
+                            <select class="form-control" id="add_department_id" name="department_id">
+                                <option value="">Select Department</option>
+                                <?php
+                                try {
+                                    $deptStmt = $pdo->query("SELECT id, department_name FROM departments ORDER BY department_name");
+                                    $departments = $deptStmt->fetchAll();
+                                    foreach ($departments as $department) {
+                                        echo "<option value='" . htmlspecialchars($department['id']) . "'>" . htmlspecialchars($department['department_name']) . "</option>";
+                                    }
+                                } catch (PDOException $e) {
+                                    // Handle error if needed
+                                }
+                                ?>
+                            </select>
+                        </div>
                         
                         <div class="mb-3">
                             <label class="form-label">Device State</label>
@@ -1463,9 +1500,6 @@ function safeHtml($value)
                                 
                                 // Apply any active filters
                                 filterTable();
-                                
-                                // Directly update equipment details with captured form values
-                                directUpdateEquipmentDetails(assetTag, buildingLoc, specificArea, personResponsible);
                             });
                         } else {
                             showToast(result.message, 'error');
@@ -1560,9 +1594,6 @@ function safeHtml($value)
                                 
                                 // Apply any active filters
                                 filterTable();
-                                
-                                // Directly update equipment details with captured form values
-                                directUpdateEquipmentDetails(assetTag, buildingLoc, specificArea, personResponsible);
                             });
                         } else {
                             showToast(result.message, 'error');

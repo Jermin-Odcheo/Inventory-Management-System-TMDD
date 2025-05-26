@@ -214,6 +214,20 @@ function updateEquipmentDetailsFromLocation(assetTag, buildingLoc, specificArea,
             console.error('Error updating equipment details:', error);
             console.error('XHR status:', status);
             console.error('XHR object:', xhr);
+            
+            // Try to parse the error message from the response
+            try {
+                const response = JSON.parse(xhr.responseText);
+                if (response && response.message) {
+                    console.error('Server error message:', response.message);
+                }
+            } catch (e) {
+                // Could not parse response as JSON
+                console.error('Could not parse error response as JSON');
+            }
+            
+            // Clear the update_in_progress flag
+            sessionStorage.removeItem('update_in_progress');
         }
     });
 }
@@ -342,6 +356,15 @@ $(document).ready(function() {
                             return;
                         }
                         
+                        // Check if we've already handled this update
+                        if (sessionStorage.getItem('update_in_progress') === 'true') {
+                            console.log('Update already in progress, skipping duplicate call');
+                            return;
+                        }
+                        
+                        // Set flag to prevent duplicate updates
+                        sessionStorage.setItem('update_in_progress', 'true');
+                        
                         // Update equipment details
                         updateEquipmentDetailsFromLocation(assetTag, buildingLoc, specificArea, personResponsible);
                         
@@ -350,6 +373,11 @@ $(document).ready(function() {
                         sessionStorage.removeItem('updated_building_loc');
                         sessionStorage.removeItem('updated_specific_area');
                         sessionStorage.removeItem('updated_person_responsible');
+                        
+                        // Clear the flag after a short delay
+                        setTimeout(function() {
+                            sessionStorage.removeItem('update_in_progress');
+                        }, 1000);
                     }
                 } catch (error) {
                     console.error('Error parsing AJAX response:', error);

@@ -251,7 +251,10 @@ if (
                     if (!$statusData) {
                         throw new Exception('Status not found');
                     }
-
+                    
+                    // Get the asset tag
+                    $assetTag = $statusData['asset_tag'];
+                    
                     // Begin transaction
                     $pdo->beginTransaction();
 
@@ -263,7 +266,7 @@ if (
                         'remarks' => $statusData['remarks']
                     ]);
 
-                    // Insert into audit_log
+                    // Insert into audit_log for status deletion
                     $auditStmt = $pdo->prepare("
                         INSERT INTO audit_log (
                             UserID,
@@ -289,18 +292,21 @@ if (
                         'Successful'
                     ]);
 
-                    // Now perform the delete
+                    // Perform the delete on equipment_status
                     $stmt = $pdo->prepare("UPDATE equipment_status SET is_disabled = 1 WHERE equipment_status_id = ?");
                     $stmt->execute([$_POST['status_id']]);
-
-                    // Commit transaction
-                    $pdo->commit();
-
+                    
+                    // No longer check for active status records or cascade deletions
+                    // We only update the equipment_status record
+                    
                     $_SESSION['success'] = "Equipment Status deleted successfully.";
                     $response = [
                         'status' => 'success',
                         'message' => 'Equipment Status deleted successfully.'
                     ];
+
+                    // Commit transaction
+                    $pdo->commit();
                 } catch (Exception $e) {
                     if ($pdo->inTransaction()) {
                         $pdo->rollBack();
@@ -374,6 +380,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
         $statusData = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($statusData) {
+            // Get the asset tag
+            $assetTag = $statusData['asset_tag'];
+            
             // Begin transaction
             $pdo->beginTransaction();
 
@@ -414,13 +423,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                 'Successful'
             ]);
 
-            // Now perform the delete
+            // Perform the delete on equipment_status
             $stmt = $pdo->prepare("UPDATE equipment_status SET is_disabled = 1 WHERE equipment_status_id = ?");
             $stmt->execute([$id]);
-
-            // Commit transaction
-            $pdo->commit();
-
+            
+            // No longer check for active status records or cascade deletions
+            // We only update the equipment_status record
+            
             $_SESSION['success'] = "Equipment Status deleted successfully.";
         }
     } catch (PDOException $e) {

@@ -33,7 +33,20 @@ if (isset($_POST['id'])) {
             exit();
         }
         
-        // Perform the restore
+        // Get the asset tag from the equipment details
+        $assetTag = $oldData['asset_tag'];
+        
+        // Check if there's already an active equipment details record for this asset tag
+        $activeCheckStmt = $pdo->prepare("SELECT COUNT(*) FROM equipment_details WHERE asset_tag = ? AND is_disabled = 0");
+        $activeCheckStmt->execute([$assetTag]);
+        $activeCount = $activeCheckStmt->fetchColumn();
+        
+        if ($activeCount > 0) {
+            echo json_encode(['status' => 'warning', 'message' => 'An active equipment details record with asset tag ' . $assetTag . ' already exists. Cannot restore.']);
+            exit();
+        }
+        
+        // Perform the restore of equipment details
         $stmt = $pdo->prepare("UPDATE equipment_details SET is_disabled = 0 WHERE id = ? AND is_disabled = 1");
         $stmt->execute([$edId]);
         
@@ -42,7 +55,7 @@ if (isset($_POST['id'])) {
         $checkStmt->execute([$edId]);
         $newData = $checkStmt->fetch(PDO::FETCH_ASSOC);
         
-        // Insert into audit_log
+        // Insert into audit_log for equipment details
         $auditStmt = $pdo->prepare("
             INSERT INTO audit_log (
                 UserID,
@@ -68,10 +81,56 @@ if (isset($_POST['id'])) {
             'Successful'
         ]);
         
+        // Also restore related equipment status records
+        $statusStmt = $pdo->prepare("UPDATE equipment_status SET is_disabled = 0 WHERE asset_tag = ? AND is_disabled = 1");
+        $statusStmt->execute([$assetTag]);
+        $statusRowsAffected = $statusStmt->rowCount();
+        
+        // Also restore related equipment location records
+        $locationStmt = $pdo->prepare("UPDATE equipment_location SET is_disabled = 0 WHERE asset_tag = ? AND is_disabled = 1");
+        $locationStmt->execute([$assetTag]);
+        $locationRowsAffected = $locationStmt->rowCount();
+        
+        // Log the cascaded restorations if any rows were affected
+        if ($statusRowsAffected > 0) {
+            $auditStmt->execute([
+                $_SESSION['user_id'],
+                $edId,
+                'Equipment Status',
+                'Restored',
+                'Equipment status entries for asset tag ' . $assetTag . ' have been restored (cascaded restore)',
+                json_encode(['asset_tag' => $assetTag, 'rows_affected' => $statusRowsAffected]),
+                null,
+                'Successful'
+            ]);
+        }
+        
+        if ($locationRowsAffected > 0) {
+            $auditStmt->execute([
+                $_SESSION['user_id'],
+                $edId,
+                'Equipment Location',
+                'Restored',
+                'Equipment location entries for asset tag ' . $assetTag . ' have been restored (cascaded restore)',
+                json_encode(['asset_tag' => $assetTag, 'rows_affected' => $locationRowsAffected]),
+                null,
+                'Successful'
+            ]);
+        }
+        
         // Commit transaction
         $pdo->commit();
         
-        echo json_encode(['status' => 'success', 'message' => 'Equipment details restored successfully']);
+        // Prepare response message based on what was restored
+        $message = 'Equipment details restored successfully';
+        if ($statusRowsAffected > 0 || $locationRowsAffected > 0) {
+            $message .= ', along with ' . 
+                ($statusRowsAffected > 0 ? $statusRowsAffected . ' status record(s)' : '') . 
+                ($statusRowsAffected > 0 && $locationRowsAffected > 0 ? ' and ' : '') . 
+                ($locationRowsAffected > 0 ? $locationRowsAffected . ' location record(s)' : '');
+        }
+        
+        echo json_encode(['status' => 'success', 'message' => $message]);
     } catch (PDOException $e) {
         // Rollback transaction if error
         if ($pdo->inTransaction()) {
@@ -133,17 +192,46 @@ if (isset($_POST['id'])) {
         
         // Store old data by ID for easier access
         $oldDataLookup = [];
+        $assetTags = []; // Store asset tags for related records
+        $skippedAssetTags = []; // Track skipped asset tags due to existing active records
+        $validEdIds = []; // Track valid equipment detail IDs after checking for active records
+        
         foreach ($oldDataRecords as $record) {
             $oldDataLookup[$record['id']] = $record;
+            $assetTags[$record['id']] = $record['asset_tag'];
+            
+            // Check if there's already an active equipment details record for this asset tag
+            $activeCheckStmt = $pdo->prepare("SELECT COUNT(*) FROM equipment_details WHERE asset_tag = ? AND is_disabled = 0");
+            $activeCheckStmt->execute([$record['asset_tag']]);
+            $activeCount = $activeCheckStmt->fetchColumn();
+            
+            if ($activeCount > 0) {
+                $skippedAssetTags[] = $record['asset_tag'];
+            } else {
+                $validEdIds[] = $record['id'];
+            }
         }
         
-        // Perform the restore
-        $stmt = $pdo->prepare("UPDATE equipment_details SET is_disabled = 0 WHERE id IN ($placeholders) AND is_disabled = 1");
-        $stmt->execute($edIds);
+        // If no valid IDs after checking for active records, exit
+        if (empty($validEdIds)) {
+            if (!empty($skippedAssetTags)) {
+                echo json_encode(['status' => 'warning', 'message' => 'All selected equipment details have active records with the same asset tags: ' . implode(', ', $skippedAssetTags)]);
+            } else {
+                echo json_encode(['status' => 'error', 'message' => 'No valid equipment details to restore']);
+            }
+            exit();
+        }
+        
+        // Prepare placeholders for valid IDs
+        $validPlaceholders = implode(",", array_fill(0, count($validEdIds), '?'));
+        
+        // Perform the restore for valid equipment details
+        $stmt = $pdo->prepare("UPDATE equipment_details SET is_disabled = 0 WHERE id IN ($validPlaceholders) AND is_disabled = 1");
+        $stmt->execute($validEdIds);
         
         // Get data after restoration
-        $checkStmt = $pdo->prepare("SELECT * FROM equipment_details WHERE id IN ($placeholders)");
-        $checkStmt->execute($edIds);
+        $checkStmt = $pdo->prepare("SELECT * FROM equipment_details WHERE id IN ($validPlaceholders)");
+        $checkStmt->execute($validEdIds);
         $newDataRecords = $checkStmt->fetchAll(PDO::FETCH_ASSOC);
         
         // Store new data by ID for easier access
@@ -152,8 +240,15 @@ if (isset($_POST['id'])) {
             $newDataLookup[$record['id']] = $record;
         }
         
-        // Log each restoration in audit_log
-        foreach ($oldDataLookup as $id => $oldData) {
+        // Track restored related records
+        $restoredStatusCount = 0;
+        $restoredLocationCount = 0;
+        
+        // Log each restoration in audit_log and restore related records
+        foreach ($validEdIds as $id) {
+            $oldData = $oldDataLookup[$id];
+            $assetTag = $assetTags[$id];
+            
             $auditStmt = $pdo->prepare("
                 INSERT INTO audit_log (
                     UserID,
@@ -178,12 +273,67 @@ if (isset($_POST['id'])) {
                 json_encode($newDataLookup[$id] ?? null),
                 'Successful'
             ]);
+            
+            // Restore related equipment status records
+            $statusStmt = $pdo->prepare("UPDATE equipment_status SET is_disabled = 0 WHERE asset_tag = ? AND is_disabled = 1");
+            $statusStmt->execute([$assetTag]);
+            $statusRowsAffected = $statusStmt->rowCount();
+            $restoredStatusCount += $statusRowsAffected;
+            
+            // Restore related equipment location records
+            $locationStmt = $pdo->prepare("UPDATE equipment_location SET is_disabled = 0 WHERE asset_tag = ? AND is_disabled = 1");
+            $locationStmt->execute([$assetTag]);
+            $locationRowsAffected = $locationStmt->rowCount();
+            $restoredLocationCount += $locationRowsAffected;
+            
+            // Log the cascaded restorations if any rows were affected
+            if ($statusRowsAffected > 0) {
+                $auditStmt->execute([
+                    $_SESSION['user_id'],
+                    $id,
+                    'Equipment Status',
+                    'Restored',
+                    'Equipment status entries for asset tag ' . $assetTag . ' have been restored (cascaded restore)',
+                    json_encode(['asset_tag' => $assetTag, 'rows_affected' => $statusRowsAffected]),
+                    null,
+                    'Successful'
+                ]);
+            }
+            
+            if ($locationRowsAffected > 0) {
+                $auditStmt->execute([
+                    $_SESSION['user_id'],
+                    $id,
+                    'Equipment Location',
+                    'Restored',
+                    'Equipment location entries for asset tag ' . $assetTag . ' have been restored (cascaded restore)',
+                    json_encode(['asset_tag' => $assetTag, 'rows_affected' => $locationRowsAffected]),
+                    null,
+                    'Successful'
+                ]);
+            }
         }
         
         // Commit transaction
         $pdo->commit();
         
-        echo json_encode(['status' => 'success', 'message' => 'Selected equipment details restored successfully']);
+        // Prepare response message
+        $message = count($validEdIds) . ' equipment details restored successfully';
+        
+        // Add info about related records
+        if ($restoredStatusCount > 0 || $restoredLocationCount > 0) {
+            $message .= ', along with ' . 
+                ($restoredStatusCount > 0 ? $restoredStatusCount . ' status record(s)' : '') . 
+                ($restoredStatusCount > 0 && $restoredLocationCount > 0 ? ' and ' : '') . 
+                ($restoredLocationCount > 0 ? $restoredLocationCount . ' location record(s)' : '');
+        }
+        
+        // Add info about skipped records
+        if (!empty($skippedAssetTags)) {
+            $message .= '. ' . count($skippedAssetTags) . ' record(s) skipped due to existing active asset tags: ' . implode(', ', $skippedAssetTags);
+        }
+        
+        echo json_encode(['status' => 'success', 'message' => $message]);
     } catch (PDOException $e) {
         // Rollback transaction if error
         if ($pdo->inTransaction()) {
