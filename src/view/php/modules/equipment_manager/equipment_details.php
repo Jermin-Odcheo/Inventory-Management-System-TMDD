@@ -1562,8 +1562,6 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="<?php echo BASE_URL; ?>src/control/js/toast.js"></script>
     <script src="<?php echo BASE_URL; ?>src/control/js/asset_tag_autofill.js"></script>
-    <!-- REMOVE ALL INLINE filterTable AND FILTER EVENT HANDLERS BELOW, DELEGATE TO EXTERNAL JS -->
-    <script src="<?php echo BASE_URL; ?>src/control/js/equipment_details.js"></script>
     <style>
         .filtered-out {
             display: none !important;
@@ -1602,7 +1600,7 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
             const dateTo = $('#dateTo').val() || '';
 
             // Debug output
-            console.log('FILTER VALUES:', {
+            console.log('FILTER VALUES AT START OF filterTable:', {
                 searchText: searchText,
                 filterEquipment: filterEquipment,
                 dateFilterType: dateFilterType,
@@ -1612,13 +1610,14 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                 dateTo: dateTo
             });
 
-            // Make sure we have allRows populated
-            if (!window.allRows || window.allRows.length === 0) {
-                window.allRows = Array.from(document.querySelectorAll('#equipmentTable tr:not(#noResultsMessage)'));
-            }
+            // Make sure we have allRows populated from the current DOM
+            window.allRows = Array.from(document.querySelectorAll('#equipmentTable tr:not(#noResultsMessage)'));
 
             // Reset filteredRows array
             window.filteredRows = [];
+
+            // Explicitly hide all rows before filtering and pagination to ensure a clean slate
+            $('#equipmentTable tr').hide(); // Hide all rows
 
             // Filter each row
             window.allRows.forEach(row => {
@@ -1685,7 +1684,7 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
 
             // Update pagination to show/hide rows based on current page
             if (typeof updatePagination === 'function') {
-                console.log('filterTable calling updatePagination.');
+                console.log('filterTable calling updatePagination. filteredRows count:', window.filteredRows.length);
                 updatePagination();
             } else {
                 console.error('updatePagination function not found in filterTable!');
@@ -1714,10 +1713,11 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                     noResultsMessage.style.display = 'table-row';
                 }
             } else if (noResultsMessage) {
+                // If there are results, ensure the no results message is hidden
                 noResultsMessage.style.display = 'none';
             }
 
-            console.log('Filtered rows:', window.filteredRows.length);
+            console.log('Filtered rows after filterTable execution:', window.filteredRows.length);
         };
 
         // Set up event listeners for filtering
@@ -1951,6 +1951,19 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
         });
 
         $(function() {
+            // Add event listener for modal hidden to remove backdrop
+            $('#addEquipmentModal').on('hidden.bs.modal', function () {
+                $('.modal-backdrop').remove();
+            });
+
+            $('#editEquipmentModal').on('hidden.bs.modal', function () {
+                $('.modal-backdrop').remove();
+            });
+
+            $('#deleteEDModal').on('hidden.bs.modal', function () {
+                $('.modal-backdrop').remove();
+            });
+
             // 1) EDIT button handler
             $(document).on('click', '.edit-equipment', function() {
                 try {
@@ -2017,9 +2030,8 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                     },
                     success(resp) {
                         showToast(resp.message, resp.status === 'success' ? 'success' : 'error');
-                        refreshEquipmentList();
+                        refreshEquipmentList(false); // Do not show refresh toast
                         $('#deleteEDModal').modal('hide');
-                        $('.modal-backdrop').remove();
                     },
                     error(xhr, _, err) {
                         showToast(`Error removing equipment: ${err}`, 'error');
@@ -2027,26 +2039,62 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                 });
             });
 
-            // 3) Refresh the list (after any CRUD) via AJAX GET
-            function refreshEquipmentList() {
-                console.log('refreshEquipmentList called.');
-                $.get(window.location.href, function(html) {
-                    const newTbody = $(html).find('#equipmentTable').html();
-                    $('#equipmentTable').html(newTbody);
+            // 3) Refresh the list (after any CRUD) via AJAX POST to search endpoint
+            // Added showRefreshToast parameter, defaults to true
+            function refreshEquipmentList(showRefreshToast = true) {
+                console.log('refreshEquipmentList called. showRefreshToast:', showRefreshToast);
 
-                    // Update allRows and filteredRows for pagination
-                    window.allRows = Array.from(document.querySelectorAll('#equipmentTable tr:not(#noResultsMessage)'));
-                    window.filteredRows = [...window.allRows];
+                // Always send empty filters to the server to get ALL non-disabled data
+                $.ajax({
+                    url: window.location.href, // Same PHP file handles AJAX
+                    method: 'POST',
+                    data: {
+                        action: 'search',
+                        query: '', // Explicitly clear query
+                        filter: '', // Explicitly clear filter
+                        dateFilterType: '', // Explicitly clear date filters
+                        month: '',
+                        year: '',
+                        dateFrom: '',
+                        dateTo: ''
+                    },
+                    dataType: 'json',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    success(resp) {
+                        if (resp.status === 'success') {
+                            $('#equipmentTable').html(resp.html); // Directly replace tbody content
 
-                    // Apply any active filters (this will also call updatePagination internally)
-                    filterTable();
+                            // Re-initialize the pagination system completely
+                            if (typeof window.initPagination === 'function') {
+                                // Re-initialize with default settings, which should reset current page to 1
+                                window.initPagination({
+                                    tableId: 'equipmentTable',
+                                    currentPage: 1 // Ensure it starts from the first page
+                                });
+                                console.log('Pagination re-initialized after table refresh.');
+                            } else {
+                                console.error('initPagination function not found after table refresh!');
+                                // Fallback: manually update counts and try to filter
+                                window.allRows = Array.from(document.querySelectorAll('#equipmentTable tr:not(#noResultsMessage)'));
+                                window.filteredRows = [...window.allRows];
+                                const totalRows = window.allRows.length;
+                                $('#totalRows').text(totalRows);
+                                filterTable(); // Call filterTable to manage visibility and pagination
+                            }
 
-                    // Update the total count
-                    const totalRows = window.allRows.length;
-                    $('#totalRows').text(totalRows);
-
-                    // Show toast notification
-                    showToast('Equipment list refreshed successfully', 'success');
+                            if (showRefreshToast) {
+                                showToast('Equipment list refreshed successfully', 'success');
+                            }
+                        } else {
+                            showToast(resp.message || 'Error refreshing list', 'error');
+                        }
+                    },
+                    error(xhr, status, error) {
+                        showToast(`Error refreshing equipment list: ${error}`, 'error');
+                        console.error('AJAX Error refreshing list:', xhr.responseText);
+                    }
                 });
             }
 
@@ -2069,7 +2117,18 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                             $('#addEquipmentModal').modal('hide');
                             showToast(resp.message, 'success');
                             $('#addEquipmentForm')[0].reset();
-                            refreshEquipmentList();
+
+                            // Reset search and filter inputs
+                            $('#searchEquipment').val('');
+                            $('#filterEquipment').val('all').trigger('change.select2'); // Reset Select2
+                            $('#dateFilter').val('');
+                            $('#monthSelect').val('');
+                            $('#yearSelect').val('');
+                            $('#dateFrom').val('');
+                            $('#dateTo').val('');
+                            $('#dateInputsContainer').hide();
+
+                            refreshEquipmentList(false); // Do not show refresh toast
                         } else {
                             showToast(resp.message, 'error');
                         }
@@ -2153,7 +2212,18 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                         if (resp.status === 'success') {
                             $('#editEquipmentModal').modal('hide');
                             showToast(resp.message, 'success');
-                            refreshEquipmentList();
+
+                            // Reset search and filter inputs
+                            $('#searchEquipment').val('');
+                            $('#filterEquipment').val('all').trigger('change.select2'); // Reset Select2
+                            $('#dateFilter').val('');
+                            $('#monthSelect').val('');
+                            $('#yearSelect').val('');
+                            $('#dateFrom').val('');
+                            $('#dateTo').val('');
+                            $('#dateInputsContainer').hide();
+
+                            refreshEquipmentList(false); // Do not show refresh toast
                         } else {
                             showToast(resp.message, 'error');
                         }
