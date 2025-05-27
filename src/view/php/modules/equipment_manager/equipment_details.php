@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 date_default_timezone_set('Asia/Manila');
 ob_start();
@@ -82,14 +82,20 @@ date_modified FROM equipment_details WHERE is_disabled = 0 AND ("
                     echo '<td>' . safeHtml($equipment['brand']) . '</td>';
                     echo '<td>' . safeHtml($equipment['model']) . '</td>';
                     echo '<td>' . safeHtml($equipment['serial_number']) . '</td>';
-                    echo '<td>' . (!empty($equipment['date_created']) ? date('Y-m-d H:i', 
-strtotime($equipment['date_created'])) : '') . '</td>';
-                    echo '<td>' . (!empty($equipment['date_created']) ? date('Y-m-d H:i', 
-strtotime($equipment['date_created'])) : '') . '</td>';
-                    echo '<td>' . (!empty($equipment['date_modified']) ? date('Y-m-d H:i', 
-strtotime($equipment['date_modified'])) : '') . '</td>';
-                    echo '<td>' . safeHtml((strpos($equipment['rr_no'] ?? '', 'RR') === 0 ? 
-$equipment['rr_no'] : ('RR' . $equipment['rr_no']))) . '</td>';
+                    echo '<td>' . (!empty($equipment['date_created']) ? date(
+                        'Y-m-d H:i',
+                        strtotime($equipment['date_created'])
+                    ) : '') . '</td>';
+                    echo '<td>' . (!empty($equipment['date_created']) ? date(
+                        'Y-m-d H:i',
+                        strtotime($equipment['date_created'])
+                    ) : '') . '</td>';
+                    echo '<td>' . (!empty($equipment['date_modified']) ? date(
+                        'Y-m-d H:i',
+                        strtotime($equipment['date_modified'])
+                    ) : '') . '</td>';
+                    echo '<td>' . safeHtml((strpos($equipment['rr_no'] ?? '', 'RR') === 0 ?
+                        $equipment['rr_no'] : ('RR' . $equipment['rr_no']))) . '</td>';
                     echo '<td>' . safeHtml($equipment['location']) . '</td>';
                     echo '<td>' . safeHtml($equipment['accountable_individual']) . '</td>';
                     echo '<td>' . safeHtml($equipment['remarks']) . '</td>';
@@ -106,8 +112,8 @@ $equipment['rr_no'] : ('RR' . $equipment['rr_no']))) . '</td>';
                             . ' data-model="' . safeHtml($equipment['model']) . '"'
                             . ' data-serial="' . safeHtml($equipment['serial_number']) . '"'
                             . ' data-location="' . safeHtml($equipment['location']) . '"'
-                            . ' data-accountable="' . safeHtml($equipment['accountable_individual']) 
-. '"'
+                            . ' data-accountable="' . safeHtml($equipment['accountable_individual'])
+                            . '"'
                             . ' data-rr="' . safeHtml($equipment['rr_no']) . '"'
                             . ' data-date="' . safeHtml($equipment['date_created']) . '"'
                             . ' data-remarks="' . safeHtml($equipment['remarks']) . '">
@@ -131,8 +137,8 @@ criteria.</div></td></tr>';
             echo json_encode(['status' => 'success', 'html' => $html]);
         } catch (Throwable $e) {
             error_log('AJAX Search Error: ' . $e->getMessage());
-            echo json_encode(['status' => 'error', 'message' => 'AJAX Search Error: ' . 
-$e->getMessage()]);
+            echo json_encode(['status' => 'error', 'message' => 'AJAX Search Error: ' .
+                $e->getMessage()]);
         }
         exit;
     }
@@ -174,8 +180,10 @@ $e->getMessage()]);
                     $_POST['serial_number'],
                     $_POST['location'] ?? null,
                     $_POST['accountable_individual'] ?? null,
-                    (isset($_POST['rr_no']) && $_POST['rr_no'] !== '' ? (strpos($_POST['rr_no'], 
-'RR') === 0 ? $_POST['rr_no'] : 'RR' . $_POST['rr_no']) : null),
+                    (isset($_POST['rr_no']) && $_POST['rr_no'] !== '' ? (strpos(
+                        $_POST['rr_no'],
+                        'RR'
+                    ) === 0 ? $_POST['rr_no'] : 'RR' . $_POST['rr_no']) : null),
                     $date_created,
                     $_POST['remarks'] ?? null
                 ];
@@ -223,8 +231,10 @@ remarks
                 if ($pdo->inTransaction()) {
                     $pdo->rollBack();
                 }
-                if ($e instanceof PDOException && isset($e->errorInfo[1]) && $e->errorInfo[1] == 1062 
-&& strpos($e->getMessage(), 'asset_tag') !== false) {
+                if (
+                    $e instanceof PDOException && isset($e->errorInfo[1]) && $e->errorInfo[1] == 1062
+                    && strpos($e->getMessage(), 'asset_tag') !== false
+                ) {
                     $response['status'] = 'error';
                     $response['message'] = 'Asset tag already exists. Please use a unique asset tag.';
                 } else {
@@ -264,8 +274,10 @@ remarks
                     $_POST['serial_number'],
                     $_POST['location'],
                     $_POST['accountable_individual'],
-                    (isset($_POST['rr_no']) && $_POST['rr_no'] !== '' ? (strpos($_POST['rr_no'], 
-'RR') === 0 ? $_POST['rr_no'] : 'RR' . $_POST['rr_no']) : null),
+                    (isset($_POST['rr_no']) && $_POST['rr_no'] !== '' ? (strpos(
+                        $_POST['rr_no'],
+                        'RR'
+                    ) === 0 ? $_POST['rr_no'] : 'RR' . $_POST['rr_no']) : null),
                     $_POST['remarks'],
                     $_POST['equipment_id']
                 ];
@@ -277,8 +289,11 @@ remarks
             rr_no = ?, remarks = ?, date_modified = NOW() WHERE id = ?");
                 $stmt->execute($values);
 
-                unset($oldEquipment['id'], $oldEquipment['is_disabled'], 
-$oldEquipment['date_created']);
+                unset(
+                    $oldEquipment['id'],
+                    $oldEquipment['is_disabled'],
+                    $oldEquipment['date_created']
+                );
                 $oldValue = json_encode($oldEquipment);
                 $newValues = json_encode([
                     'asset_tag' => $_POST['asset_tag'],
@@ -343,7 +358,7 @@ $oldEquipment['date_created']);
                 $assetTag = $detailsData['asset_tag'];
 
                 $oldValue = json_encode($detailsData);
-                
+
                 // 1. Update equipment_details to set is_disabled = 1
                 $stmt = $pdo->prepare("UPDATE equipment_details SET is_disabled = 1 WHERE id = ?");
                 $stmt->execute([$_POST['details_id']]);
@@ -364,7 +379,7 @@ $oldEquipment['date_created']);
                 $auditStmt = $pdo->prepare("INSERT INTO audit_log (
             UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status, Date_Time
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())");
-                
+
                 $auditStmt->execute([
                     $_SESSION['user_id'],
                     $detailsData['id'],
@@ -625,14 +640,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Equipment Details Management</title>
     <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.min.css" 
-rel="stylesheet">
-    <!-- Select2 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" 
-rel="stylesheet">
-    <!-- jQuery (loaded in header for RR autofill) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.min.css"
+        rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
+        rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
- 
+
     <style>
         th.sortable.asc::after {
             content: " â–²";
@@ -641,8 +654,8 @@ rel="stylesheet">
         th.sortable.desc::after {
             content: " â–¼";
         }
-        
-        
+
+
         /* Pagination styling */
         .pagination {
             display: flex;
@@ -650,32 +663,32 @@ rel="stylesheet">
             list-style: none;
             border-radius: 0.25rem;
         }
-        
+
         .page-item:first-child .page-link {
             margin-left: 0;
             border-top-left-radius: 0.25rem;
             border-bottom-left-radius: 0.25rem;
         }
-        
+
         .page-item:last-child .page-link {
             border-top-right-radius: 0.25rem;
             border-bottom-right-radius: 0.25rem;
         }
-        
+
         .page-item.active .page-link {
             z-index: 3;
             color: #fff;
             background-color: #0d6efd;
             border-color: #0d6efd;
         }
-        
+
         .page-item.disabled .page-link {
             color: #6c757d;
             pointer-events: none;
             background-color: #fff;
             border-color: #dee2e6;
         }
-        
+
         .page-link {
             position: relative;
             display: block;
@@ -687,7 +700,7 @@ rel="stylesheet">
             border: 1px solid #dee2e6;
             text-decoration: none;
         }
-        
+
         .page-link:hover {
             z-index: 2;
             color: #0056b3;
@@ -695,13 +708,13 @@ rel="stylesheet">
             background-color: #e9ecef;
             border-color: #dee2e6;
         }
-        
+
         .page-link:focus {
             z-index: 3;
             outline: 0;
             box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
         }
-        
+
         /* Hide pagination when no results or only one page */
         .pagination:empty {
             display: none;
@@ -728,12 +741,11 @@ align-items-center">
             </div>
             <div class="card-body">
                 <div class="container-fluid px-0">
-                    <!-- Toolbar Row -->
                     <div class="filter-container" id="filterContainer">
                         <div class="col-auto">
                             <?php if ($canCreate): ?>
-                                <button class="btn btn-dark" data-bs-toggle="modal" 
-data-bs-target="#addEquipmentModal">
+                                <button class="btn btn-dark" data-bs-toggle="modal"
+                                    data-bs-target="#addEquipmentModal">
                                     <i class="bi bi-plus-lg"></i> Create Equipment
                                 </button>
                             <?php endif; ?>
@@ -741,14 +753,16 @@ data-bs-target="#addEquipmentModal">
                         <div class="col-md-3">
                             <select class="form-select" id="filterEquipment">
                                 <option value="">Filter Equipment Type</option>
-                                <option value="all">All Equipment Types</option>
+                                <option value="all" selected>All Equipment Types</option>
                                 <?php
-                                $equipmentTypes = array_unique(array_column($equipmentDetails, 
-'asset_description_1'));
+                                $equipmentTypes = array_unique(array_column(
+                                    $equipmentDetails,
+                                    'asset_description_1'
+                                ));
                                 foreach ($equipmentTypes as $type) {
                                     if (!empty($type)) {
-                                        echo "<option value='" . safeHtml($type) . "'>" . 
-safeHtml($type) . "</option>";
+                                        echo "<option value='" . safeHtml($type) . "'>" .
+                                            safeHtml($type) . "</option>";
                                     }
                                 }
                                 ?>
@@ -773,17 +787,28 @@ safeHtml($type) . "</option>";
                         </div>
                     </div>
 
-                    <!-- Date Inputs Row -->
                     <div id="dateInputsContainer" class="date-inputs-container">
                         <div class="month-picker-container" id="monthPickerContainer">
                             <select class="form-select" id="monthSelect">
                                 <option value="">Select Month</option>
                                 <?php
-                                $months = ['January', 'February', 'March', 'April', 'May', 'June', 
-'July', 'August', 'September', 'October', 'November', 'December'];
+                                $months = [
+                                    'January',
+                                    'February',
+                                    'March',
+                                    'April',
+                                    'May',
+                                    'June',
+                                    'July',
+                                    'August',
+                                    'September',
+                                    'October',
+                                    'November',
+                                    'December'
+                                ];
                                 foreach ($months as $index => $month) {
-                                    echo "<option value='" . ($index + 1) . "'>" . $month . 
-"</option>";
+                                    echo "<option value='" . ($index + 1) . "'>" . $month .
+                                        "</option>";
                                 }
                                 ?>
                             </select>
@@ -842,11 +867,11 @@ safeHtml($type) . "</option>";
 H:i', strtotime($equipment['date_created'])) : ''; ?></td>
                                         <td><?= !empty($equipment['date_modified']) ? date('Y-m-d 
 H:i', strtotime($equipment['date_modified'])) : ''; ?></td>
-                                        <td><?= safeHtml((strpos($equipment['rr_no'] ?? '', 'RR') === 
-0 ? $equipment['rr_no'] : ('RR' . $equipment['rr_no']))); ?></td>
+                                        <td><?= safeHtml((strpos($equipment['rr_no'] ?? '', 'RR') ===
+                                                0 ? $equipment['rr_no'] : ('RR' . $equipment['rr_no']))); ?></td>
                                         <td><?= safeHtml($equipment['location']); ?></td>
-                                        <td><?= safeHtml($equipment['accountable_individual']); 
-?></td>
+                                        <td><?= safeHtml($equipment['accountable_individual']);
+                                            ?></td>
                                         <td><?= safeHtml($equipment['remarks']); ?></td>
                                         <td>
                                             <div class="btn-group">
@@ -854,30 +879,30 @@ H:i', strtotime($equipment['date_modified'])) : ''; ?></td>
                                                     <button class="btn btn-outline-info btn-sm 
 edit-equipment"
                                                         data-id="<?= safeHtml($equipment['id']); ?>"
-                                                        data-asset="<?= 
-safeHtml($equipment['asset_tag']); ?>"
-                                                        data-desc1="<?= 
-safeHtml($equipment['asset_description_1']); ?>"
-                                                        data-desc2="<?= 
-safeHtml($equipment['asset_description_2']); ?>"
-                                                        data-spec="<?= 
-safeHtml($equipment['specifications']); ?>"
-                                                        data-brand="<?= 
-safeHtml($equipment['brand']); ?>"
-                                                        data-model="<?= 
-safeHtml($equipment['model']); ?>"
-                                                        data-serial="<?= 
-safeHtml($equipment['serial_number']); ?>"
-                                                        data-location="<?= 
-safeHtml($equipment['location']); ?>"
-                                                        data-accountable="<?= 
-safeHtml($equipment['accountable_individual']); ?>"
-                                                        data-rr="<?= safeHtml($equipment['rr_no']); 
-?>"
-                                                        data-date="<?= 
-safeHtml($equipment['date_created']); ?>"
-                                                        data-remarks="<?= 
-safeHtml($equipment['remarks']); ?>">
+                                                        data-asset="<?=
+                                                                    safeHtml($equipment['asset_tag']); ?>"
+                                                        data-desc1="<?=
+                                                                    safeHtml($equipment['asset_description_1']); ?>"
+                                                        data-desc2="<?=
+                                                                    safeHtml($equipment['asset_description_2']); ?>"
+                                                        data-spec="<?=
+                                                                    safeHtml($equipment['specifications']); ?>"
+                                                        data-brand="<?=
+                                                                    safeHtml($equipment['brand']); ?>"
+                                                        data-model="<?=
+                                                                    safeHtml($equipment['model']); ?>"
+                                                        data-serial="<?=
+                                                                        safeHtml($equipment['serial_number']); ?>"
+                                                        data-location="<?=
+                                                                        safeHtml($equipment['location']); ?>"
+                                                        data-accountable="<?=
+                                                                            safeHtml($equipment['accountable_individual']); ?>"
+                                                        data-rr="<?= safeHtml($equipment['rr_no']);
+                                                                    ?>"
+                                                        data-date="<?=
+                                                                    safeHtml($equipment['date_created']); ?>"
+                                                        data-remarks="<?=
+                                                                        safeHtml($equipment['remarks']); ?>">
                                                         <i class="bi bi-pencil-square"></i>
                                                     </button>
                                                 <?php endif; ?>
@@ -898,8 +923,8 @@ remove-equipment"
                                 <tr>
                                     <td colspan="16" class="text-center py-4">
                                         <div class="alert alert-info mb-0">
-                                            <i class="bi bi-info-circle me-2"></i> No Equipment 
-Details found. Click on "Create Equipment" to add a new entry.
+                                            <i class="bi bi-info-circle me-2"></i> No Equipment
+                                            Details found. Click on "Create Equipment" to add a new entry.
                                         </div>
                                     </td>
                                 </tr>
@@ -907,15 +932,14 @@ Details found. Click on "Create Equipment" to add a new entry.
                         </tbody>
                     </table>
                 </div>
-                <!-- Pagination Controls -->
                 <div class="container-fluid">
                     <div class="row align-items-center g-3">
                         <div class="col-12 col-sm-auto">
                             <div class="text-muted">
                                 <?php $totalLogs = count($equipmentDetails); ?>
                                 <input type="hidden" id="total-users" value="<?= $totalLogs ?>">
-                                Showing <span id="currentPage">1</span> to <span 
-id="rowsPerPage">10</span> of <span id="totalRows"><?= $totalLogs ?></span> entries
+                                Showing <span id="currentPage">1</span> to <span
+                                    id="rowsPerPage">10</span> of <span id="totalRows"><?= $totalLogs ?></span> entries
                             </div>
                         </div>
                         <div class="col-12 col-sm-auto ms-sm-auto">
@@ -943,21 +967,19 @@ align-items-center gap-1">
                             <ul class="pagination justify-content-center" id="pagination"></ul>
                         </div>
                     </div>
-                </div> <!-- /.Pagination -->
+                </div>
             </div>
         </section>
     </div>
 
-    <!-- Modals -->
-    <!-- Add Equipment Modal -->
-    <div class="modal fade" id="addEquipmentModal" tabindex="-1" aria-labelledby="addEquipmentLabel" 
-aria-hidden="true">
+    <div class="modal fade" id="addEquipmentModal" tabindex="-1" aria-labelledby="addEquipmentLabel"
+        aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header p-4">
                     <h5 class="modal-title ">Add New Equipment</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" 
-aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
                     <form id="addEquipmentForm">
@@ -965,25 +987,29 @@ aria-label="Close"></button>
                         <div class="mb-3">
                             <label for="asset_tag" class="form-label">Asset Tag <span style="color: 
 red;">*</span></label>
-                            <select class="form-select" name="asset_tag" id="add_equipment_asset_tag" 
-required style="width: 100%;">
+                            <select class="form-select" name="asset_tag" id="add_equipment_asset_tag"
+                                required style="width: 100%;">
                                 <option value="">Select or type Asset Tag</option>
                                 <?php
                                 // Fetch unique asset tags from equipment_location and equipment_status
                                 $assetTags = [];
                                 $stmt1 = $pdo->query("SELECT DISTINCT asset_tag FROM 
 equipment_location WHERE is_disabled = 0");
-                                $assetTags = array_merge($assetTags, 
-$stmt1->fetchAll(PDO::FETCH_COLUMN));
+                                $assetTags = array_merge(
+                                    $assetTags,
+                                    $stmt1->fetchAll(PDO::FETCH_COLUMN)
+                                );
                                 $stmt2 = $pdo->query("SELECT DISTINCT asset_tag FROM equipment_status 
 WHERE is_disabled = 0");
-                                $assetTags = array_merge($assetTags, 
-$stmt2->fetchAll(PDO::FETCH_COLUMN));
+                                $assetTags = array_merge(
+                                    $assetTags,
+                                    $stmt2->fetchAll(PDO::FETCH_COLUMN)
+                                );
                                 $assetTags = array_unique(array_filter($assetTags));
                                 sort($assetTags);
                                 foreach ($assetTags as $tag) {
-                                    echo '<option value="' . htmlspecialchars($tag) . '">' . 
-htmlspecialchars($tag) . '</option>';
+                                    echo '<option value="' . htmlspecialchars($tag) . '">' .
+                                        htmlspecialchars($tag) . '</option>';
                                 }
                                 ?>
                             </select>
@@ -991,16 +1017,16 @@ htmlspecialchars($tag) . '</option>';
                         <div class="mb-3">
                             <div class="row">
                                 <div class="mb-3 col-md-6">
-                                    <label for="asset_description_1" class="form-label">Asset 
-Description 1</label>
-                                    <input type="text" class="form-control" 
-name="asset_description_1">
+                                    <label for="asset_description_1" class="form-label">Asset
+                                        Description 1</label>
+                                    <input type="text" class="form-control"
+                                        name="asset_description_1">
                                 </div>
                                 <div class="mb-3 col-md-6">
-                                    <label for="asset_description_2" class="form-label">Asset 
-Description 2</label>
-                                    <input type="text" class="form-control" 
-name="asset_description_2">
+                                    <label for="asset_description_2" class="form-label">Asset
+                                        Description 2</label>
+                                    <input type="text" class="form-control"
+                                        name="asset_description_2">
                                 </div>
                             </div>
                         </div>
@@ -1023,14 +1049,14 @@ name="asset_description_2">
                         <div class="mb-3">
                             <div class="row">
                                 <div class="mb-3 col-md-6">
-                                    <label for="serial_number" class="form-label">Serial Number 
-</label>
+                                    <label for="serial_number" class="form-label">Serial Number
+                                    </label>
                                     <input type="text" class="form-control" name="serial_number">
                                 </div>
                                 <div class="mb-3 col-md-6">
                                     <label for="add_rr_no" class="form-label">RR#</label>
-                                    <select class="form-select rr-select2" name="rr_no" 
-id="add_rr_no" style="width: 100%;">
+                                    <select class="form-select rr-select2" name="rr_no"
+                                        id="add_rr_no" style="width: 100%;">
                                         <option value="">Select or search RR Number</option>
                                         <?php
                                         // Fetch active RR numbers for dropdown
@@ -1039,8 +1065,8 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                                         $stmtRR->execute();
                                         $rrList = $stmtRR->fetchAll(PDO::FETCH_COLUMN);
                                         foreach ($rrList as $rrNo) {
-                                            echo '<option value="' . htmlspecialchars($rrNo) . '">' . 
-htmlspecialchars($rrNo) . '</option>';
+                                            echo '<option value="' . htmlspecialchars($rrNo) . '">' .
+                                                htmlspecialchars($rrNo) . '</option>';
                                         }
                                         ?>
                                     </select>
@@ -1059,14 +1085,12 @@ htmlspecialchars($rrNo) . '</option>';
                                         align-items: center;
                                     }
 
-                                    .select2-container .select2-selection--single 
-.select2-selection__rendered {
+                                    .select2-container .select2-selection--single .select2-selection__rendered {
                                         line-height: 24px;
                                         color: #212529;
                                     }
 
-                                    .select2-container--default .select2-selection--single 
-.select2-selection__arrow {
+                                    .select2-container--default .select2-selection--single .select2-selection__arrow {
                                         height: 36px;
                                         right: 10px;
                                     }
@@ -1076,6 +1100,7 @@ htmlspecialchars($rrNo) . '</option>';
                                     }
                                 </style>
                                 <script>
+                                    // This script block remains in equipment_details.php for Select2 initialization for modals
                                     $(function() {
                                         $('#add_rr_no').select2({
                                             placeholder: 'Select or search RR Number',
@@ -1117,8 +1142,8 @@ htmlspecialchars($rrNo) . '</option>';
                                                 if (term === '') return null;
                                                 var exists = false;
                                                 $('#add_equipment_asset_tag option').each(function() {
-                                                    if ($(this).text().toLowerCase() === 
-term.toLowerCase()) exists = true;
+                                                    if ($(this).text().toLowerCase() ===
+                                                        term.toLowerCase()) exists = true;
                                                 });
                                                 return exists ? null : {
                                                     id: term,
@@ -1128,23 +1153,23 @@ term.toLowerCase()) exists = true;
                                         }).on('select2:select', function(e) {
                                             console.log('Asset tag selected:', e.params.data.id);
                                             var assetTag = e.params.data.id;
-                                            
+
                                             // Reset fields before fetching new asset tag info
-                                            const $accountableField = 
-$('input[name="accountable_individual"]');
+                                            const $accountableField =
+                                                $('input[name="accountable_individual"]');
                                             const $locationField = $('input[name="location"]');
-                                            
+
                                             // If fields were previously autofilled, reset them first
                                             if ($accountableField.attr('data-autofill') === 'true') {
-                                                $accountableField.val('').prop('readonly', 
-false).attr('data-autofill', 'false').removeClass('bg-light');
+                                                $accountableField.val('').prop('readonly',
+                                                    false).attr('data-autofill', 'false').removeClass('bg-light');
                                             }
-                                            
+
                                             if ($locationField.attr('data-autofill') === 'true') {
-                                                $locationField.val('').prop('readonly', 
-false).attr('data-autofill', 'false').removeClass('bg-light');
+                                                $locationField.val('').prop('readonly',
+                                                    false).attr('data-autofill', 'false').removeClass('bg-light');
                                             }
-                                            
+
                                             // Fetch and autofill data based on asset tag
                                             fetchAssetTagInfo(assetTag, 'add', true);
                                         });
@@ -1152,18 +1177,18 @@ false).attr('data-autofill', 'false').removeClass('bg-light');
                                         // Handle asset tag being cleared
                                         $('#add_equipment_asset_tag').on('select2:clear', function() {
                                             // Reset the Location and Accountable Individual fields
-                                            const $accountableField = 
-$('input[name="accountable_individual"]');
+                                            const $accountableField =
+                                                $('input[name="accountable_individual"]');
                                             const $locationField = $('input[name="location"]');
-                                            
+
                                             if ($accountableField.attr('data-autofill') === 'true') {
-                                                $accountableField.val('').prop('readonly', 
-false).attr('data-autofill', 'false').removeClass('bg-light');
+                                                $accountableField.val('').prop('readonly',
+                                                    false).attr('data-autofill', 'false').removeClass('bg-light');
                                             }
-                                            
+
                                             if ($locationField.attr('data-autofill') === 'true') {
-                                                $locationField.val('').prop('readonly', 
-false).attr('data-autofill', 'false').removeClass('bg-light');
+                                                $locationField.val('').prop('readonly',
+                                                    false).attr('data-autofill', 'false').removeClass('bg-light');
                                             }
                                         });
 
@@ -1201,8 +1226,8 @@ false).attr('data-autofill', 'false').removeClass('bg-light');
                                                     if (term === '') return null;
                                                     var exists = false;
                                                     $('#edit_rr_no option').each(function() {
-                                                        if ($(this).text().toLowerCase() === 
-term.toLowerCase()) exists = true;
+                                                        if ($(this).text().toLowerCase() ===
+                                                            term.toLowerCase()) exists = true;
                                                     });
                                                     return exists ? null : {
                                                         id: term,
@@ -1212,11 +1237,10 @@ term.toLowerCase()) exists = true;
                                             });
                                             $('#edit_rr_no').on('select2:select', function(e) {
                                                 var data = e.params.data;
-                                                if (data.selected && data.id && 
-$(this).find('option[value="' + data.id + '"').length === 0) {
+                                                if (data.selected && data.id &&
+                                                    $(this).find('option[value="' + data.id + '"').length === 0) {
                                                     $.ajax({
-                                                        url: 
-'modules/equipment_transactions/receiving_report.php',
+                                                        url: 'modules/equipment_transactions/receiving_report.php',
                                                         method: 'POST',
                                                         data: {
                                                             action: 'create_rr_no',
@@ -1234,32 +1258,32 @@ $(this).find('option[value="' + data.id + '"').length === 0) {
                                                             }
                                                         },
                                                         error: function() {
-                                                            showToast('AJAX error creating RR#', 
-'error');
+                                                            showToast('AJAX error creating RR#',
+                                                                'error');
                                                         }
                                                     });
                                                 }
-                                                
+
                                                 // Reset fields before fetching new RR info
-                                                const $accountableField = 
-$('#edit_accountable_individual');
+                                                const $accountableField =
+                                                    $('#edit_accountable_individual');
                                                 const $locationField = $('#edit_location');
-                                                
+
                                                 // If fields were previously autofilled, reset them 
-first
-                                                if ($accountableField.attr('data-autofill') === 
-'true') {
+                                                first
+                                                if ($accountableField.attr('data-autofill') ===
+                                                    'true') {
                                                     $accountableField.val('').prop('readonly', false);
                                                 }
-                                                
+
                                                 if ($locationField.attr('data-autofill') === 'true') {
                                                     $locationField.val('').prop('readonly', false);
                                                 }
-                                                
+
                                                 // Add autofill functionality here
-                                                
+
                                             });
-                                            
+
                                             // Initialize Select2 for asset tag dropdown in the edit modal
                                             $('#edit_equipment_asset_tag').select2({
                                                 placeholder: 'Select or type Asset Tag',
@@ -1281,64 +1305,64 @@ first
                                                     };
                                                 }
                                             });
-                                            
+
                                             // Add event handler for asset tag selection in edit modal
-                                            $('#edit_equipment_asset_tag').on('select2:select', 
-function(e) {
-                                                try {
-                                                    console.log('Edit modal - Asset tag selected:', e.params.data.id);
-                                                    var assetTag = e.params.data.id;
-                                                    
-                                                    // Reset fields before fetching new asset tag info
-                                                    const $accountableField = 
-$('#edit_accountable_individual');
-                                                    const $locationField = $('#edit_location');
-                                                    
-                                                    // If fields were previously autofilled, reset them
-                                                    if ($accountableField.attr('data-autofill') === 
-'true') {
-                                                        $accountableField.val('').attr('data-autofill', 'false');
+                                            $('#edit_equipment_asset_tag').on('select2:select',
+                                                function(e) {
+                                                    try {
+                                                        console.log('Edit modal - Asset tag selected:', e.params.data.id);
+                                                        var assetTag = e.params.data.id;
+
+                                                        // Reset fields before fetching new asset tag info
+                                                        const $accountableField =
+                                                            $('#edit_accountable_individual');
+                                                        const $locationField = $('#edit_location');
+
+                                                        // If fields were previously autofilled, reset them
+                                                        if ($accountableField.attr('data-autofill') ===
+                                                            'true') {
+                                                            $accountableField.val('').attr('data-autofill', 'false');
+                                                        }
+
+                                                        if ($locationField.attr('data-autofill') === 'true') {
+                                                            $locationField.val('').attr('data-autofill', 'false');
+                                                        }
+
+                                                        // Fetch and autofill data based on asset tag
+                                                        fetchAssetTagInfo(assetTag, 'edit', true);
+                                                    } catch (error) {
+                                                        console.error('Error in select2:select handler:', error);
                                                     }
-                                                    
-                                                    if ($locationField.attr('data-autofill') === 'true') {
-                                                        $locationField.val('').attr('data-autofill', 'false');
-                                                    }
-                                                    
-                                                    // Fetch and autofill data based on asset tag
-                                                    fetchAssetTagInfo(assetTag, 'edit', true);
-                                                } catch (error) {
-                                                    console.error('Error in select2:select handler:', error);
-                                                }
-                                            });
-                                            
+                                                });
+
                                             // Handle asset tag being cleared in edit modal
-                                            $('#edit_equipment_asset_tag').on('select2:clear', 
-function() {
-                                                try {
-                                                    // Reset the Location and Accountable Individual fields
-                                                    const $accountableField = 
-$('#edit_accountable_individual');
-                                                    const $locationField = $('#edit_location');
-                                                    
-                                                    if ($accountableField.attr('data-autofill') === 
-'true') {
-                                                        $accountableField.val('').attr('data-autofill', 'false');
+                                            $('#edit_equipment_asset_tag').on('select2:clear',
+                                                function() {
+                                                    try {
+                                                        // Reset the Location and Accountable Individual fields
+                                                        const $accountableField =
+                                                            $('#edit_accountable_individual');
+                                                        const $locationField = $('#edit_location');
+
+                                                        if ($accountableField.attr('data-autofill') ===
+                                                            'true') {
+                                                            $accountableField.val('').attr('data-autofill', 'false');
+                                                        }
+
+                                                        if ($locationField.attr('data-autofill') === 'true') {
+                                                            $locationField.val('').attr('data-autofill', 'false');
+                                                        }
+                                                    } catch (error) {
+                                                        console.error('Error in select2:clear handler:', error);
                                                     }
-                                                    
-                                                    if ($locationField.attr('data-autofill') === 'true') {
-                                                        $locationField.val('').attr('data-autofill', 'false');
-                                                    }
-                                                } catch (error) {
-                                                    console.error('Error in select2:clear handler:', error);
-                                                }
-                                            });
-                                            
+                                                });
+
                                             // Check if asset tag is already selected when edit modal opens
                                             $('#editEquipmentModal').on('shown.bs.modal', function() {
                                                 try {
                                                     // Check if asset tag is already selected
-                                                    const assetTagValue = 
-$('#edit_equipment_asset_tag').val();
+                                                    const assetTagValue =
+                                                        $('#edit_equipment_asset_tag').val();
                                                     if (assetTagValue) {
                                                         console.log('Edit modal opened with asset tag already selected:', assetTagValue);
                                                         // If an asset tag is already selected, trigger the autofill without notification
@@ -1359,18 +1383,18 @@ $('#edit_equipment_asset_tag').val();
                     <div class="row">
                         <div class="mb-3 col-md-6">
                             <label for="location" class="form-label">Location</label>
-                            <input type="text" class="form-control" name="location" 
-data-autofill="false">
-                            <small class="text-muted">This field will be autofilled when an Asset Tag 
-is selected</small>
+                            <input type="text" class="form-control" name="location"
+                                data-autofill="false">
+                            <small class="text-muted">This field will be autofilled when an Asset Tag
+                                is selected</small>
                         </div>
                         <div class="mb-3 col-md-6">
-                            <label for="accountable_individual" class="form-label">Accountable 
-Individual</label>
-                            <input type="text" class="form-control" name="accountable_individual" 
-data-autofill="false">
-                            <small class="text-muted">This field will be autofilled when an Asset Tag 
-is selected</small>
+                            <label for="accountable_individual" class="form-label">Accountable
+                                Individual</label>
+                            <input type="text" class="form-control" name="accountable_individual"
+                                data-autofill="false">
+                            <small class="text-muted">This field will be autofilled when an Asset Tag
+                                is selected</small>
                         </div>
                     </div>
                 </div>
@@ -1379,8 +1403,8 @@ is selected</small>
                     <textarea class="form-control" name="remarks" rows="3"></textarea>
                 </div>
                 <div class="mb-3 text-end p-4">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" 
-style="margin-right: 4px;">Cancel</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                        style="margin-right: 4px;">Cancel</button>
                     <button type="submit" class="btn btn-primary">Create Equipment</button>
                 </div>
                 </form>
@@ -1389,30 +1413,29 @@ style="margin-right: 4px;">Cancel</button>
     </div>
     </div>
 
-    <!-- Edit Equipment Modal -->
     <div class="modal fade" id="editEquipmentModal" tabindex="-1" data-bs-backdrop="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header p-4">
                     <h5 class="modal-title">Edit Equipment</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" 
-aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
                     <form id="editEquipmentForm">
                         <input type="hidden" name="action" value="update">
                         <input type="hidden" name="equipment_id" id="edit_equipment_id">
                         <div class="mb-3">
-                            <label for="edit_asset_tag" class="form-label">Asset Tag <span 
-style="color: red;">*</span></label>
-                            <select class="form-select" name="asset_tag" 
-id="edit_equipment_asset_tag" required style="width: 100%;">
+                            <label for="edit_asset_tag" class="form-label">Asset Tag <span
+                                    style="color: red;">*</span></label>
+                            <select class="form-select" name="asset_tag"
+                                id="edit_equipment_asset_tag" required style="width: 100%;">
                                 <option value="">Select or type Asset Tag</option>
                                 <?php
                                 // Use the same $assetTags as above
                                 foreach ($assetTags as $tag) {
-                                    echo '<option value="' . htmlspecialchars($tag) . '">' . 
-htmlspecialchars($tag) . '</option>';
+                                    echo '<option value="' . htmlspecialchars($tag) . '">' .
+                                        htmlspecialchars($tag) . '</option>';
                                 }
                                 ?>
                             </select>
@@ -1420,45 +1443,45 @@ htmlspecialchars($tag) . '</option>';
                         <div class="mb-3">
                             <div class="row">
                                 <div class="mb-3 col-md-6">
-                                    <label for="edit_asset_description_1" 
-class="form-label">Description 1</label>
-                                    <input type="text" class="form-control" 
-name="asset_description_1" id="edit_asset_description_1">
+                                    <label for="edit_asset_description_1"
+                                        class="form-label">Description 1</label>
+                                    <input type="text" class="form-control"
+                                        name="asset_description_1" id="edit_asset_description_1">
                                 </div>
                                 <div class="mb-3 col-md-6">
-                                    <label for="edit_asset_description_2" 
-class="form-label">Description 2</label>
-                                    <input type="text" class="form-control" 
-name="asset_description_2" id="edit_asset_description_2">
+                                    <label for="edit_asset_description_2"
+                                        class="form-label">Description 2</label>
+                                    <input type="text" class="form-control"
+                                        name="asset_description_2" id="edit_asset_description_2">
                                 </div>
                             </div>
                         </div>
                         <div class="mb-3">
                             <label for="edit_specifications" class="form-label">Specification</label>
-                            <textarea class="form-control" name="specifications" 
-id="edit_specifications" rows="3"></textarea>
+                            <textarea class="form-control" name="specifications"
+                                id="edit_specifications" rows="3"></textarea>
                         </div>
                         <div class="mb-3">
                             <div class="row">
                                 <div class="mb-3 col-md-6">
                                     <label for="edit_brand" class="form-label">Brand</label>
-                                    <input type="text" class="form-control" name="brand" 
-id="edit_brand">
+                                    <input type="text" class="form-control" name="brand"
+                                        id="edit_brand">
                                 </div>
                                 <div class="mb-3 col-md-6">
                                     <label for="edit_model" class="form-label">Model</label>
-                                    <input type="text" class="form-control" name="model" 
-id="edit_model">
+                                    <input type="text" class="form-control" name="model"
+                                        id="edit_model">
                                 </div>
                             </div>
                         </div>
                         <div class="mb-3">
                             <div class="row">
                                 <div class="mb-3 col-md-6">
-                                    <label for="edit_serial_number" class="form-label">Serial 
-Number</label>
-                                    <input type="text" class="form-control" name="serial_number" 
-id="edit_serial_number">
+                                    <label for="edit_serial_number" class="form-label">Serial
+                                        Number</label>
+                                    <input type="text" class="form-control" name="serial_number"
+                                        id="edit_serial_number">
                                 </div>
                                 <div class="mb-3 col-md-6">
                                     <label for="edit_rr_no" class="form-label">RR#</label>
@@ -1473,8 +1496,8 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                                             $rrList = $stmtRR->fetchAll(PDO::FETCH_COLUMN);
                                         }
                                         foreach ($rrList as $rrNo) {
-                                            echo '<option value="' . htmlspecialchars($rrNo) . '">' . 
-htmlspecialchars($rrNo) . '</option>';
+                                            echo '<option value="' . htmlspecialchars($rrNo) . '">' .
+                                                htmlspecialchars($rrNo) . '</option>';
                                         }
                                         ?>
                                     </select>
@@ -1485,25 +1508,25 @@ htmlspecialchars($rrNo) . '</option>';
                             <div class="row">
                                 <div class="mb-3 col-md-6">
                                     <label for="edit_location" class="form-label">Location</label>
-                                    <input type="text" class="form-control" name="location" 
-id="edit_location" data-autofill="false">
-                                    <small class="text-muted">This field will be autofilled when an 
-Asset Tag is selected</small>
+                                    <input type="text" class="form-control" name="location"
+                                        id="edit_location" data-autofill="false">
+                                    <small class="text-muted">This field will be autofilled when an
+                                        Asset Tag is selected</small>
                                 </div>
                                 <div class="mb-3 col-md-6">
-                                    <label for="edit_accountable_individual" 
-class="form-label">Accountable Individual</label>
-                                    <input type="text" class="form-control" 
-name="accountable_individual" id="edit_accountable_individual" data-autofill="false">
-                                    <small class="text-muted">This field will be autofilled when an 
-Asset Tag is selected</small>
+                                    <label for="edit_accountable_individual"
+                                        class="form-label">Accountable Individual</label>
+                                    <input type="text" class="form-control"
+                                        name="accountable_individual" id="edit_accountable_individual" data-autofill="false">
+                                    <small class="text-muted">This field will be autofilled when an
+                                        Asset Tag is selected</small>
                                 </div>
                             </div>
                         </div>
                         <div class="mb-3">
                             <label for="edit_remarks" class="form-label">Remarks</label>
-                            <textarea class="form-control" name="remarks" id="edit_remarks" 
-rows="3"></textarea>
+                            <textarea class="form-control" name="remarks" id="edit_remarks"
+                                rows="3"></textarea>
                         </div>
                         <div class="mb-3">
                             <button type="submit" class="btn btn-primary">Save Changes</button>
@@ -1514,30 +1537,28 @@ rows="3"></textarea>
         </div>
     </div>
 
-    <!-- Remove Equipment Modal -->
     <div class="modal fade" id="deleteEDModal" tabindex="-1" data-bs-backdrop="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header p-4">
                     <h5 class="modal-title">Confirm Removal</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" 
-aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
                     Are you sure you want to remove this Equipment Detail?
                 </div>
                 <div class="modal-footer p-4">
-                    <button type="button" class="btn btn-secondary" 
-data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-secondary"
+                        data-bs-dismiss="modal">Cancel</button>
                     <button type="button" id="confirmDeleteBtn" class="btn btn-danger">Remove</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" 
-defer></script>
+    <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js"
+        defer></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="<?php echo BASE_URL; ?>src/control/js/toast.js"></script>
     <script src="<?php echo BASE_URL; ?>src/control/js/asset_tag_autofill.js"></script>
@@ -1545,138 +1566,30 @@ defer></script>
         .filtered-out {
             display: none !important;
         }
-        
+
         /* Style for highlighting updated rows */
         .updated-row {
             animation: highlight-row 3s ease-in-out;
         }
-        
+
         @keyframes highlight-row {
-            0% { background-color: rgba(255, 255, 0, 0.5); }
-            70% { background-color: rgba(255, 255, 0, 0.5); }
-            100% { background-color: transparent; }
+            0% {
+                background-color: rgba(255, 255, 0, 0.5);
+            }
+
+            70% {
+                background-color: rgba(255, 255, 0, 0.5);
+            }
+
+            100% {
+                background-color: transparent;
+            }
         }
     </style>
     <script>
-        // Force hide pagination buttons if no data or all fits on one page
-        function forcePaginationCheck() {
-            const totalRows = parseInt(document.getElementById('totalRows')?.textContent || '0');
-            const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect')?.value || '10');
-            const prevBtn = document.getElementById('prevPage');
-            const nextBtn = document.getElementById('nextPage');
-            const paginationEl = document.getElementById('pagination');
-
-            if (totalRows <= rowsPerPage) {
-                if (prevBtn) prevBtn.style.cssText = 'display: none !important';
-                if (nextBtn) nextBtn.style.cssText = 'display: none !important';
-                if (paginationEl) paginationEl.style.cssText = 'display: none !important';
-            }
-
-            // Also check for visible rows (for when filtering is applied)
-            const visibleRows = document.querySelectorAll('#equipmentTable tr:not(.filtered-out)').length;
-            if (visibleRows <= rowsPerPage) {
-                if (prevBtn) prevBtn.style.cssText = 'display: none !important';
-                if (nextBtn) nextBtn.style.cssText = 'display: none !important';
-                if (paginationEl) paginationEl.style.cssText = 'display: none !important';
-            }
-        }
-        
-        // Ensure renderPaginationControls is available
-        if (typeof renderPaginationControls !== 'function') {
-            function renderPaginationControls(totalPages) {
-                const paginationContainer = document.getElementById('pagination');
-                if (!paginationContainer) return;
-            
-                // Clear existing pagination items
-                paginationContainer.innerHTML = '';
-            
-                // Don't render pagination if there's only one page
-                if (totalPages <= 1) {
-                    paginationContainer.style.display = 'none';
-                    return;
-                } else {
-                    paginationContainer.style.display = '';
-                }
-            
-                const currentPage = window.paginationConfig?.currentPage || 1;
-                const maxPagesToShow = 5; // Maximum number of page numbers to show
-            
-                let startPage, endPage;
-                if (totalPages <= maxPagesToShow) {
-                    // Show all pages if there are fewer than maxPagesToShow
-                    startPage = 1;
-                    endPage = totalPages;
-                } else {
-                    // Calculate start and end pages to show
-                    if (currentPage <= Math.ceil(maxPagesToShow / 2)) {
-                        startPage = 1;
-                        endPage = maxPagesToShow;
-                    } else if (currentPage + Math.floor(maxPagesToShow / 2) >= totalPages) {
-                        startPage = totalPages - maxPagesToShow + 1;
-                        endPage = totalPages;
-                    } else {
-                        startPage = currentPage - Math.floor(maxPagesToShow / 2);
-                        endPage = currentPage + Math.floor(maxPagesToShow / 2);
-                    }
-                }
-            
-                // Add "First" page if not starting from page 1
-                if (startPage > 1) {
-                    addPaginationItem(paginationContainer, 1);
-                    if (startPage > 2) {
-                        // Add ellipsis if there's a gap
-                        const ellipsis = document.createElement('li');
-                        ellipsis.className = 'page-item disabled';
-                        ellipsis.innerHTML = '<span class="page-link">...</span>';
-                        paginationContainer.appendChild(ellipsis);
-                    }
-                }
-            
-                // Add page numbers
-                for (let i = startPage; i <= endPage; i++) {
-                    addPaginationItem(paginationContainer, i, i === currentPage);
-                }
-            
-                // Add "Last" page if not ending at the last page
-                if (endPage < totalPages) {
-                    if (endPage < totalPages - 1) {
-                        // Add ellipsis if there's a gap
-                        const ellipsis = document.createElement('li');
-                        ellipsis.className = 'page-item disabled';
-                        ellipsis.innerHTML = '<span class="page-link">...</span>';
-                        paginationContainer.appendChild(ellipsis);
-                    }
-                    addPaginationItem(paginationContainer, totalPages);
-                }
-            }
-            
-            function addPaginationItem(container, page, isActive = false) {
-                const li = document.createElement('li');
-                li.className = `page-item${isActive ? ' active' : ''}`;
-                
-                const a = document.createElement('a');
-                a.className = 'page-link';
-                a.href = '#';
-                a.textContent = page;
-                
-                a.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    if (window.paginationConfig) {
-                        window.paginationConfig.currentPage = page;
-                    } else if (window.paginationConfig === undefined) {
-                        window.paginationConfig = { currentPage: page };
-                    }
-                    updatePagination();
-                });
-                
-                li.appendChild(a);
-                container.appendChild(li);
-            }
-        }
-
         // Custom filterTable function for equipment details
         window.filterTable = function() {
-            console.log('Running filterTable function');
+            console.log('filterTable called.');
             // Get filter values
             const searchText = $('#searchEquipment').val() || '';
             const filterEquipment = $('#filterEquipment').val() || '';
@@ -1701,7 +1614,7 @@ defer></script>
             if (!window.allRows || window.allRows.length === 0) {
                 window.allRows = Array.from(document.querySelectorAll('#equipmentTable tr:not(#noResultsMessage)'));
             }
-            
+
             // Reset filteredRows array
             window.filteredRows = [];
 
@@ -1709,36 +1622,41 @@ defer></script>
             window.allRows.forEach(row => {
                 // Get text content for filtering
                 const rowText = row.textContent || '';
-                
+
                 // Get equipment type column (3rd column, index 2)
                 const equipmentTypeCell = row.cells && row.cells.length > 2 ? row.cells[2] : null;
                 const equipmentTypeText = equipmentTypeCell ? equipmentTypeCell.textContent.trim() || '' : '';
-                
+
                 // Get date column (10th column, index 9 - created date)
                 const dateCell = row.cells && row.cells.length > 9 ? row.cells[9] : null;
                 const dateText = dateCell ? dateCell.textContent.trim() || '' : '';
                 const date = dateText ? new Date(dateText) : null;
-                
+
                 // Apply search filter (case insensitive)
                 const searchMatch = !searchText || rowText.toLowerCase().includes(searchText.toLowerCase());
-                
+
                 // Apply equipment type filter (case insensitive, exact match)
                 let equipmentMatch = true;
                 if (filterEquipment && filterEquipment !== 'all' && filterEquipment.toLowerCase() !== 'filter equipment type') {
                     equipmentMatch = equipmentTypeText.toLowerCase() === filterEquipment.trim().toLowerCase();
                 }
-                
+
                 // Apply date filter
                 let dateMatch = true;
                 if (dateFilterType && date) {
                     if (dateFilterType === 'month' && selectedMonth && selectedYear) {
-                        dateMatch = (date.getMonth() + 1 === parseInt(selectedMonth)) && 
-                                   (date.getFullYear() === parseInt(selectedYear));
-                    } else if (dateFilterType === 'range' && dateFrom && dateTo) {
-                        const from = new Date(dateFrom);
-                        const to = new Date(dateTo);
-                        to.setHours(23, 59, 59); // End of day
-                        dateMatch = date >= from && date <= to;
+                        dateMatch = (date.getMonth() + 1 === parseInt(selectedMonth)) &&
+                            (date.getFullYear() === parseInt(selectedYear));
+                    } else if (dateFilterType === 'range') {
+                        if (dateFrom && dateTo) {
+                            const from = new Date(dateFrom);
+                            const to = new Date(dateTo);
+                            to.setHours(23, 59, 59); // End of day
+                            dateMatch = date >= from && date <= to;
+                        } else {
+                            // If range is selected but dates are not, don't filter by date
+                            dateMatch = true;
+                        }
                     }
                 }
 
@@ -1747,9 +1665,6 @@ defer></script>
                 if (shouldShow) {
                     window.filteredRows.push(row);
                 }
-                
-                // Always add the filtered-out class - updatePagination will remove it for visible rows
-                row.classList.add('filtered-out');
             });
 
             // Sort if needed
@@ -1759,30 +1674,28 @@ defer></script>
                     const dateB = b.cells && b.cells[9] ? new Date(b.cells[9].textContent) : new Date(0);
                     return dateFilterType === 'asc' ? dateA - dateB : dateB - dateA;
                 });
-
-                // Remove all rows and add back in sorted order
-                const tbody = document.getElementById('equipmentTable');
-                if (tbody) {
-                    window.filteredRows.forEach(row => tbody.appendChild(row));
-                }
             }
 
             // Reset to page 1 and update pagination
             if (typeof paginationConfig !== 'undefined') {
                 paginationConfig.currentPage = 1;
             }
-            
+
             // Update pagination to show/hide rows based on current page
             if (typeof updatePagination === 'function') {
+                console.log('filterTable calling updatePagination.');
                 updatePagination();
+            } else {
+                console.error('updatePagination function not found in filterTable!');
             }
-            
+
             // Show a message if no results found
             const noResultsMessage = document.getElementById('noResultsMessage');
+            const tbody = document.getElementById('equipmentTable');
+
             if (window.filteredRows.length === 0) {
                 if (!noResultsMessage) {
                     // Create and insert a "no results" message if it doesn't exist
-                    const tbody = document.getElementById('equipmentTable');
                     if (tbody) {
                         const noResultsRow = document.createElement('tr');
                         noResultsRow.id = 'noResultsMessage';
@@ -1801,37 +1714,38 @@ defer></script>
             } else if (noResultsMessage) {
                 noResultsMessage.style.display = 'none';
             }
-            
+
             console.log('Filtered rows:', window.filteredRows.length);
         };
 
         // Set up event listeners for filtering
         $(document).ready(function() {
-            // Initialize pagination with the correct table ID
-            initPagination({
-                tableId: 'equipmentTable',
-                currentPage: 1
-            });
-
+            console.log('Document Ready: Initializing equipment_details.php script.');
             // Initialize allRows for pagination.js
             window.allRows = Array.from(document.querySelectorAll('#equipmentTable tr:not(#noResultsMessage)'));
             window.filteredRows = [...window.allRows];
-            
-            // Make sure pagination is visible
-            const totalRows = window.allRows.length;
-            const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || '10');
-            const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
-            
-            if (totalPages > 1) {
-                // Force render pagination controls
-                renderPaginationControls(totalPages);
-                $('#pagination').show();
+
+            // Initialize paginationConfig if not already present or initialized
+            if (typeof window.paginationConfig === 'undefined' || !window.paginationConfig.isInitialized) {
+                window.paginationConfig = window.paginationConfig || {}; // Ensure it's an object
+                window.paginationConfig.isInitialized = false; // Set to false initially if not set
+
+                if (typeof window.initPagination === 'function' && !window.paginationConfig.isInitialized) {
+                    window.initPagination({
+                        tableId: 'equipmentTable',
+                        currentPage: 1
+                    });
+                    window.paginationConfig.isInitialized = true; // Mark as initialized
+                    console.log('Main pagination initialized and event listeners attached.');
+                } else {
+                    console.error('initPagination function not found or already initialized. Ensure pagination.js is loaded correctly and only once.');
+                }
             }
 
-            // First set up the standard event handlers
+            // Set up the standard event handlers for filtering
             $('#filterEquipment').on('change', function() {
-                console.log('Equipment filter changed to:', $(this).val());
-                
+                console.log('Event: Equipment filter changed to:', $(this).val());
+
                 // Reset date filters when equipment filter changes
                 if ($(this).val() && $(this).val() !== 'all') {
                     $('#dateFilter').val('');
@@ -1841,10 +1755,10 @@ defer></script>
                     $('#dateTo').val('');
                     $('#dateInputsContainer').hide();
                 }
-                
+
                 filterTable();
             });
-            
+
             // Then initialize Select2 with the proper configuration
             if ($.fn.select2) {
                 try {
@@ -1852,7 +1766,7 @@ defer></script>
                     if ($('#filterEquipment').data('select2')) {
                         $('#filterEquipment').select2('destroy');
                     }
-                    
+
                     // Initialize with proper settings
                     $('#filterEquipment').select2({
                         placeholder: 'Filter Equipment Type',
@@ -1861,35 +1775,37 @@ defer></script>
                         dropdownAutoWidth: true,
                         minimumResultsForSearch: 0
                     });
-                    
-                    // Set default value and ensure it's reflected in the UI
-                    $('#filterEquipment').val('all').trigger('change');
+
+                    // No need to trigger change here, filterTable() will be called once at the end of $(document).ready
+                    // $('#filterEquipment').val('all').trigger('change'); 
                 } catch (e) {
                     console.error('Error initializing Select2:', e);
                 }
             }
-            
+
             // Add reset button if it doesn't exist
             if ($('#resetFilters').length === 0) {
                 $('.filter-container').append('<button id="resetFilters" class="btn btn-outline-secondary ms-2">Reset Filters</button>');
             }
-            
+
             // Set up event listeners for filtering
             $('#searchEquipment').on('input', filterTable);
-            
+
             // Reset filters button handler
             $(document).on('click', '#resetFilters', function() {
+                console.log('Event: Reset Filters clicked.');
                 // Reset all filter inputs
                 $('#searchEquipment').val('');
-                
+
                 // Set select value first
                 $('#filterEquipment').val('all');
-                
+
                 // Then update Select2 UI if it exists
                 if ($('#filterEquipment').data('select2')) {
+                    // Only trigger select2 change to update UI, not to re-filter
                     $('#filterEquipment').trigger('change.select2');
                 }
-                
+
                 // Reset other filters
                 $('#dateFilter').val('');
                 $('#monthSelect').val('');
@@ -1897,25 +1813,25 @@ defer></script>
                 $('#dateFrom').val('');
                 $('#dateTo').val('');
                 $('#dateInputsContainer').hide();
-                
+
                 // Apply the filter reset
                 filterTable();
             });
-            
+
             $('#dateFilter').on('change', function() {
                 const filterType = $(this).val();
-                console.log('Date filter changed to:', filterType);
+                console.log('Event: Date filter changed to:', filterType);
 
                 // Hide all containers first
                 $('#dateInputsContainer').hide();
                 $('#monthPickerContainer').hide();
                 $('#dateRangePickers').hide();
-                
+
                 // Reset equipment filter if date filter is applied
                 if (filterType) {
                     // Set select value first
                     $('#filterEquipment').val('all');
-                    
+
                     // Then update Select2 UI if it exists
                     if ($('#filterEquipment').data('select2')) {
                         $('#filterEquipment').trigger('change.select2');
@@ -1954,65 +1870,44 @@ defer></script>
                     filterTable();
                 }
             });
-            
+
             // Check if we need to highlight updated rows
             <?php if ($forceRefresh && !empty($updatedAssetTag)): ?>
-            setTimeout(function() {
-                const updatedAssetTag = "<?= htmlspecialchars($updatedAssetTag) ?>";
-                const rows = document.querySelectorAll('#equipmentTable tr');
-                
-                rows.forEach(row => {
-                    const cells = row.querySelectorAll('td');
-                    if (cells.length > 1) {
-                        const assetTagCell = cells[1]; // Asset tag is in the second column
-                        if (assetTagCell.textContent.trim() === updatedAssetTag) {
-                            // Scroll to the row
-                            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            // Add highlight class
-                            row.classList.add('updated-row');
-                            // Show toast notification
-                            if (typeof showToast === 'function') {
-                                showToast('Equipment details for asset tag ' + updatedAssetTag + ' have been updated from location changes', 'success');
+                setTimeout(function() {
+                    const updatedAssetTag = "<?= htmlspecialchars($updatedAssetTag) ?>";
+                    const rows = document.querySelectorAll('#equipmentTable tr');
+
+                    rows.forEach(row => {
+                        const cells = row.querySelectorAll('td');
+                        if (cells.length > 1) {
+                            const assetTagCell = cells[1]; // Asset tag is in the second column
+                            if (assetTagCell.textContent.trim() === updatedAssetTag) {
+                                // Scroll to the row
+                                row.scrollIntoView({
+                                    behavior: 'smooth',
+                                    block: 'center'
+                                });
+                                // Add highlight class
+                                row.classList.add('updated-row');
+                                // Show toast notification
+                                if (typeof showToast === 'function') {
+                                    showToast('Equipment details for asset tag ' + updatedAssetTag + ' have been updated from location changes', 'success');
+                                }
                             }
                         }
-                    }
-                });
-            }, 500); // Short delay to ensure DOM is ready
+                    });
+                }, 500); // Short delay to ensure DOM is ready
             <?php endif; ?>
-            
+
             // Run initial filter to make sure everything is displayed correctly
-            setTimeout(filterTable, 100);
-            
-            // Make sure pagination is initialized properly
-            setTimeout(function() {
-                // Check if pagination controls are rendered
-                if (document.getElementById('pagination') && document.getElementById('pagination').children.length === 0) {
-                    const totalRows = window.allRows.length;
-                    const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || '10');
-                    const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
-                    
-                    if (totalPages > 1) {
-                        renderPaginationControls(totalPages);
-                        $('#pagination').show();
-                    }
-                }
-                
-                // Make sure the current page display is correct
-                if (document.getElementById('currentPage')) {
-                    document.getElementById('currentPage').textContent = window.paginationConfig?.currentPage || 1;
-                }
-                
-                // Make sure the rows per page display is correct
-                if (document.getElementById('rowsPerPage')) {
-                    const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || '10');
-                    document.getElementById('rowsPerPage').textContent = Math.min(rowsPerPage, window.filteredRows.length);
-                }
-            }, 500);
+            console.log('Document Ready: Calling filterTable for initial render.');
+            filterTable();
         });
-        
+
         document.querySelectorAll(".sortable").forEach(header => {
             header.style.cursor = "pointer";
             header.addEventListener("click", () => {
+                console.log('Event: Sortable header clicked.');
                 const table = document.querySelector("#edTable");
                 const tbody = table.querySelector("tbody");
                 const columnIndex = parseInt(header.dataset.column);
@@ -2022,7 +1917,7 @@ defer></script>
                 document.querySelectorAll(".sortable").forEach(h => h.classList.remove("asc", "desc"));
                 header.classList.add(ascending ? "asc" : "desc");
 
-                const rows = Array.from(tbody.querySelectorAll("tr:not(.filtered-out)")).sort((a, b) => {
+                const rows = Array.from(window.filteredRows).sort((a, b) => { // Sort filteredRows
                     const aText = a.children[columnIndex] ? a.children[columnIndex].textContent.trim() : '';
                     const bText = b.children[columnIndex] ? b.children[columnIndex].textContent.trim() : '';
 
@@ -2044,22 +1939,20 @@ defer></script>
                     }
                 });
 
-                // Append sorted rows
-                rows.forEach(row => tbody.appendChild(row));
-                
                 // Update filteredRows for pagination
                 window.filteredRows = rows;
-                
+
                 // Reset to page 1 and update pagination
                 paginationConfig.currentPage = 1;
                 updatePagination();
             });
         });
-        
+
         $(function() {
             // 1) EDIT button handler
             $(document).on('click', '.edit-equipment', function() {
                 try {
+                    console.log('Event: Edit Equipment button clicked.');
                     const d = $(this).data();
                     $('#edit_equipment_id').val(d.id);
                     // make sure the asset-tag exists in the dropdown
@@ -2067,7 +1960,7 @@ defer></script>
                     if (!$asset.find(`option[value="${d.asset}"]`).length) {
                         $asset.append(`<option value="${d.asset}">${d.asset}</option>`);
                     }
-                    
+
                     // First populate all fields from the data attributes
                     $('#edit_asset_description_1').val(d.desc1);
                     $('#edit_asset_description_2').val(d.desc2);
@@ -2085,7 +1978,7 @@ defer></script>
                         $rr.append(`<option value="${d.rr}">${d.rr}</option>`);
                     }
                     $rr.val(d.rr).trigger('change');
-                    
+
                     // Set the asset tag value last and trigger change to activate autofill
                     $asset.val(d.asset).trigger('change');
 
@@ -2101,12 +1994,14 @@ defer></script>
             let deleteId = null;
             $(document).on('click', '.remove-equipment', function(e) {
                 e.preventDefault();
+                console.log('Event: Remove Equipment button clicked.');
                 deleteId = $(this).data('id');
                 $('#deleteEDModal').modal('show');
             });
 
             $('#confirmDeleteBtn').on('click', function() {
                 if (!deleteId) return;
+                console.log('Event: Confirm Delete button clicked.');
                 $.ajax({
                     url: window.location.href,
                     method: 'POST',
@@ -2132,27 +2027,22 @@ defer></script>
 
             // 3) Refresh the list (after any CRUD) via AJAX GET
             function refreshEquipmentList() {
+                console.log('refreshEquipmentList called.');
                 $.get(window.location.href, function(html) {
                     const newTbody = $(html).find('#equipmentTable').html();
                     $('#equipmentTable').html(newTbody);
-                    
+
                     // Update allRows and filteredRows for pagination
                     window.allRows = Array.from(document.querySelectorAll('#equipmentTable tr:not(#noResultsMessage)'));
                     window.filteredRows = [...window.allRows];
-                    
-                    // Re-initialize pagination
-                    initPagination({
-                        tableId: 'equipmentTable',
-                        currentPage: 1
-                    });
-                    
-                    // Apply any active filters
+
+                    // Apply any active filters (this will also call updatePagination internally)
                     filterTable();
-                    
+
                     // Update the total count
                     const totalRows = window.allRows.length;
                     $('#totalRows').text(totalRows);
-                    
+
                     // Show toast notification
                     showToast('Equipment list refreshed successfully', 'success');
                 });
@@ -2161,6 +2051,7 @@ defer></script>
             // 4) CREATE form submit
             $('#addEquipmentForm').on('submit', function(e) {
                 e.preventDefault();
+                console.log('Event: Add Equipment form submitted.');
                 const btn = $(this).find('button[type=submit]').prop('disabled', true)
                     .html('<span class="spinner-border spinner-border-sm"></span> Adding…');
                 $.ajax({
@@ -2193,7 +2084,8 @@ defer></script>
             // 5) UPDATE form submit
             $('#editEquipmentForm').on('submit', function(e) {
                 e.preventDefault();
-                
+                console.log('Event: Edit Equipment form submitted.');
+
                 // Get the original values from data attributes
                 const $form = $(this);
                 const $editBtn = $('.edit-equipment[data-id="' + $('#edit_equipment_id').val() + '"]');
@@ -2210,7 +2102,7 @@ defer></script>
                     rr_no: $editBtn.data('rr'),
                     remarks: $editBtn.data('remarks')
                 };
-                
+
                 // Get current form values
                 const currentValues = {
                     asset_tag: $('#edit_equipment_asset_tag').val(),
@@ -2225,7 +2117,7 @@ defer></script>
                     rr_no: $('#edit_rr_no').val(),
                     remarks: $('#edit_remarks').val()
                 };
-                
+
                 // Check if any values changed
                 let hasChanges = false;
                 for (const key in originalValues) {
@@ -2237,14 +2129,14 @@ defer></script>
                         break;
                     }
                 }
-                
+
                 // If no changes, show notification and don't submit
                 if (!hasChanges) {
                     showToast('No changes detected', 'info');
                     $('#editEquipmentModal').modal('hide');
                     return;
                 }
-                
+
                 const btn = $(this).find('button[type=submit]').prop('disabled', true)
                     .html('<span class="spinner-border spinner-border-sm"></span> Saving…');
                 $.ajax({
@@ -2279,128 +2171,7 @@ defer></script>
                 });
             });
         });
-
-        // Ensure updatePagination is available
-        if (typeof updatePagination !== 'function') {
-            function updatePagination() {
-                console.log('Local updatePagination called');
-                const tbody = document.getElementById('equipmentTable');
-                if (!tbody) {
-                    console.error('Could not find tbody with ID equipmentTable');
-                    return;
-                }
-                
-                // Use window.filteredRows for pagination
-                const rowsToPaginate = window.filteredRows || [];
-                const totalRows = rowsToPaginate.length;
-                const rowsPerPageSelect = document.getElementById('rowsPerPageSelect');
-                const rowsPerPage = parseInt(rowsPerPageSelect?.value || '10');
-                const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
-                
-                // Make sure current page is in valid range
-                if (!window.paginationConfig) {
-                    window.paginationConfig = { currentPage: 1 };
-                } else if (window.paginationConfig.currentPage > totalPages) {
-                    window.paginationConfig.currentPage = totalPages;
-                } else if (window.paginationConfig.currentPage < 1) {
-                    window.paginationConfig.currentPage = 1;
-                }
-            
-                // Calculate start and end indices for current page
-                const startIndex = (window.paginationConfig.currentPage - 1) * rowsPerPage;
-                const endIndex = Math.min(startIndex + rowsPerPage, totalRows);
-            
-                // First, hide all rows by adding filtered-out class
-                const allTableRows = Array.from(tbody.querySelectorAll('tr:not(#noResultsMessage)'));
-                allTableRows.forEach(row => {
-                    row.classList.add('filtered-out');
-                });
-            
-                // Then, show only the rows for the current page
-                for (let i = startIndex; i < endIndex; i++) {
-                    if (rowsToPaginate[i]) {
-                        rowsToPaginate[i].classList.remove('filtered-out');
-                    }
-                }
-            
-                // Update pagination controls
-                const currentPageSpan = document.getElementById('currentPage');
-                if (currentPageSpan) {
-                    currentPageSpan.textContent = totalRows === 0 ? 0 : window.paginationConfig.currentPage;
-                }
-            
-                const rowsPerPageSpan = document.getElementById('rowsPerPage');
-                if (rowsPerPageSpan) {
-                    rowsPerPageSpan.textContent = totalRows === 0 ? 0 : Math.min(endIndex, totalRows);
-                }
-            
-                const totalRowsSpan = document.getElementById('totalRows');
-                if (totalRowsSpan) {
-                    totalRowsSpan.textContent = totalRows;
-                }
-            
-                // Enable/disable prev/next buttons based on current page
-                const prevButton = document.getElementById('prevPage');
-                const nextButton = document.getElementById('nextPage');
-            
-                if (prevButton) {
-                    prevButton.disabled = window.paginationConfig.currentPage <= 1;
-                    prevButton.classList.toggle('disabled', window.paginationConfig.currentPage <= 1);
-                    
-                    // Show/hide prev button based on current page
-                    prevButton.style.display = (window.paginationConfig.currentPage <= 1 || totalRows <= rowsPerPage) ? 'none' : '';
-                }
-            
-                if (nextButton) {
-                    nextButton.disabled = window.paginationConfig.currentPage >= totalPages;
-                    nextButton.classList.toggle('disabled', window.paginationConfig.currentPage >= totalPages);
-                    
-                    // Show/hide next button based on current page
-                    nextButton.style.display = (window.paginationConfig.currentPage >= totalPages || totalRows <= rowsPerPage) ? 'none' : '';
-                }
-            
-                // Update pagination numbers
-                renderPaginationControls(totalPages);
-                
-                // Show/hide pagination container based on total pages
-                const paginationContainer = document.getElementById('pagination');
-                if (paginationContainer) {
-                    paginationContainer.style.display = (totalPages <= 1 || totalRows <= rowsPerPage) ? 'none' : '';
-                }
-            }
-            
-            // Set up event listeners for pagination
-            document.getElementById('prevPage')?.addEventListener('click', function() {
-                if (window.paginationConfig && window.paginationConfig.currentPage > 1) {
-                    window.paginationConfig.currentPage--;
-                    updatePagination();
-                }
-            });
-            
-            document.getElementById('nextPage')?.addEventListener('click', function() {
-                const rowsToPaginate = window.filteredRows || [];
-                const totalRows = rowsToPaginate.length;
-                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect')?.value || '10');
-                const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
-                
-                if (window.paginationConfig && window.paginationConfig.currentPage < totalPages) {
-                    window.paginationConfig.currentPage++;
-                    updatePagination();
-                }
-            });
-            
-            document.getElementById('rowsPerPageSelect')?.addEventListener('change', function() {
-                if (window.paginationConfig) {
-                    window.paginationConfig.currentPage = 1;
-                }
-                updatePagination();
-            });
-        }
-
-        // Ensure renderPaginationControls is available
     </script>
 </body>
 
 </html>
-
-
