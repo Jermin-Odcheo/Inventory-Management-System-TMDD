@@ -137,7 +137,14 @@ function formatChanges($oldJsonStr)
             $html .= '</ul></li>';
         } else {
             // Format the value
-            $displayValue = is_null($value) ? '<em>null</em>' : htmlspecialchars((string)$value);
+            if (is_null($value)) {
+                $displayValue = '<em>null</em>';
+            } elseif (is_array($value)) {
+                $displayValue = htmlspecialchars(json_encode($value));
+            } else {
+                $displayValue = htmlspecialchars((string)$value);
+            }
+
             $friendlyKey = ucwords(str_replace('_', ' ', $key));
 
             $html .= '<li class="list-group-item d-flex justify-content-between align-items-center">
