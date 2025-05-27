@@ -20,6 +20,30 @@ $canRestore = $rbac->hasPrivilege('Equipment Management', 'Restore');
 $canRemove = $rbac->hasPrivilege('Equipment Management', 'Remove');
 $canDelete = $rbac->hasPrivilege('Equipment Management', 'Permanently Delete');
 
+// --- Sorting Logic ---
+$sort_by = $_GET['sort_by'] ?? 'track_id'; // Default sort column
+$sort_order = $_GET['sort_order'] ?? 'desc'; // Default sort order
+
+// Whitelist allowed columns to prevent SQL injection
+$allowedSortColumns = [
+    'track_id' => 'a.TrackID',
+    'operator_name' => 'operator_name', // Alias from CONCAT
+    'module' => 'a.Module',
+    'action' => 'a.Action',
+    'status' => 'a.Status',
+    'date_time' => 'a.Date_Time'
+];
+
+// Validate sort_by and sort_order
+if (!array_key_exists($sort_by, $allowedSortColumns)) {
+    $sort_by = 'track_id'; // Fallback to default
+}
+if (!in_array(strtolower($sort_order), ['asc', 'desc'])) {
+    $sort_order = 'desc'; // Fallback to default
+}
+
+$orderByClause = "ORDER BY " . $allowedSortColumns[$sort_by] . " " . strtoupper($sort_order);
+
 $query = "
 SELECT
     a.TrackID AS track_id,
@@ -51,7 +75,7 @@ WHERE a.Module IN ('Equipment Location', 'Equipment Status', 'Equipment Details'
       OR (a.Module = 'Equipment Status' AND es.is_disabled = 1)
       OR (a.Module = 'Equipment Details' AND ed.is_disabled = 1)
   )
-ORDER BY a.TrackID DESC
+{$orderByClause}
 ";
 
 
@@ -155,6 +179,35 @@ function formatChanges($oldJsonStr)
         .main-content {
             padding-top: 150px;
         }
+        /* Styles for sortable headers */
+        th.sortable {
+            cursor: pointer;
+            position: relative;
+            padding-right: 25px; /* Make space for the icon */
+        }
+
+        th.sortable .fas {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #ccc; /* Default icon color */
+            transition: color 0.2s ease;
+        }
+
+        th.sortable:hover .fas {
+            color: #888; /* Hover color */
+        }
+
+        th.sortable.asc .fas.fa-sort-up,
+        th.sortable.desc .fas.fa-sort-down {
+            color: #333; /* Active icon color */
+        }
+
+        th.sortable.asc .fas.fa-sort,
+        th.sortable.desc .fas.fa-sort {
+            display: none; /* Hide generic sort icon when specific order is applied */
+        }
     </style>
 </head>
 
@@ -227,14 +280,14 @@ function formatChanges($oldJsonStr)
                             <thead class="table-light">
                                 <tr>
                                     <th><input type="checkbox" id="select-all"></th>
-                                    <th>#</th>
-                                    <th>User</th>
-                                    <th>Module</th>
-                                    <th>Action</th>
+                                    <th class="sortable" data-sort-by="track_id"># <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-sort-by="operator_name">User <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-sort-by="module">Module <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-sort-by="action">Action <i class="fas fa-sort"></i></th>
                                     <th>Details</th>
                                     <th>Changes</th>
-                                    <th>Status</th>
-                                    <th>Date &amp; Time</th>
+                                    <th class="sortable" data-sort-by="status">Status <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-sort-by="date_time">Date &amp; Time <i class="fas fa-sort"></i></th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -420,6 +473,7 @@ function formatChanges($oldJsonStr)
     <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/logs.js" defer></script>
     <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js" defer></script>
     <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/archive_filters.js" defer></script>
+    <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/sort_archives.js" defer></script>
     <?php include '../../../general/footer.php'; ?>
     <script>
         // Pass RBAC permissions to JavaScript

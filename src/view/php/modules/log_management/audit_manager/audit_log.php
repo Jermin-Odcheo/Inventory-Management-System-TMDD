@@ -60,13 +60,13 @@ function formatNewValue($jsonStr)
     $html = '<ul class="list-group">';
     foreach ($data as $key => $value) {
         $friendlyKey = ucwords(str_replace('_', ' ', $key));
-        
+
         // Special handling for departments
         if ($key === 'departments' && !empty($value)) {
             // Simple format matching the modified action display
             $deptHtml = "<strong>{$friendlyKey}:</strong> ";
             $deptHtml .= "<span class='text-primary'>" . htmlspecialchars($value) . "</span>";
-            
+
             $html .= '<li class="list-group-item">' . $deptHtml . '</li>';
         } else {
             $displayValue = is_null($value) ? '<em>null</em>' : htmlspecialchars($value);
@@ -114,23 +114,23 @@ function formatAuditDiff($oldJson, $newJson, $status = null)
         $newVal = $newData[$key] ?? '';
         if ($oldVal !== $newVal) {
             $friendlyField = ucwords(str_replace('_', ' ', $key));
-            
+
             // Special handling for departments to display as lists
             if ($key === 'departments') {
                 // Split the department strings by commas
                 $oldDepts = !empty($oldVal) ? explode(', ', $oldVal) : [];
                 $newDepts = !empty($newVal) ? explode(', ', $newVal) : [];
-                
+
                 // Find added and removed departments
                 $added = array_diff($newDepts, $oldDepts);
                 $removed = array_diff($oldDepts, $newDepts);
-                
+
                 // Simplest possible format - just a direct text comparison
                 $html = "<strong>Departments:</strong> ";
                 $html .= "<span class='text-secondary'>" . htmlspecialchars($oldVal) . "</span>";
                 $html .= " <i class='fas fa-arrow-right'></i> ";
                 $html .= "<span class='text-primary'>" . htmlspecialchars($newVal) . "</span>";
-                
+
                 $descriptions[] = $html;
             } else {
                 $descriptions[] = "The {$friendlyField} was changed from '<em>{$oldVal}</em>' to '<strong>{$newVal}</strong>'.";
@@ -242,16 +242,16 @@ function formatDetailsAndChanges($log)
                     if (isset($oldData['departments']) || isset($newData['departments'])) {
                         $oldDeptStr = $oldData['departments'] ?? '';
                         $newDeptStr = $newData['departments'] ?? '';
-                        
+
                         // Simplest possible format - just a direct text comparison
                         $html = "<strong>Departments:</strong> ";
                         $html .= "<span class='text-secondary'>" . htmlspecialchars($oldDeptStr) . "</span>";
                         $html .= " <i class='fas fa-arrow-right'></i> ";
                         $html .= "<span class='text-primary'>" . htmlspecialchars($newDeptStr) . "</span>";
-                        
+
                         return $html;
                     }
-                    
+
                     // For other fields, show old -> new
                     $changesText = [];
                     foreach ($oldData as $key => $value) {
@@ -282,13 +282,13 @@ function formatDetailsAndChanges($log)
                 }
             );
             break;
-        
+
         case 'remove':
             // First check for our new format with roles array
             if (isset($oldData['roles']) && is_array($oldData['roles'])) {
                 // Use the details directly from the database
                 $details = htmlspecialchars($log['Details'] ?? '');
-                
+
                 // Format the changes as a clean list
                 $changes = '<div class="role-removal-info">';
                 $changes .= '<div><strong>Username:</strong> ' . htmlspecialchars($oldData['username'] ?? 'Unknown') . '</div>';
@@ -301,23 +301,23 @@ function formatDetailsAndChanges($log)
                 $role = $oldData['role'];
                 $details = htmlspecialchars("The role '$role' for $targetEntityName has been removed");
                 $changes = formatNewValue($log['OldVal']);
-            } 
+            }
             // Default case for user removal
             else {
                 $defaultMessage = htmlspecialchars("$targetEntityName has been removed");
-            list($details, $changes) = processStatusMessage(
-                $defaultMessage,
-                $log,
-                function () use ($log) {
-                    // 1) decode
-                    $old = json_decode($log['OldVal'], true);
-                    // 2) remove the is_disabled flag and status
-                    unset($old['is_disabled']);
-                    unset($old['status']);
-                    // 3) re-encode & hand it off to your existing formatter
-                    return formatNewValue(json_encode($old));
-                }
-            );
+                list($details, $changes) = processStatusMessage(
+                    $defaultMessage,
+                    $log,
+                    function () use ($log) {
+                        // 1) decode
+                        $old = json_decode($log['OldVal'], true);
+                        // 2) remove the is_disabled flag and status
+                        unset($old['is_disabled']);
+                        unset($old['status']);
+                        // 3) re-encode & hand it off to your existing formatter
+                        return formatNewValue(json_encode($old));
+                    }
+                );
             }
             break;
 
@@ -330,7 +330,7 @@ function formatDetailsAndChanges($log)
             // Check if this is a user role addition
             if (isset($newData['role'])) {
                 $role = $newData['role'];
-                
+
                 // Check if this is actually a role modification or removal
                 // If we have old role data, treat it as a modification
                 if (isset($oldData['role']) && $oldData['role'] !== $role) {
@@ -367,7 +367,6 @@ function formatDetailsAndChanges($log)
             }
 
             break;
-
     }
 
     return [$details, $changes];
@@ -396,7 +395,7 @@ function getChangedFieldNames(array $oldData, array $newData)
 function getNormalizedAction($log)
 {
     $action = strtolower($log['Action'] ?? '');
-    
+
     // For user role removals, always ensure action is "remove"
     if ($action === 'remove' && !is_null($log['OldVal'])) {
         $oldData = json_decode($log['OldVal'], true);
@@ -404,39 +403,119 @@ function getNormalizedAction($log)
             return 'remove';
         }
     }
-    
+
     // Check if this is actually a role modification labeled as "add"
     if ($action === 'add' && !is_null($log['OldVal']) && !is_null($log['NewVal'])) {
         $oldData = json_decode($log['OldVal'], true);
         $newData = json_decode($log['NewVal'], true);
-        
-        if (is_array($oldData) && is_array($newData) && 
-            isset($oldData['role']) && isset($newData['role']) && 
-            $oldData['role'] !== $newData['role']) {
+
+        if (
+            is_array($oldData) && is_array($newData) &&
+            isset($oldData['role']) && isset($newData['role']) &&
+            $oldData['role'] !== $newData['role']
+        ) {
             return 'modified';
         }
     }
-    
+
     // Check for restore action (existing logic)
     if (!is_null($log['OldVal']) && !is_null($log['NewVal'])) {
         $oldData = json_decode($log['OldVal'], true);
         $newData = json_decode($log['NewVal'], true);
-        if (is_array($oldData) && is_array($newData) &&
+        if (
+            is_array($oldData) && is_array($newData) &&
             isset($oldData['is_deleted'], $newData['is_deleted']) &&
-            (int)$oldData['is_deleted'] === 1 && (int)$newData['is_deleted'] === 0) {
+            (int)$oldData['is_deleted'] === 1 && (int)$newData['is_deleted'] === 0
+        ) {
             return 'restored';
         }
     }
-    
+
     return $action;
 }
+
+//Filter code
+$where = "WHERE audit_log.Module = 'User Management'";
+$params = [];
+
+// Basic filters without date filtering
+if (!empty($_GET['action_type'])) {
+    $where .= " AND audit_log.Action = :action_type";
+    $params[':action_type'] = $_GET['action_type'];
+}
+
+if (!empty($_GET['status'])) {
+    $where .= " AND audit_log.Status = :status";
+    $params[':status'] = $_GET['status'];
+}
+
+if (!empty($_GET['search'])) {
+    $where .= " AND (users.email LIKE :search_email OR audit_log.NewVal LIKE :search_newval OR audit_log.OldVal LIKE :search_oldval)";
+    $searchParam = '%' . $_GET['search'] . '%';
+    $params[':search_email'] = $searchParam;
+    $params[':search_newval'] = $searchParam;
+    $params[':search_oldval'] = $searchParam;
+}
+
+// Date filter type switch — this handles all date filtering logic
+$dateFilterType = $_GET['date_filter_type'] ?? '';
+
+switch ($dateFilterType) {
+    case 'mdy':
+        if (!empty($_GET['date_from'])) {
+            $where .= " AND DATE(audit_log.date_time) >= :date_from";
+            $params[':date_from'] = $_GET['date_from'];
+        }
+        if (!empty($_GET['date_to'])) {
+            $where .= " AND DATE(audit_log.date_time) <= :date_to";
+            $params[':date_to'] = $_GET['date_to'];
+        }
+        break;
+
+    case 'month_year':
+        if (!empty($_GET['month_year_from'])) {
+            $where .= " AND DATE_FORMAT(audit_log.date_time, '%Y-%m') >= :month_year_from";
+            $params[':month_year_from'] = $_GET['month_year_from'];
+        }
+        if (!empty($_GET['month_year_to'])) {
+            $where .= " AND DATE_FORMAT(audit_log.date_time, '%Y-%m') <= :month_year_to";
+            $params[':month_year_to'] = $_GET['month_year_to'];
+        }
+        break;
+
+    case 'year':
+        if (!empty($_GET['year_from'])) {
+            $where .= " AND YEAR(audit_log.date_time) >= :year_from";
+            $params[':year_from'] = $_GET['year_from'];
+        }
+        if (!empty($_GET['year_to'])) {
+            $where .= " AND YEAR(audit_log.date_time) <= :year_to";
+            $params[':year_to'] = $_GET['year_to'];
+        }
+        break;
+}
+
+
+$query = "
+  SELECT audit_log.*, users.email AS email 
+  FROM audit_log 
+  LEFT JOIN users ON audit_log.UserID = users.id 
+  $where 
+  ORDER BY audit_log.TrackID DESC
+";
+
+$stmt = $pdo->prepare($query);
+$stmt->execute($params);
+$auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <link rel="preload"  href="<?php echo BASE_URL; ?>src/view/styles/css/audit_log.css" as="style"
-          onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" href="<?php echo BASE_URL; ?>src/view/styles/css/audit_log.css" as="style"
+        onload="this.onload=null;this.rel='stylesheet'">
     <noscript>
         <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/audit_log.css">
     </noscript>
@@ -444,213 +523,324 @@ function getNormalizedAction($log)
     <title>User Management Audit Logs</title>
 
 </head>
+
 <body>
 
 
-<div class="main-content">
-    <div class="container-fluid">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center bg-dark">
-                <h3 class="text-white">
-                    <i class="fas fa-history me-2"></i>
-                    User Management Audit Logs
-                </h3>
-            </div>
-
-            <div class="card-body">
-                <!-- Permission Info Banner -->
-                <div class="alert alert-info mb-4">
-                    <i class="fas fa-shield-alt me-2"></i>
-                    <?php if (!$hasAuditPermission): ?>
-                        You have User Management tracking permissions.
-                    <?php else: ?>
-                        You have access to User Management audit logs.
-                    <?php endif; ?>
+    <div class="main-content">
+        <div class="container-fluid">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center bg-dark">
+                    <h3 class="text-white">
+                        <i class="fas fa-history me-2"></i>
+                        User Management Audit Logs
+                    </h3>
                 </div>
 
-                <!-- Filter Section -->
-                <div class="row mb-4">
-                    <div class="col-md-4 mb-2">
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-search"></i></span>
-                            <input type="text" id="searchInput" class="form-control" placeholder="Search audit logs...">
-                        </div>
-                    </div>
-                    <div class="col-md-4 mb-2">
-                        <select id="filterAction" class="form-select">
-                            <option value="">All Actions</option>
-                            <option value="create">Create</option>
-                            <option value="modified">Modified</option>
-                            <option value="remove">Remove</option>
-                            <option value="delete">Delete</option>
-                            <option value="restored">Restored</option>
-                            <option value="login">Login</option>
-                            <option value="logout">Logout</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4 mb-2">
-                        <select id="filterStatus" class="form-select">
-                            <option value="">All Status</option>
-                            <option value="successful">Successful</option>
-                            <option value="failed">Failed</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Table container -->
-                <div class="table-responsive" id="table">
-                    <table class="table table-hover">
-                        <colgroup>
-                            <col class="track">
-                            <col class="user">
-                            <col class="module">
-                            <col class="action">
-                            <col class="details">
-                            <col class="changes">
-                            <col class="status">
-                            <col class="date">
-                        </colgroup>
-                        <thead class="table-light">
-                        <tr>
-                            <th>Track ID</th>
-                            <th>User</th>
-                            <th>Module</th>
-                            <th>Action</th>
-                            <th>Details</th>
-                            <th>Changes</th>
-                            <th>Status</th>
-                            <th>Date & Time</th>
-                        </tr>
-                        </thead>
-                        <tbody id="auditTable">
-                        <?php if (!empty($auditLogs)): ?>
-                            <?php foreach ($auditLogs as $log):
-                                $normalizedAction = getNormalizedAction($log);
-                                list($detailsHTML, $changesHTML) = formatDetailsAndChanges($log);
-                                ?>
-                                <tr>
-                                    <!-- TRACK ID -->
-                                    <td data-label="Track ID">
-                                        <span class="badge bg-secondary">
-                                            <?php echo htmlspecialchars($log['TrackID']); ?>
-                                        </span>
-                                    </td>
-
-                                    <!-- USER -->
-                                    <td data-label="User">
-                                        <div class="d-flex align-items-center">
-                                            <i class="fas fa-user-circle me-2"></i>
-                                            <?php echo htmlspecialchars($log['email'] ?? 'N/A'); ?>
-                                        </div>
-                                    </td>
-
-                                    <!-- MODULE -->
-                                    <td data-label="Module">
-                                        <?php echo !empty($log['Module']) ? htmlspecialchars(trim($log['Module'])) : '<em class="text-muted">N/A</em>'; ?>
-                                    </td>
-
-                                    <!-- ACTION -->
-                                    <td data-label="Action">
-                                        <?php
-                                        $actionText = ucfirst($normalizedAction);
-                                        echo "<span class='action-badge action-" . strtolower($actionText) . "'>";
-                                        echo getActionIcon($actionText) . ' ' . htmlspecialchars($actionText);
-                                        echo "</span>";
-                                        ?>
-                                    </td>
-
-                                    <!-- DETAILS -->
-                                    <td data-label="Details" class="data-container">
-                                        <?php echo nl2br($detailsHTML); ?>
-                                    </td>
-
-                                    <!-- CHANGES -->
-                                    <td data-label="Changes" class="data-container">
-                                        <?php echo nl2br($changesHTML); ?>
-                                    </td>
-
-                                    <?php
-                                        $statusRaw = $log['Status'] ?? '';
-                                        $statusClean = strtolower(trim($statusRaw)); // Normalize for comparison
-                                        $isSuccess = in_array($statusClean, ['successful', 'success']); // Accept both variants
-                                    ?>
-                                    <!-- STATUS -->
-                                    <td data-label="Status">
-                                        <span class="badge <?php echo $isSuccess ? 'bg-success' : 'bg-danger'; ?>">
-                                            <?php
-                                                echo getStatusIcon($statusRaw) . ' ' . htmlspecialchars($statusRaw);
-
-                                                // DEBUG: Print raw status for unknown values
-                                                if (!$isSuccess) {
-                                                    echo "<!-- DEBUG: Raw Status = '" . addslashes($statusRaw) . "' -->";
-                                                }
-                                            ?>
-                                        </span>
-                                    </td>
-
-                                    <!-- DATE & TIME -->
-                                    <td data-label="Date & Time">
-                                        <div class="d-flex align-items-center">
-                                            <i class="far fa-clock me-2"></i>
-                                            <?php echo htmlspecialchars($log['Date_Time'] ?? ''); ?>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
+                <div class="card-body">
+                    <!-- Permission Info Banner -->
+                    <div class="alert alert-info mb-4">
+                        <i class="fas fa-shield-alt me-2"></i>
+                        <?php if (!$hasAuditPermission): ?>
+                            You have User Management tracking permissions.
                         <?php else: ?>
-                            <tr>
-                                <td colspan="8">
-                                    <div class="empty-state text-center py-4">
-                                        <i class="fas fa-inbox fa-3x mb-3"></i>
-                                        <h4>No Audit Logs Found</h4>
-                                        <p class="text-muted">There are no audit log entries to display.</p>
-                                    </div>
-                                </td>
-                            </tr>
+                            You have access to User Management audit logs.
                         <?php endif; ?>
-                        </tbody>
-                    </table>
+                    </div>
 
-                    <!-- Pagination Controls -->
-                    <div class="container-fluid">
-                        <div class="row align-items-center g-3">
-                            <div class="col-12 col-sm-auto">
-                                <div class="text-muted">
-                                    <?php $totalLogs = count($auditLogs); ?>
-                                    <input type="hidden" id="total-users" value="<?= $totalLogs ?>">
-                                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows"><?= $totalLogs ?></span> entries
-                                </div>
-                            </div>
-                            <div class="col-12 col-sm-auto ms-sm-auto">
-                                <div class="d-flex align-items-center gap-2">
-                                    <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                        <i class="bi bi-chevron-left"></i> Previous
-                                    </button>
-                                    <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
-                                        <option value="10" selected>10</option>
-                                        <option value="20">20</option>
-                                        <option value="30">30</option>
-                                        <option value="50">50</option>
-                                    </select>
-                                    <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                        Next <i class="bi bi-chevron-right"></i>
-                                    </button>
-                                </div>
+                    <!-- Filter Section -->
+                    <form method="GET" class="row g-3 mb-4">
+                        <div class="col-md-3">
+                            <label for="actionType" class="form-label">Action Type</label>
+                            <select class="form-select" name="action_type" id="actionType">
+                                <option value="">All</option>
+                                <option value="Create" <?= ($_GET['action_type'] ?? '') === 'Create' ? 'selected' : '' ?>>Create</option>
+                                <option value="Modified" <?= ($_GET['action_type'] ?? '') === 'Modified' ? 'selected' : '' ?>>Modified</option>
+                                <option value="Remove" <?= ($_GET['action_type'] ?? '') === 'Remove' ? 'selected' : '' ?>>Remove</option>
+                                <option value="Restored" <?= ($_GET['action_type'] ?? '') === 'Restored' ? 'selected' : '' ?>>Restored</option>
+                                <option value="Login" <?= ($_GET['action_type'] ?? '') === 'Login' ? 'selected' : '' ?>>Login</option>
+                                <option value="Logout" <?= ($_GET['action_type'] ?? '') === 'Logout' ? 'selected' : '' ?>>Logout</option>
+
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-select" name="status" id="status">
+                                <option value="">All</option>
+                                <option value="Successful" <?= ($_GET['status'] ?? '') === 'Successful' ? 'selected' : '' ?>>Successful</option>
+                                <option value="Failed" <?= ($_GET['status'] ?? '') === 'Failed' ? 'selected' : '' ?>>Failed</option>
+                            </select>
+                        </div>
+
+                        <!-- Date Range selector -->
+                        <div class="col-12 col-md-3">
+                            <label class="form-label fw-semibold">Date Filter Type</label>
+                            <select id="dateFilterType" name="date_filter_type" class="form-select shadow-sm">
+                                <option value="" <?= empty($filters['date_filter_type']) ? 'selected' : '' ?>>-- Select Type --</option>
+                                <option value="month_year" <?= (($_GET['date_filter_type'] ?? '') === 'month_year') ? 'selected' : '' ?>>Month-Year Range</option>
+                                <option value="year" <?= (($_GET['date_filter_type'] ?? '') === 'year') ? 'selected' : '' ?>>Year Range</option>
+                                <option value="mdy" <?= (($_GET['date_filter_type'] ?? '') === 'mdy') ? 'selected' : '' ?>>Month-Date-Year Range</option>
+
+                            </select>
+
+                        </div>
+
+                        <!-- MDY Range -->
+                        <div class="col-12 col-md-3 date-filter date-mdy d-none">
+                            <label class="form-label fw-semibold">Date From</label>
+                            <input type="date" name="date_from" class="form-control shadow-sm"
+                                value="<?= htmlspecialchars($_GET['date_from'] ?? '') ?>"
+                                placeholder="Start Date (YYYY-MM-DD)">
+                        </div>
+                        <div class="col-12 col-md-3 date-filter date-mdy d-none">
+                            <label class="form-label fw-semibold">Date To</label>
+                            <input type="date" name="date_to" class="form-control shadow-sm"
+                                value="<?= htmlspecialchars($_GET['date_to'] ?? '') ?>"
+                                placeholder="End Date (YYYY-MM-DD)">
+                        </div>
+
+                        <!-- Year Range -->
+                        <div class="col-12 col-md-3 date-filter date-year d-none">
+                            <label class="form-label fw-semibold">Year From</label>
+                            <input type="number" name="year_from" class="form-control shadow-sm"
+                                min="1900" max="2100"
+                                placeholder="e.g., 2023"
+                                value="<?= htmlspecialchars($_GET['year_from'] ?? '') ?>">
+                        </div>
+
+                        <div class="col-12 col-md-3 date-filter date-year d-none">
+                            <label class="form-label fw-semibold">Year To</label>
+                            <input type="number" name="year_to" class="form-control shadow-sm"
+                                min="1900" max="2100"
+                                placeholder="e.g., 2025"
+                                value="<?= htmlspecialchars($_GET['year_to'] ?? '') ?>">
+                        </div>
+
+                        <!-- Month-Year Range -->
+                        <div class="col-12 col-md-3 date-filter date-month_year d-none">
+                            <label class="form-label fw-semibold">From (MM-YYYY)</label>
+                            <input type="month" name="month_year_from" class="form-control shadow-sm"
+                                value="<?= htmlspecialchars($_GET['month_year_from'] ?? '') ?>"
+                                placeholder="e.g., 2023-01">
+                        </div>
+                        <div class="col-12 col-md-3 date-filter date-month_year d-none">
+                            <label class="form-label fw-semibold">To (MM-YYYY)</label>
+                            <input type="month" name="month_year_to" class="form-control shadow-sm"
+                                value="<?= htmlspecialchars($_GET['month_year_to'] ?? '') ?>"
+                                placeholder="e.g., 2023-12">
+                        </div>
+
+                        <!-- Search bar -->
+                        <div class="col-12 col-sm-6 col-md-3">
+                            <label class="form-label fw-semibold">Search</label>
+                            <div class="input-group shadow-sm">
+                                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                <input type="text" name="search" class="form-control" placeholder="Search keyword..." value="">
                             </div>
                         </div>
-                        <div class="row mt-3">
-                            <div class="col-12">
-                                <ul class="pagination justify-content-center" id="pagination"></ul>
-                            </div>
-                        </div>
-                    </div> <!-- /.Pagination -->
-                </div><!-- /.table-responsive -->
-            </div><!-- /.card-body -->
-        </div><!-- /.card -->
-    </div><!-- /.container-fluid -->
-</div><!-- /.main-content -->
 
-<script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/logs.js" defer></script>
-<script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
+                        <div class="col-6 col-md-2 d-grid">
+                            <button type="submit" class="btn btn-dark"><i class="bi bi-funnel"></i> Filter</button>
+                        </div>
+
+                        <div class="col-6 col-md-2 d-grid">
+                            <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary shadow-sm" style="align-items: center;">
+                                <i class="bi bi-x-circle"></i> Clear
+                            </a>
+                    </form>
+                    </div>
+
+
+                    <!-- Table container -->
+                    <div class="table-responsive" id="table">
+                        <table class="table table-hover">
+                            <colgroup>
+                                <col class="track">
+                                <col class="user">
+                                <col class="module">
+                                <col class="action">
+                                <col class="details">
+                                <col class="changes">
+                                <col class="status">
+                                <col class="date">
+                            </colgroup>
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Track ID</th>
+                                    <th>User</th>
+                                    <th>Module</th>
+                                    <th>Action</th>
+                                    <th>Details</th>
+                                    <th>Changes</th>
+                                    <th>Status</th>
+                                    <th>Date & Time</th>
+                                </tr>
+                            </thead>
+                            <tbody id="auditTable">
+                                <?php if (!empty($auditLogs)): ?>
+                                    <?php foreach ($auditLogs as $log):
+                                        $normalizedAction = getNormalizedAction($log);
+                                        list($detailsHTML, $changesHTML) = formatDetailsAndChanges($log);
+                                    ?>
+                                        <tr>
+                                            <!-- TRACK ID -->
+                                            <td data-label="Track ID">
+                                                <span class="badge bg-secondary">
+                                                    <?php echo htmlspecialchars($log['TrackID']); ?>
+                                                </span>
+                                            </td>
+
+                                            <!-- USER -->
+                                            <td data-label="User">
+                                                <div class="d-flex align-items-center">
+                                                    <i class="fas fa-user-circle me-2"></i>
+                                                    <?php echo htmlspecialchars($log['email'] ?? 'N/A'); ?>
+                                                </div>
+                                            </td>
+
+                                            <!-- MODULE -->
+                                            <td data-label="Module">
+                                                <?php echo !empty($log['Module']) ? htmlspecialchars(trim($log['Module'])) : '<em class="text-muted">N/A</em>'; ?>
+                                            </td>
+
+                                            <!-- ACTION -->
+                                            <td data-label="Action">
+                                                <?php
+                                                $actionText = ucfirst($normalizedAction);
+                                                echo "<span class='action-badge action-" . strtolower($actionText) . "'>";
+                                                echo getActionIcon($actionText) . ' ' . htmlspecialchars($actionText);
+                                                echo "</span>";
+                                                ?>
+                                            </td>
+
+                                            <!-- DETAILS -->
+                                            <td data-label="Details" class="data-container">
+                                                <?php echo nl2br($detailsHTML); ?>
+                                            </td>
+
+                                            <!-- CHANGES -->
+                                            <td data-label="Changes" class="data-container">
+                                                <?php echo nl2br($changesHTML); ?>
+                                            </td>
+
+                                            <?php
+                                            $statusRaw = $log['Status'] ?? '';
+                                            $statusClean = strtolower(trim($statusRaw)); // Normalize for comparison
+                                            $isSuccess = in_array($statusClean, ['successful', 'success']); // Accept both variants
+                                            ?>
+                                            <!-- STATUS -->
+                                            <td data-label="Status">
+                                                <span class="badge <?php echo $isSuccess ? 'bg-success' : 'bg-danger'; ?>">
+                                                    <?php
+                                                    echo getStatusIcon($statusRaw) . ' ' . htmlspecialchars($statusRaw);
+
+                                                    // DEBUG: Print raw status for unknown values
+                                                    if (!$isSuccess) {
+                                                        echo "<!-- DEBUG: Raw Status = '" . addslashes($statusRaw) . "' -->";
+                                                    }
+                                                    ?>
+                                                </span>
+                                            </td>
+
+                                            <!-- DATE & TIME -->
+                                            <td data-label="Date & Time">
+                                                <div class="d-flex align-items-center">
+                                                    <i class="far fa-clock me-2"></i>
+                                                    <?php echo htmlspecialchars($log['Date_Time'] ?? ''); ?>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="8">
+                                            <div class="empty-state text-center py-4">
+                                                <i class="fas fa-inbox fa-3x mb-3"></i>
+                                                <h4>No Audit Logs Found</h4>
+                                                <p class="text-muted">There are no audit log entries to display.</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+
+                        <!-- Pagination Controls -->
+                        <div class="container-fluid">
+                            <div class="row align-items-center g-3">
+                                <div class="col-12 col-sm-auto">
+                                    <div class="text-muted">
+                                        <?php $totalLogs = count($auditLogs); ?>
+                                        <input type="hidden" id="total-users" value="<?= $totalLogs ?>">
+                                        Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows"><?= $totalLogs ?></span> entries
+                                    </div>
+                                </div>
+                                <div class="col-12 col-sm-auto ms-sm-auto">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                            <i class="bi bi-chevron-left"></i> Previous
+                                        </button>
+                                        <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                            <option value="10" selected>10</option>
+                                            <option value="20">20</option>
+                                            <option value="30">30</option>
+                                            <option value="50">50</option>
+                                        </select>
+                                        <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                            Next <i class="bi bi-chevron-right"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <ul class="pagination justify-content-center" id="pagination"></ul>
+                                </div>
+                            </div>
+                        </div> <!-- /.Pagination -->
+                    </div><!-- /.table-responsive -->
+                </div><!-- /.card-body -->
+            </div><!-- /.card -->
+        </div><!-- /.container-fluid -->
+    </div><!-- /.main-content -->
+
+    <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/logs.js" defer></script>
+    <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
+    <script>
+        // date-time filter script
+        document.addEventListener('DOMContentLoaded', function() {
+            const filterType = document.getElementById('dateFilterType');
+            const allDateFilters = document.querySelectorAll('.date-filter');
+
+            function updateDateFields() {
+                allDateFilters.forEach(field => field.classList.add('d-none'));
+                if (!filterType.value) return;
+
+                const selected = document.querySelectorAll('.date-' + filterType.value);
+                selected.forEach(field => field.classList.remove('d-none'));
+            }
+
+            filterType.addEventListener('change', updateDateFields);
+            updateDateFields(); // initial load
+        });
+        document.addEventListener('DOMContentLoaded', function () {
+    const dateFilterTypeSelect = document.getElementById('dateFilterType');
+    const allDateFilters = document.querySelectorAll('.date-filter');
+
+    function toggleDateFilters() {
+        const selectedType = dateFilterTypeSelect.value;
+        allDateFilters.forEach(el => el.classList.add('d-none'));
+        if (selectedType) {
+            document.querySelectorAll(`.date-filter.date-${selectedType}`).forEach(el => el.classList.remove('d-none'));
+        }
+    }
+
+    dateFilterTypeSelect.addEventListener('change', toggleDateFilters);
+    toggleDateFilters(); // initial call
+});
+
+    </script>
 </body>
+
 </html>

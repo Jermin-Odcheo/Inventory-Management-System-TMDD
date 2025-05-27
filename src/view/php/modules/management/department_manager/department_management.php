@@ -51,73 +51,6 @@ if (isset($_SESSION['success'])) {
 }
 
 // ------------------------
-// DELETE DEPARTMENT
-// ------------------------
-if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
-    // Check RBAC permission for delete
-    if (!$canDelete) {
-        $_SESSION['errors'] = ["You don't have permission to delete departments."];
-        header("Location: department_management.php");
-        exit;
-    }
-
-    $id = $_GET['id'];
-    try {
-        $pdo->beginTransaction();
-
-        // Get department details before deletion
-        $stmt = $pdo->prepare("SELECT * FROM departments WHERE id = ?");
-        $stmt->execute([$id]);
-        $departmentData = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if ($departmentData) {
-            $oldValues = json_encode([
-                'id' => $departmentData['id'],
-                'abbreviation' => $departmentData['abbreviation'],
-                'department_name' => $departmentData['department_name']
-            ]);
-
-            $newValues = json_encode([
-                'id' => $departmentData['id'],
-                'abbreviation' => $departmentData['abbreviation'],
-                'department_name' => $departmentData['department_name']
-            ]);
-
-            // Soft delete - update is_disabled to 1 instead of DELETE
-            $stmt = $pdo->prepare("UPDATE departments SET is_disabled = 1 WHERE id = ?");
-            $stmt->execute([$id]);
-
-            // Insert audit log
-            $auditStmt = $pdo->prepare("
-                INSERT INTO audit_log (
-                    UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status, Date_Time
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
-            ");
-            $auditStmt->execute([
-                $_SESSION['user_id'],
-                $id,
-                'Department Management',
-                'Remove',
-                "Department '{$departmentData['department_name']}' has been moved to archive",
-                $oldValues,
-                $newValues,
-                'Successful'
-            ]);
-
-            $pdo->commit();
-            $_SESSION['success'] = "Department moved to archive successfully.";
-        }
-    } catch (PDOException $e) {
-        if ($pdo->inTransaction()) {
-            $pdo->rollBack();
-        }
-        $_SESSION['errors'] = ["Error archiving Department: " . $e->getMessage()];
-    }
-    header("Location: department_management.php");
-    exit;
-}
-
-// ------------------------
 // PROCESS FORM SUBMISSIONS (Create / Update)
 // ------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -392,29 +325,8 @@ if (isset($_GET["q"])) {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <!-- Include jQuery and Bootstrap JS -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Disable default pagination for this page -->
-    <script>
-        // Set flag to prevent the default pagination from initializing
-        window.paginationInitialized = true;
-        
-        // Override the default pagination functions to prevent conflicts
-        window.initPagination = function() { 
-            console.log('Default pagination disabled for department management page');
-            return {
-                update: function() {},
-                getConfig: function() { return {}; },
-                setConfig: function() {}
-            };
-        };
-        
-        // Override updatePagination to prevent conflicts
-        window.updatePagination = function() {
-            console.log('Using department-specific pagination instead of default');
-        };
-    </script>
     <meta charset="UTF-8">
     <title>Department Management</title>
     <style>
@@ -553,7 +465,6 @@ if (isset($_GET["q"])) {
                                                 <i class="bi bi-plus-circle"></i> Create Department
                                             </button>
                                         <?php endif; ?>
-                                        <!-- Sorting Filter UI -->
                                         <div class="d-flex align-items-center gap-2" id="sortFilter">
                                             <label class="mb-0">Sort by:</label>
                                             <div class="dropdown" data-bs-popper="static">
@@ -596,11 +507,12 @@ if (isset($_GET["q"])) {
                                                                 </button>
                                                             <?php endif; ?>
                                                             <?php if ($canDelete): ?>
-                                                                <a href="department_management.php?action=delete&id=<?php echo htmlspecialchars($department['id']); ?>"
+                                                                <button type="button"
                                                                     class="delete-btn"
+                                                                    data-id="<?php echo htmlspecialchars($department['id']); ?>"
                                                                     data-dept-name="<?php echo htmlspecialchars($department['department_name']); ?>">
                                                                     <i class="bi bi-trash"></i>
-                                                                </a>
+                                                                </button>
                                                             <?php endif; ?>
                                                         </div>
                                                     </td>
@@ -608,13 +520,11 @@ if (isset($_GET["q"])) {
                                             <?php endforeach; ?>
                                         </tbody>
                                     </table>
-                                    <!-- Pagination Controls -->
                                     <div class="container-fluid">
                                         <div class="row align-items-center g-3">
                                             <div class="col-12 col-sm-auto">
                                                 <div class="text-muted">
-                                                    <?php $totalLogs = count($department); ?>
-                                                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span id="totalRows"><?= $totalLogs ?></span> entries
+                                                    Showing <span id="currentPage">1</span> to <span id="rowsPerPageDisplay">10</span> of <span id="totalRows"><?= count($departments) ?></span> entries
                                                 </div>
                                             </div>
                                             <div class="col-12 col-sm-auto ms-sm-auto">
@@ -653,16 +563,6 @@ if (isset($_GET["q"])) {
         </div>
     </div>
 
-    <!-- Load department-specific pagination script -->
-    <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/department_pagination.js" defer></script>
-    <script>
-        console.log('Department management page loaded. Pagination script should initialize on DOMContentLoaded.');
-        
-        // Prevent the default pagination from initializing for this page
-        window.paginationInitialized = true;
-    </script>
-
-    <!-- Add Department Modal -->
     <div class="modal fade" id="addDepartmentModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -695,7 +595,6 @@ if (isset($_GET["q"])) {
         </div>
     </div>
 
-    <!-- Edit Department Modal -->
     <div class="modal fade" id="editDepartmentModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -733,7 +632,6 @@ if (isset($_GET["q"])) {
         </div>
     </div>
 
-    <!-- Delete Confirmation Modal -->
     <div class="modal fade" id="deleteDepartmentModal" tabindex="-1" aria-labelledby="deleteDepartmentModalLabel"
         aria-hidden="true">
         <div class="modal-dialog">
@@ -747,7 +645,7 @@ if (isset($_GET["q"])) {
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <a href="#" id="confirmDeleteLink" class="btn btn-danger">Delete</a>
+                    <button type="button" id="confirmDeleteBtn" class="btn btn-danger">Delete</button>
                 </div>
             </div>
         </div>
@@ -755,8 +653,195 @@ if (isset($_GET["q"])) {
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Live search filtering is now handled by department_pagination.js
-            // No need for this duplicate event listener
+            // Global variables for pagination state
+            let currentPage = 1;
+            let rowsPerPage = 10;
+            let allTableRows = []; // To store all rows for client-side pagination
+            let deptIdToDelete = null; // Declare deptIdToDelete in the main scope
+
+            // Function to display toast messages
+            function showToast(message, type, duration) {
+                // Implement your toast notification logic here
+                // For now, we'll just log to console
+                console.log(`Toast (${type}): ${message}`);
+                // Example using Bootstrap's toast (requires a toast container in HTML)
+                // var toastEl = document.createElement('div');
+                // toastEl.classList.add('toast', `bg-${type}`, 'text-white');
+                // toastEl.setAttribute('role', 'alert');
+                // toastEl.setAttribute('aria-live', 'assertive');
+                // toastEl.setAttribute('aria-atomic', 'true');
+                // toastEl.setAttribute('data-bs-delay', duration);
+                // toastEl.innerHTML = `<div class="d-flex"><div class="toast-body">${message}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button></div>`;
+                // document.body.appendChild(toastEl); // Or a specific toast container
+                // var toast = new bootstrap.Toast(toastEl);
+                // toast.show();
+            }
+
+            // Function to render table rows for the current page
+            function renderTableRows() {
+                const tableBody = $('#departmentTable tbody');
+                tableBody.empty(); // Clear existing rows
+
+                const startIndex = (currentPage - 1) * rowsPerPage;
+                const endIndex = startIndex + rowsPerPage;
+                const rowsToDisplay = allTableRows.slice(startIndex, endIndex);
+
+                rowsToDisplay.forEach(row => {
+                    tableBody.append(row);
+                });
+
+                // Update pagination info text
+                const totalRows = allTableRows.length;
+                const displayedStart = totalRows === 0 ? 0 : startIndex + 1;
+                const displayedEnd = Math.min(endIndex, totalRows);
+                $('#currentPage').text(currentPage);
+                $('#rowsPerPageDisplay').text(displayedEnd);
+                $('#totalRows').text(totalRows);
+
+                updatePaginationControls();
+            }
+
+            // Function to update pagination buttons and page numbers
+            function updatePaginationControls() {
+                const totalPages = Math.ceil(allTableRows.length / rowsPerPage);
+
+                $('#prevPage').prop('disabled', currentPage === 1);
+                $('#nextPage').prop('disabled', currentPage === totalPages || totalPages === 0);
+
+                const paginationUl = $('#pagination');
+                paginationUl.empty();
+
+                // Add page number buttons
+                for (let i = 1; i <= totalPages; i++) {
+                    const li = $('<li>').addClass('page-item');
+                    const button = $('<button>').addClass('page-link').text(i);
+                    if (i === currentPage) {
+                        li.addClass('active');
+                    }
+                    button.on('click', function() {
+                        currentPage = i;
+                        renderTableRows();
+                    });
+                    li.append(button);
+                    paginationUl.append(li);
+                }
+            }
+
+            // Function to initialize/re-initialize pagination
+            window.initDepartmentPagination = function(initialPage = 1, initialRowsPerPage = 10) {
+                // Get all rows from the table (before any filtering/slicing)
+                allTableRows = $('#departmentTable tbody tr').get();
+                
+                // Set initial state
+                rowsPerPage = initialRowsPerPage;
+                $('#rowsPerPageSelect').val(rowsPerPage); // Update dropdown
+                
+                // Calculate max possible page for the given rowsPerPage
+                const totalPages = Math.ceil(allTableRows.length / rowsPerPage);
+                currentPage = Math.min(initialPage, totalPages || 1); // Ensure current page is valid
+
+                renderTableRows();
+            };
+
+            // Function to attach all event listeners for interactive elements within the table
+            function attachTableEventListeners() {
+                // Event listener for rows per page select (re-attach)
+                $('#rowsPerPageSelect').off('change').on('change', function() {
+                    rowsPerPage = parseInt($(this).val());
+                    currentPage = 1; // Reset to first page when rows per page changes
+                    renderTableRows();
+                });
+
+                // Event listener for previous page button (re-attach)
+                $('#prevPage').off('click').on('click', function() {
+                    if (currentPage > 1) {
+                        currentPage--;
+                        renderTableRows();
+                    }
+                });
+
+                // Event listener for next page button (re-attach)
+                $('#nextPage').off('click').on('click', function() {
+                    const totalPages = Math.ceil(allTableRows.length / rowsPerPage);
+                    if (currentPage < totalPages) {
+                        currentPage++;
+                        renderTableRows();
+                    }
+                });
+
+                // Live search filtering (re-attach)
+                $('#eqSearch').off('keyup').on('keyup', function() {
+                    const searchText = $(this).val().toLowerCase();
+                    const originalRows = $('#departmentTable').data('original-rows'); 
+
+                    if (!originalRows) {
+                        $('#departmentTable').data('original-rows', $('#departmentTable tbody tr').get());
+                        originalRows = $('#departmentTable tbody tr').get();
+                    }
+
+                    if (searchText.length > 0) {
+                        allTableRows = originalRows.filter(row => {
+                            const rowText = $(row).text().toLowerCase();
+                            return rowText.includes(searchText);
+                        });
+                    } else {
+                        allTableRows = originalRows; 
+                    }
+                    currentPage = 1; 
+                    renderTableRows();
+                    updatePaginationControls(); 
+                });
+
+                // Open Edit Department modal and populate its fields (delegated event listener)
+                $(document).off('click', '.edit-btn').on('click', '.edit-btn', function() {
+                    var id = $(this).data('id');
+                    var deptAcronym = $(this).data('department-acronym');
+                    var deptName = $(this).data('department-name');
+                    $('#edit_department_hidden_id').val(id);
+                    $('#edit_department_acronym').val(deptAcronym).data('original-value', deptAcronym);
+                    $('#edit_department_name').val(deptName).data('original-value', deptName);
+                    $('#editDepartmentModal').modal('show');
+                });
+
+                // Open Delete Department modal and populate its fields (delegated event listener)
+                // This handler sets the global deptIdToDelete
+                $(document).off('click', '.delete-btn').on('click', '.delete-btn', function(e) {
+                    e.preventDefault();
+                    deptIdToDelete = $(this).data('id'); // Set the global variable
+                    var deptName = $(this).data('dept-name');
+                    $('#deptNameToDelete').text(deptName);
+                    $('#deleteDepartmentModal').modal('show');
+                });
+
+                // Sorting functionality for Department Name (dropdown version) (delegated event listener)
+                $(document).off('click', '.sort-dropdown').on('click', '.sort-dropdown', function(e) {
+                    e.preventDefault();
+                    var sortCol = $(this).data('sort-col');
+                    var sortOrder = $(this).data('sort-order');
+                    
+                    let rows = allTableRows; 
+
+                    var colIndex = 1; 
+                    
+                    rows.sort(function(a, b) {
+                        var A = $(a).children('td').eq(colIndex).text().toUpperCase();
+                        var B = $(b).children('td').eq(colIndex).text().toUpperCase();
+                        if (A < B) return sortOrder === 'asc' ? -1 : 1;
+                        if (A > B) return sortOrder === 'asc' ? 1 : -1;
+                        return 0;
+                    });
+                    
+                    allTableRows = rows;
+
+                    var label = sortOrder === 'asc' ? 'Department Name (A–Z) ▼' : 'Department Name (Z–A) ▼';
+                    $('#sortNameBtn').text(label);
+                    
+                    currentPage = 1; 
+                    renderTableRows();
+                    updatePaginationControls();
+                });
+            }
+
 
             // Check for success or error messages from PHP session
             <?php if (!empty($success)): ?>
@@ -773,34 +858,28 @@ if (isset($_GET["q"])) {
             $('#addDepartmentForm').on('submit', function(e) {
                 e.preventDefault();
 
+                const currentPageBeforeAction = currentPage; // Capture current page
+                const currentRowsPerPageBeforeAction = rowsPerPage;
+
                 $.ajax({
                     url: 'department_management.php',
                     method: 'POST',
                     data: $(this).serialize(),
                     dataType: 'json',
                     success: function(response) {
-                        if (response.status === 'success') {
-                            // Close modal first to prevent backdrop issues
-                            $('#addDepartmentModal').modal('hide');
-                            
-                            // Use a timeout to ensure modal backdrop is removed
-                            setTimeout(function() {
-                                // Only update the table container, not the whole page
-                                $('#table').load(location.href + ' #table > *', function() {
-                                    // Initialize department pagination after container is reloaded
-                                    if (typeof window.initDepartmentPagination === 'function') {
-                                        window.initDepartmentPagination();
-                                    }
-                                    showToast(response.message, 'success', 5000);
-                                });
+                        $('#addDepartmentModal').modal('hide');
+                        
+                        setTimeout(function() {
+                            $('#table').load(location.href + ' #table > *', function() {
+                                // Now use the captured currentPage instead of 1
+                                window.initDepartmentPagination(currentPageBeforeAction, currentRowsPerPageBeforeAction); 
+                                attachTableEventListeners(); // Re-attach listeners after table reload
+                                showToast(response.message, 'success', 5000);
+                            });
 
-                                // Clear modal inputs
-                                $('#addDepartmentForm')[0].reset();
-                            }, 300);
+                            $('#addDepartmentForm')[0].reset();
+                        }, 300);
 
-                        } else {
-                            showToast(response.message || 'An error occurred', 'error', 5000);
-                        }
                     },
                     error: function(xhr, status, error) {
                         console.error('AJAX Error:', xhr.responseText);
@@ -822,20 +901,20 @@ if (isset($_GET["q"])) {
             $('#editDepartmentForm').on('submit', function(e) {
                 e.preventDefault();
                 
-                // Store original values for comparison
                 const originalAcronym = $('#edit_department_acronym').data('original-value');
                 const originalName = $('#edit_department_name').data('original-value');
                 
-                // Get current values
                 const currentAcronym = $('#edit_department_acronym').val().trim();
                 const currentName = $('#edit_department_name').val().trim();
-                console.log(currentAcronym + " current name: " + currentName);
-                // Check if anything changed
+                
                 if (originalAcronym === currentAcronym && originalName === currentName) {
                     showToast('No changes were made to the department.', 'info', 5000);
                     $('#editDepartmentModal').modal('hide');
                     return;
                 }
+
+                const currentPageBeforeAction = currentPage;
+                const currentRowsPerPageBeforeAction = rowsPerPage;
 
                 $.ajax({
                     url: 'department_management.php',
@@ -843,23 +922,18 @@ if (isset($_GET["q"])) {
                     data: $(this).serialize(),
                     dataType: 'json',
                     success: function(response) {
-                        // Close modal first to prevent backdrop issues
                         $('#editDepartmentModal').modal('hide');
                         
                         if (response.status === 'success') {
-                            // Use a timeout to ensure modal backdrop is removed
                             setTimeout(function() {
-                                // Only update the table container, not the whole page
                                 $('#table').load(location.href + ' #table > *', function() {
-                                    // Initialize department pagination after container is reloaded
-                                    if (typeof window.initDepartmentPagination === 'function') {
-                                        window.initDepartmentPagination();
-                                    }
+                                    window.initDepartmentPagination(currentPageBeforeAction, currentRowsPerPageBeforeAction);
+                                    attachTableEventListeners(); // Re-attach listeners after table reload
                                     showToast(response.message, 'success', 5000);
                                 });
 
-                                // Clear modal inputs
-                                $('#addDepartmentForm')[0].reset();
+                                // Corrected: Reset the edit form, not the add form
+                                $('#editDepartmentForm')[0].reset(); 
                             }, 300);
 
                         } else if (response.status === 'info') {
@@ -884,32 +958,47 @@ if (isset($_GET["q"])) {
                 });
             });
 
-            // Open Edit Department modal and populate its fields
-            $(document).on('click', '.edit-btn', function() {
-                var id = $(this).data('id');
-                var deptAcronym = $(this).data('department-acronym');
-                var deptName = $(this).data('department-name');
-                $('#edit_department_hidden_id').val(id);
-                $('#edit_department_id').val(id);
-                $('#edit_department_acronym').val(deptAcronym).data('original-value', deptAcronym);
-                $('#edit_department_name').val(deptName).data('original-value', deptName);
-                $('#editDepartmentModal').modal('show');
-            });
+            // AJAX: Handle delete confirmation
+            $('#confirmDeleteBtn').on('click', function() {
+                if (deptIdToDelete) { // Use the globally set deptIdToDelete
+                    const currentPageBeforeAction = currentPage;
+                    const currentRowsPerPageBeforeAction = rowsPerPage;
 
-            // Open Delete Department modal and populate its fields
-            $(document).on('click', '.delete-btn', function(e) {
-                e.preventDefault();
-                var deleteUrl = $(this).attr('href');
-                var deptName = $(this).data('dept-name');
-                $('#deptNameToDelete').text(deptName);
-                $('#confirmDeleteLink').attr('href', deleteUrl);
-                $('#deleteDepartmentModal').modal('show');
-            });
-
-            // Add event listener for delete confirmation
-            $('#confirmDeleteLink').on('click', function() {
-                // Close the modal when delete is confirmed
-                $('#deleteDepartmentModal').modal('hide');
+                    $.ajax({
+                        url: 'delete_department.php', 
+                        method: 'POST',
+                        data: { dept_id: deptIdToDelete }, 
+                        dataType: 'json',
+                        success: function(response) {
+                            $('#deleteDepartmentModal').modal('hide'); 
+                            if (response.status === 'success') {
+                                setTimeout(function() {
+                                    $('#table').load(location.href + ' #table > *', function() {
+                                        window.initDepartmentPagination(currentPageBeforeAction, currentRowsPerPageBeforeAction);
+                                        attachTableEventListeners(); // Re-attach listeners after table reload
+                                        showToast(response.message, 'success', 5000);
+                                    });
+                                }, 300);
+                            } else {
+                                showToast(response.message || 'An error occurred during deletion', 'error', 5000);
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            $('#deleteDepartmentModal').modal('hide');
+                            console.error('AJAX Error:', xhr.responseText);
+                            let errorMsg = 'Error deleting department';
+                            if (xhr.responseText) {
+                                try {
+                                    const errorObj = JSON.parse(xhr.responseText);
+                                    errorMsg = errorObj.message || errorMsg;
+                                } catch (e) {
+                                    errorMsg += ': ' + error;
+                                }
+                            }
+                            showToast(errorMsg, 'error', 5000);
+                        }
+                    });
+                }
             });
 
             // Reset form when add modal is closed
@@ -917,54 +1006,18 @@ if (isset($_GET["q"])) {
                 $(this).find('form')[0].reset();
             });
             
-            // Ensure modal backdrop is removed when modal is hidden
+            // Ensure modal backdrop is removed and scrolling is re-enabled when ALL modals are hidden
             $('.modal').on('hidden.bs.modal', function() {
-                if ($('.modal.show').length > 0) {
-                    $('body').addClass('modal-open');
-                } else {
+                if ($('.modal.show').length === 0) {
+                    $('body').removeClass('modal-open');
+                    $('body').css('overflow', ''); 
                     $('.modal-backdrop').remove();
                 }
             });
 
-            // Sorting functionality for Department Name (dropdown version)
-            $(document).on('click', '.sort-dropdown', function(e) {
-                e.preventDefault();
-                var sortCol = $(this).data('sort-col');
-                var sortOrder = $(this).data('sort-order');
-                var rows = $('#departmentTable tbody tr').get();
-                var colIndex = 2; // 2: Department Name
-                rows.sort(function(a, b) {
-                    var A = $(a).children('td').eq(colIndex).text().toUpperCase();
-                    var B = $(b).children('td').eq(colIndex).text().toUpperCase();
-                    if (A < B) return sortOrder === 'asc' ? -1 : 1;
-                    if (A > B) return sortOrder === 'asc' ? 1 : -1;
-                    return 0;
-                });
-                $.each(rows, function(index, row) {
-                    $('#departmentTable tbody').append(row);
-                });
-                // Update button label
-                var label = sortOrder === 'asc' ? 'Department Name (A–Z) ▼' : 'Department Name (Z–A) ▼';
-                $('#sortNameBtn').text(label);
-                // Re-initialize pagination after sorting
-                if (typeof window.initDepartmentPagination === 'function') {
-                    window.initDepartmentPagination();
-                }
-            });
-
-            // Initialize department pagination
-            if (typeof window.initDepartmentPagination === 'function') {
-                // Ensure we're using the department-specific pagination
-                window.paginationInitialized = true;
-                
-                // Initialize with a slight delay to ensure DOM is fully loaded
-                setTimeout(function() {
-                    window.initDepartmentPagination();
-                    console.log('Department pagination initialized from document ready');
-                }, 100);
-            } else {
-                console.error('Department pagination function not found');
-            }
+            // Initial setup: call initDepartmentPagination and attachTableEventListeners
+            window.initDepartmentPagination();
+            attachTableEventListeners(); // Attach listeners on initial page load
         });
     </script>
 

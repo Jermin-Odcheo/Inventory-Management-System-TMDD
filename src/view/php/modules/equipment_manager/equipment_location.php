@@ -467,8 +467,8 @@ function safeHtml($value)
                         </div>
                         <div class="col-md-3">
                             <div class="input-group">
-                                <input type="text" id="eqSearch" class="form-control" placeholder="Search Equipment...">
                                 <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                <input type="text" id="eqSearch" class="form-control" placeholder="Search Equipment...">
                             </div>
                         </div>
                         <a href="equipLoc_change_log.php" class="btn btn-primary"> View Equipment Changes</a>
@@ -634,21 +634,21 @@ function safeHtml($value)
                                 // Get all asset tags from equipment_details
                                 $stmt1 = $pdo->query("SELECT DISTINCT asset_tag FROM equipment_details WHERE is_disabled = 0");
                                 $assetTags = array_merge($assetTags, $stmt1->fetchAll(PDO::FETCH_COLUMN));
-                                
+
                                 // Get asset tags that already have active location records
                                 $stmt2 = $pdo->query("SELECT DISTINCT asset_tag FROM equipment_location WHERE is_disabled = 0");
                                 $activeLocationTags = $stmt2->fetchAll(PDO::FETCH_COLUMN);
-                                
+
                                 // Get asset tags that already have active status records
                                 $stmt3 = $pdo->query("SELECT DISTINCT asset_tag FROM equipment_status WHERE is_disabled = 0");
                                 $activeStatusTags = $stmt3->fetchAll(PDO::FETCH_COLUMN);
-                                
+
                                 // Filter out asset tags that already have active location or status records
                                 $availableAssetTags = array_diff($assetTags, $activeLocationTags, $activeStatusTags);
-                                
+
                                 // Sort the available asset tags
                                 sort($availableAssetTags);
-                                
+
                                 foreach ($availableAssetTags as $tag) {
                                     echo '<option value="' . htmlspecialchars($tag) . '">' . htmlspecialchars($tag) . '</option>';
                                 }

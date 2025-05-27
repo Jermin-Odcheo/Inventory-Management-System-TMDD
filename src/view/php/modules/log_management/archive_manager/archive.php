@@ -20,8 +20,31 @@ $canRestore = $rbac->hasPrivilege('User Management', 'Restore');
 $canRemove = $rbac->hasPrivilege('User Management', 'Remove');
 $canDelete = $rbac->hasPrivilege('User Management', 'Permanently Delete');
 
+// --- Sorting Logic ---
+$sort_by = $_GET['sort_by'] ?? 'track_id'; // Default sort column
+$sort_order = $_GET['sort_order'] ?? 'desc'; // Default sort order
+
+// Whitelist allowed columns to prevent SQL injection
+$allowedSortColumns = [
+    'track_id' => 'a.TrackID',
+    'operator_name' => 'operator_name', // Alias from CONCAT
+    'module' => 'a.Module',
+    'action' => 'a.Action',
+    'status' => 'a.Status',
+    'date_time' => 'a.Date_Time'
+];
+
+// Validate sort_by and sort_order
+if (!array_key_exists($sort_by, $allowedSortColumns)) {
+    $sort_by = 'track_id'; // Fallback to default
+}
+if (!in_array(strtolower($sort_order), ['asc', 'desc'])) {
+    $sort_order = 'desc'; // Fallback to default
+}
+
+$orderByClause = "ORDER BY " . $allowedSortColumns[$sort_by] . " " . strtoupper($sort_order);
+
 $query = "
- 
 SELECT
     a.TrackID AS track_id,
     CONCAT(op.First_Name, ' ', op.Last_Name) AS operator_name,
@@ -39,14 +62,12 @@ LEFT JOIN users u ON a.EntityID = u.id
 JOIN users op ON a.UserID = op.id
 WHERE (u.is_disabled = 1)
 AND a.TrackID = (
-SELECT MAX(a2.TrackID)
-        FROM audit_log a2
-        WHERE a2.EntityID = a.EntityID
-    )
-ORDER BY a.TrackID DESC
- 
+    SELECT MAX(a2.TrackID)
+    FROM audit_log a2
+    WHERE a2.EntityID = a.EntityID
+)
+{$orderByClause}
 ";
-
 
 try {
     $stmt = $pdo->prepare($query);
@@ -137,18 +158,44 @@ function formatChanges($oldJsonStr)
 <head>
     <meta charset="UTF-8">
     <title>Users Management Archive</title>
-    <!-- Bootstrap and Font Awesome CDNs -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-      <!-- Include Toast CSS/JS (make sure showToast is defined) -->
       <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <!-- Custom CSS for audit logs -->
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/audit_log.css">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/pagination.css">
   
     <style>
         .main-content {
             padding-top: 150px;
+        }
+        /* Styles for sortable headers */
+        th.sortable {
+            cursor: pointer;
+            position: relative;
+            padding-right: 25px; /* Make space for the icon */
+        }
+
+        th.sortable .fas {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #ccc; /* Default icon color */
+            transition: color 0.2s ease;
+        }
+
+        th.sortable:hover .fas {
+            color: #888; /* Hover color */
+        }
+
+        th.sortable.asc .fas.fa-sort-up,
+        th.sortable.desc .fas.fa-sort-down {
+            color: #333; /* Active icon color */
+        }
+
+        th.sortable.asc .fas.fa-sort,
+        th.sortable.desc .fas.fa-sort {
+            display: none; /* Hide generic sort icon when specific order is applied */
         }
     </style>
 </head>
@@ -158,7 +205,6 @@ function formatChanges($oldJsonStr)
 <div class="main-content">
     <div class="container-fluid">
         <div class="card">
-            <!-- Card header -->
             <div class="card-header d-flex justify-content-between align-items-center bg-dark">
                 <h3 class="text-white">
                     <i class="fas fa-archive me-2"></i>
@@ -166,11 +212,9 @@ function formatChanges($oldJsonStr)
                 </h3>
             </div>
             <div class="card-body">
-                <!-- Bulk action buttons -->
                 <div class="row mb-3">
                     <div class="col-md-12">
                         <div class="bulk-actions mb-3">
-                            <!-- Bulk actions only show if 2 or more are selected -->
                             <?php if ($canRestore): ?>
                             <button type="button" id="restore-selected" class="btn btn-success" disabled style="display: none;">Restore Selected</button>
                             <?php endif; ?>
@@ -181,7 +225,6 @@ function formatChanges($oldJsonStr)
                     </div>
                 </div>
                 
-                <!-- Filter Section -->
                 <div class="row mb-4">
                     <div class="col-md-4 mb-2">
                         <div class="input-group">
@@ -208,7 +251,6 @@ function formatChanges($oldJsonStr)
                     </div>
                 </div>
                 
-                <!-- Table container -->
                 <div class="table-responsive" id="table">
                     <table id="archiveTable" class="table table-hover">
                         <colgroup>
@@ -226,14 +268,12 @@ function formatChanges($oldJsonStr)
                         <thead class="table-light">
                         <tr>
                             <th><input type="checkbox" id="select-all"></th>
-                            <th>#</th>
-                            <th>User</th>
-                            <th>Module</th>
-                            <th>Action</th>
-                            <th>Details</th>
-                            <th>Changes</th>
-                            <th>Status</th>
-                            <th>Date &amp; Time</th>
+                            <th class="sortable" data-sort-by="track_id"># <i class="fas fa-sort"></i></th>
+                            <th class="sortable" data-sort-by="operator_name">User <i class="fas fa-sort"></i></th>
+                            <th class="sortable" data-sort-by="module">Module <i class="fas fa-sort"></i></th>
+                            <th class="sortable" data-sort-by="action">Action <i class="fas fa-sort"></i></th>
+                            <th>Details</th> <th>Changes</th> <th class="sortable" data-sort-by="status">Status <i class="fas fa-sort"></i></th>
+                            <th class="sortable" data-sort-by="date_time">Date &amp; Time <i class="fas fa-sort"></i></th>
                             <th>Actions</th>
                         </tr>
                         </thead>
@@ -283,7 +323,6 @@ function formatChanges($oldJsonStr)
                                     </td>
                                     <td data-label="Actions">
                                         <div class="btn-group-vertical gap-1">
-                                            <!-- Individual restore now triggers a confirmation modal -->
                                             <?php if ($canRestore): ?>
                                             <button type="button" class="btn btn-success restore-btn" data-id="<?php echo $log['deleted_user_id']; ?>">
                                                 <i class="fas fa-undo me-1"></i> Restore
@@ -312,7 +351,6 @@ function formatChanges($oldJsonStr)
                         </tbody>
                     </table>
                 </div>
-                <!-- Pagination Controls -->
                 <div class="container-fluid">
                     <div class="row align-items-center g-3">
                         <div class="col-12 col-sm-auto">
@@ -344,14 +382,10 @@ function formatChanges($oldJsonStr)
                             <ul class="pagination justify-content-center" id="pagination"></ul>
                         </div>
                     </div>
-                </div> <!-- /.End of Pagination -->
-            </div>
+                </div> </div>
         </div>
     </div>
-</div> <!-- /.End of Main Content -->
-
-<!-- Delete Archive Modal (for individual deletion) -->
-<div class="modal fade" id="deleteArchiveModal" tabindex="-1">
+</div> <div class="modal fade" id="deleteArchiveModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
@@ -369,7 +403,6 @@ function formatChanges($oldJsonStr)
     </div>
 </div>
 
-<!-- Restore Archive Modal (for individual restore) -->
 <div class="modal fade" id="restoreArchiveModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -388,7 +421,6 @@ function formatChanges($oldJsonStr)
     </div>
 </div>
 
-<!-- Bulk Delete Modal -->
 <div class="modal fade" id="bulkDeleteModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -407,7 +439,6 @@ function formatChanges($oldJsonStr)
     </div>
 </div>
 
-<!-- Bulk Restore Modal -->
 <div class="modal fade" id="bulkRestoreModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -426,10 +457,11 @@ function formatChanges($oldJsonStr)
     </div>
 </div>
 
-<!-- Include pagination script if needed -->
 <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js" defer></script>
 <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/logs.js" defer></script>
 <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/archive_filters.js" defer></script>
+<script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/sort_archives.js" defer></script>
+
 <script>
     // Pass RBAC permissions to JavaScript
     var userPrivileges = {
@@ -601,10 +633,10 @@ function formatChanges($oldJsonStr)
                 if (response.status && response.status.toLowerCase() === 'success') {
                     $('#archiveTable').load(location.href + ' #archiveTable', function () {
                         updateBulkButtons();
-                        showToast(response.message, 'success');
+                        showToast(response.message, 'success', 5000, 'Success');
                     });
                 } else {
-                    showToast(response.message, 'error');
+                    showToast(response.message, 'error', 5000, 'Error');
                 }
             },
             error: function() {
@@ -742,7 +774,6 @@ function formatChanges($oldJsonStr)
     });
 </script>
 
-<!-- jQuery Direct Filtering -->
 <script>
 $(document).ready(function() {
 
@@ -894,7 +925,6 @@ $(document).ready(function() {
 </script>
 
 <?php include '../../../general/footer.php'; ?>
-<!-- Bootstrap 5 JS Bundle -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

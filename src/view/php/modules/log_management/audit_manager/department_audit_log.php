@@ -208,37 +208,114 @@ function formatDetailsAndChanges($log)
 function getNormalizedAction($log)
 {
     $action = strtolower($log['Action'] ?? '');
-    
+
     // Check for restore action
     if (!is_null($log['OldVal']) && !is_null($log['NewVal'])) {
         $oldData = json_decode($log['OldVal'], true);
         $newData = json_decode($log['NewVal'], true);
-        if (is_array($oldData) && is_array($newData) &&
+        if (
+            is_array($oldData) && is_array($newData) &&
             isset($oldData['is_disabled'], $newData['is_disabled']) &&
-            (int)$oldData['is_disabled'] === 1 && (int)$newData['is_disabled'] === 0) {
+            (int)$oldData['is_disabled'] === 1 && (int)$newData['is_disabled'] === 0
+        ) {
             return 'restore';
         }
     }
-    
+
     return $action;
 }
 
 // Display readable action names
-function getDisplayAction($action) {
+function getDisplayAction($action)
+{
     $actionMap = [
         'bulk_restore' => 'Restore',
         'bulk_delete' => 'Delete',
     ];
-    
+
     return $actionMap[$action] ?? ucfirst($action);
 }
+// Start with a base WHERE clause
+$where = "WHERE audit_log.Module = 'Department Management'";
+$params = [];
+
+// Filter by action type
+if (!empty($_GET['action_type'])) {
+    $where .= " AND audit_log.Action = :action_type";
+    $params[':action_type'] = $_GET['action_type'];
+}
+
+// Filter by status
+if (!empty($_GET['status'])) {
+    $where .= " AND audit_log.Status = :status";
+    $params[':status'] = $_GET['status'];
+}
+
+// Filter by search string
+if (!empty($_GET['search'])) {
+    $where .= " AND (users.email LIKE :search_email OR audit_log.NewVal LIKE :search_newval OR audit_log.OldVal LIKE :search_oldval)";
+    $searchParam = '%' . $_GET['search'] . '%';
+    $params[':search_email'] = $searchParam;
+    $params[':search_newval'] = $searchParam;
+    $params[':search_oldval'] = $searchParam;
+}
+
+// Date filters
+$dateFilterType = $_GET['date_filter_type'] ?? '';
+
+switch ($dateFilterType) {
+    case 'mdy':
+        if (!empty($_GET['date_from'])) {
+            $where .= " AND DATE(audit_log.date_time) >= :date_from";
+            $params[':date_from'] = date('Y-m-d', strtotime($_GET['date_from']));
+        }
+        if (!empty($_GET['date_to'])) {
+            $where .= " AND DATE(audit_log.date_time) <= :date_to";
+            $params[':date_to'] = date('Y-m-d', strtotime($_GET['date_to']));
+        }
+        break;
+
+    case 'month_year':
+        if (!empty($_GET['month_year_from'])) {
+            $where .= " AND DATE_FORMAT(audit_log.date_time, '%Y-%m') >= :month_year_from";
+            $params[':month_year_from'] = date('Y-m', strtotime($_GET['month_year_from']));
+        }
+        if (!empty($_GET['month_year_to'])) {  // <-- FIXED KEY
+            $where .= " AND DATE_FORMAT(audit_log.date_time, '%Y-%m') <= :month_year_to";
+            $params[':month_year_to'] = date('Y-m', strtotime($_GET['month_year_to']));  // <-- FIXED PARAM
+        }        
+        break;
+
+    case 'year':
+        if (!empty($_GET['year_from'])) {
+            $where .= " AND YEAR(audit_log.date_time) >= :year_from";
+            $params[':year_from'] = intval($_GET['year_from']);
+        }
+        if (!empty($_GET['year_to'])) {
+            $where .= " AND YEAR(audit_log.date_time) <= :year_to";
+            $params[':year_to'] = intval($_GET['year_to']);
+        }
+        break;
+}
+
+$query = "SELECT audit_log.*, users.email AS email 
+          FROM audit_log 
+          LEFT JOIN users ON audit_log.UserID = users.id
+          $where
+          ORDER BY audit_log.date_time DESC";
+
+$stmt = $pdo->prepare($query);
+$stmt->execute($params);
+$auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <link rel="preload"  href="<?php echo BASE_URL; ?>src/view/styles/css/audit_log.css" as="style"
-          onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" href="<?php echo BASE_URL; ?>src/view/styles/css/audit_log.css" as="style"
+        onload="this.onload=null;this.rel='stylesheet'">
     <noscript>
         <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/audit_log.css">
     </noscript>
@@ -246,54 +323,135 @@ function getDisplayAction($action) {
     <title>Department Management Audit Logs</title>
 
 </head>
+
 <body>
 
-<div class="main-content">
-    <div class="container-fluid">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center bg-dark">
-                <h3 class="text-white">
-                    <i class="fas fa-history me-2"></i>
-                    Department Management Audit Logs
-                </h3>
-            </div>
-
-            <div class="card-body">
-                <div class="alert alert-info mb-4">
-                    <i class="fas fa-shield-alt me-2"></i>
-                    <?php if (!$hasAuditPermission): ?>
-                        You have Department Management tracking permissions.
-                    <?php else: ?>
-                        You have access to Department Management audit logs.
-                    <?php endif; ?>
+    <div class="main-content">
+        <div class="container-fluid">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center bg-dark">
+                    <h3 class="text-white">
+                        <i class="fas fa-history me-2"></i>
+                        Department Management Audit Logs
+                    </h3>
                 </div>
 
-                <div class="row mb-4">
-                    <div class="col-md-4 mb-2">
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-search"></i></span>
-                            <input type="text" id="searchInput" class="form-control" placeholder="Search audit logs...">
+                <div class="card-body">
+                    <div class="alert alert-info mb-4">
+                        <i class="fas fa-shield-alt me-2"></i>
+                        <?php if (!$hasAuditPermission): ?>
+                            You have Department Management tracking permissions.
+                        <?php else: ?>
+                            You have access to Department Management audit logs.
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- Filter Section -->
+                    <form method="GET" class="row g-3 mb-4">
+                        <div class="col-md-3">
+                            <label for="actionType" class="form-label">Action Type</label>
+                            <select class="form-select" name="action_type" id="actionType">
+                                <option value="">All</option>
+                                <option value="Create" <?= ($_GET['action_type'] ?? '') === 'Create' ? 'selected' : '' ?>>Create</option>
+                                <option value="Modified" <?= ($_GET['action_type'] ?? '') === 'Modified' ? 'selected' : '' ?>>Modified</option>
+                                <option value="Remove" <?= ($_GET['action_type'] ?? '') === 'Remove' ? 'selected' : '' ?>>Remove</option>
+                                <option value="Restored" <?= ($_GET['action_type'] ?? '') === 'Restored' ? 'selected' : '' ?>>Restored</option>
+                                <option value="Login" <?= ($_GET['action_type'] ?? '') === 'Login' ? 'selected' : '' ?>>Login</option>
+                                <option value="Logout" <?= ($_GET['action_type'] ?? '') === 'Logout' ? 'selected' : '' ?>>Logout</option>
+
+                            </select>
                         </div>
-                    </div>
-                    <div class="col-md-4 mb-2">
-                        <select id="filterAction" class="form-select">
-                            <option value="">All Actions</option>
-                            <option value="create">Create</option>
-                            <option value="modified">Modified</option>
-                            <option value="remove">Remove</option>
-                            <option value="delete">Delete</option>
-                            <option value="restore">Restore</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4 mb-2">
-                        <select id="filterStatus" class="form-select">
-                            <option value="">All Status</option>
-                            <option value="successful">Successful</option>
-                            <option value="failed">Failed</option>
-                        </select>
-                    </div>
+
+                        <div class="col-md-3">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-select" name="status" id="status">
+                                <option value="">All</option>
+                                <option value="Successful" <?= ($_GET['status'] ?? '') === 'Successful' ? 'selected' : '' ?>>Successful</option>
+                                <option value="Failed" <?= ($_GET['status'] ?? '') === 'Failed' ? 'selected' : '' ?>>Failed</option>
+                            </select>
+                        </div>
+
+                        <!-- Date Range selector -->
+                        <div class="col-12 col-md-3">
+                            <label class="form-label fw-semibold">Date Filter Type</label>
+                            <select id="dateFilterType" name="date_filter_type" class="form-select shadow-sm">
+                                <option value="" <?= empty($filters['date_filter_type']) ? 'selected' : '' ?>>-- Select Type --</option>
+                                <option value="month_year" <?= (($_GET['date_filter_type'] ?? '') === 'month_year') ? 'selected' : '' ?>>Month-Year Range</option>
+                                <option value="year" <?= (($_GET['date_filter_type'] ?? '') === 'year') ? 'selected' : '' ?>>Year Range</option>
+                                <option value="mdy" <?= (($_GET['date_filter_type'] ?? '') === 'mdy') ? 'selected' : '' ?>>Month-Date-Year Range</option>
+
+                            </select>
+
+                        </div>
+
+                        <!-- MDY Range -->
+                        <div class="col-12 col-md-3 date-filter date-mdy d-none">
+                            <label class="form-label fw-semibold">Date From</label>
+                            <input type="date" name="date_from" class="form-control shadow-sm"
+                                value="<?= htmlspecialchars($_GET['date_from'] ?? '') ?>"
+                                placeholder="Start Date (YYYY-MM-DD)">
+                        </div>
+                        <div class="col-12 col-md-3 date-filter date-mdy d-none">
+                            <label class="form-label fw-semibold">Date To</label>
+                            <input type="date" name="date_to" class="form-control shadow-sm"
+                                value="<?= htmlspecialchars($_GET['date_to'] ?? '') ?>"
+                                placeholder="End Date (YYYY-MM-DD)">
+                        </div>
+
+                        <!-- Year Range -->
+                        <div class="col-12 col-md-3 date-filter date-year d-none">
+                            <label class="form-label fw-semibold">Year From</label>
+                            <input type="number" name="year_from" class="form-control shadow-sm"
+                                min="1900" max="2100"
+                                placeholder="e.g., 2023"
+                                value="<?= htmlspecialchars($_GET['year_from'] ?? '') ?>">
+                        </div>
+
+                        <div class="col-12 col-md-3 date-filter date-year d-none">
+                            <label class="form-label fw-semibold">Year To</label>
+                            <input type="number" name="year_to" class="form-control shadow-sm"
+                                min="1900" max="2100"
+                                placeholder="e.g., 2025"
+                                value="<?= htmlspecialchars($_GET['year_to'] ?? '') ?>">
+                        </div>
+
+                        <!-- Month-Year Range -->
+                        <div class="col-12 col-md-3 date-filter date-month_year d-none">
+                            <label class="form-label fw-semibold">From (MM-YYYY)</label>
+                            <input type="month" name="month_year_from" class="form-control shadow-sm"
+                                value="<?= htmlspecialchars($_GET['month_year_from'] ?? '') ?>"
+                                placeholder="e.g., 2023-01">
+                        </div>
+                        <div class="col-12 col-md-3 date-filter date-month_year d-none">
+                            <label class="form-label fw-semibold">To (MM-YYYY)</label>
+                            <input type="month" name="month_year_to" class="form-control shadow-sm"
+                                value="<?= htmlspecialchars($_GET['month_year_to'] ?? '') ?>"
+                                placeholder="e.g., 2023-12">
+                        </div>
+
+                        <!-- Search bar -->
+                        <div class="col-12 col-sm-6 col-md-3">
+                            <label class="form-label fw-semibold">Search</label>
+                            <div class="input-group shadow-sm">
+                                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                <input type="text" name="search" class="form-control" placeholder="Search keyword..."
+                                    value="<?= htmlspecialchars($_GET['search'] ?? '') ?>">
+                            </div>
+                        </div>
+                        <!-- Filter Button-->
+                        <div class="col-6 col-md-2 d-grid" style="align-items: center;">
+                            <button type="submit" class="btn btn-dark"><i class="bi bi-funnel"></i> Filter</button>
+                        </div>
+                        <!-- Clear Filter Button -->
+                        <div class="col-6 col-md-2 d-grid" style="align-items: center;">
+                            <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary shadow-sm">
+                                <i class="bi bi-x-circle"></i> Clear
+                            </a>
+                        </div>
+                    </form>
                 </div>
 
+                <!--Table values-->
                 <div class="table-responsive" id="table">
                     <table class="table table-hover">
                         <colgroup>
@@ -307,88 +465,88 @@ function getDisplayAction($action) {
                             <col class="date">
                         </colgroup>
                         <thead class="table-light">
-                        <tr>
-                            <th>Track ID</th>
-                            <th>User</th>
-                            <th>Module</th>
-                            <th>Action</th>
-                            <th>Details</th>
-                            <th>Changes</th>
-                            <th>Status</th>
-                            <th>Date & Time</th>
-                        </tr>
+                            <tr>
+                                <th>Track ID</th>
+                                <th>User</th>
+                                <th>Module</th>
+                                <th>Action</th>
+                                <th>Details</th>
+                                <th>Changes</th>
+                                <th>Status</th>
+                                <th>Date & Time</th>
+                            </tr>
                         </thead>
                         <tbody id="auditTable">
-                        <?php if (!empty($auditLogs)): ?>
-                            <?php foreach ($auditLogs as $log):
-                                $normalizedAction = getNormalizedAction($log);
-                                list($detailsHTML, $changesHTML) = formatDetailsAndChanges($log);
+                            <?php if (!empty($auditLogs)): ?>
+                                <?php foreach ($auditLogs as $log):
+                                    $normalizedAction = getNormalizedAction($log);
+                                    list($detailsHTML, $changesHTML) = formatDetailsAndChanges($log);
                                 ?>
-                                <tr>
-                                    <td data-label="Track ID">
-                                        <span class="badge bg-secondary">
-                                            <?php echo htmlspecialchars($log['TrackID']); ?>
-                                        </span>
-                                    </td>
+                                    <tr>
+                                        <td data-label="Track ID">
+                                            <span class="badge bg-secondary">
+                                                <?php echo htmlspecialchars($log['TrackID']); ?>
+                                            </span>
+                                        </td>
 
-                                    <td data-label="User">
-                                        <div class="d-flex align-items-center">
-                                            <i class="fas fa-user-circle me-2"></i>
-                                            <?php echo htmlspecialchars($log['email'] ?? 'N/A'); ?>
-                                        </div>
-                                    </td>
+                                        <td data-label="User">
+                                            <div class="d-flex align-items-center">
+                                                <i class="fas fa-user-circle me-2"></i>
+                                                <?php echo htmlspecialchars($log['email'] ?? 'N/A'); ?>
+                                            </div>
+                                        </td>
 
-                                    <td data-label="Module">
-                                        <?php echo !empty($log['Module']) ? htmlspecialchars(trim($log['Module'])) : '<em class="text-muted">N/A</em>'; ?>
-                                    </td>
+                                        <td data-label="Module">
+                                            <?php echo !empty($log['Module']) ? htmlspecialchars(trim($log['Module'])) : '<em class="text-muted">N/A</em>'; ?>
+                                        </td>
 
-                                    <td data-label="Action">
+                                        <td data-label="Action">
+                                            <?php
+                                            $actionText = getDisplayAction($normalizedAction);
+                                            echo "<span class='action-badge action-" . strtolower($normalizedAction) . "'>";
+                                            echo getActionIcon($normalizedAction) . ' ' . htmlspecialchars($actionText);
+                                            echo "</span>";
+                                            ?>
+                                        </td>
+
+                                        <td data-label="Details" class="data-container">
+                                            <?php echo nl2br($detailsHTML); ?>
+                                        </td>
+
+                                        <td data-label="Changes" class="data-container">
+                                            <?php echo $changesHTML; ?>
+                                        </td>
+
                                         <?php
-                                        $actionText = getDisplayAction($normalizedAction);
-                                        echo "<span class='action-badge action-" . strtolower($normalizedAction) . "'>";
-                                        echo getActionIcon($normalizedAction) . ' ' . htmlspecialchars($actionText);
-                                        echo "</span>";
-                                        ?>
-                                    </td>
-
-                                    <td data-label="Details" class="data-container">
-                                        <?php echo nl2br($detailsHTML); ?>
-                                    </td>
-
-                                    <td data-label="Changes" class="data-container">
-                                        <?php echo $changesHTML; ?>
-                                    </td>
-
-                                    <?php
                                         $statusRaw = $log['Status'] ?? '';
                                         $statusClean = strtolower(trim($statusRaw)); // Normalize for comparison
                                         $isSuccess = in_array($statusClean, ['successful', 'success']); // Accept both variants
-                                    ?>
-                                    <td data-label="Status">
-                                        <span class="badge <?php echo $isSuccess ? 'bg-success' : 'bg-danger'; ?>">
-                                            <?php echo getStatusIcon($statusRaw) . ' ' . htmlspecialchars($statusRaw); ?>
-                                        </span>
-                                    </td>
+                                        ?>
+                                        <td data-label="Status">
+                                            <span class="badge <?php echo $isSuccess ? 'bg-success' : 'bg-danger'; ?>">
+                                                <?php echo getStatusIcon($statusRaw) . ' ' . htmlspecialchars($statusRaw); ?>
+                                            </span>
+                                        </td>
 
-                                    <td data-label="Date & Time">
-                                        <div class="d-flex align-items-center">
-                                            <i class="far fa-clock me-2"></i>
-                                            <?php echo htmlspecialchars($log['Date_Time'] ?? ''); ?>
+                                        <td data-label="Date & Time">
+                                            <div class="d-flex align-items-center">
+                                                <i class="far fa-clock me-2"></i>
+                                                <?php echo htmlspecialchars($log['Date_Time'] ?? ''); ?>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td colspan="8">
+                                        <div class="empty-state text-center py-4">
+                                            <i class="fas fa-inbox fa-3x mb-3"></i>
+                                            <h4>No Audit Logs Found</h4>
+                                            <p class="text-muted">There are no audit log entries to display.</p>
                                         </div>
                                     </td>
                                 </tr>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <tr>
-                                <td colspan="8">
-                                    <div class="empty-state text-center py-4">
-                                        <i class="fas fa-inbox fa-3x mb-3"></i>
-                                        <h4>No Audit Logs Found</h4>
-                                        <p class="text-muted">There are no audit log entries to display.</p>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php endif; ?>
+                            <?php endif; ?>
                         </tbody>
                     </table>
 
@@ -423,21 +581,60 @@ function getDisplayAction($action) {
                                 <ul class="pagination justify-content-center" id="pagination"></ul>
                             </div>
                         </div>
-                    </div> </div></div></div></div></div><script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/logs.js" defer></script>
-<script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+    <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/logs.js" defer></script>
+    <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Set a flag to indicate that this page explicitly initializes pagination
-    window.paginationInitialized = true; // NEW LINE ADDED HERE
-    // Initialize pagination with the audit table ID.
-    // The initPagination function in pagination.js will now handle
-    // capturing all rows, setting up filter event listeners,
-    // and performing the initial updatePagination call.
-    initPagination({
-        tableId: 'auditTable'
-    });
-});
-</script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set a flag to indicate that this page explicitly initializes pagination
+            window.paginationInitialized = true; // NEW LINE ADDED HERE
+            // Initialize pagination with the audit table ID.
+            // The initPagination function in pagination.js will now handle
+            // capturing all rows, setting up filter event listeners,
+            // and performing the initial updatePagination call.
+            initPagination({
+                tableId: 'auditTable'
+            });
+        });
+        // date-time filter script
+        document.addEventListener('DOMContentLoaded', function() {
+            const filterType = document.getElementById('dateFilterType');
+            const allDateFilters = document.querySelectorAll('.date-filter');
+
+            function updateDateFields() {
+                allDateFilters.forEach(field => field.classList.add('d-none'));
+                if (!filterType.value) return;
+
+                const selected = document.querySelectorAll('.date-' + filterType.value);
+                selected.forEach(field => field.classList.remove('d-none'));
+            }
+
+            filterType.addEventListener('change', updateDateFields);
+            updateDateFields(); // initial load
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const dateFilterTypeSelect = document.getElementById('dateFilterType');
+            const allDateFilters = document.querySelectorAll('.date-filter');
+
+            function toggleDateFilters() {
+                const selectedType = dateFilterTypeSelect.value;
+                allDateFilters.forEach(el => el.classList.add('d-none'));
+                if (selectedType) {
+                    document.querySelectorAll(`.date-filter.date-${selectedType}`).forEach(el => el.classList.remove('d-none'));
+                }
+            }
+
+            dateFilterTypeSelect.addEventListener('change', toggleDateFilters);
+            toggleDateFilters(); // initial call
+        });
+    </script>
 </body>
+
 </html>
