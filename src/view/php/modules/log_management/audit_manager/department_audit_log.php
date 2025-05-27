@@ -347,10 +347,10 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </div>
 
                     <!-- Filter Section -->
-                    <form method="GET" class="row g-3 mb-4">
+                    <form method="GET" class="row g-3 mb-4" id="auditFilterForm" onsubmit="return false;">
                         <div class="col-md-3">
                             <label for="actionType" class="form-label">Action Type</label>
-                            <select class="form-select" name="action_type" id="actionType">
+                            <select class="form-select live-filter" name="action_type" id="actionType">
                                 <option value="">All</option>
                                 <option value="Create" <?= ($_GET['action_type'] ?? '') === 'Create' ? 'selected' : '' ?>>Create</option>
                                 <option value="Modified" <?= ($_GET['action_type'] ?? '') === 'Modified' ? 'selected' : '' ?>>Modified</option>
@@ -364,7 +364,7 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                         <div class="col-md-3">
                             <label for="status" class="form-label">Status</label>
-                            <select class="form-select" name="status" id="status">
+                            <select class="form-select live-filter" name="status" id="status">
                                 <option value="">All</option>
                                 <option value="Successful" <?= ($_GET['status'] ?? '') === 'Successful' ? 'selected' : '' ?>>Successful</option>
                                 <option value="Failed" <?= ($_GET['status'] ?? '') === 'Failed' ? 'selected' : '' ?>>Failed</option>
@@ -374,7 +374,7 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <!-- Date Range selector -->
                         <div class="col-12 col-md-3">
                             <label class="form-label fw-semibold">Date Filter Type</label>
-                            <select id="dateFilterType" name="date_filter_type" class="form-select shadow-sm">
+                            <select id="dateFilterType" name="date_filter_type" class="form-select shadow-sm live-filter">
                                 <option value="" <?= empty($filters['date_filter_type']) ? 'selected' : '' ?>>-- Select Type --</option>
                                 <option value="month_year" <?= (($_GET['date_filter_type'] ?? '') === 'month_year') ? 'selected' : '' ?>>Month-Year Range</option>
                                 <option value="year" <?= (($_GET['date_filter_type'] ?? '') === 'year') ? 'selected' : '' ?>>Year Range</option>
@@ -387,13 +387,13 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <!-- MDY Range -->
                         <div class="col-12 col-md-3 date-filter date-mdy d-none">
                             <label class="form-label fw-semibold">Date From</label>
-                            <input type="date" name="date_from" class="form-control shadow-sm"
+                            <input type="date" name="date_from" class="form-control shadow-sm live-filter"
                                 value="<?= htmlspecialchars($_GET['date_from'] ?? '') ?>"
                                 placeholder="Start Date (YYYY-MM-DD)">
                         </div>
                         <div class="col-12 col-md-3 date-filter date-mdy d-none">
                             <label class="form-label fw-semibold">Date To</label>
-                            <input type="date" name="date_to" class="form-control shadow-sm"
+                            <input type="date" name="date_to" class="form-control shadow-sm live-filter"
                                 value="<?= htmlspecialchars($_GET['date_to'] ?? '') ?>"
                                 placeholder="End Date (YYYY-MM-DD)">
                         </div>
@@ -401,7 +401,7 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <!-- Year Range -->
                         <div class="col-12 col-md-3 date-filter date-year d-none">
                             <label class="form-label fw-semibold">Year From</label>
-                            <input type="number" name="year_from" class="form-control shadow-sm"
+                            <input type="number" name="year_from" class="form-control shadow-sm live-filter"
                                 min="1900" max="2100"
                                 placeholder="e.g., 2023"
                                 value="<?= htmlspecialchars($_GET['year_from'] ?? '') ?>">
@@ -409,7 +409,7 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                         <div class="col-12 col-md-3 date-filter date-year d-none">
                             <label class="form-label fw-semibold">Year To</label>
-                            <input type="number" name="year_to" class="form-control shadow-sm"
+                            <input type="number" name="year_to" class="form-control shadow-sm live-filter"
                                 min="1900" max="2100"
                                 placeholder="e.g., 2025"
                                 value="<?= htmlspecialchars($_GET['year_to'] ?? '') ?>">
@@ -418,13 +418,13 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <!-- Month-Year Range -->
                         <div class="col-12 col-md-3 date-filter date-month_year d-none">
                             <label class="form-label fw-semibold">From (MM-YYYY)</label>
-                            <input type="month" name="month_year_from" class="form-control shadow-sm"
+                            <input type="month" name="month_year_from" class="form-control shadow-sm live-filter"
                                 value="<?= htmlspecialchars($_GET['month_year_from'] ?? '') ?>"
                                 placeholder="e.g., 2023-01">
                         </div>
                         <div class="col-12 col-md-3 date-filter date-month_year d-none">
                             <label class="form-label fw-semibold">To (MM-YYYY)</label>
-                            <input type="month" name="month_year_to" class="form-control shadow-sm"
+                            <input type="month" name="month_year_to" class="form-control shadow-sm live-filter"
                                 value="<?= htmlspecialchars($_GET['month_year_to'] ?? '') ?>"
                                 placeholder="e.g., 2023-12">
                         </div>
@@ -434,19 +434,19 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <label class="form-label fw-semibold">Search</label>
                             <div class="input-group shadow-sm">
                                 <span class="input-group-text"><i class="bi bi-search"></i></span>
-                                <input type="text" name="search" class="form-control" placeholder="Search keyword..."
+                                <input type="text" name="search" id="searchInput" class="form-control live-filter" placeholder="Search keyword..."
                                     value="<?= htmlspecialchars($_GET['search'] ?? '') ?>">
                             </div>
                         </div>
                         <!-- Filter Button-->
                         <div class="col-6 col-md-2 d-grid" style="align-items: center;">
-                            <button type="submit" class="btn btn-dark"><i class="bi bi-funnel"></i> Filter</button>
+                            <button type="button" id="applyFilters" class="btn btn-dark"><i class="bi bi-funnel"></i> Filter</button>
                         </div>
                         <!-- Clear Filter Button -->
                         <div class="col-6 col-md-2 d-grid" style="align-items: center;">
-                            <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary shadow-sm">
+                            <button type="button" id="clearFilters" class="btn btn-secondary shadow-sm">
                                 <i class="bi bi-x-circle"></i> Clear
-                            </a>
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -633,6 +633,205 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             dateFilterTypeSelect.addEventListener('change', toggleDateFilters);
             toggleDateFilters(); // initial call
+        });
+
+        // Add JavaScript for live filtering
+        document.addEventListener('DOMContentLoaded', function() {
+            // Store all table rows for filtering
+            const tableBody = document.getElementById('auditTable');
+            const allRows = Array.from(tableBody.querySelectorAll('tr'));
+            let filteredRows = [...allRows]; // Start with all rows
+            
+            // Get filter elements
+            const filterForm = document.getElementById('auditFilterForm');
+            const filterType = document.getElementById('dateFilterType');
+            const allDateFilters = document.querySelectorAll('.date-filter');
+            const searchInput = document.getElementById('searchInput');
+            const actionTypeFilter = document.getElementById('actionType');
+            const statusFilter = document.getElementById('status');
+            const applyFiltersBtn = document.getElementById('applyFilters');
+            const clearFiltersBtn = document.getElementById('clearFilters');
+            
+            // Date filter fields
+            const dateFromInput = filterForm.querySelector('[name="date_from"]');
+            const dateToInput = filterForm.querySelector('[name="date_to"]');
+            const yearFromInput = filterForm.querySelector('[name="year_from"]');
+            const yearToInput = filterForm.querySelector('[name="year_to"]');
+            const monthYearFromInput = filterForm.querySelector('[name="month_year_from"]');
+            const monthYearToInput = filterForm.querySelector('[name="month_year_to"]');
+            
+            // Handle date filter type changes
+            function updateDateFields() {
+                allDateFilters.forEach(field => field.classList.add('d-none'));
+                if (!filterType.value) return;
+
+                const selected = document.querySelectorAll('.date-' + filterType.value);
+                selected.forEach(field => field.classList.remove('d-none'));
+            }
+
+            filterType.addEventListener('change', function() {
+                updateDateFields();
+            });
+            
+            // Initial date fields setup
+            updateDateFields();
+            
+            // Set up event listeners for live filtering
+            document.querySelectorAll('.live-filter').forEach(filter => {
+                filter.addEventListener('change', applyFilters);
+            });
+            
+            // For search input, use input event with debounce
+            if (searchInput) {
+                let debounceTimer;
+                searchInput.addEventListener('input', function() {
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(function() {
+                        applyFilters();
+                    }, 300); // 300ms debounce for search
+                });
+            }
+            
+            // Apply filters button
+            applyFiltersBtn.addEventListener('click', applyFilters);
+            
+            // Clear filters button
+            clearFiltersBtn.addEventListener('click', function() {
+                // Reset all form fields
+                filterForm.reset();
+                
+                // Reset date fields visibility
+                updateDateFields();
+                
+                // Show all rows
+                filteredRows = [...allRows];
+                updateTable();
+            });
+            
+            // Function to apply all filters
+            function applyFilters() {
+                const searchTerm = searchInput.value.toLowerCase().trim();
+                const actionType = actionTypeFilter.value.toLowerCase();
+                const status = statusFilter.value.toLowerCase();
+                const dateFilterTypeValue = filterType.value;
+                
+                // Filter the rows
+                filteredRows = allRows.filter(row => {
+                    // Text search (across all columns)
+                    const rowText = row.textContent.toLowerCase();
+                    const matchesSearch = searchTerm === '' || rowText.includes(searchTerm);
+                    
+                    // Action type filter
+                    const actionCell = row.querySelector('[data-label="Action"]');
+                    const actionText = actionCell ? actionCell.textContent.toLowerCase() : '';
+                    const matchesAction = actionType === '' || actionText.includes(actionType);
+                    
+                    // Status filter
+                    const statusCell = row.querySelector('[data-label="Status"]');
+                    const statusText = statusCell ? statusCell.textContent.toLowerCase() : '';
+                    const matchesStatus = status === '' || statusText.includes(status);
+                    
+                    // Date filtering
+                    let matchesDate = true;
+                    
+                    if (dateFilterTypeValue) {
+                        const dateCell = row.querySelector('[data-label="Date & Time"]');
+                        const dateText = dateCell ? dateCell.textContent.trim() : '';
+                        
+                        if (dateText) {
+                            const rowDate = new Date(dateText);
+                            
+                            switch (dateFilterTypeValue) {
+                                case 'mdy':
+                                    if (dateFromInput.value) {
+                                        const fromDate = new Date(dateFromInput.value);
+                                        if (rowDate < fromDate) matchesDate = false;
+                                    }
+                                    if (dateToInput.value) {
+                                        const toDate = new Date(dateToInput.value);
+                                        toDate.setHours(23, 59, 59); // End of day
+                                        if (rowDate > toDate) matchesDate = false;
+                                    }
+                                    break;
+                                    
+                                case 'year':
+                                    const rowYear = rowDate.getFullYear();
+                                    if (yearFromInput.value && rowYear < parseInt(yearFromInput.value)) {
+                                        matchesDate = false;
+                                    }
+                                    if (yearToInput.value && rowYear > parseInt(yearToInput.value)) {
+                                        matchesDate = false;
+                                    }
+                                    break;
+                                    
+                                case 'month_year':
+                                    const rowYearMonth = rowDate.getFullYear() * 100 + rowDate.getMonth() + 1;
+                                    
+                                    if (monthYearFromInput.value) {
+                                        const [fromYear, fromMonth] = monthYearFromInput.value.split('-').map(Number);
+                                        const fromYearMonth = fromYear * 100 + fromMonth;
+                                        if (rowYearMonth < fromYearMonth) matchesDate = false;
+                                    }
+                                    
+                                    if (monthYearToInput.value) {
+                                        const [toYear, toMonth] = monthYearToInput.value.split('-').map(Number);
+                                        const toYearMonth = toYear * 100 + toMonth;
+                                        if (rowYearMonth > toYearMonth) matchesDate = false;
+                                    }
+                                    break;
+                            }
+                        }
+                    }
+                    
+                    return matchesSearch && matchesAction && matchesStatus && matchesDate;
+                });
+                
+                // Update the table with filtered rows
+                updateTable();
+            }
+            
+            // Function to update table with filtered rows
+            function updateTable() {
+                // Clear the table
+                tableBody.innerHTML = '';
+                
+                // Show no results message if no matches
+                if (filteredRows.length === 0) {
+                    const noResultsRow = document.createElement('tr');
+                    noResultsRow.innerHTML = `
+                        <td colspan="8">
+                            <div class="empty-state text-center py-4">
+                                <i class="fas fa-search fa-3x mb-3"></i>
+                                <h4>No matching records found</h4>
+                                <p class="text-muted">Try adjusting your search or filter criteria.</p>
+                            </div>
+                        </td>
+                    `;
+                    tableBody.appendChild(noResultsRow);
+                } else {
+                    // Add filtered rows to the table
+                    filteredRows.forEach(row => {
+                        tableBody.appendChild(row.cloneNode(true));
+                    });
+                }
+                
+                // Update pagination if it exists
+                if (typeof updatePagination === 'function') {
+                    // Store filtered rows for pagination
+                    window.filteredRows = filteredRows;
+                    // Reset to first page
+                    if (window.paginationConfig) {
+                        window.paginationConfig.currentPage = 1;
+                    }
+                    updatePagination();
+                }
+                
+                // Update counts display
+                const totalRowsElement = document.getElementById('totalRows');
+                if (totalRowsElement) {
+                    totalRowsElement.textContent = filteredRows.length;
+                }
+            }
         });
     </script>
 </body>

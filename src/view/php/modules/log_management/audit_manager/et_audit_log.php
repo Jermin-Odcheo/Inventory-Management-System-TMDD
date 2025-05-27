@@ -428,30 +428,156 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                     <!-- Filter Section -->
                     <div class="row mb-4">
-                        <div class="col-md-4 mb-2">
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-search"></i></span>
-                                <input type="text" id="searchInput" class="form-control"
-                                    placeholder="Search audit logs...">
+                        <form method="GET" class="row g-3 mb-4" id="auditFilterForm" onsubmit="return false;">
+                            <div class="col-md-4 mb-2">
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                    <input type="text" id="searchInput" class="form-control live-filter"
+                                        placeholder="Search audit logs...">
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-md-4 mb-2">
-                            <select id="filterAction" class="form-select">
-                                <option value="">All Actions</option>
-                                <option value="create">Create</option>
-                                <option value="modified">Modified</option>
-                                <option value="remove">Removed</option>
-                                <option value="add">Add</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4 mb-2">
-                            <select id="filterStatus" class="form-select">
-                                <option value="">All Status</option>
-                                <option value="successful">Successful</option>
-                                <option value="failed">Failed</option>
-                            </select>
-                        </div>
+                            <div class="col-md-4 mb-2">
+                                <select id="actionType" class="form-select live-filter">
+                                    <option value="">All Actions</option>
+                                    <option value="create">Create</option>
+                                    <option value="modified">Modified</option>
+                                    <option value="remove">Removed</option>
+                                    <option value="add">Add</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <select id="status" class="form-select live-filter">
+                                    <option value="">All Status</option>
+                                    <option value="successful">Successful</option>
+                                    <option value="failed">Failed</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6 mt-2">
+                                <button type="button" id="applyFilters" class="btn btn-dark"><i class="bi bi-funnel"></i> Apply Filters</button>
+                                <button type="button" id="clearFilters" class="btn btn-secondary"><i class="bi bi-x-circle"></i> Clear Filters</button>
+                            </div>
+                        </form>
                     </div>
+                    
+                    <!-- Add JavaScript for live filtering -->
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            // Store all table rows for filtering
+                            const tableBody = document.getElementById('auditTable');
+                            const allRows = Array.from(tableBody.querySelectorAll('tr'));
+                            let filteredRows = [...allRows]; // Start with all rows
+                            
+                            // Get filter elements
+                            const filterForm = document.getElementById('auditFilterForm');
+                            const searchInput = document.getElementById('searchInput');
+                            const actionTypeFilter = document.getElementById('actionType');
+                            const statusFilter = document.getElementById('status');
+                            const applyFiltersBtn = document.getElementById('applyFilters');
+                            const clearFiltersBtn = document.getElementById('clearFilters');
+                            
+                            // Set up event listeners for live filtering
+                            document.querySelectorAll('.live-filter').forEach(filter => {
+                                filter.addEventListener('change', applyFilters);
+                            });
+                            
+                            // For search input, use input event with debounce
+                            if (searchInput) {
+                                let debounceTimer;
+                                searchInput.addEventListener('input', function() {
+                                    clearTimeout(debounceTimer);
+                                    debounceTimer = setTimeout(function() {
+                                        applyFilters();
+                                    }, 300); // 300ms debounce for search
+                                });
+                            }
+                            
+                            // Apply filters button
+                            applyFiltersBtn.addEventListener('click', applyFilters);
+                            
+                            // Clear filters button
+                            clearFiltersBtn.addEventListener('click', function() {
+                                // Reset all form fields
+                                filterForm.reset();
+                                
+                                // Show all rows
+                                filteredRows = [...allRows];
+                                updateTable();
+                            });
+                            
+                            // Function to apply all filters
+                            function applyFilters() {
+                                const searchTerm = searchInput.value.toLowerCase().trim();
+                                const actionType = actionTypeFilter.value.toLowerCase();
+                                const status = statusFilter.value.toLowerCase();
+                                
+                                // Filter the rows
+                                filteredRows = allRows.filter(row => {
+                                    // Text search (across all columns)
+                                    const rowText = row.textContent.toLowerCase();
+                                    const matchesSearch = searchTerm === '' || rowText.includes(searchTerm);
+                                    
+                                    // Action type filter
+                                    const actionCell = row.querySelector('[data-label="Action"]');
+                                    const actionText = actionCell ? actionCell.textContent.toLowerCase() : '';
+                                    const matchesAction = actionType === '' || actionText.includes(actionType);
+                                    
+                                    // Status filter
+                                    const statusCell = row.querySelector('[data-label="Status"]');
+                                    const statusText = statusCell ? statusCell.textContent.toLowerCase() : '';
+                                    const matchesStatus = status === '' || statusText.includes(status);
+                                    
+                                    return matchesSearch && matchesAction && matchesStatus;
+                                });
+                                
+                                // Update the table with filtered rows
+                                updateTable();
+                            }
+                            
+                            // Function to update table with filtered rows
+                            function updateTable() {
+                                // Clear the table
+                                tableBody.innerHTML = '';
+                                
+                                // Show no results message if no matches
+                                if (filteredRows.length === 0) {
+                                    const noResultsRow = document.createElement('tr');
+                                    noResultsRow.innerHTML = `
+                                        <td colspan="8">
+                                            <div class="empty-state text-center py-4">
+                                                <i class="fas fa-search fa-3x mb-3"></i>
+                                                <h4>No matching records found</h4>
+                                                <p class="text-muted">Try adjusting your search or filter criteria.</p>
+                                            </div>
+                                        </td>
+                                    `;
+                                    tableBody.appendChild(noResultsRow);
+                                } else {
+                                    // Add filtered rows to the table
+                                    filteredRows.forEach(row => {
+                                        tableBody.appendChild(row.cloneNode(true));
+                                    });
+                                }
+                                
+                                // Update pagination if it exists
+                                if (typeof updatePagination === 'function') {
+                                    // Store filtered rows for pagination
+                                    window.filteredRows = filteredRows;
+                                    // Reset to first page
+                                    if (window.paginationConfig) {
+                                        window.paginationConfig.currentPage = 1;
+                                    }
+                                    updatePagination();
+                                }
+                                
+                                // Update counts display
+                                const totalRowsElement = document.getElementById('totalRows');
+                                if (totalRowsElement) {
+                                    totalRowsElement.textContent = filteredRows.length;
+                                }
+                            }
+                        });
+                    </script>
 
                     <!-- Table container with colgroup for column widths -->
                     <div class="table-responsive" id="table">
