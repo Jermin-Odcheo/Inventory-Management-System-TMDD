@@ -23,6 +23,31 @@ $canRestore = $rbac->hasPrivilege('Roles and Privileges', 'Restore');
 $canRemove = $rbac->hasPrivilege('Roles and Privileges', 'Remove');
 $canPermanentDelete = $rbac->hasPrivilege('Roles and Privileges', 'Permanently Delete');
 
+// --- Sorting Logic ---
+$sort_by = $_GET['sort_by'] ?? 'date_time'; // Default sort column
+$sort_order = $_GET['sort_order'] ?? 'desc'; // Default sort order
+
+// Whitelist allowed columns to prevent SQL injection
+$allowedSortColumns = [
+    'role_id' => 'r.id',
+    'operator_name' => 'operator_name', // Alias from CONCAT
+    'module' => 'al.Module',
+    'action' => 'al.Action',
+    'status' => 'al.Status',
+    'date_time' => 'al.Date_Time'
+];
+
+// Validate sort_by and sort_order
+if (!array_key_exists($sort_by, $allowedSortColumns)) {
+    $sort_by = 'date_time'; // Fallback to default
+}
+if (!in_array(strtolower($sort_order), ['asc', 'desc'])) {
+    $sort_order = 'desc'; // Fallback to default
+}
+
+$orderByClause = "ORDER BY " . $allowedSortColumns[$sort_by] . " " . strtoupper($sort_order) . ", r.id DESC";
+
+
 // SQL query for archived roles with audit information
 $sql = "
 SELECT 
@@ -47,7 +72,7 @@ WHERE r.is_disabled = 1
     FROM audit_log a2
     WHERE a2.EntityID = r.id AND a2.Module = 'Roles and Privileges'
   )
-ORDER BY al.Date_Time DESC, r.id DESC
+{$orderByClause}
 ";
 
 $stmt = $pdo->prepare($sql);
@@ -165,9 +190,7 @@ function formatChanges($oldJsonStr)
 <html lang="en">
 
 <head>
-    <!-- Load jQuery first -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <!-- Then load Select2 -->
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 
@@ -195,6 +218,35 @@ function formatChanges($oldJsonStr)
             max-height: 500px;
             overflow-y: auto;
         }
+        /* Styles for sortable headers */
+        th.sortable {
+            cursor: pointer;
+            position: relative;
+            padding-right: 25px; /* Make space for the icon */
+        }
+
+        th.sortable .fas {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #ccc; /* Default icon color */
+            transition: color 0.2s ease;
+        }
+
+        th.sortable:hover .fas {
+            color: #888; /* Hover color */
+        }
+
+        th.sortable.asc .fas.fa-sort-up,
+        th.sortable.desc .fas.fa-sort-down {
+            color: #333; /* Active icon color */
+        }
+
+        th.sortable.asc .fas.fa-sort,
+        th.sortable.desc .fas.fa-sort {
+            display: none; /* Hide generic sort icon when specific order is applied */
+        }
     </style>
 </head>
 
@@ -209,7 +261,6 @@ function formatChanges($oldJsonStr)
                     </h3>
                 </div>
                 <div class="card-body">
-                    <!-- Filter Section -->
                     <div class="row mb-4">
                         <div class="col-md-4 mb-2">
                             <div class="input-group">
@@ -241,14 +292,14 @@ function formatChanges($oldJsonStr)
                             <thead class="table-dark">
                                 <tr>
                                     <th><input type="checkbox" id="select-all"></th>
-                                    <th style="width: 25px;">ID</th>
-                                    <th>User</th>
-                                    <th>Module</th>
-                                    <th>Action</th>
+                                    <th class="sortable" data-sort-by="role_id" style="width: 25px;">ID <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-sort-by="operator_name">User <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-sort-by="module">Module <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-sort-by="action">Action <i class="fas fa-sort"></i></th>
                                     <th>Details</th>
                                     <th>Changes</th>
-                                    <th>Status</th>
-                                    <th>Date &amp; Time</th>
+                                    <th class="sortable" data-sort-by="status">Status <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-sort-by="date_time">Date &amp; Time <i class="fas fa-sort"></i></th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -371,8 +422,8 @@ function formatChanges($oldJsonStr)
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/logs.js" defer></script>
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/archive_filters.js" defer></script>
+    <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/sort_archives.js" defer></script>
 
-    <!-- Modals -->
     <div class="modal fade" id="confirmRestoreModal" tabindex="-1" aria-labelledby="confirmRestoreModalLabel"
         aria-hidden="true">
         <div class="modal-dialog">
@@ -412,7 +463,6 @@ function formatChanges($oldJsonStr)
         </div>
     </div>
 
-    <!-- Bulk Restore Modal -->
     <div class="modal fade" id="bulkRestoreModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -431,7 +481,6 @@ function formatChanges($oldJsonStr)
         </div>
     </div>
 
-    <!-- Bulk Delete Modal -->
     <div class="modal fade" id="bulkDeleteModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
