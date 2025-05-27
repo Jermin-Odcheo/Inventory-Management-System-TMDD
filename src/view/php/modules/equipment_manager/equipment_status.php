@@ -466,6 +466,48 @@ input[readonly] {
     opacity: 0.65;
     cursor: not-allowed;
 }
+.filter-btn-custom {
+    background: #181818 !important;
+    color: #fff !important;
+    border-radius: 10px !important;
+    margin-left: 8px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    min-width: 180px !important;
+    width: 220px !important;
+    justify-content: flex-start !important;
+    transition: background 0.2s;
+}
+.filter-btn-custom:hover, .filter-btn-custom:focus {
+    background: #3c3c3c !important;
+    color: #fff !important;
+}
+.filter-btn-custom:active {
+    background: #222 !important;
+    color: #fff !important;
+}
+.clear-btn-custom {
+    background: #757d84 !important;
+    color: #fff !important;
+    border-radius: 10px !important;
+    margin-left: 8px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    min-width: 120px !important;
+    width: 180px !important;
+    justify-content: flex-start !important;
+    transition: background 0.2s;
+}
+.clear-btn-custom:hover, .clear-btn-custom:focus {
+    background: #6c757d !important;
+    color: #fff !important;
+}
+.clear-btn-custom:active {
+    background: #5a6268 !important;
+    color: #fff !important;
+}
  </style>
 </head>
 
@@ -541,20 +583,33 @@ input[readonly] {
                                 ?>
                             </select>
                         </div>
-                        <div class="col-md-3">
-                            <select class="form-select" id="dateFilter">
+                        <div class="col-md-3 d-flex flex-column align-items-start" style="position:relative;">
+                            <select class="form-select mb-2" id="dateFilter">
                                 <option value="">Filter by Date</option>
                                 <option value="desc">Newest to Oldest</option>
                                 <option value="asc">Oldest to Newest</option>
                                 <option value="month">Specific Month</option>
                                 <option value="range">Custom Date Range</option>
                             </select>
+                            <button id="filterBtn" type="button" class="btn filter-btn-custom mt-1" style="width:100%;"> 
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="white" class="bi bi-funnel" viewBox="0 0 16 16">
+                                    <path d="M1.5 1.5A.5.5 0 0 1 2 1h12a.5.5 0 0 1 .39.812L10 7.21V13.5a.5.5 0 0 1-.684.474l-2-1A.5.5 0 0 1 7 12.5V7.21L1.61 1.812A.5.5 0 0 1 1.5 1.5zM2.437 2l5.36 5.812a.5.5 0 0 1 .123.329v5.54l1 0.5V8.14a.5.5 0 0 1 .123-.329L13.563 2H2.437z"/>
+                                </svg>
+                                <span style="color:#fff;">Filter</span>
+                            </button>
                         </div>
-                        <div class="col-md-3">
-                            <div class="input-group">
+                        <div class="col-md-3 d-flex flex-column align-items-end" style="position:relative;">
+                            <div class="input-group mb-2">
                                 <input type="text" id="searchStatus" class="form-control" placeholder="Search status...">
                                 <span class="input-group-text"><i class="bi bi-search"></i></span>
                             </div>
+                            <button id="clearBtn" type="button" class="btn clear-btn-custom" style="width:100%;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="white" class="bi bi-x-circle" viewBox="0 0 16 16">
+                                    <path d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14zm0 1A8 8 0 1 1 8 0a8 8 0 0 1 0 16z"/>
+                                    <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                                </svg>
+                                <span style="color:#fff;">Clear</span>
+                            </button>
                         </div>
                     </div>
 
@@ -1241,6 +1296,23 @@ input[readonly] {
             
             // Run on page load with a longer delay to ensure DOM is fully processed
             setTimeout(checkAndHidePagination, 300);
+
+            // Filter button now reloads the page on click
+            $('#filterBtn').on('click', function() {
+                location.reload();
+            });
+            // Clear button resets filters and triggers filter function
+            $('#clearBtn').on('click', function() {
+                $('#filterStatus').val('').trigger('change');
+                $('#dateFilter').val('').trigger('change');
+                $('#monthSelect').val('').trigger('change');
+                $('#yearSelect').val('').trigger('change');
+                $('#dateFrom').val('');
+                $('#dateTo').val('');
+                if (typeof filterStatusTable === 'function') {
+                    filterStatusTable();
+                }
+            });
         });
     </script>
     <!-- Select2 JS -->
