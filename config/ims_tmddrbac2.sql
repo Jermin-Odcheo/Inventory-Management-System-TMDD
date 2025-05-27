@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 26, 2025 at 06:55 PM
+-- Generation Time: May 27, 2025 at 06:36 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -1464,7 +1464,7 @@ INSERT INTO `equipment_location` (`equipment_location_id`, `asset_tag`, `buildin
 (48, '00016384-TMD', '', '', '', '', NULL, 'Inventory', '', '2025-05-26 22:47:57', 0),
 (51, '00016390-TMD', '', '', '', '', NULL, 'Inventory', '', '2025-05-26 23:07:32', 0),
 (52, '123123123', '', '', '', '', NULL, 'inventory', '', '2025-05-26 23:16:47', 1),
-(56, '123123123', '', '', '', '', NULL, 'Inventory', '', '2025-05-26 23:22:25', 1);
+(56, '123123123', '', '', '', '', NULL, 'Inventory', '', '2025-05-26 23:22:25', 0);
 
 -- --------------------------------------------------------
 
@@ -1479,7 +1479,8 @@ CREATE TABLE `equipment_status` (
   `action` varchar(255) NOT NULL,
   `remarks` text DEFAULT NULL,
   `date_created` datetime DEFAULT current_timestamp(),
-  `is_disabled` tinyint(1) DEFAULT 0
+  `is_disabled` tinyint(1) DEFAULT 0,
+  `asset_tag_active` varchar(255) GENERATED ALWAYS AS (case when `is_disabled` = 0 then `asset_tag` else NULL end) STORED
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -1501,9 +1502,8 @@ INSERT INTO `equipment_status` (`equipment_status_id`, `asset_tag`, `status`, `a
 (12, '123123123', '', '', '', '2025-05-26 23:17:06', 1),
 (13, '00016397-TMD', '', '', '', '2025-05-26 23:23:01', 0),
 (14, '00016406-TMD', '', '', '', '2025-05-26 23:23:04', 0),
-(15, '00001871-TMD', '', '', '', '2025-05-26 23:23:07', 0),
-(16, '00001257-TMD', '', '', '', '2025-05-26 23:23:11', 0),
-(17, '00001257-TMD', '', '', '', '2025-05-26 23:23:14', 0);
+(15, '00001257-TMD', '', '', '', '2025-05-26 23:23:07', 0),
+(16, '00001257-TMD', '', '', '', '2025-05-26 23:23:11', 1);
 
 -- --------------------------------------------------------
 
@@ -2609,7 +2609,8 @@ ALTER TABLE `equipment_location`
 -- Indexes for table `equipment_status`
 --
 ALTER TABLE `equipment_status`
-  ADD PRIMARY KEY (`equipment_status_id`);
+  ADD PRIMARY KEY (`equipment_status_id`),
+  ADD UNIQUE KEY `uq_equipment_status_asset_tag_active` (`asset_tag_active`) USING HASH;
 
 --
 -- Indexes for table `modules`
