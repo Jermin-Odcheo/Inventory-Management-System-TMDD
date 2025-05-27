@@ -357,9 +357,12 @@ function safeHtml($value)
     <title>Equipment Location Management</title>
     <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.min.css" rel="stylesheet">
-    <!-- Select2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
     <style>
+        /* The .filtered-out class will no longer be used for hiding rows by filterTable,
+           as updatePagination will handle rendering. Keeping it here just in case
+           other scripts might still rely on it for other purposes, but it won't
+           affect pagination directly anymore. */
         .filtered-out {
             display: none !important;
         }
@@ -474,7 +477,6 @@ function safeHtml($value)
                         <a href="equipLoc_change_log.php" class="btn btn-primary"> View Equipment Changes</a>
                     </div>
 
-                    <!-- Date Inputs Row -->
                     <div id="dateInputsContainer" class="date-inputs-container">
                         <div class="month-picker-container" id="monthPickerContainer">
                             <select class="form-select" id="monthSelect">
@@ -562,18 +564,19 @@ function safeHtml($value)
                                     </tr>
                                 <?php endforeach; ?>
                             <?php else: ?>
-                                <td colspan="16" class="text-center py-4">
-                                    <div class="alert alert-info mb-0">
-                                        <i class="bi bi-info-circle me-2"></i> No Equipment Location found. Click on "Create Equipment" to add a new entry.
-                                    </div>
-                                </td>
+                                <tr id="noResultsMessage" style="display: none;"> 
+                                    <td colspan="11" class="text-center py-4">
+                                        <div class="alert alert-info mb-0">
+                                            <i class="bi bi-info-circle me-2"></i> No Equipment Location found. Click on "Create Equipment" to add a new entry.
+                                        </div>
+                                    </td>
+                                </tr>
                             <?php endif; ?>
                         </tbody>
                     </table>
                 </div>
 
 
-                <!-- Pagination Controls -->
                 <div class="container-fluid">
                     <div class="row align-items-center g-3">
                         <div class="col-12 col-sm-auto">
@@ -611,7 +614,6 @@ function safeHtml($value)
     </div>
 
 
-    <!-- Add Location Modal -->
     <div class="modal fade" id="addLocationModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -706,7 +708,6 @@ function safeHtml($value)
         </div>
     </div>
 
-    <!-- Edit Location Modal -->
     <div class="modal fade" id="editLocationModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -772,7 +773,7 @@ function safeHtml($value)
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Device State</label>
-                            <select class="form-select" id="devState" name="device_state" required>
+                            <select class="form-select" id="edit_devState" name="device_state" required>
                             <option value="Inventory">Inventory</option>
                                 <option value="Transffered">Transffered</option>
                                 <option value="Borrowed">Borrowed</option>
@@ -797,7 +798,6 @@ function safeHtml($value)
         </div>
     </div>
 
-    <!-- Delete Equipment Location Modal -->
     <div class="modal fade" id="deleteEDModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -866,41 +866,12 @@ function safeHtml($value)
         
         // Initialize pagination for equipment location page
         document.addEventListener('DOMContentLoaded', function() {
-            // Use the new configurable pagination system
+            // Initialize pagination with the correct table ID
+            // This will also populate window.allRows and window.filteredRows initially
             initPagination({
-                tableId: 'locationTbody', // Use the actual ID of your table
+                tableId: 'locationTbody', // Use the actual ID of your table tbody
                 currentPage: 1
             });
-
-            // Initialize allRows for pagination.js
-            window.allRows = Array.from(document.querySelectorAll('#locationTbody tr'));
-
-            // Force hide pagination buttons if no data or all fits on one page
-            function forcePaginationCheck() {
-                const totalRows = parseInt(document.getElementById('totalRows')?.textContent || '0');
-                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect')?.value || '10');
-                const prevBtn = document.getElementById('prevPage');
-                const nextBtn = document.getElementById('nextPage');
-                const paginationEl = document.getElementById('pagination');
-
-                if (totalRows <= rowsPerPage) {
-                    if (prevBtn) prevBtn.style.cssText = 'display: none !important';
-                    if (nextBtn) nextBtn.style.cssText = 'display: none !important';
-                    if (paginationEl) paginationEl.style.cssText = 'display: none !important';
-                }
-
-                // Also check for visible rows (for when filtering is applied)
-                const visibleRows = document.querySelectorAll('#locationTbody tr:not(.filtered-out)').length;
-                if (visibleRows <= rowsPerPage) {
-                    if (prevBtn) prevBtn.style.cssText = 'display: none !important';
-                    if (nextBtn) nextBtn.style.cssText = 'display: none !important';
-                    if (paginationEl) paginationEl.style.cssText = 'display: none !important';
-                }
-            }
-
-            // Run immediately and after a short delay
-            forcePaginationCheck();
-            setTimeout(forcePaginationCheck, 200);
 
             // Custom filterTable function for equipment location - FIXED VERSION
             window.filterTable = function() {
@@ -924,15 +895,19 @@ function safeHtml($value)
                     dateTo: dateTo
                 });
 
-                // Get all rows directly from the DOM
-                const allTableRows = Array.from(document.querySelectorAll('#locationTbody tr:not(#noResultsMessage)'));
-                console.log('Total rows to filter:', allTableRows.length);
+                // Use the globally available 'allRows' from pagination.js
+                // This array holds the original DOM tr elements
+                const rowsToProcess = window.allRows || []; 
+                console.log('Total original rows to filter from:', rowsToProcess.length);
                 
-                // Reset filteredRows array
-                window.filteredRows = [];
+                // Create a new array for rows that pass the filters
+                let tempFilteredRows = [];
 
                 // Filter each row
-                allTableRows.forEach(row => {
+                rowsToProcess.forEach(row => {
+                    // Ensure it's a valid table row and not the 'no results' message
+                    if (!row || row.id === 'noResultsMessage') return; 
+
                     // Get text content for filtering
                     const rowText = row.textContent || '';
                     
@@ -943,11 +918,9 @@ function safeHtml($value)
                     // Get date column (10th column, index 9)
                     const dateCell = row.cells && row.cells.length > 9 ? row.cells[9] : null;
                     const dateText = dateCell ? dateCell.textContent || '' : '';
+                    // Create a Date object from the date text. Handle potential invalid dates.
                     const date = dateText ? new Date(dateText) : null;
 
-                    // Debug each row's building value
-                    console.log('Row building value:', buildingText, 'Filter value:', filterBuilding);
-                    
                     // Apply search filter (case insensitive)
                     const searchMatch = !searchText || rowText.toLowerCase().includes(searchText.toLowerCase());
                     
@@ -956,98 +929,81 @@ function safeHtml($value)
                     if (filterBuilding && filterBuilding !== 'all' && filterBuilding.toLowerCase() !== 'filter by building') {
                         // Trim and compare case-insensitive
                         buildingMatch = buildingText.trim().toLowerCase() === filterBuilding.trim().toLowerCase();
-                        console.log('Building match?', buildingMatch, 'for', buildingText, 'vs', filterBuilding);
                     }
                     
                     // Apply date filter
                     let dateMatch = true;
                     if (date && dateFilterType) {
                         if (dateFilterType === 'month' && selectedMonth && selectedYear) {
-                            dateMatch = (date.getMonth() + 1 === parseInt(selectedMonth)) && 
-                                       (date.getFullYear() === parseInt(selectedYear));
+                            // Check if date is valid before accessing getMonth/getFullYear
+                            if (!isNaN(date.getTime())) {
+                                dateMatch = (date.getMonth() + 1 === parseInt(selectedMonth)) && 
+                                            (date.getFullYear() === parseInt(selectedYear));
+                            } else {
+                                dateMatch = false; // Invalid date, so no match
+                            }
                         } else if (dateFilterType === 'range' && dateFrom && dateTo) {
                             const from = new Date(dateFrom);
                             const to = new Date(dateTo);
-                            to.setHours(23, 59, 59); // End of day
-                            dateMatch = date >= from && date <= to;
+                            // Set to end of day to include all records on the 'to' date
+                            to.setHours(23, 59, 59, 999); 
+                            // Check if dates are valid before comparison
+                            if (!isNaN(date.getTime()) && !isNaN(from.getTime()) && !isNaN(to.getTime())) {
+                                dateMatch = date >= from && date <= to;
+                            } else {
+                                dateMatch = false; // Invalid date, so no match
+                            }
                         }
                     }
 
-                    // Show or hide row based on filter match
+                    // If all filters match, add the original row element to the temporary array
                     const shouldShow = searchMatch && buildingMatch && dateMatch;
                     if (shouldShow) {
-                        row.classList.remove('filtered-out');
-                        window.filteredRows.push(row);
-                    } else {
-                        row.classList.add('filtered-out');
+                        tempFilteredRows.push(row);
                     }
-                    
-                    // Debug the filter results for this row
-                    console.log('Row filtering:', {
-                        searchMatch: searchMatch,
-                        buildingMatch: buildingMatch,
-                        dateMatch: dateMatch,
-                        shouldShow: shouldShow
-                    });
                 });
 
-                // Sort if needed
+                // Sort if needed (only if date filter type is for sorting)
                 if (dateFilterType === 'asc' || dateFilterType === 'desc') {
-                    window.filteredRows.sort((a, b) => {
+                    tempFilteredRows.sort((a, b) => {
+                        // Get the date string from the 10th cell (index 9)
                         const dateA = a.cells && a.cells[9] ? new Date(a.cells[9].textContent) : new Date(0);
                         const dateB = b.cells && b.cells[9] ? new Date(b.cells[9].textContent) : new Date(0);
-                        return dateFilterType === 'asc' ? dateA - dateB : dateB - dateA;
-                    });
+                        
+                        // Handle invalid dates during sorting
+                        const timeA = isNaN(dateA.getTime()) ? (dateFilterType === 'asc' ? Infinity : -Infinity) : dateA.getTime();
+                        const timeB = isNaN(dateB.getTime()) ? (dateFilterType === 'asc' ? Infinity : -Infinity) : dateB.getTime();
 
-                    // Remove all rows and add back in sorted order
-                    const tbody = document.getElementById('locationTbody');
-                    if (tbody) {
-                        window.filteredRows.forEach(row => tbody.appendChild(row));
-                    }
+                        return dateFilterType === 'asc' ? timeA - timeB : timeB - timeA;
+                    });
                 }
 
+                // Update the global filteredRows array for pagination.js
+                window.filteredRows = tempFilteredRows;
+                
                 // Reset to page 1 and update pagination
+                // Ensure paginationConfig is defined before using it
                 if (typeof paginationConfig !== 'undefined') {
                     paginationConfig.currentPage = 1;
+                } else {
+                    console.error("filterTable: paginationConfig is undefined!");
+                    return; // Exit if config is not ready
                 }
                 
+                // Call updatePagination from pagination.js to render the table
                 if (typeof updatePagination === 'function') {
                     updatePagination();
+                } else {
+                    console.error("filterTable: updatePagination function not found!");
                 }
                 
-                // Check if pagination controls should be shown
-                setTimeout(forcePaginationCheck, 50);
-                
-                // Show a message if no results found
-                const noResultsMessage = document.getElementById('noResultsMessage');
-                if (noResultsMessage) {
-                    if (window.filteredRows.length === 0) {
-                        noResultsMessage.style.display = 'table-row';
-                    } else {
-                        noResultsMessage.style.display = 'none';
-                    }
-                } else if (window.filteredRows.length === 0) {
-                    // Create and insert a "no results" message if it doesn't exist
-                    const tbody = document.getElementById('locationTbody');
-                    if (tbody) {
-                        const noResultsRow = document.createElement('tr');
-                        noResultsRow.id = 'noResultsMessage';
-                        noResultsRow.innerHTML = `
-                            <td colspan="11" class="text-center py-4">
-                                <div class="alert alert-warning mb-0">
-                                    <i class="bi bi-exclamation-circle me-2"></i> No results found for the current filter criteria.
-                                </div>
-                            </td>
-                        `;
-                        tbody.appendChild(noResultsRow);
-                    }
-                }
-                
-                console.log('Filtered rows:', window.filteredRows.length);
+                console.log('FilterTable completed. Filtered rows count:', window.filteredRows.length);
             };
 
             // Add a reset button to clear all filters
-            $('#filterContainer').append('<button id="resetFilters" class="btn btn-outline-secondary ms-2">Reset Filters</button>');
+            if ($('#resetFilters').length === 0) { // Prevent adding multiple times
+                $('#filterContainer').append('<button id="resetFilters" class="btn btn-outline-secondary ms-2">Reset Filters</button>');
+            }
             
             // Set up event listeners for filtering
             $('#eqSearch').on('input', filterTable);
@@ -1057,7 +1013,7 @@ function safeHtml($value)
                 console.log('Building filter changed to:', $(this).val());
                 
                 // Reset date filters when building filter changes
-                if ($(this).val() && $(this).val() !== 'all') {
+                if ($(this).val() && $(this).val() !== 'all' && $(this).val().toLowerCase() !== 'filter by building') {
                     $('#dateFilter').val('');
                     $('#monthSelect').val('');
                     $('#yearSelect').val('');
@@ -1148,6 +1104,7 @@ function safeHtml($value)
             });
             
             // Run initial filter to make sure everything is displayed correctly
+            // This ensures pagination is applied on initial load
             setTimeout(filterTable, 100);
         });
 
@@ -1162,32 +1119,24 @@ function safeHtml($value)
                         fetch(`search_equipment_location.php?q=${encodeURIComponent(searchValue)}`)
                             .then(response => response.text())
                             .then(data => {
-                                document.getElementById('liveSearchResults').innerHTML = data;
+                                // This part is for live search results, not directly pagination
+                                // document.getElementById('liveSearchResults').innerHTML = data;
                             })
                             .catch(error => console.error('Error:', error));
                     } else {
-                        document.getElementById('liveSearchResults').innerHTML = "";
+                        // document.getElementById('liveSearchResults').innerHTML = "";
                     }
                 });
             }
         });
 
         $(document).ready(function() {
-            // Initialize pagination with the correct table ID
-            initPagination({
-                tableId: 'locationTbody',
-                currentPage: 1
-            });
-
-            // Initialize allRows for pagination.js
-            window.allRows = Array.from(document.querySelectorAll('#locationTbody tr'));
-
             // First set up the standard event handlers
             $('#filterBuilding').on('change', function() {
                 console.log('Building filter changed to:', $(this).val());
                 
                 // Reset date filters when building filter changes
-                if ($(this).val() && $(this).val() !== 'all') {
+                if ($(this).val() && $(this).val() !== 'all' && $(this).val().toLowerCase() !== 'filter by building') {
                     $('#dateFilter').val('');
                     $('#monthSelect').val('');
                     $('#yearSelect').val('');
@@ -1225,7 +1174,7 @@ function safeHtml($value)
                     });
                     
                     // Set default value and ensure it's reflected in the UI
-                    $('#filterBuilding').val('all').trigger('change');
+                    // $('#filterBuilding').val('all').trigger('change'); // This will trigger filterTable again
                 } catch (e) {
                     console.error('Error initializing Select2:', e);
                 }
@@ -1318,6 +1267,7 @@ function safeHtml($value)
             });
             
             // Run initial filter to make sure everything is displayed correctly
+            // This ensures pagination is applied on initial load
             setTimeout(filterTable, 100);
         });
 
@@ -1348,6 +1298,7 @@ function safeHtml($value)
                 var specificArea = $(this).data('area');
                 var personResponsible = $(this).data('person');
                 var departmentId = $(this).data('department');
+                var deviceState = $(this).data('device-state'); // Get device state
                 var remarks = $(this).data('remarks');
 
                 // Ensure asset tag is present in the dropdown
@@ -1363,6 +1314,7 @@ function safeHtml($value)
                 $('#edit_specific_area').val(specificArea);
                 $('#edit_person_responsible').val(personResponsible);
                 $('#edit_department_id').val(departmentId).trigger('change');
+                $('#edit_devState').val(deviceState); // Set device state
                 $('#edit_remarks').val(remarks);
 
                 // Move modal to body to ensure backdrop always works
@@ -1408,20 +1360,20 @@ function safeHtml($value)
                         },
                         success: function(response) {
                             if (response.status === 'success') {
-                                $('#elTable').load(location.href + ' #elTable', function() {
+                                // Reload only the table body content
+                                $('#elTable tbody').load(location.href + ' #elTable tbody > *', function() {
                                     showToast(response.message, 'success');
                                     
-                                    // Update allRows and filteredRows for pagination
-                                    window.allRows = Array.from(document.querySelectorAll('#locationTbody tr'));
-                                    window.filteredRows = [...window.allRows];
+                                    // Re-initialize allRows from the newly loaded DOM
+                                    window.allRows = Array.from(document.querySelectorAll('#locationTbody tr:not(#noResultsMessage)'));
                                     
-                                    // Re-initialize pagination
+                                    // Re-initialize pagination with the correct table ID
                                     initPagination({
                                         tableId: 'locationTbody',
                                         currentPage: 1
                                     });
                                     
-                                    // Apply any active filters
+                                    // Apply any active filters to the new data
                                     filterTable();
                                 });
                             } else {
@@ -1485,20 +1437,20 @@ function safeHtml($value)
                                     $('#add_department_id').val('').trigger('change');
                                 }
                             }, 500);
-                            $('#elTable').load(location.href + ' #elTable', function() {
+                            // Reload only the table body content
+                            $('#elTable tbody').load(location.href + ' #elTable tbody > *', function() {
                                 showToast(result.message, 'success');
                                 
-                                // Update allRows and filteredRows for pagination
-                                window.allRows = Array.from(document.querySelectorAll('#locationTbody tr'));
-                                window.filteredRows = [...window.allRows];
+                                // Re-initialize allRows from the newly loaded DOM
+                                window.allRows = Array.from(document.querySelectorAll('#locationTbody tr:not(#noResultsMessage)'));
                                 
-                                // Re-initialize pagination
+                                // Re-initialize pagination with the correct table ID
                                 initPagination({
                                     tableId: 'locationTbody',
                                     currentPage: 1
                                 });
                                 
-                                // Apply any active filters
+                                // Apply any active filters to the new data
                                 filterTable();
                             });
                         } else {
@@ -1511,18 +1463,6 @@ function safeHtml($value)
                     }
                 });
             });
-
-            //building location serachable dropdown
-            /* This initialization is now handled earlier - removing to avoid duplication
-            $('#filterBuilding').select2({
-                placeholder: 'Filter by Building',
-                allowClear: true,
-                width: '100%',
-                dropdownAutoWidth: true,
-                minimumResultsForSearch: 0, // always show search box
-                dropdownParent: $('#filterBuilding').parent()
-            });
-            */
 
             // Department searchable dropdown (Add Location Modal)
             $('#addLocationModal').on('shown.bs.modal', function() {
@@ -1579,20 +1519,20 @@ function safeHtml($value)
                                 }
                                 // Do NOT reset the form or Select2 fields here
                             }, 500);
-                            $('#elTable').load(location.href + ' #elTable', function() {
+                            // Reload only the table body content
+                            $('#elTable tbody').load(location.href + ' #elTable tbody > *', function() {
                                 showToast(result.message, 'success');
                                 
-                                // Update allRows and filteredRows for pagination
-                                window.allRows = Array.from(document.querySelectorAll('#locationTbody tr'));
-                                window.filteredRows = [...window.allRows];
+                                // Re-initialize allRows from the newly loaded DOM
+                                window.allRows = Array.from(document.querySelectorAll('#locationTbody tr:not(#noResultsMessage)'));
                                 
-                                // Re-initialize pagination
+                                // Re-initialize pagination with the correct table ID
                                 initPagination({
                                     tableId: 'locationTbody',
                                     currentPage: 1
                                 });
                                 
-                                // Apply any active filters
+                                // Apply any active filters to the new data
                                 filterTable();
                             });
                         } else {
@@ -1641,6 +1581,14 @@ function safeHtml($value)
                     width: '100%',
                     dropdownParent: $('#editLocationModal')
                 });
+
+                // Initialize Select2 for the department in edit modal
+                $('#edit_department_id').select2({
+                    dropdownParent: $('#editLocationModal'),
+                    width: '100%',
+                    placeholder: 'Select Department',
+                    allowClear: true
+                });
             });
             $('#editLocationModal').on('hidden.bs.modal', function() {
                 // Remove any lingering modal-backdrop and modal-open after hiding
@@ -1662,12 +1610,13 @@ function safeHtml($value)
                 th.addEventListener("click", function() {
                     const table = th.closest("table");
                     const tbody = table.querySelector("tbody");
-                    const rows = Array.from(tbody.querySelectorAll("tr:not(.filtered-out)"));
+                    // Sort the original allRows, then re-filter and paginate
+                    const rowsToSort = [...window.allRows]; // Create a copy to sort
                     const index = Array.from(th.parentNode.children).indexOf(th);
                     const type = th.dataset.sort || "string";
                     const asc = !th.classList.contains("asc");
 
-                    rows.sort((a, b) => {
+                    rowsToSort.sort((a, b) => {
                         let x = a.children[index].innerText.trim();
                         let y = b.children[index].innerText.trim();
 
@@ -1677,6 +1626,10 @@ function safeHtml($value)
                         } else if (type === "date") {
                             x = new Date(x);
                             y = new Date(y);
+                            // Handle invalid dates during sorting
+                            const timeX = isNaN(x.getTime()) ? (asc ? Infinity : -Infinity) : x.getTime();
+                            const timeY = isNaN(y.getTime()) ? (asc ? Infinity : -Infinity) : y.getTime();
+                            return asc ? (timeX - timeY) : (timeY - timeX);
                         } else {
                             x = x.toLowerCase();
                             y = y.toLowerCase();
@@ -1685,18 +1638,15 @@ function safeHtml($value)
                         return asc ? (x > y ? 1 : -1) : (x < y ? 1 : -1);
                     });
 
-                    tbody.innerHTML = "";
-                    rows.forEach(row => tbody.appendChild(row));
-
+                    // Update allRows with the sorted order
+                    window.allRows = rowsToSort;
+                    
+                    // Clear existing sort classes and apply new one
                     table.querySelectorAll("th").forEach(th => th.classList.remove("asc", "desc"));
                     th.classList.add(asc ? "asc" : "desc");
                     
-                    // Update filteredRows for pagination
-                    window.filteredRows = rows;
-                    
-                    // Reset to page 1 and update pagination
-                    paginationConfig.currentPage = 1;
-                    updatePagination();
+                    // Re-apply filters and update pagination based on the newly sorted allRows
+                    filterTable();
                 });
             });
         });
