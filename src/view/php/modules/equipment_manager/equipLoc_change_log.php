@@ -157,194 +157,188 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 ?>
 
-<!-- Styles & Scripts -->
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
-<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
-<link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<style>
-    /* Fix padding when sidebar is fixed */
-    body {
-        padding-left: 50px;
-    }
-
-    @media (max-width: 992px) {
-        body {
-            padding-left: 0;
+<head>
+    <!-- Styles & Scripts -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        .filter-container {
+            width: 100%;
+            padding: 0;
+            margin: 0 auto;
+            box-sizing: border-box;
         }
-    }
 
-    /* Responsive filter layout */
-    form.row.g-3 {
-        row-gap: 1rem;
-    }
+        form.row.g-3 {
+            width: 100%;
+            margin: 0;
+            row-gap: 1rem;
+        }
 
-    form .form-select,
-    form .form-control {
-        max-width: 100%;
-    }
-</style>
+        form .form-select {
+    width: 100% !important;
+    max-width: 100% !important;
+}
 
-<div class="container-fluid" style="margin-top: 20px; padding-right: 30px">
-    </head>
+form .form-control:not(.input-group > .form-control) {
+    width: 100% !important;
+    max-width: 100% !important;
+}
 
-    <body>
-        <div class="main-container">
-            <header class="main-header">
-                <h1> Equipment Location Change Logs</h1>
-            </header>
 
-            <section class="card">
-                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                    <h2><i class="bi bi-list-task"></i> List of Equipment Locations</h2>
-                </div>
-                <div class="card-body">
-                    <div class="container-fluid px-0">
-                        <div class="filter-container" id="filterContainer">
-                            <!-- Filter Form -->
-                            <form method="GET" class="row g-3 align-items-end mb-4 bg-light p-3 rounded shadow-sm">
-                                <?php foreach ($filterValues as $key => $options): ?>
-                                    <div class="col-12 col-sm-6 col-md-3">
-                                        <label class="form-label fw-semibold"><?= $fieldsToShow[$key] ?></label>
-                                        <select name="<?= $key ?>" class="form-select shadow-sm">
-                                            <option value="">All <?= $fieldsToShow[$key] ?></option>
-                                            <?php foreach ($options as $val): ?>
-                                                <option value="<?= htmlspecialchars($val) ?>" <?= $filters[$key] === $val ? 'selected' : '' ?>>
-                                                    <?= htmlspecialchars($val) ?>
-                                                </option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    </div>
-                                <?php endforeach; ?>
+        @media (max-width: 576px) {
+            form .col-12 {
+                flex: 0 0 100%;
+                max-width: 100%;
+            }
+        }
+    </style>
 
+    <div class="container-fluid" style="margin-top: 20px; padding-right: 30px">
+</head>
+
+<body>
+    <div class="main-container">
+        <header class="main-header">
+            <h1> Equipment Location Change Logs</h1>
+        </header>
+
+        <section class="card">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <h2><i class="bi bi-list-task"></i> List of Equipment Locations</h2>
+            </div>
+            <div class="card-body">
+                <div class="container-fluid px-0">
+                    <!-- Filter div-->
+                    <div class="filter-container" id="filterContainer">
+                        <!-- Filter Form -->
+                        <form method="GET" class="row g-3 align-items-end mb-4 bg-light p-3 rounded shadow-sm">
+                            <?php foreach ($filterValues as $key => $options): ?>
                                 <div class="col-12 col-sm-6 col-md-3">
-                                    <label class="form-label fw-semibold">Search</label>
-                                    <div class="input-group shadow-sm">
-                                        <span class="input-group-text"><i class="bi bi-search"></i></span>
-                                        <input type="text" name="search" class="form-control" placeholder="Search keyword..." value="<?= htmlspecialchars($filters['search']) ?>">
-                                    </div>
-                                </div>
-
-                                <div class="col-12 col-md-3">
-                                    <label class="form-label fw-semibold">Date Filter Type</label>
-                                    <select id="dateFilterType" name="date_filter_type" class="form-select shadow-sm">
-                                        <option value="" <?= empty($filters['date_filter_type']) ? 'selected' : '' ?>>-- Select Type --</option>
-                                        <option value="mdy" <?= $filters['date_filter_type'] === 'mdy' ? 'selected' : '' ?>>Month-Day-Year Range</option>
-                                        <option value="month" <?= $filters['date_filter_type'] === 'month' ? 'selected' : '' ?>>Month Range</option>
-                                        <option value="year" <?= $filters['date_filter_type'] === 'year' ? 'selected' : '' ?>>Year Range</option>
-                                        <option value="month_year" <?= $filters['date_filter_type'] === 'month_year' ? 'selected' : '' ?>>Month-Year Range</option>
+                                    <label class="form-label fw-semibold"><?= $fieldsToShow[$key] ?></label>
+                                    <select name="<?= $key ?>" class="form-select shadow-sm">
+                                        <option value="">All <?= $fieldsToShow[$key] ?></option>
+                                        <?php foreach ($options as $val): ?>
+                                            <option value="<?= htmlspecialchars($val) ?>" <?= $filters[$key] === $val ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($val) ?>
+                                            </option>
+                                        <?php endforeach; ?>
                                     </select>
+                                </div>
+                            <?php endforeach; ?>
 
+                            <!-- Search bar -->
+                            <div class="col-12 col-sm-6 col-md-3">
+                                <label class="form-label fw-semibold">Search</label>
+                                <div class="input-group shadow-sm">
+                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                    <input type="text" name="search" class="form-control" placeholder="Search keyword..." value="<?= htmlspecialchars($filters['search']) ?>">
                                 </div>
+                            </div>
 
-                                <!-- MDY Range -->
-                                <div class="col-12 col-md-3 date-filter date-mdy d-none">
-                                    <label class="form-label fw-semibold">Date From</label>
-                                    <input type="date" name="date_from" class="form-control shadow-sm"
-                                        value="<?= htmlspecialchars($_GET['date_from'] ?? '') ?>"
-                                        placeholder="Start Date (YYYY-MM-DD)">
-                                </div>
-                                <div class="col-12 col-md-3 date-filter date-mdy d-none">
-                                    <label class="form-label fw-semibold">Date To</label>
-                                    <input type="date" name="date_to" class="form-control shadow-sm"
-                                        value="<?= htmlspecialchars($_GET['date_to'] ?? '') ?>"
-                                        placeholder="End Date (YYYY-MM-DD)">
-                                </div>
+                            <!-- Date Range selector -->
+                            <div class="col-12 col-md-3">
+                                <label class="form-label fw-semibold">Date Filter Type</label>
+                                <select id="dateFilterType" name="date_filter_type" class="form-select shadow-sm">
+                                    <option value="" <?= empty($filters['date_filter_type']) ? 'selected' : '' ?>>-- Select Type --</option>
+                                    <option value="mdy" <?= $filters['date_filter_type'] === 'mdy' ? 'selected' : '' ?>>Month-Day-Year Range</option>
+                                    <option value="month" <?= $filters['date_filter_type'] === 'month' ? 'selected' : '' ?>>Month Range</option>
+                                    <option value="year" <?= $filters['date_filter_type'] === 'year' ? 'selected' : '' ?>>Year Range</option>
+                                    <option value="month_year" <?= $filters['date_filter_type'] === 'month_year' ? 'selected' : '' ?>>Month-Year Range</option>
+                                </select>
 
-                                <!-- Month Range -->
-                                <div class="col-12 col-md-3 date-filter date-month d-none">
-                                    <label class="form-label fw-semibold">Month From</label>
-                                    <input type="month" name="month_from" class="form-control shadow-sm"
-                                        value="<?= htmlspecialchars($_GET['month_from'] ?? '') ?>"
-                                        placeholder="e.g., 2023-01">
-                                </div>
-                                <div class="col-12 col-md-3 date-filter date-month d-none">
-                                    <label class="form-label fw-semibold">Month To</label>
-                                    <input type="month" name="month_to" class="form-control shadow-sm"
-                                        value="<?= htmlspecialchars($_GET['month_to'] ?? '') ?>"
-                                        placeholder="e.g., 2023-12">
-                                </div>
+                            </div>
 
-                                <!-- Year Range -->
-                                <div class="col-12 col-md-3 date-filter date-year d-none">
-                                    <label class="form-label fw-semibold">Year From</label>
-                                    <input type="number" name="year_from" class="form-control shadow-sm"
-                                        min="1900" max="2100"
-                                        placeholder="e.g., 2023"
-                                        value="<?= htmlspecialchars($_GET['year_from'] ?? '') ?>">
-                                </div>
-                                <div class="col-12 col-md-3 date-filter date-year d-none">
-                                    <label class="form-label fw-semibold">Year To</label>
-                                    <input type="number" name="year_to" class="form-control shadow-sm"
-                                        min="1900" max="2100"
-                                        placeholder="e.g., 2025"
-                                        value="<?= htmlspecialchars($_GET['year_to'] ?? '') ?>">
-                                </div>
+                            <!-- MDY Range -->
+                            <div class="col-12 col-md-3 date-filter date-mdy d-none">
+                                <label class="form-label fw-semibold">Date From</label>
+                                <input type="date" name="date_from" class="form-control shadow-sm"
+                                    value="<?= htmlspecialchars($_GET['date_from'] ?? '') ?>"
+                                    placeholder="Start Date (YYYY-MM-DD)">
+                            </div>
+                            <div class="col-12 col-md-3 date-filter date-mdy d-none">
+                                <label class="form-label fw-semibold">Date To</label>
+                                <input type="date" name="date_to" class="form-control shadow-sm"
+                                    value="<?= htmlspecialchars($_GET['date_to'] ?? '') ?>"
+                                    placeholder="End Date (YYYY-MM-DD)">
+                            </div>
 
-                                <!-- Month-Year Range -->
-                                <div class="col-12 col-md-3 date-filter date-month_year d-none">
-                                    <label class="form-label fw-semibold">From (MM-YYYY)</label>
-                                    <input type="month" name="month_year_from" class="form-control shadow-sm"
-                                        value="<?= htmlspecialchars($_GET['month_year_from'] ?? '') ?>"
-                                        placeholder="e.g., 2023-01">
-                                </div>
-                                <div class="col-12 col-md-3 date-filter date-month_year d-none">
-                                    <label class="form-label fw-semibold">To (MM-YYYY)</label>
-                                    <input type="month" name="month_year_to" class="form-control shadow-sm"
-                                        value="<?= htmlspecialchars($_GET['month_year_to'] ?? '') ?>"
-                                        placeholder="e.g., 2023-12">
-                                </div>
+                            <!-- Month Range -->
+                            <div class="col-12 col-md-3 date-filter date-month d-none">
+                                <label class="form-label fw-semibold">Month From</label>
+                                <input type="month" name="month_from" class="form-control shadow-sm"
+                                    value="<?= htmlspecialchars($_GET['month_from'] ?? '') ?>"
+                                    placeholder="e.g., 2023-01">
+                            </div>
+                            <div class="col-12 col-md-3 date-filter date-month d-none">
+                                <label class="form-label fw-semibold">Month To</label>
+                                <input type="month" name="month_to" class="form-control shadow-sm"
+                                    value="<?= htmlspecialchars($_GET['month_to'] ?? '') ?>"
+                                    placeholder="e.g., 2023-12">
+                            </div>
 
+                            <!-- Year Range -->
+                            <div class="col-12 col-md-3 date-filter date-year d-none">
+                                <label class="form-label fw-semibold">Year From</label>
+                                <input type="number" name="year_from" class="form-control shadow-sm"
+                                    min="1900" max="2100"
+                                    placeholder="e.g., 2023"
+                                    value="<?= htmlspecialchars($_GET['year_from'] ?? '') ?>">
+                            </div>
+                            <div class="col-12 col-md-3 date-filter date-year d-none">
+                                <label class="form-label fw-semibold">Year To</label>
+                                <input type="number" name="year_to" class="form-control shadow-sm"
+                                    min="1900" max="2100"
+                                    placeholder="e.g., 2025"
+                                    value="<?= htmlspecialchars($_GET['year_to'] ?? '') ?>">
+                            </div>
 
+                            <!-- Month-Year Range -->
+                            <div class="col-12 col-md-3 date-filter date-month_year d-none">
+                                <label class="form-label fw-semibold">From (MM-YYYY)</label>
+                                <input type="month" name="month_year_from" class="form-control shadow-sm"
+                                    value="<?= htmlspecialchars($_GET['month_year_from'] ?? '') ?>"
+                                    placeholder="e.g., 2023-01">
+                            </div>
+                            <div class="col-12 col-md-3 date-filter date-month_year d-none">
+                                <label class="form-label fw-semibold">To (MM-YYYY)</label>
+                                <input type="month" name="month_year_to" class="form-control shadow-sm"
+                                    value="<?= htmlspecialchars($_GET['month_year_to'] ?? '') ?>"
+                                    placeholder="e.g., 2023-12">
+                            </div>
 
-                                <!-- Buttons-->
-                                <div class="col-6 col-md-2 d-grid">
-                                    <button type="submit" class="btn btn-dark"><i class="bi bi-funnel"></i> Filter</button>
-                                </div>
+                            <!-- Buttons-->
+                            <div class="col-6 col-md-2 d-grid">
+                                <button type="submit" class="btn btn-dark"><i class="bi bi-funnel"></i> Filter</button>
+                            </div>
 
-                                <div class="col-6 col-md-2 d-grid">
-                                    <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary shadow-sm"><i class="bi bi-x-circle"></i> Clear</a>
-                                </div>
+                            <div class="col-6 col-md-2 d-grid">
+                                <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary shadow-sm"><i class="bi bi-x-circle"></i> Clear</a>
+                            </div>
+                            
+                            <div class="col-12 col-md-3 d-grid">
+                                <a href="equipment_location.php" class="btn btn-primary"><i class="bi bi-pencil-square"></i> Edit Equipment Location</a>
+                            </div>
+                        </form>
+                    </div>
 
-                                <div class="col-12 col-md-3 d-grid">
-                                    <a href="equipment_location.php" class="btn btn-primary"><i class="bi bi-pencil-square"></i> Edit Equipment Location</a>
-                                </div>
-                            </form>
-                        </div>
-
-                        <!-- Table -->
-                        <div class="table-responsive" id="table">
-                            <table id="elTable" class="table">
-                                <thead>
-                                    <tr>
-                                        <?php foreach ($fieldsToShow as $label): ?>
-                                            <th><?= htmlspecialchars($label) ?></th>
-                                        <?php endforeach; ?>
-                                        <th>Modified Time</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php if (!empty($auditLogs)): ?>
-                                        <?php foreach ($auditLogs as $log): ?>
-                                            <?php $newValues = json_decode($log['NewVal'], true); ?>
-                                            <tr>
-                                                <?php foreach ($fieldsToShow as $key => $label): ?>
-                                                    <td><?= isset($newValues[$key]) ? htmlspecialchars($newValues[$key]) : '' ?></td>
-                                                <?php endforeach; ?>
-                                                <td><?= date("Y-m-d H:i:s", strtotime($log['Date_Time'])) ?></td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    <?php else: ?>
-                                        <tr>
-                                            <td colspan="16" class="text-center py-4">
-                                                <div class="alert alert-info mb-0">
-                                                    <i class="bi bi-info-circle me-2"></i> No Equipment Location found. Click on "Create Equipment" to add a new entry.
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    <?php endif; ?>
+                    <!-- Table -->
+                    <div class="table-responsive" id="table">
+                        <table id="elTable" class="table">
+                            <thead>
+                                <tr>
+                                    <?php foreach ($fieldsToShow as $label): ?>
+                                        <th><?= htmlspecialchars($label) ?></th>
+                                    <?php endforeach; ?>
+                                    <th>Modified Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if (!empty($auditLogs)): ?>
                                     <?php foreach ($auditLogs as $log): ?>
                                         <?php $newValues = json_decode($log['NewVal'], true); ?>
                                         <tr>
@@ -354,30 +348,48 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                             <td><?= date("Y-m-d H:i:s", strtotime($log['Date_Time'])) ?></td>
                                         </tr>
                                     <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="16" class="text-center py-4">
+                                            <div class="alert alert-info mb-0">
+                                                <i class="bi bi-info-circle me-2"></i> No Equipment Location found. Click on "Create Equipment" to add a new entry.
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php endif; ?>
+                                <?php foreach ($auditLogs as $log): ?>
+                                    <?php $newValues = json_decode($log['NewVal'], true); ?>
+                                    <tr>
+                                        <?php foreach ($fieldsToShow as $key => $label): ?>
+                                            <td><?= isset($newValues[$key]) ? htmlspecialchars($newValues[$key]) : '' ?></td>
+                                        <?php endforeach; ?>
+                                        <td><?= date("Y-m-d H:i:s", strtotime($log['Date_Time'])) ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-            </section>
-        </div>
-    </body>
+            </div>
+        </section>
+    </div>
+</body>
 
-    <script>
-        // date-time filter script
-        document.addEventListener('DOMContentLoaded', function() {
-            const filterType = document.getElementById('dateFilterType');
-            const allDateFilters = document.querySelectorAll('.date-filter');
+<script>
+    // date-time filter script
+    document.addEventListener('DOMContentLoaded', function() {
+        const filterType = document.getElementById('dateFilterType');
+        const allDateFilters = document.querySelectorAll('.date-filter');
 
-            function updateDateFields() {
-                allDateFilters.forEach(field => field.classList.add('d-none'));
-                if (!filterType.value) return;
+        function updateDateFields() {
+            allDateFilters.forEach(field => field.classList.add('d-none'));
+            if (!filterType.value) return;
 
-                const selected = document.querySelectorAll('.date-' + filterType.value);
-                selected.forEach(field => field.classList.remove('d-none'));
-            }
+            const selected = document.querySelectorAll('.date-' + filterType.value);
+            selected.forEach(field => field.classList.remove('d-none'));
+        }
 
-            filterType.addEventListener('change', updateDateFields);
-            updateDateFields(); // initial load
-        });
-    </script>
+        filterType.addEventListener('change', updateDateFields);
+        updateDateFields(); // initial load
+    });
+</script>
