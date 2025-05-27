@@ -193,15 +193,27 @@ function updateEquipmentDetailsFromLocation(assetTag, buildingLoc, specificArea,
                         } else {
                             // Fallback: reload the table via AJAX
                             $.get(window.location.href, function(html) {
-                                const newTbody = $(html).find('#equipmentTable').html();
-                                $('#equipmentTable').html(newTbody);
-                                // Re-initialize pagination if needed
-                                if (typeof initPagination === 'function') {
-                                    initPagination({
-                                        tableId: 'equipmentTable',
-                                        currentPage: 1
-                                    });
+                                // --- FIX START ---
+                                // Replace only the tbody content to preserve event listeners on pagination controls
+                                const newTbodyHtml = $(html).find('#equipmentTable tbody').html();
+                                $('#equipmentTable tbody').html(newTbodyHtml);
+
+                                // After updating tbody, update window.allRows with the new data
+                                // This is crucial for pagination.js to work correctly with refreshed data
+                                const tempDiv = document.createElement('div');
+                                tempDiv.innerHTML = newTbodyHtml;
+                                window.allRows = Array.from(tempDiv.querySelectorAll('tr'));
+                                
+                                // Reset current page to 1 for a data refresh and then trigger pagination update
+                                if (typeof paginationConfig !== 'undefined') {
+                                    paginationConfig.currentPage = 1;
                                 }
+                                if (typeof updatePagination === 'function') {
+                                    updatePagination();
+                                } else {
+                                    console.error("updatePagination function not found after table refresh fallback.");
+                                }
+                                // --- FIX END ---
                             });
                         }
                     }
@@ -441,4 +453,4 @@ $(document).ready(function() {
             }
         });
     }
-}); 
+});
