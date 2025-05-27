@@ -318,6 +318,79 @@ function getChangedFieldNames(array $oldData, array $newData)
     return $changed;
 }
 
+// Filter section
+// Start with a base WHERE clause
+$where = "WHERE audit_log.Module = 'Department Management'";
+$params = [];
+
+// Filter by action type
+if (!empty($_GET['action_type'])) {
+    $where .= " AND audit_log.Action = :action_type";
+    $params[':action_type'] = $_GET['action_type'];
+}
+
+// Filter by status
+if (!empty($_GET['status'])) {
+    $where .= " AND audit_log.Status = :status";
+    $params[':status'] = $_GET['status'];
+}
+
+// Filter by search string
+if (!empty($_GET['search'])) {
+    $where .= " AND (users.email LIKE :search_email OR audit_log.NewVal LIKE :search_newval OR audit_log.OldVal LIKE :search_oldval)";
+    $searchParam = '%' . $_GET['search'] . '%';
+    $params[':search_email'] = $searchParam;
+    $params[':search_newval'] = $searchParam;
+    $params[':search_oldval'] = $searchParam;
+}
+
+// Date filters
+$dateFilterType = $_GET['date_filter_type'] ?? '';
+
+switch ($dateFilterType) {
+    case 'mdy':
+        if (!empty($_GET['date_from'])) {
+            $where .= " AND DATE(audit_log.date_time) >= :date_from";
+            $params[':date_from'] = date('Y-m-d', strtotime($_GET['date_from']));
+        }
+        if (!empty($_GET['date_to'])) {
+            $where .= " AND DATE(audit_log.date_time) <= :date_to";
+            $params[':date_to'] = date('Y-m-d', strtotime($_GET['date_to']));
+        }
+        break;
+
+    case 'month_year':
+        if (!empty($_GET['month_year_from'])) {
+            $where .= " AND DATE_FORMAT(audit_log.date_time, '%Y-%m') >= :month_year_from";
+            $params[':month_year_from'] = date('Y-m', strtotime($_GET['month_year_from']));
+        }
+        if (!empty($_GET['month_year_to'])) {  // <-- FIXED KEY
+            $where .= " AND DATE_FORMAT(audit_log.date_time, '%Y-%m') <= :month_year_to";
+            $params[':month_year_to'] = date('Y-m', strtotime($_GET['month_year_to']));  // <-- FIXED PARAM
+        }        
+        break;
+
+    case 'year':
+        if (!empty($_GET['year_from'])) {
+            $where .= " AND YEAR(audit_log.date_time) >= :year_from";
+            $params[':year_from'] = intval($_GET['year_from']);
+        }
+        if (!empty($_GET['year_to'])) {
+            $where .= " AND YEAR(audit_log.date_time) <= :year_to";
+            $params[':year_to'] = intval($_GET['year_to']);
+        }
+        break;
+}
+
+$query = "SELECT audit_log.*, users.email AS email 
+          FROM audit_log 
+          LEFT JOIN users ON audit_log.UserID = users.id
+          $where
+          ORDER BY audit_log.date_time DESC";
+
+$stmt = $pdo->prepare($query);
+$stmt->execute($params);
+$auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>

@@ -61,9 +61,11 @@ try {
     while ($row = $deptStmt->fetch(PDO::FETCH_ASSOC)) {
         $departmentIdNameMap[$row['id']] = $row['department_name'];
     }
-} catch (Exception $e) {}
+} catch (Exception $e) {
+}
 
-function getDepartmentName($id) {
+function getDepartmentName($id)
+{
     global $departmentIdNameMap;
     return isset($departmentIdNameMap[$id]) ? $departmentIdNameMap[$id] : $id;
 }
@@ -225,7 +227,7 @@ function formatDetailsAndChanges($log)
 {
     // Normalize action to lowercase
     $action = strtolower($log['Action'] ?? '');
-    
+
     // Parse JSON fields for old/new data with null checks
     $oldData = !is_null($log['OldVal']) ? json_decode($log['OldVal'], true) : [];
     $newData = !is_null($log['NewVal']) ? json_decode($log['NewVal'], true) : [];
@@ -251,11 +253,26 @@ function formatDetailsAndChanges($log)
         // Merge all relevant fields for Equipment Status, Equipment Location, and Equipment Details
         $fieldsToCheck = [
             // Equipment Status fields
-            'status', 'action', 'remarks',
+            'status',
+            'action',
+            'remarks',
             // Equipment Location fields
-            'building_loc', 'floor_no', 'specific_area', 'person_responsible', 'department_id',
+            'building_loc',
+            'floor_no',
+            'specific_area',
+            'person_responsible',
+            'department_id',
             // Equipment Details fields
-            'asset_description_1', 'asset_description_2', 'specifications', 'brand', 'model', 'serial_number', 'rr_no', 'location', 'accountable_individual', 'remarks'
+            'asset_description_1',
+            'asset_description_2',
+            'specifications',
+            'brand',
+            'model',
+            'serial_number',
+            'rr_no',
+            'location',
+            'accountable_individual',
+            'remarks'
         ];
         foreach ($fieldsToCheck as $field) {
             $oldVal = isset($filteredOldData[$field]) ? trim((string)$filteredOldData[$field]) : '';
@@ -352,6 +369,80 @@ function getChangedFieldNames(array $oldData, array $newData)
     return $changed;
 }
 
+//Filter Section
+// Base WHERE clause to filter only Equipment Management related modules (and subcomponents)
+$where = "WHERE audit_log.Module IN ('Equipment Details', 'Equipment Location', 'Equipment Status')";
+$params = [];
+
+// Filter by action type (Create, Modified, Remove, etc.)
+if (!empty($_GET['action_type'])) {
+    $where .= " AND audit_log.Action = :action_type";
+    $params[':action_type'] = $_GET['action_type'];
+}
+
+// Filter by status (Successful, Failed)
+if (!empty($_GET['status'])) {
+    $where .= " AND audit_log.Status = :status";
+    $params[':status'] = $_GET['status'];
+}
+
+// Filter by search string (matching user email or old/new values)
+if (!empty($_GET['search'])) {
+    $where .= " AND (users.email LIKE :search_email OR audit_log.NewVal LIKE :search_newval OR audit_log.OldVal LIKE :search_oldval)";
+    $searchParam = '%' . $_GET['search'] . '%';
+    $params[':search_email'] = $searchParam;
+    $params[':search_newval'] = $searchParam;
+    $params[':search_oldval'] = $searchParam;
+}
+
+// Date filters based on date_filter_type
+$dateFilterType = $_GET['date_filter_type'] ?? '';
+
+switch ($dateFilterType) {
+    case 'mdy':
+        if (!empty($_GET['date_from'])) {
+            $where .= " AND DATE(audit_log.date_time) >= :date_from";
+            $params[':date_from'] = date('Y-m-d', strtotime($_GET['date_from']));
+        }
+        if (!empty($_GET['date_to'])) {
+            $where .= " AND DATE(audit_log.date_time) <= :date_to";
+            $params[':date_to'] = date('Y-m-d', strtotime($_GET['date_to']));
+        }
+        break;
+
+    case 'month_year':
+        if (!empty($_GET['month_year_from'])) {
+            $where .= " AND DATE_FORMAT(audit_log.date_time, '%Y-%m') >= :month_year_from";
+            $params[':month_year_from'] = date('Y-m', strtotime($_GET['month_year_from']));
+        }
+        if (!empty($_GET['month_year_to'])) {
+            $where .= " AND DATE_FORMAT(audit_log.date_time, '%Y-%m') <= :month_year_to";
+            $params[':month_year_to'] = date('Y-m', strtotime($_GET['month_year_to']));
+        }
+        break;
+
+    case 'year':
+        if (!empty($_GET['year_from'])) {
+            $where .= " AND YEAR(audit_log.date_time) >= :year_from";
+            $params[':year_from'] = intval($_GET['year_from']);
+        }
+        if (!empty($_GET['year_to'])) {
+            $where .= " AND YEAR(audit_log.date_time) <= :year_to";
+            $params[':year_to'] = intval($_GET['year_to']);
+        }
+        break;
+}
+
+// Query to get audit logs with user emails
+$query = "SELECT audit_log.*, users.email AS email 
+          FROM audit_log 
+          LEFT JOIN users ON audit_log.UserID = users.id
+          $where
+          ORDER BY audit_log.date_time DESC";
+
+$stmt = $pdo->prepare($query);
+$stmt->execute($params);
+$auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
@@ -380,32 +471,93 @@ function getChangedFieldNames(array $oldData, array $newData)
                         <i class="fas fa-shield-alt me-2"></i>
                         You have permission to view Equipment Management audit logs.
                     </div>
-                    
+
                     <!-- Filter Section -->
                     <div class="row mb-4">
-                        <div class="col-md-4 mb-2">
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-search"></i></span>
-                                <input type="text" id="searchInput" class="form-control"
-                                    placeholder="Search audit logs...">
-                            </div>
-                        </div>
-                        <div class="col-md-4 mb-2">
-                            <select id="filterAction" class="form-select">
-                                <option value="">All Actions</option>
-                                <option value="create">Create</option>
-                                <option value="modified">Modified</option>
-                                <option value="remove">Removed</option>
-                                <option value="add">Add</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4 mb-2">
-                            <select id="filterStatus" class="form-select">
-                                <option value="">All Status</option>
-                                <option value="successful">Successful</option>
-                                <option value="failed">Failed</option>
-                            </select>
-                        </div>
+
+                        <!-- Filter Section -->
+                        <form method="GET" class="row g-3 mb-4">
+    <div class="col-md-3">
+        <label for="actionType" class="form-label">Action Type</label>
+        <select class="form-select" name="action_type" id="actionType">
+            <option value="">All</option>
+            <option value="Create" <?= ($_GET['action_type'] ?? '') === 'Create' ? 'selected' : '' ?>>Create</option>
+            <option value="Modified" <?= ($_GET['action_type'] ?? '') === 'Modified' ? 'selected' : '' ?>>Modified</option>
+            <option value="Remove" <?= ($_GET['action_type'] ?? '') === 'Remove' ? 'selected' : '' ?>>Remove</option>
+            <option value="Restored" <?= ($_GET['action_type'] ?? '') === 'Restored' ? 'selected' : '' ?>>Restored</option>
+            <option value="Login" <?= ($_GET['action_type'] ?? '') === 'Login' ? 'selected' : '' ?>>Login</option>
+            <option value="Logout" <?= ($_GET['action_type'] ?? '') === 'Logout' ? 'selected' : '' ?>>Logout</option>
+        </select>
+    </div>
+
+    <div class="col-md-3">
+        <label for="status" class="form-label">Status</label>
+        <select class="form-select" name="status" id="status">
+            <option value="">All</option>
+            <option value="Successful" <?= ($_GET['status'] ?? '') === 'Successful' ? 'selected' : '' ?>>Successful</option>
+            <option value="Failed" <?= ($_GET['status'] ?? '') === 'Failed' ? 'selected' : '' ?>>Failed</option>
+        </select>
+    </div>
+
+    <div class="col-12 col-md-3">
+        <label class="form-label fw-semibold">Date Filter Type</label>
+        <select id="dateFilterType" name="date_filter_type" class="form-select shadow-sm">
+            <option value="" <?= empty($_GET['date_filter_type']) ? 'selected' : '' ?>>-- Select Type --</option>
+            <option value="month_year" <?= (($_GET['date_filter_type'] ?? '') === 'month_year') ? 'selected' : '' ?>>Month-Year Range</option>
+            <option value="year" <?= (($_GET['date_filter_type'] ?? '') === 'year') ? 'selected' : '' ?>>Year Range</option>
+            <option value="mdy" <?= (($_GET['date_filter_type'] ?? '') === 'mdy') ? 'selected' : '' ?>>Month-Date-Year Range</option>
+        </select>
+    </div>
+
+    <!-- MDY Range -->
+    <div class="col-12 col-md-3 date-filter date-mdy d-none">
+        <label class="form-label fw-semibold">Date From</label>
+        <input type="date" name="date_from" class="form-control shadow-sm" value="<?= htmlspecialchars($_GET['date_from'] ?? '') ?>">
+    </div>
+    <div class="col-12 col-md-3 date-filter date-mdy d-none">
+        <label class="form-label fw-semibold">Date To</label>
+        <input type="date" name="date_to" class="form-control shadow-sm" value="<?= htmlspecialchars($_GET['date_to'] ?? '') ?>">
+    </div>
+
+    <!-- Year Range -->
+    <div class="col-12 col-md-3 date-filter date-year d-none">
+        <label class="form-label fw-semibold">Year From</label>
+        <input type="number" name="year_from" class="form-control shadow-sm" min="1900" max="2100" placeholder="e.g., 2023" value="<?= htmlspecialchars($_GET['year_from'] ?? '') ?>">
+    </div>
+    <div class="col-12 col-md-3 date-filter date-year d-none">
+        <label class="form-label fw-semibold">Year To</label>
+        <input type="number" name="year_to" class="form-control shadow-sm" min="1900" max="2100" placeholder="e.g., 2025" value="<?= htmlspecialchars($_GET['year_to'] ?? '') ?>">
+    </div>
+
+    <!-- Month-Year Range -->
+    <div class="col-12 col-md-3 date-filter date-month_year d-none">
+        <label class="form-label fw-semibold">From (MM-YYYY)</label>
+        <input type="month" name="month_year_from" class="form-control shadow-sm" value="<?= htmlspecialchars($_GET['month_year_from'] ?? '') ?>">
+    </div>
+    <div class="col-12 col-md-3 date-filter date-month_year d-none">
+        <label class="form-label fw-semibold">To (MM-YYYY)</label>
+        <input type="month" name="month_year_to" class="form-control shadow-sm" value="<?= htmlspecialchars($_GET['month_year_to'] ?? '') ?>">
+    </div>
+
+    <!-- Search bar -->
+    <div class="col-12 col-sm-6 col-md-3">
+        <label class="form-label fw-semibold">Search</label>
+        <div class="input-group shadow-sm">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input type="text" name="search" class="form-control" placeholder="Search keyword..." value="<?= htmlspecialchars($_GET['search'] ?? '') ?>">
+        </div>
+    </div>
+
+    <!-- Filter Button -->
+    <div class="col-6 col-md-2 d-grid" style="align-items: center;">
+        <button type="submit" class="btn btn-dark"><i class="bi bi-funnel"></i> Filter</button>
+    </div>
+
+    <!-- Clear Filter Button -->
+    <div class="col-6 col-md-2 d-grid" style="align-items: center;">
+        <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary shadow-sm"><i class="bi bi-x-circle"></i> Clear</a>
+    </div>
+</form>
                     </div>
 
                     <!-- Table container with colgroup for column widths -->
@@ -535,10 +687,10 @@ function getChangedFieldNames(array $oldData, array $newData)
                             <div class="row align-items-center g-3">
                                 <!-- Pagination Info -->
                                 <div class="col-12 col-sm-auto">
-                                <div class="text-muted">
-                                    <?php $totalLogs = count($auditLogs); ?>
-                                    <input type="hidden" id="total-users" value="<?= $totalLogs ?>">
-                                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows"><?= $totalLogs ?></span> entries
+                                    <div class="text-muted">
+                                        <?php $totalLogs = count($auditLogs); ?>
+                                        <input type="hidden" id="total-users" value="<?= $totalLogs ?>">
+                                        Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows"><?= $totalLogs ?></span> entries
                                     </div>
                                 </div>
 
@@ -580,7 +732,24 @@ function getChangedFieldNames(array $oldData, array $newData)
     </div><!-- /.main-content -->
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/logs.js" defer></script>
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
+    
+    <script>
+document.addEventListener('DOMContentLoaded', function() {
+    const dateFilterTypeSelect = document.getElementById('dateFilterType');
+    const allDateFilters = document.querySelectorAll('.date-filter');
 
+    function toggleDateFilters() {
+        const selectedType = dateFilterTypeSelect.value;
+        allDateFilters.forEach(el => el.classList.add('d-none'));
+        if (selectedType) {
+            document.querySelectorAll(`.date-filter.date-${selectedType}`).forEach(el => el.classList.remove('d-none'));
+        }
+    }
+
+    dateFilterTypeSelect.addEventListener('change', toggleDateFilters);
+    toggleDateFilters(); // initial call
+});
+    </script>
 </body>
 
 </html>
