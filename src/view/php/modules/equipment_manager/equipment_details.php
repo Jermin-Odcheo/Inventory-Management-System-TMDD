@@ -84,8 +84,6 @@ date_modified FROM equipment_details WHERE is_disabled = 0 AND ("
                     echo '<td>' . safeHtml($equipment['serial_number']) . '</td>';
                     echo '<td>' . (!empty($equipment['date_created']) ? date('Y-m-d H:i', 
 strtotime($equipment['date_created'])) : '') . '</td>';
-                    echo '<td>' . (!empty($equipment['date_created']) ? date('Y-m-d H:i', 
-strtotime($equipment['date_created'])) : '') . '</td>';
                     echo '<td>' . (!empty($equipment['date_modified']) ? date('Y-m-d H:i', 
 strtotime($equipment['date_modified'])) : '') . '</td>';
                     echo '<td>' . safeHtml((strpos($equipment['rr_no'] ?? '', 'RR') === 0 ? 
@@ -706,6 +704,82 @@ rel="stylesheet">
         .pagination:empty {
             display: none;
         }
+        
+        .filtered-out {
+            display: none !important;
+        }
+        
+        /* Style for highlighting updated rows */
+        .updated-row {
+            animation: highlight-row 3s ease-in-out;
+        }
+        
+        @keyframes highlight-row {
+            0% { background-color: rgba(255, 255, 0, 0.5); }
+            70% { background-color: rgba(255, 255, 0, 0.5); }
+            100% { background-color: transparent; }
+        }
+        
+        /* Enhanced pagination styling */
+        .pagination {
+            display: flex !important;
+            padding-left: 0;
+            list-style: none;
+            border-radius: 0.25rem;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+        
+        .page-item:first-child .page-link {
+            margin-left: 0;
+            border-top-left-radius: 0.25rem;
+            border-bottom-left-radius: 0.25rem;
+        }
+        
+        .page-item:last-child .page-link {
+            border-top-right-radius: 0.25rem;
+            border-bottom-right-radius: 0.25rem;
+        }
+        
+        .page-item.active .page-link {
+            z-index: 3;
+            color: #fff;
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+        }
+        
+        .page-item.disabled .page-link {
+            color: #6c757d;
+            pointer-events: none;
+            background-color: #fff;
+            border-color: #dee2e6;
+        }
+        
+        .page-link {
+            position: relative;
+            display: block;
+            padding: 0.5rem 0.75rem;
+            margin-left: -1px;
+            line-height: 1.25;
+            color: #0d6efd;
+            background-color: #fff;
+            border: 1px solid #dee2e6;
+            text-decoration: none;
+        }
+        
+        .page-link:hover {
+            z-index: 2;
+            color: #0056b3;
+            text-decoration: none;
+            background-color: #e9ecef;
+            border-color: #dee2e6;
+        }
+        
+        .page-link:focus {
+            z-index: 3;
+            outline: 0;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
     </style>
 </head>
 
@@ -842,8 +916,9 @@ safeHtml($type) . "</option>";
 H:i', strtotime($equipment['date_created'])) : ''; ?></td>
                                         <td><?= !empty($equipment['date_modified']) ? date('Y-m-d 
 H:i', strtotime($equipment['date_modified'])) : ''; ?></td>
-                                        <td><?= safeHtml((strpos($equipment['rr_no'] ?? '', 'RR') === 
-0 ? $equipment['rr_no'] : ('RR' . $equipment['rr_no']))); ?></td>
+                                        <td>
+                                            <?= strpos($equipment['rr_no'] ?? '', 'RR') === 0 ? $equipment['rr_no'] : ('RR' . $equipment['rr_no']); ?>
+                                        </td>
                                         <td><?= safeHtml($equipment['location']); ?></td>
                                         <td><?= safeHtml($equipment['accountable_individual']); 
 ?></td>
@@ -854,30 +929,18 @@ H:i', strtotime($equipment['date_modified'])) : ''; ?></td>
                                                     <button class="btn btn-outline-info btn-sm 
 edit-equipment"
                                                         data-id="<?= safeHtml($equipment['id']); ?>"
-                                                        data-asset="<?= 
-safeHtml($equipment['asset_tag']); ?>"
-                                                        data-desc1="<?= 
-safeHtml($equipment['asset_description_1']); ?>"
-                                                        data-desc2="<?= 
-safeHtml($equipment['asset_description_2']); ?>"
-                                                        data-spec="<?= 
-safeHtml($equipment['specifications']); ?>"
-                                                        data-brand="<?= 
-safeHtml($equipment['brand']); ?>"
-                                                        data-model="<?= 
-safeHtml($equipment['model']); ?>"
-                                                        data-serial="<?= 
-safeHtml($equipment['serial_number']); ?>"
-                                                        data-location="<?= 
-safeHtml($equipment['location']); ?>"
-                                                        data-accountable="<?= 
-safeHtml($equipment['accountable_individual']); ?>"
-                                                        data-rr="<?= safeHtml($equipment['rr_no']); 
-?>"
-                                                        data-date="<?= 
-safeHtml($equipment['date_created']); ?>"
-                                                        data-remarks="<?= 
-safeHtml($equipment['remarks']); ?>">
+                                                        data-asset="<?= safeHtml($equipment['asset_tag']); ?>"
+                                                        data-desc1="<?= safeHtml($equipment['asset_description_1']); ?>"
+                                                        data-desc2="<?= safeHtml($equipment['asset_description_2']); ?>"
+                                                        data-spec="<?= safeHtml($equipment['specifications']); ?>"
+                                                        data-brand="<?= safeHtml($equipment['brand']); ?>"
+                                                        data-model="<?= safeHtml($equipment['model']); ?>"
+                                                        data-serial="<?= safeHtml($equipment['serial_number']); ?>"
+                                                        data-location="<?= safeHtml($equipment['location']); ?>"
+                                                        data-accountable="<?= safeHtml($equipment['accountable_individual']); ?>"
+                                                        data-rr="<?= safeHtml($equipment['rr_no']); ?>"
+                                                        data-date="<?= safeHtml($equipment['date_created']); ?>"
+                                                        data-remarks="<?= safeHtml($equipment['remarks']); ?>">
                                                         <i class="bi bi-pencil-square"></i>
                                                     </button>
                                                 <?php endif; ?>
@@ -1536,28 +1599,194 @@ data-bs-dismiss="modal">Cancel</button>
     </div>
 
     <!-- Scripts -->
-    <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" 
-defer></script>
+    <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="<?php echo BASE_URL; ?>src/control/js/toast.js"></script>
     <script src="<?php echo BASE_URL; ?>src/control/js/asset_tag_autofill.js"></script>
-    <style>
-        .filtered-out {
-            display: none !important;
-        }
-        
-        /* Style for highlighting updated rows */
-        .updated-row {
-            animation: highlight-row 3s ease-in-out;
-        }
-        
-        @keyframes highlight-row {
-            0% { background-color: rgba(255, 255, 0, 0.5); }
-            70% { background-color: rgba(255, 255, 0, 0.5); }
-            100% { background-color: transparent; }
-        }
-    </style>
     <script>
+        // Function to create pagination numbers
+        function createPaginationNumbers(totalPages, currentPage) {
+            const paginationContainer = document.getElementById('pagination');
+            if (!paginationContainer) return;
+            
+            // Clear existing pagination
+            paginationContainer.innerHTML = '';
+            
+            // Don't create pagination if only one page
+            if (totalPages <= 1) return;
+            
+            // Add page numbers
+            for (let i = 1; i <= totalPages; i++) {
+                const li = document.createElement('li');
+                li.className = `page-item${i === currentPage ? ' active' : ''}`;
+                
+                const a = document.createElement('a');
+                a.className = 'page-link';
+                a.href = '#';
+                a.textContent = i;
+                
+                a.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Update current page
+                    window.paginationConfig.currentPage = i;
+                    
+                    // Hide all rows
+                    window.allRows.forEach(row => row.classList.add('filtered-out'));
+                    
+                    // Show rows for current page
+                    const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || '10');
+                    const start = (i - 1) * rowsPerPage;
+                    const end = Math.min(start + rowsPerPage, window.filteredRows.length);
+                    
+                    for (let j = start; j < end; j++) {
+                        if (window.filteredRows[j]) {
+                            window.filteredRows[j].classList.remove('filtered-out');
+                        }
+                    }
+                    
+                    // Update pagination numbers
+                    createPaginationNumbers(totalPages, i);
+                    
+                    // Update info text
+                    $('#currentPage').text(window.filteredRows.length === 0 ? 0 : start + 1);
+                    $('#rowsPerPage').text(Math.min(end, window.filteredRows.length));
+                    
+                    // Update prev/next button states
+                    $('#prevPage').prop('disabled', i <= 1);
+                    $('#nextPage').prop('disabled', i >= totalPages);
+                });
+                
+                li.appendChild(a);
+                paginationContainer.appendChild(li);
+            }
+        }
+        
+        // Function to initialize rows display
+        function initializeRowsDisplay() {
+            console.log('Initializing rows display');
+            
+            // Make sure we have allRows populated
+            if (!window.allRows || window.allRows.length === 0) {
+                window.allRows = Array.from(document.querySelectorAll('#equipmentTable tr:not(#noResultsMessage)'));
+            }
+            
+            // Initialize filteredRows with all rows
+            window.filteredRows = [...window.allRows];
+            
+            // Get pagination config
+            const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || '10');
+            const totalRows = window.allRows.length;
+            const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
+            
+            // Initialize pagination config
+            window.paginationConfig = { currentPage: 1 };
+            
+            // Show rows for first page
+            window.allRows.forEach((row, index) => {
+                if (index < rowsPerPage) {
+                    // Show rows for first page
+                    row.classList.remove('filtered-out');
+                } else {
+                    // Hide rows for other pages
+                    row.classList.add('filtered-out');
+                }
+            });
+            
+            // Update pagination numbers
+            createPaginationNumbers(totalPages, 1);
+            
+            // Update info text
+            $('#currentPage').text(totalRows === 0 ? 0 : 1);
+            $('#rowsPerPage').text(Math.min(rowsPerPage, totalRows));
+            $('#totalRows').text(totalRows);
+            
+            // Update button states
+            $('#prevPage').prop('disabled', true);
+            $('#nextPage').prop('disabled', totalPages <= 1);
+            
+            // Show or hide pagination controls
+            if (totalPages > 1) {
+                $('#pagination').show();
+                $('#prevPage, #nextPage').show();
+            } else {
+                $('#pagination').hide();
+                $('#prevPage, #nextPage').hide();
+            }
+            
+            console.log(`Initialized with ${totalRows} rows, ${rowsPerPage} per page, ${totalPages} pages`);
+        }
+        
+        // Initialize pagination for equipment details
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOMContentLoaded fired for equipment_details.php');
+            
+            // Store all table rows for pagination
+            const equipmentRows = Array.from(document.querySelectorAll('#equipmentTable tr'));
+            window.allRows = equipmentRows;
+            window.filteredRows = equipmentRows;
+            window.paginationInitialized = true;
+            
+            // Initialize rows display directly
+            initializeRowsDisplay();
+            
+            // Override the updatePagination function to work with our table structure
+            window.updatePagination = function() {
+                console.log('Custom updatePagination called for equipment_details');
+                
+                // Get pagination config
+                const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || '10');
+                const currentPage = window.paginationConfig?.currentPage || 1;
+                const totalRows = window.filteredRows.length;
+                const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
+                
+                console.log(`Pagination: page ${currentPage}/${totalPages}, ${totalRows} total rows, ${rowsPerPage} per page`);
+                
+                // Hide all rows first
+                window.allRows.forEach(row => {
+                    row.classList.add('filtered-out');
+                });
+                
+                // Show only the rows for the current page
+                const start = (currentPage - 1) * rowsPerPage;
+                const end = Math.min(start + rowsPerPage, totalRows);
+                
+                for (let i = start; i < end; i++) {
+                    if (window.filteredRows[i]) {
+                        window.filteredRows[i].classList.remove('filtered-out');
+                    }
+                }
+                
+                // Update the pagination info
+                $('#currentPage').text(totalRows === 0 ? 0 : start + 1);
+                $('#rowsPerPage').text(Math.min(end, totalRows));
+                $('#totalRows').text(totalRows);
+                
+                // Enable/disable prev/next buttons
+                $('#prevPage').prop('disabled', currentPage <= 1);
+                $('#nextPage').prop('disabled', currentPage >= totalPages || totalPages === 0);
+                
+                // Update pagination controls
+                if (typeof renderPaginationControls === 'function') {
+                    renderPaginationControls(totalPages);
+                }
+                
+                // Check if we need to hide pagination controls
+                setTimeout(forcePaginationCheck, 100);
+            };
+            
+            // Initialize pagination with the equipment table ID
+            if (typeof initPagination === 'function') {
+                initPagination({
+                    tableId: 'equipmentTable',
+                    currentPage: 1
+                });
+                
+                // Run initial pagination
+                window.updatePagination();
+            }
+        });
+        
         // Force hide pagination buttons if no data or all fits on one page
         function forcePaginationCheck() {
             const totalRows = parseInt(document.getElementById('totalRows')?.textContent || '0');
@@ -1566,10 +1795,21 @@ defer></script>
             const nextBtn = document.getElementById('nextPage');
             const paginationEl = document.getElementById('pagination');
 
+            // Calculate total pages
+            const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
+            
+            console.log(`forcePaginationCheck: totalRows=${totalRows}, rowsPerPage=${rowsPerPage}, totalPages=${totalPages}`);
+
             if (totalRows <= rowsPerPage) {
+                // Hide pagination controls if all rows fit on one page
                 if (prevBtn) prevBtn.style.cssText = 'display: none !important';
                 if (nextBtn) nextBtn.style.cssText = 'display: none !important';
                 if (paginationEl) paginationEl.style.cssText = 'display: none !important';
+            } else {
+                // Show pagination controls if multiple pages
+                if (prevBtn) prevBtn.style.display = '';
+                if (nextBtn) nextBtn.style.display = '';
+                if (paginationEl) paginationEl.style.display = '';
             }
 
             // Also check for visible rows (for when filtering is applied)
@@ -1601,52 +1841,48 @@ defer></script>
                 const currentPage = window.paginationConfig?.currentPage || 1;
                 const maxPagesToShow = 5; // Maximum number of page numbers to show
             
-                let startPage, endPage;
-                if (totalPages <= maxPagesToShow) {
-                    // Show all pages if there are fewer than maxPagesToShow
-                    startPage = 1;
-                    endPage = totalPages;
-                } else {
-                    // Calculate start and end pages to show
-                    if (currentPage <= Math.ceil(maxPagesToShow / 2)) {
-                        startPage = 1;
-                        endPage = maxPagesToShow;
-                    } else if (currentPage + Math.floor(maxPagesToShow / 2) >= totalPages) {
-                        startPage = totalPages - maxPagesToShow + 1;
-                        endPage = totalPages;
+                // Always show first page
+                addPaginationItem(paginationContainer, 1, currentPage === 1);
+                
+                // Show ellipsis and a window of pages around current page
+                let startPage = Math.max(2, currentPage - Math.floor(maxPagesToShow / 2));
+                let endPage = Math.min(totalPages - 1, currentPage + Math.floor(maxPagesToShow / 2));
+                
+                // Adjust start and end to ensure we show up to maxPagesToShow pages
+                if (endPage - startPage + 1 < Math.min(maxPagesToShow, totalPages - 2)) {
+                    if (currentPage < totalPages / 2) {
+                        // Near the start, so extend endPage
+                        endPage = Math.min(totalPages - 1, startPage + maxPagesToShow - 1);
                     } else {
-                        startPage = currentPage - Math.floor(maxPagesToShow / 2);
-                        endPage = currentPage + Math.floor(maxPagesToShow / 2);
+                        // Near the end, so decrease startPage
+                        startPage = Math.max(2, endPage - maxPagesToShow + 1);
                     }
                 }
-            
-                // Add "First" page if not starting from page 1
-                if (startPage > 1) {
-                    addPaginationItem(paginationContainer, 1);
-                    if (startPage > 2) {
-                        // Add ellipsis if there's a gap
-                        const ellipsis = document.createElement('li');
-                        ellipsis.className = 'page-item disabled';
-                        ellipsis.innerHTML = '<span class="page-link">...</span>';
-                        paginationContainer.appendChild(ellipsis);
-                    }
+                
+                // Show ellipsis after first page if needed
+                if (startPage > 2) {
+                    const ellipsis = document.createElement('li');
+                    ellipsis.className = 'page-item disabled';
+                    ellipsis.innerHTML = '<span class="page-link">...</span>';
+                    paginationContainer.appendChild(ellipsis);
                 }
-            
-                // Add page numbers
+                
+                // Add page numbers between start and end
                 for (let i = startPage; i <= endPage; i++) {
                     addPaginationItem(paginationContainer, i, i === currentPage);
                 }
-            
-                // Add "Last" page if not ending at the last page
-                if (endPage < totalPages) {
-                    if (endPage < totalPages - 1) {
-                        // Add ellipsis if there's a gap
-                        const ellipsis = document.createElement('li');
-                        ellipsis.className = 'page-item disabled';
-                        ellipsis.innerHTML = '<span class="page-link">...</span>';
-                        paginationContainer.appendChild(ellipsis);
-                    }
-                    addPaginationItem(paginationContainer, totalPages);
+                
+                // Show ellipsis before last page if needed
+                if (endPage < totalPages - 1) {
+                    const ellipsis = document.createElement('li');
+                    ellipsis.className = 'page-item disabled';
+                    ellipsis.innerHTML = '<span class="page-link">...</span>';
+                    paginationContainer.appendChild(ellipsis);
+                }
+                
+                // Always show last page if more than 1 page
+                if (totalPages > 1) {
+                    addPaginationItem(paginationContainer, totalPages, currentPage === totalPages);
                 }
             }
             
@@ -1685,6 +1921,9 @@ defer></script>
             const selectedYear = $('#yearSelect').val() || '';
             const dateFrom = $('#dateFrom').val() || '';
             const dateTo = $('#dateTo').val() || '';
+            
+            // Get rows per page
+            const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || '10');
 
             // Debug output
             console.log('FILTER VALUES:', {
@@ -1694,13 +1933,16 @@ defer></script>
                 selectedMonth: selectedMonth,
                 selectedYear: selectedYear,
                 dateFrom: dateFrom,
-                dateTo: dateTo
+                dateTo: dateTo,
+                rowsPerPage: rowsPerPage
             });
 
             // Make sure we have allRows populated
             if (!window.allRows || window.allRows.length === 0) {
                 window.allRows = Array.from(document.querySelectorAll('#equipmentTable tr:not(#noResultsMessage)'));
             }
+            
+            console.log('Total rows in allRows:', window.allRows.length);
             
             // Reset filteredRows array
             window.filteredRows = [];
@@ -1747,9 +1989,6 @@ defer></script>
                 if (shouldShow) {
                     window.filteredRows.push(row);
                 }
-                
-                // Always add the filtered-out class - updatePagination will remove it for visible rows
-                row.classList.add('filtered-out');
             });
 
             // Sort if needed
@@ -1759,22 +1998,54 @@ defer></script>
                     const dateB = b.cells && b.cells[9] ? new Date(b.cells[9].textContent) : new Date(0);
                     return dateFilterType === 'asc' ? dateA - dateB : dateB - dateA;
                 });
+            }
 
-                // Remove all rows and add back in sorted order
-                const tbody = document.getElementById('equipmentTable');
-                if (tbody) {
-                    window.filteredRows.forEach(row => tbody.appendChild(row));
+            // Reset to page 1
+            window.paginationConfig = { currentPage: 1 };
+            
+            console.log('Filtered rows count:', window.filteredRows.length);
+            
+            // Calculate total pages
+            const totalPages = Math.ceil(window.filteredRows.length / rowsPerPage) || 1;
+            
+            console.log('Total pages:', totalPages);
+            
+            // Hide all rows first
+            window.allRows.forEach(row => {
+                row.classList.add('filtered-out');
+            });
+            
+            // Show only rows for the first page
+            const start = 0;
+            const end = Math.min(rowsPerPage, window.filteredRows.length);
+            
+            console.log(`Showing rows ${start} to ${end-1}`);
+            
+            for (let i = start; i < end; i++) {
+                if (window.filteredRows[i]) {
+                    window.filteredRows[i].classList.remove('filtered-out');
                 }
             }
-
-            // Reset to page 1 and update pagination
-            if (typeof paginationConfig !== 'undefined') {
-                paginationConfig.currentPage = 1;
-            }
             
-            // Update pagination to show/hide rows based on current page
-            if (typeof updatePagination === 'function') {
-                updatePagination();
+            // Update info text
+            $('#currentPage').text(window.filteredRows.length === 0 ? 0 : 1);
+            $('#rowsPerPage').text(Math.min(end, window.filteredRows.length));
+            $('#totalRows').text(window.filteredRows.length);
+            
+            // Update button states
+            $('#prevPage').prop('disabled', true);
+            $('#nextPage').prop('disabled', totalPages <= 1);
+            
+            // Create pagination numbers
+            createPaginationNumbers(totalPages, 1);
+            
+            // Show or hide pagination controls
+            if (totalPages > 1) {
+                $('#pagination').show();
+                $('#prevPage, #nextPage').show();
+            } else {
+                $('#pagination').hide();
+                $('#prevPage, #nextPage').hide();
             }
             
             // Show a message if no results found
@@ -1801,8 +2072,6 @@ defer></script>
             } else if (noResultsMessage) {
                 noResultsMessage.style.display = 'none';
             }
-            
-            console.log('Filtered rows:', window.filteredRows.length);
         };
 
         // Set up event listeners for filtering
@@ -1822,11 +2091,74 @@ defer></script>
             const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || '10');
             const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
             
+            // Create pagination numbers directly
+            createPaginationNumbers(totalPages, 1);
+            
             if (totalPages > 1) {
-                // Force render pagination controls
-                renderPaginationControls(totalPages);
+                // Show pagination controls
                 $('#pagination').show();
+                $('#prevPage, #nextPage').show();
+            } else {
+                // Hide pagination if only one page
+                forcePaginationCheck();
             }
+            
+            // Set up prev/next button handlers
+            $('#prevPage').on('click', function() {
+                if (window.paginationConfig.currentPage > 1) {
+                    window.paginationConfig.currentPage--;
+                    createPaginationNumbers(totalPages, window.paginationConfig.currentPage);
+                    
+                    // Hide all rows
+                    window.allRows.forEach(row => row.classList.add('filtered-out'));
+                    
+                    // Show rows for current page
+                    const start = (window.paginationConfig.currentPage - 1) * rowsPerPage;
+                    const end = Math.min(start + rowsPerPage, window.filteredRows.length);
+                    
+                    for (let j = start; j < end; j++) {
+                        if (window.filteredRows[j]) {
+                            window.filteredRows[j].classList.remove('filtered-out');
+                        }
+                    }
+                    
+                    // Update info text
+                    $('#currentPage').text(start + 1);
+                    $('#rowsPerPage').text(Math.min(end, window.filteredRows.length));
+                    
+                    // Update button states
+                    $(this).prop('disabled', window.paginationConfig.currentPage <= 1);
+                    $('#nextPage').prop('disabled', window.paginationConfig.currentPage >= totalPages);
+                }
+            });
+            
+            $('#nextPage').on('click', function() {
+                if (window.paginationConfig.currentPage < totalPages) {
+                    window.paginationConfig.currentPage++;
+                    createPaginationNumbers(totalPages, window.paginationConfig.currentPage);
+                    
+                    // Hide all rows
+                    window.allRows.forEach(row => row.classList.add('filtered-out'));
+                    
+                    // Show rows for current page
+                    const start = (window.paginationConfig.currentPage - 1) * rowsPerPage;
+                    const end = Math.min(start + rowsPerPage, window.filteredRows.length);
+                    
+                    for (let j = start; j < end; j++) {
+                        if (window.filteredRows[j]) {
+                            window.filteredRows[j].classList.remove('filtered-out');
+                        }
+                    }
+                    
+                    // Update info text
+                    $('#currentPage').text(start + 1);
+                    $('#rowsPerPage').text(Math.min(end, window.filteredRows.length));
+                    
+                    // Update button states
+                    $(this).prop('disabled', window.paginationConfig.currentPage >= totalPages);
+                    $('#prevPage').prop('disabled', window.paginationConfig.currentPage <= 1);
+                }
+            });
 
             // First set up the standard event handlers
             $('#filterEquipment').on('change', function() {
@@ -1983,31 +2315,51 @@ defer></script>
             // Run initial filter to make sure everything is displayed correctly
             setTimeout(filterTable, 100);
             
-            // Make sure pagination is initialized properly
-            setTimeout(function() {
-                // Check if pagination controls are rendered
-                if (document.getElementById('pagination') && document.getElementById('pagination').children.length === 0) {
-                    const totalRows = window.allRows.length;
-                    const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || '10');
-                    const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
-                    
-                    if (totalPages > 1) {
-                        renderPaginationControls(totalPages);
-                        $('#pagination').show();
+            // Handle rows per page changes
+            $('#rowsPerPageSelect').on('change', function() {
+                const rowsPerPage = parseInt($(this).val() || '10');
+                const currentPage = window.paginationConfig?.currentPage || 1;
+                const totalRows = window.filteredRows.length;
+                const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
+                
+                // Reset to page 1 if current page is beyond new total pages
+                if (currentPage > totalPages) {
+                    window.paginationConfig.currentPage = 1;
+                }
+                
+                // Update pagination
+                createPaginationNumbers(totalPages, window.paginationConfig.currentPage);
+                
+                // Hide all rows
+                window.allRows.forEach(row => row.classList.add('filtered-out'));
+                
+                // Show rows for current page
+                const start = (window.paginationConfig.currentPage - 1) * rowsPerPage;
+                const end = Math.min(start + rowsPerPage, totalRows);
+                
+                for (let i = start; i < end; i++) {
+                    if (window.filteredRows[i]) {
+                        window.filteredRows[i].classList.remove('filtered-out');
                     }
                 }
                 
-                // Make sure the current page display is correct
-                if (document.getElementById('currentPage')) {
-                    document.getElementById('currentPage').textContent = window.paginationConfig?.currentPage || 1;
-                }
+                // Update info text
+                $('#currentPage').text(totalRows === 0 ? 0 : start + 1);
+                $('#rowsPerPage').text(Math.min(end, totalRows));
                 
-                // Make sure the rows per page display is correct
-                if (document.getElementById('rowsPerPage')) {
-                    const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || '10');
-                    document.getElementById('rowsPerPage').textContent = Math.min(rowsPerPage, window.filteredRows.length);
+                // Update button states
+                $('#prevPage').prop('disabled', window.paginationConfig.currentPage <= 1);
+                $('#nextPage').prop('disabled', window.paginationConfig.currentPage >= totalPages);
+                
+                // Show/hide pagination controls
+                if (totalPages > 1) {
+                    $('#pagination').show();
+                    $('#prevPage, #nextPage').show();
+                } else {
+                    $('#pagination').hide();
+                    $('#prevPage, #nextPage').hide();
                 }
-            }, 500);
+            });
         });
         
         document.querySelectorAll(".sortable").forEach(header => {
@@ -2279,125 +2631,123 @@ defer></script>
                 });
             });
         });
+ 
+    </script>
 
-        // Ensure updatePagination is available
-        if (typeof updatePagination !== 'function') {
-            function updatePagination() {
-                console.log('Local updatePagination called');
-                const tbody = document.getElementById('equipmentTable');
-                if (!tbody) {
-                    console.error('Could not find tbody with ID equipmentTable');
-                    return;
-                }
-                
-                // Use window.filteredRows for pagination
-                const rowsToPaginate = window.filteredRows || [];
-                const totalRows = rowsToPaginate.length;
-                const rowsPerPageSelect = document.getElementById('rowsPerPageSelect');
-                const rowsPerPage = parseInt(rowsPerPageSelect?.value || '10');
+    <!-- Force hide pagination buttons if no data -->
+    <script>
+        (function() {
+            // Function to check and hide pagination
+            function forcePaginationCheck() {
+                const totalRows = parseInt(document.getElementById('totalRows')?.textContent || '0');
+                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect')?.value || '10');
+                const prevBtn = document.getElementById('prevPage');
+                const nextBtn = document.getElementById('nextPage');
+                const paginationEl = document.getElementById('pagination');
+
+                // Calculate total pages
                 const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
                 
-                // Make sure current page is in valid range
-                if (!window.paginationConfig) {
-                    window.paginationConfig = { currentPage: 1 };
-                } else if (window.paginationConfig.currentPage > totalPages) {
-                    window.paginationConfig.currentPage = totalPages;
-                } else if (window.paginationConfig.currentPage < 1) {
-                    window.paginationConfig.currentPage = 1;
-                }
-            
-                // Calculate start and end indices for current page
-                const startIndex = (window.paginationConfig.currentPage - 1) * rowsPerPage;
-                const endIndex = Math.min(startIndex + rowsPerPage, totalRows);
-            
-                // First, hide all rows by adding filtered-out class
-                const allTableRows = Array.from(tbody.querySelectorAll('tr:not(#noResultsMessage)'));
-                allTableRows.forEach(row => {
-                    row.classList.add('filtered-out');
-                });
-            
-                // Then, show only the rows for the current page
-                for (let i = startIndex; i < endIndex; i++) {
-                    if (rowsToPaginate[i]) {
-                        rowsToPaginate[i].classList.remove('filtered-out');
+                console.log(`forcePaginationCheck: totalRows=${totalRows}, rowsPerPage=${rowsPerPage}, totalPages=${totalPages}`);
+
+                if (totalRows <= rowsPerPage) {
+                    // Hide pagination controls if all rows fit on one page
+                    if (prevBtn) prevBtn.style.display = 'none';
+                    if (nextBtn) nextBtn.style.display = 'none';
+                    if (paginationEl) paginationEl.style.display = 'none';
+                } else {
+                    // Show pagination controls if multiple pages
+                    if (prevBtn) prevBtn.style.display = '';
+                    if (nextBtn) nextBtn.style.display = '';
+                    if (paginationEl) paginationEl.style.display = '';
+                    
+                    // Make sure page numbers are created
+                    if (paginationEl && paginationEl.children.length === 0 && typeof createPaginationNumbers === 'function') {
+                        createPaginationNumbers(totalPages, window.paginationConfig?.currentPage || 1);
                     }
                 }
-            
-                // Update pagination controls
-                const currentPageSpan = document.getElementById('currentPage');
-                if (currentPageSpan) {
-                    currentPageSpan.textContent = totalRows === 0 ? 0 : window.paginationConfig.currentPage;
-                }
-            
-                const rowsPerPageSpan = document.getElementById('rowsPerPage');
-                if (rowsPerPageSpan) {
-                    rowsPerPageSpan.textContent = totalRows === 0 ? 0 : Math.min(endIndex, totalRows);
-                }
-            
-                const totalRowsSpan = document.getElementById('totalRows');
-                if (totalRowsSpan) {
-                    totalRowsSpan.textContent = totalRows;
-                }
-            
-                // Enable/disable prev/next buttons based on current page
-                const prevButton = document.getElementById('prevPage');
-                const nextButton = document.getElementById('nextPage');
-            
-                if (prevButton) {
-                    prevButton.disabled = window.paginationConfig.currentPage <= 1;
-                    prevButton.classList.toggle('disabled', window.paginationConfig.currentPage <= 1);
-                    
-                    // Show/hide prev button based on current page
-                    prevButton.style.display = (window.paginationConfig.currentPage <= 1 || totalRows <= rowsPerPage) ? 'none' : '';
-                }
-            
-                if (nextButton) {
-                    nextButton.disabled = window.paginationConfig.currentPage >= totalPages;
-                    nextButton.classList.toggle('disabled', window.paginationConfig.currentPage >= totalPages);
-                    
-                    // Show/hide next button based on current page
-                    nextButton.style.display = (window.paginationConfig.currentPage >= totalPages || totalRows <= rowsPerPage) ? 'none' : '';
-                }
-            
-                // Update pagination numbers
-                renderPaginationControls(totalPages);
-                
-                // Show/hide pagination container based on total pages
-                const paginationContainer = document.getElementById('pagination');
-                if (paginationContainer) {
-                    paginationContainer.style.display = (totalPages <= 1 || totalRows <= rowsPerPage) ? 'none' : '';
+
+                // Also check for visible rows (for when filtering is applied)
+                const visibleRows = document.querySelectorAll('#equipmentTable tr:not(.filtered-out)').length;
+                if (visibleRows <= rowsPerPage) {
+                    if (prevBtn) prevBtn.style.display = 'none';
+                    if (nextBtn) nextBtn.style.display = 'none';
+                    if (paginationEl) paginationEl.style.display = 'none';
                 }
             }
+
+            // Run immediately
+            forcePaginationCheck();
+
+            // Also run after a delay to ensure DOM is fully loaded
+            setTimeout(forcePaginationCheck, 500);
+            setTimeout(forcePaginationCheck, 1000);
+
+            // Add event listener for DOMContentLoaded
+            document.addEventListener('DOMContentLoaded', forcePaginationCheck);
             
-            // Set up event listeners for pagination
-            document.getElementById('prevPage')?.addEventListener('click', function() {
-                if (window.paginationConfig && window.paginationConfig.currentPage > 1) {
-                    window.paginationConfig.currentPage--;
-                    updatePagination();
+            // Debug function to check pagination status
+            window.debugPagination = function() {
+                console.log('--- PAGINATION DEBUG ---');
+                console.log('Total rows in allRows:', window.allRows?.length || 0);
+                console.log('Total rows in filteredRows:', window.filteredRows?.length || 0);
+                console.log('Visible rows:', document.querySelectorAll('#equipmentTable tr:not(.filtered-out)').length);
+                console.log('Current page:', window.paginationConfig?.currentPage || 'undefined');
+                console.log('Rows per page:', document.getElementById('rowsPerPageSelect')?.value || '10');
+                console.log('Pagination element visible:', document.getElementById('pagination')?.style.display !== 'none');
+                console.log('Previous button visible:', document.getElementById('prevPage')?.style.display !== 'none');
+                console.log('Next button visible:', document.getElementById('nextPage')?.style.display !== 'none');
+                
+                // Try to manually show all rows for debugging
+                if (confirm('Show all rows for debugging?')) {
+                    document.querySelectorAll('#equipmentTable tr').forEach(row => {
+                        row.classList.remove('filtered-out');
+                        row.style.display = '';
+                    });
+                    alert('All rows should now be visible');
                 }
-            });
+            };
             
-            document.getElementById('nextPage')?.addEventListener('click', function() {
-                const rowsToPaginate = window.filteredRows || [];
-                const totalRows = rowsToPaginate.length;
+            // Direct initialization - make sure rows are visible immediately
+            setTimeout(function() {
+                console.log('Direct initialization running...');
+                
+                // Make sure all rows are visible initially
+                const allRows = document.querySelectorAll('#equipmentTable tr');
                 const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect')?.value || '10');
+                
+                console.log(`Found ${allRows.length} rows, showing first ${rowsPerPage}`);
+                
+                allRows.forEach((row, index) => {
+                    if (index < rowsPerPage) {
+                        // Show first page of rows
+                        row.classList.remove('filtered-out');
+                        row.style.display = '';
+                    } else {
+                        // Hide other rows
+                        row.classList.add('filtered-out');
+                    }
+                });
+                
+                // Create pagination numbers if needed
+                const totalRows = allRows.length;
                 const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
                 
-                if (window.paginationConfig && window.paginationConfig.currentPage < totalPages) {
-                    window.paginationConfig.currentPage++;
-                    updatePagination();
+                if (totalPages > 1 && typeof createPaginationNumbers === 'function') {
+                    console.log(`Creating pagination for ${totalPages} pages`);
+                    createPaginationNumbers(totalPages, 1);
                 }
-            });
-            
-            document.getElementById('rowsPerPageSelect')?.addEventListener('change', function() {
-                if (window.paginationConfig) {
-                    window.paginationConfig.currentPage = 1;
-                }
-                updatePagination();
-            });
-        }
-
-        // Ensure renderPaginationControls is available
+                
+                // Update info text
+                const currentPageEl = document.getElementById('currentPage');
+                const rowsPerPageEl = document.getElementById('rowsPerPage');
+                const totalRowsEl = document.getElementById('totalRows');
+                
+                if (currentPageEl) currentPageEl.textContent = totalRows === 0 ? 0 : 1;
+                if (rowsPerPageEl) rowsPerPageEl.textContent = Math.min(rowsPerPage, totalRows);
+                if (totalRowsEl) totalRowsEl.textContent = totalRows;
+            }, 200);
+        })();
     </script>
 </body>
 
