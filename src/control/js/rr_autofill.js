@@ -38,10 +38,6 @@ function fetchRRInfo(rrNo, formType, showNotification = true) {
                     dateAcquiredField.value = response.data.date_acquired;
                     dateAcquiredField.setAttribute('data-autofill', 'true');
                     
-                    // Make field read-only and grey it out
-                    dateAcquiredField.readOnly = true;
-                    dateAcquiredField.classList.add('bg-light');
-                    
                     // Show notification if requested and data was found
                     if (showNotification) {
                         showToast('Acquired date has been automatically set from the Charge Invoice', 'info');
@@ -50,37 +46,16 @@ function fetchRRInfo(rrNo, formType, showNotification = true) {
             } else if (response.status === 'partial' && showNotification) {
                 // PO found but no CI data
                 showToast('PO found but no Charge Invoice information available', 'warning');
-                
-                // Reset field to be editable if no data was found
-                if (dateAcquiredField) {
-                    dateAcquiredField.readOnly = false;
-                    dateAcquiredField.classList.remove('bg-light');
-                    dateAcquiredField.setAttribute('data-autofill', 'false');
-                }
             } else if (showNotification) {
                 console.log('No RR info found');
                 // Optional: Show notification that no data was found
                 showToast('No Charge Invoice information found for this RR#', 'warning');
-                
-                // Reset field to be editable if no data was found
-                if (dateAcquiredField) {
-                    dateAcquiredField.readOnly = false;
-                    dateAcquiredField.classList.remove('bg-light');
-                    dateAcquiredField.setAttribute('data-autofill', 'false');
-                }
             }
         },
         error: function(xhr, status, error) {
             console.error('Error fetching RR info:', error);
             if (showNotification) {
                 showToast('Error fetching RR information', 'error');
-            }
-            
-            // Reset field to be editable on error
-            if (dateAcquiredField) {
-                dateAcquiredField.readOnly = false;
-                dateAcquiredField.classList.remove('bg-light');
-                dateAcquiredField.setAttribute('data-autofill', 'false');
             }
         }
     });
@@ -107,28 +82,6 @@ $(document).ready(function() {
             }
         });
         
-        // Handle clearing of RR# in add form
-        $('#add_rr_no').on('select2:clear', function() {
-            const dateAcquiredField = document.querySelector('input[name="date_acquired"]');
-            if (dateAcquiredField) {
-                dateAcquiredField.value = '';
-                dateAcquiredField.readOnly = false;
-                dateAcquiredField.classList.remove('bg-light');
-                dateAcquiredField.setAttribute('data-autofill', 'false');
-            }
-        });
-        
-        // Handle clearing of RR# in edit form
-        $('#edit_rr_no').on('select2:clear', function() {
-            const dateAcquiredField = document.getElementById('edit_date_acquired');
-            if (dateAcquiredField) {
-                dateAcquiredField.value = '';
-                dateAcquiredField.readOnly = false;
-                dateAcquiredField.classList.remove('bg-light');
-                dateAcquiredField.setAttribute('data-autofill', 'false');
-            }
-        });
-        
         // Check if RR# is already selected when add modal opens
         $('#addEquipmentModal').on('shown.bs.modal', function() {
             const rrNoValue = $('#add_rr_no').val();
@@ -144,26 +97,6 @@ $(document).ready(function() {
             if (rrNoValue) {
                 console.log('Edit modal opened with RR# already selected:', rrNoValue);
                 fetchRRInfo(rrNoValue, 'edit', false);
-            }
-        });
-        
-        // Reset date field when add modal is closed
-        $('#addEquipmentModal').on('hidden.bs.modal', function() {
-            const dateAcquiredField = document.querySelector('input[name="date_acquired"]');
-            if (dateAcquiredField) {
-                dateAcquiredField.readOnly = false;
-                dateAcquiredField.classList.remove('bg-light');
-                dateAcquiredField.setAttribute('data-autofill', 'false');
-            }
-        });
-        
-        // Reset date field when edit modal is closed
-        $('#editEquipmentModal').on('hidden.bs.modal', function() {
-            const dateAcquiredField = document.getElementById('edit_date_acquired');
-            if (dateAcquiredField) {
-                dateAcquiredField.readOnly = false;
-                dateAcquiredField.classList.remove('bg-light');
-                dateAcquiredField.setAttribute('data-autofill', 'false');
             }
         });
     }

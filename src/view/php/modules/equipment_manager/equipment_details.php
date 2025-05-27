@@ -783,21 +783,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
         .filtered-out {
             display: none !important;
         }
-        
-        /* Style for auto-filled fields */
-        input[data-autofill="true"] {
-            background-color: #e9ecef !important;
-            border-color: #ced4da !important;
-            color: #495057 !important;
-            cursor: not-allowed;
-            box-shadow: none !important;
-        }
-        
-        input[data-autofill="true"]::after {
-            content: " (auto-filled)";
-            color: #6c757d;
-            font-style: italic;
-        }
     </style>
 </head>
 
@@ -1161,7 +1146,7 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                                 <div class="mb-3 col-md-6">
                                     <label for="date_acquired" class="form-label">Date Acquired</label>
                                     <input type="date" class="form-control" name="date_acquired" data-autofill="false">
-                                    <small class="text-muted">This field will be auto-filled and locked when an RR# is selected</small>
+                                    <small class="text-muted">This field will be auto-filled when an RR# is selected</small>
                                 </div>
                             </div>
                         </div>
@@ -1296,7 +1281,7 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                                 <div class="mb-3 col-md-6">
                                     <label for="edit_date_acquired" class="form-label">Date Acquired</label>
                                     <input type="date" class="form-control" name="date_acquired" id="edit_date_acquired" data-autofill="false">
-                                    <small class="text-muted">This field will be auto-filled and locked when an RR# is selected</small>
+                                    <small class="text-muted">This field will be auto-filled when an RR# is selected</small>
                                 </div>
                             </div>
                         </div>
@@ -1387,6 +1372,43 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                         text: term
                     };
                 }
+            }).on('select2:select', function(e) {
+                var rrNo = e.params.data.id;
+                var isNewOption = e.params.data.newOption;
+                
+                // If this is a newly created option (doesn't exist in the database)
+                if (isNewOption || !e.params.data.element) {
+                    // Create a new RR entry in the database
+                    $.ajax({
+                        url: window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1) + 'create_rr.php',
+                        method: 'POST',
+                        data: {
+                            action: 'create_rr',
+                            rr_no: rrNo,
+                            date_created: new Date().toISOString().slice(0, 19).replace('T', ' ')
+                        },
+                        dataType: 'json',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        success: function(response) {
+                            if (response.status === 'success') {
+                                showToast('New RR# created successfully', 'success');
+                                // Now try to get any related charge invoice data
+                                fetchRRInfo(rrNo, 'add', false);
+                            } else {
+                                showToast(response.message || 'Failed to create RR#', 'warning');
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('Error creating RR:', error);
+                            showToast('Error creating RR entry', 'error');
+                        }
+                    });
+                } else {
+                    // For existing RR numbers, just fetch the data
+                    fetchRRInfo(rrNo, 'add', true);
+                }
             });
             
             $('#edit_rr_no').select2({
@@ -1412,6 +1434,152 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                         id: term,
                         text: term
                     };
+                }
+            }).on('select2:select', function(e) {
+                var rrNo = e.params.data.id;
+                var isNewOption = e.params.data.newOption;
+                
+                // If this is a newly created option (doesn't exist in the database)
+                if (isNewOption || !e.params.data.element) {
+                    // Create a new RR entry in the database
+                    $.ajax({
+                        url: window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1) + 'create_rr.php',
+                        method: 'POST',
+                        data: {
+                            action: 'create_rr',
+                            rr_no: rrNo,
+                            date_created: new Date().toISOString().slice(0, 19).replace('T', ' ')
+                        },
+                        dataType: 'json',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        success: function(response) {
+                            if (response.status === 'success') {
+                                showToast('New RR# created successfully', 'success');
+                                // Now try to get any related charge invoice data
+                                fetchRRInfo(rrNo, 'edit', false);
+                            } else {
+                                showToast(response.message || 'Failed to create RR#', 'warning');
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('Error creating RR:', error);
+                            showToast('Error creating RR entry', 'error');
+                        }
+                    });
+                } else {
+                    // For existing RR numbers, just fetch the data
+                    fetchRRInfo(rrNo, 'edit', true);
+                }
+            });
+            
+            // Initialize Select2 for asset tag dropdowns
+            $('#add_equipment_asset_tag').select2({
+                placeholder: 'Select or type Asset Tag',
+                allowClear: true,
+                width: '100%',
+                tags: true,  // This allows adding new tags/values
+                dropdownParent: $('#addEquipmentModal'),
+                minimumResultsForSearch: 0,
+                createTag: function(params) {
+                    var term = $.trim(params.term);
+                    if (term === '') return null;
+                    
+                    // Check if this tag already exists
+                    var exists = false;
+                    $('#add_equipment_asset_tag option').each(function() {
+                        if ($(this).text().toLowerCase() === term.toLowerCase()) {
+                            exists = true;
+                        }
+                    });
+                    
+                    // If it doesn't exist, allow creating it
+                    return exists ? null : {
+                        id: term,
+                        text: term,
+                        newTag: true
+                    };
+                }
+            }).on('select2:select', function(e) {
+                var assetTag = e.params.data.id;
+                
+                // If this is a valid asset tag, try to fetch related info
+                if (assetTag) {
+                    console.log('Asset tag selected in add modal:', assetTag);
+                    
+                    // Reset fields before fetching new asset tag info
+                    const $accountableField = $('input[name="accountable_individual"]');
+                    const $locationField = $('input[name="location"]');
+                    
+                    // If fields were previously autofilled, reset them first
+                    if ($accountableField.attr('data-autofill') === 'true') {
+                        $accountableField.val('').prop('readonly', false).attr('data-autofill', 'false').removeClass('bg-light');
+                    }
+                    
+                    if ($locationField.attr('data-autofill') === 'true') {
+                        $locationField.val('').prop('readonly', false).attr('data-autofill', 'false').removeClass('bg-light');
+                    }
+                    
+                    // Only fetch info if this is a pre-existing tag
+                    if (!e.params.data.newTag) {
+                        // Fetch and autofill data based on asset tag
+                        fetchAssetTagInfo(assetTag, 'add', true);
+                    }
+                }
+            });
+            
+            $('#edit_equipment_asset_tag').select2({
+                placeholder: 'Select or type Asset Tag',
+                allowClear: true,
+                width: '100%',
+                tags: true,
+                dropdownParent: $('#editEquipmentModal'),
+                minimumResultsForSearch: 0,
+                createTag: function(params) {
+                    var term = $.trim(params.term);
+                    if (term === '') return null;
+                    
+                    // Check if this tag already exists
+                    var exists = false;
+                    $('#edit_equipment_asset_tag option').each(function() {
+                        if ($(this).text().toLowerCase() === term.toLowerCase()) {
+                            exists = true;
+                        }
+                    });
+                    
+                    // If it doesn't exist, allow creating it
+                    return exists ? null : {
+                        id: term,
+                        text: term,
+                        newTag: true
+                    };
+                }
+            }).on('select2:select', function(e) {
+                var assetTag = e.params.data.id;
+                
+                // If this is a valid asset tag, try to fetch related info
+                if (assetTag) {
+                    console.log('Asset tag selected in edit modal:', assetTag);
+                    
+                    // Reset fields before fetching new asset tag info
+                    const $accountableField = $('#edit_accountable_individual');
+                    const $locationField = $('#edit_location');
+                    
+                    // If fields were previously autofilled, reset them first
+                    if ($accountableField.attr('data-autofill') === 'true') {
+                        $accountableField.val('').attr('data-autofill', 'false');
+                    }
+                    
+                    if ($locationField.attr('data-autofill') === 'true') {
+                        $locationField.val('').attr('data-autofill', 'false');
+                    }
+                    
+                    // Only fetch info if this is a pre-existing tag
+                    if (!e.params.data.newTag) {
+                        // Fetch and autofill data based on asset tag
+                        fetchAssetTagInfo(assetTag, 'edit', true);
+                    }
                 }
             });
         });
