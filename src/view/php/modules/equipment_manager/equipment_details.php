@@ -1562,6 +1562,8 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="<?php echo BASE_URL; ?>src/control/js/toast.js"></script>
     <script src="<?php echo BASE_URL; ?>src/control/js/asset_tag_autofill.js"></script>
+    <!-- REMOVE ALL INLINE filterTable AND FILTER EVENT HANDLERS BELOW, DELEGATE TO EXTERNAL JS -->
+    <script src="<?php echo BASE_URL; ?>src/control/js/equipment_details.js"></script>
     <style>
         .filtered-out {
             display: none !important;
