@@ -43,69 +43,151 @@ $(document).ready(function() {
         }
     });
 
+    // Date range change handler
+    $('#dateFrom, #dateTo').on('change', function() {
+        if ($('#dateFrom').val() && $('#dateTo').val()) {
+            filterTable();
+        }
+    });
+
+    // Reset filters button handler
+    $(document).on('click', '#resetFilters', function() {
+        $('#searchEquipment').val('');
+        $('#filterEquipment').val('all');
+        if ($('#filterEquipment').data('select2')) {
+            $('#filterEquipment').trigger('change.select2');
+        }
+        $('#dateFilter').val('');
+        $('#monthSelect').val('');
+        $('#yearSelect').val('');
+        $('#dateFrom').val('');
+        $('#dateTo').val('');
+        $('#dateInputsContainer').hide();
+        filterTable();
+    });
+
+    // Main filterTable implementation (single source of truth)
     function filterTable() {
-        const searchText = $('#searchEquipment').val().toLowerCase();
-        const filterType = $('#filterEquipment').val().toLowerCase();
-        const dateFilterType = $('#dateFilter').val();
-        const selectedMonth = $('#monthSelect').val();
-        const selectedYear = $('#yearSelect').val();
-        const dateFrom = $('#dateFrom').val();
-        const dateTo = $('#dateTo').val();
+        // Get filter values
+        const searchText = $('#searchEquipment').val() || '';
+        const filterEquipment = $('#filterEquipment').val() || '';
+        const dateFilterType = $('#dateFilter').val() || '';
+        const selectedMonth = $('#monthSelect').val() || '';
+        const selectedYear = $('#yearSelect').val() || '';
+        const dateFrom = $('#dateFrom').val() || '';
+        const dateTo = $('#dateTo').val() || '';
 
-        $(".table tbody tr").each(function() {
-            const row = $(this);
-            const rowText = row.text().toLowerCase();
-            const typeCell = row.find('td:eq(2)').text().toLowerCase();
-            const dateCell = row.find('td:eq(8)').text(); // Adjust index based on date column
-            const date = new Date(dateCell);
+        // Make sure we have allRows populated
+        if (!window.allRows || window.allRows.length === 0) {
+            window.allRows = Array.from(document.querySelectorAll('#equipmentTable tr:not(#noResultsMessage)'));
+        }
 
-            const searchMatch = rowText.indexOf(searchText) > -1;
-            const typeMatch = !filterType || typeCell === filterType;
+        // Reset filteredRows array
+        window.filteredRows = [];
+
+        // Filter each row
+        window.allRows.forEach(row => {
+            // Get text content for filtering
+            const rowText = row.textContent || '';
+
+            // Get equipment type column (3rd column, index 2)
+            const equipmentTypeCell = row.cells && row.cells.length > 2 ? row.cells[2] : null;
+            const equipmentTypeText = equipmentTypeCell ? equipmentTypeCell.textContent.trim() || '' : '';
+
+            // Get date column (10th column, index 9 - created date)
+            const dateCell = row.cells && row.cells.length > 9 ? row.cells[9] : null;
+            const dateText = dateCell ? dateCell.textContent.trim() || '' : '';
+            const date = dateText ? new Date(dateText) : null;
+
+            // Apply search filter (case insensitive)
+            const searchMatch = !searchText || rowText.toLowerCase().includes(searchText.toLowerCase());
+
+            // Apply equipment type filter (case insensitive, exact match)
+            let equipmentMatch = true;
+            if (filterEquipment && filterEquipment !== 'all' && filterEquipment.toLowerCase() !== 'filter equipment type') {
+                equipmentMatch = equipmentTypeText.toLowerCase() === filterEquipment.trim().toLowerCase();
+            }
+
+            // Apply date filter
             let dateMatch = true;
-
-            switch(dateFilterType) {
-                case 'asc':
-                    const tbody = $('.table tbody');
-                    const rows = tbody.find('tr').toArray();
-                    rows.sort((a, b) => {
-                        const dateA = new Date($(a).find('td:eq(8)').text());
-                        const dateB = new Date($(b).find('td:eq(8)').text());
-                        return dateA - dateB;
-                    });
-                    tbody.append(rows);
-                    return;
-
-                case 'desc':
-                    const tbody2 = $('.table tbody');
-                    const rows2 = tbody2.find('tr').toArray();
-                    rows2.sort((a, b) => {
-                        const dateA = new Date($(a).find('td:eq(8)').text());
-                        const dateB = new Date($(b).find('td:eq(8)').text());
-                        return dateB - dateA;
-                    });
-                    tbody2.append(rows2);
-                    return;
-
-                case 'month':
-                    if (selectedMonth && selectedYear) {
-                        dateMatch = date.getMonth() + 1 === parseInt(selectedMonth) &&
-                            date.getFullYear() === parseInt(selectedYear);
-                    }
-                    break;
-
-                case 'range':
+            if (dateFilterType && date) {
+                if (dateFilterType === 'month' && selectedMonth && selectedYear) {
+                    dateMatch = (date.getMonth() + 1 === parseInt(selectedMonth)) &&
+                        (date.getFullYear() === parseInt(selectedYear));
+                } else if (dateFilterType === 'range') {
                     if (dateFrom && dateTo) {
                         const from = new Date(dateFrom);
                         const to = new Date(dateTo);
-                        to.setHours(23, 59, 59);
+                        to.setHours(23, 59, 59); // End of day
                         dateMatch = date >= from && date <= to;
+                    } else {
+                        // If range is selected but dates are not, don't filter by date
+                        dateMatch = true;
                     }
-                    break;
+                }
             }
 
-            row.toggle(searchMatch && typeMatch && dateMatch);
+            // Show or hide row based on filter match
+            const shouldShow = searchMatch && equipmentMatch && dateMatch;
+            if (shouldShow) {
+                window.filteredRows.push(row);
+            }
         });
+
+        // Sort if needed
+        if (dateFilterType === 'asc' || dateFilterType === 'desc') {
+            window.filteredRows.sort((a, b) => {
+                const dateA = a.cells && a.cells[9] ? new Date(a.cells[9].textContent) : new Date(0);
+                const dateB = b.cells && b.cells[9] ? new Date(b.cells[9].textContent) : new Date(0);
+                return dateFilterType === 'asc' ? dateA - dateB : dateB - dateA;
+            });
+        }
+
+        // Reset to page 1 and update pagination
+        if (typeof paginationConfig !== 'undefined') {
+            paginationConfig.currentPage = 1;
+        }
+
+        // Update pagination to show/hide rows based on current page
+        if (typeof updatePagination === 'function') {
+            updatePagination();
+        }
+
+        // Show a message if no results found
+        const noResultsMessage = document.getElementById('noResultsMessage');
+        const tbody = document.getElementById('equipmentTable');
+
+        if (window.filteredRows.length === 0) {
+            if (!noResultsMessage) {
+                // Create and insert a "no results" message if it doesn't exist
+                if (tbody) {
+                    const noResultsRow = document.createElement('tr');
+                    noResultsRow.id = 'noResultsMessage';
+                    noResultsRow.innerHTML = `
+                        <td colspan="16" class="text-center py-4">
+                            <div class="alert alert-warning mb-0">
+                                <i class="bi bi-exclamation-circle me-2"></i> No results found for the current filter criteria.
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(noResultsRow);
+                }
+            } else {
+                noResultsMessage.style.display = 'table-row';
+            }
+        } else if (noResultsMessage) {
+            noResultsMessage.style.display = 'none';
+        }
     }
+    // Expose filterTable globally for other scripts (e.g., pagination.js)
+    window.filterTable = filterTable;
+
+    // Initialize allRows and filteredRows on page load
+    window.allRows = Array.from(document.querySelectorAll('#equipmentTable tr:not(#noResultsMessage)'));
+    window.filteredRows = [...window.allRows];
+
+    // Initial filter
+    filterTable();
 });
 
 $(document).ready(function() {

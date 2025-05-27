@@ -1,5 +1,6 @@
 // Global variable to store the original table rows.
-// This will be populated by logs.js and used as the source for filtering.
+// This will be populated by page-specific scripts (e.g., logs.js or inline scripts)
+// and used as the source for filtering.
 let allRows = window.allRows || [];
 
 // Global variable to store the currently filtered rows.
@@ -7,8 +8,9 @@ let allRows = window.allRows || [];
 window.filteredRows = [];
 
 // Configuration object with default values
+// Page-specific scripts can override these by passing a config object to initPagination
 let paginationConfig = {
-    tableId: 'auditTable',      // Default table ID
+    tableId: 'auditTable',      // Default table ID, should be overridden by specific pages
     currentPage: 1,             // Current page
     rowsPerPageSelectId: 'rowsPerPageSelect',
     currentPageId: 'currentPage',
@@ -16,278 +18,251 @@ let paginationConfig = {
     totalRowsId: 'totalRows',
     prevPageId: 'prevPage',
     nextPageId: 'nextPage',
-    paginationId: 'pagination'
+    paginationId: 'pagination',
+    isInitialized: false // Flag to track if pagination has been initialized FOR THIS CONFIG
 };
 
-// Function to initialize pagination with a specific table
+// Function to initialize pagination with a specific table and configuration
 function initPagination(config = {}) {
-    console.log('pagination.js: initPagination called with config:', config);
-    // Update config with any user-specified values
-    Object.assign(paginationConfig, config);
+    console.log(`pagination.js: initPagination called for tableId: ${config.tableId || paginationConfig.tableId}. Current global config tableId: ${window.paginationConfig ? window.paginationConfig.tableId : 'undefined'}, isInitialized: ${window.paginationConfig ? window.paginationConfig.isInitialized : 'undefined'}`);
     
-    // Ensure allRows is populated from window.allRows if it exists,
-    // otherwise populate from the table initially. This handles cases
-    // where logs.js might not have run yet, or for other tables.
+    // Create a new config object for this instance to avoid clashes if multiple tables use this script.
+    // However, for a single page context like equipment_details, we often rely on one global.
+    // For this fix, we'll continue to use the global `paginationConfig` but be careful.
+    Object.assign(paginationConfig, config); // Merge new config into the global one.
+    
     const tableBody = document.getElementById(paginationConfig.tableId);
     if (tableBody) {
-        if (!window.allRows || window.allRows.length === 0) {
-             // Fallback if logs.js hasn't populated it yet (less likely with defer, but good to have)
-             window.allRows = Array.from(tableBody.querySelectorAll('tr'));
-             console.log(`pagination.js: Populated window.allRows as fallback with ${window.allRows.length} rows.`);
+        // Prioritize window.allRows if it's explicitly set by the calling page for THIS tableId
+        if (window.allRows && window.allRows.length > 0 && (window.pageSpecificTableId === paginationConfig.tableId)) {
+             allRows = window.allRows;
+             console.log(`pagination.js: Using pre-populated window.allRows for ${paginationConfig.tableId}, total ${allRows.length} rows.`);
+        } else {
+             allRows = Array.from(tableBody.querySelectorAll('tr:not(#noResultsMessage)')); // Exclude noResultsMessage row
+             window.allRows = allRows; 
+             window.pageSpecificTableId = paginationConfig.tableId; 
+             console.log(`pagination.js: Populated allRows from table ${paginationConfig.tableId}, total ${allRows.length} rows.`);
         }
-        allRows = window.allRows; // pagination.js uses its local allRows reference
-        console.log(`pagination.js: Local allRows synchronized, total ${allRows.length} rows.`);
+        window.filteredRows = [...allRows];
     } else {
         console.error(`pagination.js: Table body with ID ${paginationConfig.tableId} not found during initPagination.`);
+        return; 
     }
     
-    // Initialize filters and set up event listeners
-    setupEventListeners();
+    setupEventListeners(); // This will now use dataset attributes to avoid double listening more robustly
     
-    // Perform an initial filter and update pagination
-    filterTable(); // Call filterTable to apply initial filters and populate filteredRows
+    // The calling page (e.g., equipment_details.php) is responsible for the initial call to its filterTable,
+    // which in turn should call updatePagination.
+    // If no page-specific filterTable is intended, then a generic one or direct updatePagination call happens here.
+    if (typeof window.filterTable === 'function' && window.filterTable.isPageSpecific) {
+        console.log('pagination.js: Page-specific filterTable found. It should call updatePagination after filtering.');
+        // Example: window.filterTable(); // Page script should do this.
+    } else if (document.getElementById('searchInput')) { 
+        // Fallback to generic filter if searchInput exists and no page-specific filter is flagged
+        console.log('pagination.js: Calling generic filterTable.');
+        filterTable(); 
+    } else {
+        console.log('pagination.js: No specific or generic filter setup found, calling updatePagination directly.');
+        updatePagination(); 
+    }
     
-    console.log('pagination.js: initPagination completed.');
+    paginationConfig.isInitialized = true; // Mark this specific configuration as initialized
+    // Store the initialized config globally if it's the main one for the page
+    window.paginationConfig = paginationConfig; 
+    console.log(`pagination.js: initPagination for ${paginationConfig.tableId} completed. Global isInitialized: ${window.paginationConfig.isInitialized}`);
+    
     return {
         update: updatePagination,
         getConfig: () => paginationConfig,
-        setConfig: (config) => Object.assign(paginationConfig, config)
+        setConfig: (newConfig) => Object.assign(paginationConfig, newConfig)
     };
 }
 
-// Re-added the DOMContentLoaded listener with a check to prevent double initialization.
 document.addEventListener('DOMContentLoaded', () => {
-    // Only initialize if a page hasn't explicitly initialized it already
-    if (!window.paginationInitialized) { 
-        console.log('pagination.js: DOMContentLoaded fallback triggered. Initializing with default config.');
-        initPagination(); // Call initPagination with default config
+    // This fallback should only run if NO page-specific initPagination has occurred.
+    if (typeof window.paginationConfig === 'undefined' || !window.paginationConfig.isInitialized) {
+        console.log('pagination.js: DOMContentLoaded fallback triggered because no specific pagination was initialized.');
+        const defaultTableId = 'auditTable'; 
+        if (document.getElementById(defaultTableId)) {
+            console.log(`pagination.js: DOMContentLoaded: Initializing with default config for table "${defaultTableId}".`);
+            initPagination({ tableId: defaultTableId }); 
+        } else {
+            console.log(`pagination.js: DOMContentLoaded fallback: Default table "${defaultTableId}" not found. Skipping default initialization.`);
+        }
     } else {
-        console.log('pagination.js: DOMContentLoaded fallback skipped. Pagination already initialized by page script.');
+        console.log(`pagination.js: DOMContentLoaded fallback skipped. Pagination (table: ${window.paginationConfig.tableId}) already initialized by a page-specific script.`);
     }
 });
 
-
-// Sets up event listeners for all filter inputs and pagination controls.
 function setupEventListeners() {
-    console.log('pagination.js: setupEventListeners called.');
-    const searchInput = document.getElementById('searchInput');
-    const filterAction = document.getElementById('filterAction');
-    const filterStatus = document.getElementById('filterStatus');
-    const filterModule = document.getElementById('filterModule'); // Added module filter listener
-
+    console.log(`pagination.js: setupEventListeners for current config (table: ${paginationConfig.tableId}).`);
+    
+    // Example for generic search input - adapt if your page uses different filter IDs
+    const searchInput = document.getElementById('searchInput'); 
     if (searchInput) {
-        searchInput.addEventListener('input', filterTable);
-        console.log('pagination.js: Added listener to searchInput.');
-    }
-
-    if (filterAction) {
-        filterAction.addEventListener('change', filterTable);
-        console.log('pagination.js: Added listener to filterAction.');
-    }
-
-    if (filterStatus) {
-        filterStatus.addEventListener('change', filterTable);
-        console.log('pagination.js: Added listener to filterStatus.');
-    }
-
-    if (filterModule) { // Added module filter listener
-        filterModule.addEventListener('change', filterTable);
-        console.log('pagination.js: Added listener to filterModule.');
+        // Use a unique key for the listener flag if multiple tables might share filter inputs
+        const listenerKey = `listenerAttached_${paginationConfig.tableId}`;
+        if (!searchInput.dataset[listenerKey]) {
+            searchInput.addEventListener('input', () => {
+                // Ensure 'filterTable' is the correct one (page-specific or generic)
+                if (typeof window.filterTable === 'function') {
+                    window.filterTable();
+                } else {
+                    filterTable(); // Fallback to pagination.js generic filterTable
+                }
+            });
+            searchInput.dataset[listenerKey] = 'true';
+            console.log(`pagination.js: Added input listener to generic searchInput for ${paginationConfig.tableId}.`);
+        }
     }
 
     const rowsPerPageSelect = document.getElementById(paginationConfig.rowsPerPageSelectId);
     if (rowsPerPageSelect) {
-        rowsPerPageSelect.addEventListener('change', () => {
-            console.log('pagination.js: rowsPerPageSelect changed.');
-            paginationConfig.currentPage = 1; // Reset to first page on rows per page change
-            updatePagination();
-        });
-        console.log('pagination.js: Added listener to rowsPerPageSelect.');
+        const listenerKey = `rppsListener_${paginationConfig.tableId}`;
+        if (!rowsPerPageSelect.dataset[listenerKey]) {
+            rowsPerPageSelect.addEventListener('change', () => {
+                console.log(`pagination.js: rowsPerPageSelect changed for ${paginationConfig.tableId}.`);
+                paginationConfig.currentPage = 1;
+                updatePagination();
+            });
+            rowsPerPageSelect.dataset[listenerKey] = 'true';
+            console.log(`pagination.js: Added change listener to ${paginationConfig.rowsPerPageSelectId} for ${paginationConfig.tableId}.`);
+        }
     }
 
     const prevButton = document.getElementById(paginationConfig.prevPageId);
-    const nextButton = document.getElementById(paginationConfig.nextPageId);
-
     if (prevButton) {
-        prevButton.addEventListener('click', () => {
-            console.log('pagination.js: Previous button clicked. Current page:', paginationConfig.currentPage);
-            if (paginationConfig.currentPage > 1) {
-                paginationConfig.currentPage--;
-                updatePagination();
-            }
-        });
-        console.log('pagination.js: Added listener to prevButton.');
+        // Using a more specific dataset key to avoid conflicts if multiple paginations exist.
+        const listenerFlag = `prevBtnListener_${paginationConfig.tableId}`;
+        if (!prevButton.dataset[listenerFlag]) {
+            // Clone to remove any unrelated listeners if IDs are somehow reused.
+            const newPrevButton = prevButton.cloneNode(true);
+            prevButton.parentNode.replaceChild(newPrevButton, prevButton);
+            
+            newPrevButton.addEventListener('click', (event) => {
+                console.log(`PAGINATION_PREV_CLICK: Table: ${paginationConfig.tableId}, Timestamp: ${event.timeStamp}, CurrentPage BEFORE: ${paginationConfig.currentPage}`);
+                if (paginationConfig.currentPage > 1) {
+                    paginationConfig.currentPage--;
+                    console.log(`PAGINATION_PREV_CLICK: CurrentPage AFTER: ${paginationConfig.currentPage}`);
+                    updatePagination();
+                } else {
+                    console.log(`PAGINATION_PREV_CLICK: Already on first page.`);
+                }
+            });
+            newPrevButton.dataset[listenerFlag] = 'true'; // Mark listener as attached for this specific config
+            console.log(`pagination.js: Added click listener to ${paginationConfig.prevPageId} for ${paginationConfig.tableId}.`);
+        } else {
+             console.log(`pagination.js: Click listener for ${paginationConfig.prevPageId} (table ${paginationConfig.tableId}) already attached.`);
+        }
     }
 
+    const nextButton = document.getElementById(paginationConfig.nextPageId);
     if (nextButton) {
-        nextButton.addEventListener('click', () => {
-            console.log('pagination.js: Next button clicked. Current page:', paginationConfig.currentPage);
-            const totalPages = getTotalPages();
-            if (paginationConfig.currentPage < totalPages) {
-                paginationConfig.currentPage++;
-                updatePagination();
-            }
-        });
-        console.log('pagination.js: Added listener to nextButton.');
+        const listenerFlag = `nextBtnListener_${paginationConfig.tableId}`;
+        if (!nextButton.dataset[listenerFlag]) {
+            const newNextButton = nextButton.cloneNode(true);
+            nextButton.parentNode.replaceChild(newNextButton, nextButton);
+
+            newNextButton.addEventListener('click', (event) => {
+                console.log(`PAGINATION_NEXT_CLICK: Table: ${paginationConfig.tableId}, Timestamp: ${event.timeStamp}, CurrentPage BEFORE: ${paginationConfig.currentPage}`);
+                const totalPages = getTotalPages();
+                if (paginationConfig.currentPage < totalPages) {
+                    paginationConfig.currentPage++;
+                    console.log(`PAGINATION_NEXT_CLICK: CurrentPage AFTER: ${paginationConfig.currentPage}`);
+                    updatePagination();
+                } else {
+                    console.log(`PAGINATION_NEXT_CLICK: Already on last page (Page ${paginationConfig.currentPage} of ${totalPages}).`);
+                }
+            });
+            newNextButton.dataset[listenerFlag] = 'true';
+            console.log(`pagination.js: Added click listener to ${paginationConfig.nextPageId} for ${paginationConfig.tableId}.`);
+        } else {
+            console.log(`pagination.js: Click listener for ${paginationConfig.nextPageId} (table ${paginationConfig.tableId}) already attached.`);
+        }
     }
 }
 
-// Rebuilds the table body with only the rows that match the filters.
-// This function now centralizes all filtering logic.
+// Generic filterTable function (fallback if no page-specific one is used)
 function filterTable() {
-    console.log('pagination.js: filterTable called.');
+    console.log('pagination.js: Generic filterTable called (fallback).');
     const searchFilter = document.getElementById('searchInput')?.value.toLowerCase() || '';
-    const actionFilter = document.getElementById('filterAction')?.value.toLowerCase() || '';
-    const statusFilter = document.getElementById('filterStatus')?.value.toLowerCase() || '';
-    const moduleFilter = document.getElementById('filterModule')?.value.toLowerCase() || '';
+    // Add other generic filter inputs if applicable
     
-    // Use window.allRows (the original, unfiltered rows) for filtering
-    const rowsToFilter = window.allRows || [];
-    console.log(`filterTable: Filtering from ${rowsToFilter.length} total rows.`);
+    const rowsToFilter = allRows || []; 
+    console.log(`Generic filterTable: Filtering from ${rowsToFilter.length} total rows.`);
 
-    // Filter rows from the original set
-    const filteredRows = rowsToFilter.filter(row => {
-        // For debugging purposes
-        if (!row) return false;
-        
-        // Skip header row if it somehow gets into allRows
-        if (row.querySelector('th')) return false;
-        
-        let matchesSearch = true;
-        let matchesAction = true;
-        let matchesStatus = true;
-        let matchesModule = true;
-        
-        // Search filter (applies to all cells)
+    window.filteredRows = rowsToFilter.filter(row => {
+        if (!row || row.querySelector('th')) return false; 
         if (searchFilter) {
-            matchesSearch = row.textContent.toLowerCase().includes(searchFilter);
+            return row.textContent.toLowerCase().includes(searchFilter);
         }
-        
-        // Action filter
-        if (actionFilter) {
-            const actionCell = row.querySelector('[data-label="Action"]');
-            if (actionCell) {
-                // Get text from the action badge, which contains the action name
-                const actionBadge = actionCell.querySelector('.action-badge');
-                const actionText = actionBadge ? 
-                    actionBadge.textContent.toLowerCase().trim() : 
-                    actionCell.textContent.toLowerCase().trim();
-                
-                // Convert both to lowercase and trim for comparison
-                matchesAction = actionText.includes(actionFilter);
-                
-            } else {
-                matchesAction = false;
-            }
-        }
-        
-        // Status filter
-        if (statusFilter) {
-            const statusCell = row.querySelector('[data-label="Status"]');
-            if (statusCell) {
-                // Get text from the status badge
-                const statusBadge = statusCell.querySelector('.badge');
-                const statusText = statusBadge ? 
-                    statusBadge.textContent.toLowerCase().trim() : 
-                    statusCell.textContent.toLowerCase().trim();
-                
-                // Handle status cases
-                if (statusFilter === 'successful') {
-                    matchesStatus = statusText.includes('successful');
-                } else if (statusFilter === 'failed') {
-                    matchesStatus = statusText.includes('failed');
-                } else {
-                    matchesStatus = statusText.includes(statusFilter);
-                }
-                
-            } else {
-                matchesStatus = false;
-            }
-        }
-        
-        // Module filter (specific to logs.js original implementation)
-        if (moduleFilter) {
-            const moduleCell = row.querySelector('[data-label="Module"]');
-            if (moduleCell) {
-                const moduleText = moduleCell.textContent.toLowerCase().trim();
-                matchesModule = moduleText.includes(moduleFilter);
-            } else {
-                matchesModule = false;
-            }
-        }
-        
-        return matchesSearch && matchesAction && matchesStatus && matchesModule;
+        return true; // No generic filter applied, show all
     });
     
-    // Store filtered rows in window for pagination to use
-    window.filteredRows = filteredRows;
-    console.log(`filterTable: Filtered down to ${window.filteredRows.length} rows.`);
-    
-    // Reset to the first page after filtering
-    paginationConfig.currentPage = 1;
-    
-    // Update pagination based on the new filtered set
+    console.log(`Generic filterTable: Filtered down to ${window.filteredRows.length} rows.`);
+    if (paginationConfig) { // Ensure paginationConfig is defined
+       paginationConfig.currentPage = 1;
+    } else {
+       console.error("Generic filterTable: paginationConfig is undefined!");
+       return;
+    }
     updatePagination();
 }
 
-// Updates the display of table rows and pagination controls based on current page and filters.
 function updatePagination() {
-    console.log('pagination.js: updatePagination called. Current Page:', paginationConfig.currentPage);
+    if (!paginationConfig || !paginationConfig.tableId) {
+        console.error(`updatePagination: paginationConfig or tableId is not defined. Config:`, paginationConfig);
+        return;
+    }
+    console.log(`pagination.js: updatePagination for ${paginationConfig.tableId}. Current Page: ${paginationConfig.currentPage}`);
     const tbody = document.getElementById(paginationConfig.tableId);
     if (!tbody) {
-        console.error(`Could not find tbody with ID ${paginationConfig.tableId}`);
+        console.error(`updatePagination: Could not find tbody with ID ${paginationConfig.tableId}`);
         return;
     }
     
-    // Use window.filteredRows for pagination
     const rowsToPaginate = window.filteredRows || [];
     const totalRows = rowsToPaginate.length;
     const rowsPerPageSelect = document.getElementById(paginationConfig.rowsPerPageSelectId);
     const rowsPerPage = parseInt(rowsPerPageSelect?.value || '10');
     const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
 
-    console.log(`updatePagination: Total Rows: ${totalRows}, Rows Per Page: ${rowsPerPage}, Total Pages: ${totalPages}`);
+    console.log(`updatePagination: Total Filtered: ${totalRows}, PerPage: ${rowsPerPage}, TotalPages: ${totalPages}`);
 
-    // Adjust current page if it's out of bounds after filtering
-    paginationConfig.currentPage = Math.min(paginationConfig.currentPage, totalPages);
-    if (paginationConfig.currentPage < 1 && totalPages >= 1) {
-        paginationConfig.currentPage = 1;
-    } else if (totalPages === 0) {
-        paginationConfig.currentPage = 0; // No pages if no rows
-    }
+    if (paginationConfig.currentPage > totalPages) paginationConfig.currentPage = totalPages;
+    if (paginationConfig.currentPage < 1 && totalPages >= 1) paginationConfig.currentPage = 1;
+    else if (totalPages === 0 && paginationConfig.currentPage !== 0) paginationConfig.currentPage = 0;
+    
     console.log('updatePagination: Adjusted Current Page:', paginationConfig.currentPage);
 
-
-    const start = (paginationConfig.currentPage - 1) * rowsPerPage;
-    const end = paginationConfig.currentPage * rowsPerPage;
-    console.log(`updatePagination: Displaying rows from index ${start} to ${end}.`);
-
-    // Clear the tbody before adding the current page's rows
-    tbody.innerHTML = '';
+    const start = paginationConfig.currentPage > 0 ? (paginationConfig.currentPage - 1) * rowsPerPage : 0;
+    const end = paginationConfig.currentPage > 0 ? paginationConfig.currentPage * rowsPerPage : 0;
     
-    // If no filtered rows, show a "no results" message
+    tbody.innerHTML = ''; 
+    
     if (totalRows === 0) {
         const noResultsRow = document.createElement('tr');
-        noResultsRow.innerHTML = `
-            <td colspan="10">
-                <div class="empty-state text-center py-4">
-                    <i class="fas fa-search fa-3x mb-3"></i>
-                    <h4>No matching records found</h4>
-                    <p class="text-muted">Try adjusting your search or filter criteria.</p>
-                </div>
-            </td>
-        `;
+        noResultsRow.id = 'noResultsMessage'; // Ensure it has this ID if your CSS/JS targets it
+        const cell = noResultsRow.insertCell();
+        const table = tbody.closest('table');
+        let colspan = 10; 
+        if (table && table.tHead && table.tHead.rows.length > 0 && table.tHead.rows[0].cells.length > 0) {
+            colspan = table.tHead.rows[0].cells.length;
+        }
+        cell.colSpan = colspan;
+        cell.innerHTML = `
+            <div class="empty-state text-center py-4">
+                <i class="bi bi-search" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                <h4>No matching records found</h4>
+                <p class="text-muted">Try adjusting your search or filter criteria.</p>
+            </div>`;
         tbody.appendChild(noResultsRow);
-        console.log('updatePagination: Displaying "No matching records found".');
     } else {
-        // Add only the rows for the current page
         rowsToPaginate.slice(start, end).forEach(row => {
-            tbody.appendChild(row.cloneNode(true)); // Append a clone to avoid moving nodes
+            tbody.appendChild(row.cloneNode(true)); 
         });
-        console.log(`updatePagination: Appended ${rowsToPaginate.slice(start, end).length} rows to tbody.`);
     }
 
-    // Update display text for "Showing X to Y of Z entries"
     const currentPageEl = document.getElementById(paginationConfig.currentPageId);
     if (currentPageEl) currentPageEl.textContent = totalRows === 0 ? 0 : start + 1;
     
@@ -297,20 +272,20 @@ function updatePagination() {
     const totalRowsEl = document.getElementById(paginationConfig.totalRowsId);
     if (totalRowsEl) totalRowsEl.textContent = totalRows;
 
-    // Disable/enable Prev/Next buttons
     const prevPageEl = document.getElementById(paginationConfig.prevPageId);
-    if (prevPageEl) prevPageEl.disabled = (paginationConfig.currentPage <= 1);
+    if (prevPageEl) prevPageEl.disabled = (paginationConfig.currentPage <= 1 || totalRows === 0);
     
     const nextPageEl = document.getElementById(paginationConfig.nextPageId);
-    if (nextPageEl) nextPageEl.disabled = (paginationConfig.currentPage >= totalPages);
+    if (nextPageEl) nextPageEl.disabled = (paginationConfig.currentPage >= totalPages || totalRows === 0);
 
-    // Render pagination links (1, 2, 3, ..., N)
     renderPaginationControls(totalPages);
-    console.log('updatePagination: Finished rendering pagination controls.');
 }
 
-// Calculates the total number of pages based on filtered rows and rows per page.
 function getTotalPages() {
+    if (!paginationConfig || !paginationConfig.rowsPerPageSelectId) {
+        console.error("getTotalPages: paginationConfig or rowsPerPageSelectId is undefined.");
+        return 1; // Fallback
+    }
     const rowsToPaginate = window.filteredRows || [];
     const totalRows = rowsToPaginate.length;
     const rowsPerPageSelect = document.getElementById(paginationConfig.rowsPerPageSelectId);
@@ -318,84 +293,71 @@ function getTotalPages() {
     return Math.ceil(totalRows / rowsPerPage) || 1;
 }
 
-// Renders the pagination links (e.g., 1, 2, ..., 5, 6).
 function renderPaginationControls(totalPages) {
-    console.log('pagination.js: renderPaginationControls called. Total Pages:', totalPages);
-    const paginationContainer = document.getElementById(paginationConfig.paginationId);
-    if (!paginationContainer) {
-        console.error(`Could not find pagination container with ID ${paginationConfig.paginationId}`);
+    if (!paginationConfig || !paginationConfig.paginationId) {
+        console.error("renderPaginationControls: paginationConfig or paginationId is undefined.");
         return;
     }
-
-    paginationContainer.innerHTML = ''; // Clear existing pagination links
-
+    const paginationContainer = document.getElementById(paginationConfig.paginationId);
+    if (!paginationContainer) {
+        console.error(`renderPaginationControls: Could not find pagination container with ID ${paginationConfig.paginationId}`);
+        return;
+    }
+    paginationContainer.innerHTML = ''; 
     if (totalPages <= 1) {
-        console.log('renderPaginationControls: Only one page, no pagination links needed.');
-        return; // No pagination needed for 1 or fewer pages
+        paginationContainer.style.display = 'none';
+        return;
     }
+    paginationContainer.style.display = ''; 
+    const currentPage = paginationConfig.currentPage;
 
-    // Always show first page
-    addPaginationItem(paginationContainer, 1, paginationConfig.currentPage === 1);
+    if (totalPages <= 7) { 
+        for (let i = 1; i <= totalPages; i++) {
+            addPaginationItem(paginationContainer, i, i === currentPage);
+        }
+    } else {
+        addPaginationItem(paginationContainer, 1, 1 === currentPage);
+        if (currentPage > 3) addPaginationItem(paginationContainer, '...');
+        
+        let startPage = Math.max(2, currentPage - 1);
+        let endPage = Math.min(totalPages - 1, currentPage + 1);
 
-    // Show ellipses and a window of pages around current page
-    const maxVisiblePages = 5; // Adjust to show more or fewer pages in the control
-    const halfWindow = Math.floor(maxVisiblePages / 2);
-    
-    let startPage = Math.max(2, paginationConfig.currentPage - halfWindow);
-    let endPage = Math.min(totalPages - 1, paginationConfig.currentPage + halfWindow);
-    
-    // Adjust start and end to ensure 'maxVisiblePages' are shown if possible
-    if (paginationConfig.currentPage <= halfWindow + 1) {
-        endPage = Math.min(totalPages - 1, maxVisiblePages);
-    } else if (paginationConfig.currentPage >= totalPages - halfWindow) {
-        startPage = Math.max(2, totalPages - maxVisiblePages);
+        if (currentPage <= 2) { startPage = 2; endPage = Math.min(totalPages -1, 3); }
+        else if (currentPage >= totalPages - 1) { startPage = Math.max(2, totalPages - 2); endPage = totalPages - 1; }
+        
+        for (let i = startPage; i <= endPage; i++) {
+            addPaginationItem(paginationContainer, i, i === currentPage);
+        }
+        if (currentPage < totalPages - 2) addPaginationItem(paginationContainer, '...');
+        addPaginationItem(paginationContainer, totalPages, totalPages === currentPage);
     }
-    
-    // Show ellipsis after first page if needed
-    if (startPage > 2) {
-        addPaginationItem(paginationContainer, '...');
-    }
-    
-    // Show pages in the window
-    for (let i = startPage; i <= endPage; i++) {
-        addPaginationItem(paginationContainer, i, i === paginationConfig.currentPage);
-    }
-    
-    // Show ellipsis before last page if needed
-    if (endPage < totalPages - 1) {
-        addPaginationItem(paginationContainer, '...');
-    }
-    
-    // Always show last page if more than 1 page
-    if (totalPages > 1) {
-        addPaginationItem(paginationContainer, totalPages, paginationConfig.currentPage === totalPages);
-    }
-    console.log('renderPaginationControls: Pagination links rendered.');
 }
 
-// Helper function to add a single pagination item (page number or ellipsis).
-function addPaginationItem(container, page, isActive = false) {
+function addPaginationItem(container, pageContent, isActive = false, isDisabled = false, clickHandler) {
     const li = document.createElement('li');
-    li.className = 'page-item' + (isActive ? ' active' : '');
+    li.className = 'page-item';
+    if (isActive) li.classList.add('active');
+    if (isDisabled || pageContent === '...') li.classList.add('disabled');
 
     const a = document.createElement('a');
     a.className = 'page-link';
     a.href = '#';
-    a.textContent = page;
+    a.innerHTML = pageContent; 
 
-    if (page !== '...') {
+    if (!isDisabled && pageContent !== '...') {
         a.addEventListener('click', function (e) {
-            e.preventDefault(); // Prevent default link behavior
-            console.log(`addPaginationItem: Page link clicked - ${page}.`);
-            paginationConfig.currentPage = parseInt(page);
-            updatePagination(); // Update pagination when a page number is clicked
+            e.preventDefault();
+            if (clickHandler) {
+                clickHandler();
+            } else {
+                console.log(`PAGINATION_LINK_CLICK: Page: ${pageContent}`);
+                if (paginationConfig) paginationConfig.currentPage = parseInt(pageContent);
+                updatePagination();
+            }
         });
-    } else {
-        // Disable ellipsis links
-        a.setAttribute('disabled', true);
-        li.classList.add('disabled');
+    } else if (pageContent === '...') {
+        a.style.pointerEvents = 'none'; 
     }
-
     li.appendChild(a);
     container.appendChild(li);
 }
