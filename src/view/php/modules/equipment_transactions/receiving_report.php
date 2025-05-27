@@ -1231,49 +1231,43 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
             // Initialize pagination with this table's ID
             initPagination({
                 tableId: 'rrTableBody',
-                currentPage: 1
+                currentPage: 1,
+                rowsPerPageSelectId: 'rowsPerPageSelect',
+                currentPageId: 'currentPage',
+                rowsPerPageId: 'rowsPerPage',
+                totalRowsId: 'totalRows',
+                prevPageId: 'prevPage',
+                nextPageId: 'nextPage',
+                paginationId: 'pagination'
             });
 
-            // Force hide pagination buttons if no data or all fits on one page
-            function forcePaginationCheck() {
-                const totalRows = parseInt(document.getElementById('totalRows')?.textContent || '0');
-                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect')?.value || '10');
-                const prevBtn = document.getElementById('prevPage');
-                const nextBtn = document.getElementById('nextPage');
-                const paginationEl = document.getElementById('pagination');
-
-                if (totalRows <= rowsPerPage) {
-                    if (prevBtn) prevBtn.style.cssText = 'display: none !important';
-                    if (nextBtn) nextBtn.style.cssText = 'display: none !important';
-                    if (paginationEl) paginationEl.style.cssText = 'display: none !important';
-                }
-
-                // Also check for visible rows (for when filtering is applied)
-                const visibleRows = document.querySelectorAll('#rrTableBody tr:not(.filtered-out)').length;
-                if (visibleRows <= rowsPerPage) {
-                    if (prevBtn) prevBtn.style.cssText = 'display: none !important';
-                    if (nextBtn) nextBtn.style.cssText = 'display: none !important';
-                    if (paginationEl) paginationEl.style.cssText = 'display: none !important';
-                }
-            }
-
-            // Run immediately and after a short delay
-            forcePaginationCheck();
-            setTimeout(forcePaginationCheck, 200);
-
-            // Run after any filter changes
-            const searchInput = document.getElementById('searchRR');
+            // Create search functionality for the table
+            const searchInput = document.getElementById('searchReport');
             if (searchInput) {
                 searchInput.addEventListener('input', function() {
-                    setTimeout(forcePaginationCheck, 100);
+                    const searchText = this.value.toLowerCase();
+                    
+                    // Filter the rows based on the search text
+                    window.filteredRows = window.allRows.filter(row => {
+                        return row.textContent.toLowerCase().includes(searchText);
+                    });
+                    
+                    // Reset to first page and update pagination
+                    if (window.paginationConfig) {
+                        window.paginationConfig.currentPage = 1;
+                    }
+                    updatePagination();
                 });
             }
 
-            // Run after rows per page changes
+            // Handle rows per page change
             const rowsPerPageSelect = document.getElementById('rowsPerPageSelect');
             if (rowsPerPageSelect) {
                 rowsPerPageSelect.addEventListener('change', function() {
-                    setTimeout(forcePaginationCheck, 100);
+                    if (window.paginationConfig) {
+                        window.paginationConfig.currentPage = 1;
+                    }
+                    updatePagination();
                 });
             }
         });
