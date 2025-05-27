@@ -658,24 +658,7 @@ if (isset($_GET["q"])) {
             let rowsPerPage = 10;
             let allTableRows = []; // To store all rows for client-side pagination
             let deptIdToDelete = null; // Declare deptIdToDelete in the main scope
-
-            // Function to display toast messages
-            function showToast(message, type, duration) {
-                // Implement your toast notification logic here
-                // For now, we'll just log to console
-                console.log(`Toast (${type}): ${message}`);
-                // Example using Bootstrap's toast (requires a toast container in HTML)
-                // var toastEl = document.createElement('div');
-                // toastEl.classList.add('toast', `bg-${type}`, 'text-white');
-                // toastEl.setAttribute('role', 'alert');
-                // toastEl.setAttribute('aria-live', 'assertive');
-                // toastEl.setAttribute('aria-atomic', 'true');
-                // toastEl.setAttribute('data-bs-delay', duration);
-                // toastEl.innerHTML = `<div class="d-flex"><div class="toast-body">${message}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button></div>`;
-                // document.body.appendChild(toastEl); // Or a specific toast container
-                // var toast = new bootstrap.Toast(toastEl);
-                // toast.show();
-            }
+ 
 
             // Function to render table rows for the current page
             function renderTableRows() {

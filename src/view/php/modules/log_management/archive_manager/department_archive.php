@@ -324,19 +324,24 @@ function formatChanges($oldJsonStr)
                     <div class="col-md-4 mb-2">
                         <select id="filterAction" class="form-select">
                             <option value="">All Actions</option>
-                            <option value="create">Create</option>
-                            <option value="modified">Modified</option>
-                            <option value="remove">Remove</option>
-                            <option value="delete">Delete</option>
-                            <option value="restored">Restored</option>
+                            <option value="Create">Create</option>
+                            <option value="Modified">Modified</option>
+                            <option value="Remove">Remove</option>
+                            <option value="Delete">Delete</option>
+                            <option value="Restored">Restored</option>
                         </select>
                     </div>
                     <div class="col-md-4 mb-2">
                         <select id="filterStatus" class="form-select">
                             <option value="">All Status</option>
-                            <option value="successful">Successful</option>
-                            <option value="failed">Failed</option>
+                            <option value="Successful">Successful</option>
+                            <option value="Failed">Failed</option>
                         </select>
+                    </div>
+                    <div class="col-md-12 mt-2 text-end">
+                        <button type="button" id="clearArchiveFilters" class="btn btn-secondary">
+                            <i class="fas fa-times-circle me-1"></i> Clear Filters
+                        </button>
                     </div>
                 </div>
                 
@@ -387,7 +392,7 @@ function formatChanges($oldJsonStr)
                                     <td data-label="Module">
                                         <?php echo !empty($log['module']) ? htmlspecialchars(trim($log['module'])) : '<em class="text-muted">N/A</em>'; ?>
                                     </td>
-                                    <td data-label="Action">
+                                    <td data-label="Action" class="action-cell">
                                         <?php
                                         $actionText = !empty($log['action']) ? $log['action'] : 'Unknown';
                                         echo '<span class="action-badge action-' . strtolower($actionText) . '">';
@@ -412,7 +417,7 @@ function formatChanges($oldJsonStr)
                                     <td data-label="Changes">
                                         <?php echo formatChanges($log['old_val']); ?>
                                     </td>
-                                    <td data-label="Status">
+                                    <td data-label="Status" class="status-cell">
                                         <span class="badge <?php echo (strtolower($log['status']) === 'successful') ? 'bg-success' : 'bg-danger'; ?>">
                                             <?php echo getStatusIcon($log['status']) . ' ' . htmlspecialchars($log['status']); ?>
                                         </span>

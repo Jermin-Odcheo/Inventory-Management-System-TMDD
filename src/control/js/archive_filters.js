@@ -22,6 +22,27 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize once
     captureRows();
     
+    // Function to clear all filters
+    function clearFilters() {
+        // Reset filter values
+        const filterAction = document.getElementById('filterAction');
+        if (filterAction) filterAction.value = '';
+        
+        const filterStatus = document.getElementById('filterStatus');
+        if (filterStatus) filterStatus.value = '';
+        
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) searchInput.value = '';
+        
+        // Reset Select2 if it exists
+        if (typeof jQuery !== 'undefined' && jQuery.fn.select2) {
+            jQuery('#filterAction, #filterStatus').trigger('change');
+        }
+        
+        // Re-apply filters (which will show all rows since filters are cleared)
+        applyFilters();
+    }
+    
     // Apply filters to rows
     function applyFilters() {
         // Get filter values
@@ -50,20 +71,27 @@ document.addEventListener('DOMContentLoaded', function() {
             const row = rows[i];
             let showRow = true;
             
-            // Action filter
+            // Action filter - improved to better match action text
             if (actionFilter && showRow) {
-                const actionCell = row.querySelector('[data-label="Action"], .action');
+                const actionCell = row.querySelector('[data-label="Action"], .action-cell, .action');
                 if (actionCell) {
+                    // Get the actual text content, remove any extra whitespace and convert to lowercase
                     const actionText = actionCell.textContent.toLowerCase().trim();
+                    
+                    // Check if the filter value is contained within the action text
+                    // This is more reliable than exact matching
                     showRow = actionText.includes(actionFilter);
                 }
             }
             
-            // Status filter
+            // Status filter - improved to better match status text
             if (statusFilter && showRow) {
-                const statusCell = row.querySelector('[data-label="Status"], .status');
+                const statusCell = row.querySelector('[data-label="Status"], .status-cell, .status');
                 if (statusCell) {
+                    // Get the actual text content, remove any extra whitespace and convert to lowercase
                     const statusText = statusCell.textContent.toLowerCase().trim();
+                    
+                    // Check if the filter value is contained within the status text
                     showRow = statusText.includes(statusFilter);
                 }
             }
@@ -116,7 +144,18 @@ document.addEventListener('DOMContentLoaded', function() {
     
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
-        searchInput.addEventListener('input', applyFilters);
+        // Add debounce for search input to improve performance
+        let debounceTimer;
+        searchInput.addEventListener('input', function() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(applyFilters, 300);
+        });
+    }
+    
+    // Wire up clear filters button
+    const clearFiltersBtn = document.getElementById('clearArchiveFilters');
+    if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener('click', clearFilters);
     }
     
     // Handle pagination button clicks
@@ -137,6 +176,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Make functions available globally for AJAX callbacks
     window.archiveFilters = {
         captureRows: captureRows,
-        applyFilters: applyFilters
+        applyFilters: applyFilters,
+        clearFilters: clearFilters
     };
 }); 
