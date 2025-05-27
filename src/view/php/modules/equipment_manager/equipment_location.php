@@ -136,7 +136,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAjax) {
             if (empty($assetTag)) {
                 throw new Exception('Asset tag is required');
             }
-            
+
             if (empty($deviceState)) {
                 throw new Exception('Device state is required');
             }
@@ -226,7 +226,7 @@ if (
         if ($locationData) {
             // Get the asset tag from the location data
             $assetTag = $locationData['asset_tag'];
-            
+
             $oldValues = json_encode([
                 'asset_tag'          => $locationData['asset_tag'],
                 'building_loc'       => $locationData['building_loc'],
@@ -237,7 +237,7 @@ if (
                 'device_state'       => $locationData['device_state'],
                 'remarks'            => $locationData['remarks']
             ]);
-            
+
             // 1. Update equipment_location to set is_disabled = 1
             $stmt = $pdo->prepare("UPDATE equipment_location SET is_disabled = 1 WHERE equipment_location_id = ?");
             $stmt->execute([$id]);
@@ -258,12 +258,12 @@ if (
                 null,
                 'Successful'
             ]);
-            
+
             // Since equipment_location is the parent of Asset Tag, we don't cascade the deletion
             // to equipment_details or equipment_status
-            
+
             echo json_encode(['status' => 'success', 'message' => 'Equipment Location deleted successfully']);
-            
+
             $pdo->commit();
         } else {
             echo json_encode(['status' => 'error', 'message' => 'Location not found']);
@@ -312,10 +312,10 @@ if (strlen($q) > 0) {
        OR remarks LIKE :q
     LIMIT 10
 ");
-$likeQ = "%$q%";
-$stmt->execute(['q' => $likeQ]);
+    $likeQ = "%$q%";
+    $stmt->execute(['q' => $likeQ]);
 
-while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         echo "<div class='result-item'>"
             . "<strong>Asset Tag:</strong> " . htmlspecialchars($row['asset_tag']) . " - "
             . "<strong>Building:</strong> " . htmlspecialchars($row['building_loc']) . " - "
@@ -374,7 +374,7 @@ function safeHtml($value)
         th.sortable.desc::after {
             content: " ▼";
         }
-        
+
         /* Select2 custom styling to match other filter elements */
         .select2-container--default .select2-selection--single {
             height: 38px;
@@ -382,40 +382,40 @@ function safeHtml($value)
             border: 1px solid #ced4da;
             border-radius: 0.25rem;
         }
-        
+
         .select2-container--default .select2-selection--single .select2-selection__arrow {
             height: 36px;
         }
-        
+
         .select2-container--default .select2-selection--single .select2-selection__rendered {
             line-height: 24px;
             color: #212529;
             padding-left: 8px;
         }
-    
+
         /* Make all filter elements have consistent height */
-        .filter-container select, 
+        .filter-container select,
         .filter-container input,
         .filter-container .select2-container {
             height: calc(1.5em + 0.75rem + 2px);
         }
 
         /* Style the filter container elements for consistent spacing */
-        .filter-container > div {
+        .filter-container>div {
             padding: 0 8px;
         }
-        
+
         /* Ensure Select2 container is properly aligned */
         .filter-container .select2-container--default .select2-selection--single {
             display: flex;
             align-items: center;
         }
-        
+
         /* Match Select2 dropdown to Bootstrap form-select style */
         .select2-dropdown {
             border-color: #ced4da;
         }
-        
+
         /* Match dropdown item styling */
         .select2-container--default .select2-results__option {
             padding: 6px 12px;
@@ -438,13 +438,17 @@ function safeHtml($value)
             <div class="card-body">
                 <div class="container-fluid px-0">
                     <div class="filter-container" id="filterContainer">
-                        <div class="col-auto">
+
+                        <!--CREATE EQUIPMENT LOCATION: Disabled for now since user cannot create/add equipment location if asset tag does not exist in equipment locations-->
+                        <!--To re-enable Create Equipment Location: allow asset tag field from -->
+                        <!-- <div class="col-auto">
                             <?php if ($canCreate): ?>
                                 <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#addLocationModal">
                                     <i class="bi bi-plus-lg"></i> Create Location
                                 </button>
                             <?php endif; ?>
-                        </div>
+                        </div> -->
+
                         <div class="col-md-3">
                             <select class="form-select" id="filterBuilding">
                                 <option value="">Filter by Building</option>
@@ -613,8 +617,10 @@ function safeHtml($value)
         </section>
     </div>
 
-
-    <div class="modal fade" id="addLocationModal" tabindex="-1">
+    <!--CREATE EQUIPMENT LOCATION: Disabled for now since user cannot create/add equipment location if asset tag does not exist in equipment locations-->
+    <!--To re-enable Create Equipment Location: allow asset tag field from -->
+    <!-- Add Location Modal -->
+    <!-- <div class="modal fade" id="addLocationModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -706,7 +712,7 @@ function safeHtml($value)
                 </div>
             </div>
         </div>
-    </div>
+    </div> -->
 
     <div class="modal fade" id="editLocationModal" tabindex="-1">
         <div class="modal-dialog">
@@ -715,7 +721,7 @@ function safeHtml($value)
                     <h5 class="modal-title">Edit Location</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                
+
                 <div class="modal-body">
                     <form id="editLocationForm" method="post">
                         <input type="hidden" name="action" value="update">
@@ -733,27 +739,27 @@ function safeHtml($value)
                                 ?>
                             </select>
                         </div>
-                        
+
                         <div class="mb-3">
                             <label for="edit_building_loc" class="form-label"><i class="bi bi-building"></i> Building Location</label>
                             <input type="text" class="form-control" id="edit_building_loc" name="building_loc">
                         </div>
-                        
+
                         <div class="mb-3">
                             <label for="edit_floor_no" class="form-label"><i class="bi bi-layers"></i> Floor Number</label>
                             <input type="text" class="form-control" id="edit_floor_no" name="floor_no" autocomplete="off">
                         </div>
-                        
+
                         <div class="mb-3">
                             <label for="edit_specific_area" class="form-label"><i class="bi bi-pin-map"></i> Specific Area</label>
                             <input type="text" class="form-control" id="edit_specific_area" name="specific_area">
                         </div>
-                        
+
                         <div class="mb-3">
                             <label for="edit_person_responsible" class="form-label"><i class="bi bi-person"></i> Person Responsible</label>
                             <input type="text" class="form-control" id="edit_person_responsible" name="person_responsible">
                         </div>
-                        
+
                         <div class="mb-3">
                             <label for="edit_department_id" class="form-label"><i class="bi bi-building"></i> Department</label>
                             <select class="form-control" id="edit_department_id" name="department_id">
@@ -821,9 +827,12 @@ function safeHtml($value)
         // Function to directly update equipment details after successful form submission
         function directUpdateEquipmentDetails(assetTag, buildingLoc, specificArea, personResponsible) {
             console.log('Directly updating equipment details with:', {
-                assetTag, buildingLoc, specificArea, personResponsible
+                assetTag,
+                buildingLoc,
+                specificArea,
+                personResponsible
             });
-            
+
             // Format location as "Building, Area" if both are available
             let location = '';
             if (buildingLoc && specificArea) {
@@ -833,7 +842,7 @@ function safeHtml($value)
             } else if (specificArea) {
                 location = specificArea;
             }
-            
+
             // Make AJAX request to update equipment details
             $.ajax({
                 url: window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/')) + '/equipment_details_update.php',
@@ -863,7 +872,7 @@ function safeHtml($value)
                 }
             });
         }
-        
+
         // Initialize pagination for equipment location page
         document.addEventListener('DOMContentLoaded', function() {
             // Initialize pagination with the correct table ID
@@ -883,7 +892,7 @@ function safeHtml($value)
                 const selectedYear = $('#yearSelect').val() || '';
                 const dateFrom = $('#dateFrom').val() || '';
                 const dateTo = $('#dateTo').val() || '';
-                
+
                 // Debug output
                 console.log('FILTER VALUES:', {
                     searchText: searchText,
@@ -910,11 +919,11 @@ function safeHtml($value)
 
                     // Get text content for filtering
                     const rowText = row.textContent || '';
-                    
+
                     // Get building column (3rd column, index 2)
                     const buildingCell = row.cells && row.cells.length > 2 ? row.cells[2] : null;
                     const buildingText = buildingCell ? buildingCell.textContent || '' : '';
-                    
+
                     // Get date column (10th column, index 9)
                     const dateCell = row.cells && row.cells.length > 9 ? row.cells[9] : null;
                     const dateText = dateCell ? dateCell.textContent || '' : '';
@@ -923,14 +932,14 @@ function safeHtml($value)
 
                     // Apply search filter (case insensitive)
                     const searchMatch = !searchText || rowText.toLowerCase().includes(searchText.toLowerCase());
-                    
+
                     // Apply building filter (case insensitive, exact match)
                     let buildingMatch = true;
                     if (filterBuilding && filterBuilding !== 'all' && filterBuilding.toLowerCase() !== 'filter by building') {
                         // Trim and compare case-insensitive
                         buildingMatch = buildingText.trim().toLowerCase() === filterBuilding.trim().toLowerCase();
                     }
-                    
+
                     // Apply date filter
                     let dateMatch = true;
                     if (date && dateFilterType) {
@@ -1007,11 +1016,11 @@ function safeHtml($value)
             
             // Set up event listeners for filtering
             $('#eqSearch').on('input', filterTable);
-            
+
             // Simple change handler for building filter
             $('#filterBuilding').on('change', function() {
                 console.log('Building filter changed to:', $(this).val());
-                
+
                 // Reset date filters when building filter changes
                 if ($(this).val() && $(this).val() !== 'all' && $(this).val().toLowerCase() !== 'filter by building') {
                     $('#dateFilter').val('');
@@ -1021,23 +1030,23 @@ function safeHtml($value)
                     $('#dateTo').val('');
                     $('#dateInputsContainer').hide();
                 }
-                
+
                 filterTable();
             });
-            
+
             // Reset filters button handler
             $(document).on('click', '#resetFilters', function() {
                 // Reset all filter inputs
                 $('#eqSearch').val('');
-                
+
                 // Set select value first
                 $('#filterBuilding').val('all');
-                
+
                 // Then update Select2 UI if it exists
                 if ($('#filterBuilding').data('select2')) {
                     $('#filterBuilding').trigger('change.select2');
                 }
-                
+
                 // Reset other filters
                 $('#dateFilter').val('');
                 $('#monthSelect').val('');
@@ -1045,11 +1054,11 @@ function safeHtml($value)
                 $('#dateFrom').val('');
                 $('#dateTo').val('');
                 $('#dateInputsContainer').hide();
-                
+
                 // Apply the filter reset
                 filterTable();
             });
-            
+
             $('#dateFilter').on('change', function() {
                 const filterType = $(this).val();
                 console.log('Date filter changed to:', filterType);
@@ -1058,12 +1067,12 @@ function safeHtml($value)
                 $('#dateInputsContainer').hide();
                 $('#monthPickerContainer').hide();
                 $('#dateRangePickers').hide();
-                
+
                 // Reset building filter if date filter is applied
                 if (filterType) {
                     // Set select value first
                     $('#filterBuilding').val('all');
-                    
+
                     // Then update Select2 UI if it exists
                     if ($('#filterBuilding').data('select2')) {
                         $('#filterBuilding').trigger('change.select2');
@@ -1102,7 +1111,7 @@ function safeHtml($value)
                     filterTable();
                 }
             });
-            
+
             // Run initial filter to make sure everything is displayed correctly
             // This ensures pagination is applied on initial load
             setTimeout(filterTable, 100);
@@ -1134,7 +1143,7 @@ function safeHtml($value)
             // First set up the standard event handlers
             $('#filterBuilding').on('change', function() {
                 console.log('Building filter changed to:', $(this).val());
-                
+
                 // Reset date filters when building filter changes
                 if ($(this).val() && $(this).val() !== 'all' && $(this).val().toLowerCase() !== 'filter by building') {
                     $('#dateFilter').val('');
@@ -1144,10 +1153,10 @@ function safeHtml($value)
                     $('#dateTo').val('');
                     $('#dateInputsContainer').hide();
                 }
-                
+
                 filterTable();
             });
-            
+
             // Then initialize Select2 with the proper configuration
             if ($.fn.select2) {
                 try {
@@ -1155,7 +1164,7 @@ function safeHtml($value)
                     if ($('#filterBuilding').data('select2')) {
                         $('#filterBuilding').select2('destroy');
                     }
-                    
+
                     // Initialize with proper settings
                     $('#filterBuilding').select2({
                         placeholder: 'Filter by Building',
@@ -1172,35 +1181,35 @@ function safeHtml($value)
                             return $('<span>').text(data.text).addClass('py-1');
                         }
                     });
-                    
+
                     // Set default value and ensure it's reflected in the UI
                     // $('#filterBuilding').val('all').trigger('change'); // This will trigger filterTable again
                 } catch (e) {
                     console.error('Error initializing Select2:', e);
                 }
             }
-            
+
             // Add reset button if it doesn't exist
             if ($('#resetFilters').length === 0) {
                 $('.filter-container').append('<button id="resetFilters" class="btn btn-outline-secondary ms-2">Reset Filters</button>');
             }
-            
+
             // Set up event listeners for filtering
             $('#eqSearch').on('input', filterTable);
-            
+
             // Reset filters button handler
             $(document).on('click', '#resetFilters', function() {
                 // Reset all filter inputs
                 $('#eqSearch').val('');
-                
+
                 // Set select value first
                 $('#filterBuilding').val('all');
-                
+
                 // Then update Select2 UI if it exists
                 if ($('#filterBuilding').data('select2')) {
                     $('#filterBuilding').trigger('change.select2');
                 }
-                
+
                 // Reset other filters
                 $('#dateFilter').val('');
                 $('#monthSelect').val('');
@@ -1208,11 +1217,11 @@ function safeHtml($value)
                 $('#dateFrom').val('');
                 $('#dateTo').val('');
                 $('#dateInputsContainer').hide();
-                
+
                 // Apply the filter reset
                 filterTable();
             });
-            
+
             $('#dateFilter').on('change', function() {
                 const filterType = $(this).val();
                 console.log('Date filter changed to:', filterType);
@@ -1221,12 +1230,12 @@ function safeHtml($value)
                 $('#dateInputsContainer').hide();
                 $('#monthPickerContainer').hide();
                 $('#dateRangePickers').hide();
-                
+
                 // Reset building filter if date filter is applied
                 if (filterType) {
                     // Set select value first
                     $('#filterBuilding').val('all');
-                    
+
                     // Then update Select2 UI if it exists
                     if ($('#filterBuilding').data('select2')) {
                         $('#filterBuilding').trigger('change.select2');
@@ -1265,7 +1274,7 @@ function safeHtml($value)
                     filterTable();
                 }
             });
-            
+
             // Run initial filter to make sure everything is displayed correctly
             // This ensures pagination is applied on initial load
             setTimeout(filterTable, 100);
@@ -1327,7 +1336,9 @@ function safeHtml($value)
                     }
                     // Move modal to body
                     document.body.appendChild(modalEl);
-                    var editModal = new bootstrap.Modal(modalEl, {backdrop: true});
+                    var editModal = new bootstrap.Modal(modalEl, {
+                        backdrop: true
+                    });
                     modalEl._bootstrapModal = editModal;
                     editModal.show();
                 }
@@ -1572,7 +1583,7 @@ function safeHtml($value)
                     $('body').removeClass('modal-open');
                     $('body').css('padding-right', '');
                 }
-                
+
                 // Initialize Select2 for the asset tag in edit modal
                 $('#edit_location_asset_tag').select2({
                     tags: false,
@@ -1603,7 +1614,7 @@ function safeHtml($value)
             });
 
         });
-       
+
         document.addEventListener("DOMContentLoaded", function() {
             document.querySelectorAll(".sortable").forEach(th => {
                 th.style.cursor = "pointer";
@@ -1669,7 +1680,9 @@ function safeHtml($value)
                     modalEl._bootstrapModal.dispose();
                 }
                 document.body.appendChild(modalEl);
-                var addModal = new bootstrap.Modal(modalEl, {backdrop: true});
+                var addModal = new bootstrap.Modal(modalEl, {
+                    backdrop: true
+                });
                 modalEl._bootstrapModal = addModal;
                 addModal.show();
             }
