@@ -864,342 +864,20 @@ function safeHtml($value)
             });
         }
         
-        // Initialize pagination for equipment location page
-        document.addEventListener('DOMContentLoaded', function() {
-            // Use the new configurable pagination system
-            initPagination({
-                tableId: 'locationTbody', // Use the actual ID of your table
-                currentPage: 1
-            });
-
-            // Initialize allRows for pagination.js
-            window.allRows = Array.from(document.querySelectorAll('#locationTbody tr'));
-
-            // Force hide pagination buttons if no data or all fits on one page
-            function forcePaginationCheck() {
-                const totalRows = parseInt(document.getElementById('totalRows')?.textContent || '0');
-                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect')?.value || '10');
-                const prevBtn = document.getElementById('prevPage');
-                const nextBtn = document.getElementById('nextPage');
-                const paginationEl = document.getElementById('pagination');
-
-                if (totalRows <= rowsPerPage) {
-                    if (prevBtn) prevBtn.style.cssText = 'display: none !important';
-                    if (nextBtn) nextBtn.style.cssText = 'display: none !important';
-                    if (paginationEl) paginationEl.style.cssText = 'display: none !important';
-                }
-
-                // Also check for visible rows (for when filtering is applied)
-                const visibleRows = document.querySelectorAll('#locationTbody tr:not(.filtered-out)').length;
-                if (visibleRows <= rowsPerPage) {
-                    if (prevBtn) prevBtn.style.cssText = 'display: none !important';
-                    if (nextBtn) nextBtn.style.cssText = 'display: none !important';
-                    if (paginationEl) paginationEl.style.cssText = 'display: none !important';
-                }
-            }
-
-            // Run immediately and after a short delay
-            forcePaginationCheck();
-            setTimeout(forcePaginationCheck, 200);
-
-            // Custom filterTable function for equipment location - FIXED VERSION
-            window.filterTable = function() {
-                // Get filter values
-                const searchText = $('#eqSearch').val() || '';
-                const filterBuilding = $('#filterBuilding').val() || '';
-                const dateFilterType = $('#dateFilter').val() || '';
-                const selectedMonth = $('#monthSelect').val() || '';
-                const selectedYear = $('#yearSelect').val() || '';
-                const dateFrom = $('#dateFrom').val() || '';
-                const dateTo = $('#dateTo').val() || '';
-                
-                // Debug output
-                console.log('FILTER VALUES:', {
-                    searchText: searchText,
-                    filterBuilding: filterBuilding,
-                    dateFilterType: dateFilterType,
-                    selectedMonth: selectedMonth,
-                    selectedYear: selectedYear,
-                    dateFrom: dateFrom,
-                    dateTo: dateTo
-                });
-
-                // Get all rows directly from the DOM
-                const allTableRows = Array.from(document.querySelectorAll('#locationTbody tr:not(#noResultsMessage)'));
-                console.log('Total rows to filter:', allTableRows.length);
-                
-                // Reset filteredRows array
-                window.filteredRows = [];
-
-                // Filter each row
-                allTableRows.forEach(row => {
-                    // Get text content for filtering
-                    const rowText = row.textContent || '';
-                    
-                    // Get building column (3rd column, index 2)
-                    const buildingCell = row.cells && row.cells.length > 2 ? row.cells[2] : null;
-                    const buildingText = buildingCell ? buildingCell.textContent || '' : '';
-                    
-                    // Get date column (10th column, index 9)
-                    const dateCell = row.cells && row.cells.length > 9 ? row.cells[9] : null;
-                    const dateText = dateCell ? dateCell.textContent || '' : '';
-                    const date = dateText ? new Date(dateText) : null;
-
-                    // Debug each row's building value
-                    console.log('Row building value:', buildingText, 'Filter value:', filterBuilding);
-                    
-                    // Apply search filter (case insensitive)
-                    const searchMatch = !searchText || rowText.toLowerCase().includes(searchText.toLowerCase());
-                    
-                    // Apply building filter (case insensitive, exact match)
-                    let buildingMatch = true;
-                    if (filterBuilding && filterBuilding !== 'all' && filterBuilding.toLowerCase() !== 'filter by building') {
-                        // Trim and compare case-insensitive
-                        buildingMatch = buildingText.trim().toLowerCase() === filterBuilding.trim().toLowerCase();
-                        console.log('Building match?', buildingMatch, 'for', buildingText, 'vs', filterBuilding);
-                    }
-                    
-                    // Apply date filter
-                    let dateMatch = true;
-                    if (date && dateFilterType) {
-                        if (dateFilterType === 'month' && selectedMonth && selectedYear) {
-                            dateMatch = (date.getMonth() + 1 === parseInt(selectedMonth)) && 
-                                       (date.getFullYear() === parseInt(selectedYear));
-                        } else if (dateFilterType === 'range' && dateFrom && dateTo) {
-                            const from = new Date(dateFrom);
-                            const to = new Date(dateTo);
-                            to.setHours(23, 59, 59); // End of day
-                            dateMatch = date >= from && date <= to;
-                        }
-                    }
-
-                    // Show or hide row based on filter match
-                    const shouldShow = searchMatch && buildingMatch && dateMatch;
-                    if (shouldShow) {
-                        row.classList.remove('filtered-out');
-                        window.filteredRows.push(row);
-                    } else {
-                        row.classList.add('filtered-out');
-                    }
-                    
-                    // Debug the filter results for this row
-                    console.log('Row filtering:', {
-                        searchMatch: searchMatch,
-                        buildingMatch: buildingMatch,
-                        dateMatch: dateMatch,
-                        shouldShow: shouldShow
-                    });
-                });
-
-                // Sort if needed
-                if (dateFilterType === 'asc' || dateFilterType === 'desc') {
-                    window.filteredRows.sort((a, b) => {
-                        const dateA = a.cells && a.cells[9] ? new Date(a.cells[9].textContent) : new Date(0);
-                        const dateB = b.cells && b.cells[9] ? new Date(b.cells[9].textContent) : new Date(0);
-                        return dateFilterType === 'asc' ? dateA - dateB : dateB - dateA;
-                    });
-
-                    // Remove all rows and add back in sorted order
-                    const tbody = document.getElementById('locationTbody');
-                    if (tbody) {
-                        window.filteredRows.forEach(row => tbody.appendChild(row));
-                    }
-                }
-
-                // Reset to page 1 and update pagination
-                if (typeof paginationConfig !== 'undefined') {
-                    paginationConfig.currentPage = 1;
-                }
-                
-                if (typeof updatePagination === 'function') {
-                    updatePagination();
-                }
-                
-                // Check if pagination controls should be shown
-                setTimeout(forcePaginationCheck, 50);
-                
-                // Show a message if no results found
-                const noResultsMessage = document.getElementById('noResultsMessage');
-                if (noResultsMessage) {
-                    if (window.filteredRows.length === 0) {
-                        noResultsMessage.style.display = 'table-row';
-                    } else {
-                        noResultsMessage.style.display = 'none';
-                    }
-                } else if (window.filteredRows.length === 0) {
-                    // Create and insert a "no results" message if it doesn't exist
-                    const tbody = document.getElementById('locationTbody');
-                    if (tbody) {
-                        const noResultsRow = document.createElement('tr');
-                        noResultsRow.id = 'noResultsMessage';
-                        noResultsRow.innerHTML = `
-                            <td colspan="11" class="text-center py-4">
-                                <div class="alert alert-warning mb-0">
-                                    <i class="bi bi-exclamation-circle me-2"></i> No results found for the current filter criteria.
-                                </div>
-                            </td>
-                        `;
-                        tbody.appendChild(noResultsRow);
-                    }
-                }
-                
-                console.log('Filtered rows:', window.filteredRows.length);
-            };
-
-            // Add a reset button to clear all filters
-            $('#filterContainer').append('<button id="resetFilters" class="btn btn-outline-secondary ms-2">Reset Filters</button>');
-            
-            // Set up event listeners for filtering
-            $('#eqSearch').on('input', filterTable);
-            
-            // Simple change handler for building filter
-            $('#filterBuilding').on('change', function() {
-                console.log('Building filter changed to:', $(this).val());
-                
-                // Reset date filters when building filter changes
-                if ($(this).val() && $(this).val() !== 'all') {
-                    $('#dateFilter').val('');
-                    $('#monthSelect').val('');
-                    $('#yearSelect').val('');
-                    $('#dateFrom').val('');
-                    $('#dateTo').val('');
-                    $('#dateInputsContainer').hide();
-                }
-                
-                filterTable();
-            });
-            
-            // Reset filters button handler
-            $(document).on('click', '#resetFilters', function() {
-                // Reset all filter inputs
-                $('#eqSearch').val('');
-                
-                // Set select value first
-                $('#filterBuilding').val('all');
-                
-                // Then update Select2 UI if it exists
-                if ($('#filterBuilding').data('select2')) {
-                    $('#filterBuilding').trigger('change.select2');
-                }
-                
-                // Reset other filters
-                $('#dateFilter').val('');
-                $('#monthSelect').val('');
-                $('#yearSelect').val('');
-                $('#dateFrom').val('');
-                $('#dateTo').val('');
-                $('#dateInputsContainer').hide();
-                
-                // Apply the filter reset
-                filterTable();
-            });
-            
-            $('#dateFilter').on('change', function() {
-                const filterType = $(this).val();
-                console.log('Date filter changed to:', filterType);
-
-                // Hide all containers first
-                $('#dateInputsContainer').hide();
-                $('#monthPickerContainer').hide();
-                $('#dateRangePickers').hide();
-                
-                // Reset building filter if date filter is applied
-                if (filterType) {
-                    // Set select value first
-                    $('#filterBuilding').val('all');
-                    
-                    // Then update Select2 UI if it exists
-                    if ($('#filterBuilding').data('select2')) {
-                        $('#filterBuilding').trigger('change.select2');
-                    }
-                }
-
-                // Show appropriate containers based on selection
-                if (filterType === 'month') {
-                    $('#dateInputsContainer').show();
-                    $('#monthPickerContainer').show();
-                } else if (filterType === 'range') {
-                    $('#dateInputsContainer').show();
-                    $('#dateRangePickers').show();
-                } else if (filterType === 'desc' || filterType === 'asc') {
-                    // Apply sorting without showing date inputs
-                    filterTable();
-                }
-            });
-
-            // Handle month/year selection changes
-            $('#monthSelect, #yearSelect').on('change', function() {
-                const month = $('#monthSelect').val();
-                const year = $('#yearSelect').val();
-
-                if (month && year) {
-                    filterTable();
-                }
-            });
-
-            // Handle date range changes
-            $('#dateFrom, #dateTo').on('change', function() {
-                const dateFrom = $('#dateFrom').val();
-                const dateTo = $('#dateTo').val();
-
-                if (dateFrom && dateTo) {
-                    filterTable();
-                }
-            });
-            
-            // Run initial filter to make sure everything is displayed correctly
-            setTimeout(filterTable, 100);
-        });
-
-        document.addEventListener('DOMContentLoaded', function() {
-            const searchInput = document.getElementById('eqSearch');
-
-            if (searchInput) {
-                searchInput.addEventListener('keyup', function() {
-                    const searchValue = searchInput.value.trim();
-
-                    if (searchValue.length > 0) {
-                        fetch(`search_equipment_location.php?q=${encodeURIComponent(searchValue)}`)
-                            .then(response => response.text())
-                            .then(data => {
-                                document.getElementById('liveSearchResults').innerHTML = data;
-                            })
-                            .catch(error => console.error('Error:', error));
-                    } else {
-                        document.getElementById('liveSearchResults').innerHTML = "";
-                    }
-                });
-            }
-        });
-
         $(document).ready(function() {
-            // Initialize pagination with the correct table ID
-            initPagination({
-                tableId: 'locationTbody',
-                currentPage: 1
-            });
-
-            // Initialize allRows for pagination.js
-            window.allRows = Array.from(document.querySelectorAll('#locationTbody tr'));
-
-            // First set up the standard event handlers
-            $('#filterBuilding').on('change', function() {
-                console.log('Building filter changed to:', $(this).val());
-                
-                // Reset date filters when building filter changes
-                if ($(this).val() && $(this).val() !== 'all') {
-                    $('#dateFilter').val('');
-                    $('#monthSelect').val('');
-                    $('#yearSelect').val('');
-                    $('#dateFrom').val('');
-                    $('#dateTo').val('');
-                    $('#dateInputsContainer').hide();
-                }
-                
-                filterTable();
-            });
+            // Store all table rows for pagination
+            const locationRows = Array.from(document.querySelectorAll('#locationTbody tr'));
+            window.allRows = locationRows;
+            window.filteredRows = locationRows;
             
-            // Then initialize Select2 with the proper configuration
+            // Initialize allRows for pagination
+            window.allRows = Array.from(document.querySelectorAll('#locationTbody tr'));
+            
+            // Set default pagination values
+            window.currentPage = 1;
+            let rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
+
+            // Initialize Select2 for Building dropdown
             if ($.fn.select2) {
                 try {
                     // First destroy any existing instance
@@ -1213,18 +891,10 @@ function safeHtml($value)
                         allowClear: true,
                         width: '100%',
                         dropdownAutoWidth: true,
-                        minimumResultsForSearch: 0,
-                        dropdownParent: $('#filterBuilding').parent(),
-                        templateResult: function(data) {
-                            if (!data.id) return data.text;
-                            return $('<span>').text(data.text).addClass('py-1');
-                        },
-                        templateSelection: function(data) {
-                            return $('<span>').text(data.text).addClass('py-1');
-                        }
+                        minimumResultsForSearch: 0
                     });
                     
-                    // Set default value and ensure it's reflected in the UI
+                    // Set default value
                     $('#filterBuilding').val('all').trigger('change');
                 } catch (e) {
                     console.error('Error initializing Select2:', e);
@@ -1236,54 +906,217 @@ function safeHtml($value)
                 $('.filter-container').append('<button id="resetFilters" class="btn btn-outline-secondary ms-2">Reset Filters</button>');
             }
             
-            // Set up event listeners for filtering
-            $('#eqSearch').on('input', filterTable);
-            
-            // Reset filters button handler
-            $(document).on('click', '#resetFilters', function() {
-                // Reset all filter inputs
-                $('#eqSearch').val('');
+            // Custom filter function for equipment location
+            function filterTable() {
+                const searchText = $('#eqSearch').val().toLowerCase();
+                const filterBuilding = $('#filterBuilding').val();
+                const dateFilterType = $('#dateFilter').val();
+                const selectedMonth = $('#monthSelect').val();
+                const selectedYear = $('#yearSelect').val();
+                const dateFrom = $('#dateFrom').val();
+                const dateTo = $('#dateTo').val();
                 
-                // Set select value first
-                $('#filterBuilding').val('all');
+                // Reset filteredRows to contain all rows initially
+                window.filteredRows = [];
                 
-                // Then update Select2 UI if it exists
-                if ($('#filterBuilding').data('select2')) {
-                    $('#filterBuilding').trigger('change.select2');
+                // Filter each row
+                window.allRows.forEach(row => {
+                    const rowText = row.textContent.toLowerCase();
+                    
+                    // Get building column
+                    const buildingCell = row.querySelector('td:nth-child(3)');
+                    const buildingText = buildingCell ? buildingCell.textContent.trim() : '';
+                    
+                    // Get date column
+                    const dateCell = row.querySelector('td:nth-child(10)');
+                    const dateText = dateCell ? dateCell.textContent.trim() : '';
+                    const date = dateText ? new Date(dateText) : null;
+                    
+                    // Apply search filter
+                    const searchMatch = !searchText || rowText.includes(searchText);
+                    
+                    // Apply building filter
+                    let buildingMatch = true;
+                    if (filterBuilding && filterBuilding !== 'all' && filterBuilding.toLowerCase() !== 'filter by building') {
+                        buildingMatch = buildingText.toLowerCase() === filterBuilding.toLowerCase();
+                    }
+                    
+                    // Apply date filter
+                    let dateMatch = true;
+                    if (date && dateFilterType) {
+                        if (dateFilterType === 'month' && selectedMonth && selectedYear) {
+                            dateMatch = (date.getMonth() + 1 === parseInt(selectedMonth)) && 
+                                      (date.getFullYear() === parseInt(selectedYear));
+                        } else if (dateFilterType === 'range' && dateFrom && dateTo) {
+                            const from = new Date(dateFrom);
+                            const to = new Date(dateTo);
+                            to.setHours(23, 59, 59); // End of day
+                            dateMatch = date >= from && date <= to;
+                        }
+                    }
+                    
+                    // Only include rows that match all filters
+                    if (searchMatch && buildingMatch && dateMatch) {
+                        window.filteredRows.push(row);
+                    }
+                });
+                
+                // Sort if needed
+                if (dateFilterType === 'asc' || dateFilterType === 'desc') {
+                    window.filteredRows.sort((a, b) => {
+                        const dateA = new Date(a.querySelector('td:nth-child(10)').textContent.trim());
+                        const dateB = new Date(b.querySelector('td:nth-child(10)').textContent.trim());
+                        return dateFilterType === 'asc' ? dateA - dateB : dateB - dateA;
+                    });
                 }
                 
-                // Reset other filters
-                $('#dateFilter').val('');
-                $('#monthSelect').val('');
-                $('#yearSelect').val('');
-                $('#dateFrom').val('');
-                $('#dateTo').val('');
-                $('#dateInputsContainer').hide();
+                // Update total row count
+                $('#totalRows').text(window.filteredRows.length);
                 
-                // Apply the filter reset
-                filterTable();
+                // Reset to first page and update pagination
+                window.currentPage = 1;
+                updatePagination();
+            }
+            
+            // Function to update the pagination display
+            function updatePagination() {
+                const totalRows = window.filteredRows.length;
+                rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
+                const totalPages = Math.ceil(totalRows / rowsPerPage);
+                
+                // Clamp currentPage to valid range
+                window.currentPage = Math.max(1, Math.min(window.currentPage, totalPages || 1));
+                
+                // Update info text
+                $('#totalRows').text(totalRows);
+                $('#currentPage').text(window.currentPage);
+                $('#rowsPerPage').text(Math.min(rowsPerPage, totalRows));
+                
+                // Hide all rows first
+                $('#locationTbody tr').hide();
+                
+                // Calculate range of rows to show
+                const start = (window.currentPage - 1) * rowsPerPage;
+                const end = Math.min(start + rowsPerPage, totalRows);
+                
+                // Show only rows for current page
+                for (let i = start; i < end; i++) {
+                    $(window.filteredRows[i]).show();
+                }
+                
+                // Enable/disable prev/next buttons
+                $('#prevPage').prop('disabled', window.currentPage <= 1);
+                $('#nextPage').prop('disabled', window.currentPage >= totalPages || totalPages === 0);
+                
+                // Generate page numbers
+                createPageNumbers(window.currentPage, totalPages);
+                
+                // Hide pagination controls if not needed
+                if (totalPages <= 1) {
+                    $('#prevPage, #nextPage').hide();
+                    $('#pagination').hide();
+                } else {
+                    $('#prevPage, #nextPage').show();
+                    $('#pagination').show();
+                }
+            }
+            
+            // Function to generate page number buttons
+            function createPageNumbers(currentPage, totalPages) {
+                const $pagination = $('#pagination');
+                $pagination.empty();
+                
+                // Don't show pagination if there's only one page
+                if (totalPages <= 1) {
+                    return;
+                }
+                
+                // Create a simple function to add page buttons
+                function createPageLink(pageNum, isActive = false) {
+                    const $li = $('<li>').addClass('page-item' + (isActive ? ' active' : ''));
+                    const $a = $('<a>')
+                        .addClass('page-link')
+                        .attr('href', '#')
+                        .text(pageNum)
+                        .click(function(e) {
+                            e.preventDefault();
+                            window.currentPage = pageNum;
+                            updatePagination();
+                        });
+                    
+                    $li.append($a);
+                    $pagination.append($li);
+                }
+                
+                // Create a disabled ellipsis item
+                function createEllipsis() {
+                    const $li = $('<li>').addClass('page-item disabled');
+                    const $span = $('<span>').addClass('page-link').html('&hellip;');
+                    $li.append($span);
+                    $pagination.append($li);
+                }
+                
+                // First page
+                createPageLink(1, currentPage === 1);
+                
+                // Ellipsis after first page if needed
+                if (currentPage > 3) {
+                    createEllipsis();
+                }
+                
+                // Pages around current page
+                for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+                    // Skip if it's the first or last page (already shown)
+                    if (i === 1 || i === totalPages) continue;
+                    createPageLink(i, i === currentPage);
+                }
+                
+                // Ellipsis before last page if needed
+                if (currentPage < totalPages - 2) {
+                    createEllipsis();
+                }
+                
+                // Last page if more than one page
+                if (totalPages > 1) {
+                    createPageLink(totalPages, currentPage === totalPages);
+                }
+            }
+            
+            // Event handlers for pagination controls
+            $('#prevPage').on('click', function() {
+                if (window.currentPage > 1) {
+                    window.currentPage--;
+                    updatePagination();
+                }
             });
             
+            $('#nextPage').on('click', function() {
+                const totalPages = Math.ceil(window.filteredRows.length / rowsPerPage);
+                if (window.currentPage < totalPages) {
+                    window.currentPage++;
+                    updatePagination();
+                }
+            });
+            
+            $('#rowsPerPageSelect').on('change', function() {
+                rowsPerPage = parseInt($(this).val());
+                window.currentPage = 1; // Reset to first page
+                updatePagination();
+            });
+            
+            // Filter event handlers
+            $('#eqSearch').on('input', filterTable);
+            $('#filterBuilding').on('change', filterTable);
+            
+            // Date filter handling
             $('#dateFilter').on('change', function() {
                 const filterType = $(this).val();
-                console.log('Date filter changed to:', filterType);
-
+                
                 // Hide all containers first
                 $('#dateInputsContainer').hide();
                 $('#monthPickerContainer').hide();
                 $('#dateRangePickers').hide();
                 
-                // Reset building filter if date filter is applied
-                if (filterType) {
-                    // Set select value first
-                    $('#filterBuilding').val('all');
-                    
-                    // Then update Select2 UI if it exists
-                    if ($('#filterBuilding').data('select2')) {
-                        $('#filterBuilding').trigger('change.select2');
-                    }
-                }
-
                 // Show appropriate containers based on selection
                 if (filterType === 'month') {
                     $('#dateInputsContainer').show();
@@ -1296,381 +1129,62 @@ function safeHtml($value)
                     filterTable();
                 }
             });
-
-            // Handle month/year selection changes
+            
+            // Month/year selection changes
             $('#monthSelect, #yearSelect').on('change', function() {
                 const month = $('#monthSelect').val();
                 const year = $('#yearSelect').val();
-
+                
                 if (month && year) {
                     filterTable();
                 }
             });
-
-            // Handle date range changes
+            
+            // Date range changes
             $('#dateFrom, #dateTo').on('change', function() {
                 const dateFrom = $('#dateFrom').val();
                 const dateTo = $('#dateTo').val();
-
+                
                 if (dateFrom && dateTo) {
                     filterTable();
                 }
             });
             
-            // Run initial filter to make sure everything is displayed correctly
-            setTimeout(filterTable, 100);
-        });
-
-        $(document).ready(function() {
-            // Delegate event for editing location
-            $(document).on('click', '.edit-location', function() {
-                // Always clean up before showing modal
-                if ($('.modal-backdrop').length) {
-                    $('.modal-backdrop').remove();
-                }
-                if ($('body').hasClass('modal-open') && $('.modal.show').length === 0) {
-                    $('body').removeClass('modal-open');
-                    $('body').css('padding-right', '');
-                }
-                // Reset the form and destroy Select2 before populating
-                if ($('#edit_location_asset_tag').hasClass('select2-hidden-accessible')) {
-                    $('#edit_location_asset_tag').select2('destroy');
-                }
-                if ($('#edit_department_id').hasClass('select2-hidden-accessible')) {
-                    $('#edit_department_id').select2('destroy');
-                }
-                $('#editLocationForm')[0].reset();
-
-                var id = $(this).data('id');
-                var assetTag = $(this).data('asset');
-                var buildingLocation = $(this).data('building');
-                var floorNumber = $(this).data('floor');
-                var specificArea = $(this).data('area');
-                var personResponsible = $(this).data('person');
-                var departmentId = $(this).data('department');
-                var remarks = $(this).data('remarks');
-
-                // Ensure asset tag is present in the dropdown
-                var $assetTagSelect = $('#edit_location_asset_tag');
-                if ($assetTagSelect.find('option[value="' + assetTag + '"]').length === 0) {
-                    $assetTagSelect.append('<option value="' + $('<div>').text(assetTag).html() + '">' + $('<div>').text(assetTag).html() + '</option>');
-                }
-                $assetTagSelect.val(assetTag).trigger('change');
-
-                $('#edit_location_id').val(id);
-                $('#edit_building_loc').val(buildingLocation);
-                $('#edit_floor_no').val(floorNumber);
-                $('#edit_specific_area').val(specificArea);
-                $('#edit_person_responsible').val(personResponsible);
-                $('#edit_department_id').val(departmentId).trigger('change');
-                $('#edit_remarks').val(remarks);
-
-                // Move modal to body to ensure backdrop always works
-                var modalEl = document.getElementById('editLocationModal');
-                if (modalEl) {
-                    // Remove any previous modal instance
-                    if (modalEl._bootstrapModal) {
-                        modalEl._bootstrapModal.hide();
-                        modalEl._bootstrapModal.dispose();
-                    }
-                    // Move modal to body
-                    document.body.appendChild(modalEl);
-                    var editModal = new bootstrap.Modal(modalEl, {backdrop: true});
-                    modalEl._bootstrapModal = editModal;
-                    editModal.show();
-                }
-            });
-
-            // Global variable for deletion
-            var deleteId = null;
-
-            // Delegate event for delete button to show modal
-            $(document).on('click', '.delete-location', function(e) {
-                e.preventDefault();
-                deleteId = $(this).data('id');
-                var deleteModal = new bootstrap.Modal(document.getElementById('deleteEDModal'));
-                deleteModal.show();
-            });
-
-            // When confirm delete button is clicked, perform AJAX delete
-            $('#confirmDeleteBtn').on('click', function() {
-                if (deleteId) {
-                    $.ajax({
-                        url: window.location.href,
-                        method: 'GET',
-                        data: {
-                            action: 'delete',
-                            id: deleteId
-                        },
-                        dataType: 'json',
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        },
-                        success: function(response) {
-                            if (response.status === 'success') {
-                                $('#elTable').load(location.href + ' #elTable', function() {
-                                    showToast(response.message, 'success');
-                                    
-                                    // Update allRows and filteredRows for pagination
-                                    window.allRows = Array.from(document.querySelectorAll('#locationTbody tr'));
-                                    window.filteredRows = [...window.allRows];
-                                    
-                                    // Re-initialize pagination
-                                    initPagination({
-                                        tableId: 'locationTbody',
-                                        currentPage: 1
-                                    });
-                                    
-                                    // Apply any active filters
-                                    filterTable();
-                                });
-                            } else {
-                                showToast(response.message, 'error');
-                            }
-                            var deleteModalInstance = bootstrap.Modal.getInstance(document.getElementById('deleteEDModal'));
-                            deleteModalInstance.hide();
-                        },
-                        error: function(xhr, status, error) {
-                            showToast('Error deleting location: ' + error, 'error');
-                        }
-                    });
-                }
-            });
-
-            // AJAX submission for Add Location form using toast notifications
-            $('#addLocationForm').on('submit', function(e) {
-                e.preventDefault();
-                const submitBtn = $(this).find('button[type="submit"]');
-                const originalBtnText = submitBtn.data('original-text') || submitBtn.text();
-
-                // Store the original text once
-                submitBtn.data('original-text', originalBtnText);
-                submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Adding...');
-
-                // Capture form values before submission
-                const assetTag = $('#add_location_asset_tag').val();
-                const buildingLoc = $('#addLocationForm input[name="building_loc"]').val();
-                const specificArea = $('#addLocationForm input[name="specific_area"]').val();
-                const personResponsible = $('#addLocationForm input[name="person_responsible"]').val();
-
-                $.ajax({
-                    url: window.location.href,
-                    method: 'POST',
-                    data: $(this).serialize(),
-                    dataType: 'json',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    success: function(result) {
-                        // Always re-enable the button
-                        submitBtn.prop('disabled', false).html(originalBtnText);
-
-                        if (result.status === 'success') {
-                            $('#addLocationModal').modal('hide');
-                            setTimeout(function() {
-                                // Remove lingering modal-backdrop and modal-open
-                                if ($('.modal-backdrop').length) {
-                                    $('.modal-backdrop').remove();
-                                }
-                                if ($('body').hasClass('modal-open') && $('.modal.show').length === 0) {
-                                    $('body').removeClass('modal-open');
-                                    $('body').css('padding-right', '');
-                                }
-                                // Reset the form and Select2 fields
-                                $('#addLocationForm')[0].reset();
-                                if ($('#add_location_asset_tag').hasClass('select2-hidden-accessible')) {
-                                    $('#add_location_asset_tag').val('').trigger('change');
-                                }
-                                if ($('#add_department_id').hasClass('select2-hidden-accessible')) {
-                                    $('#add_department_id').val('').trigger('change');
-                                }
-                            }, 500);
-                            $('#elTable').load(location.href + ' #elTable', function() {
-                                showToast(result.message, 'success');
-                                
-                                // Update allRows and filteredRows for pagination
-                                window.allRows = Array.from(document.querySelectorAll('#locationTbody tr'));
-                                window.filteredRows = [...window.allRows];
-                                
-                                // Re-initialize pagination
-                                initPagination({
-                                    tableId: 'locationTbody',
-                                    currentPage: 1
-                                });
-                                
-                                // Apply any active filters
-                                filterTable();
-                            });
-                        } else {
-                            showToast(result.message, 'error');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        submitBtn.prop('disabled', false).html(originalBtnText);
-                        showToast('Error adding location: ' + error, 'error');
-                    }
-                });
-            });
-
-            //building location serachable dropdown
-            /* This initialization is now handled earlier - removing to avoid duplication
-            $('#filterBuilding').select2({
-                placeholder: 'Filter by Building',
-                allowClear: true,
-                width: '100%',
-                dropdownAutoWidth: true,
-                minimumResultsForSearch: 0, // always show search box
-                dropdownParent: $('#filterBuilding').parent()
-            });
-            */
-
-            // Department searchable dropdown (Add Location Modal)
-            $('#addLocationModal').on('shown.bs.modal', function() {
-                $('#add_department_id').select2({
-                    dropdownParent: $('#addLocationModal'),
-                    width: '100%',
-                    placeholder: 'Select Department',
-                    allowClear: true
-                });
-            });
-            $('#addLocationModal').on('hidden.bs.modal', function() {
-                if ($('#add_department_id').hasClass('select2-hidden-accessible')) {
-                    $('#add_department_id').select2('destroy');
-                }
-                $(this).find('form')[0].reset();
-            });
-
-            // AJAX submission for Edit Location form using toast notifications
-            $('#editLocationForm').on('submit', function(e) {
-                e.preventDefault();
-                const submitBtn = $(this).find('button[type="submit"]');
-                const originalBtnText = submitBtn.text();
-                submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Updating...');
-
-                // Capture form values before submission
-                const assetTag = $('#edit_location_asset_tag').val();
-                const buildingLoc = $('#edit_building_loc').val();
-                const specificArea = $('#edit_specific_area').val();
-                const personResponsible = $('#edit_person_responsible').val();
-
-                $.ajax({
-                    url: window.location.href,
-                    method: 'POST',
-                    data: $(this).serialize(),
-                    dataType: 'json',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    success: function(result) {
-                        // Always re-enable the button
-                        submitBtn.prop('disabled', false).text(originalBtnText);
-
-                        // Regardless of changes, show a success toast.
-                        if (result.status === 'success') {
-                            $('#editLocationModal').modal('hide');
-                            setTimeout(function() {
-                                // Remove lingering modal-backdrop and modal-open
-                                if ($('.modal-backdrop').length > 1) {
-                                    $('.modal-backdrop').not(':last').remove();
-                                }
-                                if ($('body').hasClass('modal-open') && $('.modal.show').length === 0) {
-                                    $('body').removeClass('modal-open');
-                                    $('body').css('padding-right', '');
-                                }
-                                // Do NOT reset the form or Select2 fields here
-                            }, 500);
-                            $('#elTable').load(location.href + ' #elTable', function() {
-                                showToast(result.message, 'success');
-                                
-                                // Update allRows and filteredRows for pagination
-                                window.allRows = Array.from(document.querySelectorAll('#locationTbody tr'));
-                                window.filteredRows = [...window.allRows];
-                                
-                                // Re-initialize pagination
-                                initPagination({
-                                    tableId: 'locationTbody',
-                                    currentPage: 1
-                                });
-                                
-                                // Apply any active filters
-                                filterTable();
-                            });
-                        } else {
-                            showToast(result.message, 'error');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        submitBtn.prop('disabled', false).text(originalBtnText);
-                        showToast('Error updating location: ' + error, 'error');
-                    }
-                });
-            });
-
-            // Asset Tag Select2 for Add Location Modal
-            $('#addLocationModal').on('shown.bs.modal', function() {
-                $('#add_location_asset_tag').select2({
-                    tags: false,
-                    placeholder: 'Select Asset Tag',
-                    allowClear: true,
-                    width: '100%',
-                    dropdownParent: $('#addLocationModal')
-                });
-            });
-            $('#addLocationModal').on('hidden.bs.modal', function() {
-                if ($('#add_location_asset_tag').hasClass('select2-hidden-accessible')) {
-                    $('#add_location_asset_tag').select2('destroy');
-                }
-                $(this).find('form')[0].reset();
-            });
-            // Asset Tag Select2 for Edit Location Modal
-            $('#editLocationModal').on('shown.bs.modal', function() {
-                // Remove any lingering modal-backdrop and modal-open after showing
-                if ($('.modal-backdrop').length > 1) {
-                    $('.modal-backdrop').not(':last').remove();
-                }
-                if ($('body').hasClass('modal-open') && $('.modal.show').length === 0) {
-                    $('body').removeClass('modal-open');
-                    $('body').css('padding-right', '');
-                }
+            // Reset filters button
+            $(document).on('click', '#resetFilters', function() {
+                // Reset all filter inputs
+                $('#eqSearch').val('');
+                $('#filterBuilding').val('all').trigger('change');
+                $('#dateFilter').val('').trigger('change');
+                $('#monthSelect').val('');
+                $('#yearSelect').val('');
+                $('#dateFrom').val('');
+                $('#dateTo').val('');
+                $('#dateInputsContainer').hide();
                 
-                // Initialize Select2 for the asset tag in edit modal
-                $('#edit_location_asset_tag').select2({
-                    tags: false,
-                    placeholder: 'Select Asset Tag',
-                    allowClear: true,
-                    width: '100%',
-                    dropdownParent: $('#editLocationModal')
-                });
+                // Apply the filter reset
+                filterTable();
             });
-            $('#editLocationModal').on('hidden.bs.modal', function() {
-                // Remove any lingering modal-backdrop and modal-open after hiding
-                if ($('.modal-backdrop').length) {
-                    $('.modal-backdrop').remove();
-                }
-                if ($('body').hasClass('modal-open') && $('.modal.show').length === 0) {
-                    $('body').removeClass('modal-open');
-                    $('body').css('padding-right', '');
-                }
-                // Do NOT reset form or destroy Select2 here
-            });
-
-        });
-       
-        document.addEventListener("DOMContentLoaded", function() {
+            
+            // Table sorting
             document.querySelectorAll(".sortable").forEach(th => {
                 th.style.cursor = "pointer";
                 th.addEventListener("click", function() {
                     const table = th.closest("table");
                     const tbody = table.querySelector("tbody");
-                    const rows = Array.from(tbody.querySelectorAll("tr:not(.filtered-out)"));
                     const index = Array.from(th.parentNode.children).indexOf(th);
                     const type = th.dataset.sort || "string";
                     const asc = !th.classList.contains("asc");
-
-                    rows.sort((a, b) => {
-                        let x = a.children[index].innerText.trim();
-                        let y = b.children[index].innerText.trim();
-
+                    
+                    // Update sort indicators
+                    table.querySelectorAll("th").forEach(header => header.classList.remove("asc", "desc"));
+                    th.classList.add(asc ? "asc" : "desc");
+                    
+                    // Sort the filtered rows
+                    window.filteredRows.sort((a, b) => {
+                        let x = a.children[index]?.innerText.trim() || "";
+                        let y = b.children[index]?.innerText.trim() || "";
+                        
                         if (type === "number") {
                             x = parseFloat(x) || 0;
                             y = parseFloat(y) || 0;
@@ -1681,24 +1195,316 @@ function safeHtml($value)
                             x = x.toLowerCase();
                             y = y.toLowerCase();
                         }
-
+                        
                         return asc ? (x > y ? 1 : -1) : (x < y ? 1 : -1);
                     });
-
-                    tbody.innerHTML = "";
-                    rows.forEach(row => tbody.appendChild(row));
-
-                    table.querySelectorAll("th").forEach(th => th.classList.remove("asc", "desc"));
-                    th.classList.add(asc ? "asc" : "desc");
                     
-                    // Update filteredRows for pagination
-                    window.filteredRows = rows;
-                    
-                    // Reset to page 1 and update pagination
-                    paginationConfig.currentPage = 1;
+                    // Reset to first page and update pagination
+                    window.currentPage = 1;
                     updatePagination();
                 });
             });
+            
+            // Initialize pagination on page load
+            setTimeout(function() {
+                filterTable();
+            }, 100);
+        });
+
+        // Delegate event for editing location
+        $(document).on('click', '.edit-location', function() {
+            // Always clean up before showing modal
+            if ($('.modal-backdrop').length) {
+                $('.modal-backdrop').remove();
+            }
+            if ($('body').hasClass('modal-open') && $('.modal.show').length === 0) {
+                $('body').removeClass('modal-open');
+                $('body').css('padding-right', '');
+            }
+            // Reset the form and destroy Select2 before populating
+            if ($('#edit_location_asset_tag').hasClass('select2-hidden-accessible')) {
+                $('#edit_location_asset_tag').select2('destroy');
+            }
+            if ($('#edit_department_id').hasClass('select2-hidden-accessible')) {
+                $('#edit_department_id').select2('destroy');
+            }
+            $('#editLocationForm')[0].reset();
+
+            var id = $(this).data('id');
+            var assetTag = $(this).data('asset');
+            var buildingLocation = $(this).data('building');
+            var floorNumber = $(this).data('floor');
+            var specificArea = $(this).data('area');
+            var personResponsible = $(this).data('person');
+            var departmentId = $(this).data('department');
+            var remarks = $(this).data('remarks');
+
+            // Ensure asset tag is present in the dropdown
+            var $assetTagSelect = $('#edit_location_asset_tag');
+            if ($assetTagSelect.find('option[value="' + assetTag + '"]').length === 0) {
+                $assetTagSelect.append('<option value="' + $('<div>').text(assetTag).html() + '">' + $('<div>').text(assetTag).html() + '</option>');
+            }
+            $assetTagSelect.val(assetTag).trigger('change');
+
+            $('#edit_location_id').val(id);
+            $('#edit_building_loc').val(buildingLocation);
+            $('#edit_floor_no').val(floorNumber);
+            $('#edit_specific_area').val(specificArea);
+            $('#edit_person_responsible').val(personResponsible);
+            $('#edit_department_id').val(departmentId).trigger('change');
+            $('#edit_remarks').val(remarks);
+
+            // Move modal to body to ensure backdrop always works
+            var modalEl = document.getElementById('editLocationModal');
+            if (modalEl) {
+                // Remove any previous modal instance
+                if (modalEl._bootstrapModal) {
+                    modalEl._bootstrapModal.hide();
+                    modalEl._bootstrapModal.dispose();
+                }
+                // Move modal to body
+                document.body.appendChild(modalEl);
+                var editModal = new bootstrap.Modal(modalEl, {backdrop: true});
+                modalEl._bootstrapModal = editModal;
+                editModal.show();
+            }
+        });
+
+        // Global variable for deletion
+        var deleteId = null;
+
+        // Delegate event for delete button to show modal
+        $(document).on('click', '.delete-location', function(e) {
+            e.preventDefault();
+            deleteId = $(this).data('id');
+            var deleteModal = new bootstrap.Modal(document.getElementById('deleteEDModal'));
+            deleteModal.show();
+        });
+
+        // When confirm delete button is clicked, perform AJAX delete
+        $('#confirmDeleteBtn').on('click', function() {
+            if (deleteId) {
+                $.ajax({
+                    url: window.location.href,
+                    method: 'GET',
+                    data: {
+                        action: 'delete',
+                        id: deleteId
+                    },
+                    dataType: 'json',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            $('#elTable').load(location.href + ' #elTable', function() {
+                                showToast(response.message, 'success');
+                                
+                                // Reinitialize pagination after reload
+                                window.allRows = Array.from(document.querySelectorAll('#locationTbody tr'));
+                                window.filteredRows = [...window.allRows];
+                                filterTable();
+                            });
+                        } else {
+                            showToast(response.message, 'error');
+                        }
+                        var deleteModalInstance = bootstrap.Modal.getInstance(document.getElementById('deleteEDModal'));
+                        deleteModalInstance.hide();
+                    },
+                    error: function(xhr, status, error) {
+                        showToast('Error deleting location: ' + error, 'error');
+                    }
+                });
+            }
+        });
+
+        // AJAX submission for Add Location form using toast notifications
+        $('#addLocationForm').on('submit', function(e) {
+            e.preventDefault();
+            const submitBtn = $(this).find('button[type="submit"]');
+            const originalBtnText = submitBtn.data('original-text') || submitBtn.text();
+
+            // Store the original text once
+            submitBtn.data('original-text', originalBtnText);
+            submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Adding...');
+
+            // Capture form values before submission
+            const assetTag = $('#add_location_asset_tag').val();
+            const buildingLoc = $('#addLocationForm input[name="building_loc"]').val();
+            const specificArea = $('#addLocationForm input[name="specific_area"]').val();
+            const personResponsible = $('#addLocationForm input[name="person_responsible"]').val();
+
+            $.ajax({
+                url: window.location.href,
+                method: 'POST',
+                data: $(this).serialize(),
+                dataType: 'json',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                success: function(result) {
+                    // Always re-enable the button
+                    submitBtn.prop('disabled', false).html(originalBtnText);
+
+                    if (result.status === 'success') {
+                        $('#addLocationModal').modal('hide');
+                        setTimeout(function() {
+                            // Remove lingering modal-backdrop and modal-open
+                            if ($('.modal-backdrop').length) {
+                                $('.modal-backdrop').remove();
+                            }
+                            if ($('body').hasClass('modal-open') && $('.modal.show').length === 0) {
+                                $('body').removeClass('modal-open');
+                                $('body').css('padding-right', '');
+                            }
+                            // Reset the form and Select2 fields
+                            $('#addLocationForm')[0].reset();
+                            if ($('#add_location_asset_tag').hasClass('select2-hidden-accessible')) {
+                                $('#add_location_asset_tag').val('').trigger('change');
+                            }
+                            if ($('#add_department_id').hasClass('select2-hidden-accessible')) {
+                                $('#add_department_id').val('').trigger('change');
+                            }
+                        }, 500);
+                        $('#elTable').load(location.href + ' #elTable', function() {
+                            showToast(result.message, 'success');
+                            
+                            // Reinitialize pagination after reload
+                            window.allRows = Array.from(document.querySelectorAll('#locationTbody tr'));
+                            window.filteredRows = [...window.allRows];
+                            filterTable();
+                        });
+                    } else {
+                        showToast(result.message, 'error');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    submitBtn.prop('disabled', false).html(originalBtnText);
+                    showToast('Error adding location: ' + error, 'error');
+                }
+            });
+        });
+
+        // Department searchable dropdown (Add Location Modal)
+        $('#addLocationModal').on('shown.bs.modal', function() {
+            $('#add_department_id').select2({
+                dropdownParent: $('#addLocationModal'),
+                width: '100%',
+                placeholder: 'Select Department',
+                allowClear: true
+            });
+        });
+        $('#addLocationModal').on('hidden.bs.modal', function() {
+            if ($('#add_department_id').hasClass('select2-hidden-accessible')) {
+                $('#add_department_id').select2('destroy');
+            }
+            $(this).find('form')[0].reset();
+        });
+
+        // AJAX submission for Edit Location form using toast notifications
+        $('#editLocationForm').on('submit', function(e) {
+            e.preventDefault();
+            const submitBtn = $(this).find('button[type="submit"]');
+            const originalBtnText = submitBtn.text();
+            submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Updating...');
+
+            // Capture form values before submission
+            const assetTag = $('#edit_location_asset_tag').val();
+            const buildingLoc = $('#edit_building_loc').val();
+            const specificArea = $('#edit_specific_area').val();
+            const personResponsible = $('#edit_person_responsible').val();
+
+            $.ajax({
+                url: window.location.href,
+                method: 'POST',
+                data: $(this).serialize(),
+                dataType: 'json',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                success: function(result) {
+                    // Always re-enable the button
+                    submitBtn.prop('disabled', false).text(originalBtnText);
+
+                    // Regardless of changes, show a success toast.
+                    if (result.status === 'success') {
+                        $('#editLocationModal').modal('hide');
+                        setTimeout(function() {
+                            // Remove lingering modal-backdrop and modal-open
+                            if ($('.modal-backdrop').length > 1) {
+                                $('.modal-backdrop').not(':last').remove();
+                            }
+                            if ($('body').hasClass('modal-open') && $('.modal.show').length === 0) {
+                                $('body').removeClass('modal-open');
+                                $('body').css('padding-right', '');
+                            }
+                            // Do NOT reset the form or Select2 fields here
+                        }, 500);
+                        $('#elTable').load(location.href + ' #elTable', function() {
+                            showToast(result.message, 'success');
+                            
+                            // Reinitialize pagination after reload
+                            window.allRows = Array.from(document.querySelectorAll('#locationTbody tr'));
+                            window.filteredRows = [...window.allRows];
+                            filterTable();
+                        });
+                    } else {
+                        showToast(result.message, 'error');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    submitBtn.prop('disabled', false).text(originalBtnText);
+                    showToast('Error updating location: ' + error, 'error');
+                }
+            });
+        });
+
+        // Asset Tag Select2 for Add Location Modal
+        $('#addLocationModal').on('shown.bs.modal', function() {
+            $('#add_location_asset_tag').select2({
+                tags: false,
+                placeholder: 'Select Asset Tag',
+                allowClear: true,
+                width: '100%',
+                dropdownParent: $('#addLocationModal')
+            });
+        });
+        $('#addLocationModal').on('hidden.bs.modal', function() {
+            if ($('#add_location_asset_tag').hasClass('select2-hidden-accessible')) {
+                $('#add_location_asset_tag').select2('destroy');
+            }
+            $(this).find('form')[0].reset();
+        });
+        // Asset Tag Select2 for Edit Location Modal
+        $('#editLocationModal').on('shown.bs.modal', function() {
+            // Remove any lingering modal-backdrop and modal-open after showing
+            if ($('.modal-backdrop').length > 1) {
+                $('.modal-backdrop').not(':last').remove();
+            }
+            if ($('body').hasClass('modal-open') && $('.modal.show').length === 0) {
+                $('body').removeClass('modal-open');
+                $('body').css('padding-right', '');
+            }
+            
+            // Initialize Select2 for the asset tag in edit modal
+            $('#edit_location_asset_tag').select2({
+                tags: false,
+                placeholder: 'Select Asset Tag',
+                allowClear: true,
+                width: '100%',
+                dropdownParent: $('#editLocationModal')
+            });
+        });
+        $('#editLocationModal').on('hidden.bs.modal', function() {
+            // Remove any lingering modal-backdrop and modal-open after hiding
+            if ($('.modal-backdrop').length) {
+                $('.modal-backdrop').remove();
+            }
+            if ($('body').hasClass('modal-open') && $('.modal.show').length === 0) {
+                $('body').removeClass('modal-open');
+                $('body').css('padding-right', '');
+            }
+            // Do NOT reset form or destroy Select2 here
         });
 
         $(document).on('click', '[data-bs-target="#addLocationModal"]', function() {
