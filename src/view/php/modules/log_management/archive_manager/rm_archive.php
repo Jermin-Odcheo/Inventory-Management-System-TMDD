@@ -123,28 +123,35 @@ function formatChanges($oldJsonStr)
                         <ul class="list-group mt-2">';
 
             foreach ($value as $module => $privileges) {
+                // Join privileges array into a comma-separated string
+                $privilegesStr = is_array($privileges) ? implode(', ', $privileges) : $privileges;
+
                 $html .= '<li class="list-group-item d-flex justify-content-between align-items-center">
                             <strong>' . htmlspecialchars($module) . ':</strong>
-                            <span class="old-value text-danger"><i class="fas fa-history me-1"></i> ' .
-                    htmlspecialchars($privileges) . '</span>
+                            <span class="old-value text-danger">
+                                <i class="fas fa-history me-1"></i> ' . htmlspecialchars($privilegesStr) . '
+                            </span>
                           </li>';
             }
 
             $html .= '</ul></li>';
         } else {
             // Format the value
-            $displayValue = is_null($value) ? '<em>null</em>' : htmlspecialchars($value);
+            $displayValue = is_null($value) ? '<em>null</em>' : htmlspecialchars((string)$value);
             $friendlyKey = ucwords(str_replace('_', ' ', $key));
 
             $html .= '<li class="list-group-item d-flex justify-content-between align-items-center">
                         <strong>' . $friendlyKey . ':</strong>
-                        <span class="old-value text-danger"><i class="fas fa-history me-1"></i> ' . $displayValue . '</span>
+                        <span class="old-value text-danger">
+                            <i class="fas fa-history me-1"></i> ' . $displayValue . '
+                        </span>
                       </li>';
         }
     }
     $html .= '</ul>';
     return $html;
 }
+
 ?>
 
 <!DOCTYPE html>
