@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 date_default_timezone_set('Asia/Manila');
 ob_start();
@@ -48,7 +48,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) 
             $search = trim($_POST['query'] ?? '');
             $filter = trim($_POST['filter'] ?? '');
             $sql = "SELECT id, asset_tag, asset_description_1, asset_description_2, specifications, 
-brand, model, serial_number, location, accountable_individual, rr_no, remarks, date_created, 
+brand, model, serial_number, date_acquired, location, accountable_individual, rr_no, remarks, date_created, 
 date_modified FROM equipment_details WHERE is_disabled = 0 AND ("
                 . "asset_tag LIKE ? OR "
                 . "asset_description_1 LIKE ? OR "
@@ -82,9 +82,9 @@ date_modified FROM equipment_details WHERE is_disabled = 0 AND ("
                     echo '<td>' . safeHtml($equipment['brand']) . '</td>';
                     echo '<td>' . safeHtml($equipment['model']) . '</td>';
                     echo '<td>' . safeHtml($equipment['serial_number']) . '</td>';
-                    echo '<td>' . (!empty($equipment['date_created']) ? date(
-                        'Y-m-d H:i',
-                        strtotime($equipment['date_created'])
+                    echo '<td>' . (!empty($equipment['date_acquired']) ? date(
+                        'Y-m-d',
+                        strtotime($equipment['date_acquired'])
                     ) : '') . '</td>';
                     echo '<td>' . (!empty($equipment['date_created']) ? date(
                         'Y-m-d H:i',
@@ -184,15 +184,16 @@ criteria.</div></td></tr>';
                         $_POST['rr_no'],
                         'RR'
                     ) === 0 ? $_POST['rr_no'] : 'RR' . $_POST['rr_no']) : null),
+                    $_POST['date_acquired'] ?? null,
                     $date_created,
                     $_POST['remarks'] ?? null
                 ];
 
                 $stmt = $pdo->prepare("INSERT INTO equipment_details (
             asset_tag, asset_description_1, asset_description_2, specifications, 
-            brand, model, serial_number, location, accountable_individual, rr_no, date_created, 
+            brand, model, serial_number, location, accountable_individual, rr_no, date_acquired, date_created, 
 remarks
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 $stmt->execute($values);
                 $newEquipmentId = $pdo->lastInsertId();
 
@@ -207,6 +208,7 @@ remarks
                     'location' => $_POST['location'] ?? null,
                     'accountable_individual' => $_POST['accountable_individual'] ?? null,
                     'rr_no' => $_POST['rr_no'] ?? null,
+                    'date_acquired' => $_POST['date_acquired'] ?? null,
                     'date_created' => $date_created,
                     'remarks' => $_POST['remarks'] ?? null
                 ]);
@@ -278,6 +280,7 @@ remarks
                         $_POST['rr_no'],
                         'RR'
                     ) === 0 ? $_POST['rr_no'] : 'RR' . $_POST['rr_no']) : null),
+                    $_POST['date_acquired'] ?? null,
                     $_POST['remarks'],
                     $_POST['equipment_id']
                 ];
@@ -286,7 +289,7 @@ remarks
                 $stmt = $pdo->prepare("UPDATE equipment_details SET 
             asset_tag = ?, asset_description_1 = ?, asset_description_2 = ?, specifications = ?, 
             brand = ?, model = ?, serial_number = ?, location = ?, accountable_individual = ?, 
-            rr_no = ?, remarks = ?, date_modified = NOW() WHERE id = ?");
+            rr_no = ?, date_acquired = ?, remarks = ?, date_modified = NOW() WHERE id = ?");
                 $stmt->execute($values);
 
                 unset(
@@ -306,6 +309,7 @@ remarks
                     'location' => $_POST['location'],
                     'accountable_individual' => $_POST['accountable_individual'],
                     'rr_no' => $_POST['rr_no'],
+                    'date_acquired' => $_POST['date_acquired'] ?? null,
                     'remarks' => $_POST['remarks']
                 ]);
                 $auditStmt = $pdo->prepare("INSERT INTO audit_log (
@@ -455,7 +459,7 @@ if (isset($_SESSION['equipment_details_updated']) && $_SESSION['equipment_detail
 
 try {
     $stmt = $pdo->query("SELECT id, asset_tag, asset_description_1, asset_description_2,
-                         specifications, brand, model, serial_number, location, 
+                         specifications, brand, model, serial_number, date_acquired, location, 
 accountable_individual, rr_no,
                          remarks, date_created, date_modified FROM equipment_details WHERE 
 is_disabled = 0 ORDER BY id DESC");
@@ -719,6 +723,81 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
         .pagination:empty {
             display: none;
         }
+
+        /* Ensure Select2 input matches form-control size and font */
+        .select2-container--default .select2-selection--single {
+            height: 38px !important;
+            padding: 6px 12px;
+            font-size: 1rem;
+            border: 1px solid #ced4da;
+            border-radius: 0.375rem;
+            background-color: #fff;
+            box-shadow: none;
+            display: flex;
+            align-items: center;
+        }
+
+        .select2-container .select2-selection--single .select2-selection__rendered {
+            line-height: 24px;
+            color: #212529;
+            padding-left: 0;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 36px;
+            right: 10px;
+        }
+
+        .select2-container--open .select2-dropdown {
+            z-index: 9999 !important;
+        }
+        
+        /* Make Select2 match Bootstrap form-control height */
+        .select2-container .select2-selection {
+            min-height: 38px !important;
+        }
+        
+        /* Fix padding for the select2 input */
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            padding-top: 2px;
+        }
+        
+        /* Adjust the clear button position */
+        .select2-container--default .select2-selection--single .select2-selection__clear {
+            margin-right: 20px;
+        }
+        
+        /* Make the dropdown match Bootstrap styling */
+        .select2-dropdown {
+            border-color: #ced4da;
+            border-radius: 0.375rem;
+        }
+        
+        /* Make the search field match Bootstrap input */
+        .select2-container--default .select2-search--dropdown .select2-search__field {
+            border: 1px solid #ced4da;
+            border-radius: 0.25rem;
+            padding: 0.375rem 0.75rem;
+        }
+        
+        .filtered-out {
+            display: none !important;
+        }
+        
+        /* Style for auto-filled fields */
+        input[data-autofill="true"] {
+            background-color: #e9ecef !important;
+            border-color: #ced4da !important;
+            color: #495057 !important;
+            cursor: not-allowed;
+            box-shadow: none !important;
+        }
+        
+        input[data-autofill="true"]::after {
+            content: " (auto-filled)";
+            color: #6c757d;
+            font-style: italic;
+        }
     </style>
 </head>
 
@@ -862,7 +941,8 @@ align-items-center">
                                         <td><?= safeHtml($equipment['brand']); ?></td>
                                         <td><?= safeHtml($equipment['model']); ?></td>
                                         <td><?= safeHtml($equipment['serial_number']); ?></td>
-                                        <td><?= safeHtml($equipment['date_created']); ?></td>
+                                        <td><?= !empty($equipment['date_acquired']) ? date('Y-m-d', 
+strtotime($equipment['date_acquired'])) : ''; ?></td>
                                         <td><?= !empty($equipment['date_created']) ? date('Y-m-d 
 H:i', strtotime($equipment['date_created'])) : ''; ?></td>
                                         <td><?= !empty($equipment['date_modified']) ? date('Y-m-d 
@@ -893,6 +973,8 @@ edit-equipment"
                                                                     safeHtml($equipment['model']); ?>"
                                                         data-serial="<?=
                                                                         safeHtml($equipment['serial_number']); ?>"
+                                                        data-date-acquired="<?=
+                                                                        safeHtml($equipment['date_acquired']); ?>"
                                                         data-location="<?=
                                                                         safeHtml($equipment['location']); ?>"
                                                         data-accountable="<?=
@@ -977,7 +1059,7 @@ align-items-center gap-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header p-4">
-                    <h5 class="modal-title ">Add New Equipment</h5>
+                    <h5 class="modal-title">Add New Equipment</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"
                         aria-label="Close"></button>
                 </div>
@@ -1070,347 +1152,51 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                                         }
                                         ?>
                                     </select>
+                                    <small class="text-muted">Selecting an RR# will auto-fill the acquired date from Charge Invoice</small>
                                 </div>
-                                <style>
-                                    /* Ensure Select2 input matches form-control size and font */
-                                    .select2-container--default .select2-selection--single {
-                                        height: 38px;
-                                        padding: 6px 12px;
-                                        font-size: 1rem;
-                                        border: 1px solid #ced4da;
-                                        border-radius: 0.375rem;
-                                        background-color: #fff;
-                                        box-shadow: none;
-                                        display: flex;
-                                        align-items: center;
-                                    }
-
-                                    .select2-container .select2-selection--single .select2-selection__rendered {
-                                        line-height: 24px;
-                                        color: #212529;
-                                    }
-
-                                    .select2-container--default .select2-selection--single .select2-selection__arrow {
-                                        height: 36px;
-                                        right: 10px;
-                                    }
-
-                                    .select2-container--open .select2-dropdown {
-                                        z-index: 9999 !important;
-                                    }
-                                </style>
-                                <script>
-                                    // This script block remains in equipment_details.php for Select2 initialization for modals
-                                    $(function() {
-                                        $('#add_rr_no').select2({
-                                            placeholder: 'Select or search RR Number',
-                                            allowClear: true,
-                                            width: '100%',
-                                            tags: true, // Allow new entries
-                                            dropdownParent: $('#addEquipmentModal'), // Attach to modal for proper positioning
-                                            minimumResultsForSearch: 0,
-                                            dropdownPosition: 'below', // Always show dropdown below input
-                                            createTag: function(params) {
-                                                // Only allow non-empty, non-duplicate RR numbers (numbers only)
-                                                var term = $.trim(params.term);
-                                                if (term === '') return null;
-                                                var exists = false;
-                                                $('#add_rr_no option').each(function() {
-                                                    if ($(this).text().toLowerCase() === term.toLowerCase()) exists = true;
-                                                });
-                                                // Only allow numbers for new tags
-                                                if (!/^[0-9]+$/.test(term)) {
-                                                    return null;
-                                                }
-                                                return exists ? null : {
-                                                    id: term,
-                                                    text: term
-                                                };
-                                            }
-                                        });
-
-                                        // Initialize Select2 for asset tag dropdown in the add modal
-                                        $('#add_equipment_asset_tag').select2({
-                                            placeholder: 'Select or type Asset Tag',
-                                            allowClear: true,
-                                            tags: true, // Allow typing new values
-                                            width: '100%',
-                                            dropdownParent: $('#addEquipmentModal'),
-                                            minimumResultsForSearch: 0,
-                                            createTag: function(params) {
-                                                var term = $.trim(params.term);
-                                                if (term === '') return null;
-                                                var exists = false;
-                                                $('#add_equipment_asset_tag option').each(function() {
-                                                    if ($(this).text().toLowerCase() ===
-                                                        term.toLowerCase()) exists = true;
-                                                });
-                                                return exists ? null : {
-                                                    id: term,
-                                                    text: term
-                                                };
-                                            }
-                                        }).on('select2:select', function(e) {
-                                            console.log('Asset tag selected:', e.params.data.id);
-                                            var assetTag = e.params.data.id;
-
-                                            // Reset fields before fetching new asset tag info
-                                            const $accountableField =
-                                                $('input[name="accountable_individual"]');
-                                            const $locationField = $('input[name="location"]');
-
-                                            // If fields were previously autofilled, reset them first
-                                            if ($accountableField.attr('data-autofill') === 'true') {
-                                                $accountableField.val('').prop('readonly',
-                                                    false).attr('data-autofill', 'false').removeClass('bg-light');
-                                            }
-
-                                            if ($locationField.attr('data-autofill') === 'true') {
-                                                $locationField.val('').prop('readonly',
-                                                    false).attr('data-autofill', 'false').removeClass('bg-light');
-                                            }
-
-                                            // Fetch and autofill data based on asset tag
-                                            fetchAssetTagInfo(assetTag, 'add', true);
-                                        });
-
-                                        // Handle asset tag being cleared
-                                        $('#add_equipment_asset_tag').on('select2:clear', function() {
-                                            // Reset the Location and Accountable Individual fields
-                                            const $accountableField =
-                                                $('input[name="accountable_individual"]');
-                                            const $locationField = $('input[name="location"]');
-
-                                            if ($accountableField.attr('data-autofill') === 'true') {
-                                                $accountableField.val('').prop('readonly',
-                                                    false).attr('data-autofill', 'false').removeClass('bg-light');
-                                            }
-
-                                            if ($locationField.attr('data-autofill') === 'true') {
-                                                $locationField.val('').prop('readonly',
-                                                    false).attr('data-autofill', 'false').removeClass('bg-light');
-                                            }
-                                        });
-
-                                        // Check if asset tag is already selected when add modal opens
-                                        $('#addEquipmentModal').on('shown.bs.modal', function() {
-                                            // Check if asset tag is already selected
-                                            const assetTagValue = $('#add_equipment_asset_tag').val();
-                                            if (assetTagValue) {
-                                                console.log('Add modal opened with asset tag already selected:', assetTagValue);
-                                                // If an asset tag is already selected, trigger the autofill without notification
-                                                fetchAssetTagInfo(assetTagValue, 'add', false);
-                                            }
-                                        });
-
-                                        //select2 for filtering equipment
-                                        $('#filterEquipment').select2({
-                                            placeholder: 'Filter Equipment Type',
-                                            allowClear: true,
-                                            width: '100%',
-                                            dropdownAutoWidth: true,
-                                            minimumResultsForSearch: 0, // always show search box
-                                            dropdownParent: $('#filterEquipment').parent() // helps with z-index issues
-                                        });
-                                        // Also initialize for edit modal if present
-                                        if ($('#edit_rr_no').length) {
-                                            $('#edit_rr_no').select2({
-                                                placeholder: 'Select or search RR Number',
-                                                allowClear: true,
-                                                width: '100%',
-                                                tags: true,
-                                                dropdownParent: $('#editEquipmentModal'),
-                                                minimumResultsForSearch: 0,
-                                                createTag: function(params) {
-                                                    var term = $.trim(params.term);
-                                                    if (term === '') return null;
-                                                    var exists = false;
-                                                    $('#edit_rr_no option').each(function() {
-                                                        if ($(this).text().toLowerCase() ===
-                                                            term.toLowerCase()) exists = true;
-                                                    });
-                                                    return exists ? null : {
-                                                        id: term,
-                                                        text: term
-                                                    };
-                                                }
-                                            });
-                                            $('#edit_rr_no').on('select2:select', function(e) {
-                                                var data = e.params.data;
-                                                if (data.selected && data.id &&
-                                                    $(this).find('option[value="' + data.id + '"').length === 0) {
-                                                    $.ajax({
-                                                        url: 'modules/equipment_transactions/receiving_report.php',
-                                                        method: 'POST',
-                                                        data: {
-                                                            action: 'create_rr_no',
-                                                            rr_no: data.id
-                                                        },
-                                                        dataType: 'json',
-                                                        headers: {
-                                                            'X-Requested-With': 'XMLHttpRequest'
-                                                        },
-                                                        success: function(response) {
-                                                            if (response.status === 'success') {
-                                                                showToast('RR# ' + data.id + ' created!', 'success');
-                                                            } else {
-                                                                showToast(response.message || 'Failed to create RR#', 'error');
-                                                            }
-                                                        },
-                                                        error: function() {
-                                                            showToast('AJAX error creating RR#',
-                                                                'error');
-                                                        }
-                                                    });
-                                                }
-
-                                                // Reset fields before fetching new RR info
-                                                const $accountableField =
-                                                    $('#edit_accountable_individual');
-                                                const $locationField = $('#edit_location');
-
-                                                // If fields were previously autofilled, reset them 
-                                                first
-                                                if ($accountableField.attr('data-autofill') ===
-                                                    'true') {
-                                                    $accountableField.val('').prop('readonly', false);
-                                                }
-
-                                                if ($locationField.attr('data-autofill') === 'true') {
-                                                    $locationField.val('').prop('readonly', false);
-                                                }
-
-                                                // Add autofill functionality here
-
-                                            });
-
-                                            // Initialize Select2 for asset tag dropdown in the edit modal
-                                            $('#edit_equipment_asset_tag').select2({
-                                                placeholder: 'Select or type Asset Tag',
-                                                allowClear: true,
-                                                tags: true, // Allow typing new values
-                                                width: '100%',
-                                                dropdownParent: $('#editEquipmentModal'),
-                                                minimumResultsForSearch: 0,
-                                                createTag: function(params) {
-                                                    var term = $.trim(params.term);
-                                                    if (term === '') return null;
-                                                    var exists = false;
-                                                    $('#edit_equipment_asset_tag option').each(function() {
-                                                        if ($(this).text().toLowerCase() === term.toLowerCase()) exists = true;
-                                                    });
-                                                    return exists ? null : {
-                                                        id: term,
-                                                        text: term
-                                                    };
-                                                }
-                                            });
-
-                                            // Add event handler for asset tag selection in edit modal
-                                            $('#edit_equipment_asset_tag').on('select2:select',
-                                                function(e) {
-                                                    try {
-                                                        console.log('Edit modal - Asset tag selected:', e.params.data.id);
-                                                        var assetTag = e.params.data.id;
-
-                                                        // Reset fields before fetching new asset tag info
-                                                        const $accountableField =
-                                                            $('#edit_accountable_individual');
-                                                        const $locationField = $('#edit_location');
-
-                                                        // If fields were previously autofilled, reset them
-                                                        if ($accountableField.attr('data-autofill') ===
-                                                            'true') {
-                                                            $accountableField.val('').attr('data-autofill', 'false');
-                                                        }
-
-                                                        if ($locationField.attr('data-autofill') === 'true') {
-                                                            $locationField.val('').attr('data-autofill', 'false');
-                                                        }
-
-                                                        // Fetch and autofill data based on asset tag
-                                                        fetchAssetTagInfo(assetTag, 'edit', true);
-                                                    } catch (error) {
-                                                        console.error('Error in select2:select handler:', error);
-                                                    }
-                                                });
-
-                                            // Handle asset tag being cleared in edit modal
-                                            $('#edit_equipment_asset_tag').on('select2:clear',
-                                                function() {
-                                                    try {
-                                                        // Reset the Location and Accountable Individual fields
-                                                        const $accountableField =
-                                                            $('#edit_accountable_individual');
-                                                        const $locationField = $('#edit_location');
-
-                                                        if ($accountableField.attr('data-autofill') ===
-                                                            'true') {
-                                                            $accountableField.val('').attr('data-autofill', 'false');
-                                                        }
-
-                                                        if ($locationField.attr('data-autofill') === 'true') {
-                                                            $locationField.val('').attr('data-autofill', 'false');
-                                                        }
-                                                    } catch (error) {
-                                                        console.error('Error in select2:clear handler:', error);
-                                                    }
-                                                });
-
-                                            // Check if asset tag is already selected when edit modal opens
-                                            $('#editEquipmentModal').on('shown.bs.modal', function() {
-                                                try {
-                                                    // Check if asset tag is already selected
-                                                    const assetTagValue =
-                                                        $('#edit_equipment_asset_tag').val();
-                                                    if (assetTagValue) {
-                                                        console.log('Edit modal opened with asset tag already selected:', assetTagValue);
-                                                        // If an asset tag is already selected, trigger the autofill without notification
-                                                        fetchAssetTagInfo(assetTagValue, 'edit', false);
-                                                    }
-                                                } catch (error) {
-                                                    console.error('Error in modal shown handler:', error);
-                                                }
-                                            });
-                                        }
-
-                                    });
-                                </script>
                             </div>
                         </div>
-                </div>
-                <div class="mb-3 p-4">
-                    <div class="row">
-                        <div class="mb-3 col-md-6">
-                            <label for="location" class="form-label">Location</label>
-                            <input type="text" class="form-control" name="location"
-                                data-autofill="false">
-                            <small class="text-muted">This field will be autofilled when an Asset Tag
-                                is selected</small>
+                        <div class="mb-3">
+                            <div class="row">
+                                <div class="mb-3 col-md-6">
+                                    <label for="date_acquired" class="form-label">Date Acquired</label>
+                                    <input type="date" class="form-control" name="date_acquired" data-autofill="false">
+                                    <small class="text-muted">This field will be auto-filled and locked when an RR# is selected</small>
+                                </div>
+                            </div>
                         </div>
-                        <div class="mb-3 col-md-6">
-                            <label for="accountable_individual" class="form-label">Accountable
-                                Individual</label>
-                            <input type="text" class="form-control" name="accountable_individual"
-                                data-autofill="false">
-                            <small class="text-muted">This field will be autofilled when an Asset Tag
-                                is selected</small>
+                        <div class="mb-3">
+                            <div class="row">
+                                <div class="mb-3 col-md-6">
+                                    <label for="location" class="form-label">Location</label>
+                                    <input type="text" class="form-control" name="location"
+                                        data-autofill="false">
+                                    <small class="text-muted">This field will be autofilled when an Asset Tag
+                                        is selected</small>
+                                </div>
+                                <div class="mb-3 col-md-6">
+                                    <label for="accountable_individual" class="form-label">Accountable
+                                        Individual</label>
+                                    <input type="text" class="form-control" name="accountable_individual"
+                                        data-autofill="false">
+                                    <small class="text-muted">This field will be autofilled when an Asset Tag
+                                        is selected</small>
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                        <div class="mb-3">
+                            <label for="remarks" class="form-label">Remarks</label>
+                            <textarea class="form-control" name="remarks" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3 text-end">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                                style="margin-right: 4px;">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Create Equipment</button>
+                        </div>
+                    </form>
                 </div>
-                <div class="mb-3 p-4">
-                    <label for="remarks" class="form-label">Remarks</label>
-                    <textarea class="form-control" name="remarks" rows="3"></textarea>
-                </div>
-                <div class="mb-3 text-end p-4">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
-                        style="margin-right: 4px;">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Create Equipment</button>
-                </div>
-                </form>
             </div>
         </div>
-    </div>
     </div>
 
     <div class="modal fade" id="editEquipmentModal" tabindex="-1" data-bs-backdrop="true">
@@ -1501,6 +1287,16 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                                         }
                                         ?>
                                     </select>
+                                    <small class="text-muted">Selecting an RR# will auto-fill the acquired date from Charge Invoice</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="row">
+                                <div class="mb-3 col-md-6">
+                                    <label for="edit_date_acquired" class="form-label">Date Acquired</label>
+                                    <input type="date" class="form-control" name="date_acquired" id="edit_date_acquired" data-autofill="false">
+                                    <small class="text-muted">This field will be auto-filled and locked when an RR# is selected</small>
                                 </div>
                             </div>
                         </div>
@@ -1562,6 +1358,64 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="<?php echo BASE_URL; ?>src/control/js/toast.js"></script>
     <script src="<?php echo BASE_URL; ?>src/control/js/asset_tag_autofill.js"></script>
+    <script src="<?php echo BASE_URL; ?>src/control/js/rr_autofill.js"></script>
+    <script>
+        $(document).ready(function() {
+            // Initialize Select2 for RR# dropdowns
+            $('#add_rr_no').select2({
+                placeholder: 'Select or search RR Number',
+                allowClear: true,
+                width: '100%',
+                tags: true, // Allow new entries
+                dropdownParent: $('#addEquipmentModal'), // Attach to modal for proper positioning
+                minimumResultsForSearch: 0,
+                dropdownPosition: 'below', // Always show dropdown below input
+                createTag: function(params) {
+                    // Only allow non-empty, non-duplicate RR numbers (numbers only)
+                    var term = $.trim(params.term);
+                    if (term === '') return null;
+                    var exists = false;
+                    $('#add_rr_no option').each(function() {
+                        if ($(this).text().toLowerCase() === term.toLowerCase()) exists = true;
+                    });
+                    // Only allow numbers for new tags
+                    if (!/^[0-9]+$/.test(term)) {
+                        return null;
+                    }
+                    return exists ? null : {
+                        id: term,
+                        text: term
+                    };
+                }
+            });
+            
+            $('#edit_rr_no').select2({
+                placeholder: 'Select or search RR Number',
+                allowClear: true,
+                width: '100%',
+                tags: true,
+                dropdownParent: $('#editEquipmentModal'),
+                minimumResultsForSearch: 0,
+                createTag: function(params) {
+                    // Only allow non-empty, non-duplicate RR numbers (numbers only)
+                    var term = $.trim(params.term);
+                    if (term === '') return null;
+                    var exists = false;
+                    $('#edit_rr_no option').each(function() {
+                        if ($(this).text().toLowerCase() === term.toLowerCase()) exists = true;
+                    });
+                    // Only allow numbers for new tags
+                    if (!/^[0-9]+$/.test(term)) {
+                        return null;
+                    }
+                    return exists ? null : {
+                        id: term,
+                        text: term
+                    };
+                }
+            });
+        });
+    </script>
     <style>
         .filtered-out {
             display: none !important;
@@ -1983,6 +1837,7 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                     $('#edit_brand').val(d.brand);
                     $('#edit_model').val(d.model);
                     $('#edit_serial_number').val(d.serial);
+                    $('#edit_date_acquired').val(d.dateAcquired);
                     $('#edit_location').val(d.location);
                     $('#edit_accountable_individual').val(d.accountable);
                     $('#edit_remarks').val(d.remarks);
