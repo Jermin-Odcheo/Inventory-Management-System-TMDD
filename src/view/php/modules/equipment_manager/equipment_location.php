@@ -136,7 +136,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAjax) {
             if (empty($assetTag)) {
                 throw new Exception('Asset tag is required');
             }
-            
+
             if (empty($deviceState)) {
                 throw new Exception('Device state is required');
             }
@@ -226,7 +226,7 @@ if (
         if ($locationData) {
             // Get the asset tag from the location data
             $assetTag = $locationData['asset_tag'];
-            
+
             $oldValues = json_encode([
                 'asset_tag'          => $locationData['asset_tag'],
                 'building_loc'       => $locationData['building_loc'],
@@ -237,7 +237,7 @@ if (
                 'device_state'       => $locationData['device_state'],
                 'remarks'            => $locationData['remarks']
             ]);
-            
+
             // 1. Update equipment_location to set is_disabled = 1
             $stmt = $pdo->prepare("UPDATE equipment_location SET is_disabled = 1 WHERE equipment_location_id = ?");
             $stmt->execute([$id]);
@@ -258,12 +258,12 @@ if (
                 null,
                 'Successful'
             ]);
-            
+
             // Since equipment_location is the parent of Asset Tag, we don't cascade the deletion
             // to equipment_details or equipment_status
-            
+
             echo json_encode(['status' => 'success', 'message' => 'Equipment Location deleted successfully']);
-            
+
             $pdo->commit();
         } else {
             echo json_encode(['status' => 'error', 'message' => 'Location not found']);
@@ -312,10 +312,10 @@ if (strlen($q) > 0) {
        OR remarks LIKE :q
     LIMIT 10
 ");
-$likeQ = "%$q%";
-$stmt->execute(['q' => $likeQ]);
+    $likeQ = "%$q%";
+    $stmt->execute(['q' => $likeQ]);
 
-while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         echo "<div class='result-item'>"
             . "<strong>Asset Tag:</strong> " . htmlspecialchars($row['asset_tag']) . " - "
             . "<strong>Building:</strong> " . htmlspecialchars($row['building_loc']) . " - "
@@ -371,7 +371,7 @@ function safeHtml($value)
         th.sortable.desc::after {
             content: " ▼";
         }
-        
+
         /* Select2 custom styling to match other filter elements */
         .select2-container--default .select2-selection--single {
             height: 38px;
@@ -379,40 +379,40 @@ function safeHtml($value)
             border: 1px solid #ced4da;
             border-radius: 0.25rem;
         }
-        
+
         .select2-container--default .select2-selection--single .select2-selection__arrow {
             height: 36px;
         }
-        
+
         .select2-container--default .select2-selection--single .select2-selection__rendered {
             line-height: 24px;
             color: #212529;
             padding-left: 8px;
         }
-    
+
         /* Make all filter elements have consistent height */
-        .filter-container select, 
+        .filter-container select,
         .filter-container input,
         .filter-container .select2-container {
             height: calc(1.5em + 0.75rem + 2px);
         }
 
         /* Style the filter container elements for consistent spacing */
-        .filter-container > div {
+        .filter-container>div {
             padding: 0 8px;
         }
-        
+
         /* Ensure Select2 container is properly aligned */
         .filter-container .select2-container--default .select2-selection--single {
             display: flex;
             align-items: center;
         }
-        
+
         /* Match Select2 dropdown to Bootstrap form-select style */
         .select2-dropdown {
             border-color: #ced4da;
         }
-        
+
         /* Match dropdown item styling */
         .select2-container--default .select2-results__option {
             padding: 6px 12px;
@@ -627,15 +627,29 @@ function safeHtml($value)
                             <select class="form-select" name="asset_tag" id="add_location_asset_tag" required style="width: 100%;">
                                 <option value="">Select Asset Tag</option>
                                 <?php
-                                // Fetch unique asset tags from equipment_details and equipment_status
+                                // Fetch unique asset tags from equipment_details
+                                // but exclude those that already have active status records
                                 $assetTags = [];
+
+                                // Get all asset tags from equipment_details
                                 $stmt1 = $pdo->query("SELECT DISTINCT asset_tag FROM equipment_details WHERE is_disabled = 0");
                                 $assetTags = array_merge($assetTags, $stmt1->fetchAll(PDO::FETCH_COLUMN));
-                                $stmt2 = $pdo->query("SELECT DISTINCT asset_tag FROM equipment_status WHERE is_disabled = 0");
-                                $assetTags = array_merge($assetTags, $stmt2->fetchAll(PDO::FETCH_COLUMN));
-                                $assetTags = array_unique(array_filter($assetTags));
-                                sort($assetTags);
-                                foreach ($assetTags as $tag) {
+                                
+                                // Get asset tags that already have active location records
+                                $stmt2 = $pdo->query("SELECT DISTINCT asset_tag FROM equipment_location WHERE is_disabled = 0");
+                                $activeLocationTags = $stmt2->fetchAll(PDO::FETCH_COLUMN);
+                                
+                                // Get asset tags that already have active status records
+                                $stmt3 = $pdo->query("SELECT DISTINCT asset_tag FROM equipment_status WHERE is_disabled = 0");
+                                $activeStatusTags = $stmt3->fetchAll(PDO::FETCH_COLUMN);
+                                
+                                // Filter out asset tags that already have active location or status records
+                                $availableAssetTags = array_diff($assetTags, $activeLocationTags, $activeStatusTags);
+                                
+                                // Sort the available asset tags
+                                sort($availableAssetTags);
+                                
+                                foreach ($availableAssetTags as $tag) {
                                     echo '<option value="' . htmlspecialchars($tag) . '">' . htmlspecialchars($tag) . '</option>';
                                 }
                                 ?>
@@ -646,22 +660,22 @@ function safeHtml($value)
                             <label for="building_loc" class="form-label">Building Location</label>
                             <input type="text" class="form-control" name="building_loc">
                         </div>
-                        
+
                         <div class="mb-3">
                             <label for="floor_no" class="form-label">Floor Number</label>
                             <input type="text" class="form-control" name="floor_no" autocomplete="off">
                         </div>
-                        
+
                         <div class="mb-3">
                             <label for="specific_area" class="form-label">Specific Area</label>
                             <input type="text" class="form-control" name="specific_area">
                         </div>
-                        
+
                         <div class="mb-3">
                             <label for="person_responsible" class="form-label">Person Responsible</label>
                             <input type="text" class="form-control" name="person_responsible">
                         </div>
-                    
+
                         <div class="mb-3">
                             <label for="department_id" class="form-label">Department</label>
                             <select class="form-control" id="add_department_id" name="department_id">
@@ -679,23 +693,23 @@ function safeHtml($value)
                                 ?>
                             </select>
                         </div>
-                        
+
                         <div class="mb-3">
                             <label class="form-label">Device State</label>
                             <select class="form-select" id="devState" name="device_state" required>
-                            <option value="Inventory">Inventory</option>
+                                <option value="Inventory">Inventory</option>
                                 <option value="Transffered">Transffered</option>
                                 <option value="Borrowed">Borrowed</option>
                                 <option value="Returned">Returned</option>
                                 <option value="Stationed">Stationed</option>
                             </select>
                         </div>
-                        
+
                         <div class="mb-3">
                             <label for="remarks" class="form-label">Remarks</label>
                             <textarea class="form-control" name="remarks" rows="3"></textarea>
                         </div>
-                        
+
                         <div class="modal-footer border-0">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="margin-right: 4px;">Cancel</button>
                             <button type="submit" class="btn btn-primary">Add Equipment Location</button>
@@ -714,7 +728,7 @@ function safeHtml($value)
                     <h5 class="modal-title">Edit Location</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                
+
                 <div class="modal-body">
                     <form id="editLocationForm" method="post">
                         <input type="hidden" name="action" value="update">
@@ -732,27 +746,27 @@ function safeHtml($value)
                                 ?>
                             </select>
                         </div>
-                        
+
                         <div class="mb-3">
                             <label for="edit_building_loc" class="form-label"><i class="bi bi-building"></i> Building Location</label>
                             <input type="text" class="form-control" id="edit_building_loc" name="building_loc">
                         </div>
-                        
+
                         <div class="mb-3">
                             <label for="edit_floor_no" class="form-label"><i class="bi bi-layers"></i> Floor Number</label>
                             <input type="text" class="form-control" id="edit_floor_no" name="floor_no" autocomplete="off">
                         </div>
-                        
+
                         <div class="mb-3">
                             <label for="edit_specific_area" class="form-label"><i class="bi bi-pin-map"></i> Specific Area</label>
                             <input type="text" class="form-control" id="edit_specific_area" name="specific_area">
                         </div>
-                        
+
                         <div class="mb-3">
                             <label for="edit_person_responsible" class="form-label"><i class="bi bi-person"></i> Person Responsible</label>
                             <input type="text" class="form-control" id="edit_person_responsible" name="person_responsible">
                         </div>
-                        
+
                         <div class="mb-3">
                             <label for="edit_department_id" class="form-label"><i class="bi bi-building"></i> Department</label>
                             <select class="form-control" id="edit_department_id" name="department_id">
@@ -773,7 +787,7 @@ function safeHtml($value)
                         <div class="mb-3">
                             <label class="form-label">Device State</label>
                             <select class="form-select" id="devState" name="device_state" required>
-                            <option value="Inventory">Inventory</option>
+                                <option value="Inventory">Inventory</option>
                                 <option value="Transffered">Transffered</option>
                                 <option value="Borrowed">Borrowed</option>
                                 <option value="Returned">Returned</option>
@@ -821,9 +835,12 @@ function safeHtml($value)
         // Function to directly update equipment details after successful form submission
         function directUpdateEquipmentDetails(assetTag, buildingLoc, specificArea, personResponsible) {
             console.log('Directly updating equipment details with:', {
-                assetTag, buildingLoc, specificArea, personResponsible
+                assetTag,
+                buildingLoc,
+                specificArea,
+                personResponsible
             });
-            
+
             // Format location as "Building, Area" if both are available
             let location = '';
             if (buildingLoc && specificArea) {
@@ -833,7 +850,7 @@ function safeHtml($value)
             } else if (specificArea) {
                 location = specificArea;
             }
-            
+
             // Make AJAX request to update equipment details
             $.ajax({
                 url: window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/')) + '/equipment_details_update.php',
@@ -863,16 +880,16 @@ function safeHtml($value)
                 }
             });
         }
-        
+
         $(document).ready(function() {
             // Store all table rows for pagination
             const locationRows = Array.from(document.querySelectorAll('#locationTbody tr'));
             window.allRows = locationRows;
             window.filteredRows = locationRows;
-            
+
             // Initialize allRows for pagination
             window.allRows = Array.from(document.querySelectorAll('#locationTbody tr'));
-            
+
             // Set default pagination values
             window.currentPage = 1;
             let rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
@@ -884,7 +901,7 @@ function safeHtml($value)
                     if ($('#filterBuilding').data('select2')) {
                         $('#filterBuilding').select2('destroy');
                     }
-                    
+
                     // Initialize with proper settings
                     $('#filterBuilding').select2({
                         placeholder: 'Filter by Building',
@@ -893,19 +910,19 @@ function safeHtml($value)
                         dropdownAutoWidth: true,
                         minimumResultsForSearch: 0
                     });
-                    
+
                     // Set default value
                     $('#filterBuilding').val('all').trigger('change');
                 } catch (e) {
                     console.error('Error initializing Select2:', e);
                 }
             }
-            
+
             // Add reset button if it doesn't exist
             if ($('#resetFilters').length === 0) {
                 $('.filter-container').append('<button id="resetFilters" class="btn btn-outline-secondary ms-2">Reset Filters</button>');
             }
-            
+
             // Custom filter function for equipment location
             function filterTable() {
                 const searchText = $('#eqSearch').val().toLowerCase();
@@ -915,38 +932,38 @@ function safeHtml($value)
                 const selectedYear = $('#yearSelect').val();
                 const dateFrom = $('#dateFrom').val();
                 const dateTo = $('#dateTo').val();
-                
+
                 // Reset filteredRows to contain all rows initially
                 window.filteredRows = [];
-                
+
                 // Filter each row
                 window.allRows.forEach(row => {
                     const rowText = row.textContent.toLowerCase();
-                    
+
                     // Get building column
                     const buildingCell = row.querySelector('td:nth-child(3)');
                     const buildingText = buildingCell ? buildingCell.textContent.trim() : '';
-                    
+
                     // Get date column
                     const dateCell = row.querySelector('td:nth-child(10)');
                     const dateText = dateCell ? dateCell.textContent.trim() : '';
                     const date = dateText ? new Date(dateText) : null;
-                    
+
                     // Apply search filter
                     const searchMatch = !searchText || rowText.includes(searchText);
-                    
+
                     // Apply building filter
                     let buildingMatch = true;
                     if (filterBuilding && filterBuilding !== 'all' && filterBuilding.toLowerCase() !== 'filter by building') {
                         buildingMatch = buildingText.toLowerCase() === filterBuilding.toLowerCase();
                     }
-                    
+
                     // Apply date filter
                     let dateMatch = true;
                     if (date && dateFilterType) {
                         if (dateFilterType === 'month' && selectedMonth && selectedYear) {
-                            dateMatch = (date.getMonth() + 1 === parseInt(selectedMonth)) && 
-                                      (date.getFullYear() === parseInt(selectedYear));
+                            dateMatch = (date.getMonth() + 1 === parseInt(selectedMonth)) &&
+                                (date.getFullYear() === parseInt(selectedYear));
                         } else if (dateFilterType === 'range' && dateFrom && dateTo) {
                             const from = new Date(dateFrom);
                             const to = new Date(dateTo);
@@ -954,13 +971,13 @@ function safeHtml($value)
                             dateMatch = date >= from && date <= to;
                         }
                     }
-                    
+
                     // Only include rows that match all filters
                     if (searchMatch && buildingMatch && dateMatch) {
                         window.filteredRows.push(row);
                     }
                 });
-                
+
                 // Sort if needed
                 if (dateFilterType === 'asc' || dateFilterType === 'desc') {
                     window.filteredRows.sort((a, b) => {
@@ -969,48 +986,48 @@ function safeHtml($value)
                         return dateFilterType === 'asc' ? dateA - dateB : dateB - dateA;
                     });
                 }
-                
+
                 // Update total row count
                 $('#totalRows').text(window.filteredRows.length);
-                
+
                 // Reset to first page and update pagination
                 window.currentPage = 1;
                 updatePagination();
             }
-            
+
             // Function to update the pagination display
             function updatePagination() {
                 const totalRows = window.filteredRows.length;
                 rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
                 const totalPages = Math.ceil(totalRows / rowsPerPage);
-                
+
                 // Clamp currentPage to valid range
                 window.currentPage = Math.max(1, Math.min(window.currentPage, totalPages || 1));
-                
+
                 // Update info text
                 $('#totalRows').text(totalRows);
                 $('#currentPage').text(window.currentPage);
                 $('#rowsPerPage').text(Math.min(rowsPerPage, totalRows));
-                
+
                 // Hide all rows first
                 $('#locationTbody tr').hide();
-                
+
                 // Calculate range of rows to show
                 const start = (window.currentPage - 1) * rowsPerPage;
                 const end = Math.min(start + rowsPerPage, totalRows);
-                
+
                 // Show only rows for current page
                 for (let i = start; i < end; i++) {
                     $(window.filteredRows[i]).show();
                 }
-                
+
                 // Enable/disable prev/next buttons
                 $('#prevPage').prop('disabled', window.currentPage <= 1);
                 $('#nextPage').prop('disabled', window.currentPage >= totalPages || totalPages === 0);
-                
+
                 // Generate page numbers
                 createPageNumbers(window.currentPage, totalPages);
-                
+
                 // Hide pagination controls if not needed
                 if (totalPages <= 1) {
                     $('#prevPage, #nextPage').hide();
@@ -1020,17 +1037,17 @@ function safeHtml($value)
                     $('#pagination').show();
                 }
             }
-            
+
             // Function to generate page number buttons
             function createPageNumbers(currentPage, totalPages) {
                 const $pagination = $('#pagination');
                 $pagination.empty();
-                
+
                 // Don't show pagination if there's only one page
                 if (totalPages <= 1) {
                     return;
                 }
-                
+
                 // Create a simple function to add page buttons
                 function createPageLink(pageNum, isActive = false) {
                     const $li = $('<li>').addClass('page-item' + (isActive ? ' active' : ''));
@@ -1043,11 +1060,11 @@ function safeHtml($value)
                             window.currentPage = pageNum;
                             updatePagination();
                         });
-                    
+
                     $li.append($a);
                     $pagination.append($li);
                 }
-                
+
                 // Create a disabled ellipsis item
                 function createEllipsis() {
                     const $li = $('<li>').addClass('page-item disabled');
@@ -1055,33 +1072,33 @@ function safeHtml($value)
                     $li.append($span);
                     $pagination.append($li);
                 }
-                
+
                 // First page
                 createPageLink(1, currentPage === 1);
-                
+
                 // Ellipsis after first page if needed
                 if (currentPage > 3) {
                     createEllipsis();
                 }
-                
+
                 // Pages around current page
                 for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
                     // Skip if it's the first or last page (already shown)
                     if (i === 1 || i === totalPages) continue;
                     createPageLink(i, i === currentPage);
                 }
-                
+
                 // Ellipsis before last page if needed
                 if (currentPage < totalPages - 2) {
                     createEllipsis();
                 }
-                
+
                 // Last page if more than one page
                 if (totalPages > 1) {
                     createPageLink(totalPages, currentPage === totalPages);
                 }
             }
-            
+
             // Event handlers for pagination controls
             $('#prevPage').on('click', function() {
                 if (window.currentPage > 1) {
@@ -1089,7 +1106,7 @@ function safeHtml($value)
                     updatePagination();
                 }
             });
-            
+
             $('#nextPage').on('click', function() {
                 const totalPages = Math.ceil(window.filteredRows.length / rowsPerPage);
                 if (window.currentPage < totalPages) {
@@ -1097,26 +1114,26 @@ function safeHtml($value)
                     updatePagination();
                 }
             });
-            
+
             $('#rowsPerPageSelect').on('change', function() {
                 rowsPerPage = parseInt($(this).val());
                 window.currentPage = 1; // Reset to first page
                 updatePagination();
             });
-            
+
             // Filter event handlers
             $('#eqSearch').on('input', filterTable);
             $('#filterBuilding').on('change', filterTable);
-            
+
             // Date filter handling
             $('#dateFilter').on('change', function() {
                 const filterType = $(this).val();
-                
+
                 // Hide all containers first
                 $('#dateInputsContainer').hide();
                 $('#monthPickerContainer').hide();
                 $('#dateRangePickers').hide();
-                
+
                 // Show appropriate containers based on selection
                 if (filterType === 'month') {
                     $('#dateInputsContainer').show();
@@ -1129,27 +1146,27 @@ function safeHtml($value)
                     filterTable();
                 }
             });
-            
+
             // Month/year selection changes
             $('#monthSelect, #yearSelect').on('change', function() {
                 const month = $('#monthSelect').val();
                 const year = $('#yearSelect').val();
-                
+
                 if (month && year) {
                     filterTable();
                 }
             });
-            
+
             // Date range changes
             $('#dateFrom, #dateTo').on('change', function() {
                 const dateFrom = $('#dateFrom').val();
                 const dateTo = $('#dateTo').val();
-                
+
                 if (dateFrom && dateTo) {
                     filterTable();
                 }
             });
-            
+
             // Reset filters button
             $(document).on('click', '#resetFilters', function() {
                 // Reset all filter inputs
@@ -1161,11 +1178,11 @@ function safeHtml($value)
                 $('#dateFrom').val('');
                 $('#dateTo').val('');
                 $('#dateInputsContainer').hide();
-                
+
                 // Apply the filter reset
                 filterTable();
             });
-            
+
             // Table sorting
             document.querySelectorAll(".sortable").forEach(th => {
                 th.style.cursor = "pointer";
@@ -1175,16 +1192,16 @@ function safeHtml($value)
                     const index = Array.from(th.parentNode.children).indexOf(th);
                     const type = th.dataset.sort || "string";
                     const asc = !th.classList.contains("asc");
-                    
+
                     // Update sort indicators
                     table.querySelectorAll("th").forEach(header => header.classList.remove("asc", "desc"));
                     th.classList.add(asc ? "asc" : "desc");
-                    
+
                     // Sort the filtered rows
                     window.filteredRows.sort((a, b) => {
                         let x = a.children[index]?.innerText.trim() || "";
                         let y = b.children[index]?.innerText.trim() || "";
-                        
+
                         if (type === "number") {
                             x = parseFloat(x) || 0;
                             y = parseFloat(y) || 0;
@@ -1195,16 +1212,16 @@ function safeHtml($value)
                             x = x.toLowerCase();
                             y = y.toLowerCase();
                         }
-                        
+
                         return asc ? (x > y ? 1 : -1) : (x < y ? 1 : -1);
                     });
-                    
+
                     // Reset to first page and update pagination
                     window.currentPage = 1;
                     updatePagination();
                 });
             });
-            
+
             // Initialize pagination on page load
             setTimeout(function() {
                 filterTable();
@@ -1264,7 +1281,9 @@ function safeHtml($value)
                 }
                 // Move modal to body
                 document.body.appendChild(modalEl);
-                var editModal = new bootstrap.Modal(modalEl, {backdrop: true});
+                var editModal = new bootstrap.Modal(modalEl, {
+                    backdrop: true
+                });
                 modalEl._bootstrapModal = editModal;
                 editModal.show();
             }
@@ -1299,7 +1318,7 @@ function safeHtml($value)
                         if (response.status === 'success') {
                             $('#elTable').load(location.href + ' #elTable', function() {
                                 showToast(response.message, 'success');
-                                
+
                                 // Reinitialize pagination after reload
                                 window.allRows = Array.from(document.querySelectorAll('#locationTbody tr'));
                                 window.filteredRows = [...window.allRows];
@@ -1368,7 +1387,7 @@ function safeHtml($value)
                         }, 500);
                         $('#elTable').load(location.href + ' #elTable', function() {
                             showToast(result.message, 'success');
-                            
+
                             // Reinitialize pagination after reload
                             window.allRows = Array.from(document.querySelectorAll('#locationTbody tr'));
                             window.filteredRows = [...window.allRows];
@@ -1442,7 +1461,7 @@ function safeHtml($value)
                         }, 500);
                         $('#elTable').load(location.href + ' #elTable', function() {
                             showToast(result.message, 'success');
-                            
+
                             // Reinitialize pagination after reload
                             window.allRows = Array.from(document.querySelectorAll('#locationTbody tr'));
                             window.filteredRows = [...window.allRows];
@@ -1485,7 +1504,7 @@ function safeHtml($value)
                 $('body').removeClass('modal-open');
                 $('body').css('padding-right', '');
             }
-            
+
             // Initialize Select2 for the asset tag in edit modal
             $('#edit_location_asset_tag').select2({
                 tags: false,
@@ -1525,7 +1544,9 @@ function safeHtml($value)
                     modalEl._bootstrapModal.dispose();
                 }
                 document.body.appendChild(modalEl);
-                var addModal = new bootstrap.Modal(modalEl, {backdrop: true});
+                var addModal = new bootstrap.Modal(modalEl, {
+                    backdrop: true
+                });
                 modalEl._bootstrapModal = addModal;
                 addModal.show();
             }

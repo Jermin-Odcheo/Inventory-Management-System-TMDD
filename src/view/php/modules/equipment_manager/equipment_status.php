@@ -708,14 +708,27 @@ input[readonly] {
                                     <option value="">Select Asset Tag</option>
                                     <?php
                                     // Fetch unique asset tags from equipment_details and equipment_location
+                                    // but exclude those that already have active status records
                                     $assetTags = [];
+                                    
+                                    // Get all asset tags from equipment_details and equipment_location
                                     $stmt1 = $pdo->query("SELECT DISTINCT asset_tag FROM equipment_details WHERE is_disabled = 0");
                                     $assetTags = array_merge($assetTags, $stmt1->fetchAll(PDO::FETCH_COLUMN));
                                     $stmt2 = $pdo->query("SELECT DISTINCT asset_tag FROM equipment_location WHERE is_disabled = 0");
                                     $assetTags = array_merge($assetTags, $stmt2->fetchAll(PDO::FETCH_COLUMN));
                                     $assetTags = array_unique(array_filter($assetTags));
-                                    sort($assetTags);
-                                    foreach ($assetTags as $tag) {
+                                    
+                                    // Get asset tags that already have active status records
+                                    $stmt3 = $pdo->query("SELECT DISTINCT asset_tag FROM equipment_status WHERE is_disabled = 0");
+                                    $activeStatusTags = $stmt3->fetchAll(PDO::FETCH_COLUMN);
+                                    
+                                    // Filter out asset tags that already have active status
+                                    $availableAssetTags = array_diff($assetTags, $activeStatusTags);
+                                    
+                                    // Sort the available asset tags
+                                    sort($availableAssetTags);
+                                    
+                                    foreach ($availableAssetTags as $tag) {
                                         echo '<option value="' . htmlspecialchars($tag) . '">' . htmlspecialchars($tag) . '</option>';
                                     }
                                     ?>
