@@ -436,173 +436,182 @@ function safeHtml($value)
             <div class="card-body">
                 <div class="container-fluid px-0">
                     <div class="filter-container" id="filterContainer">
-                        <div class="col-auto">
-                            <?php if ($canCreate): ?>
-                                <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#addLocationModal">
-                                    <i class="bi bi-plus-lg"></i> Create Location
-                                </button>
-                            <?php endif; ?>
-                        </div>
-                        <div class="col-md-3">
-                            <select class="form-select" id="filterBuilding">
-                                <option value="">Filter by Building</option>
-                                <option value="all">All Buildings</option>
-                                <?php
-                                if (!empty($equipmentLocations)) {
-                                    $buildings = array_unique(array_column($equipmentLocations, 'building_loc'));
-                                    foreach ($buildings as $building) {
-                                        echo "<option>" . htmlspecialchars($building) . "</option>";
+                        <!-- Row 1: Create Location + Filters -->
+                        <div class="row mb-2 g-2 align-items-center flex-wrap">
+                            <div class="col-auto">
+                                <?php if ($canCreate): ?>
+                                    <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#addLocationModal">
+                                        <i class="bi bi-plus-lg"></i> Create Location
+                                    </button>
+                                <?php endif; ?>
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" id="filterBuilding">
+                                    <option value="">Filter by Building</option>
+                                    <option value="all">All Buildings</option>
+                                    <?php
+                                    if (!empty($equipmentLocations)) {
+                                        $buildings = array_unique(array_column($equipmentLocations, 'building_loc'));
+                                        foreach ($buildings as $building) {
+                                            echo "<option>" . htmlspecialchars($building) . "</option>";
+                                        }
                                     }
-                                }
-                                ?>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <select class="form-select" id="dateFilter">
-                                <option value="">Filter by Date</option>
-                                <option value="desc">Newest to Oldest</option>
-                                <option value="asc">Oldest to Newest</option>
-                                <option value="month">Specific Month</option>
-                                <option value="range">Custom Date Range</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="bi bi-search"></i></span>
-                                <input type="text" id="eqSearch" class="form-control" placeholder="Search Equipment...">
-                            </div>
-                        </div>
-                        <a href="equipLoc_change_log.php" class="btn btn-primary"><i class="bi bi-card-list"></i> View Equipment Changes</a>
-                    </div>
-
-                    <!-- Date Inputs Row -->
-                    <div id="dateInputsContainer" class="date-inputs-container">
-                        <div class="month-picker-container" id="monthPickerContainer">
-                            <select class="form-select" id="monthSelect">
-                                <option value="">Select Month</option>
-                                <?php
-                                $months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-                                foreach ($months as $index => $month) {
-                                    echo "<option value='" . ($index + 1) . "'>" . $month . "</option>";
-                                }
-                                ?>
-                            </select>
-                            <select class="form-select" id="yearSelect">
-                                <option value="">Select Year</option>
-                                <?php
-                                $currentYear = date('Y');
-                                for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
-                                    echo "<option value='" . $year . "'>" . $year . "</option>";
-                                }
-                                ?>
-                            </select>
-                        </div>
-                        <div class="date-range-container" id="dateRangePickers">
-                            <input type="date" class="form-control" id="dateFrom" placeholder="From">
-                            <input type="date" class="form-control" id="dateTo" placeholder="To">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="table-responsive" id="table">
-                    <table class="table" id="elTable">
-                        <thead>
-                            <tr>
-                                <th class="sortable" data-sort="number">#</th>
-                                <th class="sortable" data-sort="string">Asset Tag</th>
-                                <th class="sortable" data-sort="string">Building</th>
-                                <th class="sortable" data-sort="string">Floor</th>
-                                <th class="sortable" data-sort="string">Area</th>
-                                <th class="sortable" data-sort="string">Person Responsible</th>
-                                <th class="sortable" data-sort="string">Department</th>
-                                <th class="sortable" data-sort="string">Device State</th>
-                                <th class="sortable" data-sort="string">Remarks</th>
-                                <th class="sortable" data-sort="date">Date Created</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="locationTbody">
-                            <?php if (!empty($equipmentLocations)): ?>
-                                <?php foreach ($equipmentLocations as $index => $loc): ?>
-                                    <tr>
-                                        <td><?= $index + 1 ?></td>
-                                        <td><?= htmlspecialchars($loc['asset_tag'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($loc['building_loc'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($loc['floor_no'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($loc['specific_area'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($loc['person_responsible'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($loc['department_name'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($loc['device_state'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($loc['remarks'] ?? '') ?></td>
-                                        <td><?= date('Y-m-d H:i', strtotime($loc['date_created'])) ?></td>
-                                        <td>
-                                            <?php if ($canModify): ?>
-                                                <button class="btn btn-sm btn-outline-info edit-location"
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#editLocationModal"
-                                                    data-id="<?= $loc['equipment_location_id'] ?>"
-                                                    data-asset="<?= htmlspecialchars($loc['asset_tag'] ?? '') ?>"
-                                                    data-building="<?= htmlspecialchars($loc['building_loc'] ?? '') ?>"
-                                                    data-floor="<?= htmlspecialchars($loc['floor_no'] ?? '') ?>"
-                                                    data-area="<?= htmlspecialchars($loc['specific_area'] ?? '') ?>"
-                                                    data-person="<?= htmlspecialchars($loc['person_responsible'] ?? '') ?>"
-                                                    data-department="<?= htmlspecialchars($loc['department_id'] ?? '') ?>"
-                                                    data-device-state="<?= htmlspecialchars($loc['device_state'] ?? '') ?>"
-                                                    data-remarks="<?= htmlspecialchars($loc['remarks'] ?? '') ?>">
-                                                    <i class="bi bi-pencil"></i>
-                                                </button>
-                                            <?php endif; ?>
-
-                                            <?php if ($canDelete): ?>
-                                                <button class="btn btn-sm btn-outline-danger delete-location"
-                                                    data-id="<?= $loc['equipment_location_id'] ?>">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            <?php endif; ?>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            <?php else: ?>
-                                <td colspan="16" class="text-center py-4">
-                                    <div class="alert alert-info mb-0">
-                                        <i class="bi bi-info-circle me-2"></i> No Equipment Location found. Click on "Create Equipment" to add a new entry.
-                                    </div>
-                                </td>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
-
-
-                <!-- Pagination Controls -->
-                <div class="container-fluid">
-                    <div class="row align-items-center g-3">
-                        <div class="col-12 col-sm-auto">
-                            <div class="text-muted">
-                                <?php $totalLogs = count($equipmentLocations); ?>
-                                <input type="hidden" id="total-users" value="<?= $totalLogs ?>">
-                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows"><?= $totalLogs ?></span> entries
-                            </div>
-                        </div>
-                        <div class="col-12 col-sm-auto ms-sm-auto">
-                            <div class="d-flex align-items-center gap-2">
-                                <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                    <i class="bi bi-chevron-left"></i> Previous
-                                </button>
-                                <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
-                                    <option value="10" selected>10</option>
-                                    <option value="20">20</option>
-                                    <option value="30">30</option>
-                                    <option value="50">50</option>
+                                    ?>
                                 </select>
-                                <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                    Next <i class="bi bi-chevron-right"></i>
-                                </button>
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" id="dateFilter">
+                                    <option value="">Filter by Date</option>
+                                    <option value="desc">Newest to Oldest</option>
+                                    <option value="asc">Oldest to Newest</option>
+                                    <option value="month">Specific Month</option>
+                                    <option value="range">Custom Date Range</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                    <input type="text" id="eqSearch" class="form-control" placeholder="Search Equipment...">
+                                </div>
                             </div>
                         </div>
-                        <div class="row mt-3">
-                            <div class="col-12">
-                                <ul class="pagination justify-content-center" id="pagination"></ul>
+                        <!-- Row 2: View Equipment Changes, Filter, Clear -->
+                        <div class="row mb-2 g-2 align-items-center">
+                            <div class="col-auto d-flex gap-2 align-items-center">
+                                <a href="equipLoc_change_log.php" class="btn btn-primary"><i class="bi bi-card-list"></i> View Equipment Changes</a>
+                                <button type="button" id="applyFilters" class="btn btn-dark"><i class="bi bi-funnel"></i> Filter</button>
+                                <button type="button" id="clearFilters" class="btn btn-secondary shadow-sm"><i class="bi bi-x-circle"></i> Clear</button>
+                            </div>
+                        </div>
+                        <!-- Date Inputs Row -->
+                        <div id="dateInputsContainer" class="date-inputs-container">
+                            <div class="month-picker-container" id="monthPickerContainer">
+                                <select class="form-select" id="monthSelect">
+                                    <option value="">Select Month</option>
+                                    <?php
+                                    $months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                                    foreach ($months as $index => $month) {
+                                        echo "<option value='" . ($index + 1) . "'>" . $month . "</option>";
+                                    }
+                                    ?>
+                                </select>
+                                <select class="form-select" id="yearSelect">
+                                    <option value="">Select Year</option>
+                                    <?php
+                                    $currentYear = date('Y');
+                                    for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
+                                        echo "<option value='" . $year . "'>" . $year . "</option>";
+                                    }
+                                    ?>
+                                </select>
+                            </div>
+                            <div class="date-range-container" id="dateRangePickers">
+                                <input type="date" class="form-control" id="dateFrom" placeholder="From">
+                                <input type="date" class="form-control" id="dateTo" placeholder="To">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive" id="table">
+                        <table class="table" id="elTable">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-sort="number">#</th>
+                                    <th class="sortable" data-sort="string">Asset Tag</th>
+                                    <th class="sortable" data-sort="string">Building</th>
+                                    <th class="sortable" data-sort="string">Floor</th>
+                                    <th class="sortable" data-sort="string">Area</th>
+                                    <th class="sortable" data-sort="string">Person Responsible</th>
+                                    <th class="sortable" data-sort="string">Department</th>
+                                    <th class="sortable" data-sort="string">Device State</th>
+                                    <th class="sortable" data-sort="string">Remarks</th>
+                                    <th class="sortable" data-sort="date">Date Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="locationTbody">
+                                <?php if (!empty($equipmentLocations)): ?>
+                                    <?php foreach ($equipmentLocations as $index => $loc): ?>
+                                        <tr>
+                                            <td><?= $index + 1 ?></td>
+                                            <td><?= htmlspecialchars($loc['asset_tag'] ?? '') ?></td>
+                                            <td><?= htmlspecialchars($loc['building_loc'] ?? '') ?></td>
+                                            <td><?= htmlspecialchars($loc['floor_no'] ?? '') ?></td>
+                                            <td><?= htmlspecialchars($loc['specific_area'] ?? '') ?></td>
+                                            <td><?= htmlspecialchars($loc['person_responsible'] ?? '') ?></td>
+                                            <td><?= htmlspecialchars($loc['department_name'] ?? '') ?></td>
+                                            <td><?= htmlspecialchars($loc['device_state'] ?? '') ?></td>
+                                            <td><?= htmlspecialchars($loc['remarks'] ?? '') ?></td>
+                                            <td><?= date('Y-m-d H:i', strtotime($loc['date_created'])) ?></td>
+                                            <td>
+                                                <?php if ($canModify): ?>
+                                                    <button class="btn btn-sm btn-outline-info edit-location"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#editLocationModal"
+                                                        data-id="<?= $loc['equipment_location_id'] ?>"
+                                                        data-asset="<?= htmlspecialchars($loc['asset_tag'] ?? '') ?>"
+                                                        data-building="<?= htmlspecialchars($loc['building_loc'] ?? '') ?>"
+                                                        data-floor="<?= htmlspecialchars($loc['floor_no'] ?? '') ?>"
+                                                        data-area="<?= htmlspecialchars($loc['specific_area'] ?? '') ?>"
+                                                        data-person="<?= htmlspecialchars($loc['person_responsible'] ?? '') ?>"
+                                                        data-department="<?= htmlspecialchars($loc['department_id'] ?? '') ?>"
+                                                        data-device-state="<?= htmlspecialchars($loc['device_state'] ?? '') ?>"
+                                                        data-remarks="<?= htmlspecialchars($loc['remarks'] ?? '') ?>">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </button>
+                                                <?php endif; ?>
+
+                                                <?php if ($canDelete): ?>
+                                                    <button class="btn btn-sm btn-outline-danger delete-location"
+                                                        data-id="<?= $loc['equipment_location_id'] ?>">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <td colspan="16" class="text-center py-4">
+                                        <div class="alert alert-info mb-0">
+                                            <i class="bi bi-info-circle me-2"></i> No Equipment Location found. Click on "Create Equipment" to add a new entry.
+                                        </div>
+                                    </td>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+
+
+                    <!-- Pagination Controls -->
+                    <div class="container-fluid">
+                        <div class="row align-items-center g-3">
+                            <div class="col-12 col-sm-auto">
+                                <div class="text-muted">
+                                    <?php $totalLogs = count($equipmentLocations); ?>
+                                    <input type="hidden" id="total-users" value="<?= $totalLogs ?>">
+                                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows"><?= $totalLogs ?></span> entries
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-auto ms-sm-auto">
+                                <div class="d-flex align-items-center gap-2">
+                                    <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                        <i class="bi bi-chevron-left"></i> Previous
+                                    </button>
+                                    <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                        <option value="10" selected>10</option>
+                                        <option value="20">20</option>
+                                        <option value="30">30</option>
+                                        <option value="50">50</option>
+                                    </select>
+                                    <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                        Next <i class="bi bi-chevron-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <ul class="pagination justify-content-center" id="pagination"></ul>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -919,82 +928,10 @@ function safeHtml($value)
                 }
             }
 
-            // Add reset button if it doesn't exist
-            if ($('#resetFilters').length === 0) {
-                $('.filter-container').append('<button id="resetFilters" class="btn btn-outline-secondary ms-2">Reset Filters</button>');
-            }
-
-            // Custom filter function for equipment location
-            function filterTable() {
-                const searchText = $('#eqSearch').val().toLowerCase();
-                const filterBuilding = $('#filterBuilding').val();
-                const dateFilterType = $('#dateFilter').val();
-                const selectedMonth = $('#monthSelect').val();
-                const selectedYear = $('#yearSelect').val();
-                const dateFrom = $('#dateFrom').val();
-                const dateTo = $('#dateTo').val();
-
-                // Reset filteredRows to contain all rows initially
-                window.filteredRows = [];
-
-                // Filter each row
-                window.allRows.forEach(row => {
-                    const rowText = row.textContent.toLowerCase();
-
-                    // Get building column
-                    const buildingCell = row.querySelector('td:nth-child(3)');
-                    const buildingText = buildingCell ? buildingCell.textContent.trim() : '';
-
-                    // Get date column
-                    const dateCell = row.querySelector('td:nth-child(10)');
-                    const dateText = dateCell ? dateCell.textContent.trim() : '';
-                    const date = dateText ? new Date(dateText) : null;
-
-                    // Apply search filter
-                    const searchMatch = !searchText || rowText.includes(searchText);
-
-                    // Apply building filter
-                    let buildingMatch = true;
-                    if (filterBuilding && filterBuilding !== 'all' && filterBuilding.toLowerCase() !== 'filter by building') {
-                        buildingMatch = buildingText.toLowerCase() === filterBuilding.toLowerCase();
-                    }
-
-                    // Apply date filter
-                    let dateMatch = true;
-                    if (date && dateFilterType) {
-                        if (dateFilterType === 'month' && selectedMonth && selectedYear) {
-                            dateMatch = (date.getMonth() + 1 === parseInt(selectedMonth)) &&
-                                (date.getFullYear() === parseInt(selectedYear));
-                        } else if (dateFilterType === 'range' && dateFrom && dateTo) {
-                            const from = new Date(dateFrom);
-                            const to = new Date(dateTo);
-                            to.setHours(23, 59, 59); // End of day
-                            dateMatch = date >= from && date <= to;
-                        }
-                    }
-
-                    // Only include rows that match all filters
-                    if (searchMatch && buildingMatch && dateMatch) {
-                        window.filteredRows.push(row);
-                    }
-                });
-
-                // Sort if needed
-                if (dateFilterType === 'asc' || dateFilterType === 'desc') {
-                    window.filteredRows.sort((a, b) => {
-                        const dateA = new Date(a.querySelector('td:nth-child(10)').textContent.trim());
-                        const dateB = new Date(b.querySelector('td:nth-child(10)').textContent.trim());
-                        return dateFilterType === 'asc' ? dateA - dateB : dateB - dateA;
-                    });
-                }
-
-                // Update total row count
-                $('#totalRows').text(window.filteredRows.length);
-
-                // Reset to first page and update pagination
-                window.currentPage = 1;
-                updatePagination();
-            }
+            // Apply Filters button event
+            $(document).on('click', '#applyFilters', function() {
+                filterTable();
+            });
 
             // Function to update the pagination display
             function updatePagination() {
@@ -1066,14 +1003,6 @@ function safeHtml($value)
                     $pagination.append($li);
                 }
 
-                // Create a disabled ellipsis item
-                function createEllipsis() {
-                    const $li = $('<li>').addClass('page-item disabled');
-                    const $span = $('<span>').addClass('page-link').html('&hellip;');
-                    $li.append($span);
-                    $pagination.append($li);
-                }
-
                 // First page
                 createPageLink(1, currentPage === 1);
 
@@ -1124,17 +1053,14 @@ function safeHtml($value)
 
             // Filter event handlers
             $('#eqSearch').on('input', filterTable);
-            $('#filterBuilding').on('change', filterTable);
 
             // Date filter handling
             $('#dateFilter').on('change', function() {
                 const filterType = $(this).val();
-
                 // Hide all containers first
                 $('#dateInputsContainer').hide();
                 $('#monthPickerContainer').hide();
                 $('#dateRangePickers').hide();
-
                 // Show appropriate containers based on selection
                 if (filterType === 'month') {
                     $('#dateInputsContainer').show();
@@ -1142,35 +1068,21 @@ function safeHtml($value)
                 } else if (filterType === 'range') {
                     $('#dateInputsContainer').show();
                     $('#dateRangePickers').show();
-                } else if (filterType === 'desc' || filterType === 'asc') {
-                    // Apply sorting without showing date inputs
-                    filterTable();
                 }
+                // Do not auto-filter on change
             });
 
-            // Month/year selection changes
+            // Month/year selection changes - no auto-filter
             $('#monthSelect, #yearSelect').on('change', function() {
-                const month = $('#monthSelect').val();
-                const year = $('#yearSelect').val();
-
-                if (month && year) {
-                    filterTable();
-                }
+                // No auto-filter here
             });
-
-            // Date range changes
+            // Date range changes - no auto-filter
             $('#dateFrom, #dateTo').on('change', function() {
-                const dateFrom = $('#dateFrom').val();
-                const dateTo = $('#dateTo').val();
-
-                if (dateFrom && dateTo) {
-                    filterTable();
-                }
+                // No auto-filter here
             });
 
-            // Reset filters button
-            $(document).on('click', '#resetFilters', function() {
-                // Reset all filter inputs
+            // Clear filters button (matches audit_log.php)
+            $(document).on('click', '#clearFilters', function() {
                 $('#eqSearch').val('');
                 $('#filterBuilding').val('all').trigger('change');
                 $('#dateFilter').val('').trigger('change');
@@ -1179,8 +1091,6 @@ function safeHtml($value)
                 $('#dateFrom').val('');
                 $('#dateTo').val('');
                 $('#dateInputsContainer').hide();
-
-                // Apply the filter reset
                 filterTable();
             });
 
@@ -1553,6 +1463,103 @@ function safeHtml($value)
             }
         });
     </script>
+<script>
+// Equipment Location Filtering Logic
+$(document).ready(function() {
+    // Filter table rows based on filters
+    function filterTable() {
+        var building = $('#filterBuilding').val().toLowerCase();
+        var dateFilter = $('#dateFilter').val();
+        var search = $('#eqSearch').val().toLowerCase();
+        var month = $('#monthSelect').val();
+        var year = $('#yearSelect').val();
+        var dateFrom = $('#dateFrom').val();
+        var dateTo = $('#dateTo').val();
+
+        var rows = $('#locationTbody tr').get();
+
+        // Sort rows by Date Created if needed
+        if (dateFilter === 'desc' || dateFilter === 'asc') {
+            rows.sort(function(a, b) {
+                var dateA = $(a).find('td').eq(9).text();
+                var dateB = $(b).find('td').eq(9).text();
+                var dA = new Date(dateA);
+                var dB = new Date(dateB);
+                if (dateFilter === 'desc') {
+                    return dB - dA;
+                } else {
+                    return dA - dB;
+                }
+            });
+            // Re-append sorted rows
+            $.each(rows, function(idx, row) {
+                $('#locationTbody').append(row);
+            });
+        }
+
+        // Now filter rows
+        $('#locationTbody tr').each(function() {
+            var row = $(this);
+            var show = true;
+
+            // Building filter
+            if (building && building !== 'all') {
+                var buildingText = row.find('td').eq(2).text().toLowerCase();
+                if (buildingText !== building) show = false;
+            }
+            // Date filter (month/range)
+            if (dateFilter === 'month') {
+                if (month && year) {
+                    var dateText = row.find('td').eq(9).text().substring(0,7); // 'YYYY-MM'
+                    var target = year + '-' + (month.length === 1 ? '0'+month : month);
+                    if (dateText !== target) show = false;
+                }
+            } else if (dateFilter === 'range') {
+                if (dateFrom && dateTo) {
+                    var dateText = row.find('td').eq(9).text().substring(0,10); // 'YYYY-MM-DD'
+                    if (dateText < dateFrom || dateText > dateTo) show = false;
+                }
+            }
+            // Search filter (always applied)
+            if (search) {
+                var rowText = row.text().toLowerCase();
+                if (!rowText.includes(search)) show = false;
+            }
+            row.toggle(show);
+        });
+    }
+
+    // Filter button: apply Building and Date filters + current search
+    $('#applyFilters').on('click', function() {
+        filterTable();
+    });
+    // Search Equipment: live search
+    $('#eqSearch').on('input', function() {
+        filterTable();
+    });
+    // Store original order of rows
+    if (!window._originalRows) {
+        window._originalRows = $('#locationTbody').children().toArray();
+    }
+    // Clear button: reset all filters and restore original row order
+    $('#clearFilters').on('click', function() {
+        $('#filterBuilding').val('');
+        $('#dateFilter').val('');
+        $('#monthSelect').val('');
+        $('#yearSelect').val('');
+        $('#dateFrom').val('');
+        $('#dateTo').val('');
+        $('#eqSearch').val('');
+        // Restore original row order
+        if (window._originalRows) {
+            $('#locationTbody').empty().append(window._originalRows);
+        }
+        filterTable();
+    });
+    // Optionally, filter on page load
+    filterTable();
+});
+</script>
 </body>
 
 </html>
