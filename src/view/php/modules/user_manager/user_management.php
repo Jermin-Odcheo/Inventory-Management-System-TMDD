@@ -128,6 +128,8 @@ try {
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <!-- User Management JS -->
     <script src="<?php echo BASE_URL; ?>src/control/js/user_management.js" defer></script>
+    <!-- Pagination JS -->
+    <script src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 
     <title>Manage Users</title>
     <style>
@@ -194,6 +196,36 @@ try {
         .toast {
             min-width: 300px;
         }
+        
+        /* Pagination styles */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .pagination .page-item {
+            margin: 0 2px;
+        }
+        .pagination .page-item.active .page-link {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+            color: white;
+        }
+        .pagination .page-link {
+            color: #0d6efd;
+            border: 1px solid #dee2e6;
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.25rem;
+            text-decoration: none;
+        }
+        .pagination .page-link:hover {
+            background-color: #e9ecef;
+        }
+        .pagination .page-item.disabled .page-link {
+            color: #6c757d;
+            pointer-events: none;
+            background-color: #fff;
+        }
     </style>
 </head>
 
@@ -216,7 +248,7 @@ try {
                     // Fetch all departments directly for the filter dropdown, show ALL regardless of is_disabled
                     try {
                         // Fetch both acronym and department_name
-                        $deptStmt = $pdo->query("SELECT department_name, abbreviation FROM departments ORDER BY department_name");
+                        $deptStmt = $pdo->query("SELECT department_name, abbreviation FROM departments WHERE is_disabled = 0 ORDER BY department_name");
                         $allDepartments = $deptStmt->fetchAll(PDO::FETCH_ASSOC);
 
                         foreach ($allDepartments as $dept) {
@@ -232,8 +264,8 @@ try {
                 </select>
             </div>
             <div>
-                <button type="button" id="clear-filters-btn">
-                    Clear Filters
+                <button type="button" id="clear-filters-btn" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Clear Filters
                 </button>
             </div>
             <div class="action-buttons">
@@ -295,7 +327,7 @@ try {
                         <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="auditTable">
                     <?php if (empty($users)): ?>
                         <tr>
                             <td colspan="9" class="text-center text-muted">No users found.</td>
@@ -389,7 +421,7 @@ try {
                     </div>
                     <div class="col-12 col-sm-auto ms-sm-auto">
                         <div class="d-flex align-items-center gap-2">
-                            <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1" <?= $totalUsers <= 10 ? 'style="display:none !important;"' : '' ?>>
+                            <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
                                 <i class="bi bi-chevron-left"></i> Previous
                             </button>
                             <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
@@ -398,7 +430,7 @@ try {
                                 <option value="30">30</option>
                                 <option value="50">50</option>
                             </select>
-                            <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1" <?= $totalUsers <= 10 ? 'style="display:none !important;"' : '' ?>>
+                            <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
                                 Next <i class="bi bi-chevron-right"></i>
                             </button>
                         </div>
@@ -624,6 +656,21 @@ try {
 
     <script>
         $(document).ready(function() {
+            // Initialize pagination
+            if (typeof initPagination === 'function') {
+                console.log("Initializing pagination for user management");
+                initPagination({
+                    tableId: 'auditTable',
+                    rowsPerPageSelectId: 'rowsPerPageSelect',
+                    currentPageId: 'currentPage',
+                    rowsPerPageId: 'rowsPerPage',
+                    totalRowsId: 'totalRows',
+                    prevPageId: 'prevPage',
+                    nextPageId: 'nextPage',
+                    paginationId: 'pagination'
+                });
+            }
+            
             const originalUpdatePagination = window.updatePagination || function() {};
 
             // Add forcePaginationCheck function
@@ -644,7 +691,7 @@ try {
                     if (paginationEl) paginationEl.style.cssText = '';
 
                     if (prevBtn) {
-                        if (window.currentPage <= 1) {
+                        if (window.paginationConfig && window.paginationConfig.currentPage <= 1) {
                             prevBtn.style.cssText = 'display: none !important';
                         } else {
                             prevBtn.style.cssText = '';
@@ -653,7 +700,7 @@ try {
 
                     if (nextBtn) {
                         const totalPages = Math.ceil(totalRows / rowsPerPage);
-                        if (window.currentPage >= totalPages) {
+                        if (window.paginationConfig && window.paginationConfig.currentPage >= totalPages) {
                             nextBtn.style.cssText = 'display: none !important';
                         } else {
                             nextBtn.style.cssText = '';
@@ -664,7 +711,7 @@ try {
 
             window.updatePagination = function() {
                 // Get all rows again in case the DOM was updated
-                window.allRows = Array.from(document.querySelectorAll('#umTable tbody tr'));
+                window.allRows = Array.from(document.querySelectorAll('#auditTable tbody tr'));
 
                 // If filtered rows is empty or not defined, use all rows
                 if (!window.filteredRows || window.filteredRows.length === 0) {
@@ -994,11 +1041,19 @@ try {
                     colIndex = 1;
             }
 
-            // Sort the table rows
-            const rows = $('#umTable tbody tr').get();
+            // Get all rows
+            const tableBody = document.getElementById('auditTable');
+            if (!tableBody) {
+                console.error('Table body not found!');
+                return;
+            }
+            
+            const rows = Array.from(tableBody.querySelectorAll('tr'));
+            
+            // Sort the rows
             rows.sort(function(a, b) {
-                const aValue = $(a).children('td').eq(colIndex).text().trim().toLowerCase();
-                const bValue = $(b).children('td').eq(colIndex).text().trim().toLowerCase();
+                const aValue = a.cells[colIndex] ? a.cells[colIndex].textContent.trim().toLowerCase() : '';
+                const bValue = b.cells[colIndex] ? b.cells[colIndex].textContent.trim().toLowerCase() : '';
 
                 // Handle numeric sorting for IDs
                 if (column === 'id') {
@@ -1013,12 +1068,19 @@ try {
                 return 0;
             });
 
+            // Clear the table
+            while (tableBody.firstChild) {
+                tableBody.removeChild(tableBody.firstChild);
+            }
+            
             // Re-append sorted rows to the table
-            $.each(rows, function(index, row) {
-                $('#umTable tbody').append(row);
-            });
-
-            // Do NOT call filterTable() here - this caused multiple calls
+            rows.forEach(row => tableBody.appendChild(row));
+            
+            // Update window.allRows and window.filteredRows for pagination
+            window.allRows = rows;
+            
+            // Apply any active filters
+            filterTable();
         }
 
         // Direct client-side filtering function
@@ -1031,59 +1093,50 @@ try {
                 deptFilter
             });
 
-            // Show all rows first
-            $('#umTable tbody tr').show();
-
-            // Apply search filter if present
-            if (searchText) {
-                $('#umTable tbody tr').each(function() {
-                    const rowText = $(this).text().toLowerCase();
-                    if (!rowText.includes(searchText)) {
-                        $(this).hide();
+            // Store all table rows for filtering
+            const tableBody = document.getElementById('auditTable');
+            if (!tableBody) {
+                console.error('Table body not found!');
+                return;
+            }
+            
+            const allRows = Array.from(tableBody.querySelectorAll('tr'));
+            
+            // Filter rows based on search and department filter
+            window.filteredRows = allRows.filter(row => {
+                const rowText = row.textContent.toLowerCase();
+                let matchesSearch = true;
+                let matchesDept = true;
+                
+                // Apply search filter
+                if (searchText) {
+                    matchesSearch = rowText.includes(searchText);
+                }
+                
+                // Apply department filter
+                if (deptFilter && deptFilter !== 'all') {
+                    const deptCell = row.querySelector('td:nth-child(6)');
+                    if (deptCell) {
+                        matchesDept = deptCell.textContent.toLowerCase().includes(deptFilter.toLowerCase());
+                    } else {
+                        matchesDept = false;
                     }
-                });
+                }
+                
+                return matchesSearch && matchesDept;
+            });
+            
+            // Store the filtered rows for pagination
+            window.allRows = allRows;
+            
+            // Reset to first page and update pagination
+            if (window.paginationConfig) {
+                window.paginationConfig.currentPage = 1;
             }
-
-            // Apply department filter if selected
-            if (deptFilter && deptFilter !== 'all') {
-                $('#umTable tbody tr:visible').each(function() {
-                    const deptCell = $(this).find('td:nth-child(6)').text().toLowerCase();
-                    if (!deptCell.includes(deptFilter.toLowerCase())) {
-                        $(this).hide();
-                    }
-                });
-            }
-
-            // Update the visibility count
-            const visibleCount = $('#umTable tbody tr:visible').length;
-            const totalCount = $('#umTable tbody tr').length;
-            console.log(`Showing ${visibleCount} of ${totalCount} rows`);
-
-            // Update pagination info
-            $('#totalRows').text(visibleCount);
-            if (visibleCount > 0) {
-                const rowsPerPage = parseInt($('#rowsPerPageSelect').val()) || 10;
-                $('#rowsPerPage').text(Math.min(rowsPerPage, visibleCount));
-                $('#currentPage').text('1');
-            } else {
-                $('#rowsPerPage').text('0');
-                $('#currentPage').text('0');
-            }
-
-            // Update pagination controls
-            updatePaginationControls(visibleCount);
-        }
-
-        // Helper to update pagination visibility
-        function updatePaginationControls(visibleCount) {
-            const rowsPerPage = parseInt($('#rowsPerPageSelect').val()) || 10;
-
-            if (visibleCount <= rowsPerPage) {
-                $('#prevPage, #nextPage').addClass('d-none');
-                $('#pagination').empty();
-            } else {
-                $('#prevPage, #nextPage').removeClass('d-none');
-                // If you have a pagination function, call it here
+            
+            // Call the pagination library's update function
+            if (typeof updatePagination === 'function') {
+                updatePagination();
             }
         }
 
@@ -1157,26 +1210,36 @@ try {
                 // Clear both filters safely
                 $('#search-filters').val('');
                 $('#department-filter').val('all').trigger('change');
-
-                // Show all rows and update the pagination counts
-                $('#umTable tbody tr').show();
-
-                const totalRows = $('#umTable tbody tr').length;
-                $('#totalRows').text(totalRows);
-                $('#rowsPerPage').text(Math.min(totalRows, parseInt($('#rowsPerPageSelect').val()) || 10));
-                $('#currentPage').text('1');
-
-                // Update pagination controls
-                updatePaginationControls(totalRows);
-            });
-
-            // Handle rows per page changes
-            $('#rowsPerPageSelect').off('change').on('change', function() {
-                filterTable();
+                
+                // Reset filteredRows to all rows
+                window.filteredRows = window.allRows;
+                
+                // Update pagination
+                if (typeof updatePagination === 'function') {
+                    // Reset to first page
+                    if (window.paginationConfig) {
+                        window.paginationConfig.currentPage = 1;
+                    }
+                    updatePagination();
+                }
             });
 
             // Initial sort/filter (done only once)
             sortTable('id');
+            
+            // Initialize pagination if not already done
+            if (typeof initPagination === 'function' && !window.paginationConfig) {
+                initPagination({
+                    tableId: 'auditTable',
+                    rowsPerPageSelectId: 'rowsPerPageSelect',
+                    currentPageId: 'currentPage',
+                    rowsPerPageId: 'rowsPerPage',
+                    totalRowsId: 'totalRows',
+                    prevPageId: 'prevPage',
+                    nextPageId: 'nextPage',
+                    paginationId: 'pagination'
+                });
+            }
         });
 
         // Handle create user form submission
