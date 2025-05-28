@@ -586,8 +586,15 @@ function formatChanges($oldJsonStr)
                     restoreUrl = '../../equipment_manager/restore_equipment_status.php';
                 } else if (restoreModule === 'Equipment Details') {
                     restoreUrl = '../../equipment_manager/restore_equipment_details.php';
+                } else if (restoreModule === 'Purchase Order') {
+                    restoreUrl = '../../equipment_transactions/restore_purchase_order.php';
+                } else if (restoreModule === 'Charge Invoice') {
+                    restoreUrl = '../../equipment_transactions/restore_charge_invoice.php';
+                } else if (restoreModule === 'Receiving Report') {
+                    restoreUrl = '../../equipment_transactions/restore_receiving_report.php';
                 } else {
-                    showToast('Unknown module for restore.', 'error');
+                    showToast('Unknown module for restore: ' + restoreModule, 'error');
+                    console.error('Unknown module for restore:', restoreModule);
                     return;
                 }
 
@@ -645,11 +652,23 @@ function formatChanges($oldJsonStr)
             $(document).on('click', '#confirmDeleteBtn', function() {
                 if (!userPrivileges.canDelete || !deleteId || !deleteModule) return;
 
-                var deleteUrl = '../../equipment_manager/delete_equipment.php'; // Generic delete endpoint
+                var deleteUrl = '';
+                // Determine the correct delete URL based on the module
+                if (deleteModule === 'Purchase Order') {
+                    deleteUrl = '../../equipment_transactions/delete_purchase_order.php';
+                } else if (deleteModule === 'Charge Invoice') {
+                    deleteUrl = '../../equipment_transactions/delete_charge_invoice.php';
+                } else if (deleteModule === 'Receiving Report') {
+                    deleteUrl = '../../equipment_transactions/delete_receiving_report.php';
+                } else {
+                    showToast('Unknown module for delete: ' + deleteModule, 'error');
+                    console.error('Unknown module for delete:', deleteModule);
+                    return;
+                }
+
                 var data = {
                     id: deleteId,
-                    permanent: 1,
-                    module: deleteModule // Pass module to the delete script
+                    permanent: 1
                 };
                 $.ajax({
                     url: deleteUrl,
@@ -681,7 +700,7 @@ function formatChanges($oldJsonStr)
                                 showToast(response.message, 'success');
                             });
                         } else {
-                            showToast(response.message, 'error');
+                            showToast(response.message || 'Error processing delete for module: ' + deleteModule, 'error');
                         }
                     },
                     error: function() {
@@ -710,53 +729,118 @@ function formatChanges($oldJsonStr)
             $(document).on('click', '#confirmBulkRestoreBtn', function() {
                 if (!userPrivileges.canRestore || bulkRestoreIds.length === 0) return;
 
-                // For bulk restore, we'll need to send module information if the restore script requires it.
-                // Assuming a generic bulk restore endpoint that can handle different modules or
-                // a single module type for all selected. For simplicity, we'll assume the backend
-                // can infer the module from the entity IDs or it's a single type of entity.
-                // If not, you'd need to collect module info for each selected item.
-                var bulkRestoreUrl = '../../equipment_manager/restore_equipment_bulk.php'; // Example bulk endpoint
-                var data = {
-                    entity_ids: bulkRestoreIds // Send an array of IDs
-                };
-
-                $.ajax({
-                    url: bulkRestoreUrl,
-                    method: 'POST',
-                    data: data,
-                    dataType: 'json',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    success: function(response) {
-                        var modalInstance = bootstrap.Modal.getInstance(document.getElementById('bulkRestoreModal'));
-                        modalInstance.hide();
-                        if (response.status && response.status.toLowerCase() === 'success') {
-                            // Reload only the tbody content
-                            $('#archiveTableBody').load(location.href + ' #archiveTableBody > *', function() {
-                                // After content is loaded, re-capture all rows for filtering and pagination
-                                if (window.archiveFilters && typeof window.archiveFilters.captureRows === 'function') {
-                                    window.archiveFilters.captureRows();
-                                } else {
-                                    console.error('window.archiveFilters.captureRows function not available after AJAX reload.');
-                                }
-                                // Then re-apply filters and update pagination based on the new data
-                                if (window.archiveFilters && typeof window.archiveFilters.applyFilters === 'function') {
-                                    window.archiveFilters.applyFilters();
-                                } else {
-                                    console.error('window.archiveFilters.applyFilters function not available after AJAX reload.');
-                                }
-                                updateBulkButtons();
-                                showToast(response.message, 'success');
-                            });
-                        } else {
-                            showToast(response.message, 'error');
-                        }
-                    },
-                    error: function() {
-                        showToast('Error processing bulk restore.', 'error');
+                // Group selected items by module
+                var moduleGroups = {};
+                $('.select-row:checked').each(function() {
+                    var $row = $(this).closest('tr');
+                    var entityId = $(this).val();
+                    var module = $row.find('td[data-label="Module"]').text().trim();
+                    
+                    if (!moduleGroups[module]) {
+                        moduleGroups[module] = [];
                     }
+                    moduleGroups[module].push(entityId);
                 });
+
+                var totalRequests = Object.keys(moduleGroups).length;
+                var completedRequests = 0;
+                var successCount = 0;
+                var errorMessages = [];
+
+                // Process each module group separately
+                for (var module in moduleGroups) {
+                    var restoreUrl = '';
+                    
+                    // Determine the correct restore URL based on the module
+                    if (module === 'Purchase Order') {
+                        restoreUrl = '../../equipment_transactions/restore_purchase_order.php';
+                    } else if (module === 'Charge Invoice') {
+                        restoreUrl = '../../equipment_transactions/restore_charge_invoice.php';
+                    } else if (module === 'Receiving Report') {
+                        restoreUrl = '../../equipment_transactions/restore_receiving_report.php';
+                    } else {
+                        errorMessages.push('Unknown module for restore: ' + module);
+                        completedRequests++;
+                        continue;
+                    }
+
+                    // For each module type, send a bulk request with all IDs of that type
+                    $.ajax({
+                        url: restoreUrl,
+                        method: 'POST',
+                        data: function() {
+                            // Use the correct parameter name based on module type
+                            var data = { bulk: 1 };
+                            if (module === 'Purchase Order') {
+                                data.po_ids = moduleGroups[module];
+                            } else if (module === 'Charge Invoice') {
+                                data.ci_ids = moduleGroups[module];
+                            } else if (module === 'Receiving Report') {
+                                data.rr_ids = moduleGroups[module];
+                            }
+                            return data;
+                        }(),
+                        dataType: 'json',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        success: function(response) {
+                            completedRequests++;
+                            
+                            if (response.status && response.status.toLowerCase() === 'success') {
+                                successCount++;
+                            } else {
+                                errorMessages.push(response.message || 'Error processing request');
+                            }
+                            
+                            // Check if all requests are completed
+                            if (completedRequests === totalRequests) {
+                                processAllRestoreResponses();
+                            }
+                        },
+                        error: function() {
+                            completedRequests++;
+                            errorMessages.push('Error processing restore request');
+                            
+                            // Check if all requests are completed
+                            if (completedRequests === totalRequests) {
+                                processAllRestoreResponses();
+                            }
+                        }
+                    });
+                }
+                
+                // Process all responses after all AJAX calls are completed
+                function processAllRestoreResponses() {
+                    var modalInstance = bootstrap.Modal.getInstance(document.getElementById('bulkRestoreModal'));
+                    modalInstance.hide();
+                    
+                    // Reload the table content
+                    $('#archiveTableBody').load(location.href + ' #archiveTableBody > *', function() {
+                        // After content is loaded, re-capture all rows for filtering and pagination
+                        if (window.archiveFilters && typeof window.archiveFilters.captureRows === 'function') {
+                            window.archiveFilters.captureRows();
+                        } else {
+                            console.error('window.archiveFilters.captureRows function not available after AJAX reload.');
+                        }
+                        // Then re-apply filters and update pagination based on the new data
+                        if (window.archiveFilters && typeof window.archiveFilters.applyFilters === 'function') {
+                            window.archiveFilters.applyFilters();
+                        } else {
+                            console.error('window.archiveFilters.applyFilters function not available after AJAX reload.');
+                        }
+                        updateBulkButtons();
+                        
+                        // Show appropriate toast message
+                        if (successCount === totalRequests) {
+                            showToast('All items restored successfully', 'success');
+                        } else if (successCount > 0) {
+                            showToast('Some items restored successfully. Errors: ' + errorMessages.join('; '), 'warning');
+                        } else {
+                            showToast('Failed to restore items: ' + errorMessages.join('; '), 'error');
+                        }
+                    });
+                }
             });
 
 
@@ -775,50 +859,111 @@ function formatChanges($oldJsonStr)
             $(document).on('click', '#confirmBulkDeleteBtn', function() {
                 if (!userPrivileges.canDelete || bulkDeleteIds.length === 0) return;
 
-                var bulkDeleteUrl = '../../equipment_manager/delete_equipment_bulk.php'; // Example bulk delete endpoint
-                var data = {
-                    entity_ids: bulkDeleteIds, // Send an array of IDs
-                    permanent: 1
-                };
-
-                $.ajax({
-                    url: bulkDeleteUrl,
-                    method: 'POST',
-                    data: data,
-                    dataType: 'json',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    success: function(response) {
-                        var bulkModalInstance = bootstrap.Modal.getInstance(document.getElementById('bulkDeleteModal'));
-                        bulkModalInstance.hide();
-
-                        if (response.status && response.status.toLowerCase() === 'success') {
-                            // Reload only the tbody content
-                            $('#archiveTableBody').load(location.href + ' #archiveTableBody > *', function() {
-                                // After content is loaded, re-capture all rows for filtering and pagination
-                                if (window.archiveFilters && typeof window.archiveFilters.captureRows === 'function') {
-                                    window.archiveFilters.captureRows();
-                                } else {
-                                    console.error('window.archiveFilters.captureRows function not available after AJAX reload.');
-                                }
-                                // Then re-apply filters and update pagination based on the new data
-                                if (window.archiveFilters && typeof window.archiveFilters.applyFilters === 'function') {
-                                    window.archiveFilters.applyFilters();
-                                } else {
-                                    console.error('window.archiveFilters.applyFilters function not available after AJAX reload.');
-                                }
-                                updateBulkButtons();
-                                showToast(response.message, 'success');
-                            });
-                        } else {
-                            showToast(response.message, 'error');
-                        }
-                    },
-                    error: function() {
-                        showToast('Error processing bulk delete.', 'error');
+                // Group selected items by module
+                var moduleGroups = {};
+                $('.select-row:checked').each(function() {
+                    var $row = $(this).closest('tr');
+                    var entityId = $(this).val();
+                    var module = $row.find('td[data-label="Module"]').text().trim();
+                    
+                    if (!moduleGroups[module]) {
+                        moduleGroups[module] = [];
                     }
+                    moduleGroups[module].push(entityId);
                 });
+
+                var totalRequests = Object.keys(moduleGroups).length;
+                var completedRequests = 0;
+                var successCount = 0;
+                var errorMessages = [];
+
+                // Process each module group separately
+                for (var module in moduleGroups) {
+                    var deleteUrl = '';
+                    
+                    // Determine the correct delete URL based on the module
+                    if (module === 'Purchase Order') {
+                        deleteUrl = '../../equipment_transactions/delete_purchase_order.php';
+                    } else if (module === 'Charge Invoice') {
+                        deleteUrl = '../../equipment_transactions/delete_charge_invoice.php';
+                    } else if (module === 'Receiving Report') {
+                        deleteUrl = '../../equipment_transactions/delete_receiving_report.php';
+                    } else {
+                        errorMessages.push('Unknown module for delete: ' + module);
+                        completedRequests++;
+                        continue;
+                    }
+
+                    // For each module type, send a bulk request with all IDs of that type
+                    $.ajax({
+                        url: deleteUrl,
+                        method: 'POST',
+                        data: {
+                            bulk: 1,
+                            ids: moduleGroups[module],
+                            permanent: 1
+                        },
+                        dataType: 'json',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        success: function(response) {
+                            completedRequests++;
+                            
+                            if (response.status && response.status.toLowerCase() === 'success') {
+                                successCount++;
+                            } else {
+                                errorMessages.push(response.message || 'Error processing request');
+                            }
+                            
+                            // Check if all requests are completed
+                            if (completedRequests === totalRequests) {
+                                processAllDeleteResponses();
+                            }
+                        },
+                        error: function() {
+                            completedRequests++;
+                            errorMessages.push('Error processing delete request');
+                            
+                            // Check if all requests are completed
+                            if (completedRequests === totalRequests) {
+                                processAllDeleteResponses();
+                            }
+                        }
+                    });
+                }
+                
+                // Process all responses after all AJAX calls are completed
+                function processAllDeleteResponses() {
+                    var bulkModalInstance = bootstrap.Modal.getInstance(document.getElementById('bulkDeleteModal'));
+                    bulkModalInstance.hide();
+                    
+                    // Reload the table content
+                    $('#archiveTableBody').load(location.href + ' #archiveTableBody > *', function() {
+                        // After content is loaded, re-capture all rows for filtering and pagination
+                        if (window.archiveFilters && typeof window.archiveFilters.captureRows === 'function') {
+                            window.archiveFilters.captureRows();
+                        } else {
+                            console.error('window.archiveFilters.captureRows function not available after AJAX reload.');
+                        }
+                        // Then re-apply filters and update pagination based on the new data
+                        if (window.archiveFilters && typeof window.archiveFilters.applyFilters === 'function') {
+                            window.archiveFilters.applyFilters();
+                        } else {
+                            console.error('window.archiveFilters.applyFilters function not available after AJAX reload.');
+                        }
+                        updateBulkButtons();
+                        
+                        // Show appropriate toast message
+                        if (successCount === totalRequests) {
+                            showToast('All items deleted successfully', 'success');
+                        } else if (successCount > 0) {
+                            showToast('Some items deleted successfully. Errors: ' + errorMessages.join('; '), 'warning');
+                        } else {
+                            showToast('Failed to delete items: ' + errorMessages.join('; '), 'error');
+                        }
+                    });
+                }
             });
         }); // End of jQuery document ready
     </script>

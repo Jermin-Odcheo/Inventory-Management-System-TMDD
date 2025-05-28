@@ -36,9 +36,17 @@ if (!$hasAuditPermission && !$hasETPermission) {
 // Fetch all audit logs (including permanent deletes)
 $query = "
  SELECT
-    audit_log.*,
-    audit_log.Status AS status,  
-    users.email  AS email
+    audit_log.TrackID,
+    audit_log.UserID,
+    audit_log.EntityID,
+    audit_log.Module,
+    audit_log.Action,
+    audit_log.Details,
+    audit_log.OldVal,
+    audit_log.NewVal,
+    UPPER(audit_log.Status) AS status,
+    audit_log.Date_Time,
+    users.email AS email
   FROM audit_log
     LEFT JOIN users
       ON audit_log.UserID = users.id
@@ -51,11 +59,19 @@ $query = "
       audit_log.TrackID DESC
 ";
 
-
+// Add debugging for the query
+// echo "<pre style='font-size:10px;'>Query: " . htmlspecialchars($query) . "</pre>";
 
 $stmt = $pdo->prepare($query);
 $stmt->execute();
 $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Debug the first few records to see what's in them
+// if (!empty($auditLogs)) {
+//     echo "<pre style='font-size:10px;'>First record: ";
+//     print_r($auditLogs[0]);
+//     echo "</pre>";
+// }
 
 /**
  * Helper function to display JSON data with <br> for new lines.
@@ -85,7 +101,7 @@ function formatNewValue($jsonStr)
     $html = '<ul class="list-group">';
     foreach ($data as $key => $value) {
         // Convert null to a display string
-        $displayValue = is_null($value) ? '<em>null</em>' : htmlspecialchars($value);
+        $displayValue = is_null($value) ? '<em>N/A</em>' : htmlspecialchars($value);
         $friendlyKey = ucwords(str_replace('_', ' ', $key));
         $html .= '<li class="list-group-item d-flex justify-content-between align-items-center">
                     <strong>' . $friendlyKey . ':</strong> <span>' . $displayValue . '</span>
@@ -188,11 +204,27 @@ function getActionIcon($action)
  */
 function getStatusIcon($status)
 {
-    return (strtolower($status) === 'successful')
+    $statusLower = strtolower(trim($status));
+    return (in_array($statusLower, ['successful', 'success']))
         ? '<i class="fas fa-check-circle"></i>'
         : '<i class="fas fa-times-circle"></i>';
 }
-
+/**
+ * Processes error messages when the log status is failed.
+ * Returns an array with [details, changes].
+ */
+function processStatusMessage($defaultMessage, $log, $changeCallback)
+{
+    $statusLower = strtolower(trim($log['Status'] ?? ''));
+    $isFailed = !in_array($statusLower, ['successful', 'success']);
+    $customMessage = trim($log['Details'] ?? '');
+    if ($isFailed && !empty($customMessage) && $customMessage !== $defaultMessage) {
+        $details = $defaultMessage . "<hr><br><strong style='color:red;font-style:italic;'>Error:</strong> "
+            . '<span style="color:red;font-style:italic;">' . nl2br(htmlspecialchars($customMessage)) . '</span>';
+        return [$details, 'N/A'];
+    }
+    return [$defaultMessage, $changeCallback()];
+}
 /**
  * Format the "Details" and "Changes" columns based on the action.
  * Returns an array: [ $detailsHTML, $changesHTML ]
@@ -270,16 +302,40 @@ function formatDetailsAndChanges($log)
             break;
         case 'restored':
             $details = htmlspecialchars("$targetEntityName has been restored");
-            $changes = "is_deleted 1 -> 0";
+            unset($log['is_disabled']);
+            $changes = formatNewValue(jsonStr: $log['OldVal']);
             break;
-        case 'remove':
-            $details = htmlspecialchars("$targetEntityName has been removed");
-            $changes = "is_deleted 0 -> 1";
+        
+        case 'removed':
+            $defaultMessage = htmlspecialchars("$targetEntityName has been removed");
+            list($details, $changes) = processStatusMessage(
+                $defaultMessage,
+                $log,
+                function () use ($log) {
+                    // 1) decode
+                    $old = json_decode($log['OldVal'], true);
+                    // 2) remove the is_disabled flag and status
+                    unset($old['is_disabled']);
+                    // 3) re-encode & hand it off to your existing formatter
+                    return formatNewValue(json_encode($old));
+                }
+            );
             break;
-        case 'delete':
+        case 'deleted':
         case 'permanent delete':
-            $details = htmlspecialchars("$targetEntityName has been permanently deleted");
-            $changes = formatNewValue($log['OldVal']);
+            $defaultMessage = htmlspecialchars("$targetEntityName has been permanently deleted");
+            list($details, $changes) = processStatusMessage(
+                $defaultMessage,
+                $log,
+                function () use ($log) {
+                    // 1) decode
+                    $old = json_decode($log['OldVal'], true);
+                    // 2) remove the is_disabled flag and status
+                    unset($old['is_disabled']);
+                    // 3) re-encode & hand it off to your existing formatter
+                    return formatNewValue(json_encode($old));
+                }
+            );
             break;
         default:
             $details = htmlspecialchars($log['Details'] ?? '');
@@ -320,7 +376,7 @@ function getChangedFieldNames(array $oldData, array $newData)
 
 // Filter section
 // Start with a base WHERE clause
-$where = "WHERE audit_log.Module = 'Department Management'";
+$where = "WHERE audit_log.Module IN ('Purchase Order','Charge Invoice','Receiving Report')";
 $params = [];
 
 // Filter by action type
@@ -331,8 +387,10 @@ if (!empty($_GET['action_type'])) {
 
 // Filter by status
 if (!empty($_GET['status'])) {
-    $where .= " AND audit_log.Status = :status";
+    $where .= " AND UPPER(audit_log.Status) = UPPER(:status)";
     $params[':status'] = $_GET['status'];
+    // Debug the status filter
+    // echo "<div style='font-size:10px;'>Filtering by status: " . htmlspecialchars($_GET['status']) . "</div>";
 }
 
 // Filter by search string
@@ -382,7 +440,17 @@ switch ($dateFilterType) {
         break;
 }
 
-$query = "SELECT audit_log.*, users.email AS email 
+$query = "SELECT audit_log.TrackID,
+    audit_log.UserID,
+    audit_log.EntityID,
+    audit_log.Module,
+    audit_log.Action,
+    audit_log.Details,
+    audit_log.OldVal,
+    audit_log.NewVal,
+    UPPER(audit_log.Status) AS status,
+    audit_log.Date_Time,
+    users.email AS email
           FROM audit_log 
           LEFT JOIN users ON audit_log.UserID = users.id
           $where
@@ -671,17 +739,26 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                             <!-- STATUS -->
                                             <td data-label="Status">
                                                 <?php
-                                                $status = $log['status'] ?? '';
+                                                // Get the raw status value from the database
+                                                $status = $log['Status'] ?? $log['status'] ?? '';
+                                                
+                                                // Normalize for comparison
                                                 $normalizedStatus = strtolower(trim($status));
-                                                $isSuccess = ($normalizedStatus === 'successful');
+                                                
+                                                // Check if it's a success status
+                                                $isSuccess = in_array($normalizedStatus, ['successful', 'success']);
+                                                
+                                                // Set display text
                                                 $statusText = $isSuccess ? 'Successful' : 'Failed';
+                                                
+                                                // Debug info - hidden in HTML comments
+                                                echo "<!-- Raw Status: '" . htmlspecialchars($status) . "' -->";
+                                                echo "<!-- Normalized: '" . htmlspecialchars($normalizedStatus) . "' -->";
+                                                echo "<!-- Is Success: " . ($isSuccess ? 'true' : 'false') . " -->";
                                                 ?>
                                                 <span class="badge <?= $isSuccess ? 'bg-success' : 'bg-danger' ?>">
                                                     <?= getStatusIcon($status) . ' ' . htmlspecialchars($statusText) ?>
                                                 </span>
-                                                <!-- DEBUG: Raw Status = '<?= htmlspecialchars($status) ?>' -->
-                                                <!-- DEBUG: Status Text = '<?= htmlspecialchars($statusText) ?>' -->
-                                                <!-- DEBUG: Is Success = '<?= htmlspecialchars($isSuccess) ?>' -->
                                             </td>
 
                                             <!-- DATE & TIME -->
