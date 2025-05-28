@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 27, 2025 at 06:36 AM
+-- Generation Time: May 28, 2025 at 09:26 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -1203,7 +1203,96 @@ INSERT INTO `audit_log` (`TrackID`, `UserID`, `EntityID`, `Action`, `Details`, `
 (1254, 1, 14, 'Create', 'New equipment status added', NULL, '{\"asset_tag\":\"00016406-TMD\",\"status\":\"\",\"action\":\"\",\"remarks\":\"\",\"is_disabled\":0}', 'Equipment Status', 'Successful', '2025-05-26 23:23:04'),
 (1255, 1, 15, 'Create', 'New equipment status added', NULL, '{\"asset_tag\":\"00001871-TMD\",\"status\":\"\",\"action\":\"\",\"remarks\":\"\",\"is_disabled\":0}', 'Equipment Status', 'Successful', '2025-05-26 23:23:07'),
 (1256, 1, 16, 'Create', 'New equipment status added', NULL, '{\"asset_tag\":\"00001257-TMD\",\"status\":\"\",\"action\":\"\",\"remarks\":\"\",\"is_disabled\":0}', 'Equipment Status', 'Successful', '2025-05-26 23:23:11'),
-(1257, 1, 17, 'Create', 'New equipment status added', NULL, '{\"asset_tag\":\"00001257-TMD\",\"status\":\"\",\"action\":\"\",\"remarks\":\"\",\"is_disabled\":0}', 'Equipment Status', 'Successful', '2025-05-26 23:23:14');
+(1257, 1, 17, 'Create', 'New equipment status added', NULL, '{\"asset_tag\":\"00001257-TMD\",\"status\":\"\",\"action\":\"\",\"remarks\":\"\",\"is_disabled\":0}', 'Equipment Status', 'Successful', '2025-05-26 23:23:14'),
+(1258, 1, 91, 'Modified', 'Equipment details modified', '{\"asset_tag\":\"123123123\",\"asset_description_1\":\"\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"\",\"model\":\"\",\"serial_number\":\"\",\"date_acquired\":\"2025-05-26 23:16:46\",\"invoice_no\":null,\"rr_no\":null,\"location\":\"\",\"accountable_individual\":\"\",\"remarks\":\"\",\"date_modified\":\"2025-05-26 23:16:46\",\"asset_tag_active\":\"123123123\"}', '{\"asset_tag\":\"123123123\",\"asset_description_1\":\"\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"\",\"model\":\"\",\"serial_number\":\"\",\"location\":\"\",\"accountable_individual\":\"\",\"rr_no\":\"RR1234567890\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-27 13:15:19'),
+(1259, 1, 36, 'Create', 'Purchase Order PO987654322323 created', NULL, '{\"po_no\":\"PO987654322323\",\"date_of_order\":\"2025-05-17\",\"no_of_units\":\"12\",\"item_specifications\":\"123123\"}', 'Purchase Order', 'Successful', '2025-05-27 13:41:02'),
+(1260, 1, 28, 'Create', 'Charge Invoice CI098765343434 created', NULL, '{\"invoice_no\":\"CI098765343434\",\"date_of_purchase\":\"2025-05-21\",\"po_no\":\"PO0000978\"}', 'Charge Invoice', 'Successful', '2025-05-27 13:41:25'),
+(1261, 1, 35, 'create', 'New Receiving Report has been Created', NULL, '{\"rr_no\":\"RR00000000\",\"accountable_individual\":\"23234\",\"po_no\":\"PO0000978\",\"ai_loc\":\"23123123\",\"date_created\":\"2025-05-27 07:41:42\"}', 'Receiving Report', 'Successful', '2025-05-27 13:41:42'),
+(1262, 1, 32, 'Add', 'Po No \'PO1213114123123\' has been created', '{\"id\":\"32\"}', '{\"id\":\"32\",\"po_no\":\"PO1213114123123\"}', 'Receiving Report', 'Successful', '2025-05-27 13:42:45'),
+(1263, 1, 91, 'Modified', 'Equipment details modified', '{\"asset_tag\":\"123123123\",\"asset_description_1\":\"\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"\",\"model\":\"\",\"serial_number\":\"\",\"date_acquired\":\"2025-05-26 23:16:46\",\"invoice_no\":null,\"rr_no\":\"RR1234567890\",\"location\":\"\",\"accountable_individual\":\"\",\"remarks\":\"\",\"date_modified\":\"2025-05-27 13:15:19\",\"asset_tag_active\":\"123123123\"}', '{\"asset_tag\":\"123123123\",\"asset_description_1\":\"\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"\",\"model\":\"\",\"serial_number\":\"\",\"location\":\"\",\"accountable_individual\":\"\",\"rr_no\":\"RR00000000\",\"date_acquired\":\"2000-12-12\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-27 13:53:48'),
+(1264, 1, NULL, 'Database Migration', 'Added date_acquired column to equipment_details table', NULL, NULL, 'System Administration', 'Successful', '2025-05-27 14:05:33'),
+(1265, 1, NULL, 'Database Migration', 'Added date_acquired column to equipment_details table', NULL, NULL, 'System Administration', 'Successful', '2025-05-27 14:05:34'),
+(1266, 1, NULL, 'Database Migration', 'Added date_acquired column to equipment_details table', NULL, NULL, 'System Administration', 'Successful', '2025-05-27 14:05:49'),
+(1267, 1, 37, 'Create', 'Purchase Order PO9999999999999999999999 created', NULL, '{\"po_no\":\"PO9999999999999999999999\",\"date_of_order\":\"2025-07-27\",\"no_of_units\":\"9\",\"item_specifications\":\"00000\"}', 'Purchase Order', 'Successful', '2025-05-27 14:06:38'),
+(1268, 1, 29, 'Create', 'Charge Invoice CI909090909090099090909090 created', NULL, '{\"invoice_no\":\"CI909090909090099090909090\",\"date_of_purchase\":\"2025-07-22\",\"po_no\":\"PO999999999999999999\"}', 'Charge Invoice', 'Successful', '2025-05-27 14:07:01'),
+(1269, 1, 36, 'create', 'New Receiving Report has been Created', NULL, '{\"rr_no\":\"RR80808080808080808080\",\"accountable_individual\":\"saem same\",\"po_no\":\"PO999999999999999999\",\"ai_loc\":\"23125123123adas234\",\"date_created\":\"2025-05-27 08:07:19\"}', 'Receiving Report', 'Successful', '2025-05-27 14:07:19'),
+(1270, 1, 91, 'Modified', 'Equipment details modified', '{\"asset_tag\":\"123123123\",\"asset_description_1\":\"\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"\",\"model\":\"\",\"serial_number\":\"\",\"date_acquired\":\"2000-12-12 00:00:00\",\"invoice_no\":null,\"rr_no\":\"RR00000000\",\"location\":\"\",\"accountable_individual\":\"\",\"remarks\":\"\",\"date_modified\":\"2025-05-27 13:53:48\",\"asset_tag_active\":\"123123123\"}', '{\"asset_tag\":\"123123123\",\"asset_description_1\":\"\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"\",\"model\":\"\",\"serial_number\":\"\",\"location\":\"\",\"accountable_individual\":\"\",\"rr_no\":\"RR808080808080808080\",\"date_acquired\":\"2025-07-22\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-27 14:41:29'),
+(1271, 1, 92, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"1111\",\"asset_description_1\":\"1231\",\"asset_description_2\":\"2\",\"specifications\":\"\",\"brand\":\"\",\"model\":\"\",\"serial_number\":\"\",\"location\":\"\",\"accountable_individual\":\"\",\"rr_no\":\"RR007571\",\"date_acquired\":\"2024-11-19\",\"date_created\":\"2025-05-27 14:41:59\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-27 14:41:59'),
+(1272, 1, 57, 'Create', 'Equipment location created from details', NULL, '{\"asset_tag\":\"1111\",\"building_loc\":\"\",\"floor_no\":\"\",\"specific_area\":\"\",\"person_responsible\":\"\",\"department_id\":null,\"device_state\":\"inventory\",\"remarks\":\"\"}', 'Equipment Location', 'Successful', '2025-05-27 14:41:59'),
+(1273, 1, 37, 'Create', 'New RR created from Equipment Details page', NULL, '{\"rr_no\":\"RR95678353245345\",\"date_created\":\"2025-05-27 07:07:06\",\"is_disabled\":0}', 'Receiving Report', 'Successful', '2025-05-27 15:07:06'),
+(1274, 1, 98, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"2134567890\",\"asset_description_1\":\"\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"\",\"model\":\"\",\"serial_number\":\"\",\"location\":\"\",\"accountable_individual\":\"\",\"rr_no\":\"95678353245345\",\"date_acquired\":\"2025-11-21\",\"date_created\":\"2025-05-27 15:07:47\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-27 15:07:47'),
+(1275, 1, 58, 'Create', 'Equipment location created from details', NULL, '{\"asset_tag\":\"2134567890\",\"building_loc\":\"\",\"floor_no\":\"\",\"specific_area\":\"\",\"person_responsible\":\"\",\"department_id\":null,\"device_state\":\"inventory\",\"remarks\":\"\"}', 'Equipment Location', 'Successful', '2025-05-27 15:07:47'),
+(1276, 1, 149, 'Create', 'New user added: 123123123123', NULL, '{\"id\": 149, \"username\": \"123123123123\", \"email\": \"admin13123123@example.com\", \"first_name\": \"123123\", \"last_name\": \"123123123\", \"department\": \"Unknown\", \"status\": \"Offline\", \"date_created\": \"2025-05-28 09:02:53\"}', 'User Management', 'Successful', '2025-05-28 09:02:53'),
+(1277, 1, 1, 'Logout', 'navithebear is now offline.', '{\"status\": \"Online\"}', '{\"status\": \"Offline\"}', 'User Management', 'Successful', '2025-05-28 09:03:10'),
+(1278, 1, 150, 'Create', 'New user added: asdasdasd', NULL, '{\"id\": 150, \"username\": \"asdasdasd\", \"email\": \"3123asd@example.com\", \"first_name\": \"asdasd\", \"last_name\": \"asdasd\", \"department\": \"Unknown\", \"status\": \"Offline\", \"date_created\": \"2025-05-28 09:03:46\"}', 'User Management', 'Successful', '2025-05-28 09:03:46'),
+(1279, 1, 151, 'Create', 'New user added: test31232', NULL, '{\"id\": 151, \"username\": \"test31232\", \"email\": \"test@example.com\", \"first_name\": \"test123123\", \"last_name\": \"test3123123\", \"department\": \"Unknown\", \"status\": \"Offline\", \"date_created\": \"2025-05-28 09:13:00\"}', 'User Management', 'Successful', '2025-05-28 09:13:00'),
+(1280, 1, 152, 'Create', 'New user added: aofaksdf', NULL, '{\"id\": 152, \"username\": \"aofaksdf\", \"email\": \"1312331@example.com\", \"first_name\": \"kalsdkalsd\", \"last_name\": \"asdasd\", \"department\": \"Unknown\", \"status\": \"Offline\", \"date_created\": \"2025-05-28 09:13:56\"}', 'User Management', 'Successful', '2025-05-28 09:13:56'),
+(1281, 1, 153, 'Create', 'New user added: 1231111', NULL, '{\"id\": 153, \"username\": \"1231111\", \"email\": \"asd3123@gmail.com\", \"first_name\": \"123\", \"last_name\": \"123\", \"department\": \"Unknown\", \"status\": \"Offline\", \"date_created\": \"2025-05-28 09:14:34\"}', 'User Management', 'Successful', '2025-05-28 09:14:34'),
+(1282, 1, 153, 'create', 'Attempted to create user with existing email: asd3123@gmail.com', NULL, '{\"email\":\"asd3123@gmail.com\"}', 'User Management', 'Failed', '2025-05-28 09:15:25'),
+(1283, 1, NULL, 'create', 'Attempted to create user with existing username: 1231111', NULL, '{\"username\":\"1231111\"}', 'User Management', 'Failed', '2025-05-28 09:15:30'),
+(1284, 1, 154, 'Create', 'New user added: 12311111', NULL, '{\"id\": 154, \"username\": \"12311111\", \"email\": \"asd31233@gmail.com\", \"first_name\": \"123\", \"last_name\": \"123\", \"department\": \"Unknown\", \"status\": \"Offline\", \"date_created\": \"2025-05-28 09:15:33\"}', 'User Management', 'Successful', '2025-05-28 09:15:33'),
+(1285, 1, 155, 'Create', 'New user added: 11112', NULL, '{\"id\": 155, \"username\": \"11112\", \"email\": \"asd3333@gmail.com\", \"first_name\": \"3331\", \"last_name\": \"123\", \"department\": \"Unknown\", \"status\": \"Offline\", \"date_created\": \"2025-05-28 09:18:10\"}', 'User Management', 'Successful', '2025-05-28 09:18:10'),
+(1286, 1, 156, 'Create', 'New user added: wasd', NULL, '{\"id\": 156, \"username\": \"wasd\", \"email\": \"waasd@gmail.com\", \"first_name\": \"wasd\", \"last_name\": \"wasd\", \"department\": \"Unknown\", \"status\": \"Offline\", \"date_created\": \"2025-05-28 09:20:41\"}', 'User Management', 'Successful', '2025-05-28 09:20:41'),
+(1287, 1, 156, 'create', 'Attempted to create user with existing email: waasd@gmail.com', NULL, '{\"email\":\"waasd@gmail.com\"}', 'User Management', 'Failed', '2025-05-28 09:20:42'),
+(1288, 1, 156, 'create', 'Attempted to create user with existing email: waasd@gmail.com', NULL, '{\"email\":\"waasd@gmail.com\"}', 'User Management', 'Failed', '2025-05-28 09:20:42'),
+(1289, 1, 156, 'create', 'Attempted to create user with existing email: waasd@gmail.com', NULL, '{\"email\":\"waasd@gmail.com\"}', 'User Management', 'Failed', '2025-05-28 09:20:43'),
+(1290, 1, 156, 'create', 'Attempted to create user with existing email: waasd@gmail.com', NULL, '{\"email\":\"waasd@gmail.com\"}', 'User Management', 'Failed', '2025-05-28 09:20:43'),
+(1291, 1, 156, 'create', 'Attempted to create user with existing email: waasd@gmail.com', NULL, '{\"email\":\"waasd@gmail.com\"}', 'User Management', 'Failed', '2025-05-28 09:20:44'),
+(1292, 1, 156, 'create', 'Attempted to create user with existing email: waasd@gmail.com', NULL, '{\"email\":\"waasd@gmail.com\"}', 'User Management', 'Failed', '2025-05-28 09:20:44'),
+(1293, 1, 157, 'Create', 'New user added: asdasdw', NULL, '{\"id\": 157, \"username\": \"asdasdw\", \"email\": \"31213asd@example.com\", \"first_name\": \"asdasd\", \"last_name\": \"asdasd\", \"department\": \"Unknown\", \"status\": \"Offline\", \"date_created\": \"2025-05-28 09:21:41\"}', 'User Management', 'Successful', '2025-05-28 09:21:41'),
+(1294, 1, 158, 'Create', 'New user added: moa', NULL, '{\"id\": 158, \"username\": \"moa\", \"email\": \"fff@example.com\", \"first_name\": \"moa\", \"last_name\": \"moa\", \"department\": \"Unknown\", \"status\": \"Offline\", \"date_created\": \"2025-05-28 09:22:18\"}', 'User Management', 'Successful', '2025-05-28 09:22:18'),
+(1295, 1, 159, 'Create', 'New user added: lol', NULL, '{\"id\": 159, \"username\": \"lol\", \"email\": \"as12323d@gmail.com\", \"first_name\": \"lol\", \"last_name\": \"lol\", \"department\": \"Unknown\", \"status\": \"Offline\", \"date_created\": \"2025-05-28 09:27:15\"}', 'User Management', 'Successful', '2025-05-28 09:27:15'),
+(1296, 1, 160, 'Create', 'New user added: mzlm', NULL, '{\"id\": 160, \"username\": \"mzlm\", \"email\": \"tdg@gmail.com\", \"first_name\": \"mlzm\", \"last_name\": \"mzlmz\", \"department\": \"Unknown\", \"status\": \"Offline\", \"date_created\": \"2025-05-28 09:30:43\"}', 'User Management', 'Successful', '2025-05-28 09:30:43'),
+(1297, 1, 1, 'create', 'Attempted to create user with existing email: navi@example.com', NULL, '{\"email\":\"navi@example.com\"}', 'User Management', 'Failed', '2025-05-28 09:34:35'),
+(1298, 1, 161, 'Create', 'New user added: 123', NULL, '{\"id\": 161, \"username\": \"123\", \"email\": \"navi3333@example.com\", \"first_name\": \"123\", \"last_name\": \"123\", \"department\": \"Unknown\", \"status\": \"Offline\", \"date_created\": \"2025-05-28 09:34:38\"}', 'User Management', 'Successful', '2025-05-28 09:34:38'),
+(1299, 1, 162, 'Create', 'New user added: 123123123', NULL, '{\"id\": 162, \"username\": \"123123123\", \"email\": \"asd123@gmail.com\", \"first_name\": \"123123\", \"last_name\": \"123123\", \"department\": \"Unknown\", \"status\": \"Offline\", \"date_created\": \"2025-05-28 09:35:12\"}', 'User Management', 'Successful', '2025-05-28 09:35:12'),
+(1300, 1, 161, 'Remove', 'User has been removed', '{\"id\": 161, \"username\": \"123\", \"email\": \"navi3333@example.com\", \"first_name\": \"123\", \"last_name\": \"123\", \"status\": \"Offline\", \"date_created\": \"2025-05-28 09:34:38\", \"is_disabled\": 0}', '', 'User Management', 'Successful', '2025-05-28 09:35:38'),
+(1301, 1, 160, 'Remove', 'User has been removed', '{\"id\": 160, \"username\": \"mzlm\", \"email\": \"tdg@gmail.com\", \"first_name\": \"mlzm\", \"last_name\": \"mzlmz\", \"status\": \"Offline\", \"date_created\": \"2025-05-28 09:30:43\", \"is_disabled\": 0}', '', 'User Management', 'Successful', '2025-05-28 09:35:43'),
+(1302, 2, 2, 'Logout', 'userman is now offline.', '{\"status\": \"Online\"}', '{\"status\": \"Offline\"}', 'User Management', 'Successful', '2025-05-28 09:43:36'),
+(1303, 1, 163, 'Create', 'New user added: asdf', NULL, '{\"id\": 163, \"username\": \"asdf\", \"email\": \"123asdf@example.com\", \"first_name\": \"asdf\", \"last_name\": \"asdf\", \"department\": \"Unknown\", \"status\": \"Offline\", \"date_created\": \"2025-05-28 09:45:45\"}', 'User Management', 'Successful', '2025-05-28 09:45:45'),
+(1304, 1, 163, 'modified', 'Updated user information: departments changed from [5777] to [Athletics and Fitness Center]', '{\"departments\":\"5777\"}', '{\"departments\":\"Athletics and Fitness Center\"}', 'User Management', 'Success', '2025-05-28 10:05:17'),
+(1305, 1, 163, 'modified', 'Updated user information: departments changed from [Athletics and Fitness Center] to [Basic Education School, Athletics and Fitness Center]', '{\"departments\":\"Athletics and Fitness Center\"}', '{\"departments\":\"Basic Education School, Athletics and Fitness Center\"}', 'User Management', 'Success', '2025-05-28 10:05:24'),
+(1306, 1, 163, 'modified', 'Updated user information: departments changed from [Basic Education School, Athletics and Fitness Center] to [Medical Clinic]', '{\"departments\":\"Basic Education School, Athletics and Fitness Center\"}', '{\"departments\":\"Medical Clinic\"}', 'User Management', 'Success', '2025-05-28 10:07:24'),
+(1307, 1, 164, 'Create', 'New user added: 123zxc', NULL, '{\"id\": 164, \"username\": \"123zxc\", \"email\": \"tester12333@gmail.com\", \"first_name\": \"zxc\", \"last_name\": \"zc\", \"department\": \"Unknown\", \"status\": \"Offline\", \"date_created\": \"2025-05-28 10:08:52\"}', 'User Management', 'Successful', '2025-05-28 10:08:52'),
+(1308, 1, 164, 'modified', 'Updated user information: departments changed from [Asset Management and Inventory Control Office] to [Office for Legal Affairs]', '{\"departments\":\"Asset Management and Inventory Control Office\"}', '{\"departments\":\"Office for Legal Affairs\"}', 'User Management', 'Success', '2025-05-28 10:08:57'),
+(1309, 1, 164, 'modified', 'Updated user information: departments changed from [Office for Legal Affairs] to [Athletics and Fitness Center]', '{\"departments\":\"Office for Legal Affairs\"}', '{\"departments\":\"Athletics and Fitness Center\"}', 'User Management', 'Success', '2025-05-28 10:09:05'),
+(1310, 1, 164, 'modified', 'Updated user information: departments changed from [Athletics and Fitness Center] to [Guidance Center]', '{\"departments\":\"Athletics and Fitness Center\"}', '{\"departments\":\"Guidance Center\"}', 'User Management', 'Success', '2025-05-28 10:09:10'),
+(1311, 1, 163, 'Remove', 'User has been removed', '{\"id\": 163, \"username\": \"asdf\", \"email\": \"123asdf@example.com\", \"first_name\": \"asdf\", \"last_name\": \"asdf\", \"status\": \"\", \"date_created\": \"2025-05-28 09:45:45\", \"is_disabled\": 0}', '', 'User Management', 'Successful', '2025-05-28 10:09:36'),
+(1312, 1, 164, 'modified', 'Updated user information: departments changed from [Guidance Center] to [Athletics and Fitness Center]', '{\"departments\":\"Guidance Center\"}', '{\"departments\":\"Athletics and Fitness Center\"}', 'User Management', 'Success', '2025-05-28 10:10:40'),
+(1313, 1, 164, 'modified', 'Updated user information: departments changed from [Athletics and Fitness Center] to [Finance Office, Athletics and Fitness Center, Guidance Center]', '{\"departments\":\"Athletics and Fitness Center\"}', '{\"departments\":\"Finance Office, Athletics and Fitness Center, Guidance Center\"}', 'User Management', 'Success', '2025-05-28 10:13:31');
+INSERT INTO `audit_log` (`TrackID`, `UserID`, `EntityID`, `Action`, `Details`, `OldVal`, `NewVal`, `Module`, `Status`, `Date_Time`) VALUES
+(1314, 1, 164, 'modified', 'Updated user information: departments changed from [Finance Office, Athletics and Fitness Center, Guidance Center] to [Finance Office, Athletics and Fitness Center, Guidance Center, Office for Legal Affairs]', '{\"departments\":\"Finance Office, Athletics and Fitness Center, Guidance Center\"}', '{\"departments\":\"Finance Office, Athletics and Fitness Center, Guidance Center, Office for Legal Affairs\"}', 'User Management', 'Success', '2025-05-28 10:13:38'),
+(1315, 1, 164, 'Remove', 'User has been removed', '{\"id\": 164, \"username\": \"123zxc\", \"email\": \"tester12333@gmail.com\", \"first_name\": \"zxc\", \"last_name\": \"zc\", \"status\": \"\", \"date_created\": \"2025-05-28 10:08:52\", \"is_disabled\": 0}', '', 'User Management', 'Successful', '2025-05-28 10:13:43'),
+(1316, 1, 1, 'create', 'Attempted to create user with existing email: navi@example.com', NULL, '{\"email\":\"navi@example.com\"}', 'User Management', 'Failed', '2025-05-28 10:13:51'),
+(1317, 1, 1, 'create', 'Attempted to create user with existing email: navi@example.com', NULL, '{\"email\":\"navi@example.com\"}', 'User Management', 'Failed', '2025-05-28 10:27:22'),
+(1318, 1, 1, 'create', 'Attempted to create user with existing email: navi@example.com', NULL, '{\"email\":\"navi@example.com\"}', 'User Management', 'Failed', '2025-05-28 10:27:23'),
+(1319, 1, 1, 'create', 'Attempted to create user with existing email: navi@example.com', NULL, '{\"email\":\"navi@example.com\"}', 'User Management', 'Failed', '2025-05-28 10:31:12'),
+(1320, 1, 1, 'create', 'Attempted to create user with existing email: navi@example.com', NULL, '{\"email\":\"navi@example.com\"}', 'User Management', 'Failed', '2025-05-28 10:36:28'),
+(1321, 1, 1, 'create', 'Attempted to create user with existing email: navi@example.com', NULL, '{\"email\":\"navi@example.com\"}', 'User Management', 'Failed', '2025-05-28 10:43:26'),
+(1322, 1, 54, 'Remove', 'Department \'123\' has been moved to archive', '{\"id\":54,\"abbreviation\":\"123\",\"department_name\":\"123\"}', '{\"id\":54,\"abbreviation\":\"123\",\"department_name\":\"123\"}', 'Department Management', 'Successful', '2025-05-28 10:45:24'),
+(1323, 1, 55, 'Create', 'Department \'123\' has been created', NULL, '{\"id\":55,\"abbreviation\":\"123\",\"department_name\":\"123\"}', 'Department Management', 'Successful', '2025-05-28 10:45:28'),
+(1324, 1, 1, 'create', 'Attempted to create user with existing email: navi@example.com', NULL, '{\"email\":\"navi@example.com\"}', 'User Management', 'Failed', '2025-05-28 10:46:46'),
+(1325, 1, 206, 'Create', 'New user added: 123asdf', NULL, '{\"id\": 206, \"username\": \"123asdf\", \"email\": \"nav123i@example.com\", \"first_name\": \"asdfasdf\", \"last_name\": \"123123adfasdf\", \"department\": \"Unknown\", \"status\": \"Offline\", \"date_created\": \"2025-05-28 10:46:59\"}', 'User Management', 'Successful', '2025-05-28 10:46:59'),
+(1326, 1, 206, 'modified', 'Attempted to change username from 123asdf to an existing username: 123', '{\"username\":\"123asdf\"}', '{\"username\":\"123\"}', 'User Management', 'Failed', '2025-05-28 10:55:13'),
+(1327, 1, 206, 'modified', 'Updated user information: departments changed from [Asset Management and Inventory Control Office] to [Asset Management and Inventory Control Office, Guidance Center]', '{\"departments\":\"Asset Management and Inventory Control Office\"}', '{\"departments\":\"Asset Management and Inventory Control Office, Guidance Center\"}', 'User Management', 'Success', '2025-05-28 10:55:16'),
+(1328, 1, 206, 'modified', 'Updated user information: departments changed from [Asset Management and Inventory Control Office, Guidance Center] to [Basic Education School, Asset Management and Inventory Control Office, Guidance Center]', '{\"departments\":\"Asset Management and Inventory Control Office, Guidance Center\"}', '{\"departments\":\"Basic Education School, Asset Management and Inventory Control Office, Guidance Center\"}', 'User Management', 'Success', '2025-05-28 11:05:55'),
+(1329, 1, 55, 'Remove', 'Department \'123\' has been moved to archive', '{\"id\":55,\"abbreviation\":\"123\",\"department_name\":\"123\"}', '{\"id\":55,\"abbreviation\":\"123\",\"department_name\":\"123\"}', 'Department Management', 'Successful', '2025-05-28 11:08:15'),
+(1330, 1, 56, 'Create', 'Department \'123\' has been created', NULL, '{\"id\":56,\"abbreviation\":\"123\",\"department_name\":\"123\"}', 'Department Management', 'Successful', '2025-05-28 11:08:18'),
+(1331, 1, 206, 'modified', 'Updated user information: departments changed from [Basic Education School, Asset Management and Inventory Control Office, Guidance Center] to []', '{\"departments\":\"Basic Education School, Asset Management and Inventory Control Office, Guidance Center\"}', '{\"departments\":\"\"}', 'User Management', 'Success', '2025-05-28 11:11:32'),
+(1332, 1, 162, 'modified', 'Updated user information: departments changed from [Asset Management and Inventory Control Office] to []', '{\"departments\":\"Asset Management and Inventory Control Office\"}', '{\"departments\":\"\"}', 'User Management', 'Success', '2025-05-28 11:11:40'),
+(1333, 1, 159, 'modified', 'Updated user information: departments changed from [Asset Management and Inventory Control Office] to [Asset Management and Inventory Control Office, 5777]', '{\"departments\":\"Asset Management and Inventory Control Office\"}', '{\"departments\":\"Asset Management and Inventory Control Office, 5777\"}', 'User Management', 'Success', '2025-05-28 11:16:28'),
+(1334, 1, 159, 'modified', 'Updated user information: departments changed from [Asset Management and Inventory Control Office, 5777] to [Asset Management and Inventory Control Office, Athletics and Fitness Center, 5777]', '{\"departments\":\"Asset Management and Inventory Control Office, 5777\"}', '{\"departments\":\"Asset Management and Inventory Control Office, Athletics and Fitness Center, 5777\"}', 'User Management', 'Success', '2025-05-28 11:16:33'),
+(1335, 1, 159, 'modified', 'Attempted to change username from lol to an existing username: 123', '{\"username\":\"lol\"}', '{\"username\":\"123\"}', 'User Management', 'Failed', '2025-05-28 11:16:41'),
+(1336, 1, 206, 'Remove', 'User has been removed', '{\"id\": 206, \"username\": \"123asdf\", \"email\": \"nav123i@example.com\", \"first_name\": \"asdfasdf\", \"last_name\": \"123123adfasdf\", \"status\": \"\", \"date_created\": \"2025-05-28 10:46:59\", \"is_disabled\": 0}', '', 'User Management', 'Successful', '2025-05-28 11:16:45'),
+(1337, 1, 162, 'Remove', 'User has been removed', '{\"id\": 162, \"username\": \"123123123\", \"email\": \"asd123@gmail.com\", \"first_name\": \"123123\", \"last_name\": \"123123\", \"status\": \"\", \"date_created\": \"2025-05-28 09:35:12\", \"is_disabled\": 0}', '', 'User Management', 'Successful', '2025-05-28 11:16:47'),
+(1338, 1, 159, 'modified', 'Updated user information: username: lol → lol123123', '{\"username\":\"lol\"}', '{\"username\":\"lol123123\"}', 'User Management', 'Success', '2025-05-28 12:26:26'),
+(1339, 1, 207, 'Create', 'New user added: 123124asd', NULL, '{\"id\": 207, \"username\": \"123124asd\", \"email\": \"superuser123123123@example.com\", \"first_name\": \"123asd\", \"last_name\": \"3123asd\", \"department\": \"Unknown\", \"status\": \"Offline\", \"date_created\": \"2025-05-28 12:26:39\"}', 'User Management', 'Successful', '2025-05-28 12:26:39'),
+(1340, 1, 99, 'Create', 'New equipment created', NULL, '{\"asset_tag\":\"5555555555555555555555555\",\"asset_description_1\":\"\",\"asset_description_2\":\"\",\"specifications\":\"\",\"brand\":\"\",\"model\":\"\",\"serial_number\":\"\",\"location\":\"\",\"accountable_individual\":\"\",\"rr_no\":\"\",\"date_acquired\":\"\",\"date_created\":\"2025-05-28 13:54:35\",\"remarks\":\"\"}', 'Equipment Details', 'Successful', '2025-05-28 13:54:35'),
+(1341, 1, 59, 'Create', 'Equipment location created from details', NULL, '{\"asset_tag\":\"5555555555555555555555555\",\"building_loc\":\"\",\"floor_no\":\"\",\"specific_area\":\"\",\"person_responsible\":\"\",\"department_id\":null,\"device_state\":\"inventory\",\"remarks\":\"\"}', 'Equipment Location', 'Successful', '2025-05-28 13:54:35'),
+(1342, 1, 208, 'Create', 'New user added: 312312312', NULL, '{\"id\": 208, \"username\": \"312312312\", \"email\": \"ad3123min@example.com\", \"first_name\": \"123123\", \"last_name\": \"123123\", \"department\": \"Unknown\", \"status\": \"Offline\", \"date_created\": \"2025-05-28 14:17:11\"}', 'User Management', 'Successful', '2025-05-28 14:17:11'),
+(1343, 1, 159, 'Remove', 'User has been removed', '{\"id\": 159, \"username\": \"lol123123\", \"email\": \"as12323d@gmail.com\", \"first_name\": \"lol\", \"last_name\": \"lol\", \"status\": \"\", \"date_created\": \"2025-05-28 09:27:15\", \"is_disabled\": 0}', '', 'User Management', 'Successful', '2025-05-28 15:16:58'),
+(1344, 1, 158, 'Remove', 'User has been removed', '{\"id\": 158, \"username\": \"moa\", \"email\": \"fff@example.com\", \"first_name\": \"moa\", \"last_name\": \"moa\", \"status\": \"Offline\", \"date_created\": \"2025-05-28 09:22:18\", \"is_disabled\": 0}', '', 'User Management', 'Successful', '2025-05-28 15:19:53'),
+(1345, 1, 210, 'Create', 'New user added: moa', NULL, '{\"id\": 210, \"username\": \"moa\", \"email\": \"fff@example.com\", \"first_name\": \"123123\", \"last_name\": \"123123\", \"department\": \"Unknown\", \"status\": \"Offline\", \"date_created\": \"2025-05-28 15:20:00\"}', 'User Management', 'Successful', '2025-05-28 15:20:00');
 
 -- --------------------------------------------------------
 
@@ -1238,7 +1327,9 @@ INSERT INTO `charge_invoice` (`id`, `invoice_no`, `date_of_purchase`, `po_no`, `
 (24, 'CI20247', '2024-11-19', 'PO1025000664', '2025-05-19 09:31:23', 0),
 (25, 'CI12123456', '2024-12-12', 'PO0000978', '2025-05-19 13:44:27', 0),
 (26, 'CI00001', '2025-05-20', 'PO0001', '2025-05-20 14:43:25', 0),
-(27, 'CI2345678', '2000-12-12', 'PO1213114123123', '2025-05-21 11:25:15', 0);
+(27, 'CI2345678', '2000-12-12', 'PO1213114123123', '2025-05-21 11:25:15', 0),
+(28, 'CI098765343434', '2025-05-21', 'PO0000978', '2025-05-27 13:41:25', 0),
+(29, 'CI909090909090099090', '2025-07-22', 'PO999999999999999999', '2025-05-27 14:07:01', 0);
 
 -- --------------------------------------------------------
 
@@ -1300,7 +1391,9 @@ INSERT INTO `departments` (`id`, `department_name`, `abbreviation`, `is_disabled
 (48, '123', '123', 1),
 (49, '321', '321', 1),
 (53, '321', '321', 1),
-(54, '123', '123', 0);
+(54, '123', '123', 1),
+(55, '123', '123', 1),
+(56, '123', '123', 0);
 
 -- --------------------------------------------------------
 
@@ -1412,7 +1505,10 @@ INSERT INTO `equipment_details` (`id`, `asset_tag`, `asset_description_1`, `asse
 (88, '0987654', '', '', '', '', '', '', '2025-05-26 19:42:31', NULL, NULL, '123123', '123123', '', '2025-05-26 19:42:31', 1, '2025-05-26 19:42:34'),
 (89, 'AT213', '123123', '123123', '', '', '', '', '2025-05-26 20:51:48', NULL, NULL, '', '', '', '2025-05-26 20:51:48', 1, '2025-05-26 21:09:03'),
 (90, 'AT213', '', '', '', '', '', '', '2025-05-26 21:09:11', NULL, NULL, '', '', '', '2025-05-26 21:09:11', 1, '2025-05-26 22:46:22'),
-(91, '123123123', '', '', '', '', '', '', '2025-05-26 23:16:46', NULL, NULL, '', '', '', '2025-05-26 23:16:46', 0, '2025-05-26 23:16:46');
+(91, '123123123', '', '', '', '', '', '', '2025-07-22 00:00:00', NULL, 'RR808080808080808080', '', '', '', '2025-05-26 23:16:46', 0, '2025-05-27 14:41:29'),
+(92, '1111', '1231', '2', '', '', '', '', '2024-11-19 00:00:00', NULL, 'RR007571', '', '', '', '2025-05-27 14:41:59', 0, '2025-05-27 14:41:59'),
+(98, '2134567890', '', '', '', '', '', '', '2025-11-21 00:00:00', NULL, 'RR95678353245345', '', '', '', '2025-05-27 15:07:47', 0, '2025-05-27 15:07:47'),
+(99, '5555555555555555555555555', '', '', '', '', '', '', '0000-00-00 00:00:00', NULL, NULL, '', '', '', '2025-05-28 13:54:35', 0, '2025-05-28 13:54:35');
 
 -- --------------------------------------------------------
 
@@ -1464,7 +1560,10 @@ INSERT INTO `equipment_location` (`equipment_location_id`, `asset_tag`, `buildin
 (48, '00016384-TMD', '', '', '', '', NULL, 'Inventory', '', '2025-05-26 22:47:57', 0),
 (51, '00016390-TMD', '', '', '', '', NULL, 'Inventory', '', '2025-05-26 23:07:32', 0),
 (52, '123123123', '', '', '', '', NULL, 'inventory', '', '2025-05-26 23:16:47', 1),
-(56, '123123123', '', '', '', '', NULL, 'Inventory', '', '2025-05-26 23:22:25', 0);
+(56, '123123123', '', '', '', '', NULL, 'Inventory', '', '2025-05-26 23:22:25', 0),
+(57, '1111', '', '', '', '', NULL, 'inventory', '', '2025-05-27 14:41:59', 0),
+(58, '2134567890', '', '', '', '', NULL, 'inventory', '', '2025-05-27 15:07:47', 0),
+(59, '5555555555555555555555555', '', '', '', '', NULL, 'inventory', '', '2025-05-28 13:54:35', 0);
 
 -- --------------------------------------------------------
 
@@ -1589,7 +1688,9 @@ INSERT INTO `purchase_order` (`id`, `po_no`, `date_of_order`, `no_of_units`, `it
 (29, 'PO234879734', '0123-12-31', 1234567, 'asdfghjk', '2025-05-21 10:13:41', 0),
 (30, 'PO123456', '2123-12-31', 23456789, '2346578', '2025-05-21 10:13:56', 0),
 (34, 'PO12345678900987654', '0231-12-31', 4356789, '4569870-=ghfdsasdasd', '2025-05-21 10:14:27', 1),
-(35, 'PO3234', '5634-12-12', 12789, 'dsfghmjh,kn', '2025-05-21 10:15:14', 0);
+(35, 'PO3234', '5634-12-12', 12789, 'dsfghmjh,kn', '2025-05-21 10:15:14', 0),
+(36, 'PO987654322323', '2025-05-17', 12, '123123', '2025-05-27 13:41:02', 0),
+(37, 'PO999999999999999999', '2025-07-27', 9, '00000', '2025-05-27 14:06:38', 0);
 
 -- --------------------------------------------------------
 
@@ -1626,9 +1727,12 @@ INSERT INTO `receive_report` (`id`, `rr_no`, `accountable_individual`, `ai_loc`,
 (28, 'RR234567', '12347', '345678', '', '2025-05-21 10:35:00', 0),
 (29, 'RR987654', '4567gfh', '1234567', '', '2025-05-21 10:35:00', 0),
 (30, 'RR3457', 'qerty', 'hgjasfsg', '', '2025-05-21 10:35:00', 0),
-(32, 'RR1234567890', 'dfghjkl;', 'azsdfghj', '', '2025-05-21 10:45:00', 0),
+(32, 'RR1234567890', 'dfghjkl;', 'azsdfghj', 'PO1213114123123', '2025-05-21 10:45:00', 0),
 (33, 'RR332131', 'xzczx', 'dfgdgd', 'PO23213123', '2025-05-21 10:45:00', 0),
-(34, 'RR123456', 'sdfghj', 'asdfghj', '', '2025-05-21 10:46:00', 0);
+(34, 'RR123456', 'sdfghj', 'asdfghj', '', '2025-05-21 10:46:00', 0),
+(35, 'RR00000000', '23234', '23123123', 'PO0000978', '2025-05-27 07:41:42', 0),
+(36, 'RR808080808080808080', 'saem same', '23125123123adas234', 'PO999999999999999999', '2025-05-27 08:07:19', 0),
+(37, 'RR95678353245345', NULL, NULL, NULL, '2025-05-27 07:07:06', 0);
 
 -- --------------------------------------------------------
 
@@ -2287,7 +2391,9 @@ CREATE TABLE `users` (
   `date_created` timestamp NULL DEFAULT current_timestamp(),
   `status` enum('Offline','Online') NOT NULL,
   `is_disabled` tinyint(1) NOT NULL DEFAULT 0,
-  `profile_pic_path` varchar(2048) DEFAULT NULL
+  `profile_pic_path` varchar(2048) DEFAULT NULL,
+  `username_active` varchar(50) GENERATED ALWAYS AS (case when `is_disabled` = 0 then `username` else NULL end) STORED,
+  `email_active` varchar(100) GENERATED ALWAYS AS (case when `is_disabled` = 0 then `email` else NULL end) STORED
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -2295,13 +2401,33 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `username`, `email`, `password`, `first_name`, `last_name`, `date_created`, `status`, `is_disabled`, `profile_pic_path`) VALUES
-(1, 'navithebear', 'navi@example.com', '$2y$12$2esj1uaDmbD3K6Fi.C0CiuOye96x8OjARwTc82ViEAPvmx4b1cL0S', 'navi', 'slu', '2025-02-19 01:19:52', 'Online', 0, 'assets/img/user_images/user_1.gif'),
-(2, 'userman', 'um@example.com', '$2y$12$wE3B0Dq4z0Bd1AHXf4gumexeObTqWXm7aASm7PnkCrtiL.iIfObS.', 'user', 'manager', '2025-02-19 05:40:35', 'Online', 0, NULL),
+(1, 'navithebear', 'navi@example.com', '$2y$12$2esj1uaDmbD3K6Fi.C0CiuOye96x8OjARwTc82ViEAPvmx4b1cL0S', 'navi', 'slu', '2025-02-19 01:19:52', 'Offline', 0, 'assets/img/user_images/user_1.gif'),
+(2, 'userman', 'um@example.com', '$2y$12$wE3B0Dq4z0Bd1AHXf4gumexeObTqWXm7aASm7PnkCrtiL.iIfObS.', 'user', 'manager', '2025-02-19 05:40:35', 'Offline', 0, NULL),
 (3, 'equipman', 'em@example.com', '$2y$12$J0iy9bwoalbG2/NkqDZchuLU4sWramGpsw1EsSZ6se0CefM/sqpZq', '123', '123', '2025-02-19 05:40:35', 'Online', 0, NULL),
 (4, 'rpman', 'rp@example.com', '$2y$12$dWnJinU4uO7ETYIKi9cL0uN4wJgjACaF.q0Pbkr5yNUK2q1HUQk8G', 'ropriv', 'manager', '2025-02-19 05:41:59', 'Offline', 0, NULL),
 (106, 'ttest1', 'test1@example.com', '$2y$10$2bz/ybJjCzyFYEd26NEZr.tsuqUZTpSwQtSTU1IQ8fVHyD2dzjTkO', 'test1', 'test1', '2025-03-21 08:30:58', '', 1, NULL),
 (107, 'ttest2', 'test2@example.com', '$2y$10$9uEUFx90zNh3wJmh8deSXenpr6PVopkRfkkzq4PtPAwPFRCx4cecW', 'test2', 'test2', '2025-03-21 08:31:14', '', 1, NULL),
-(134, '1123', 'Testertesting123@example.com', '$2y$12$xFf4FmS./UoBc..wijJsUuk8on6EcSeIWiThkd5p5sMdFtoBs23pa', '123', '123', '2025-05-13 13:28:15', '', 1, NULL);
+(134, '1123', 'Testertesting123@example.com', '$2y$12$xFf4FmS./UoBc..wijJsUuk8on6EcSeIWiThkd5p5sMdFtoBs23pa', '123', '123', '2025-05-13 13:28:15', '', 1, NULL),
+(149, '123123123123', 'admin13123123@example.com', '$2y$10$QQJH7lXGrp7ztU/3mLkz1eZiSUYtvLNi1/Ev/.BR5Cnb2MoQq3FkW', '123123', '123123123', '2025-05-28 01:02:53', 'Offline', 0, NULL),
+(150, 'asdasdasd', '3123asd@example.com', '$2y$10$rW0IUlSRkGE/.6dQEmsi0usHVxNXC7kJ9wK8viALwikMh9lVR.DMi', 'asdasd', 'asdasd', '2025-05-28 01:03:46', 'Offline', 0, NULL),
+(151, 'test31232', 'test@example.com', '$2y$10$UPipt34sD2DFAP/z7tTDwuC25wz4oYgQohaitoZW5TDceCgPJp/Fi', 'test123123', 'test3123123', '2025-05-28 01:13:00', 'Offline', 0, NULL),
+(152, 'aofaksdf', '1312331@example.com', '$2y$10$IuVjFIOjhThmZ4ILiCkBru6gE0qy6UzmBGcnskKvkb3IUh9F2Y..m', 'kalsdkalsd', 'asdasd', '2025-05-28 01:13:56', 'Offline', 0, NULL),
+(153, '1231111', 'asd3123@gmail.com', '$2y$10$aSKSW07BBlGld6/qZLx.bujjeu8jqyRjL2r5/Lgy3RAcWa59PNNF.', '123', '123', '2025-05-28 01:14:34', 'Offline', 0, NULL),
+(154, '12311111', 'asd31233@gmail.com', '$2y$10$3XBA9WXKag5.YYMzA3dSAej5.ajpzfUH7U5CB6Z2p6Wi.pUAOfXE2', '123', '123', '2025-05-28 01:15:33', 'Offline', 0, NULL),
+(155, '11112', 'asd3333@gmail.com', '$2y$10$oqS3o8jrzUfFdRNOCI1sSeCLz8u9OTkJUQE0RhKnUzu93UkEXgHaS', '3331', '123', '2025-05-28 01:18:10', 'Offline', 0, NULL),
+(156, 'wasd', 'waasd@gmail.com', '$2y$10$jFxsP8m2d2jErwJMhFjtmuIgyZkdo68jU4pc6r9JLyu3na9OXfCKO', 'wasd', 'wasd', '2025-05-28 01:20:41', 'Offline', 0, NULL),
+(157, 'asdasdw', '31213asd@example.com', '$2y$10$pigLeN7VEIUu3px35B.jc.yyLW5HjHyLFkhHw4/Oek0PaKk887u2.', 'asdasd', 'asdasd', '2025-05-28 01:21:41', 'Offline', 0, NULL),
+(158, 'moa', 'fff@example.com', '$2y$10$9GgcKpJ5wQM4AcJOoqiWPuxcZvToD/JNIaos3nSRu4rxamQE1/Y4q', 'moa', 'moa', '2025-05-28 01:22:18', '', 1, NULL),
+(159, 'lol123123', 'as12323d@gmail.com', '$2y$10$515XqcwQJgRlnJnHaIMg5efH7cULElCe2Y.ZiASid77s4E34Wb19m', 'lol', 'lol', '2025-05-28 01:27:15', '', 1, NULL),
+(160, 'mzlm', 'tdg@gmail.com', '$2y$10$/GaH4It2AchgYIbVCmZzHOO5x9o6OskXtWwP1m9d9vwsrb0xl3Xuy', 'mlzm', 'mzlmz', '2025-05-28 01:30:43', '', 1, NULL),
+(161, '123', 'navi3333@example.com', '$2y$10$jYvH5XXfzXZOO3RUwCW2l.0w3JBURoBQbdMfnLeLNa0ws8rPmFnvO', '123', '123', '2025-05-28 01:34:38', '', 1, NULL),
+(162, '123123123', 'asd123@gmail.com', '$2y$10$Jd1WqYeAXTMZyVd1PdcVZuwMnCagobev5.rQYZl2x.5EZ5im.zTVS', '123123', '123123', '2025-05-28 01:35:12', '', 1, NULL),
+(163, 'asdf', '123asdf@example.com', '$2y$10$3tPgORRD6o0dYfFiNQRNs.1PRK.7YzzDWQTOf8j0Md7vkwc90AEGW', 'asdf', 'asdf', '2025-05-28 01:45:45', '', 1, NULL),
+(164, '123zxc', 'tester12333@gmail.com', '$2y$10$2.PoG0vdSY53pb3TMJcpNOAZ/q9TOZDB9tj0SkFC6Gdq9sb4pWGLa', 'zxc', 'zc', '2025-05-28 02:08:52', '', 1, NULL),
+(206, '123asdf', 'nav123i@example.com', '$2y$10$SMuNxZw/s3juBo406HW8rudAGpVUnWydV.rQw.obIpsJ3rAb9oqMS', 'asdfasdf', '123123adfasdf', '2025-05-28 02:46:59', '', 1, NULL),
+(207, '123124asd', 'superuser123123123@example.com', '$2y$10$o6E7lLSkOY85t4YFtkkkfewa6NCeAyJBOMtUH9./t2bzVq1tDwIxe', '123asd', '3123asd', '2025-05-28 04:26:39', 'Offline', 0, NULL),
+(208, '312312312', 'ad3123min@example.com', '$2y$10$vDPoJuDqhH6Fci.8mnVkUe/cI8/vPJVhBkKutE0wcfQwN526..MLO', '123123', '123123', '2025-05-28 06:17:11', 'Offline', 0, NULL),
+(210, 'moa', 'fff@example.com', '$2y$10$H/HsOhHQNAZ00lpycBQk9.duAc7yydxV/czayP4OdwsY9/nVMQ8g2', '123123', '123123', '2025-05-28 07:20:00', 'Offline', 0, NULL);
 
 --
 -- Triggers `users`
@@ -2562,7 +2688,30 @@ INSERT INTO `user_department_roles` (`user_id`, `department_id`, `role_id`) VALU
 (147, 26, 1),
 (147, 26, 3),
 (147, 26, 36),
-(148, 23, 0);
+(148, 23, 0),
+(149, 54, 0),
+(150, 46, 0),
+(151, 23, 0),
+(152, 23, 0),
+(153, 23, 0),
+(154, 23, 0),
+(155, 23, 0),
+(156, 46, 0),
+(157, 23, 0),
+(158, 46, 0),
+(159, 23, 0),
+(159, 28, 0),
+(159, 46, 0),
+(160, 23, 0),
+(161, 46, 0),
+(163, 35, 0),
+(164, 24, 0),
+(164, 28, 0),
+(164, 32, 0),
+(164, 36, 0),
+(207, 23, 0),
+(208, 15, 0),
+(210, 23, 0);
 
 --
 -- Indexes for dumped tables
@@ -2669,8 +2818,8 @@ ALTER TABLE `role_module_privileges`
 --
 ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `username` (`username`),
-  ADD UNIQUE KEY `email` (`email`);
+  ADD UNIQUE KEY `uq_users_username_active` (`username_active`),
+  ADD UNIQUE KEY `uq_users_email_active` (`email_active`);
 
 --
 -- Indexes for table `user_department_roles`
@@ -2688,31 +2837,31 @@ ALTER TABLE `user_department_roles`
 -- AUTO_INCREMENT for table `audit_log`
 --
 ALTER TABLE `audit_log`
-  MODIFY `TrackID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1258;
+  MODIFY `TrackID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1346;
 
 --
 -- AUTO_INCREMENT for table `charge_invoice`
 --
 ALTER TABLE `charge_invoice`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=30;
 
 --
 -- AUTO_INCREMENT for table `departments`
 --
 ALTER TABLE `departments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=55;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=57;
 
 --
 -- AUTO_INCREMENT for table `equipment_details`
 --
 ALTER TABLE `equipment_details`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=92;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=100;
 
 --
 -- AUTO_INCREMENT for table `equipment_location`
 --
 ALTER TABLE `equipment_location`
-  MODIFY `equipment_location_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=57;
+  MODIFY `equipment_location_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=60;
 
 --
 -- AUTO_INCREMENT for table `equipment_status`
@@ -2736,13 +2885,13 @@ ALTER TABLE `privileges`
 -- AUTO_INCREMENT for table `purchase_order`
 --
 ALTER TABLE `purchase_order`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=38;
 
 --
 -- AUTO_INCREMENT for table `receive_report`
 --
 ALTER TABLE `receive_report`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=35;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=38;
 
 --
 -- AUTO_INCREMENT for table `roles`
@@ -2766,7 +2915,7 @@ ALTER TABLE `role_module_privileges`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=149;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=211;
 
 --
 -- Constraints for dumped tables
