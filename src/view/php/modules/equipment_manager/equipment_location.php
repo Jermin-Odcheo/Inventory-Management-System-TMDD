@@ -347,6 +347,7 @@ function safeHtml($value)
     return htmlspecialchars($value ?? 'N/A');
 }
 
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -471,7 +472,7 @@ function safeHtml($value)
                                 <input type="text" id="eqSearch" class="form-control" placeholder="Search Equipment...">
                             </div>
                         </div>
-                        <a href="equipLoc_change_log.php" class="btn btn-primary"> View Equipment Changes</a>
+                        <a href="equipLoc_change_log.php" class="btn btn-primary"><i class="bi bi-card-list"></i> View Equipment Changes</a>
                     </div>
 
                     <!-- Date Inputs Row -->

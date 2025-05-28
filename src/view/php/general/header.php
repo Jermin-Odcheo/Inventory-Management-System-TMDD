@@ -7,17 +7,6 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 $user_id = $_SESSION['user_id'] ?? null;
-if ($user_id !== null) {
-    $stmt = $pdo->prepare("SELECT profile_pic_path FROM users WHERE id = ?");
-    $stmt->execute([$user_id]);
-    $user = $stmt->fetch(PDO::FETCH_ASSOC);
-} else {
-    die("User not logged in.");
-}
-
-$role = isset($_SESSION["role"]) ? $_SESSION["role"] : "";
-$uname = $_SESSION['username'];
-$user_id = $_SESSION['user_id'] ?? null;
 
 $stmt = $pdo->prepare("
     SELECT u.username, u.profile_pic_path, r.role_name AS role
@@ -25,10 +14,24 @@ $stmt = $pdo->prepare("
     LEFT JOIN user_department_roles ur ON u.id = ur.user_id
     LEFT JOIN roles r ON ur.role_id = r.id
     WHERE u.id = ?
-    LIMIT 1
 ");
 $stmt->execute([$user_id]);
-$user = $stmt->fetch(PDO::FETCH_ASSOC);
+$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+if (!$rows) {
+    die("User not found or has no roles assigned.");
+}
+
+// Extract basic info from the first row
+$user = [
+    'username' => $rows[0]['username'],
+    'profile_pic_path' => $rows[0]['profile_pic_path'],
+];
+
+// Collect all roles
+$roles = array_column($rows, 'role');
+$roles_display = implode(', ', array_filter(array_unique($roles)));
+
 
 
 ?>
@@ -99,7 +102,7 @@ $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
                 <div class="user-info">
                     <div class="user-name"><?php echo htmlspecialchars($user['username']); ?></div>
-                    <div class="user-role"><?= htmlspecialchars($user['role']); ?></div>
+                    <div class="user-role"><?= htmlspecialchars($roles_display); ?></div>
                 </div>
                 <div class="dropdown-menu" id="dropdownMenu">
                     <div class="settings-container">

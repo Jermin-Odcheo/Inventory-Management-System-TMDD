@@ -251,10 +251,10 @@ if (
                     if (!$statusData) {
                         throw new Exception('Status not found');
                     }
-                    
+
                     // Get the asset tag
                     $assetTag = $statusData['asset_tag'];
-                    
+
                     // Begin transaction
                     $pdo->beginTransaction();
 
@@ -295,10 +295,10 @@ if (
                     // Perform the delete on equipment_status
                     $stmt = $pdo->prepare("UPDATE equipment_status SET is_disabled = 1 WHERE equipment_status_id = ?");
                     $stmt->execute([$_POST['status_id']]);
-                    
+
                     // No longer check for active status records or cascade deletions
                     // We only update the equipment_status record
-                    
+
                     $_SESSION['success'] = "Equipment Status deleted successfully.";
                     $response = [
                         'status' => 'success',
@@ -382,7 +382,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
         if ($statusData) {
             // Get the asset tag
             $assetTag = $statusData['asset_tag'];
-            
+
             // Begin transaction
             $pdo->beginTransaction();
 
@@ -426,10 +426,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             // Perform the delete on equipment_status
             $stmt = $pdo->prepare("UPDATE equipment_status SET is_disabled = 1 WHERE equipment_status_id = ?");
             $stmt->execute([$id]);
-            
+
             // No longer check for active status records or cascade deletions
             // We only update the equipment_status record
-            
+
             $_SESSION['success'] = "Equipment Status deleted successfully.";
         }
     } catch (PDOException $e) {
@@ -452,63 +452,72 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Equipment Status Management</title>
     <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
- <style>
-          th.sortable.asc::after {
-    content: " ▲";
-}
-th.sortable.desc::after {
-    content: " ▼";
-}
+    <style>
+        th.sortable.asc::after {
+            content: " ▲";
+        }
 
-/* Styling for read-only fields */
-input[readonly] {
-    background-color: #e9ecef;
-    opacity: 0.65;
-    cursor: not-allowed;
-}
-.filter-btn-custom {
-    background: #181818 !important;
-    color: #fff !important;
-    border-radius: 10px !important;
-    margin-left: 8px !important;
-    display: flex !important;
-    align-items: center !important;
-    gap: 6px !important;
-    min-width: 180px !important;
-    width: 220px !important;
-    justify-content: flex-start !important;
-    transition: background 0.2s;
-}
-.filter-btn-custom:hover, .filter-btn-custom:focus {
-    background: #3c3c3c !important;
-    color: #fff !important;
-}
-.filter-btn-custom:active {
-    background: #222 !important;
-    color: #fff !important;
-}
-.clear-btn-custom {
-    background: #757d84 !important;
-    color: #fff !important;
-    border-radius: 10px !important;
-    margin-left: 8px !important;
-    display: flex !important;
-    align-items: center !important;
-    gap: 6px !important;
-    min-width: 120px !important;
-    width: 180px !important;
-    justify-content: flex-start !important;
-    transition: background 0.2s;
-}
-.clear-btn-custom:hover, .clear-btn-custom:focus {
-    background: #6c757d !important;
-    color: #fff !important;
-}
-.clear-btn-custom:active {
-    background: #5a6268 !important;
-    color: #fff !important;
-}
- </style>
+        th.sortable.desc::after {
+            content: " ▼";
+        }
+
+        /* Styling for read-only fields */
+        input[readonly] {
+            background-color: #e9ecef;
+            opacity: 0.65;
+            cursor: not-allowed;
+        }
+
+        .filter-btn-custom {
+            background: #181818 !important;
+            color: #fff !important;
+            border-radius: 10px !important;
+            margin-left: 8px !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+            min-width: 180px !important;
+            width: 220px !important;
+            justify-content: flex-start !important;
+            transition: background 0.2s;
+        }
+
+        .filter-btn-custom:hover,
+        .filter-btn-custom:focus {
+            background: #3c3c3c !important;
+            color: #fff !important;
+        }
+
+        .filter-btn-custom:active {
+            background: #222 !important;
+            color: #fff !important;
+        }
+
+        .clear-btn-custom {
+            background: #757d84 !important;
+            color: #fff !important;
+            border-radius: 10px !important;
+            margin-left: 8px !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+            min-width: 120px !important;
+            width: 180px !important;
+            justify-content: flex-start !important;
+            transition: background 0.2s;
+        }
+
+        .clear-btn-custom:hover,
+        .clear-btn-custom:focus {
+            background: #6c757d !important;
+            color: #fff !important;
+        }
+
+        .clear-btn-custom:active {
+            background: #5a6268 !important;
+            color: #fff !important;
+        }
+    </style>
 </head>
 
 <body>
@@ -533,16 +542,16 @@ input[readonly] {
                                 </button>
                             <?php endif; ?>
                         </div>
-                        <div class="col-md-3">
+                        <!-- <div class="col-md-3">
                             <select class="form-select" id="filterStatus">
                                 <option value="">Filter by Status</option>
-                                <?php 
+                                <?php
                                 // Get unique status values from the database
                                 try {
                                     // First, let's check for any problematic values for debugging
                                     $debugQuery = $pdo->query("SELECT equipment_status_id, asset_tag, status, LENGTH(status) as status_length FROM equipment_status WHERE is_disabled = 0 ORDER BY status");
                                     $debugResults = $debugQuery->fetchAll(PDO::FETCH_ASSOC);
-                                    
+
                                     // Log the raw status values with detailed info
                                     foreach ($debugResults as $row) {
                                         $statusValue = $row['status'];
@@ -552,22 +561,22 @@ input[readonly] {
                                         }
                                         error_log("Status ID {$row['equipment_status_id']} (Asset: {$row['asset_tag']}): '{$statusValue}' - Length: {$row['status_length']} - Hex: {$hexChars}");
                                     }
-                                    
+
                                     // Now get the distinct values for the dropdown, excluding empty values
                                     $statusOptions = $pdo->query("SELECT DISTINCT status FROM equipment_status WHERE is_disabled = 0 AND status IS NOT NULL AND TRIM(status) != '' ORDER BY status")->fetchAll(PDO::FETCH_COLUMN);
-                                    
+
                                     // Debug - print status values
                                     error_log("Equipment Status Values: " . print_r($statusOptions, true));
-                                    
-                                    foreach($statusOptions as $status) {
+
+                                    foreach ($statusOptions as $status) {
                                         // Normalize the status value to remove any extra whitespace
                                         $normalizedStatus = trim(preg_replace('/\s+/', ' ', $status));
-                                        
+
                                         // Skip empty values
                                         if (empty($normalizedStatus)) {
                                             continue;
                                         }
-                                        
+
                                         echo "<option value=\"" . htmlspecialchars($normalizedStatus) . "\">" . htmlspecialchars($normalizedStatus) . "</option>";
                                     }
                                 } catch (PDOException $e) {
@@ -613,8 +622,8 @@ input[readonly] {
                         </div>
                     </div>
 
-                    <!-- Date Inputs Row -->
-                    <div id="dateInputsContainer" class="date-inputs-container">
+                    <!--Date Inputs Row -->
+                        <!-- <div id="dateInputsContainer" class="date-inputs-container">
                         <div class="month-picker-container" id="monthPickerContainer">
                             <select class="form-select" id="monthSelect">
                                 <option value="">Select Month</option>
@@ -639,39 +648,53 @@ input[readonly] {
                             <input type="date" class="form-control" id="dateFrom" placeholder="From">
                             <input type="date" class="form-control" id="dateTo" placeholder="To">
                         </div>
-                    </div>
-                </div>
+                    </div> -->
 
-                <div class="table-responsive" id="table">
-    <table class="table" id="statusTable">
-        <thead>
-            <tr>
-                <th class="sortable" data-sort="number" data-column="1">#</th>
-                <th class="sortable" data-sort="string" data-column="2">Asset Tag</th>
-                <th class="sortable" data-sort="string" data-column="3">Status</th>
-                <th class="sortable" data-sort="string" data-column="4">Process Action Taken</th>
-                <th class="sortable" data-sort="date" data-column="5">Created Date</th>
-                <th class="sortable" data-sort="string" data-column="6">Remarks</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody id="statusTbody">
-            <?php
-            try {
-                $stmt = $pdo->query("SELECT * FROM equipment_status WHERE is_disabled = 0 ORDER BY date_created DESC");
-                while ($row = $stmt->fetch()) {
-                    echo "<tr>";
-                    echo "<td>" . htmlspecialchars($row['equipment_status_id']) . "</td>";
-                    echo "<td>" . htmlspecialchars($row['asset_tag']) . "</td>";
-                    echo "<td>" . htmlspecialchars($row['status']) . "</td>";
-                    echo "<td>" . htmlspecialchars($row['action']) . "</td>";
-                    echo "<td>" . date('Y-m-d H:i', strtotime($row['date_created'])) . "</td>";
-                    echo "<td>" . htmlspecialchars($row['remarks']) . "</td>";
-                    echo "<td>
+                        <!-- Buttons -->
+                        <!-- Buttons-->
+                        <div class="col-6 col-md-2 d-grid">
+                            <button type="submit" class="btn btn-dark"><i class="bi bi-funnel"></i> Filter</button>
+                        </div>
+
+                        <div class="col-6 col-md-2 d-grid">
+                            <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary shadow-sm"><i class="bi bi-x-circle"></i> Clear</a>
+                        </div>
+
+                        <div class="col-12 col-md-3 d-grid">
+                            <a href="equipStat_change_log.php" class="btn btn-primary"><i class="bi bi-card-list"></i> View Equipment Status Changes</a>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive" id="table">
+                        <table class="table" id="statusTable">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-sort="number" data-column="1">#</th>
+                                    <th class="sortable" data-sort="string" data-column="2">Asset Tag</th>
+                                    <th class="sortable" data-sort="string" data-column="3">Status</th>
+                                    <th class="sortable" data-sort="string" data-column="4">Process Action Taken</th>
+                                    <th class="sortable" data-sort="date" data-column="5">Created Date</th>
+                                    <th class="sortable" data-sort="string" data-column="6">Remarks</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="statusTbody">
+                                <?php
+                                try {
+                                    $stmt = $pdo->query("SELECT * FROM equipment_status WHERE is_disabled = 0 ORDER BY date_created DESC");
+                                    while ($row = $stmt->fetch()) {
+                                        echo "<tr>";
+                                        echo "<td>" . htmlspecialchars($row['equipment_status_id']) . "</td>";
+                                        echo "<td>" . htmlspecialchars($row['asset_tag']) . "</td>";
+                                        echo "<td>" . htmlspecialchars($row['status']) . "</td>";
+                                        echo "<td>" . htmlspecialchars($row['action']) . "</td>";
+                                        echo "<td>" . date('Y-m-d H:i', strtotime($row['date_created'])) . "</td>";
+                                        echo "<td>" . htmlspecialchars($row['remarks']) . "</td>";
+                                        echo "<td>
                         <div class='d-flex justify-content-center gap-2'>";
-                    
-                    if ($canModify) {
-                        echo "<button class='btn btn-sm btn-outline-info edit-status' 
+
+                                        if ($canModify) {
+                                            echo "<button class='btn btn-sm btn-outline-info edit-status' 
                                 data-id='" . htmlspecialchars($row['equipment_status_id']) . "'
                                 data-asset='" . htmlspecialchars($row['asset_tag']) . "'
                                 data-status='" . htmlspecialchars($row['status']) . "'
@@ -680,68 +703,68 @@ input[readonly] {
                                 data-disabled='" . htmlspecialchars($row['is_disabled']) . "'>
                               <i class='bi bi-pencil'></i>
                             </button>";
-                    }
-                    
-                    if ($canDelete) {
-                        echo "<button class='btn btn-sm btn-outline-danger delete-status' 
+                                        }
+
+                                        if ($canDelete) {
+                                            echo "<button class='btn btn-sm btn-outline-danger delete-status' 
                                 data-id='" . htmlspecialchars($row['equipment_status_id']) . "'>
                               <i class='bi bi-trash'></i>
                             </button>";
-                    }
-                    
-                    echo "</div>
+                                        }
+
+                                        echo "</div>
                     </td>";
-                    echo "</tr>";
-                }
-            } catch (PDOException $e) {
-                echo "<tr><td colspan='8' class='text-danger text-center'>Error loading equipment status: " . $e->getMessage() . "</td></tr>";
-            }
-            ?>
-        </tbody>
-    </table>
-</div>
-
-
-                <!-- Pagination Controls -->
-                <div class="container-fluid">
-                    <div class="row align-items-center g-3">
-                        <div class="col-12 col-sm-auto">
-                            <div class="text-muted">
-                                <?php 
-                                // Count total equipment status entries
-                                $statusCountStmt = $pdo->query("SELECT COUNT(*) FROM equipment_status WHERE is_disabled = 0");
-                                $totalLogs = $statusCountStmt->fetchColumn();
+                                        echo "</tr>";
+                                    }
+                                } catch (PDOException $e) {
+                                    echo "<tr><td colspan='8' class='text-danger text-center'>Error loading equipment status: " . $e->getMessage() . "</td></tr>";
+                                }
                                 ?>
-                                <input type="hidden" id="total-users" value="<?= $totalLogs ?>">
-                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span id="totalRows"><?= $totalLogs ?></span> entries
-                            </div>
-                        </div>
-                        <div class="col-12 col-sm-auto ms-sm-auto">
-                            <div class="d-flex align-items-center gap-2">
-                                <button id="prevPage"
-                                    class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                    <i class="bi bi-chevron-left"></i> Previous
-                                </button>
-                                <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
-                                    <option value="10" selected>10</option>
-                                    <option value="20">20</option>
-                                    <option value="30">30</option>
-                                    <option value="50">50</option>
-                                </select>
-                                <button id="nextPage"
-                                    class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                    Next <i class="bi bi-chevron-right"></i>
-                                </button>
-                            </div>
-                        </div>
+                            </tbody>
+                        </table>
                     </div>
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <ul class="pagination justify-content-center" id="pagination"></ul>
+
+
+                    <!-- Pagination Controls -->
+                    <div class="container-fluid">
+                        <div class="row align-items-center g-3">
+                            <div class="col-12 col-sm-auto">
+                                <div class="text-muted">
+                                    <?php
+                                    // Count total equipment status entries
+                                    $statusCountStmt = $pdo->query("SELECT COUNT(*) FROM equipment_status WHERE is_disabled = 0");
+                                    $totalLogs = $statusCountStmt->fetchColumn();
+                                    ?>
+                                    <input type="hidden" id="total-users" value="<?= $totalLogs ?>">
+                                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span id="totalRows"><?= $totalLogs ?></span> entries
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-auto ms-sm-auto">
+                                <div class="d-flex align-items-center gap-2">
+                                    <button id="prevPage"
+                                        class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                        <i class="bi bi-chevron-left"></i> Previous
+                                    </button>
+                                    <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                        <option value="10" selected>10</option>
+                                        <option value="20">20</option>
+                                        <option value="30">30</option>
+                                        <option value="50">50</option>
+                                    </select>
+                                    <button id="nextPage"
+                                        class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                        Next <i class="bi bi-chevron-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <ul class="pagination justify-content-center" id="pagination"></ul>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
         </section>
     </div>
 
@@ -765,24 +788,24 @@ input[readonly] {
                                     // Fetch unique asset tags from equipment_details and equipment_location
                                     // but exclude those that already have active status records
                                     $assetTags = [];
-                                    
+
                                     // Get all asset tags from equipment_details and equipment_location
                                     $stmt1 = $pdo->query("SELECT DISTINCT asset_tag FROM equipment_details WHERE is_disabled = 0");
                                     $assetTags = array_merge($assetTags, $stmt1->fetchAll(PDO::FETCH_COLUMN));
                                     $stmt2 = $pdo->query("SELECT DISTINCT asset_tag FROM equipment_location WHERE is_disabled = 0");
                                     $assetTags = array_merge($assetTags, $stmt2->fetchAll(PDO::FETCH_COLUMN));
                                     $assetTags = array_unique(array_filter($assetTags));
-                                    
+
                                     // Get asset tags that already have active status records
                                     $stmt3 = $pdo->query("SELECT DISTINCT asset_tag FROM equipment_status WHERE is_disabled = 0");
                                     $activeStatusTags = $stmt3->fetchAll(PDO::FETCH_COLUMN);
-                                    
+
                                     // Filter out asset tags that already have active status
                                     $availableAssetTags = array_diff($assetTags, $activeStatusTags);
-                                    
+
                                     // Sort the available asset tags
                                     sort($availableAssetTags);
-                                    
+
                                     foreach ($availableAssetTags as $tag) {
                                         echo '<option value="' . htmlspecialchars($tag) . '">' . htmlspecialchars($tag) . '</option>';
                                     }
@@ -900,13 +923,13 @@ input[readonly] {
             window.allRows = statusRows;
             window.filteredRows = statusRows;
             window.paginationInitialized = true;
-            
+
             // Initialize pagination with the status table ID
             initPagination({
                 tableId: 'statusTbody',
                 currentPage: 1
             });
-            
+
             // Diagnostic function to analyze all status values
             function analyzeStatusValues() {
                 console.log("--- ANALYZING ALL STATUS VALUES ---");
@@ -915,24 +938,24 @@ input[readonly] {
                 statusCells.forEach((cell, index) => {
                     const statusText = cell.textContent.trim();
                     const normalizedStatus = statusText.replace(/\s+/g, ' ').trim();
-                    
+
                     if (!statusValues[normalizedStatus]) {
                         statusValues[normalizedStatus] = [];
                     }
                     statusValues[normalizedStatus].push(index + 1);
-                    
+
                     // Log each status with detailed info
                     console.log(`Row ${index+1} Status: "${statusText}"`);
                     console.log(`  - Length: ${statusText.length}`);
                     console.log(`  - Character codes: [${Array.from(statusText).map(c => c.charCodeAt(0))}]`);
                 });
-                
+
                 console.log("--- STATUS VALUE SUMMARY ---");
                 for (const [status, rows] of Object.entries(statusValues)) {
                     console.log(`Status "${status}" appears in ${rows.length} rows: ${rows.join(', ')}`);
                 }
             }
-            
+
             // Run the analysis once the page is loaded
             setTimeout(analyzeStatusValues, 1000);
         });
@@ -947,20 +970,20 @@ input[readonly] {
                 focus: true
             });
             
-            // Real-time search only for searchStatus (not filterStatus)
-            $('#searchStatus').on('input', function() {
+            // Real-time search & filter
+            $('#searchStatus, #filterStatus').on('input change', function() {
                 filterStatusTable();
             });
-            
+
             // Table sorting
             $('.sortable').on('click', function(event) {
                 const sortField = $(this).data('sort');
                 const currentClass = $(this).hasClass('asc') ? 'asc' : ($(this).hasClass('desc') ? 'desc' : '');
                 const columnIndex = $(this).data('column');
-                
+
                 // Remove sort indicators from all headers
                 $('.sortable').removeClass('asc desc');
-                
+
                 // Set new sort direction
                 let newDirection = 'asc';
                 if (currentClass === 'asc') {
@@ -969,19 +992,19 @@ input[readonly] {
                 } else {
                     $(this).addClass('asc');
                 }
-                
+
                 // Sort the rows
                 sortTable(sortField, newDirection, columnIndex);
             });
-            
+
             // Function to sort the table
             function sortTable(field, direction, columnIndex) {
                 // Use the allRows array as the source
                 const sortedRows = [...window.allRows];
-                
+
                 sortedRows.sort((a, b) => {
                     let valueA, valueB;
-                    
+
                     switch (field) {
                         case 'number':
                             valueA = parseInt(a.querySelector(`td:nth-child(${columnIndex})`).textContent.trim()) || 0;
@@ -998,7 +1021,7 @@ input[readonly] {
                         default:
                             return 0;
                     }
-                    
+
                     // Compare values based on direction
                     if (direction === 'asc') {
                         return valueA > valueB ? 1 : (valueA < valueB ? -1 : 0);
@@ -1006,10 +1029,10 @@ input[readonly] {
                         return valueA < valueB ? 1 : (valueA > valueB ? -1 : 0);
                     }
                 });
-                
+
                 // Update the filteredRows with the sorted rows
                 window.filteredRows = sortedRows;
-                
+
                 // Update the pagination
                 updatePagination();
             }
@@ -1051,10 +1074,31 @@ input[readonly] {
                 } else if (filterType === 'range') {
                     $('#dateInputsContainer').show();
                     $('#dateRangePickers').show();
+                } else if (filterType === 'desc' || filterType === 'asc') {
+                    // Apply sorting without showing date inputs
+                filterStatusTable();
                 }
-                // Do NOT call filterStatusTable() here
             });
-            // Do NOT trigger filterStatusTable() on month/year/dateFrom/dateTo changes
+
+            // Handle month/year selection changes
+            $('#monthSelect, #yearSelect').on('change', function() {
+                const month = $('#monthSelect').val();
+                const year = $('#yearSelect').val();
+
+                if (month && year) {
+                    filterStatusTable();
+                }
+            });
+
+            // Handle date range changes
+            $('#dateFrom, #dateTo').on('change', function() {
+                const dateFrom = $('#dateFrom').val();
+                const dateTo = $('#dateTo').val();
+
+                if (dateFrom && dateTo) {
+                    filterStatusTable();
+                }
+            });
 
             // Custom filter function for this page that works with the pagination system
             function filterStatusTable() {
@@ -1072,26 +1116,26 @@ input[readonly] {
                 window.filteredRows = window.allRows.filter(row => {
                     // Get text content for search
                     const rowText = row.textContent.toLowerCase();
-                    
+
                     // Get status cell text - ensuring we normalize whitespace
                     const statusCell = row.querySelector('td:nth-child(3)');
                     // Normalize whitespace by trimming and removing extra spaces
                     const statusText = statusCell ? statusCell.textContent.replace(/\s+/g, ' ').trim() : '';
-                    
+
                     // Get date info
                     const dateCell = row.querySelector('td:nth-child(5)').textContent;
                     const date = new Date(dateCell);
-                    
+
                     // Text search match
                     const searchMatch = rowText.includes(searchText);
-                    
+
                     // Status filtering - checking for selected value with flexible matching
                     let statusMatch = true;
                     if (filterStatus && filterStatus.trim() !== '') {
                         // Only do status filtering if we have a real value selected
                         statusMatch = statusText.toLowerCase() === filterStatus.toLowerCase();
                     }
-                    
+
                     // Date filtering
                     let dateMatch = true;
                     if (dateFilterType === 'month' && selectedMonth && selectedYear) {
@@ -1103,10 +1147,10 @@ input[readonly] {
                         to.setHours(23, 59, 59); // Include the entire "to" day
                         dateMatch = date >= from && date <= to;
                     }
-                    
+
                     return searchMatch && statusMatch && dateMatch;
                 });
-                
+
                 // Handle sorting if needed
                 if (dateFilterType === 'asc' || dateFilterType === 'desc') {
                     window.filteredRows.sort(function(a, b) {
@@ -1115,13 +1159,13 @@ input[readonly] {
                         return dateFilterType === 'asc' ? dateA - dateB : dateB - dateA;
                     });
                 }
-                
+
                 // Update total count in the UI
                 $('#totalRows').text(window.filteredRows.length);
-                
+
                 // Update pagination with filtered rows
                 updatePagination();
-                
+
                 // After pagination updates, check if we need to hide pagination controls
                 setTimeout(checkAndHidePagination, 100);
             }
@@ -1272,7 +1316,7 @@ input[readonly] {
             $('#editStatusModal').on('hidden.bs.modal', function() {
                 $(this).find('form')[0].reset();
             });
-            
+
             // Run on page load with a longer delay to ensure DOM is fully processed
             setTimeout(checkAndHidePagination, 300);
 
@@ -1307,7 +1351,7 @@ input[readonly] {
                 width: '100%',
                 dropdownParent: $('#addStatusModal')
             });
-            
+
             // Proper management of modal backdrops when closing a modal
             $('#addStatusModal').on('hidden.bs.modal', function() {
                 $(this).find('form')[0].reset();
