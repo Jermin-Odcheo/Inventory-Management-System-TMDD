@@ -28,6 +28,12 @@ try {
     $departments = isset($_POST['departments']) && is_array($_POST['departments']) ? $_POST['departments'] : [];
     $roles = isset($_POST['roles']) && is_array($_POST['roles']) ? $_POST['roles'] : [];
     $password  = $_POST['password'] ?? '';
+    $useExistingDepartments = isset($_POST['use_existing_departments']) && $_POST['use_existing_departments'] == '1';
+    
+    // Debug log
+    error_log("Update user - POST data: " . json_encode($_POST));
+    error_log("Update user - Departments: " . json_encode($departments));
+    error_log("Update user - Use existing departments: " . ($useExistingDepartments ? 'yes' : 'no'));
     
     if (!$userId || !$email || !$firstName || !$lastName) {
         throw new Exception('Invalid input data');
@@ -60,8 +66,18 @@ try {
     // Sort arrays for comparison
     $currentDepartments = array_keys($existingRoleMap);
     sort($currentDepartments);
+    
+    // If no departments were provided but the flag is set, use the current departments
+    if ((empty($departments) || $useExistingDepartments) && !empty($currentDepartments)) {
+        error_log("Using current departments due to flag or empty departments: " . json_encode($currentDepartments));
+        $departments = $currentDepartments;
+    }
+    
     $deptIdsToCompare = array_map('intval', $departments);
     sort($deptIdsToCompare);
+    
+    // Check if departments have changed
+    $departmentsChanged = $currentDepartments !== $deptIdsToCompare;
     
     // Check if any data has changed
     $hasChanges = false;
@@ -71,12 +87,12 @@ try {
         $currentUser['first_name'] !== $firstName || 
         $currentUser['last_name'] !== $lastName || 
         !empty($password) ||
-        $currentDepartments !== $deptIdsToCompare) {
+        $departmentsChanged) {
         $hasChanges = true;
     }
     
-    // If no changes, return an error
-    if (!$hasChanges) {
+    // If no changes and departments are empty, return an error
+    if (!$hasChanges && empty($departments)) {
         echo json_encode([
             'success' => false,
             'message' => 'No changes detected to save'
@@ -98,9 +114,18 @@ try {
                 }
             }
         }
+    } else if (!empty($currentDepartments)) {
+        // If no departments provided but user has existing departments, use those
+        $validDepartments = $currentDepartments;
     }
     
-    // If no valid departments, throw an error (departments are required)
+    // If no valid departments but we have current departments, use those as a fallback
+    if (empty($validDepartments) && !empty($currentDepartments)) {
+        error_log("No valid departments found, using current departments as fallback");
+        $validDepartments = $currentDepartments;
+    }
+    
+    // If still no valid departments, throw an error (departments are required)
     if (empty($validDepartments)) {
         throw new Exception('At least one valid department is required');
     }
@@ -176,6 +201,56 @@ try {
         throw new Exception("Email address already exists for user: " . $existingUsername);
     }
 
+    /* Check username uniqueness
+     * Check if the new username already exists (excluding the current user)
+     * Updating a user with existing username will log and mark the status as 'Failed'
+     */
+    if (!empty($username)) {
+        $dupUsernameStmt = $pdo->prepare("SELECT id, username FROM users WHERE username = ? AND id != ? AND is_disabled = 0");
+        $dupUsernameStmt->execute([$username, $userId]);
+        if ($dupUsernameStmt->rowCount() > 0) {
+            // Get the existing user with this username
+            $existingUser = $dupUsernameStmt->fetch(PDO::FETCH_ASSOC);
+            $existingUserId = $existingUser['id'];
+            
+            // Retrieve the current username of the user being modified
+            $currentStmt = $pdo->prepare("SELECT username FROM users WHERE id = ?");
+            $currentStmt->execute([$userId]);
+            $currentUser = $currentStmt->fetch(PDO::FETCH_ASSOC);
+            $currentUsername = $currentUser['username'];
+
+            // Prepare JSON objects with the username values
+            $oldValJson = json_encode(['username' => $currentUsername]);
+            $newValJson = json_encode(['username' => $username]);
+
+            // Insert an audit log entry for the duplicate username update attempt
+            $auditStmt = $pdo->prepare("
+            INSERT INTO audit_log (
+                UserID,
+                EntityID,
+                Action,
+                Details,
+                OldVal,
+                NewVal,
+                Module,
+                `Status`,
+                Date_Time
+            )
+            VALUES (?, ?, 'modified', ?, ?, ?, 'User Management', 'Failed', NOW())
+        ");
+            $customMessage = 'Attempted to change username from ' . $currentUsername . ' to an existing username: ' . $username;
+            $auditStmt->execute([
+                $_SESSION['user_id'],
+                $userId, // The user being modified
+                $customMessage,
+                $oldValJson,
+                $newValJson
+            ]);
+
+            throw new Exception("Username already exists. Please choose a different username.");
+        }
+    }
+
     // Begin transaction
     $pdo->beginTransaction();
 
@@ -193,14 +268,61 @@ try {
             status = ?
         WHERE id = ?
     ");
-    $updateUserStmt->execute([
-        $email,
-        $username,
-        $firstName,
-        $lastName,
-        'active', // Adjust based on your status logic
-        $userId
-    ]);
+    
+    try {
+        $updateUserStmt->execute([
+            $email,
+            $username,
+            $firstName,
+            $lastName,
+            'active', // Adjust based on your status logic
+            $userId
+        ]);
+    } catch (PDOException $e) {
+        // Check for duplicate username constraint violation
+        if ($e->getCode() == '23000' && strpos($e->getMessage(), 'Duplicate entry') !== false && strpos($e->getMessage(), 'username') !== false) {
+            // Log the error
+            error_log("Duplicate username error: " . $e->getMessage());
+            
+            // Create audit log entry for the failed update
+            $currentStmt = $pdo->prepare("SELECT username FROM users WHERE id = ?");
+            $currentStmt->execute([$userId]);
+            $currentUser = $currentStmt->fetch(PDO::FETCH_ASSOC);
+            $currentUsername = $currentUser['username'];
+            
+            $auditStmt = $pdo->prepare("
+                INSERT INTO audit_log (
+                    UserID,
+                    EntityID,
+                    Action,
+                    Details,
+                    OldVal,
+                    NewVal,
+                    Module,
+                    `Status`,
+                    Date_Time
+                )
+                VALUES (?, ?, 'modified', ?, ?, ?, 'User Management', 'Failed', NOW())
+            ");
+            
+            $customMessage = 'Attempted to change username from ' . $currentUsername . ' to an existing username: ' . $username;
+            $oldValJson = json_encode(['username' => $currentUsername]);
+            $newValJson = json_encode(['username' => $username]);
+            
+            $auditStmt->execute([
+                $_SESSION['user_id'],
+                $userId,
+                $customMessage,
+                $oldValJson,
+                $newValJson
+            ]);
+            
+            throw new Exception("Username already exists. Please choose a different username.");
+        }
+        
+        // Re-throw other database errors
+        throw $e;
+    }
     
     // Update password if provided
     if (!empty($hashedPassword)) {
@@ -276,7 +398,7 @@ try {
         $newVals['password'] = '********';
         $changes[] = "password updated";
     }
-    if ($currentDepartments !== $deptIdsToCompare) {
+    if ($departmentsChanged) {
         // Fetch department names for the audit log instead of just IDs
         $oldDeptNames = [];
         $newDeptNames = [];
@@ -315,27 +437,30 @@ try {
     $oldValJson = json_encode($oldVals);
     $newValJson = json_encode($newVals);
 
-    // 2) Insert including OldVal and NewVal
-    $auditStmt = $pdo->prepare("
-        INSERT INTO audit_log (
-            UserID,
-            EntityID,
-            Action,
-            Details,
-            OldVal,
-            NewVal,
-            Module,
-            `Status`,
-            Date_Time
-        ) VALUES (?, ?, 'modified', ?, ?, ?, 'User Management', 'Success', NOW())
-    ");
-    $auditStmt->execute([
-        $_SESSION['user_id'],
-        $userId,
-        $details,
-        $oldValJson,
-        $newValJson
-    ]);
+    // Only create audit log if there were actual changes
+    if (!empty($changes)) {
+        // 2) Insert including OldVal and NewVal
+        $auditStmt = $pdo->prepare("
+            INSERT INTO audit_log (
+                UserID,
+                EntityID,
+                Action,
+                Details,
+                OldVal,
+                NewVal,
+                Module,
+                `Status`,
+                Date_Time
+            ) VALUES (?, ?, 'modified', ?, ?, ?, 'User Management', 'Success', NOW())
+        ");
+        $auditStmt->execute([
+            $_SESSION['user_id'],
+            $userId,
+            $details,
+            $oldValJson,
+            $newValJson
+        ]);
+    }
 
     $pdo->commit();
 
@@ -357,10 +482,19 @@ try {
         $pdo->rollBack();
     }
     error_log("Update user error: " . $e->getMessage());
-    echo json_encode([
-        'success' => false,
-        'message' => $e->getMessage()
-    ]);
+    
+    // Check if this is a duplicate username error
+    if (strpos($e->getMessage(), 'Duplicate entry') !== false && strpos($e->getMessage(), 'username') !== false) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Username already exists. Please choose a different username.'
+        ]);
+    } else {
+        echo json_encode([
+            'success' => false,
+            'message' => $e->getMessage()
+        ]);
+    }
 }
 
 ob_end_flush();
