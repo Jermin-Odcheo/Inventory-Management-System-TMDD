@@ -180,14 +180,14 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
 
         form .form-select {
-    width: 100% !important;
-    max-width: 100% !important;
-}
+            width: 100% !important;
+            max-width: 100% !important;
+        }
 
-form .form-control:not(.input-group > .form-control) {
-    width: 100% !important;
-    max-width: 100% !important;
-}
+        form .form-control:not(.input-group > .form-control) {
+            width: 100% !important;
+            max-width: 100% !important;
+        }
 
 
         @media (max-width: 576px) {
@@ -319,7 +319,7 @@ form .form-control:not(.input-group > .form-control) {
                             <div class="col-6 col-md-2 d-grid">
                                 <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary shadow-sm"><i class="bi bi-x-circle"></i> Clear</a>
                             </div>
-                            
+
                             <div class="col-12 col-md-3 d-grid">
                                 <a href="equipment_location.php" class="btn btn-primary"><i class="bi bi-pencil-square"></i> Edit Equipment Location</a>
                             </div>
