@@ -947,8 +947,8 @@ input[readonly] {
                 focus: true
             });
             
-            // Real-time search & filter
-            $('#searchStatus, #filterStatus').on('input change', function() {
+            // Real-time search only for searchStatus (not filterStatus)
+            $('#searchStatus').on('input', function() {
                 filterStatusTable();
             });
             
@@ -1035,7 +1035,7 @@ input[readonly] {
                 setTimeout(checkAndHidePagination, 100);
             });
 
-            // Date filter handling
+            // Date filter handling (only update UI, don't filter yet)
             $('#dateFilter').on('change', function() {
                 const filterType = $(this).val();
 
@@ -1051,31 +1051,10 @@ input[readonly] {
                 } else if (filterType === 'range') {
                     $('#dateInputsContainer').show();
                     $('#dateRangePickers').show();
-                } else if (filterType === 'desc' || filterType === 'asc') {
-                    // Apply sorting without showing date inputs
-                filterStatusTable();
                 }
+                // Do NOT call filterStatusTable() here
             });
-
-            // Handle month/year selection changes
-            $('#monthSelect, #yearSelect').on('change', function() {
-                const month = $('#monthSelect').val();
-                const year = $('#yearSelect').val();
-
-                if (month && year) {
-                    filterStatusTable();
-                }
-            });
-
-            // Handle date range changes
-            $('#dateFrom, #dateTo').on('change', function() {
-                const dateFrom = $('#dateFrom').val();
-                const dateTo = $('#dateTo').val();
-
-                if (dateFrom && dateTo) {
-                    filterStatusTable();
-                }
-            });
+            // Do NOT trigger filterStatusTable() on month/year/dateFrom/dateTo changes
 
             // Custom filter function for this page that works with the pagination system
             function filterStatusTable() {
@@ -1297,9 +1276,9 @@ input[readonly] {
             // Run on page load with a longer delay to ensure DOM is fully processed
             setTimeout(checkAndHidePagination, 300);
 
-            // Filter button now reloads the page on click
+            // Filter button now triggers filtering using current filter values
             $('#filterBtn').on('click', function() {
-                location.reload();
+                filterStatusTable();
             });
             // Clear button resets filters and triggers filter function
             $('#clearBtn').on('click', function() {
