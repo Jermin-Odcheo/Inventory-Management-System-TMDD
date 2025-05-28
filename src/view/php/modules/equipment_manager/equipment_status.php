@@ -969,7 +969,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                 keyboard: true,
                 focus: true
             });
-            
+
             // Real-time search & filter
             $('#searchStatus, #filterStatus').on('input change', function() {
                 filterStatusTable();
@@ -1076,7 +1076,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                     $('#dateRangePickers').show();
                 } else if (filterType === 'desc' || filterType === 'asc') {
                     // Apply sorting without showing date inputs
-                filterStatusTable();
+                    filterStatusTable();
                 }
             });
 
@@ -1216,13 +1216,28 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                         },
                         success: function(response) {
                             if (response.status === 'success') {
-                                // Reload the page to refresh data after successful deletion
-                                location.reload();
+                                // Properly hide the modal
+                                const deleteModal = bootstrap.Modal.getInstance(document.getElementById('deleteModal'));
+                                if (deleteModal) {
+                                    deleteModal.hide();
+                                }
+                                
+                                // Ensure scrolling is restored
+                                $('body').removeClass('modal-open');
+                                $('.modal-backdrop').remove();
+                                $('body').css('overflow', '');
+                                $('body').css('padding-right', '');
+                                
+                                // Show success message
+                                showToast(response.message || 'Status deleted successfully', 'success');
+                                
+                                // Refresh table without page reload
+                                refreshTable();
                             } else {
                                 showToast(response.message, 'error');
+                                var deleteModalInstance = bootstrap.Modal.getInstance(document.getElementById('deleteModal'));
+                                deleteModalInstance.hide();
                             }
-                            var deleteModalInstance = bootstrap.Modal.getInstance(document.getElementById('deleteModal'));
-                            deleteModalInstance.hide();
                         },
                         error: function(xhr, status, error) {
                             console.error("Error Response:", xhr.responseText);
@@ -1258,9 +1273,26 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                     },
                     success: function(result) {
                         if (result.status === 'success') {
-                            $('#addStatusModal').modal('hide');
-                            // Reload the page to refresh data after successful addition
-                            location.reload();
+                            // Properly hide the modal
+                            const addModal = bootstrap.Modal.getInstance(document.getElementById('addStatusModal'));
+                            if (addModal) {
+                                addModal.hide();
+                            }
+                            
+                            // Reset form
+                            $('#addStatusForm')[0].reset();
+                            
+                            // Ensure scrolling is restored
+                            $('body').removeClass('modal-open');
+                            $('.modal-backdrop').remove();
+                            $('body').css('overflow', '');
+                            $('body').css('padding-right', '');
+                            
+                            // Show success message
+                            showToast(result.message || 'Status added successfully', 'success');
+                            
+                            // Refresh table without page reload
+                            refreshTable();
                         } else {
                             showToast(result.message, 'error');
                         }
@@ -1274,8 +1306,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                 });
             });
 
+            // Ensure proper cleanup when modal is hidden
             $('#addStatusModal').on('hidden.bs.modal', function() {
                 $(this).find('form')[0].reset();
+                
+                // Ensure scrolling is restored
+                $('body').removeClass('modal-open');
+                $('.modal-backdrop').remove();
+                $('body').css('overflow', '');
+                $('body').css('padding-right', '');
             });
 
             // AJAX submission for Edit Status form using toast notifications
@@ -1299,9 +1338,23 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 
                         // Regardless of changes, show a success toast.
                         if (result.status === 'success') {
-                            $('#editStatusModal').modal('hide');
-                            // Reload the page to refresh data after successful update
-                            location.reload();
+                            // Properly hide the modal
+                            const editModal = bootstrap.Modal.getInstance(document.getElementById('editStatusModal'));
+                            if (editModal) {
+                                editModal.hide();
+                            }
+                            
+                            // Ensure scrolling is restored
+                            $('body').removeClass('modal-open');
+                            $('.modal-backdrop').remove();
+                            $('body').css('overflow', '');
+                            $('body').css('padding-right', '');
+                            
+                            // Show success message
+                            showToast(result.message || 'Status updated successfully', 'success');
+                            
+                            // Refresh table without page reload
+                            refreshTable();
                         } else {
                             showToast(result.message, 'error');
                         }
@@ -1313,8 +1366,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                 });
             });
 
+            // Ensure proper cleanup when edit modal is hidden
             $('#editStatusModal').on('hidden.bs.modal', function() {
                 $(this).find('form')[0].reset();
+                
+                // Ensure scrolling is restored
+                $('body').removeClass('modal-open');
+                $('.modal-backdrop').remove();
+                $('body').css('overflow', '');
+                $('body').css('padding-right', '');
             });
 
             // Run on page load with a longer delay to ensure DOM is fully processed
@@ -1392,6 +1452,40 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             document.addEventListener('DOMContentLoaded', forcePaginationCheck);
         })();
     </script>
+    <script>
+        // Function to refresh table without reloading the page
+        function refreshTable() {
+            // Create a temporary container to hold the loaded content
+            const tempContainer = $('<div>');
+            
+            // Load the page content into the temporary container
+            tempContainer.load(location.href + ' #statusTable', function() {
+                // Extract only the tbody content
+                const newTbody = tempContainer.find('#statusTbody').html();
+                
+                // Replace the current tbody content with the new content
+                $('#statusTbody').html(newTbody);
+                
+                // Update pagination after table refresh
+                window.allRows = Array.from(document.querySelectorAll('#statusTbody tr'));
+                window.filteredRows = window.allRows;
+                
+                // Update total count in the UI
+                $('#totalRows').text(window.allRows.length);
+                
+                // Reinitialize pagination
+                if (typeof updatePagination === 'function') {
+                    updatePagination();
+                }
+                
+                // Check if pagination buttons should be hidden
+                if (typeof checkAndHidePagination === 'function') {
+                    setTimeout(checkAndHidePagination, 100);
+                }
+            });
+        }
+    </script>
+    
 </body>
 
 </html>
