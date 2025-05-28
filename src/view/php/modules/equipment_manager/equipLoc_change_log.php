@@ -50,118 +50,17 @@ while ($row = $filterStmt->fetch(PDO::FETCH_ASSOC)) {
         }
     }
 }
-// Get filters
-$filters = [
-    'building_loc' => $_GET['building_loc'] ?? '',
-    'floor_n' => $_GET['floor_n'] ?? '',
-    'specific_area' => $_GET['specific_area'] ?? '',
-    'device_state' => $_GET['device_state'] ?? '',
-    'search' => $_GET['search'] ?? '',
-    'date_filter_type' => $_GET['date_filter_type'] ?? '',
-];
 
-// Base conditions
-$conditions = [
-    "audit_log.Module = 'Equipment Location'",
-    "audit_log.Status = 'Successful'",
-    "audit_log.Action IN ('modified', 'create')",
-];
-
-// Add text filters
-foreach (['building_loc', 'floor_n', 'specific_area', 'device_state'] as $key) {
-    if (!empty($filters[$key])) {
-        $conditions[] = "NewVal LIKE :$key";
-    }
-}
-
-// Add search condition
-if (!empty($filters['search'])) {
-    $searchParts = [];
-    foreach ($fieldsToShow as $key => $label) {
-        $searchParts[] = "NewVal LIKE :search_$key";
-    }
-    $conditions[] = "(" . implode(" OR ", $searchParts) . ")";
-}
-
-// Add date filters based on filter type
-$params = [];
-switch ($filters['date_filter_type']) {
-    case 'mdy':
-        if (!empty($_GET['date_from'])) {
-            $conditions[] = "audit_log.Date_Time >= :date_from";
-            $params[':date_from'] = $_GET['date_from'] . " 00:00:00";
-        }
-        if (!empty($_GET['date_to'])) {
-            $conditions[] = "audit_log.Date_Time <= :date_to";
-            $params[':date_to'] = $_GET['date_to'] . " 23:59:59";
-        }
-        break;
-    case 'month':
-        if (!empty($_GET['month_from'])) {
-            $conditions[] = "DATE_FORMAT(audit_log.Date_Time, '%Y-%m') >= :month_from";
-            $params[':month_from'] = $_GET['month_from'];
-        }
-        if (!empty($_GET['month_to'])) {
-            $conditions[] = "DATE_FORMAT(audit_log.Date_Time, '%Y-%m') <= :month_to";
-            $params[':month_to'] = $_GET['month_to'];
-        }
-        break;
-    case 'year':
-        if (!empty($_GET['year_from'])) {
-            $conditions[] = "YEAR(audit_log.Date_Time) >= :year_from";
-            $params[':year_from'] = $_GET['year_from'];
-        }
-        if (!empty($_GET['year_to'])) {
-            $conditions[] = "YEAR(audit_log.Date_Time) <= :year_to";
-            $params[':year_to'] = $_GET['year_to'];
-        }
-        break;
-    case 'month_year':
-        if (!empty($_GET['month_year_from'])) {
-            $conditions[] = "DATE_FORMAT(audit_log.Date_Time, '%Y-%m') >= :month_year_from";
-            $params[':month_year_from'] = $_GET['month_year_from'];
-        }
-        if (!empty($_GET['month_year_to'])) {
-            $conditions[] = "DATE_FORMAT(audit_log.Date_Time, '%Y-%m') <= :month_year_to";
-            $params[':month_year_to'] = $_GET['month_year_to'];
-        }
-        break;
-}
-
-// Build query
-$whereClause = implode(" AND ", $conditions);
-$sql = "SELECT * FROM audit_log WHERE $whereClause ORDER BY TrackID DESC";
+// Fetch all audit logs for client-side filtering and pagination
+// The PHP will fetch all relevant data, and JavaScript will handle display.
+$sql = "SELECT * FROM audit_log WHERE Module = 'Equipment Location' AND Status = 'Successful' AND Action IN ('modified', 'create') ORDER BY TrackID DESC";
 $stmt = $pdo->prepare($sql);
-
-// Bind text filter params
-foreach (['building_loc', 'floor_n', 'specific_area', 'device_state'] as $key) {
-    if (!empty($filters[$key])) {
-        $stmt->bindValue(":$key", '%"' . $key . '":"' . $filters[$key] . '%');
-    }
-}
-
-// Bind search params
-if (!empty($filters['search'])) {
-    foreach ($fieldsToShow as $key => $label) {
-        $stmt->bindValue(":search_$key", '%' . $filters['search'] . '%');
-    }
-}
-
-// Bind date filter params
-foreach ($params as $param => $value) {
-    $stmt->bindValue($param, $value);
-}
-
 $stmt->execute();
 $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 ?>
 
 <head>
-    <!-- Styles & Scripts -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -189,12 +88,31 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
             max-width: 100% !important;
         }
 
-
         @media (max-width: 576px) {
             form .col-12 {
                 flex: 0 0 100%;
                 max-width: 100%;
             }
+        }
+
+        th.sortable.asc::after {
+            content: " ▲";
+        }
+
+        th.sortable.desc::after {
+            content: " ▼";
+        }
+
+        /* Empty state styling for no results */
+        .empty-state {
+            color: #6c757d;
+            /* text-muted */
+            font-size: 1.1rem;
+        }
+
+        .empty-state i {
+            color: #0d6efd;
+            /* info color */
         }
     </style>
 
@@ -213,17 +131,15 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </div>
             <div class="card-body">
                 <div class="container-fluid px-0">
-                    <!-- Filter div-->
                     <div class="filter-container" id="filterContainer">
-                        <!-- Filter Form -->
-                        <form method="GET" class="row g-3 align-items-end mb-4 bg-light p-3 rounded shadow-sm">
+                        <form id="filterForm" method="GET" class="row g-3 align-items-end mb-4 bg-light p-3 rounded shadow-sm">
                             <?php foreach ($filterValues as $key => $options): ?>
                                 <div class="col-12 col-sm-6 col-md-3">
                                     <label class="form-label fw-semibold"><?= $fieldsToShow[$key] ?></label>
                                     <select name="<?= $key ?>" class="form-select shadow-sm">
                                         <option value="">All <?= $fieldsToShow[$key] ?></option>
                                         <?php foreach ($options as $val): ?>
-                                            <option value="<?= htmlspecialchars($val) ?>" <?= $filters[$key] === $val ? 'selected' : '' ?>>
+                                            <option value="<?= htmlspecialchars($val) ?>" <?= ($filters[$key] ?? '') === $val ? 'selected' : '' ?>>
                                                 <?= htmlspecialchars($val) ?>
                                             </option>
                                         <?php endforeach; ?>
@@ -231,29 +147,26 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 </div>
                             <?php endforeach; ?>
 
-                            <!-- Search bar -->
                             <div class="col-12 col-sm-6 col-md-3">
                                 <label class="form-label fw-semibold">Search</label>
                                 <div class="input-group shadow-sm">
                                     <span class="input-group-text"><i class="bi bi-search"></i></span>
-                                    <input type="text" name="search" class="form-control" placeholder="Search keyword..." value="<?= htmlspecialchars($filters['search']) ?>">
+                                    <input type="text" name="search" id="searchInput" class="form-control" placeholder="Search keyword..." value="<?= htmlspecialchars($filters['search'] ?? '') ?>">
                                 </div>
                             </div>
 
-                            <!-- Date Range selector -->
                             <div class="col-12 col-md-3">
                                 <label class="form-label fw-semibold">Date Filter Type</label>
                                 <select id="dateFilterType" name="date_filter_type" class="form-select shadow-sm">
                                     <option value="" <?= empty($filters['date_filter_type']) ? 'selected' : '' ?>>-- Select Type --</option>
-                                    <option value="mdy" <?= $filters['date_filter_type'] === 'mdy' ? 'selected' : '' ?>>Month-Day-Year Range</option>
-                                    <option value="month" <?= $filters['date_filter_type'] === 'month' ? 'selected' : '' ?>>Month Range</option>
-                                    <option value="year" <?= $filters['date_filter_type'] === 'year' ? 'selected' : '' ?>>Year Range</option>
-                                    <option value="month_year" <?= $filters['date_filter_type'] === 'month_year' ? 'selected' : '' ?>>Month-Year Range</option>
+                                    <option value="mdy" <?= ($filters['date_filter_type'] ?? '') === 'mdy' ? 'selected' : '' ?>>Month-Day-Year Range</option>
+                                    <option value="month" <?= ($filters['date_filter_type'] ?? '') === 'month' ? 'selected' : '' ?>>Month Range</option>
+                                    <option value="year" <?= ($filters['date_filter_type'] ?? '') === 'year' ? 'selected' : '' ?>>Year Range</option>
+                                    <option value="month_year" <?= ($filters['date_filter_type'] ?? '') === 'month_year' ? 'selected' : '' ?>>Month-Year Range</option>
                                 </select>
 
                             </div>
 
-                            <!-- MDY Range -->
                             <div class="col-12 col-md-3 date-filter date-mdy d-none">
                                 <label class="form-label fw-semibold">Date From</label>
                                 <input type="date" name="date_from" class="form-control shadow-sm"
@@ -267,7 +180,6 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     placeholder="End Date (YYYY-MM-DD)">
                             </div>
 
-                            <!-- Month Range -->
                             <div class="col-12 col-md-3 date-filter date-month d-none">
                                 <label class="form-label fw-semibold">Month From</label>
                                 <input type="month" name="month_from" class="form-control shadow-sm"
@@ -281,7 +193,6 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     placeholder="e.g., 2023-12">
                             </div>
 
-                            <!-- Year Range -->
                             <div class="col-12 col-md-3 date-filter date-year d-none">
                                 <label class="form-label fw-semibold">Year From</label>
                                 <input type="number" name="year_from" class="form-control shadow-sm"
@@ -297,7 +208,6 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     value="<?= htmlspecialchars($_GET['year_to'] ?? '') ?>">
                             </div>
 
-                            <!-- Month-Year Range -->
                             <div class="col-12 col-md-3 date-filter date-month_year d-none">
                                 <label class="form-label fw-semibold">From (MM-YYYY)</label>
                                 <input type="month" name="month_year_from" class="form-control shadow-sm"
@@ -311,13 +221,12 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     placeholder="e.g., 2023-12">
                             </div>
 
-                            <!-- Buttons-->
                             <div class="col-6 col-md-2 d-grid">
-                                <button type="submit" class="btn btn-dark"><i class="bi bi-funnel"></i> Filter</button>
+                                <button type="button" class="btn btn-dark" onclick="window.filterTable()"><i class="bi bi-funnel"></i> Filter</button>
                             </div>
 
                             <div class="col-6 col-md-2 d-grid">
-                                <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary shadow-sm"><i class="bi bi-x-circle"></i> Clear</a>
+                                <a href="javascript:void(0)" class="btn btn-secondary shadow-sm" onclick="document.getElementById('filterForm').reset(); document.getElementById('dateFilterType').value = ''; updateDateFields(); window.filterTable();"><i class="bi bi-x-circle"></i> Clear</a>
                             </div>
 
                             <div class="col-12 col-md-3 d-grid">
@@ -326,22 +235,20 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         </form>
                     </div>
 
-                    <!-- Table -->
                     <div class="table-responsive" id="table">
-                        <table id="elTable" class="table">
+                        <table id="auditTable" class="table">
                             <thead>
                                 <tr>
-                                    <?php foreach ($fieldsToShow as $label): ?>
-                                        <th><?= htmlspecialchars($label) ?></th>
+                                    <?php foreach ($fieldsToShow as $key => $label): ?>
+                                        <th class="sortable" data-sort="string" data-field-key="<?= $key ?>"><?= htmlspecialchars($label) ?></th>
                                     <?php endforeach; ?>
-                                    <th>Modified Time</th>
+                                    <th class="sortable" data-sort="date">Modified Time</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <?php if (!empty($auditLogs)): ?>
+                            <tbody id="auditLogTbody"> <?php if (!empty($auditLogs)): ?>
                                     <?php foreach ($auditLogs as $log): ?>
                                         <?php $newValues = json_decode($log['NewVal'], true); ?>
-                                        <tr>
+                                        <tr data-newval="<?= htmlspecialchars(json_encode($newValues)) ?>">
                                             <?php foreach ($fieldsToShow as $key => $label): ?>
                                                 <td><?= isset($newValues[$key]) ? htmlspecialchars($newValues[$key]) : '' ?></td>
                                             <?php endforeach; ?>
@@ -349,25 +256,49 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
-                                    <tr>
-                                        <td colspan="16" class="text-center py-4">
-                                            <div class="alert alert-info mb-0">
-                                                <i class="bi bi-info-circle me-2"></i> No Equipment Location found. Click on "Create Equipment" to add a new entry.
+                                    <tr id="noResultsMessage" style="display: none;">
+                                        <td colspan="<?= count($fieldsToShow) + 1 ?>" class="text-center py-4">
+                                            <div class="empty-state">
+                                                <i class="bi bi-info-circle me-2" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                                                <h4>No matching records found</h4>
+                                                <p class="text-muted">Try adjusting your search or filter criteria.</p>
                                             </div>
                                         </td>
                                     </tr>
                                 <?php endif; ?>
-                                <?php foreach ($auditLogs as $log): ?>
-                                    <?php $newValues = json_decode($log['NewVal'], true); ?>
-                                    <tr>
-                                        <?php foreach ($fieldsToShow as $key => $label): ?>
-                                            <td><?= isset($newValues[$key]) ? htmlspecialchars($newValues[$key]) : '' ?></td>
-                                        <?php endforeach; ?>
-                                        <td><?= date("Y-m-d H:i:s", strtotime($log['Date_Time'])) ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
                             </tbody>
                         </table>
+                    </div>
+
+                    <div class="container-fluid">
+                        <div class="row align-items-center g-3">
+                            <div class="col-12 col-sm-auto">
+                                <div class="text-muted">
+                                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows">0</span> entries
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-auto ms-sm-auto">
+                                <div class="d-flex align-items-center gap-2">
+                                    <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                        <i class="bi bi-chevron-left"></i> Previous
+                                    </button>
+                                    <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                        <option value="10" selected>10</option>
+                                        <option value="20">20</option>
+                                        <option value="30">30</option>
+                                        <option value="50">50</option>
+                                    </select>
+                                    <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                        Next <i class="bi bi-chevron-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <ul class="pagination justify-content-center" id="pagination"></ul>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -375,8 +306,10 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </div>
 </body>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 <script>
-    // date-time filter script
+    // date-time filter script (existing function)
     document.addEventListener('DOMContentLoaded', function() {
         const filterType = document.getElementById('dateFilterType');
         const allDateFilters = document.querySelectorAll('.date-filter');
@@ -391,5 +324,166 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         filterType.addEventListener('change', updateDateFields);
         updateDateFields(); // initial load
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Collect all rows from the table body into window.allRows
+        // This must be done AFTER the PHP has rendered the table
+        // Ensure to exclude the 'noResultsMessage' row if it exists initially
+        window.allRows = Array.from(document.querySelectorAll('#auditLogTbody tr')).filter(row => row.id !== 'noResultsMessage');
+        window.pageSpecificTableId = 'auditLogTbody'; // Important for pagination.js to use this specific table's rows
+
+        // Initialize pagination with the correct table ID
+        initPagination({
+            tableId: 'auditLogTbody', // Use the actual ID of your table tbody
+            currentPage: 1
+        });
+
+        // Define a global filterTable function for pagination.js to use
+        window.filterTable = function() {
+            const buildingLocFilter = document.querySelector('select[name="building_loc"]').value;
+            const floorNFilter = document.querySelector('select[name="floor_n"]').value;
+            const specificAreaFilter = document.querySelector('select[name="specific_area"]').value;
+            const deviceStateFilter = document.querySelector('select[name="device_state"]').value;
+            const searchFilter = document.querySelector('input[name="search"]').value.toLowerCase();
+            const dateFilterType = document.getElementById('dateFilterType').value;
+            const dateFrom = document.querySelector('input[name="date_from"]')?.value;
+            const dateTo = document.querySelector('input[name="date_to"]')?.value;
+            const monthFrom = document.querySelector('input[name="month_from"]')?.value;
+            const monthTo = document.querySelector('input[name="month_to"]')?.value;
+            const yearFrom = document.querySelector('input[name="year_from"]')?.value;
+            const yearTo = document.querySelector('input[name="year_to"]')?.value;
+            const monthYearFrom = document.querySelector('input[name="month_year_from"]')?.value;
+            const monthYearTo = document.querySelector('input[name="month_year_to"]')?.value;
+
+            window.filteredRows = window.allRows.filter(row => {
+                // Parse the NewVal JSON from the data attribute
+                const newValuesJson = JSON.parse(row.dataset.newval);
+                // Get the date from the last cell (Modified Time)
+                const dateTime = new Date(row.cells[row.cells.length - 1].innerText);
+
+                let match = true;
+
+                // Apply dropdown filters
+                if (buildingLocFilter && newValuesJson.building_loc !== buildingLocFilter) match = false;
+                if (floorNFilter && newValuesJson.floor_n !== floorNFilter) match = false;
+                if (specificAreaFilter && newValuesJson.specific_area !== specificAreaFilter) match = false;
+                if (deviceStateFilter && newValuesJson.device_state !== deviceStateFilter) match = false;
+
+                // Apply search filter across all relevant fields
+                if (searchFilter && match) {
+                    let searchMatch = false;
+                    const fieldsToShowKeys = [
+                        'asset_tag', 'building_loc', 'floor_n', 'specific_area',
+                        'person_responsible', 'device_state', 'remarks'
+                    ];
+                    for (const key of fieldsToShowKeys) {
+                        if (newValuesJson[key] && String(newValuesJson[key]).toLowerCase().includes(searchFilter)) {
+                            searchMatch = true;
+                            break;
+                        }
+                    }
+                    if (!searchMatch) match = false;
+                }
+
+                // Apply date filters
+                if (match && dateFilterType) {
+                    if (dateFilterType === 'mdy') {
+                        const fromDate = dateFrom ? new Date(dateFrom + 'T00:00:00') : null;
+                        const toDate = dateTo ? new Date(dateTo + 'T23:59:59') : null;
+                        if (fromDate && dateTime < fromDate) match = false;
+                        if (toDate && dateTime > toDate) match = false;
+                    } else if (dateFilterType === 'month') {
+                        const fromMonth = monthFrom ? new Date(monthFrom + '-01T00:00:00') : null;
+                        // Calculate the last day of the 'toMonth' to include all days in that month
+                        const toMonthDate = monthTo ? new Date(monthTo + '-01T00:00:00') : null;
+                        const toMonthLastDay = toMonthDate ? new Date(toMonthDate.getFullYear(), toMonthDate.getMonth() + 1, 0, 23, 59, 59, 999) : null;
+
+                        if (fromMonth && dateTime < fromMonth) match = false;
+                        if (toMonthLastDay && dateTime > toMonthLastDay) match = false;
+                    } else if (dateFilterType === 'year') {
+                        const fromYear = yearFrom ? new Date(yearFrom + '-01-01T00:00:00') : null;
+                        const toYear = yearTo ? new Date(yearTo + '-12-31T23:59:59') : null;
+                        if (fromYear && dateTime < fromYear) match = false;
+                        if (toYear && dateTime > toYear) match = false;
+                    } else if (dateFilterType === 'month_year') {
+                        const fromMonthYear = monthYearFrom ? new Date(monthYearFrom + '-01T00:00:00') : null;
+                        // Calculate the last day of the 'toMonthYear' to include all days in that month
+                        const toMonthYearDate = monthYearTo ? new Date(monthYearTo + '-01T00:00:00') : null;
+                        const toMonthYearLastDay = toMonthYearDate ? new Date(toMonthYearDate.getFullYear(), toMonthYearDate.getMonth() + 1, 0, 23, 59, 59, 999) : null;
+
+                        if (fromMonthYear && dateTime < fromMonthYear) match = false;
+                        if (toMonthYearLastDay && dateTime > toMonthYearLastDay) match = false;
+                    }
+                }
+                return match;
+            });
+
+            // Reset current page to 1 after filtering
+            if (typeof paginationConfig !== 'undefined') {
+                paginationConfig.currentPage = 1;
+            }
+            updatePagination();
+        };
+
+        // Attach event listeners to filter inputs to trigger filterTable
+        document.querySelectorAll('.filter-container select, .filter-container input[type="text"], .filter-container input[type="date"], .filter-container input[type="month"], .filter-container input[type="number"]').forEach(input => {
+            input.addEventListener('change', window.filterTable); // Use 'change' for selects and date inputs
+            if (input.type === 'text') {
+                input.addEventListener('input', window.filterTable); // Use 'input' for text search
+            }
+        });
+
+        // Initial filter to display paginated data on load
+        window.filterTable();
+    });
+
+    // Sorting logic adapted for client-side pagination
+    document.addEventListener("DOMContentLoaded", function() {
+        document.querySelectorAll("#auditTable th.sortable").forEach(th => {
+            th.style.cursor = "pointer";
+            th.addEventListener("click", function() {
+                const table = th.closest("table");
+                const tbody = table.querySelector("tbody");
+                const rowsToSort = [...window.allRows]; // Create a copy to sort from the full dataset
+
+                const index = Array.from(th.parentNode.children).indexOf(th);
+                const type = th.dataset.sort || "string";
+                const fieldKey = th.dataset.fieldKey; // Get the original field key for data-newval lookup
+                const asc = !th.classList.contains("asc");
+
+                rowsToSort.sort((a, b) => {
+                    let x, y;
+
+                    if (type === "date") { // For 'Modified Time' column
+                        x = new Date(a.children[index].innerText.trim());
+                        y = new Date(b.children[index].innerText.trim());
+                        const timeX = isNaN(x.getTime()) ? (asc ? Infinity : -Infinity) : x.getTime();
+                        const timeY = isNaN(y.getTime()) ? (asc ? Infinity : -Infinity) : y.getTime();
+                        return asc ? (timeX - timeY) : (timeY - timeX);
+                    } else { // For other columns, parse from the data-newval attribute
+                        const aNewVal = JSON.parse(a.dataset.newval);
+                        const bNewVal = JSON.parse(b.dataset.newval);
+
+                        x = aNewVal[fieldKey] !== undefined ? String(aNewVal[fieldKey]).trim() : '';
+                        y = bNewVal[fieldKey] !== undefined ? String(bNewVal[fieldKey]).trim() : '';
+
+                        if (type === "number") {
+                            x = parseFloat(x) || 0;
+                            y = parseFloat(y) || 0;
+                        } else {
+                            x = x.toLowerCase();
+                            y = y.toLowerCase();
+                        }
+                        return asc ? (x > y ? 1 : -1) : (x < y ? 1 : -1);
+                    }
+                });
+
+                window.allRows = rowsToSort; // Update the global allRows with the sorted order
+                table.querySelectorAll("th").forEach(t => t.classList.remove("asc", "desc"));
+                th.classList.add(asc ? "asc" : "desc");
+                window.filterTable(); // Re-filter and paginate based on the new sorted order
+            });
+        });
     });
 </script>
