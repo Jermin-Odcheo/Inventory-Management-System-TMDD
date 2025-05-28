@@ -708,7 +708,7 @@ function safeHtml($value)
                             <label class="form-label">Device State</label>
                             <select class="form-select" id="devState" name="device_state" required>
                                 <option value="Inventory">Inventory</option>
-                                <option value="Transffered">Transffered</option>
+                                <option value="Transferred">Transferred</option>
                                 <option value="Borrowed">Borrowed</option>
                                 <option value="Returned">Returned</option>
                                 <option value="Stationed">Stationed</option>
