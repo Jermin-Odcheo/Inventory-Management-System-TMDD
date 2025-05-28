@@ -195,12 +195,12 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <body>
     <div class="main-container">
         <header class="main-header">
-            <h1> Equipment Location Change Logs</h1>
+            <h1> Equipment Status Change Logs</h1>
         </header>
 
         <section class="card">
             <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                <h2><i class="bi bi-list-task"></i> List of Equipment Locations</h2>
+                <h2><i class="bi bi-list-task"></i> List of Equipment Status Changes</h2>
             </div>
             <div class="card-body">
                 <div class="container-fluid px-0">

@@ -115,8 +115,6 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
             /* info color */
         }
     </style>
-
-    <div class="container-fluid" style="margin-top: 20px; padding-right: 30px">
 </head>
 
 <body>
@@ -127,7 +125,7 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         <section class="card">
             <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                <h2><i class="bi bi-list-task"></i> List of Equipment Locations</h2>
+                <h2><i class="bi bi-list-task"></i> List of Equipment Location Changes</h2>
             </div>
             <div class="card-body">
                 <div class="container-fluid px-0">
