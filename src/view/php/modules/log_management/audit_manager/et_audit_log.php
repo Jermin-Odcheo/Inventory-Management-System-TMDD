@@ -680,6 +680,8 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                                     <?= getStatusIcon($status) . ' ' . htmlspecialchars($statusText) ?>
                                                 </span>
                                                 <!-- DEBUG: Raw Status = '<?= htmlspecialchars($status) ?>' -->
+                                                <!-- DEBUG: Status Text = '<?= htmlspecialchars($statusText) ?>' -->
+                                                <!-- DEBUG: Raw Status = '<?= htmlspecialchars($isSuccess) ?>' -->
                                             </td>
 
                                             <!-- DATE & TIME -->
