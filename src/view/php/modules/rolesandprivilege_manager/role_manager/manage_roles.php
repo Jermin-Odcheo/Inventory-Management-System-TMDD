@@ -21,6 +21,9 @@ $rbac->requirePrivilege('Roles and Privileges', 'View');
 $canCreate = $rbac->hasPrivilege('Roles and Privileges', 'Create');
 $canModify = $rbac->hasPrivilege('Roles and Privileges', 'Modify');
 $canRemove = $rbac->hasPrivilege('Roles and Privileges', 'Remove');
+$canUndo = $rbac->hasPrivilege('Roles and Privileges', 'Undo');
+$canRedo = $rbac->hasPrivilege('Roles and Privileges', 'Redo');
+$canViewArchive = $rbac->hasPrivilege('Roles and Privileges', 'View');
 
 // In manage_roles.php, update the SQL query to:
 $sql = "
@@ -92,7 +95,6 @@ unset($role);
     <meta charset="UTF-8">
     <title>Role Management</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-
     <style>
         .wrapper {
             display: flex;
@@ -157,50 +159,52 @@ unset($role);
                 <h1> Role Management</h1>
             </header>
 
-
-            <!--Filter -->
-            <div class="filter-container">
+            <!-- Add Filter Section -->
+            <div class="row mb-3">
+                
+            <div class="d-flex justify-content-end mb-3">
                 <?php if ($canCreate): ?>
-                    <button type="button" class="btn btn-primary ms-2" data-bs-toggle="modal" data-bs-target="#addRoleModal">
+                    <button type="button" class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#addRoleModal">
                         <i class="bi bi-plus-lg"></i> Create New Role
                     </button>
                 <?php endif; ?>
-                <div class="filter-container">
-                    <!-- <label for="department-filter">FILTER BY DEPARTMENT</label>
-                               <select id="department-filter" name="department" autocomplete="off">
-                                   <option value="all">All Departments</option>
-                                   <?php
-                                    // Fetch all departments directly for the filter dropdown, show ALL regardless of is_disabled
-                                    try {
-                                        // Fetch both acronym and department_name
-                                        $deptStmt = $pdo->query("SELECT department_name, abbreviation FROM departments ORDER BY department_name");
-                                        $allDepartments = $deptStmt->fetchAll(PDO::FETCH_ASSOC);
-
-                                        foreach ($allDepartments as $dept) {
-                                            $name = htmlspecialchars($dept['department_name']);
-                                            $abbreviation = htmlspecialchars($dept['abbreviation']);
-                                            $label = "($abbreviation) $name";
-                                            echo '<option value="' . $name . '">' . $label . '</option>';
-                                        }
-                                    } catch (PDOException $e) {
-                                        // fallback: empty
-                                    }
-                                    ?>
-                               </select> -->
+            </div>
+            
+                <!-- <div class="col-md-3">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" id="roleNameFilter" class="form-control" placeholder="Filter by role name...">
+                    </div>
                 </div>
-
-                <!-- Buttons -->
-                <div class="col-6 col-md-2 d-grid">
-                    <button type="submit" class="btn btn-dark"><i class="bi bi-funnel"></i> Filter</button>
+                <div class="col-md-3">
+                    <select id="moduleFilter" class="form-select">
+                        <option value="">All Modules</option>
+                        <?php
+                        $modules = array_unique(array_column($roleData, 'Module_Name'));
+                        foreach ($modules as $module) {
+                            echo "<option value='" . htmlspecialchars($module) . "'>" . htmlspecialchars($module) . "</option>";
+                        }
+                        ?>
+                    </select>
                 </div>
-                <div class="col-6 col-md-2 d-grid">
-                    <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary shadow-sm"><i class="bi bi-x-circle"></i> Clear</a>
+                <div class="col-md-3">
+                    <select id="privilegeFilter" class="form-select" multiple>
+                        <?php
+                        $fixedPrivileges = ['Track', 'Create', 'Remove', 'Permanently Delete', 'Modify', 'View', 'Restore'];
+                        foreach ($fixedPrivileges as $privilege) {
+                            echo "<option value='" . htmlspecialchars($privilege) . "'>" . htmlspecialchars($privilege) . "</option>";
+                        }
+                        ?>
+                    </select>
                 </div>
-
+                <div class="col-md-3">
+                    <button id="clear-filters-btn" class="btn btn-outline-secondary w-100">
+                        <i class="bi bi-x-circle"></i> Clear Filters
+                    </button>
+                </div> -->
             </div>
 
-
-            <!-- Table -->
+            <!-- Table Filter Section -->
             <div class="table-responsive" id="table">
                 <table id="rolesTable" class="table table-striped table-hover align-middle">
                     <thead class="table-dark">
@@ -254,6 +258,7 @@ unset($role);
                     </tbody>
                 </table>
 
+                <!-- Pagination -->
                 <div class="container-fluid">
                     <div class="row align-items-center g-3">
                         <div class="col-12 col-sm-auto">
