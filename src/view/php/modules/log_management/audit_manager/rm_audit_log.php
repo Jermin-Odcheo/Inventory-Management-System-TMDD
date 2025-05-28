@@ -17,10 +17,10 @@ $rbac = new RBACService($pdo, $_SESSION['user_id']);
 
 // Check for required privilege
 $hasAuditPermission = $rbac->hasPrivilege('Audit', 'Track');
-$hasAuditPermission = $rbac->hasPrivilege('Roles and Privileges', 'Track');
+$hasRMPermission = $rbac->hasPrivilege('Roles and Privileges', 'Track');
 
 // If user doesn't have permission, show an inline "no permission" page
-if (!$hasAuditPermission) {
+if (!$hasAuditPermission && !$hasRMPermission) {
     echo '
       <div class="container d-flex justify-content-center align-items-center" 
            style="height:70vh; padding-left:300px">
