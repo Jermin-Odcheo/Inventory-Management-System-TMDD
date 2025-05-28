@@ -711,13 +711,16 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                             $statusRaw = $log['Status'] ?? '';
                                             $statusClean = strtolower(trim($statusRaw)); // Normalize for comparison
                                             $isSuccess = in_array($statusClean, ['successful', 'success']); // Accept both variants
+                                            
+                                            // Normalize status display to "Successful"
+                                            $displayStatus = $isSuccess ? "Successful" : $statusRaw;
                                             ?>
                                             <!-- STATUS -->
                                             <td data-label="Status">
                                                 <span class="badge <?php echo $isSuccess ? 'bg-success' : 'bg-danger'; ?>">
                                                     <?php
-                                                    echo getStatusIcon($statusRaw) . ' ' . htmlspecialchars($statusRaw);
-
+                                                    echo getStatusIcon($statusRaw) . ' ' . htmlspecialchars($displayStatus);
+                                                    
                                                     // DEBUG: Print raw status for unknown values
                                                     if (!$isSuccess) {
                                                         echo "<!-- DEBUG: Raw Status = '" . addslashes($statusRaw) . "' -->";

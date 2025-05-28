@@ -12,7 +12,7 @@ if (!$userId) {
 $rbac = new RBACService($pdo, $userId);
 
 $modules = [
-    'User Management' => ['audit' => 'audit_log.php', 'archive' => 'archive.php', 'user management' => ''],
+    'User Management' => ['audit' => 'um_audit_log.php', 'archive' => 'archive.php', 'user management' => ''],
     'Equipment Management' => ['audit' => 'em_audit_log.php', 'archive' => 'em_archive.php'],
     'Equipment Transactions' => ['audit' => 'et_audit_log.php', 'archive' => 'et_archive.php'],
     'Roles and Privileges' => ['audit' => 'rm_audit_log.php', 'archive' => 'rm_archive.php'],
