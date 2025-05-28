@@ -332,8 +332,12 @@ function formatChanges($oldJsonStr)
                                                 <?php echo formatChanges($log['old_val']); ?>
                                             </td>
                                             <td data-label="Status">
-                                                <span class="badge <?php echo (strtolower((string)$log['status']) === 'successful') ? 'bg-success' : 'bg-danger'; ?>">
-                                                    <?php echo getStatusIcon($log['status']) . ' ' . htmlspecialchars((string)($log['status'] ?? '')); ?>
+                                                <?php
+                                                $statusText = (strtolower((string)$log['status']) === 'successful') ? 'Successful' : 'Failed';
+                                                $statusClass = (strtolower((string)$log['status']) === 'successful') ? 'bg-success' : 'bg-danger';
+                                                ?>
+                                                <span class="badge <?php echo $statusClass; ?>">
+                                                    <?php echo getStatusIcon($log['status']) . ' ' . htmlspecialchars($statusText); ?>
                                                 </span>
                                             </td>
                                             <td data-label="Date &amp; Time">
