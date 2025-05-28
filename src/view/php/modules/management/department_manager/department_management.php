@@ -153,7 +153,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         echo json_encode($response);
         exit;
-
     } elseif (isset($_POST['action']) && $_POST['action'] === 'update') {
         if (!$canModify) {
             echo json_encode([
@@ -176,8 +175,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new Exception('Department not found.');
             }
 
-            if ($oldDepartment['abbreviation'] === $DepartmentAcronym && 
-                $oldDepartment['department_name'] === $DepartmentName) {
+            if (
+                $oldDepartment['abbreviation'] === $DepartmentAcronym &&
+                $oldDepartment['department_name'] === $DepartmentName
+            ) {
                 echo json_encode([
                     'status' => 'info',
                     'message' => 'No changes were made to the department.'
@@ -456,15 +457,16 @@ if (isset($_GET["q"])) {
                         <div class="card-body">
                             <?php if (!empty($departments)): ?>
 
-
-                                <div class="table-responsive" id="table">
+                                <div class="filter-container">
                                     <div class="d-flex justify-content-start mb-3 gap-2 align-items-center">
                                         <?php if ($canCreate): ?>
-                                            <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal"
+                                            <button type="button" class="btn btn-success btn-dark" data-bs-toggle="modal"
                                                 data-bs-target="#addDepartmentModal">
-                                                <i class="bi bi-plus-circle"></i> Create Department
+                                                <i class="bi bi-plus-lg"></i> Create Department
                                             </button>
                                         <?php endif; ?>
+
+                                        <!-- Filter -->
                                         <div class="d-flex align-items-center gap-2" id="sortFilter">
                                             <label class="mb-0">Sort by:</label>
                                             <div class="dropdown" data-bs-popper="static">
@@ -482,6 +484,11 @@ if (isset($_GET["q"])) {
                                             <input type="text" class="form-control" placeholder="Search..." id="eqSearch">
                                         </div>
                                     </div>
+                                </div>
+
+
+                                <!-- Table -->
+                                <div class="table-responsive" id="table">
                                     <table id="departmentTable" class="table table-striped table-hover align-middle">
                                         <thead class="table-dark">
                                             <tr>
@@ -563,6 +570,7 @@ if (isset($_GET["q"])) {
         </div>
     </div>
 
+    <!-- Add new Department Modal -->
     <div class="modal fade" id="addDepartmentModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -658,7 +666,7 @@ if (isset($_GET["q"])) {
             let rowsPerPage = 10;
             let allTableRows = []; // To store all rows for client-side pagination
             let deptIdToDelete = null; // Declare deptIdToDelete in the main scope
- 
+
 
             // Function to render table rows for the current page
             function renderTableRows() {
@@ -714,11 +722,11 @@ if (isset($_GET["q"])) {
             window.initDepartmentPagination = function(initialPage = 1, initialRowsPerPage = 10) {
                 // Get all rows from the table (before any filtering/slicing)
                 allTableRows = $('#departmentTable tbody tr').get();
-                
+
                 // Set initial state
                 rowsPerPage = initialRowsPerPage;
                 $('#rowsPerPageSelect').val(rowsPerPage); // Update dropdown
-                
+
                 // Calculate max possible page for the given rowsPerPage
                 const totalPages = Math.ceil(allTableRows.length / rowsPerPage);
                 currentPage = Math.min(initialPage, totalPages || 1); // Ensure current page is valid
@@ -755,7 +763,7 @@ if (isset($_GET["q"])) {
                 // Live search filtering (re-attach)
                 $('#eqSearch').off('keyup').on('keyup', function() {
                     const searchText = $(this).val().toLowerCase();
-                    const originalRows = $('#departmentTable').data('original-rows'); 
+                    const originalRows = $('#departmentTable').data('original-rows');
 
                     if (!originalRows) {
                         $('#departmentTable').data('original-rows', $('#departmentTable tbody tr').get());
@@ -768,11 +776,11 @@ if (isset($_GET["q"])) {
                             return rowText.includes(searchText);
                         });
                     } else {
-                        allTableRows = originalRows; 
+                        allTableRows = originalRows;
                     }
-                    currentPage = 1; 
+                    currentPage = 1;
                     renderTableRows();
-                    updatePaginationControls(); 
+                    updatePaginationControls();
                 });
 
                 // Open Edit Department modal and populate its fields (delegated event listener)
@@ -801,11 +809,11 @@ if (isset($_GET["q"])) {
                     e.preventDefault();
                     var sortCol = $(this).data('sort-col');
                     var sortOrder = $(this).data('sort-order');
-                    
-                    let rows = allTableRows; 
 
-                    var colIndex = 1; 
-                    
+                    let rows = allTableRows;
+
+                    var colIndex = 1;
+
                     rows.sort(function(a, b) {
                         var A = $(a).children('td').eq(colIndex).text().toUpperCase();
                         var B = $(b).children('td').eq(colIndex).text().toUpperCase();
@@ -813,13 +821,13 @@ if (isset($_GET["q"])) {
                         if (A > B) return sortOrder === 'asc' ? 1 : -1;
                         return 0;
                     });
-                    
+
                     allTableRows = rows;
 
                     var label = sortOrder === 'asc' ? 'Department Name (A–Z) ▼' : 'Department Name (Z–A) ▼';
                     $('#sortNameBtn').text(label);
-                    
-                    currentPage = 1; 
+
+                    currentPage = 1;
                     renderTableRows();
                     updatePaginationControls();
                 });
@@ -830,7 +838,7 @@ if (isset($_GET["q"])) {
             <?php if (!empty($success)): ?>
                 showToast("<?php echo addslashes($success); ?>", "success", 5000);
             <?php endif; ?>
-            
+
             <?php if (!empty($errors) && is_array($errors)): ?>
                 <?php foreach ($errors as $error): ?>
                     showToast("<?php echo addslashes($error); ?>", "error", 5000);
@@ -851,11 +859,11 @@ if (isset($_GET["q"])) {
                     dataType: 'json',
                     success: function(response) {
                         $('#addDepartmentModal').modal('hide');
-                        
+
                         setTimeout(function() {
                             $('#table').load(location.href + ' #table > *', function() {
                                 // Now use the captured currentPage instead of 1
-                                window.initDepartmentPagination(currentPageBeforeAction, currentRowsPerPageBeforeAction); 
+                                window.initDepartmentPagination(currentPageBeforeAction, currentRowsPerPageBeforeAction);
                                 attachTableEventListeners(); // Re-attach listeners after table reload
                                 showToast(response.message, 'success', 5000);
                             });
@@ -883,13 +891,13 @@ if (isset($_GET["q"])) {
             // AJAX: Edit Department form submission
             $('#editDepartmentForm').on('submit', function(e) {
                 e.preventDefault();
-                
+
                 const originalAcronym = $('#edit_department_acronym').data('original-value');
                 const originalName = $('#edit_department_name').data('original-value');
-                
+
                 const currentAcronym = $('#edit_department_acronym').val().trim();
                 const currentName = $('#edit_department_name').val().trim();
-                
+
                 if (originalAcronym === currentAcronym && originalName === currentName) {
                     showToast('No changes were made to the department.', 'info', 5000);
                     $('#editDepartmentModal').modal('hide');
@@ -906,7 +914,7 @@ if (isset($_GET["q"])) {
                     dataType: 'json',
                     success: function(response) {
                         $('#editDepartmentModal').modal('hide');
-                        
+
                         if (response.status === 'success') {
                             setTimeout(function() {
                                 $('#table').load(location.href + ' #table > *', function() {
@@ -916,7 +924,7 @@ if (isset($_GET["q"])) {
                                 });
 
                                 // Corrected: Reset the edit form, not the add form
-                                $('#editDepartmentForm')[0].reset(); 
+                                $('#editDepartmentForm')[0].reset();
                             }, 300);
 
                         } else if (response.status === 'info') {
@@ -948,12 +956,14 @@ if (isset($_GET["q"])) {
                     const currentRowsPerPageBeforeAction = rowsPerPage;
 
                     $.ajax({
-                        url: 'delete_department.php', 
+                        url: 'delete_department.php',
                         method: 'POST',
-                        data: { dept_id: deptIdToDelete }, 
+                        data: {
+                            dept_id: deptIdToDelete
+                        },
                         dataType: 'json',
                         success: function(response) {
-                            $('#deleteDepartmentModal').modal('hide'); 
+                            $('#deleteDepartmentModal').modal('hide');
                             if (response.status === 'success') {
                                 setTimeout(function() {
                                     $('#table').load(location.href + ' #table > *', function() {
@@ -988,12 +998,12 @@ if (isset($_GET["q"])) {
             $('#addDepartmentModal').on('hidden.bs.modal', function() {
                 $(this).find('form')[0].reset();
             });
-            
+
             // Ensure modal backdrop is removed and scrolling is re-enabled when ALL modals are hidden
             $('.modal').on('hidden.bs.modal', function() {
                 if ($('.modal.show').length === 0) {
                     $('body').removeClass('modal-open');
-                    $('body').css('overflow', ''); 
+                    $('body').css('overflow', '');
                     $('.modal-backdrop').remove();
                 }
             });

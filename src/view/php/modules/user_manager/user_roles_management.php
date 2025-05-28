@@ -150,11 +150,12 @@ $userRoleDepartments = array_values($userRoleMap);
         </header>
 
         <div class="filters-container">
-            <div class="search-filter">
-                <label for="search-users">SEARCH FOR USERS</label>
-                <input type="text" id="search-users" placeholder="Search user...">
-            </div>
-            <div class="filter-container">
+            <?php if ($canCreate): ?>
+                <button type="button" id="create-btn" class="btn btn-dark">
+                <i class="bi bi-plus-lg"></i> Add User/s to role</button>
+            <?php endif; ?>
+
+            <!-- <div class="filter-container">
                 <label for="role-filter">FILTER BY ROLE</label>
                 <select id="role-filter">
                     <option value="">All Roles</option>
@@ -176,15 +177,23 @@ $userRoleDepartments = array_values($userRoleMap);
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div>
-                <button type="button" id="clear-filters-btn">Clear Filters</button>
+            <div class="search-filter">
+                <label for="search-users">SEARCH FOR USERS</label>
+                <input type="text" id="search-users" placeholder="Search user...">
+            </div> -->
+
+            <!-- Buttons -->
+            <div class="col-6 col-md-2 d-grid">
+                <button type="submit" class="btn btn-dark"><i class="bi bi-funnel"></i> Filter</button>
             </div>
+
+            <div class="col-6 col-md-2 d-grid">
+                <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary shadow-sm"><i class="bi bi-x-circle"></i> Clear</a>
+            </div>
+
             <div class="action-buttons">
-            <?php if ($rbac->hasPrivilege('User Management', 'Modify')): ?>
-                <a href="user_management.php" class="btn btn-primary"> Manage User Accounts</a>
-            <?php endif; ?>
-                <?php if ($canCreate): ?>
-                    <button type="button" id="create-btn" class="btn btn-primary">Add user to role</button>
+                <?php if ($rbac->hasPrivilege('User Management', 'Modify')): ?>
+                    <a href="user_management.php" class="btn btn-primary"> Manage User Accounts</a>
                 <?php endif; ?>
             </div>
         </div>
@@ -201,7 +210,7 @@ $userRoleDepartments = array_values($userRoleMap);
                     </tr>
                 </thead>
                 <tbody>
-                    </tbody>
+                </tbody>
             </table>
 
             <?php if ($canRemove): ?>
@@ -252,65 +261,65 @@ $userRoleDepartments = array_values($userRoleMap);
     </div>
 
 
-<div id="add-user-roles-modal" class="modal">
-    <div class="modal-content">
-        <h2>add user to roles modal</h2>
-        <div class="modal-body">
-            <div class="form-group">
-                <label for="search-department-dropdown">select department <span class="text-danger">*</span></label>
-                <select id="search-department-dropdown">
-                    <option value="">Select one department</option>
-                    <?php foreach ($departmentsData as $dept): ?>
-                        <option value="<?php echo $dept['id']; ?>"><?php echo '(' . htmlspecialchars($dept['abbreviation']) . ') ' . htmlspecialchars($dept['department_name']); ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <small class="text-muted">Department is required</small>
+    <div id="add-user-roles-modal" class="modal">
+        <div class="modal-content">
+            <h2>add user to roles modal</h2>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="search-department-dropdown">select department <span class="text-danger">*</span></label>
+                    <select id="search-department-dropdown">
+                        <option value="">Select one department</option>
+                        <?php foreach ($departmentsData as $dept): ?>
+                            <option value="<?php echo $dept['id']; ?>"><?php echo '(' . htmlspecialchars($dept['abbreviation']) . ') ' . htmlspecialchars($dept['department_name']); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small class="text-muted">Department is required</small>
+                </div>
+                <div class="form-group">
+                    <label>selected department</label>
+                    <div id="selected-department-container"></div>
+                </div>
+                <div class="form-group">
+                    <label for="search-role-dropdown">search role/s (optional)</label>
+                    <select id="search-role-dropdown">
+                        <option value="">Select roles</option>
+                        <?php foreach ($rolesData as $role): ?>
+                            <option value="<?php echo $role['id']; ?>"><?php echo htmlspecialchars($role['role_name']); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small class="text-muted">Leave empty for assignments without roles</small>
+                </div>
+                <div class="form-group">
+                    <label>current role selection</label>
+                    <div id="selected-roles-container"></div>
+                </div>
+                <div class="form-group">
+                    <label for="search-users-dropdown">search user/s</label>
+                    <select id="search-users-dropdown">
+                        <option value="">Select users</option>
+                        <?php foreach ($usersData as $user): ?>
+                            <option value="<?php echo $user['id']; ?>"><?php echo htmlspecialchars($user['username']); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>current user selection</label>
+                    <div id="selected-users-container"></div>
+                </div>
+                <div class="form-group">
+                    <label>list of current users</label>
+                    <table id="current-users-table">
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
             </div>
-            <div class="form-group">
-                <label>selected department</label>
-                <div id="selected-department-container"></div>
+            <div class="modal-footer">
+                <button id="close-user-roles-modal">Cancel</button>
+                <button id="save-user-roles">Save</button>
             </div>
-            <div class="form-group">
-                <label for="search-role-dropdown">search role/s (optional)</label>
-                <select id="search-role-dropdown">
-                    <option value="">Select roles</option>
-                    <?php foreach ($rolesData as $role): ?>
-                        <option value="<?php echo $role['id']; ?>"><?php echo htmlspecialchars($role['role_name']); ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <small class="text-muted">Leave empty for assignments without roles</small>
-            </div>
-            <div class="form-group">
-                <label>current role selection</label>
-                <div id="selected-roles-container"></div>
-            </div>
-            <div class="form-group">
-                <label for="search-users-dropdown">search user/s</label>
-                <select id="search-users-dropdown">
-                    <option value="">Select users</option>
-                    <?php foreach ($usersData as $user): ?>
-                        <option value="<?php echo $user['id']; ?>"><?php echo htmlspecialchars($user['username']); ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>current user selection</label>
-                <div id="selected-users-container"></div>
-            </div>
-            <div class="form-group">
-                <label>list of current users</label>
-                <table id="current-users-table">
-                    <tbody>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        <div class="modal-footer">
-            <button id="close-user-roles-modal">Cancel</button>
-            <button id="save-user-roles">Save</button>
         </div>
     </div>
-</div>
 
     <div id="add-department-role-modal" class="modal">
         <div class="modal-content">
@@ -333,7 +342,7 @@ $userRoleDepartments = array_values($userRoleMap);
                         <?php foreach ($rolesData as $role): ?>
                             <option value="<?php echo $role['id']; ?>"><?php echo htmlspecialchars($role['role_name']); ?></option>
                         <?php endforeach; ?>
-                        
+
                     </select>
                     <small class="form-text text-muted">You can save without adding any roles</small>
                 </div>
@@ -348,7 +357,7 @@ $userRoleDepartments = array_values($userRoleMap);
                                 </tr>
                             </thead>
                             <tbody>
-                                </tbody>
+                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -412,18 +421,18 @@ $userRoleDepartments = array_values($userRoleMap);
                     if ($.trim(params.term) === '') {
                         return data;
                     }
-                    
+
                     // Search in both department name and abbreviation
                     if (data.text.toLowerCase().indexOf(params.term.toLowerCase()) > -1) {
                         return data;
                     }
-                    
+
                     // Try to extract abbreviation from the data text (format: "(ABBR) Department Name")
                     const abbr = data.text.match(/^\(([^)]+)\)/);
                     if (abbr && abbr[1].toLowerCase().indexOf(params.term.toLowerCase()) > -1) {
                         return data;
                     }
-                    
+
                     // Return `null` if the term should not be displayed
                     return null;
                 }
@@ -449,18 +458,18 @@ $userRoleDepartments = array_values($userRoleMap);
                     if ($.trim(params.term) === '') {
                         return data;
                     }
-                    
+
                     // Search in both department name and abbreviation
                     if (data.text.toLowerCase().indexOf(params.term.toLowerCase()) > -1) {
                         return data;
                     }
-                    
+
                     // Try to extract abbreviation from the data text (format: "(ABBR) Department Name")
                     const abbr = data.text.match(/^\(([^)]+)\)/);
                     if (abbr && abbr[1].toLowerCase().indexOf(params.term.toLowerCase()) > -1) {
                         return data;
                     }
-                    
+
                     // Return `null` if the term should not be displayed
                     return null;
                 }

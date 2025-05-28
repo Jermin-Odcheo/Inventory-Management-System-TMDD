@@ -241,12 +241,14 @@ try {
         </header>
 
         <div class="filters-container">
-            <div class="search-filter">
-                <label for="search-filters">SEARCH USERS</label>
-                <input type="text" id="search-filters" name="search" placeholder="Search…">
-            </div>
+            <?php if ($canCreate): ?>
+                <button type="button" id="create-btn" class="btn btn-dark">
+                    <i class="bi bi-plus-lg"></i> Create New User
+                </button>
+            <?php endif; ?>
+            <!--Filter -->
             <div class="filter-container">
-                <label for="department-filter">FILTER BY DEPARTMENT</label>
+                <!-- <label for="department-filter">FILTER BY DEPARTMENT</label>
                 <select id="department-filter" name="department" autocomplete="off">
                     <option value="all">All Departments</option>
                     <?php
@@ -266,21 +268,21 @@ try {
                         // fallback: empty
                     }
                     ?>
-                </select>
+                </select> -->
             </div>
-            <div>
-                <button type="button" id="clear-filters-btn" class="btn btn-secondary">
-                    <i class="bi bi-x-circle"></i> Clear Filters
-                </button>
+
+            <!-- Buttons -->
+            <div class="col-6 col-md-2 d-grid">
+                <button type="submit" class="btn btn-dark"><i class="bi bi-funnel"></i> Filter</button>
             </div>
+
+            <div class="col-6 col-md-2 d-grid">
+                <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary shadow-sm"><i class="bi bi-x-circle"></i> Clear</a>
+            </div>
+
             <div class="action-buttons">
                 <?php if ($rbac->hasPrivilege('User Management', 'Modify')): ?>
                     <a href="user_roles_management.php" class="btn btn-primary"> Manage Role Assignments</a>
-                <?php endif; ?>
-                <?php if ($canCreate): ?>
-                    <button type="button" id="create-btn" class="btn btn-primary">
-                        Create New User
-                    </button>
                 <?php endif; ?>
                 <?php if ($canDelete): ?>
                     <!-- Bulk remove button, hidden until >=2 checked -->

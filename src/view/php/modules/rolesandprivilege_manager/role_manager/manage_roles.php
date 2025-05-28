@@ -21,9 +21,6 @@ $rbac->requirePrivilege('Roles and Privileges', 'View');
 $canCreate = $rbac->hasPrivilege('Roles and Privileges', 'Create');
 $canModify = $rbac->hasPrivilege('Roles and Privileges', 'Modify');
 $canRemove = $rbac->hasPrivilege('Roles and Privileges', 'Remove');
-$canUndo = $rbac->hasPrivilege('Roles and Privileges', 'Undo');
-$canRedo = $rbac->hasPrivilege('Roles and Privileges', 'Redo');
-$canViewArchive = $rbac->hasPrivilege('Roles and Privileges', 'View');
 
 // In manage_roles.php, update the SQL query to:
 $sql = "
@@ -160,61 +157,50 @@ unset($role);
                 <h1> Role Management</h1>
             </header>
 
-            <div class="d-flex justify-content-end mb-3">
-                <!-- <?php if ($canViewArchive): ?>
-            <a href="archived_roles.php" class="btn btn-outline-secondary me-2">
-                <i class="bi bi-archive"></i> View Archived Roles
-            </a> -->
-            <?php endif; ?>
-            <?php if ($canUndo): ?>
-                <button type="button" class="btn btn-secondary me-2" id="undoButton">Undo</button>
-            <?php endif; ?>
-            <?php if ($canRedo): ?>
-                <button type="button" class="btn btn-secondary" id="redoButton">Redo</button>
-            <?php endif; ?>
-            <?php if ($canCreate): ?>
-                <button type="button" class="btn btn-primary ms-2" data-bs-toggle="modal" data-bs-target="#addRoleModal">
-                    Create New Role
-                </button>
-            <?php endif; ?>
-            </div>
 
-            <!-- Add Filter Section -->
-            <div class="row mb-3">
-                <div class="col-md-3">
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-search"></i></span>
-                        <input type="text" id="roleNameFilter" class="form-control" placeholder="Filter by role name...">
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <select id="moduleFilter" class="form-select">
-                        <option value="">All Modules</option>
-                        <?php
-                        $modules = array_unique(array_column($roleData, 'Module_Name'));
-                        foreach ($modules as $module) {
-                            echo "<option value='" . htmlspecialchars($module) . "'>" . htmlspecialchars($module) . "</option>";
-                        }
-                        ?>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <select id="privilegeFilter" class="form-select" multiple>
-                        <?php
-                        $fixedPrivileges = ['Track', 'Create', 'Remove', 'Permanently Delete', 'Modify', 'View', 'Restore'];
-                        foreach ($fixedPrivileges as $privilege) {
-                            echo "<option value='" . htmlspecialchars($privilege) . "'>" . htmlspecialchars($privilege) . "</option>";
-                        }
-                        ?>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <button id="clear-filters-btn" class="btn btn-outline-secondary w-100">
-                        <i class="bi bi-x-circle"></i> Clear Filters
+            <!--Filter -->
+            <div class="filter-container">
+                <?php if ($canCreate): ?>
+                    <button type="button" class="btn btn-primary ms-2" data-bs-toggle="modal" data-bs-target="#addRoleModal">
+                        <i class="bi bi-plus-lg"></i> Create New Role
                     </button>
+                <?php endif; ?>
+                <div class="filter-container">
+                    <!-- <label for="department-filter">FILTER BY DEPARTMENT</label>
+                               <select id="department-filter" name="department" autocomplete="off">
+                                   <option value="all">All Departments</option>
+                                   <?php
+                                    // Fetch all departments directly for the filter dropdown, show ALL regardless of is_disabled
+                                    try {
+                                        // Fetch both acronym and department_name
+                                        $deptStmt = $pdo->query("SELECT department_name, abbreviation FROM departments ORDER BY department_name");
+                                        $allDepartments = $deptStmt->fetchAll(PDO::FETCH_ASSOC);
+
+                                        foreach ($allDepartments as $dept) {
+                                            $name = htmlspecialchars($dept['department_name']);
+                                            $abbreviation = htmlspecialchars($dept['abbreviation']);
+                                            $label = "($abbreviation) $name";
+                                            echo '<option value="' . $name . '">' . $label . '</option>';
+                                        }
+                                    } catch (PDOException $e) {
+                                        // fallback: empty
+                                    }
+                                    ?>
+                               </select> -->
                 </div>
+
+                <!-- Buttons -->
+                <div class="col-6 col-md-2 d-grid">
+                    <button type="submit" class="btn btn-dark"><i class="bi bi-funnel"></i> Filter</button>
+                </div>
+                <div class="col-6 col-md-2 d-grid">
+                    <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary shadow-sm"><i class="bi bi-x-circle"></i> Clear</a>
+                </div>
+
             </div>
 
+
+            <!-- Table -->
             <div class="table-responsive" id="table">
                 <table id="rolesTable" class="table table-striped table-hover align-middle">
                     <thead class="table-dark">
@@ -267,6 +253,7 @@ unset($role);
                         <?php endif; ?>
                     </tbody>
                 </table>
+
                 <div class="container-fluid">
                     <div class="row align-items-center g-3">
                         <div class="col-12 col-sm-auto">
@@ -359,12 +346,12 @@ unset($role);
         function refreshRolesTable() {
             // Store current scroll position
             const scrollPosition = window.scrollY || document.documentElement.scrollTop;
-            
+
             // Ensure modals are properly cleaned up
             $('.modal').modal('hide');
             $('body').removeClass('modal-open');
             $('.modal-backdrop').remove();
-            
+
             $.ajax({
                 url: location.href,
                 type: 'GET',
@@ -373,26 +360,26 @@ unset($role);
                     const parser = new DOMParser();
                     const doc = parser.parseFromString(response, 'text/html');
                     const newTable = doc.querySelector('#rolesTable');
-                    
+
                     if (newTable) {
                         // Replace the current table with the new one
                         $('#rolesTable').replaceWith(newTable);
-                        
+
                         // Reset the global arrays for pagination
                         window.allRows = Array.from(document.querySelectorAll('#auditTable tr'));
                         window.filteredRows = window.allRows;
                         window.currentPage = 1;
-                        
+
                         // Reinitialize pagination
                         if (typeof updatePagination === 'function') {
                             updatePagination();
                             setTimeout(forcePaginationCheck, 100);
                         }
-                        
+
                         // Restore scroll position after everything is loaded
                         setTimeout(function() {
                             window.scrollTo(0, scrollPosition);
-                            
+
                             // Double check that modal classes are removed
                             $('body').removeClass('modal-open');
                             $('body').css('overflow', '');
@@ -420,7 +407,7 @@ unset($role);
             }
 
             // Ensure scrolling is properly restored when any modal is closed
-            $('.modal').on('hidden.bs.modal', function () {
+            $('.modal').on('hidden.bs.modal', function() {
                 setTimeout(function() {
                     $('body').removeClass('modal-open');
                     $('body').css('overflow', '');
@@ -727,7 +714,7 @@ unset($role);
                     success: function(response) {
                         $('#editRoleContent').html(response);
                         $('#roleID').val(roleID);
-                        
+
                         // Form is loaded in modal content, no need for parent window access
                         // The script in edit_roles.php will handle capturing the original state
                     },
@@ -774,7 +761,7 @@ unset($role);
                             $('body').css('overflow', '');
                             $('body').css('padding-right', '');
                             $('.modal-backdrop').remove();
-                            
+
                             // Refresh the table without reloading the whole page
                             refreshRolesTable();
                             showToast(response.message, 'success', 5000);
