@@ -969,7 +969,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                 keyboard: true,
                 focus: true
             });
-
+            
             // Real-time search & filter
             $('#searchStatus, #filterStatus').on('input change', function() {
                 filterStatusTable();
@@ -1058,7 +1058,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                 setTimeout(checkAndHidePagination, 100);
             });
 
-            // Date filter handling
+            // Date filter handling (only update UI, don't filter yet)
             $('#dateFilter').on('change', function() {
                 const filterType = $(this).val();
 
@@ -1076,7 +1076,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                     $('#dateRangePickers').show();
                 } else if (filterType === 'desc' || filterType === 'asc') {
                     // Apply sorting without showing date inputs
-                    filterStatusTable();
+                filterStatusTable();
                 }
             });
 
@@ -1320,9 +1320,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             // Run on page load with a longer delay to ensure DOM is fully processed
             setTimeout(checkAndHidePagination, 300);
 
-            // Filter button now reloads the page on click
+            // Filter button now triggers filtering using current filter values
             $('#filterBtn').on('click', function() {
-                location.reload();
+                filterStatusTable();
             });
             // Clear button resets filters and triggers filter function
             $('#clearBtn').on('click', function() {
