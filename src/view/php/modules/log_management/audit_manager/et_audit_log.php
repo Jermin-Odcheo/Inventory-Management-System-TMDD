@@ -672,14 +672,15 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                             <td data-label="Status">
                                                 <?php
                                                 $status = $log['status'] ?? '';
-                                                $isSuccess = (strtolower($status) === 'successful');
+                                                $normalizedStatus = strtolower(trim($status));
+                                                $isSuccess = ($normalizedStatus === 'successful');
                                                 $statusText = $isSuccess ? 'Successful' : 'Failed';
                                                 ?>
                                                 <span class="badge <?= $isSuccess ? 'bg-success' : 'bg-danger' ?>">
                                                     <?= getStatusIcon($status) . ' ' . htmlspecialchars($statusText) ?>
                                                 </span>
+                                                <!-- DEBUG: Raw Status = '<?= htmlspecialchars($status) ?>' -->
                                             </td>
-
 
                                             <!-- DATE & TIME -->
                                             <td data-label="Date & Time">

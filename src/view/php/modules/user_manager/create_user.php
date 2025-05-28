@@ -199,7 +199,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             error_log("SQL Code: " . $e->errorInfo[1]);
             error_log("SQL Message: " . $e->errorInfo[2]);
             
-            throw new Exception("Database error: " . $e->getMessage());
+            // Check for duplicate username constraint violation
+            if ($e->getCode() == '23000' && strpos($e->getMessage(), 'Duplicate entry') !== false && strpos($e->getMessage(), 'username') !== false) {
+                throw new Exception("Username is already taken. Please choose a different username.");
+            } else {
+                throw new Exception("Database error: " . $e->getMessage());
+            }
         }
 
         $pdo->commit();
@@ -283,10 +288,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $pdo->rollBack();
         }
         error_log("Update user error: " . $e->getMessage());
-        echo json_encode([
-            'success' => false,
-            'message' => 'Error: ' . $e->getMessage()
-        ]);
+        
+        // Check for duplicate username error
+        if (strpos($e->getMessage(), 'Duplicate entry') !== false && strpos($e->getMessage(), 'username') !== false) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Username already exists. Please choose a different username.'
+            ]);
+        } else {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ]);
+        }
     }
     exit();
 }
