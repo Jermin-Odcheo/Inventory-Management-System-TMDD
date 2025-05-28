@@ -196,21 +196,24 @@ try {
         .toast {
             min-width: 300px;
         }
-        
+
         /* Pagination styles */
         .pagination {
             display: flex;
             justify-content: center;
             margin: 20px 0;
         }
+
         .pagination .page-item {
             margin: 0 2px;
         }
+
         .pagination .page-item.active .page-link {
             background-color: #0d6efd;
             border-color: #0d6efd;
             color: white;
         }
+
         .pagination .page-link {
             color: #0d6efd;
             border: 1px solid #dee2e6;
@@ -218,9 +221,11 @@ try {
             border-radius: 0.25rem;
             text-decoration: none;
         }
+
         .pagination .page-link:hover {
             background-color: #e9ecef;
         }
+
         .pagination .page-item.disabled .page-link {
             color: #6c757d;
             pointer-events: none;
@@ -327,7 +332,7 @@ try {
                         <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody id="auditTable">
+                <tbody id="umTableBody">
                     <?php if (empty($users)): ?>
                         <tr>
                             <td colspan="9" class="text-center text-muted">No users found.</td>
@@ -660,7 +665,7 @@ try {
             if (typeof initPagination === 'function') {
                 console.log("Initializing pagination for user management");
                 initPagination({
-                    tableId: 'auditTable',
+                    tableId: 'umTableBody',
                     rowsPerPageSelectId: 'rowsPerPageSelect',
                     currentPageId: 'currentPage',
                     rowsPerPageId: 'rowsPerPage',
@@ -670,13 +675,13 @@ try {
                     paginationId: 'pagination'
                 });
             }
-            
+
             const originalUpdatePagination = window.updatePagination || function() {};
 
-            // Add forcePaginationCheck function
-            function forcePaginationCheck() {
+            // Function to check and update pagination visibility
+            window.forcePaginationCheck = function() {
                 const totalRows = window.filteredRows ? window.filteredRows.length : 0;
-                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value);
+                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value) || 10;
                 const prevBtn = document.getElementById('prevPage');
                 const nextBtn = document.getElementById('nextPage');
                 const paginationEl = document.getElementById('pagination');
@@ -711,7 +716,7 @@ try {
 
             window.updatePagination = function() {
                 // Get all rows again in case the DOM was updated
-                window.allRows = Array.from(document.querySelectorAll('#auditTable tbody tr'));
+                window.allRows = Array.from(document.querySelectorAll('#umTableBody tbody tr'));
 
                 // If filtered rows is empty or not defined, use all rows
                 if (!window.filteredRows || window.filteredRows.length === 0) {
@@ -731,12 +736,12 @@ try {
 
             // Call updatePagination immediately
             updatePagination();
-            
+
             // Handle edit user form submission
             $('#submitEditUser').on('click', function() {
                 const form = $('#editUserForm');
                 const formData = new FormData(form[0]);
-                
+
                 // Validate email has domain
                 const email = $('#editEmail').val();
                 if (!validateEmail(email)) {
@@ -745,18 +750,18 @@ try {
                 } else {
                     $('#editEmail').removeClass('is-invalid');
                 }
-                
+
                 // Check if departments are selected from the assigned departments table
                 const departmentRows = $('#assignedDepartmentsTable tbody tr');
                 if (departmentRows.length === 0) {
                     Toast.error('At least one department must be assigned');
                     return;
                 }
-                
+
                 // Clear any existing department values to avoid duplicates
                 formData.delete('departments[]');
                 formData.delete('department');
-                
+
                 // Add all departments as array
                 departmentRows.each(function(index) {
                     const deptId = $(this).data('department-id');
@@ -768,7 +773,7 @@ try {
                         }
                     }
                 });
-                
+
                 $.ajax({
                     url: form.attr('action'),
                     type: 'POST',
@@ -781,10 +786,15 @@ try {
                             if (result.success) {
                                 Toast.success('User updated successfully');
                                 $('#editUserModal').modal('hide');
-                                // Reload page after successful update
-                                setTimeout(function() {
-                                    window.location.reload();
-                                }, 1000);
+                                // Use reloadUserTable function instead of page reload
+                                if (typeof reloadUserTable === 'function') {
+                                    reloadUserTable();
+                                } else {
+                                    // Fallback to page reload if function not available
+                                    setTimeout(function() {
+                                        window.location.reload();
+                                    }, 1000);
+                                }
                             } else {
                                 Toast.error(result.message || 'Failed to update user');
                             }
@@ -793,9 +803,15 @@ try {
                             if (typeof response === 'string' && response.includes('success')) {
                                 Toast.success('User updated successfully');
                                 $('#editUserModal').modal('hide');
-                                setTimeout(function() {
-                                    window.location.reload();
-                                }, 1000);
+                                // Use reloadUserTable function instead of page reload
+                                if (typeof reloadUserTable === 'function') {
+                                    reloadUserTable();
+                                } else {
+                                    // Fallback to page reload if function not available
+                                    setTimeout(function() {
+                                        window.location.reload();
+                                    }, 1000);
+                                }
                             } else {
                                 Toast.error('Error processing response');
                                 console.error('Error parsing response:', e, response);
@@ -805,7 +821,7 @@ try {
                     error: function(xhr, status, error) {
                         console.error("Error updating user:", error);
                         console.error("Response text:", xhr.responseText);
-                        
+
                         try {
                             // First try to extract JSON from the response if it contains HTML errors
                             let jsonStr = xhr.responseText;
@@ -885,29 +901,31 @@ try {
 
         // Use event delegation for dynamically added elements
         $(document).on('click', '.edit-btn', function() {
-             $(".modal-backdrop").hide();
+            $(".modal-backdrop").hide();
             const userId = $(this).data('id');
             const email = $(this).data('email');
             const username = $(this).data('username');
             const firstName = $(this).data('first-name');
             const lastName = $(this).data('last-name');
-            
+
             // Set values in form
             $('#editUserID').val(userId);
             $('#editEmail').val(email);
             $('#editUsername').val(username);
             $('#editFirstName').val(firstName);
             $('#editLastName').val(lastName);
-            
+
             // Clear previous department selections
             selectedDepartments = [];
             updateEditDepartmentsDisplay();
-            
+
             // Fetch user's departments
             $.ajax({
                 url: 'get_user_departments.php',
                 type: 'GET',
-                data: { user_id: userId },
+                data: {
+                    user_id: userId
+                },
                 dataType: 'json',
                 success: function(response) {
                     if (response.success) {
@@ -927,7 +945,7 @@ try {
                     Toast.error('Failed to load user departments. Please try again.');
                 }
             });
-            
+
             // Show the modal
             var editModal = document.getElementById('editUserModal');
             var modal = new bootstrap.Modal(editModal);
@@ -1042,14 +1060,14 @@ try {
             }
 
             // Get all rows
-            const tableBody = document.getElementById('auditTable');
+            const tableBody = document.getElementById('umTableBody');
             if (!tableBody) {
                 console.error('Table body not found!');
                 return;
             }
-            
+
             const rows = Array.from(tableBody.querySelectorAll('tr'));
-            
+
             // Sort the rows
             rows.sort(function(a, b) {
                 const aValue = a.cells[colIndex] ? a.cells[colIndex].textContent.trim().toLowerCase() : '';
@@ -1072,13 +1090,13 @@ try {
             while (tableBody.firstChild) {
                 tableBody.removeChild(tableBody.firstChild);
             }
-            
+
             // Re-append sorted rows to the table
             rows.forEach(row => tableBody.appendChild(row));
-            
+
             // Update window.allRows and window.filteredRows for pagination
             window.allRows = rows;
-            
+
             // Apply any active filters
             filterTable();
         }
@@ -1094,25 +1112,25 @@ try {
             });
 
             // Store all table rows for filtering
-            const tableBody = document.getElementById('auditTable');
+            const tableBody = document.getElementById('umTableBody');
             if (!tableBody) {
                 console.error('Table body not found!');
                 return;
             }
-            
+
             const allRows = Array.from(tableBody.querySelectorAll('tr'));
-            
+
             // Filter rows based on search and department filter
             window.filteredRows = allRows.filter(row => {
                 const rowText = row.textContent.toLowerCase();
                 let matchesSearch = true;
                 let matchesDept = true;
-                
+
                 // Apply search filter
                 if (searchText) {
                     matchesSearch = rowText.includes(searchText);
                 }
-                
+
                 // Apply department filter
                 if (deptFilter && deptFilter !== 'all') {
                     const deptCell = row.querySelector('td:nth-child(6)');
@@ -1122,18 +1140,18 @@ try {
                         matchesDept = false;
                     }
                 }
-                
+
                 return matchesSearch && matchesDept;
             });
-            
+
             // Store the filtered rows for pagination
             window.allRows = allRows;
-            
+
             // Reset to first page and update pagination
             if (window.paginationConfig) {
                 window.paginationConfig.currentPage = 1;
             }
-            
+
             // Call the pagination library's update function
             if (typeof updatePagination === 'function') {
                 updatePagination();
@@ -1145,16 +1163,16 @@ try {
             // Update edit user departments display
             const $list = $('#assignedDepartmentsList');
             const $table = $('#assignedDepartmentsTable tbody');
-            
+
             $list.empty();
             $table.empty();
-            
+
             selectedDepartments.forEach(function(dept) {
                 // Add badge to list
                 $list.append(`
                     <span class="badge bg-primary me-1 mb-1">${dept.name}</span>
                 `);
-                
+
                 // Add row to table
                 $table.append(`
                     <tr data-department-id="${dept.id}">
@@ -1167,7 +1185,7 @@ try {
                     </tr>
                 `);
             });
-            
+
             // Add event handlers for removal buttons
             $('.remove-edit-dept').on('click', function() {
                 const deptId = $(this).data('dept-id');
@@ -1210,10 +1228,10 @@ try {
                 // Clear both filters safely
                 $('#search-filters').val('');
                 $('#department-filter').val('all').trigger('change');
-                
+
                 // Reset filteredRows to all rows
                 window.filteredRows = window.allRows;
-                
+
                 // Update pagination
                 if (typeof updatePagination === 'function') {
                     // Reset to first page
@@ -1226,11 +1244,11 @@ try {
 
             // Initial sort/filter (done only once)
             sortTable('id');
-            
+
             // Initialize pagination if not already done
             if (typeof initPagination === 'function' && !window.paginationConfig) {
                 initPagination({
-                    tableId: 'auditTable',
+                    tableId: 'umTableBody',
                     rowsPerPageSelectId: 'rowsPerPageSelect',
                     currentPageId: 'currentPage',
                     rowsPerPageId: 'rowsPerPage',

@@ -5,6 +5,25 @@ $(document).ready(function() {
     // Initialize the page
     initializeUI();
     
+    // Add CSS styles for loading overlay
+    $('<style>')
+        .prop('type', 'text/css')
+        .html(`
+            .loading-overlay {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(255, 255, 255, 0.7);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 1000;
+            }
+        `)
+        .appendTo('head');
+    
     // Email validation function
     function validateEmail(email) {
         const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -86,47 +105,88 @@ $(document).ready(function() {
     
     // Function to reload just the table instead of the whole page
     function reloadUserTable() {
-        // Save current search and filter values
+        // Store current search and filter values
         const searchValue = $('#search-filters').val();
         const departmentFilter = $('#department-filter').val();
         
-        // Also save current pagination state if possible
-        const currentPage = $('#currentPage').text();
-        const rowsPerPage = $('#rowsPerPageSelect').val();
+        // Store current pagination state
+        const currentPage = window.paginationConfig ? window.paginationConfig.currentPage : 1;
+        const rowsPerPage = parseInt($('#rowsPerPageSelect').val()) || 10;
         
-        // Reload the table with the current filters
-        $('#umTable').load(getCacheBustedUrl('#umTable'), function() {
-            // Re-apply any filters after reload
-            if (searchValue) $('#search-filters').val(searchValue);
-            if (departmentFilter) $('#department-filter').val(departmentFilter);
-            
-            // Re-initialize any event handlers for the refreshed table
-            updateBulkDeleteButton();
-            
-            // Update pagination display
-            const totalUsers = parseInt($('#total-users').val()) || 0;
-            
-            // Update pagination text values
-            if (totalUsers <= rowsPerPage) {
-                $('#currentPage').text('1');
-                $('#rowsPerPage').text(totalUsers);
-            } else {
-                $('#currentPage').text(currentPage);
-                $('#rowsPerPage').text(rowsPerPage);
-            }
-            $('#totalRows').text(totalUsers);
-            
-            // Show/hide pagination controls
-            if (totalUsers <= rowsPerPage) {
-                $('#prevPage, #nextPage').addClass('d-none');
-                $('#pagination').empty();
-            } else {
-                $('#prevPage, #nextPage').removeClass('d-none');
+        // Store current scroll position
+        const scrollPosition = window.scrollY || document.documentElement.scrollTop;
+        
+        // Ensure modals are properly cleaned up
+        $('.modal').modal('hide');
+        $('body').removeClass('modal-open');
+        $('.modal-backdrop').remove();
+        
+        // Show a loading indicator
+        const loadingOverlay = $('<div class="loading-overlay"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>');
+        $('#table').append(loadingOverlay);
+        
+        $.ajax({
+            url: window.location.href,
+            type: 'GET',
+            success: function(response) {
+                // Extract just the table HTML from the response
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(response, 'text/html');
+                const newTable = doc.querySelector('#umTable');
                 
-                // If pagination.js is used
-                if (typeof initializePagination === 'function') {
-                    initializePagination();
+                if (newTable) {
+                    // Replace the current table with the new one
+                    $('#umTable').replaceWith(newTable);
+                    
+                    // Re-apply any filters after reload
+                    if (searchValue) $('#search-filters').val(searchValue);
+                    if (departmentFilter) $('#department-filter').val(departmentFilter);
+                    
+                    // Re-initialize any event handlers for the refreshed table
+                    updateBulkDeleteButton();
+                    
+                    // Reset the global arrays for pagination
+                    window.allRows = Array.from(document.querySelectorAll('#umTableBody tr'));
+                    window.filteredRows = window.allRows;
+                    
+                    // Restore pagination state
+                    if (window.paginationConfig) {
+                        window.paginationConfig.currentPage = currentPage;
+                    }
+                    
+                    // Reinitialize pagination
+                    if (typeof updatePagination === 'function') {
+                        updatePagination();
+                        if (typeof window.forcePaginationCheck === 'function') {
+                            setTimeout(window.forcePaginationCheck, 100);
+                        }
+                    }
+                    
+                    // Apply filters if needed
+                    if (searchValue || (departmentFilter && departmentFilter !== 'all')) {
+                        filterTable();
+                    }
+                    
+                    // Remove loading overlay
+                    $('.loading-overlay').remove();
+                    
+                    // Restore scroll position
+                    setTimeout(function() {
+                        window.scrollTo(0, scrollPosition);
+                    }, 100);
+                    
+                    // Show success message
+                    Toast.success('Data updated successfully');
+                } else {
+                    console.error('Could not find table in response');
+                    $('.loading-overlay').remove();
+                    Toast.error('Failed to refresh data. Please reload the page.');
                 }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error refreshing table:', error);
+                $('.loading-overlay').remove();
+                Toast.error('Failed to refresh data. Please reload the page.');
             }
         });
     }
@@ -640,10 +700,8 @@ $(document).ready(function() {
                     if (result.success) {
                         Toast.success('User updated successfully');
                         $('#editUserModal').modal('hide');
-                        // Reload page after successful update
-                        setTimeout(function() {
-                            window.location.reload();
-                        }, 1000);
+                        // Reload table after successful update
+                        reloadUserTable();
                     } else {
                         Toast.error(result.message || 'Failed to update user');
                     }
@@ -652,9 +710,8 @@ $(document).ready(function() {
                     if (typeof response === 'string' && response.includes('success')) {
                         Toast.success('User updated successfully');
                         $('#editUserModal').modal('hide');
-                        setTimeout(function() {
-                            window.location.reload();
-                        }, 1000);
+                        // Reload table after successful update
+                        reloadUserTable();
                     } else {
                         Toast.error('Error processing response');
                         console.error('Error parsing response:', e, response);
@@ -794,8 +851,8 @@ $(document).ready(function() {
             dataType: 'json',
             success: function(response) {
                 if (response.success) {
-                    // Remove the row from the table
-                    $(`tr:has(.delete-btn[data-id="${userId}"])`).remove();
+                    // Reload the table instead of just removing the row
+                    reloadUserTable();
                     Toast.success('User removed successfully');
                 } else {
                     Toast.error(response.message || 'Failed to remove user');
@@ -823,7 +880,7 @@ $(document).ready(function() {
                             // Process the JSON response
                             if (jsonData.success) {
                                 // Process success even though there were warnings
-                                $(`tr:has(.delete-btn[data-id="${userId}"])`).remove();
+                                reloadUserTable();
                                 Toast.success('User removed successfully');
                                 return;
                             } else {
@@ -856,10 +913,8 @@ $(document).ready(function() {
                   response.status &&
                   response.status.toLowerCase() === "success"
                 ) {
-                  // Remove the rows from the table
-                  userIds.forEach(function (id) {
-                    $(`tr:has(.select-row[value="${id}"])`).remove();
-                  });
+                  // Reload the table instead of just removing rows
+                  reloadUserTable();
                   Toast.success("Selected users removed successfully");
                   $("#delete-selected").hide().prop("disabled", true);
                 } else {
@@ -890,9 +945,7 @@ $(document).ready(function() {
                             // Process the JSON response
                             if (jsonData.success || (jsonData.status && jsonData.status.toLowerCase() === "success")) {
                                 // Process success even though there were warnings
-                                userIds.forEach(function (id) {
-                                    $(`tr:has(.select-row[value="${id}"])`).remove();
-                                });
+                                reloadUserTable();
                                 Toast.success("Selected users removed successfully");
                                 $("#delete-selected").hide().prop("disabled", true);
                                 return;
