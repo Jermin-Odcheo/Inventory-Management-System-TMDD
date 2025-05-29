@@ -356,6 +356,74 @@ try {
 } catch (PDOException $e) {
     $errors[] = "Error retrieving Charge Invoices: " . $e->getMessage();
 }
+
+// ------------------------
+// FILTER CHARGE INVOICES (AJAX)
+// ------------------------
+if (isset($_GET['action']) && $_GET['action'] === 'filter') {
+    try {
+        $query = "
+            SELECT 
+                ci.*,
+                po.date_of_order,
+                po.no_of_units,
+                po.item_specifications
+            FROM charge_invoice AS ci
+            LEFT JOIN purchase_order AS po
+                ON ci.po_no = po.po_no
+            WHERE ci.is_disabled = 0
+              AND (
+                    ci.po_no IS NULL
+                 OR ci.po_no = ''
+                 OR po.is_disabled = 0
+              )
+        ";
+        $params = [];
+
+        switch (
+            $_GET['type'] ?? ''
+        ) {
+            case 'desc':
+                $query .= " ORDER BY ci.date_of_purchase DESC";
+                break;
+            case 'asc':
+                $query .= " ORDER BY ci.date_of_purchase ASC";
+                break;
+            case 'month':
+                $query .= " AND MONTH(ci.date_of_purchase) = ? AND YEAR(ci.date_of_purchase) = ?";
+                $params[] = $_GET['month'];
+                $params[] = $_GET['year'];
+                break;
+            case 'range':
+                $query .= " AND ci.date_of_purchase BETWEEN ? AND ?";
+                $params[] = $_GET['dateFrom'];
+                $params[] = $_GET['dateTo'];
+                break;
+        }
+
+        $stmt = $pdo->prepare($query);
+        $stmt->execute($params);
+        $filteredInvoices = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (is_ajax_request()) {
+            ob_clean();
+            echo json_encode([
+                'status' => 'success',
+                'invoices' => $filteredInvoices
+            ]);
+            exit;
+        }
+    } catch (PDOException $e) {
+        if (is_ajax_request()) {
+            ob_clean();
+            echo json_encode([
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ]);
+            exit;
+        }
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -375,6 +443,439 @@ try {
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
     <!-- Custom Styles -->
     <link href="../../../styles/css/equipment-transactions.css" rel="stylesheet">
+<style>
+  /* Ensure table header is always visible and dark */
+  #invoiceTable thead.table-dark th {
+    background-color: #212529 !important;
+    color: #fff !important;
+    opacity: 1 !important;
+  }
+  #invoiceTable thead.table-dark {
+    background-color: #212529 !important;
+  }
+</style>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Ensure toast.js is loaded for showToast -->
+<script src="/src/control/js/toast.js"></script>
+<script>
+var canModify = <?php echo json_encode($canModify); ?>;
+var canDelete = <?php echo json_encode($canDelete); ?>;
+
+// Place JS function here
+function formatDateAMPM(dateString) {
+    if (!dateString) return '';
+    // Accepts 'YYYY-MM-DD HH:MM:SS' or 'YYYY-MM-DDTHH:MM:SS'
+    const d = new Date(dateString.replace(' ', 'T'));
+    const year = d.getFullYear();
+    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+    const day = d.getDate().toString().padStart(2, '0');
+    let hours = d.getHours();
+    const minutes = d.getMinutes().toString().padStart(2, '0');
+    const seconds = d.getSeconds().toString().padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12; // the hour '0' should be '12'
+    return `${year}-${month}-${day} ${hours.toString().padStart(2, '0')}:${minutes}:${seconds} ${ampm}`;
+}
+
+$(document).ready(function() {
+    $('#add_po_no').select2({
+        dropdownParent: $('#addInvoiceModal'),
+        width: '100%',
+        placeholder: 'Type or select PO…',
+        allowClear: true
+    });
+
+    $('#edit_po_no').select2({
+        dropdownParent: $('#editInvoiceModal'),
+        width: '100%',
+        placeholder: 'Type or select PO…',
+        allowClear: true
+    });
+
+    // Always clean up modal backdrop and body class after modal is hidden
+    $('#addInvoiceModal').on('hidden.bs.modal', function() {
+        $('.modal-backdrop').remove();
+        $('body').removeClass('modal-open').css('overflow', '');
+        $('body').css('padding-right', '');
+    });
+    // Restrict Invoice Number and PO Number fields to numbers only (block e, +, -, . and paste)
+    $(document).on('keydown', 'input[name="invoice_no"], #edit_invoice_no, input[name="po_no"], #edit_po_no', function(e) {
+        // Allow: backspace, delete, tab, escape, enter, arrows
+        if ($.inArray(e.keyCode, [46, 8, 9, 27, 13, 110, 190]) !== -1 ||
+            // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+            ((e.keyCode == 65 || e.keyCode == 67 || e.keyCode == 86 || e.keyCode == 88) && (e.ctrlKey === true || e.metaKey === true)) ||
+            // Allow: home, end, left, right, down, up
+            (e.keyCode >= 35 && e.keyCode <= 40)) {
+            return;
+        }
+        // Block: e, +, -, .
+        if ([69, 187, 189, 190].includes(e.keyCode)) {
+            e.preventDefault();
+        }
+        // Ensure only numbers
+        if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
+            e.preventDefault();
+        }
+    });
+    // Block paste of non-numeric
+    $(document).on('paste', 'input[name="invoice_no"], #edit_invoice_no, input[name="po_no"], #edit_po_no', function(e) {
+        var pasted = (e.originalEvent || e).clipboardData.getData('text');
+        if (!/^\d+$/.test(pasted)) {
+            e.preventDefault();
+        }
+    });
+    // Search filter for invoices
+    $('#searchInvoice').on('input', function() {
+        var searchText = $(this).val().toLowerCase();
+        $("#table tbody tr").filter(function() {
+            $(this).toggle($(this).text().toLowerCase().indexOf(searchText) > -1);
+        });
+    });
+
+    // Trigger Edit Invoice Modal using Bootstrap 5 Modal API
+    $(document).on('click', '.edit-invoice', function() {
+        const id = $(this).data('id');
+        const invoice = $(this).data('invoice') || '';
+        const date = $(this).data('date') || '';
+        const po = $(this).data('po') || '';
+
+        // Fill hidden and inputs
+        $('#edit_invoice_id').val(id);
+        $('#edit_invoice_no').val(invoice.replace(/^CI/, '')); // strip CI so input=number stays numeric
+        $('#edit_date_of_purchase').val(date);
+        $('#edit_po_no').val(po).trigger('change'); // set the dropdown and trigger Select2 update
+
+        // Show the edit modal
+        const modalEl = document.getElementById('editInvoiceModal');
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    });
+
+
+    // Trigger Delete Invoice Modal
+    $(document).on('click', '.delete-invoice', function(e) {
+        e.preventDefault();
+        deleteInvoiceId = $(this).data('id');
+        var deleteModal = new bootstrap.Modal(document.getElementById('deleteInvoiceModal'));
+        deleteModal.show();
+    });
+
+    // Confirm Delete Invoice via AJAX
+    $('#confirmDeleteInvoiceBtn').on('click', function() {
+        if (deleteInvoiceId) {
+            $.ajax({
+                url: 'charge_invoice.php',
+                method: 'GET',
+                data: {
+                    action: 'removed',
+                    id: deleteInvoiceId
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        $('#invoiceTable').load(location.href + ' #invoiceTable', function() {
+                            showToast(response.message, 'success');
+                            reinitInvoiceTableJS();
+                        });
+                    } else {
+                        showToast(response.message, 'error');
+                    }
+                    var deleteModalEl = document.getElementById('deleteInvoiceModal');
+                    var deleteModalInstance = bootstrap.Modal.getInstance(deleteModalEl);
+                    deleteModalInstance.hide();
+                },
+                error: function() {
+                    showToast('Error processing request.', 'error');
+                }
+            });
+        }
+    });
+
+    // Add Invoice AJAX submission
+    $('#addInvoiceForm').on('submit', function(e) {
+        let invoiceNo = $(this).find('input[name="invoice_no"]').val();
+        let valid = true;
+        if (!/^\d+$/.test(invoiceNo)) {
+            showToast('Invoice Number must contain numbers only.', 'error');
+            valid = false;
+        }
+        if (!valid) {
+            e.preventDefault();
+            return false;
+        }
+        // Build data with prefixed invoice number
+        const formData = $(this).serializeArray();
+        let dataObj = {};
+        formData.forEach(function(item) {
+            if (item.name === 'invoice_no') {
+                dataObj['invoice_no'] = 'CI' + invoiceNo;
+            } else {
+                dataObj[item.name] = item.value;
+            }
+        });
+        e.preventDefault();
+        $.ajax({
+            url: 'charge_invoice.php',
+            method: 'POST',
+            data: dataObj,
+            dataType: 'json',
+            success: function(response) {
+                if (response.status === 'success') {
+                    $('#invoiceTable').load(location.href + ' #invoiceTable', function() {
+                        showToast(response.message, 'success');
+                        reinitInvoiceTableJS();
+                    });
+                    // Close the modal after successful submission
+                    var addModalEl = document.getElementById('addInvoiceModal');
+                    var addModal = bootstrap.Modal.getInstance(addModalEl);
+                    if (addModal) {
+                        addModal.hide();
+                    }
+                    // Reset form fields to be blank when reopening the modal
+                    $('#addInvoiceForm')[0].reset();
+                } else {
+                    showToast(response.message, 'error');
+                }
+            },
+            error: function() {
+                showToast('Error processing request.', 'error');
+                // Also remove modal backdrop in case of error
+                $('.modal-backdrop').remove();
+                $('body').removeClass('modal-open').css('overflow', '');
+                $('body').css('padding-right', '');
+            }
+        });
+    });
+
+    // Edit Invoice AJAX submission
+    $('#editInvoiceForm').on('submit', function(e) {
+        let invoiceNo = $(this).find('input[name="invoice_no"]').val();
+        let valid = true;
+        if (!/^\d+$/.test(invoiceNo)) {
+            showToast('Invoice Number must contain numbers only.', 'error');
+            valid = false;
+        }
+        if (!valid) {
+            e.preventDefault();
+            return false;
+        }
+        // Build data with prefixed invoice number
+        const formData = $(this).serializeArray();
+        let dataObj = {};
+        formData.forEach(function(item) {
+            if (item.name === 'invoice_no') {
+                dataObj['invoice_no'] = 'CI' + invoiceNo;
+            } else {
+                dataObj[item.name] = item.value;
+            }
+        });
+        e.preventDefault();
+        $.ajax({
+            url: 'charge_invoice.php',
+            method: 'POST',
+            data: dataObj,
+            dataType: 'json',
+            beforeSend: function() {
+                // Optionally add loading state
+            },
+            success: function(response) {
+                if (response.status === 'success') {
+                    $('#invoiceTable').load(location.href + ' #invoiceTable', function() {
+                        showToast(response.message, 'success');
+                        reinitInvoiceTableJS();
+                    });
+
+                    var editModalEl = document.getElementById('editInvoiceModal');
+                    var editModal = bootstrap.Modal.getInstance(editModalEl);
+                    if (editModal) {
+                        editModal.hide();
+                    }
+
+                    // Ensure modal backdrop is removed and body class is reset after closing the modal
+                    $('.modal-backdrop').remove();
+                    $('body').removeClass('modal-open').css('overflow', '');
+                    $('body').css('padding-right', '');
+                } else {
+                    showToast(response.message || 'Error updating invoice', 'error');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Ajax error:', error);
+
+                showToast('Error processing request. Please try again.', 'error');
+
+                // Remove modal backdrop in case of error
+                $('.modal-backdrop').remove();
+                $('body').removeClass('modal-open').css('overflow', '');
+                $('body').css('padding-right', '');
+            }
+        });
+    });
+
+    // Create search functionality for the table
+    const searchInput = document.getElementById('searchInvoice');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const searchText = this.value.toLowerCase();
+            
+            // Filter the rows based on the search text
+            window.filteredRows = window.allRows.filter(row => {
+                return row.textContent.toLowerCase().includes(searchText);
+            });
+            
+            // Reset to first page and update pagination
+            if (window.paginationConfig) {
+                window.paginationConfig.currentPage = 1;
+            }
+            updatePagination();
+        });
+    }
+
+    // Handle rows per page change
+    const rowsPerPageSelect = document.getElementById('rowsPerPageSelect');
+    if (rowsPerPageSelect) {
+        rowsPerPageSelect.addEventListener('change', function() {
+            if (window.paginationConfig) {
+                window.paginationConfig.currentPage = 1;
+            }
+            updatePagination();
+        });
+    }
+
+    // Date filter UI handling (show/hide inputs only, not filtering)
+    $('#dateFilter').on('change', function() {
+        const filterType = $(this).val();
+        $('#dateInputsContainer').hide();
+        $('#monthPickerContainer').hide();
+        $('#dateRangePickers').hide();
+        if (filterType === 'month') {
+            $('#dateInputsContainer').show();
+            $('#monthPickerContainer').show();
+        } else if (filterType === 'range') {
+            $('#dateInputsContainer').show();
+            $('#dateRangePickers').show();
+        }
+        // If filter is cleared, reload
+        if (!filterType) {
+            window.location.reload();
+        }
+    });
+
+    // Only trigger filtering when the Filter button is clicked
+    $('#applyFilters').off('click').on('click', function() {
+        const filterType = $('#dateFilter').val();
+        if (!filterType) {
+            showToast('Please select a filter type.', 'error');
+            return;
+        }
+        if (filterType === 'desc' || filterType === 'asc') {
+            applyInvoiceFilter(filterType);
+        } else if (filterType === 'month') {
+            const month = $('#monthSelect').val();
+            const year = $('#yearSelect').val();
+            if (!month || !year) {
+                showToast('Please select both month and year.', 'error');
+                return;
+            }
+            applyInvoiceFilter('month', { month, year });
+        } else if (filterType === 'range') {
+            const dateFrom = $('#dateFrom').val();
+            const dateTo = $('#dateTo').val();
+            if (!dateFrom || !dateTo) {
+                showToast('Please select both start and end dates.', 'error');
+                return;
+            }
+            applyInvoiceFilter('range', { dateFrom, dateTo });
+        }
+    });
+
+    // Clear filters and reload table
+    $('#clearFilters').off('click').on('click', function() {
+        $('#dateFilter').val('');
+        $('#monthSelect').val('');
+        $('#yearSelect').val('');
+        $('#dateFrom').val('');
+        $('#dateTo').val('');
+        $('#dateInputsContainer').hide();
+        $('#monthPickerContainer').hide();
+        $('#dateRangePickers').hide();
+        window.location.reload();
+    });
+
+    // Function to apply the filter
+    function applyInvoiceFilter(type, params = {}) {
+        let filterData = {
+            action: 'filter',
+            type: type
+        };
+        // Add additional parameters based on filter type
+        if (type === 'month') {
+            filterData.month = params.month;
+            filterData.year = params.year;
+        } else if (type === 'range') {
+            filterData.dateFrom = params.dateFrom;
+            filterData.dateTo = params.dateTo;
+        }
+        $.ajax({
+            url: 'charge_invoice.php',
+            method: 'GET',
+            data: filterData,
+            success: function(response) {
+                try {
+                    const data = JSON.parse(response);
+                    if (data.status === 'success') {
+                        // Update table body with filtered results
+                        let tableBody = '';
+                        data.invoices.forEach(invoice => {
+                            let formattedDate = '';
+                            if (invoice.date_created) {
+                                formattedDate = formatDateAMPM(invoice.date_created);
+                            }
+                            tableBody += `
+                            <tr>
+                                <td>${invoice.id}</td>
+                                <td>${invoice.invoice_no || ''}</td>
+                                <td>${invoice.date_of_purchase || ''}</td>
+                                <td>${invoice.po_no || ''}</td>
+                                <td>${formattedDate}</td>
+                                <td class="text-center">
+                                    <div class="btn-group" role="group">
+                                        ${canModify ? `
+                                        <a class="btn btn-sm btn-outline-primary edit-invoice"
+                                            data-id="${invoice.id}"
+                                            data-invoice="${invoice.invoice_no || ''}"
+                                            data-date="${invoice.date_of_purchase || ''}"
+                                            data-po="${invoice.po_no || ''}">
+                                            <i class="bi bi-pencil-square"></i> <span>Edit</span>
+                                        </a>` : ''}
+                                        ${canDelete ? `
+                                        <a class="btn btn-sm btn-outline-danger delete-invoice"
+                                            data-id="${invoice.id}"
+                                            href="#">
+                                            <i class="bi bi-trash"></i> <span>Remove</span>
+                                        </a>` : ''}
+                                    </div>
+                                </td>
+                            </tr>
+                            `;
+                        });
+                        $('#invoiceTable tbody').html(tableBody || '<tr><td colspan="6">No Charge Invoices found.</td></tr>');
+                    } else {
+                        showToast('Error filtering data: ' + data.message, 'error');
+                    }
+                } catch (e) {
+                    console.error('Error parsing response:', e);
+                    showToast('Error processing response', 'error');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('AJAX Error:', error);
+                showToast('Error filtering data', 'error');
+            }
+        });
+    }
+});
+</script>
 </head>
 
 <body>
@@ -398,39 +899,42 @@ try {
                     <?php else: ?>
                         <div></div>
                     <?php endif; ?>
-                    <!-- Optionally add date filters -->
-                    <select class="form-select form-select-sm" id="dateFilter" style="width: auto;">
-                        <option value="">Filter by Date</option>
-                        <option value="desc">Newest to Oldest</option>
-                        <option value="asc">Oldest to Newest</option>
-                        <option value="month">Specific Month</option>
-                        <option value="range">Custom Date Range</option>
-                    </select>
-                    <div id="dateInputsContainer" style="display: none;">
-                        <div class="d-flex gap-2" id="monthPickerContainer" style="display: none;">
-                            <select class="form-select form-select-sm" id="monthSelect" style="min-width: 130px;">
-                                <option value="">Select Month</option>
-                                <?php
-                                $months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-                                foreach ($months as $index => $month) {
-                                    echo "<option value='" . ($index + 1) . "'>" . $month . "</option>";
-                                }
-                                ?>
-                            </select>
-                            <select class="form-select form-select-sm" id="yearSelect" style="min-width: 110px;">
-                                <option value="">Select Year</option>
-                                <?php
-                                $currentYear = date('Y');
-                                for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
-                                    echo "<option value='" . $year . "'>" . $year . "</option>";
-                                }
-                                ?>
-                            </select>
+                    <div class="d-flex align-items-center gap-2">
+                        <select class="form-select form-select-sm" id="dateFilter" style="width: auto;">
+                            <option value="">Filter by Date</option>
+                            <option value="desc">Newest to Oldest</option>
+                            <option value="asc">Oldest to Newest</option>
+                            <option value="month">Specific Month</option>
+                            <option value="range">Custom Date Range</option>
+                        </select>
+                        <div id="dateInputsContainer" style="display: none;">
+                            <div class="d-flex gap-2" id="monthPickerContainer" style="display: none;">
+                                <select class="form-select form-select-sm" id="monthSelect" style="min-width: 130px;">
+                                    <option value="">Select Month</option>
+                                    <?php
+                                    $months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                                    foreach ($months as $index => $month) {
+                                        echo "<option value='" . ($index + 1) . "'>" . $month . "</option>";
+                                    }
+                                    ?>
+                                </select>
+                                <select class="form-select form-select-sm" id="yearSelect" style="min-width: 110px;">
+                                    <option value="">Select Year</option>
+                                    <?php
+                                    $currentYear = date('Y');
+                                    for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
+                                        echo "<option value='" . $year . "'>" . $year . "</option>";
+                                    }
+                                    ?>
+                                </select>
+                            </div>
+                            <div class="d-flex gap-2" id="dateRangePickers" style="display: none;">
+                                <input type="date" class="form-control form-control-sm" id="dateFrom" placeholder="From">
+                                <input type="date" class="form-control form-control-sm" id="dateTo" placeholder="To">
+                            </div>
                         </div>
-                        <div class="d-flex gap-2" id="dateRangePickers" style="display: none;">
-                            <input type="date" class="form-control form-control-sm" id="dateFrom" placeholder="From">
-                            <input type="date" class="form-control form-control-sm" id="dateTo" placeholder="To">
-                        </div>
+                        <button type="button" id="applyFilters" class="btn btn-dark btn-sm ms-2"><i class="bi bi-funnel"></i> Filter</button>
+                        <button type="button" id="clearFilters" class="btn btn-secondary btn-sm ms-1"><i class="bi bi-x-circle"></i> Clear</button>
                     </div>
                     <div class="input-group w-auto">
                         <span class="input-group-text"><i class="bi bi-search"></i></span>
@@ -439,7 +943,7 @@ try {
                 </div>
 
                 <div class="table-responsive" id="table">
-                    <table id="invoiceTable" class="table table-hover">
+                    <table id="invoiceTable" class="table table-striped table-bordered table-hover">
                         <thead class="table-dark">
                             <tr>
                                 <th>#</th>
@@ -640,387 +1144,6 @@ try {
     <?php endif; ?>
 
     <?php include '../../general/footer.php'; ?>
-    <!-- JavaScript for functionality -->
-    <script>
-        var deleteInvoiceId = null;
-
-        $(document).ready(function() {
-            $('#add_po_no').select2({
-                dropdownParent: $('#addInvoiceModal'),
-                width: '100%',
-                placeholder: 'Type or select PO…',
-                allowClear: true
-            });
-
-            $('#edit_po_no').select2({
-                dropdownParent: $('#editInvoiceModal'),
-                width: '100%',
-                placeholder: 'Type or select PO…',
-                allowClear: true
-            });
-
-            // Always clean up modal backdrop and body class after modal is hidden
-            $('#addInvoiceModal').on('hidden.bs.modal', function() {
-                $('.modal-backdrop').remove();
-                $('body').removeClass('modal-open').css('overflow', '');
-                $('body').css('padding-right', '');
-            });
-            // Restrict Invoice Number and PO Number fields to numbers only (block e, +, -, . and paste)
-            $(document).on('keydown', 'input[name="invoice_no"], #edit_invoice_no, input[name="po_no"], #edit_po_no', function(e) {
-                // Allow: backspace, delete, tab, escape, enter, arrows
-                if ($.inArray(e.keyCode, [46, 8, 9, 27, 13, 110, 190]) !== -1 ||
-                    // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
-                    ((e.keyCode == 65 || e.keyCode == 67 || e.keyCode == 86 || e.keyCode == 88) && (e.ctrlKey === true || e.metaKey === true)) ||
-                    // Allow: home, end, left, right, down, up
-                    (e.keyCode >= 35 && e.keyCode <= 40)) {
-                    return;
-                }
-                // Block: e, +, -, .
-                if ([69, 187, 189, 190].includes(e.keyCode)) {
-                    e.preventDefault();
-                }
-                // Ensure only numbers
-                if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
-                    e.preventDefault();
-                }
-            });
-            // Block paste of non-numeric
-            $(document).on('paste', 'input[name="invoice_no"], #edit_invoice_no, input[name="po_no"], #edit_po_no', function(e) {
-                var pasted = (e.originalEvent || e).clipboardData.getData('text');
-                if (!/^\d+$/.test(pasted)) {
-                    e.preventDefault();
-                }
-            });
-            // Search filter for invoices
-            $('#searchInvoice').on('input', function() {
-                var searchText = $(this).val().toLowerCase();
-                $("#table tbody tr").filter(function() {
-                    $(this).toggle($(this).text().toLowerCase().indexOf(searchText) > -1);
-                });
-            });
-
-            // Trigger Edit Invoice Modal using Bootstrap 5 Modal API
-            $(document).on('click', '.edit-invoice', function() {
-                const id = $(this).data('id');
-                const invoice = $(this).data('invoice') || '';
-                const date = $(this).data('date') || '';
-                const po = $(this).data('po') || '';
-
-                // Fill hidden and inputs
-                $('#edit_invoice_id').val(id);
-                $('#edit_invoice_no').val(invoice.replace(/^CI/, '')); // strip CI so input=number stays numeric
-                $('#edit_date_of_purchase').val(date);
-                $('#edit_po_no').val(po).trigger('change'); // set the dropdown and trigger Select2 update
-
-                // Show the edit modal
-                const modalEl = document.getElementById('editInvoiceModal');
-                bootstrap.Modal.getOrCreateInstance(modalEl).show();
-            });
-
-
-            // Trigger Delete Invoice Modal
-            $(document).on('click', '.delete-invoice', function(e) {
-                e.preventDefault();
-                deleteInvoiceId = $(this).data('id');
-                var deleteModal = new bootstrap.Modal(document.getElementById('deleteInvoiceModal'));
-                deleteModal.show();
-            });
-
-            // Confirm Delete Invoice via AJAX
-            $('#confirmDeleteInvoiceBtn').on('click', function() {
-                if (deleteInvoiceId) {
-                    $.ajax({
-                        url: 'charge_invoice.php',
-                        method: 'GET',
-                        data: {
-                            action: 'removed',
-                            id: deleteInvoiceId
-                        },
-                        dataType: 'json',
-                        success: function(response) {
-                            if (response.status === 'success') {
-                                $('#invoiceTable').load(location.href + ' #invoiceTable', function() {
-                                    showToast(response.message, 'success');
-                                });
-                            } else {
-                                showToast(response.message, 'error');
-                            }
-                            var deleteModalEl = document.getElementById('deleteInvoiceModal');
-                            var deleteModalInstance = bootstrap.Modal.getInstance(deleteModalEl);
-                            deleteModalInstance.hide();
-                        },
-                        error: function() {
-                            showToast('Error processing request.', 'error');
-                        }
-                    });
-                }
-            });
-
-            // Add Invoice AJAX submission
-            $('#addInvoiceForm').on('submit', function(e) {
-                let invoiceNo = $(this).find('input[name="invoice_no"]').val();
-                let valid = true;
-                if (!/^\d+$/.test(invoiceNo)) {
-                    showToast('Invoice Number must contain numbers only.', 'error');
-                    valid = false;
-                }
-                if (!valid) {
-                    e.preventDefault();
-                    return false;
-                }
-                // Build data with prefixed invoice number
-                const formData = $(this).serializeArray();
-                let dataObj = {};
-                formData.forEach(function(item) {
-                    if (item.name === 'invoice_no') {
-                        dataObj['invoice_no'] = 'CI' + invoiceNo;
-                    } else {
-                        dataObj[item.name] = item.value;
-                    }
-                });
-                e.preventDefault();
-                $.ajax({
-                    url: 'charge_invoice.php',
-                    method: 'POST',
-                    data: dataObj,
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.status === 'success') {
-                            $('#invoiceTable').load(location.href + ' #invoiceTable', function() {
-                                showToast(response.message, 'success');
-                            });
-                            // Close the modal after successful submission
-                            var addModalEl = document.getElementById('addInvoiceModal');
-                            var addModal = bootstrap.Modal.getInstance(addModalEl);
-                            if (addModal) {
-                                addModal.hide();
-                            }
-                            // Reset form fields to be blank when reopening the modal
-                            $('#addInvoiceForm')[0].reset();
-                        } else {
-                            showToast(response.message, 'error');
-                        }
-                    },
-                    error: function() {
-                        showToast('Error processing request.', 'error');
-                        // Also remove modal backdrop in case of error
-                        $('.modal-backdrop').remove();
-                        $('body').removeClass('modal-open').css('overflow', '');
-                        $('body').css('padding-right', '');
-                    }
-                });
-            });
-
-            // Edit Invoice AJAX submission
-            $('#editInvoiceForm').on('submit', function(e) {
-                let invoiceNo = $(this).find('input[name="invoice_no"]').val();
-                let valid = true;
-                if (!/^\d+$/.test(invoiceNo)) {
-                    showToast('Invoice Number must contain numbers only.', 'error');
-                    valid = false;
-                }
-                if (!valid) {
-                    e.preventDefault();
-                    return false;
-                }
-                // Build data with prefixed invoice number
-                const formData = $(this).serializeArray();
-                let dataObj = {};
-                formData.forEach(function(item) {
-                    if (item.name === 'invoice_no') {
-                        dataObj['invoice_no'] = 'CI' + invoiceNo;
-                    } else {
-                        dataObj[item.name] = item.value;
-                    }
-                });
-                e.preventDefault();
-                $.ajax({
-                    url: 'charge_invoice.php',
-                    method: 'POST',
-                    data: dataObj,
-                    dataType: 'json',
-                    beforeSend: function() {
-                        // Optionally add loading state
-                    },
-                    success: function(response) {
-                        if (response.status === 'success') {
-                            $('#invoiceTable').load(location.href + ' #invoiceTable', function() {
-                                showToast(response.message, 'success');
-                            });
-
-                            var editModalEl = document.getElementById('editInvoiceModal');
-                            var editModal = bootstrap.Modal.getInstance(editModalEl);
-                            if (editModal) {
-                                editModal.hide();
-                            }
-
-                            // Ensure modal backdrop is removed and body class is reset after closing the modal
-                            $('.modal-backdrop').remove();
-                            $('body').removeClass('modal-open').css('overflow', '');
-                            $('body').css('padding-right', '');
-                        } else {
-                            showToast(response.message || 'Error updating invoice', 'error');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('Ajax error:', error);
-
-                        showToast('Error processing request. Please try again.', 'error');
-
-                        // Remove modal backdrop in case of error
-                        $('.modal-backdrop').remove();
-                        $('body').removeClass('modal-open').css('overflow', '');
-                        $('body').css('padding-right', '');
-                    }
-                });
-            });
-        });
-
-        // Date filter functionality
-        $('#dateFilter').on('change', function() {
-            const filterValue = $(this).val();
-            const monthPickerContainer = $('#monthPickerContainer');
-            const dateRangePickers = $('#dateRangePickers');
-            const dateInputsContainer = $('#dateInputsContainer');
-
-            // Reset and hide all date input containers first
-            dateInputsContainer.hide();
-            monthPickerContainer.hide();
-            dateRangePickers.hide();
-
-            switch (filterValue) {
-                case 'desc':
-                case 'asc':
-                    filterByOrder(filterValue);
-                    break;
-                case 'month':
-                    dateInputsContainer.show();
-                    monthPickerContainer.show();
-                    break;
-                case 'range':
-                    dateInputsContainer.show();
-                    dateRangePickers.show();
-                    break;
-                default:
-                    // Show all rows when no filter is selected
-                    $('#invoiceTable tbody tr').show();
-            }
-        });
-
-        // Handle month and year selection
-        $('#monthSelect, #yearSelect').on('change', function() {
-            const month = $('#monthSelect').val();
-            const year = $('#yearSelect').val();
-
-            if (month && year) {
-                filterByMonth(month, year);
-            }
-        });
-
-        // Handle date range selection
-        $('#dateFrom, #dateTo').on('change', function() {
-            const dateFrom = $('#dateFrom').val();
-            const dateTo = $('#dateTo').val();
-
-            if (dateFrom && dateTo) {
-                filterByDateRange(dateFrom, dateTo);
-            }
-        });
-
-        function filterByOrder(order) {
-            const tbody = $('#invoiceTable tbody');
-            const rows = tbody.find('tr').toArray();
-
-            rows.sort((a, b) => {
-                const dateA = new Date($(a).find('td:eq(2)').text()); // Index 2 is the date_of_purchase column
-                const dateB = new Date($(b).find('td:eq(2)').text());
-
-                return order === 'asc' ? dateA - dateB : dateB - dateA;
-            });
-
-            tbody.empty().append(rows);
-        }
-
-        function filterByMonth(month, year) {
-            $('#invoiceTable tbody tr').each(function() {
-                const purchaseDate = new Date($(this).find('td:eq(2)').text());
-                const rowMonth = purchaseDate.getMonth() + 1; // getMonth() returns 0-11
-                const rowYear = purchaseDate.getFullYear();
-
-                if (rowMonth == month && rowYear == year) {
-                    $(this).show();
-                } else {
-                    $(this).hide();
-                }
-            });
-        }
-
-        function filterByDateRange(dateFrom, dateTo) {
-            const fromDate = new Date(dateFrom);
-            const toDate = new Date(dateTo);
-
-            $('#invoiceTable tbody tr').each(function() {
-                const purchaseDate = new Date($(this).find('td:eq(2)').text());
-
-                if (purchaseDate >= fromDate && purchaseDate <= toDate) {
-                    $(this).show();
-                } else {
-                    $(this).hide();
-                }
-            });
-        }
-    </script>
-
-    <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js" defer></script>
-    <script>
-        // Initialize pagination when document is ready
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialize pagination with the proper table ID
-            initPagination({
-                tableId: 'invoiceTable',
-                currentPage: 1,
-                rowsPerPageSelectId: 'rowsPerPageSelect',
-                currentPageId: 'currentPage',
-                rowsPerPageId: 'rowsPerPage',
-                totalRowsId: 'totalRows',
-                prevPageId: 'prevPage',
-                nextPageId: 'nextPage',
-                paginationId: 'pagination'
-            });
-
-            // Create search functionality for the table
-            const searchInput = document.getElementById('searchInvoice');
-            if (searchInput) {
-                searchInput.addEventListener('input', function() {
-                    const searchText = this.value.toLowerCase();
-                    
-                    // Filter the rows based on the search text
-                    window.filteredRows = window.allRows.filter(row => {
-                        return row.textContent.toLowerCase().includes(searchText);
-                    });
-                    
-                    // Reset to first page and update pagination
-                    if (window.paginationConfig) {
-                        window.paginationConfig.currentPage = 1;
-                    }
-                    updatePagination();
-                });
-            }
-
-            // Handle rows per page change
-            const rowsPerPageSelect = document.getElementById('rowsPerPageSelect');
-            if (rowsPerPageSelect) {
-                rowsPerPageSelect.addEventListener('change', function() {
-                    if (window.paginationConfig) {
-                        window.paginationConfig.currentPage = 1;
-                    }
-                    updatePagination();
-                });
-            }
-        });
-    </script>
-
-
 </body>
 
 </html>

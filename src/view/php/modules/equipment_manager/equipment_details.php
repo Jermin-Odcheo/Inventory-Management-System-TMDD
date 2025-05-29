@@ -661,11 +661,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 
     <style>
         th.sortable.asc::after {
-            content: " â–²";
+            content: " \2191"; /* Unicode up arrow */
         }
 
         th.sortable.desc::after {
-            content: " â–¼";
+            content: " \2193"; /* Unicode down arrow */
         }
 
 
@@ -2319,32 +2319,78 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
             // Set up column sorting
             $('.sortable').on('click', function() {
                 const columnIndex = parseInt($(this).data('column'));
-                const ascending = !$(this).hasClass('asc');
+                const currentSortState = $(this).hasClass('asc') ? 'asc' : ($(this).hasClass('desc') ? 'desc' : '');
+                let newSortState = '';
                 
-                // Update sort indicators
+                // Toggle sort direction or start with ascending
+                if (currentSortState === '') {
+                    newSortState = 'asc';
+                } else if (currentSortState === 'asc') {
+                    newSortState = 'desc';
+                } else {
+                    newSortState = 'asc'; // Toggle back to ascending
+                }
+                
+                // Update sort indicators (remove from all columns, add to current column)
                 $('.sortable').removeClass('asc desc');
-                $(this).addClass(ascending ? 'asc' : 'desc');
+                $(this).addClass(newSortState);
                 
-                // Sort the visible rows
-                window.filteredRows.sort((a, b) => {
-                    const aText = a.cells[columnIndex] ? a.cells[columnIndex].textContent.trim() : '';
-                    const bText = b.cells[columnIndex] ? b.cells[columnIndex].textContent.trim() : '';
+                console.log(`Sorting column ${columnIndex} in ${newSortState} order`);
+                
+                // Sort the filtered rows
+                window.filteredRows.sort(function(a, b) {
+                    const aText = a.cells[columnIndex] ? (a.cells[columnIndex].textContent || '').trim() : '';
+                    const bText = b.cells[columnIndex] ? (b.cells[columnIndex].textContent || '').trim() : '';
                     
-                    const isDate = /^\d{4}-\d{2}-\d{2}/.test(aText);
-                    const isNumeric = !isNaN(parseFloat(aText)) && !isNaN(parseFloat(bText));
+                    // Check if this is a date column (date formats like YYYY-MM-DD or YYYY-MM-DD HH:MM)
+                    const isDate = /^\d{4}-\d{2}-\d{2}/.test(aText) || /^\d{4}-\d{2}-\d{2}/.test(bText);
                     
-                    if (isNumeric) {
-                        return ascending ? parseFloat(aText) - parseFloat(bText) : parseFloat(bText) - parseFloat(aText);
-                    } else if (isDate) {
-                        return ascending ? new Date(aText) - new Date(bText) : new Date(bText) - new Date(aText);
+                    // Check if this is a numeric column
+                    const aNum = parseFloat(aText.replace(/[^\d.-]/g, ''));
+                    const bNum = parseFloat(bText.replace(/[^\d.-]/g, ''));
+                    const isNumeric = !isNaN(aNum) && !isNaN(bNum) && 
+                                      aText.replace(/[^\d.-]/g, '') !== '' && 
+                                      bText.replace(/[^\d.-]/g, '') !== '';
+                    
+                    let comparison = 0;
+                    
+                    if (isDate) {
+                        // Handle dates - convert to timestamps for comparison
+                        const dateA = new Date(aText);
+                        const dateB = new Date(bText);
+                        comparison = dateA - dateB;
+                    } else if (isNumeric) {
+                        // Handle numbers
+                        comparison = aNum - bNum;
                     } else {
-                        return ascending ? aText.localeCompare(bText) : bText.localeCompare(aText);
+                        // Handle strings (case-insensitive)
+                        comparison = aText.toLowerCase().localeCompare(bText.toLowerCase());
                     }
+                    
+                    // Apply sort direction
+                    return newSortState === 'asc' ? comparison : -comparison;
                 });
                 
-                // Reset pagination to page 1
+                // Re-order the table rows in the DOM based on the new sort order
+                const tbody = document.getElementById('equipmentTable');
+                window.filteredRows.forEach(row => {
+                    tbody.appendChild(row);
+                });
+                
+                // Reset to page 1 after sorting
                 window.currentPage = 1;
-                initPagination();
+                
+                // Update UI to reflect changes
+                $('#currentPage').text(window.currentPage);
+                
+                // Rebuild pagination
+                const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
+                const totalPages = Math.ceil(window.filteredRows.length / rowsPerPage);
+                buildPaginationButtons(totalPages);
+                updatePaginationButtons();
+                
+                // Show only the rows for current page
+                showCurrentPageRows();
             });
             
             console.log('Equipment filters initialization complete');
