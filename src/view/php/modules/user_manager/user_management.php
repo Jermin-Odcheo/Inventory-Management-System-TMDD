@@ -346,6 +346,31 @@ try {
             overflow: auto;
             background-color: rgba(0, 0, 0, 0.4);
         }
+        
+        /* Fix z-index for modal and dropdowns */
+        .modal {
+            z-index: 1055 !important; /* Higher than select2 containers */
+        }
+        
+        /* Make select2 stay behind modal when modal is open */
+        body.modal-open .select2-container--open {
+            z-index: 1000 !important; /* Lower than modal */
+        }
+        
+        /* Only for page select2 elements (not in modal) */
+        body.modal-open .select2-dropdown:not(.select2-dropdown--below) {
+            z-index: 1000 !important; /* Lower than modal */
+        }
+        
+        /* For select2 elements inside modals */
+        .modal .select2-dropdown {
+            z-index: 1056 !important; /* Higher than modal */
+        }
+        
+        /* Ensure modal backdrop is behind modal but above other elements */
+        .modal-backdrop {
+            z-index: 1054 !important;
+        }
 
         /* Toast notification styles */
         .toast-container {
@@ -392,6 +417,51 @@ try {
             color: #6c757d;
             pointer-events: none;
             background-color: #fff;
+        }
+        
+        /* Enhanced pagination styles */
+        .pagination {
+            display: inline-flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-bottom: 0;
+        }
+        
+        .pagination .page-item .page-link {
+            min-width: 36px;
+            height: 36px;
+            text-align: center;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.375rem;
+            border-radius: 0.25rem;
+        }
+        
+        .pagination .page-item .page-link i {
+            font-size: 0.875rem;
+        }
+        
+        /* Center pagination on mobile */
+        @media (max-width: 767.98px) {
+            .pagination {
+                justify-content: center;
+                margin: 0.5rem 0;
+            }
+            
+            /* Center info text on mobile */
+            .text-muted {
+                text-align: center;
+                margin-bottom: 0.5rem;
+            }
+            
+            /* Center prev/next buttons on mobile */
+            .justify-content-md-end {
+                justify-content: center !important;
+                margin-top: 0.5rem;
+            }
         }
 
         /* Filter form styling */
@@ -521,6 +591,56 @@ try {
 
         .sortable:hover i {
             color: #0d6efd;
+        }
+
+        /* For select2 elements inside modals */
+        .modal .select2-dropdown {
+            z-index: 1056 !important; /* Higher than modal */
+        }
+        
+        /* Ensure modal backdrop is behind modal but above other elements */
+        .modal-backdrop {
+            z-index: 1054 !important;
+        }
+        
+        /* Fix for Select2 dropdowns in modals */
+        .modal .select2-container--open .select2-dropdown {
+            z-index: 2060 !important; /* Even higher than modal content */
+        }
+        
+        /* Ensure Select2 dropdowns in the main document stay behind modals */
+        body.modal-open > .select2-container--open .select2-dropdown {
+            z-index: 1040 !important; /* Lower than modal backdrop */
+        }
+        
+        /* Force all select2 dropdowns to stay behind modal when modal is open */
+        body.modal-open .select2-container {
+            z-index: 1040 !important; /* Lower than modal backdrop */
+        }
+        
+        /* Improve modal positioning */
+        .modal-dialog {
+            display: flex;
+            align-items: center;
+            min-height: calc(100% - 3.5rem);
+            margin: 1.75rem auto;
+        }
+        
+        .modal-lower {
+            margin-top: 5rem;
+        }
+        
+        /* Ensure modals are centered on mobile too */
+        @media (max-width: 576px) {
+            .modal-dialog {
+                min-height: calc(100% - 1rem);
+                margin: 0.5rem auto;
+            }
+        }
+        
+        /* Additional Select2 fixes for modals */
+        .modal-open .select2-container--open {
+            z-index: 1 !important; /* Force below modal */
         }
     </style>
 </head>
@@ -798,34 +918,34 @@ try {
             </table>
             <!-- Pagination Controls -->
             <div class="container-fluid">
-                <div class="row align-items-center g-3">
-                    <div class="col-12 col-sm-auto">
+                <div class="row align-items-center g-3 mb-3">
+                    <div class="col-12 col-md-4">
                         <div class="text-muted">
                             <?php $totalUsers = count($users); ?>
                             <input type="hidden" id="total-users" value="<?= $totalUsers ?>">
                             Showing <span id="currentPage">1</span> to <span id="rowsPerPage"><?= min($totalUsers, 10) ?></span> of <span id="totalRows"><?= $totalUsers ?></span> entries
                         </div>
                     </div>
-                    <div class="col-12 col-sm-auto ms-sm-auto">
-                        <div class="d-flex align-items-center gap-2">
-                            <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                    <div class="col-12 col-md-4 text-center">
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination pagination-sm d-inline-flex justify-content-center mb-0" id="pagination"></ul>
+                        </nav>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="d-flex align-items-center gap-2 justify-content-md-end">
+                            <button id="prevPage" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1">
                                 <i class="bi bi-chevron-left"></i> Previous
                             </button>
-                            <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                            <select id="rowsPerPageSelect" class="form-select form-select-sm" style="width: auto;">
                                 <option value="10" selected>10</option>
                                 <option value="20">20</option>
                                 <option value="30">30</option>
                                 <option value="50">50</option>
                             </select>
-                            <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                            <button id="nextPage" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1">
                                 Next <i class="bi bi-chevron-right"></i>
                             </button>
                         </div>
-                    </div>
-                </div>
-                <div class="row mt-3">
-                    <div class="col-12">
-                        <ul class="pagination justify-content-center" id="pagination"></ul>
                     </div>
                 </div>
             </div>
@@ -1048,23 +1168,65 @@ try {
 
     <script>
         $(document).ready(function() {
+            // Adjust z-index of Select2 dropdowns when modal opens/closes
+            $(document).on('show.bs.modal', '.modal', function() {
+                // Lower z-index for all page-level Select2 dropdowns
+                $('.select2-container--default:not(.select2-container--open)').css('z-index', '1000');
+                
+                // Close any open Select2 dropdowns on the page
+                $('.select2-container--open').removeClass('select2-container--open');
+                
+                // Force close any open Select2 dropdowns
+                if ($.fn.select2) {
+                    $('select.select2-hidden-accessible').select2('close');
+                }
+                
+                // Hide any visible Select2 dropdowns
+                $('.select2-dropdown').hide();
+            });
+            
+            $(document).on('hide.bs.modal', '.modal', function() {
+                // Restore z-index for all Select2 dropdowns
+                setTimeout(function() {
+                    $('.select2-container--default').css('z-index', '9999');
+                }, 100);
+            });
+            
             // Create button handler - show the create user modal
             $('#create-btn').on('click', function() {
                 // Reset the form first
                 $('#createUserForm')[0].reset();
+                
+                // Close any open Select2 dropdowns
+                if ($.fn.select2) {
+                    $('select.select2-hidden-accessible').select2('close');
+                }
                 
                 // Clear any previously selected departments
                 selectedDepartments = [];
                 $('#createAssignedDepartmentsTable tbody').empty();
                 
                 // Show the modal
-                $('#createUserModal').modal('show');
+                const modal = new bootstrap.Modal(document.getElementById('createUserModal'), {
+                    backdrop: 'static',
+                    keyboard: false
+                });
+                modal.show();
+                
+                // Ensure modal is centered
+                setTimeout(function() {
+                    const modalDialog = $('#createUserModal .modal-dialog');
+                    const windowHeight = $(window).height();
+                    const modalHeight = modalDialog.height();
+                    const topMargin = Math.max(0, (windowHeight - modalHeight) / 2);
+                    modalDialog.css('margin-top', topMargin + 'px');
+                }, 200);
             });
             
             // Initialize pagination
             if (typeof initPagination === 'function') {
                 console.log("Initializing pagination for user management");
-                initPagination({
+                window.paginationConfig = {
                     tableId: 'umTableBody',
                     rowsPerPageSelectId: 'rowsPerPageSelect',
                     currentPageId: 'currentPage',
@@ -1072,7 +1234,33 @@ try {
                     totalRowsId: 'totalRows',
                     prevPageId: 'prevPage',
                     nextPageId: 'nextPage',
-                    paginationId: 'pagination'
+                    paginationId: 'pagination',
+                    currentPage: 1
+                };
+                
+                // Initialize event listeners for pagination buttons
+                document.getElementById('prevPage').addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (window.paginationConfig.currentPage > 1) {
+                        window.paginationConfig.currentPage--;
+                        window.updatePagination();
+                    }
+                });
+                
+                document.getElementById('nextPage').addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value) || 10;
+                    const totalPages = Math.ceil(window.filteredRows.length / rowsPerPage);
+                    if (window.paginationConfig.currentPage < totalPages) {
+                        window.paginationConfig.currentPage++;
+                        window.updatePagination();
+                    }
+                });
+                
+                // Listen for rows per page changes
+                document.getElementById('rowsPerPageSelect').addEventListener('change', function() {
+                    window.paginationConfig.currentPage = 1; // Reset to first page
+                    window.updatePagination();
                 });
             }
 
@@ -1082,35 +1270,52 @@ try {
             window.forcePaginationCheck = function() {
                 const totalRows = window.filteredRows ? window.filteredRows.length : 0;
                 const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value) || 10;
+                const totalPages = Math.ceil(totalRows / rowsPerPage);
+                const currentPage = window.paginationConfig ? window.paginationConfig.currentPage : 1;
+                
                 const prevBtn = document.getElementById('prevPage');
                 const nextBtn = document.getElementById('nextPage');
                 const paginationEl = document.getElementById('pagination');
+                const paginationContainer = paginationEl ? paginationEl.closest('.col-md-4') : null;
 
                 // Hide pagination completely if all rows fit on one page
                 if (totalRows <= rowsPerPage) {
-                    if (prevBtn) prevBtn.style.cssText = 'display: none !important';
-                    if (nextBtn) nextBtn.style.cssText = 'display: none !important';
-                    if (paginationEl) paginationEl.style.cssText = 'display: none !important';
+                    if (prevBtn) prevBtn.style.display = 'none';
+                    if (nextBtn) nextBtn.style.display = 'none';
+                    if (paginationContainer) paginationContainer.style.display = 'none';
                 } else {
                     // Show pagination but conditionally hide prev/next buttons
-                    if (paginationEl) paginationEl.style.cssText = '';
+                    if (paginationContainer) paginationContainer.style.display = '';
 
                     if (prevBtn) {
-                        if (window.paginationConfig && window.paginationConfig.currentPage <= 1) {
-                            prevBtn.style.cssText = 'display: none !important';
+                        prevBtn.style.display = '';
+                        if (currentPage <= 1) {
+                            prevBtn.classList.add('disabled');
                         } else {
-                            prevBtn.style.cssText = '';
+                            prevBtn.classList.remove('disabled');
                         }
                     }
 
                     if (nextBtn) {
-                        const totalPages = Math.ceil(totalRows / rowsPerPage);
-                        if (window.paginationConfig && window.paginationConfig.currentPage >= totalPages) {
-                            nextBtn.style.cssText = 'display: none !important';
+                        nextBtn.style.display = '';
+                        if (currentPage >= totalPages) {
+                            nextBtn.classList.add('disabled');
                         } else {
-                            nextBtn.style.cssText = '';
+                            nextBtn.classList.remove('disabled');
                         }
                     }
+                }
+                
+                // Update the showing X to Y of Z entries text
+                const currentPageEl = document.getElementById('currentPage');
+                const rowsPerPageEl = document.getElementById('rowsPerPage');
+                
+                if (currentPageEl && rowsPerPageEl) {
+                    const start = totalRows === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1;
+                    const end = Math.min(start + rowsPerPage - 1, totalRows);
+                    
+                    currentPageEl.textContent = start;
+                    rowsPerPageEl.textContent = end;
                 }
             }
 
@@ -1129,21 +1334,189 @@ try {
                     totalRowsEl.textContent = window.filteredRows.length;
                 }
 
+                // Get pagination elements
+                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value) || 10;
+                const totalRows = window.filteredRows.length;
+                const totalPages = Math.ceil(totalRows / rowsPerPage);
+                const currentPage = window.paginationConfig ? window.paginationConfig.currentPage : 1;
+                
                 // Update rows per page display
                 const rowsPerPageEl = document.getElementById('rowsPerPage');
                 if (rowsPerPageEl) {
-                    const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value) || 10;
-                    rowsPerPageEl.textContent = Math.min(rowsPerPage, window.filteredRows.length);
+                    const visibleRows = Math.min(rowsPerPage, window.filteredRows.length - (currentPage - 1) * rowsPerPage);
+                    rowsPerPageEl.textContent = visibleRows;
+                }
+                
+                // Update current page display
+                const currentPageEl = document.getElementById('currentPage');
+                if (currentPageEl) {
+                    const start = totalRows === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1;
+                    currentPageEl.textContent = start;
+                }
+                
+                // Generate pagination numbers
+                const paginationEl = document.getElementById('pagination');
+                if (paginationEl) {
+                    paginationEl.innerHTML = '';
+                    
+                    // Previous button
+                    const prevLi = document.createElement('li');
+                    prevLi.className = 'page-item' + (currentPage <= 1 ? ' disabled' : '');
+                    const prevLink = document.createElement('a');
+                    prevLink.className = 'page-link';
+                    prevLink.href = '#';
+                    prevLink.innerHTML = '<i class="bi bi-chevron-left"></i>';
+                    prevLink.setAttribute('aria-label', 'Previous');
+                    prevLink.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        if (currentPage > 1) {
+                            window.paginationConfig.currentPage--;
+                            window.updatePagination();
+                        }
+                    });
+                    prevLi.appendChild(prevLink);
+                    paginationEl.appendChild(prevLi);
+                    
+                    // Calculate range of page numbers to show
+                    let startPage = Math.max(1, currentPage - 1);
+                    let endPage = Math.min(totalPages, startPage + 2);
+                    
+                    // Adjust if we're near the end
+                    if (endPage - startPage < 2 && startPage > 1) {
+                        startPage = Math.max(1, endPage - 2);
+                    }
+                    
+                    // First page if not in range
+                    if (startPage > 1) {
+                        const firstLi = document.createElement('li');
+                        firstLi.className = 'page-item';
+                        const firstLink = document.createElement('a');
+                        firstLink.className = 'page-link';
+                        firstLink.href = '#';
+                        firstLink.textContent = '1';
+                        firstLink.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            window.paginationConfig.currentPage = 1;
+                            window.updatePagination();
+                        });
+                        firstLi.appendChild(firstLink);
+                        paginationEl.appendChild(firstLi);
+                        
+                        // Add ellipsis if needed
+                        if (startPage > 2) {
+                            const ellipsisLi = document.createElement('li');
+                            ellipsisLi.className = 'page-item disabled';
+                            const ellipsisSpan = document.createElement('span');
+                            ellipsisSpan.className = 'page-link';
+                            ellipsisSpan.textContent = '...';
+                            ellipsisLi.appendChild(ellipsisSpan);
+                            paginationEl.appendChild(ellipsisLi);
+                        }
+                    }
+                    
+                    // Page numbers
+                    for (let i = startPage; i <= endPage; i++) {
+                        const pageLi = document.createElement('li');
+                        pageLi.className = 'page-item' + (i === currentPage ? ' active' : '');
+                        const pageLink = document.createElement('a');
+                        pageLink.className = 'page-link';
+                        pageLink.href = '#';
+                        pageLink.textContent = i;
+                        pageLink.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            window.paginationConfig.currentPage = i;
+                            window.updatePagination();
+                        });
+                        pageLi.appendChild(pageLink);
+                        paginationEl.appendChild(pageLi);
+                    }
+                    
+                    // Last page if not in range
+                    if (endPage < totalPages) {
+                        // Add ellipsis if needed
+                        if (endPage < totalPages - 1) {
+                            const ellipsisLi = document.createElement('li');
+                            ellipsisLi.className = 'page-item disabled';
+                            const ellipsisSpan = document.createElement('span');
+                            ellipsisSpan.className = 'page-link';
+                            ellipsisSpan.textContent = '...';
+                            ellipsisLi.appendChild(ellipsisSpan);
+                            paginationEl.appendChild(ellipsisLi);
+                        }
+                        
+                        const lastLi = document.createElement('li');
+                        lastLi.className = 'page-item';
+                        const lastLink = document.createElement('a');
+                        lastLink.className = 'page-link';
+                        lastLink.href = '#';
+                        lastLink.textContent = totalPages;
+                        lastLink.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            window.paginationConfig.currentPage = totalPages;
+                            window.updatePagination();
+                        });
+                        lastLi.appendChild(lastLink);
+                        paginationEl.appendChild(lastLi);
+                    }
+                    
+                    // Next button
+                    const nextLi = document.createElement('li');
+                    nextLi.className = 'page-item' + (currentPage >= totalPages ? ' disabled' : '');
+                    const nextLink = document.createElement('a');
+                    nextLink.className = 'page-link';
+                    nextLink.href = '#';
+                    nextLink.innerHTML = '<i class="bi bi-chevron-right"></i>';
+                    nextLink.setAttribute('aria-label', 'Next');
+                    nextLink.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        if (currentPage < totalPages) {
+                            window.paginationConfig.currentPage++;
+                            window.updatePagination();
+                        }
+                    });
+                    nextLi.appendChild(nextLink);
+                    paginationEl.appendChild(nextLi);
                 }
 
-                // Call original updatePagination
+                // Update visibility of rows
+                window.filteredRows.forEach(function(row, index) {
+                    const pageIndex = Math.floor(index / rowsPerPage);
+                    if (pageIndex === currentPage - 1) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+
+                // Call original updatePagination if it exists
+                if (typeof originalUpdatePagination === 'function') {
                 originalUpdatePagination();
+                }
+                
+                // Update prev/next button visibility
                 forcePaginationCheck();
             };
 
             // Call updatePagination immediately
             updatePagination();
             
+            // Initialize Select2 for department filter with custom positioning
+            $('#department-filter').select2({
+                placeholder: 'All Departments',
+                allowClear: true,
+                minimumResultsForSearch: 5,
+                dropdownParent: $('body'), // Attach to body for proper z-index handling
+                closeOnSelect: true,
+                selectOnClose: true
+            }).on('select2:open', function() {
+                // Check if any modal is open
+                if ($('.modal.show').length) {
+                    // If a modal is open, close the dropdown
+                    $(this).select2('close');
+                    return false;
+                }
+            });
+
             // Initialize Select2 for date filter type dropdown - ONLY ONCE
             if ($.fn.select2 && $('#dateFilterType').length && !$('#dateFilterType').hasClass('select2-hidden-accessible')) {
                 console.log('Initializing Select2 for dateFilterType');
@@ -1151,13 +1524,23 @@ try {
                     placeholder: '-- Select Type --',
                     allowClear: true,
                     width: '100%',
-                    minimumResultsForSearch: -1 // Hide search box
+                    minimumResultsForSearch: -1, // Hide search box
+                    dropdownParent: $('body'), // Attach to body for proper z-index handling
+                    closeOnSelect: true,
+                    selectOnClose: true
                 }).on('select2:select', function(e) {
                     console.log('Date filter type selected:', e.params.data.id);
                     handleDateFilterTypeChange(e.params.data.id);
                 }).on('select2:clear', function() {
                     console.log('Date filter type cleared');
                     handleDateFilterTypeChange('');
+                }).on('select2:open', function() {
+                    // Check if any modal is open
+                    if ($('.modal.show').length) {
+                        // If a modal is open, close the dropdown
+                        $(this).select2('close');
+                        return false;
+                    }
                 });
             }
             
@@ -1209,14 +1592,6 @@ try {
                 $('#dateInputsContainer').addClass('d-none');
                 $('.date-filter').addClass('d-none');
             });
-
-        // Initialize Select2 for department filter with custom positioning
-        $('#department-filter').select2({
-            placeholder: 'All Departments',
-            allowClear: true,
-            minimumResultsForSearch: 5,
-            dropdownParent: $('body') // Attach to body for proper z-index handling
-        });
 
         // Initialize Select2 for modal department dropdown
         $('#modal_department').select2({
@@ -1301,8 +1676,20 @@ try {
             });
 
             // Show the modal using Bootstrap 5 modal API
-            const editModal = new bootstrap.Modal(document.getElementById('editUserModal'));
+            const editModal = new bootstrap.Modal(document.getElementById('editUserModal'), {
+                backdrop: 'static',
+                keyboard: false
+            });
             editModal.show();
+            
+            // Ensure modal is centered
+            setTimeout(function() {
+                const modalDialog = $('#editUserModal .modal-dialog');
+                const windowHeight = $(window).height();
+                const modalHeight = modalDialog.height();
+                const topMargin = Math.max(0, (windowHeight - modalHeight) / 2);
+                modalDialog.css('margin-top', topMargin + 'px');
+            }, 200);
         });
 
         // Add department selection handler for edit user modal
@@ -1361,9 +1748,22 @@ try {
         $('.modal').on('shown.bs.modal', function() {
             $(this).find('.select2-container').css('width', '100%');
             $(this).find('select').trigger('change.select2');
+            
+            // Fix for page-level Select2 dropdowns appearing above modal
+            $('.select2-dropdown').parents('body').find('> .select2-container').css('z-index', '1000');
+            
+            // Ensure Select2 inside modals has higher z-index
+            $(this).find('.select2-container').css('z-index', '1056');
         });
+        
+        // Handle modal being closed - restore Select2 z-index
+        $('.modal').on('hidden.bs.modal', function() {
+            // Restore regular Select2 z-index
+            $('.select2-container').css('z-index', '9999');
+        });
+        
         $('#editUserModal').on('shown.bs.modal', function() {
-            // your existing Select2 width fix…
+            // your existing Select2 width fix
             $(this).find('.select2-container').css('width', '100%');
             $(this).find('select').trigger('change.select2');
 
@@ -2029,3 +2429,4 @@ try {
 </body>
 
 </html>
+ritten_file>
