@@ -18,12 +18,12 @@ if (!isset($_SESSION['user_id'])) {
 
 // Init RBAC & enforce "View" privilege
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
-$rbac->requirePrivilege('Roles and Privileges', 'View');
+$rbac->requirePrivilege('Management', 'View');
 
 // Button flags for RBAC controls
-$canCreate = $rbac->hasPrivilege('Roles and Privileges', 'Create');
-$canModify = $rbac->hasPrivilege('Roles and Privileges', 'Modify');
-$canDelete = $rbac->hasPrivilege('Roles and Privileges', 'Remove');
+$canCreate = $rbac->hasPrivilege('Management', 'Create');
+$canModify = $rbac->hasPrivilege('Management', 'Modify');
+$canDelete = $rbac->hasPrivilege('Management', 'Remove');
 
 // Set the audit log session variables for MySQL triggers.
 if (isset($_SESSION['user_id'])) {
