@@ -83,8 +83,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (empty($po_no) || empty($date_of_order) || empty($no_of_units) || empty($item_specifications)) {
         $errors[] = "Please fill in all required fields.";
-    } elseif (!preg_match('/^PO\d+$/', $po_no)) {
-        $errors[] = "PO Number must be in the format PO followed by numbers (e.g., PO123).";
+    } elseif (!preg_match('/^PO[0-9\/-]+$/', $po_no)) {
+        $errors[] = "PO Number must start with 'PO' and can only contain numbers, hyphens (-), and slashes (/).";
     }
 
     if (empty($errors)) {
@@ -471,39 +471,43 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                             <?php else: ?>
                                 <div></div>
                             <?php endif; ?>
-                            <select class="form-select form-select-sm" id="dateFilter" style="width: auto;">
-                                <option value="">Filter by Date</option>
-                                <option value="desc">Newest to Oldest</option>
-                                <option value="asc">Oldest to Newest</option>
-                                <option value="month">Specific Month</option>
-                                <option value="range">Custom Date Range</option>
-                            </select>
-                            <div id="dateInputsContainer" style="display: none;">
-                                <div class="d-flex gap-2" id="monthPickerContainer" style="display: none;">
-                                    <select class="form-select form-select-sm" id="monthSelect" style="min-width: 130px;">
-                                        <option value="">Select Month</option>
-                                        <?php
-                                        $months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-                                        foreach ($months as $index => $month) {
-                                            echo "<option value='" . ($index + 1) . "'>" . $month . "</option>";
-                                        }
-                                        ?>
-                                    </select>
-                                    <select class="form-select form-select-sm" id="yearSelect" style="min-width: 110px;">
-                                        <option value="">Select Year</option>
-                                        <?php
-                                        $currentYear = date('Y');
-                                        for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
-                                            echo "<option value='" . $year . "'>" . $year . "</option>";
-                                        }
-                                        ?>
-                                    </select>
-                                </div>
-                                <div class="d-flex gap-2" id="dateRangePickers" style="display: none;">
-                                    <input type="date" class="form-control form-control-sm" id="dateFrom" placeholder="From">
-                                    <input type="date" class="form-control form-control-sm" id="dateTo" placeholder="To">
-                                </div>
-                            </div>
+                            <div class="d-flex align-items-center gap-2">
+    <select class="form-select form-select-sm" id="dateFilter" style="width: auto;">
+        <option value="">Filter by Date</option>
+        <option value="desc">Newest to Oldest</option>
+        <option value="asc">Oldest to Newest</option>
+        <option value="month">Specific Month</option>
+        <option value="range">Custom Date Range</option>
+    </select>
+    <div id="dateInputsContainer" style="display: none;">
+        <div class="d-flex gap-2" id="monthPickerContainer" style="display: none;">
+            <select class="form-select form-select-sm" id="monthSelect" style="min-width: 130px;">
+                <option value="">Select Month</option>
+                <?php
+                $months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                foreach ($months as $index => $month) {
+                    echo "<option value='" . ($index + 1) . "'>" . $month . "</option>";
+                }
+                ?>
+            </select>
+            <select class="form-select form-select-sm" id="yearSelect" style="min-width: 110px;">
+                <option value="">Select Year</option>
+                <?php
+                $currentYear = date('Y');
+                for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
+                    echo "<option value='" . $year . "'>" . $year . "</option>";
+                }
+                ?>
+            </select>
+        </div>
+        <div class="d-flex gap-2" id="dateRangePickers" style="display: none;">
+            <input type="date" class="form-control form-control-sm" id="dateFrom" placeholder="From">
+            <input type="date" class="form-control form-control-sm" id="dateTo" placeholder="To">
+        </div>
+    </div>
+    <button type="button" id="applyFilters" class="btn btn-dark btn-sm ms-2"><i class="bi bi-funnel"></i> Filter</button>
+    <button type="button" id="clearFilters" class="btn btn-secondary btn-sm ms-1"><i class="bi bi-x-circle"></i> Clear</button>
+</div>
                             <div class="input-group w-auto">
                                 <span class="input-group-text"><i class="bi bi-search"></i></span>
                                 <input type="text" id="searchPO" class="form-control" placeholder="Search purchase order...">
@@ -639,7 +643,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                             <div class="mb-3">
                                 <label for="po_no" class="form-label">PO Number <span
                                         class="text-danger">*</span></label>
-                                <input type="number" class="form-control" name="po_no" min="0" step="1" required pattern="\d*" inputmode="numeric">
+                                <input type="text" class="form-control" name="po_no" id="create_po_no" required pattern="[0-9\-/]+" maxlength="30" title="PO Number can only contain numbers, hyphens (-), and slashes (/)">
                             </div>
                             <div class="mb-3">
                                 <label for="date_of_order" class="form-label">Date of Order <span
@@ -684,7 +688,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                             <input type="hidden" name="id" id="edit_po_id">
                             <div class="mb-3">
                                 <label for="edit_po_no" class="form-label">PO Number <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control" name="po_no" id="edit_po_no" min="0" step="1" required pattern="\d*" inputmode="numeric">
+                                <input type="text" class="form-control" name="po_no" id="edit_po_no" required pattern="[0-9\-/]+" maxlength="30" title="PO Number can only contain numbers, hyphens (-), and slashes (/)">
                             </div>
                             <div class="mb-3">
                                 <label for="edit_date_of_order" class="form-label">Date of Order <span class="text-danger">*</span></label>
@@ -757,7 +761,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                 const units = $(this).data('units') || '';
                 const item = $(this).data('item') || '';
 
-                // Strip off the "PO" prefix so the <input type="number"> only gets digits
+                // Strip off the "PO" prefix so the <input> only gets allowed chars
                 const numericPo = rawPo.replace(/^PO/, '');
 
                 // Fill the Edit form
@@ -797,9 +801,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                     dataType: 'json',
                     success: function(response) {
                         if (response.status === 'success') {
-                            $('#purchaseTable').load(location.href + ' #purchaseTable', function() {
-                                showToast(response.message, 'success');
-                            });
+                            showToast(response.message, 'success');
+                            location.reload();
                         } else {
                             showToast(response.message, 'error');
                         }
@@ -836,23 +839,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                 dataType: 'json',
                 success: function(response) {
                     if (response.status === 'success') {
-                        $('#purchaseTable').load(location.href + ' #purchaseTable', function() {
-                            showToast(response.message, 'success');
-                        });
-                        // Hide the add modal using Bootstrap API
-                        var addModalEl = document.getElementById('addPOModal');
-                        var addModal = bootstrap.Modal.getInstance(addModalEl);
-                        if (addModal) {
-                            addModal.hide();
-                            // Listen for the hidden event to ensure backdrop is gone
-                            $(addModalEl).on('hidden.bs.modal', function () {
-                                removeModalBackdrop(); // Call this to clean up
-                                $(this).off('hidden.bs.modal'); // Remove listener to prevent multiple calls
-                            });
-                        } else {
-                            // If modal instance wasn't found, force backdrop removal anyway
-                            removeModalBackdrop();
-                        }
+                        showToast(response.message, 'success');
+                        location.reload();
                     } else {
                         showToast(response.message, 'error');
                     }
@@ -912,53 +900,80 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
 
         $('#addPOModal').on('hidden.bs.modal', function() {
             $('#addPOForm')[0].reset();
+            removeModalBackdrop();
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css({overflow: '', paddingRight: ''});
         });
 
-        // Date filter handling
-        $('#dateFilter').on('change', function() {
-            const filterType = $(this).val();
-
-            // Hide all containers first
-            $('#dateInputsContainer').hide();
-            $('#monthPickerContainer').hide();
-            $('#dateRangePickers').hide();
-
-            // Show appropriate containers based on selection
-            if (filterType === 'month') {
-                $('#dateInputsContainer').show();
-                $('#monthPickerContainer').show();
-            } else if (filterType === 'range') {
-                $('#dateInputsContainer').show();
-                $('#dateRangePickers').show();
-            } else if (filterType === 'desc' || filterType === 'asc') {
-                // Immediately trigger the filter for desc/asc
-                applyFilter(filterType);
+        // Extra safety: Always reset modal state before showing
+        $('#addPOModal').on('show.bs.modal', function () {
+            // Dispose of any existing Bootstrap modal instance to avoid stuck state
+            var addModalEl = document.getElementById('addPOModal');
+            var existingModal = bootstrap.Modal.getInstance(addModalEl);
+            if (existingModal) {
+                existingModal.dispose();
             }
+            removeModalBackdrop();
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css({overflow: '', paddingRight: ''});
+            $('#addPOForm')[0].reset();
         });
 
-        // Handle month/year selection changes
-        $('#monthSelect, #yearSelect').on('change', function() {
-            const month = $('#monthSelect').val();
-            const year = $('#yearSelect').val();
-            if (month && year) {
-                applyFilter('month', {
-                    month,
-                    year
-                });
-            }
-        });
+        // Date filter UI handling (show/hide inputs only, not filtering)
+$('#dateFilter').on('change', function() {
+    const filterType = $(this).val();
+    $('#dateInputsContainer').hide();
+    $('#monthPickerContainer').hide();
+    $('#dateRangePickers').hide();
+    if (filterType === 'month') {
+        $('#dateInputsContainer').show();
+        $('#monthPickerContainer').show();
+    } else if (filterType === 'range') {
+        $('#dateInputsContainer').show();
+        $('#dateRangePickers').show();
+    }
+});
 
-        // Handle date range changes
-        $('#dateFrom, #dateTo').on('change', function() {
-            const dateFrom = $('#dateFrom').val();
-            const dateTo = $('#dateTo').val();
-            if (dateFrom && dateTo) {
-                applyFilter('range', {
-                    dateFrom,
-                    dateTo
-                });
-            }
-        });
+// Only trigger filtering when the Filter button is clicked
+$('#applyFilters').on('click', function() {
+    const filterType = $('#dateFilter').val();
+    if (!filterType) {
+        showToast('Please select a filter type.', 'error');
+        return;
+    }
+    if (filterType === 'desc' || filterType === 'asc') {
+        applyFilter(filterType);
+    } else if (filterType === 'month') {
+        const month = $('#monthSelect').val();
+        const year = $('#yearSelect').val();
+        if (!month || !year) {
+            showToast('Please select both month and year.', 'error');
+            return;
+        }
+        applyFilter('month', { month, year });
+    } else if (filterType === 'range') {
+        const dateFrom = $('#dateFrom').val();
+        const dateTo = $('#dateTo').val();
+        if (!dateFrom || !dateTo) {
+            showToast('Please select both start and end dates.', 'error');
+            return;
+        }
+        applyFilter('range', { dateFrom, dateTo });
+    }
+});
+
+// Clear filters and reload table
+$('#clearFilters').on('click', function() {
+    $('#dateFilter').val('');
+    $('#monthSelect').val('');
+    $('#yearSelect').val('');
+    $('#dateFrom').val('');
+    $('#dateTo').val('');
+    $('#dateInputsContainer').hide();
+    $('#monthPickerContainer').hide();
+    $('#dateRangePickers').hide();
+    window.location.reload();
+});
 
         // Function to apply the filter
         function applyFilter(type, params = {}) {
@@ -1086,6 +1101,29 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                 });
             }
         });
+    // Block letters in PO Number fields (Create & Edit)
+    function restrictPONumberInput(selector) {
+        $(document).on('input', selector, function() {
+            // Remove any character that is not a digit, hyphen, or slash
+            this.value = this.value.replace(/[^0-9\-/]/g, '');
+        });
+        $(document).on('keypress', selector, function(e) {
+            // Allow only digits, hyphen, slash
+            const char = String.fromCharCode(e.which);
+            if (!/[0-9\-/]/.test(char)) {
+                e.preventDefault();
+            }
+        });
+        // Optional: Block paste of invalid chars
+        $(document).on('paste', selector, function(e) {
+            const paste = (e.originalEvent || e).clipboardData.getData('text');
+            if (/[^0-9\-/]/.test(paste)) {
+                e.preventDefault();
+            }
+        });
+    }
+    restrictPONumberInput('#create_po_no');
+    restrictPONumberInput('#edit_po_no');
     </script>
     <?php include '../../general/footer.php'; ?>
 
