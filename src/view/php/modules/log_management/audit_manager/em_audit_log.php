@@ -443,6 +443,111 @@ $query = "SELECT audit_log.*, users.email AS email
 $stmt = $pdo->prepare($query);
 $stmt->execute($params);
 $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+try {
+    // Fetch unique values for dropdowns
+    $actionTypesQuery = "SELECT DISTINCT Action FROM audit_log WHERE Module IN ('Equipment Location', 'Equipment Details', 'Equipment Status') ORDER BY Action";
+    $statusTypesQuery = "SELECT DISTINCT Status FROM audit_log WHERE Module IN ('Equipment Location', 'Equipment Details', 'Equipment Status') ORDER BY Status";
+    $moduleTypesQuery = "SELECT DISTINCT Module FROM audit_log WHERE Module IN ('Equipment Location', 'Equipment Details', 'Equipment Status') ORDER BY Module";
+    
+    $actionTypes = $conn->query($actionTypesQuery)->fetch_all(MYSQLI_ASSOC);
+    $statusTypes = $conn->query($statusTypesQuery)->fetch_all(MYSQLI_ASSOC);
+    $moduleTypes = $conn->query($moduleTypesQuery)->fetch_all(MYSQLI_ASSOC);
+    
+    // Initialize base WHERE clause
+    $whereClause = "WHERE Module IN ('Equipment Location', 'Equipment Details', 'Equipment Status')";
+    $params = [];
+    $types = "";
+    
+    // Add filters
+    if (!empty($_GET['module_type'])) {
+        $whereClause .= " AND Module = ?";
+        $params[] = $_GET['module_type'];
+        $types .= "s";
+    }
+    
+    if (!empty($_GET['action_type'])) {
+        $whereClause .= " AND Action = ?";
+        $params[] = $_GET['action_type'];
+        $types .= "s";
+    }
+    
+    if (!empty($_GET['status'])) {
+        $whereClause .= " AND Status = ?";
+        $params[] = $_GET['status'];
+        $types .= "s";
+    }
+    
+    if (!empty($_GET['search'])) {
+        $whereClause .= " AND (User LIKE ? OR Details LIKE ? OR Changes LIKE ?)";
+        $searchTerm = "%" . $_GET['search'] . "%";
+        $params[] = $searchTerm;
+        $params[] = $searchTerm;
+        $params[] = $searchTerm;
+        $types .= "sss";
+    }
+    
+    // Add date range filter
+    if (!empty($_GET['date_from']) && !empty($_GET['date_to'])) {
+        $whereClause .= " AND Date_Time BETWEEN ? AND ?";
+        $params[] = $_GET['date_from'] . " 00:00:00";
+        $params[] = $_GET['date_to'] . " 23:59:59";
+        $types .= "ss";
+    }
+    
+    // Initialize sorting parameters
+    $sortColumn = isset($_GET['sort']) ? $_GET['sort'] : 'Date_Time';
+    $sortOrder = isset($_GET['order']) ? $_GET['order'] : 'DESC';
+    
+    // Validate sort column to prevent SQL injection
+    $allowedColumns = ['Track_ID', 'User', 'Module', 'Action', 'Details', 'Changes', 'Status', 'Date_Time'];
+    if (!in_array($sortColumn, $allowedColumns)) {
+        $sortColumn = 'Date_Time';
+    }
+    
+    // Validate sort order
+    $sortOrder = strtoupper($sortOrder) === 'ASC' ? 'ASC' : 'DESC';
+    
+    // Add sorting to query
+    $orderClause = "ORDER BY $sortColumn $sortOrder";
+    
+    // Get total count for pagination
+    $countQuery = "SELECT COUNT(*) as total FROM audit_log $whereClause";
+    $stmt = $conn->prepare($countQuery);
+    if (!empty($params)) {
+        $stmt->bind_param($types, ...$params);
+    }
+    $stmt->execute();
+    $totalRecords = $stmt->get_result()->fetch_assoc()['total'];
+    
+    // Calculate pagination
+    $recordsPerPage = 10;
+    $totalPages = ceil($totalRecords / $recordsPerPage);
+    $currentPage = isset($_GET['page']) ? max(1, min($totalPages, intval($_GET['page']))) : 1;
+    $offset = ($currentPage - 1) * $recordsPerPage;
+    
+    // Main query with pagination
+    $query = "SELECT * FROM audit_log $whereClause $orderClause LIMIT ? OFFSET ?";
+    $stmt = $conn->prepare($query);
+    
+    // Add pagination parameters
+    $params[] = $recordsPerPage;
+    $params[] = $offset;
+    $types .= "ii";
+    
+    // Bind all parameters
+    $stmt->bind_param($types, ...$params);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    // Log debug information
+    error_log("Query: " . $query);
+    error_log("Parameters: " . print_r($params, true));
+    error_log("Types: " . $types);
+} catch (Exception $e) {
+    // Handle exception
+    error_log("Error in query: " . $e->getMessage());
+}
 ?>
 
 <!DOCTYPE html>
@@ -472,94 +577,269 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         You have permission to view Equipment Management audit logs.
                     </div>
 
-                    <!-- Filter Section -->
-                    <div class="row mb-4">
+                                                      <!-- Filter Section -->
+                    <form method="GET" class="row g-3 mb-4" id="auditFilterForm" onsubmit="return false;">
+                        <div class="col-md-3">
+                            <label for="moduleType" class="form-label">Module Type</label>
+                            <select class="form-select" name="module_type" id="moduleType">
+                                <option value="">All</option>
+                                <?php
+                                if (!empty($moduleTypes)) {
+                                    foreach ($moduleTypes as $module) {
+                                        $selected = ($_GET['module_type'] ?? '') === $module ? 'selected' : '';
+                                        echo '<option value="' . htmlspecialchars($module) . '" ' . $selected . '>' .
+                                            htmlspecialchars($module) . '</option>';
+                                    }
+                                } else {
+                                    // Fallback options if database query fails
+                                    $defaultModules = ['Purchase Order', 'Charge Invoice', 'Receiving Report'];
+                                    foreach ($defaultModules as $module) {
+                                        $selected = ($_GET['module_type'] ?? '') === $module ? 'selected' : '';
+                                        echo '<option value="' . htmlspecialchars($module) . '" ' . $selected . '>' .
+                                            htmlspecialchars($module) . '</option>';
+                                    }
+                                }
+                                ?>
+                            </select>
+                        </div>
 
-                        <!-- Filter Section -->
-                        <form method="GET" class="row g-3 mb-4" id="auditFilterForm" onsubmit="return false;">
-    <div class="col-md-3">
-        <label for="actionType" class="form-label">Action Type</label>
-        <select class="form-select live-filter" name="action_type" id="actionType">
-            <option value="">All</option>
-            <option value="Create" <?= ($_GET['action_type'] ?? '') === 'Create' ? 'selected' : '' ?>>Create</option>
-            <option value="Modified" <?= ($_GET['action_type'] ?? '') === 'Modified' ? 'selected' : '' ?>>Modified</option>
-            <option value="Remove" <?= ($_GET['action_type'] ?? '') === 'Remove' ? 'selected' : '' ?>>Remove</option>
-            <option value="Restored" <?= ($_GET['action_type'] ?? '') === 'Restored' ? 'selected' : '' ?>>Restored</option>
-            <option value="Login" <?= ($_GET['action_type'] ?? '') === 'Login' ? 'selected' : '' ?>>Login</option>
-            <option value="Logout" <?= ($_GET['action_type'] ?? '') === 'Logout' ? 'selected' : '' ?>>Logout</option>
-        </select>
-    </div>
+                        <div class="col-md-3">
+                            <label for="actionType" class="form-label">Action Type</label>
+                            <select class="form-select" name="action_type" id="actionType">
+                                <option value="">All</option>
+                                <?php
+                                if (!empty($actionTypes)) {
+                                    foreach ($actionTypes as $action) {
+                                        $selected = ($_GET['action_type'] ?? '') === $action ? 'selected' : '';
+                                        echo '<option value="' . htmlspecialchars($action) . '" ' . $selected . '>' .
+                                            htmlspecialchars($action) . '</option>';
+                                    }
+                                } else {
+                                    // Fallback options if database query fails
+                                    $defaultActions = ['Create', 'Modified', 'Remove', 'Restore', 'Delete'];
+                                    foreach ($defaultActions as $action) {
+                                        $selected = ($_GET['action_type'] ?? '') === $action ? 'selected' : '';
+                                        echo '<option value="' . htmlspecialchars($action) . '" ' . $selected . '>' .
+                                            htmlspecialchars($action) . '</option>';
+                                    }
+                                }
+                                ?>
+                            </select>
+                        </div>
 
-    <div class="col-md-3">
-        <label for="status" class="form-label">Status</label>
-        <select class="form-select live-filter" name="status" id="status">
-            <option value="">All</option>
-            <option value="Successful" <?= ($_GET['status'] ?? '') === 'Successful' ? 'selected' : '' ?>>Successful</option>
-            <option value="Failed" <?= ($_GET['status'] ?? '') === 'Failed' ? 'selected' : '' ?>>Failed</option>
-        </select>
-    </div>
+                        <div class="col-md-3">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-select" name="status" id="status">
+                                <option value="">All</option>
+                                <?php
+                                if (!empty($statusTypes)) {
+                                    foreach ($statusTypes as $status) {
+                                        $selected = ($_GET['status'] ?? '') === $status ? 'selected' : '';
+                                        echo '<option value="' . htmlspecialchars($status) . '" ' . $selected . '>' .
+                                            htmlspecialchars($status) . '</option>';
+                                    }
+                                } else {
+                                    // Fallback options if database query fails
+                                    $defaultStatuses = ['Successful', 'Failed'];
+                                    foreach ($defaultStatuses as $status) {
+                                        $selected = ($_GET['status'] ?? '') === $status ? 'selected' : '';
+                                        echo '<option value="' . htmlspecialchars($status) . '" ' . $selected . '>' .
+                                            htmlspecialchars($status) . '</option>';
+                                    }
+                                    // Add debug info
+                                    error_log("Using fallback status types as no values were found in database");
+                                }
+                                ?>
+                            </select>
+                        </div>
 
-    <div class="col-12 col-md-3">
-        <label class="form-label fw-semibold">Date Filter Type</label>
-        <select id="dateFilterType" name="date_filter_type" class="form-select shadow-sm live-filter">
-            <option value="" <?= empty($_GET['date_filter_type']) ? 'selected' : '' ?>>-- Select Type --</option>
-            <option value="month_year" <?= (($_GET['date_filter_type'] ?? '') === 'month_year') ? 'selected' : '' ?>>Month-Year Range</option>
-            <option value="year" <?= (($_GET['date_filter_type'] ?? '') === 'year') ? 'selected' : '' ?>>Year Range</option>
-            <option value="mdy" <?= (($_GET['date_filter_type'] ?? '') === 'mdy') ? 'selected' : '' ?>>Month-Date-Year Range</option>
-        </select>
-    </div>
+                        <!-- Date Range selector -->
+                        <div class="col-12 col-md-3">
+                            <label class="form-label fw-semibold">Date Filter Type</label>
+                            <select id="dateFilterType" name="date_filter_type" class="form-select shadow-sm live-filter">
+                                <option value="" <?= empty($filters['date_filter_type']) ? 'selected' : '' ?>>-- Select Type --</option>
+                                <option value="month_year" <?= (($_GET['date_filter_type'] ?? '') === 'month_year') ? 'selected' : '' ?>>Month-Year Range</option>
+                                <option value="year" <?= (($_GET['date_filter_type'] ?? '') === 'year') ? 'selected' : '' ?>>Year Range</option>
+                                <option value="mdy" <?= (($_GET['date_filter_type'] ?? '') === 'mdy') ? 'selected' : '' ?>>Month-Date-Year Range</option>
 
-    <!-- MDY Range -->
-    <div class="col-12 col-md-3 date-filter date-mdy d-none">
-        <label class="form-label fw-semibold">Date From</label>
-        <input type="date" name="date_from" class="form-control shadow-sm live-filter" value="<?= htmlspecialchars($_GET['date_from'] ?? '') ?>">
-    </div>
-    <div class="col-12 col-md-3 date-filter date-mdy d-none">
-        <label class="form-label fw-semibold">Date To</label>
-        <input type="date" name="date_to" class="form-control shadow-sm live-filter" value="<?= htmlspecialchars($_GET['date_to'] ?? '') ?>">
-    </div>
+                            </select>
 
-    <!-- Year Range -->
-    <div class="col-12 col-md-3 date-filter date-year d-none">
-        <label class="form-label fw-semibold">Year From</label>
-        <input type="number" name="year_from" class="form-control shadow-sm live-filter" min="1900" max="2100" placeholder="e.g., 2023" value="<?= htmlspecialchars($_GET['year_from'] ?? '') ?>">
-    </div>
-    <div class="col-12 col-md-3 date-filter date-year d-none">
-        <label class="form-label fw-semibold">Year To</label>
-        <input type="number" name="year_to" class="form-control shadow-sm live-filter" min="1900" max="2100" placeholder="e.g., 2025" value="<?= htmlspecialchars($_GET['year_to'] ?? '') ?>">
-    </div>
+                        </div>
 
-    <!-- Month-Year Range -->
-    <div class="col-12 col-md-3 date-filter date-month_year d-none">
-        <label class="form-label fw-semibold">From (MM-YYYY)</label>
-        <input type="month" name="month_year_from" class="form-control shadow-sm live-filter" value="<?= htmlspecialchars($_GET['month_year_from'] ?? '') ?>">
-    </div>
-    <div class="col-12 col-md-3 date-filter date-month_year d-none">
-        <label class="form-label fw-semibold">To (MM-YYYY)</label>
-        <input type="month" name="month_year_to" class="form-control shadow-sm live-filter" value="<?= htmlspecialchars($_GET['month_year_to'] ?? '') ?>">
-    </div>
+                        <!-- MDY Range -->
+                        <div class="col-12 col-md-3 date-filter date-mdy d-none">
+                            <label class="form-label fw-semibold">Date From</label>
+                            <input type="date" name="date_from" class="form-control shadow-sm live-filter"
+                                value="<?= htmlspecialchars($_GET['date_from'] ?? '') ?>"
+                                placeholder="Start Date (YYYY-MM-DD)">
+                        </div>
+                        <div class="col-12 col-md-3 date-filter date-mdy d-none">
+                            <label class="form-label fw-semibold">Date To</label>
+                            <input type="date" name="date_to" class="form-control shadow-sm live-filter"
+                                value="<?= htmlspecialchars($_GET['date_to'] ?? '') ?>"
+                                placeholder="End Date (YYYY-MM-DD)">
+                        </div>
 
-    <!-- Search bar -->
-    <div class="col-12 col-sm-6 col-md-3">
-        <label class="form-label fw-semibold">Search</label>
-        <div class="input-group shadow-sm">
-            <span class="input-group-text"><i class="bi bi-search"></i></span>
-            <input type="text" name="search" id="searchInput" class="form-control live-filter" placeholder="Search keyword..." value="<?= htmlspecialchars($_GET['search'] ?? '') ?>">
-        </div>
-    </div>
+                        <!-- Year Range -->
+                        <div class="col-12 col-md-3 date-filter date-year d-none">
+                            <label class="form-label fw-semibold">Year From</label>
+                            <input type="number" name="year_from" class="form-control shadow-sm live-filter"
+                                min="1900" max="2100"
+                                placeholder="e.g., 2023"
+                                value="<?= htmlspecialchars($_GET['year_from'] ?? '') ?>">
+                        </div>
 
-    <!-- Filter Button -->
-    <div class="col-6 col-md-2 d-grid" style="align-items: center;">
-        <button type="button" id="applyFilters" class="btn btn-dark"><i class="bi bi-funnel"></i> Filter</button>
-    </div>
+                        <div class="col-12 col-md-3 date-filter date-year d-none">
+                            <label class="form-label fw-semibold">Year To</label>
+                            <input type="number" name="year_to" class="form-control shadow-sm live-filter"
+                                min="1900" max="2100"
+                                placeholder="e.g., 2025"
+                                value="<?= htmlspecialchars($_GET['year_to'] ?? '') ?>">
+                        </div>
 
-    <!-- Clear Filter Button -->
-    <div class="col-6 col-md-2 d-grid" style="align-items: center;">
-        <button type="button" id="clearFilters" class="btn btn-secondary shadow-sm"><i class="bi bi-x-circle"></i> Clear</button>
-    </div>
-</form>
-                    </div>
+                        <!-- Month-Year Range -->
+                        <div class="col-12 col-md-3 date-filter date-month_year d-none">
+                            <label class="form-label fw-semibold">From (MM-YYYY)</label>
+                            <input type="month" name="month_year_from" class="form-control shadow-sm live-filter"
+                                value="<?= htmlspecialchars($_GET['month_year_from'] ?? '') ?>"
+                                placeholder="e.g., 2023-01">
+                        </div>
+                        <div class="col-12 col-md-3 date-filter date-month_year d-none">
+                            <label class="form-label fw-semibold">To (MM-YYYY)</label>
+                            <input type="month" name="month_year_to" class="form-control shadow-sm live-filter"
+                                value="<?= htmlspecialchars($_GET['month_year_to'] ?? '') ?>"
+                                placeholder="e.g., 2023-12">
+                        </div>
 
+                        <!-- Search bar -->
+                        <div class="col-12 col-sm-6 col-md-3">
+                            <label class="form-label fw-semibold">Search</label>
+                            <div class="input-group shadow-sm">
+                                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                <input type="text" name="search" id="searchInput" class="form-control live-filter" placeholder="Search keyword..."
+                                    value="<?= htmlspecialchars($_GET['search'] ?? '') ?>">
+                            </div>
+                        </div>
+                        <!-- Filter Button-->
+                        <div class="col-6 col-md-2 d-grid" style="align-items: center;">
+                            <button type="button" id="applyFilters" class="btn btn-dark"><i class="bi bi-funnel"></i> Filter</button>
+                        </div>
+                        <!-- Clear Filter Button -->
+                        <div class="col-6 col-md-2 d-grid" style="align-items: center;">
+                            <button type="button" id="clearFilters" class="btn btn-secondary shadow-sm">
+                                <i class="bi bi-x-circle"></i> Clear
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                        <div class="col-md-3">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-select" name="status" id="status">
+                                <option value="">All</option>
+                                <?php 
+                                if (!empty($statusTypes)) {
+                                    foreach ($statusTypes as $status) {
+                                        $selected = ($_GET['status'] ?? '') === $status ? 'selected' : '';
+                                        echo '<option value="' . htmlspecialchars($status) . '" ' . $selected . '>' . 
+                                             htmlspecialchars($status) . '</option>';
+                                    }
+                                } else {
+                                    // Fallback options if database query fails
+                                    $defaultStatuses = ['Successful', 'Failed'];
+                                    foreach ($defaultStatuses as $status) {
+                                        $selected = ($_GET['status'] ?? '') === $status ? 'selected' : '';
+                                        echo '<option value="' . htmlspecialchars($status) . '" ' . $selected . '>' . 
+                                             htmlspecialchars($status) . '</option>';
+                                    }
+                                    // Add debug info
+                                    error_log("Using fallback status types as no values were found in database");
+                                }
+                                ?>
+                            </select>
+                        </div>
+
+                        <!-- Date Range selector -->
+                        <div class="col-12 col-md-3">
+                            <label class="form-label fw-semibold">Date Filter Type</label>
+                            <select id="dateFilterType" name="date_filter_type" class="form-select shadow-sm live-filter">
+                                <option value="" <?= empty($filters['date_filter_type']) ? 'selected' : '' ?>>-- Select Type --</option>
+                                <option value="month_year" <?= (($_GET['date_filter_type'] ?? '') === 'month_year') ? 'selected' : '' ?>>Month-Year Range</option>
+                                <option value="year" <?= (($_GET['date_filter_type'] ?? '') === 'year') ? 'selected' : '' ?>>Year Range</option>
+                                <option value="mdy" <?= (($_GET['date_filter_type'] ?? '') === 'mdy') ? 'selected' : '' ?>>Month-Date-Year Range</option>
+
+                            </select>
+
+                        </div>
+
+                        <!-- MDY Range -->
+                        <div class="col-12 col-md-3 date-filter date-mdy d-none">
+                            <label class="form-label fw-semibold">Date From</label>
+                            <input type="date" name="date_from" class="form-control shadow-sm live-filter"
+                                value="<?= htmlspecialchars($_GET['date_from'] ?? '') ?>"
+                                placeholder="Start Date (YYYY-MM-DD)">
+                        </div>
+                        <div class="col-12 col-md-3 date-filter date-mdy d-none">
+                            <label class="form-label fw-semibold">Date To</label>
+                            <input type="date" name="date_to" class="form-control shadow-sm live-filter"
+                                value="<?= htmlspecialchars($_GET['date_to'] ?? '') ?>"
+                                placeholder="End Date (YYYY-MM-DD)">
+                        </div>
+
+                        <!-- Year Range -->
+                        <div class="col-12 col-md-3 date-filter date-year d-none">
+                            <label class="form-label fw-semibold">Year From</label>
+                            <input type="number" name="year_from" class="form-control shadow-sm live-filter"
+                                min="1900" max="2100"
+                                placeholder="e.g., 2023"
+                                value="<?= htmlspecialchars($_GET['year_from'] ?? '') ?>">
+                        </div>
+
+                        <div class="col-12 col-md-3 date-filter date-year d-none">
+                            <label class="form-label fw-semibold">Year To</label>
+                            <input type="number" name="year_to" class="form-control shadow-sm live-filter"
+                                min="1900" max="2100"
+                                placeholder="e.g., 2025"
+                                value="<?= htmlspecialchars($_GET['year_to'] ?? '') ?>">
+                        </div>
+
+                        <!-- Month-Year Range -->
+                        <div class="col-12 col-md-3 date-filter date-month_year d-none">
+                            <label class="form-label fw-semibold">From (MM-YYYY)</label>
+                            <input type="month" name="month_year_from" class="form-control shadow-sm live-filter"
+                                value="<?= htmlspecialchars($_GET['month_year_from'] ?? '') ?>"
+                                placeholder="e.g., 2023-01">
+                        </div>
+                        <div class="col-12 col-md-3 date-filter date-month_year d-none">
+                            <label class="form-label fw-semibold">To (MM-YYYY)</label>
+                            <input type="month" name="month_year_to" class="form-control shadow-sm live-filter"
+                                value="<?= htmlspecialchars($_GET['month_year_to'] ?? '') ?>"
+                                placeholder="e.g., 2023-12">
+                        </div>
+
+                        <!-- Search bar -->
+                        <div class="col-12 col-sm-6 col-md-3">
+                            <label class="form-label fw-semibold">Search</label>
+                            <div class="input-group shadow-sm">
+                                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                <input type="text" name="search" id="searchInput" class="form-control live-filter" placeholder="Search keyword..."
+                                    value="<?= htmlspecialchars($_GET['search'] ?? '') ?>">
+                            </div>
+                        </div>
+                        <!-- Filter Button-->
+                        <div class="col-6 col-md-2 d-grid" style="align-items: center;">
+                            <button type="button" id="applyFilters" class="btn btn-dark"><i class="bi bi-funnel"></i> Filter</button>
+                        </div>
+                        <!-- Clear Filter Button -->
+                        <div class="col-6 col-md-2 d-grid" style="align-items: center;">
+                            <button type="button" id="clearFilters" class="btn btn-secondary shadow-sm">
+                                <i class="bi bi-x-circle"></i> Clear
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                
                     <!-- Table container with colgroup for column widths -->
                     <div class="table-responsive" id="table">
                         <table class="table table-hover">
