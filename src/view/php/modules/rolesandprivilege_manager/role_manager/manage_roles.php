@@ -32,25 +32,13 @@ SELECT
     r.role_name AS Role_Name,
     m.id AS Module_ID,
     m.module_name AS Module_Name,
-    CASE 
-        WHEN LOWER(m.module_name) = 'audit' THEN 
-            COALESCE((
-                SELECT GROUP_CONCAT(p.priv_name ORDER BY p.priv_name SEPARATOR ', ')
-                FROM role_module_privileges rmp2
-                JOIN privileges p ON p.id = rmp2.privilege_id
-                WHERE rmp2.role_id = r.id
-                  AND rmp2.module_id = m.id
-
-            ), 'No privileges') 
-        ELSE
-            COALESCE((
-                SELECT GROUP_CONCAT(p.priv_name ORDER BY p.priv_name SEPARATOR ', ')
-                FROM role_module_privileges rmp2
-                JOIN privileges p ON p.id = rmp2.privilege_id
-                WHERE rmp2.role_id = r.id
-                  AND rmp2.module_id = m.id
-            ), 'No privileges')
-    END AS Privileges
+    COALESCE((
+        SELECT GROUP_CONCAT(p.priv_name ORDER BY p.priv_name SEPARATOR ', ')
+        FROM role_module_privileges rmp2
+        JOIN privileges p ON p.id = rmp2.privilege_id
+        WHERE rmp2.role_id = r.id
+          AND rmp2.module_id = m.id
+    ), 'No privileges') AS Privileges
 FROM roles r
 CROSS JOIN modules m
 WHERE r.is_disabled = 0
