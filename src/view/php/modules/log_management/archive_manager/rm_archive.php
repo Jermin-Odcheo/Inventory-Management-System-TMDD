@@ -39,44 +39,101 @@ $allowedSortColumns = [
 
 // Validate sort_by and sort_order
 if (!array_key_exists($sort_by, $allowedSortColumns)) {
-    $sort_by = 'date_time'; // Fallback to default
+    $sort_by = 'role_name'; // Fallback to default
 }
 if (!in_array(strtolower($sort_order), ['asc', 'desc'])) {
-    $sort_order = 'desc'; // Fallback to default
+    $sort_order = 'asc'; // Fallback to default
 }
 
-$orderByClause = "ORDER BY " . $allowedSortColumns[$sort_by] . " " . strtoupper($sort_order) . ", r.id DESC";
+// --- Filter Logic ---
+$dateFilterType = $_GET['date_filter_type'] ?? '';
+$baseWhere = "r.is_deleted = 1";
+$params = [];
 
+// Apply action filter
+if (!empty($_GET['action_type'])) {
+    $baseWhere .= " AND a.Action = :action_type";
+    $params[':action_type'] = $_GET['action_type'];
+}
+
+// Apply status filter
+if (!empty($_GET['status'])) {
+    $baseWhere .= " AND a.Status = :status";
+    $params[':status'] = $_GET['status'];
+}
+
+// Apply search filter
+if (!empty($_GET['search'])) {
+    $searchTerm = '%' . $_GET['search'] . '%';
+    $baseWhere .= " AND (
+        r.role_name LIKE :search_role
+        OR r.description LIKE :search_desc
+        OR op.Email LIKE :search_email
+    )";
+    $params[':search_role'] = $searchTerm;
+    $params[':search_desc'] = $searchTerm;
+    $params[':search_email'] = $searchTerm;
+}
+
+// Apply date filters
+if ($dateFilterType === 'mdy') {
+    if (!empty($_GET['date_from'])) {
+        $baseWhere .= " AND DATE(a.Date_Time) >= :date_from";
+        $params[':date_from'] = $_GET['date_from'];
+    }
+    if (!empty($_GET['date_to'])) {
+        $baseWhere .= " AND DATE(a.Date_Time) <= :date_to";
+        $params[':date_to'] = $_GET['date_to'];
+    }
+} else if ($dateFilterType === 'month_year') {
+    if (!empty($_GET['month_year_from'])) {
+        $baseWhere .= " AND a.Date_Time >= STR_TO_DATE(:month_year_from, '%Y-%m')";
+        $params[':month_year_from'] = $_GET['month_year_from'];
+    }
+    if (!empty($_GET['month_year_to'])) {
+        $baseWhere .= " AND a.Date_Time < DATE_ADD(STR_TO_DATE(:month_year_to, '%Y-%m'), INTERVAL 1 MONTH)";
+        $params[':month_year_to'] = $_GET['month_year_to'];
+    }
+} else if ($dateFilterType === 'year') {
+    if (!empty($_GET['year_from'])) {
+        $baseWhere .= " AND YEAR(a.Date_Time) >= :year_from";
+        $params[':year_from'] = $_GET['year_from'];
+    }
+    if (!empty($_GET['year_to'])) {
+        $baseWhere .= " AND YEAR(a.Date_Time) <= :year_to";
+        $params[':year_to'] = $_GET['year_to'];
+    }
+}
+
+$orderByClause = "ORDER BY " . $allowedSortColumns[$sort_by] . " " . strtoupper($sort_order);
 
 // SQL query for archived roles with audit information
 $sql = "
-SELECT 
-    r.id AS role_id,
-    r.role_name AS role_name,
-    CONCAT(u.First_Name, ' ', u.Last_Name) AS operator_name,
-    u.Email AS operator_email,
-    al.Module AS module,
-    al.Action AS action,
-    al.Details AS details,
-    al.OldVal AS old_val,
-    al.NewVal AS new_val,
-    al.Status AS status,
-    al.Date_Time AS date_time,
-    al.UserID AS operator_id
-FROM roles r
-LEFT JOIN audit_log al ON al.EntityID = r.id AND al.Module = 'Roles and Privileges'
-LEFT JOIN users u ON u.id = al.UserID
-WHERE r.is_disabled = 1
-  AND al.TrackID = (
-    SELECT MAX(a2.TrackID)
-    FROM audit_log a2
-    WHERE a2.EntityID = r.id AND a2.Module = 'Roles and Privileges'
-  )
-{$orderByClause}
+    SELECT 
+        r.id AS role_id,
+        r.role_name,
+        r.description,
+        r.is_deleted,
+        r.created_at,
+        r.updated_at,
+        r.deleted_at,
+        a.TrackID AS last_audit_id,
+        a.Action AS last_action,
+        a.Status AS action_status,
+        a.OldVal AS old_values,
+        a.NewVal AS new_values,
+        a.Date_Time AS audit_timestamp,
+        CONCAT(op.First_Name, ' ', op.Last_Name) AS operator_name,
+        op.Email AS operator_email
+    FROM roles r
+    LEFT JOIN audit_log a ON a.EntityID = r.id AND a.Module = 'Role Management'
+    LEFT JOIN users op ON a.UserID = op.id
+    WHERE $baseWhere
+    $orderByClause
 ";
 
 $stmt = $pdo->prepare($sql);
-$stmt->execute();
+$stmt->execute($params);
 $roleData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 /**
@@ -261,31 +318,120 @@ function formatChanges($oldJsonStr)
                     </h3>
                 </div>
                 <div class="card-body">
-                    <div class="row mb-4">
-                        <div class="col-md-4 mb-2">
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-search"></i></span>
-                                <input type="text" id="searchInput" class="form-control" placeholder="Search room archives...">
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <div class="bulk-actions mb-3">
+                                <?php if ($canRestore): ?>
+                                    <button type="button" id="restore-selected" class="btn btn-success" disabled style="display: none;">Restore Selected</button>
+                                <?php endif; ?>
+                                <?php if ($canRemove): ?>
+                                    <button type="button" id="delete-selected-permanently" class="btn btn-danger" disabled style="display: none;">Delete Selected Permanently</button>
+                                <?php endif; ?>
                             </div>
                         </div>
-                        <div class="col-md-4 mb-2">
-                            <select id="filterAction" class="form-select">
-                                <option value="">All Actions</option>
-                                <option value="create">Create</option>
-                                <option value="modified">Modified</option>
-                                <option value="remove">Remove</option>
-                                <option value="delete">Delete</option>
-                                <option value="restored">Restored</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4 mb-2">
-                            <select id="filterStatus" class="form-select">
-                                <option value="">All Status</option>
-                                <option value="successful">Successful</option>
-                                <option value="failed">Failed</option>
-                            </select>
-                        </div>
                     </div>
+
+                    <!-- Filter Section -->
+                    <form method="GET" class="row g-3 mb-4" id="archiveFilterForm" action="">
+                        <div class="col-md-3">
+                            <label for="action_type" class="form-label">Action Type</label>
+                            <select class="form-select" name="action_type" id="filterAction">
+                                <option value="">All Actions</option>
+                                <option value="Create" <?= ($_GET['action_type'] ?? '') === 'Create' ? 'selected' : '' ?>>Create</option>
+                                <option value="Modified" <?= ($_GET['action_type'] ?? '') === 'Modified' ? 'selected' : '' ?>>Modified</option>
+                                <option value="Remove" <?= ($_GET['action_type'] ?? '') === 'Remove' ? 'selected' : '' ?>>Remove</option>
+                                <option value="Delete" <?= ($_GET['action_type'] ?? '') === 'Delete' ? 'selected' : '' ?>>Delete</option>
+                                <option value="Restored" <?= ($_GET['action_type'] ?? '') === 'Restored' ? 'selected' : '' ?>>Restored</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-select" name="status" id="filterStatus">
+                                <option value="">All Status</option>
+                                <option value="Successful" <?= ($_GET['status'] ?? '') === 'Successful' ? 'selected' : '' ?>>Successful</option>
+                                <option value="Failed" <?= ($_GET['status'] ?? '') === 'Failed' ? 'selected' : '' ?>>Failed</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Date Range selector -->
+                        <div class="col-12 col-md-3">
+                            <label class="form-label fw-semibold">Date Filter Type</label>
+                            <select id="dateFilterType" name="date_filter_type" class="form-select shadow-sm">
+                                <option value="" <?= empty($_GET['date_filter_type']) ? 'selected' : '' ?>>-- Select Type --</option>
+                                <option value="month_year" <?= (($_GET['date_filter_type'] ?? '') === 'month_year') ? 'selected' : '' ?>>Month-Year Range</option>
+                                <option value="year" <?= (($_GET['date_filter_type'] ?? '') === 'year') ? 'selected' : '' ?>>Year Range</option>
+                                <option value="mdy" <?= (($_GET['date_filter_type'] ?? '') === 'mdy') ? 'selected' : '' ?>>Month-Date-Year Range</option>
+                            </select>
+                        </div>
+                        
+                        <!-- MDY Range -->
+                        <div class="col-12 col-md-3 date-filter date-mdy d-none">
+                            <label class="form-label fw-semibold">Date From</label>
+                            <input type="date" name="date_from" class="form-control shadow-sm"
+                                value="<?= htmlspecialchars($_GET['date_from'] ?? '') ?>"
+                                placeholder="Start Date (YYYY-MM-DD)">
+                        </div>
+                        <div class="col-12 col-md-3 date-filter date-mdy d-none">
+                            <label class="form-label fw-semibold">Date To</label>
+                            <input type="date" name="date_to" class="form-control shadow-sm"
+                                value="<?= htmlspecialchars($_GET['date_to'] ?? '') ?>"
+                                placeholder="End Date (YYYY-MM-DD)">
+                        </div>
+                        
+                        <!-- Year Range -->
+                        <div class="col-12 col-md-3 date-filter date-year d-none">
+                            <label class="form-label fw-semibold">Year From</label>
+                            <input type="number" name="year_from" class="form-control shadow-sm"
+                                min="1900" max="2100"
+                                placeholder="e.g., 2023"
+                                value="<?= htmlspecialchars($_GET['year_from'] ?? '') ?>">
+                        </div>
+                        <div class="col-12 col-md-3 date-filter date-year d-none">
+                            <label class="form-label fw-semibold">Year To</label>
+                            <input type="number" name="year_to" class="form-control shadow-sm"
+                                min="1900" max="2100"
+                                placeholder="e.g., 2025"
+                                value="<?= htmlspecialchars($_GET['year_to'] ?? '') ?>">
+                        </div>
+                        
+                        <!-- Month-Year Range -->
+                        <div class="col-12 col-md-3 date-filter date-month_year d-none">
+                            <label class="form-label fw-semibold">From (MM-YYYY)</label>
+                            <input type="month" name="month_year_from" class="form-control shadow-sm"
+                                value="<?= htmlspecialchars($_GET['month_year_from'] ?? '') ?>"
+                                placeholder="e.g., 2023-01">
+                        </div>
+                        <div class="col-12 col-md-3 date-filter date-month_year d-none">
+                            <label class="form-label fw-semibold">To (MM-YYYY)</label>
+                            <input type="month" name="month_year_to" class="form-control shadow-sm"
+                                value="<?= htmlspecialchars($_GET['month_year_to'] ?? '') ?>"
+                                placeholder="e.g., 2023-12">
+                        </div>
+                        
+                        <!-- Search bar -->
+                        <div class="col-12 col-sm-6 col-md-3">
+                            <label class="form-label fw-semibold">Search</label>
+                            <div class="input-group shadow-sm">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                <input type="text" name="search" id="searchInput" class="form-control" 
+                                    placeholder="Search role archives..." 
+                                    value="<?= htmlspecialchars($_GET['search'] ?? '') ?>">
+                            </div>
+                        </div>
+                        
+                        <div class="col-6 col-md-2 d-grid">
+                            <button type="submit" id="applyFilters" class="btn btn-dark">
+                                <i class="fas fa-filter"></i> Filter
+                            </button>
+                        </div>
+                        
+                        <div class="col-6 col-md-2 d-grid">
+                            <button type="button" id="clearFilters" class="btn btn-secondary shadow-sm">
+                                <i class="fas fa-times-circle"></i> Clear
+                            </button>
+                        </div>
+                    </form>
 
                     <div class="table-responsive" id="table">
                         <table id="archivedRolesTable" class="table table-striped table-hover align-middle">
@@ -355,7 +501,7 @@ function formatChanges($oldJsonStr)
                                                             <i class="fas fa-undo me-1"></i> Restore
                                                         </button>
                                                     <?php endif; ?>
-                                                    <?php if ($canPermanentDelete): ?>
+                                                    <?php if ($canRemove): ?>
                                                         <button type="button" class="btn btn-danger delete-btn"
                                                             data-role-id="<?php echo $role['role_id']; ?>"
                                                             data-role-name="<?php echo htmlspecialchars($role['role_name']); ?>"
@@ -519,7 +665,7 @@ function formatChanges($oldJsonStr)
             // Pass RBAC privileges to JavaScript
             const userPrivileges = {
                 canRestore: <?php echo json_encode($canRestore); ?>,
-                canPermanentDelete: <?php echo json_encode($canPermanentDelete); ?>
+                canRemove: <?php echo json_encode($canRemove); ?>
             };
 
             // Handle select all checkbox
@@ -588,7 +734,7 @@ function formatChanges($oldJsonStr)
 
             // Handle permanent delete role modal
             $('#confirmDeleteModal').on('show.bs.modal', function(event) {
-                if (!userPrivileges.canPermanentDelete) {
+                if (!userPrivileges.canRemove) {
                     event.preventDefault();
                     return false;
                 }
@@ -602,7 +748,7 @@ function formatChanges($oldJsonStr)
 
             // Confirm permanent delete role via AJAX
             $(document).on('click', '#confirmDeleteButton', function(e) {
-                if (!userPrivileges.canPermanentDelete) return;
+                if (!userPrivileges.canRemove) return;
 
                 e.preventDefault();
                 $(this).blur();
@@ -682,7 +828,7 @@ function formatChanges($oldJsonStr)
 
             // When bulk delete button is clicked
             $(document).on('click', '#bulk-delete', function() {
-                if (!userPrivileges.canPermanentDelete) return;
+                if (!userPrivileges.canRemove) return;
 
                 bulkDeleteIds = [];
                 $('.select-row:checked').each(function() {
@@ -696,7 +842,7 @@ function formatChanges($oldJsonStr)
 
             // Confirm bulk delete
             $(document).on('click', '#confirmBulkDeleteBtn', function() {
-                if (!userPrivileges.canPermanentDelete || bulkDeleteIds.length === 0) return;
+                if (!userPrivileges.canRemove || bulkDeleteIds.length === 0) return;
 
                 $.ajax({
                     type: 'POST',
@@ -782,6 +928,53 @@ function formatChanges($oldJsonStr)
 
             // Call updatePagination immediately
             updatePagination();
+        });
+
+        // Custom script to ensure filtering only happens on button click
+        document.addEventListener('DOMContentLoaded', function() {
+            // Only keep the date filter type handler to show/hide date inputs
+            // Remove any handlers that might trigger filtering on input change
+            
+            // Date filter handling - keep this functionality
+            const filterType = document.getElementById('dateFilterType');
+            const allDateFilters = document.querySelectorAll('.date-filter');
+
+            function updateDateFields() {
+                allDateFilters.forEach(field => field.classList.add('d-none'));
+                if (!filterType.value) return;
+                document.querySelectorAll('.date-' + filterType.value).forEach(field => field.classList.remove('d-none'));
+            }
+
+            if (filterType) {
+                // Remove any previous listeners
+                const newFilterType = filterType.cloneNode(true);
+                filterType.parentNode.replaceChild(newFilterType, filterType);
+                
+                // Add only the date field visibility listener
+                newFilterType.addEventListener('change', updateDateFields);
+                updateDateFields(); // Initialize on page load
+            }
+            
+            // Override any filterTable function that might be called on input
+            window.filterTable = function() {
+                console.log("Auto-filtering disabled - click Filter button instead");
+                return false;
+            };
+            
+            // Make sure the clear filters button still works
+            const clearFiltersBtn = document.getElementById('clearFilters');
+            if (clearFiltersBtn) {
+                // Remove any previous listeners
+                const newClearBtn = clearFiltersBtn.cloneNode(true);
+                clearFiltersBtn.parentNode.replaceChild(newClearBtn, clearFiltersBtn);
+                
+                // Add click handler to reset and submit form
+                newClearBtn.addEventListener('click', function() {
+                    document.getElementById('archiveFilterForm').reset();
+                    updateDateFields();
+                    document.getElementById('archiveFilterForm').submit();
+                });
+            }
         });
     </script>
 </body>

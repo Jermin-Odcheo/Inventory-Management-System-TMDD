@@ -42,6 +42,72 @@ if (!in_array(strtolower($sort_order), ['asc', 'desc'])) {
     $sort_order = 'desc'; // Fallback to default
 }
 
+// --- Filter Logic ---
+$dateFilterType = $_GET['date_filter_type'] ?? '';
+$baseWhere = "(u.is_disabled = 1) AND a.TrackID = (
+    SELECT MAX(a2.TrackID)
+    FROM audit_log a2
+    WHERE a2.EntityID = a.EntityID
+)";
+$params = [];
+
+// Apply action filter
+if (!empty($_GET['action_type'])) {
+    $baseWhere .= " AND a.Action = :action_type";
+    $params[':action_type'] = $_GET['action_type'];
+}
+
+// Apply status filter
+if (!empty($_GET['status'])) {
+    $baseWhere .= " AND a.Status = :status";
+    $params[':status'] = $_GET['status'];
+}
+
+// Apply search filter
+if (!empty($_GET['search'])) {
+    $searchTerm = '%' . $_GET['search'] . '%';
+    $baseWhere .= " AND (
+        op.Email LIKE :search_email 
+        OR a.Details LIKE :search_details
+        OR a.OldVal LIKE :search_oldval
+        OR a.NewVal LIKE :search_newval
+    )";
+    $params[':search_email'] = $searchTerm;
+    $params[':search_details'] = $searchTerm;
+    $params[':search_oldval'] = $searchTerm;
+    $params[':search_newval'] = $searchTerm;
+}
+
+// Apply date filters
+if ($dateFilterType === 'mdy') {
+    if (!empty($_GET['date_from'])) {
+        $baseWhere .= " AND DATE(a.Date_Time) >= :date_from";
+        $params[':date_from'] = $_GET['date_from'];
+    }
+    if (!empty($_GET['date_to'])) {
+        $baseWhere .= " AND DATE(a.Date_Time) <= :date_to";
+        $params[':date_to'] = $_GET['date_to'];
+    }
+} else if ($dateFilterType === 'month_year') {
+    if (!empty($_GET['month_year_from'])) {
+        $baseWhere .= " AND a.Date_Time >= STR_TO_DATE(:month_year_from, '%Y-%m')";
+        $params[':month_year_from'] = $_GET['month_year_from'];
+    }
+    if (!empty($_GET['month_year_to'])) {
+        $baseWhere .= " AND a.Date_Time < DATE_ADD(STR_TO_DATE(:month_year_to, '%Y-%m'), INTERVAL 1 MONTH)";
+        $params[':month_year_to'] = $_GET['month_year_to'];
+    }
+} else if ($dateFilterType === 'year') {
+    if (!empty($_GET['year_from'])) {
+        $baseWhere .= " AND YEAR(a.Date_Time) >= :year_from";
+        $params[':year_from'] = $_GET['year_from'];
+    }
+    if (!empty($_GET['year_to'])) {
+        $baseWhere .= " AND YEAR(a.Date_Time) <= :year_to";
+        $params[':year_to'] = $_GET['year_to'];
+    }
+}
+
 $orderByClause = "ORDER BY " . $allowedSortColumns[$sort_by] . " " . strtoupper($sort_order);
 
 $query = "
@@ -60,18 +126,13 @@ SELECT
 FROM audit_log a
 LEFT JOIN users u ON a.EntityID = u.id
 JOIN users op ON a.UserID = op.id
-WHERE (u.is_disabled = 1)
-AND a.TrackID = (
-    SELECT MAX(a2.TrackID)
-    FROM audit_log a2
-    WHERE a2.EntityID = a.EntityID
-)
+WHERE $baseWhere
 {$orderByClause}
 ";
 
 try {
     $stmt = $pdo->prepare($query);
-    $stmt->execute();
+    $stmt->execute($params);
     $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
     if (!$logs) {
         $logs = [];
@@ -225,31 +286,107 @@ function formatChanges($oldJsonStr)
                     </div>
                 </div>
                 
-                <div class="row mb-4">
-                    <div class="col-md-4 mb-2">
-                        <div class="input-group">
+                <!-- Filter Section -->
+                <form method="GET" class="row g-3 mb-4" id="archiveFilterForm" action="">
+                    <div class="col-md-3">
+                        <label for="action_type" class="form-label">Action Type</label>
+                        <select class="form-select" name="action_type" id="filterAction">
+                            <option value="">All Actions</option>
+                            <option value="Create" <?= ($_GET['action_type'] ?? '') === 'Create' ? 'selected' : '' ?>>Create</option>
+                            <option value="Modified" <?= ($_GET['action_type'] ?? '') === 'Modified' ? 'selected' : '' ?>>Modified</option>
+                            <option value="Remove" <?= ($_GET['action_type'] ?? '') === 'Remove' ? 'selected' : '' ?>>Remove</option>
+                            <option value="Delete" <?= ($_GET['action_type'] ?? '') === 'Delete' ? 'selected' : '' ?>>Delete</option>
+                            <option value="Restored" <?= ($_GET['action_type'] ?? '') === 'Restored' ? 'selected' : '' ?>>Restored</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label for="status" class="form-label">Status</label>
+                        <select class="form-select" name="status" id="filterStatus">
+                            <option value="">All Status</option>
+                            <option value="Successful" <?= ($_GET['status'] ?? '') === 'Successful' ? 'selected' : '' ?>>Successful</option>
+                            <option value="Failed" <?= ($_GET['status'] ?? '') === 'Failed' ? 'selected' : '' ?>>Failed</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Date Range selector -->
+                    <div class="col-12 col-md-3">
+                        <label class="form-label fw-semibold">Date Filter Type</label>
+                        <select id="dateFilterType" name="date_filter_type" class="form-select shadow-sm">
+                            <option value="" <?= empty($_GET['date_filter_type']) ? 'selected' : '' ?>>-- Select Type --</option>
+                            <option value="month_year" <?= (($_GET['date_filter_type'] ?? '') === 'month_year') ? 'selected' : '' ?>>Month-Year Range</option>
+                            <option value="year" <?= (($_GET['date_filter_type'] ?? '') === 'year') ? 'selected' : '' ?>>Year Range</option>
+                            <option value="mdy" <?= (($_GET['date_filter_type'] ?? '') === 'mdy') ? 'selected' : '' ?>>Month-Date-Year Range</option>
+                        </select>
+                    </div>
+                    
+                    <!-- MDY Range -->
+                    <div class="col-12 col-md-3 date-filter date-mdy d-none">
+                        <label class="form-label fw-semibold">Date From</label>
+                        <input type="date" name="date_from" class="form-control shadow-sm"
+                            value="<?= htmlspecialchars($_GET['date_from'] ?? '') ?>"
+                            placeholder="Start Date (YYYY-MM-DD)">
+                    </div>
+                    <div class="col-12 col-md-3 date-filter date-mdy d-none">
+                        <label class="form-label fw-semibold">Date To</label>
+                        <input type="date" name="date_to" class="form-control shadow-sm"
+                            value="<?= htmlspecialchars($_GET['date_to'] ?? '') ?>"
+                            placeholder="End Date (YYYY-MM-DD)">
+                    </div>
+                    
+                    <!-- Year Range -->
+                    <div class="col-12 col-md-3 date-filter date-year d-none">
+                        <label class="form-label fw-semibold">Year From</label>
+                        <input type="number" name="year_from" class="form-control shadow-sm"
+                            min="1900" max="2100"
+                            placeholder="e.g., 2023"
+                            value="<?= htmlspecialchars($_GET['year_from'] ?? '') ?>">
+                    </div>
+                    <div class="col-12 col-md-3 date-filter date-year d-none">
+                        <label class="form-label fw-semibold">Year To</label>
+                        <input type="number" name="year_to" class="form-control shadow-sm"
+                            min="1900" max="2100"
+                            placeholder="e.g., 2025"
+                            value="<?= htmlspecialchars($_GET['year_to'] ?? '') ?>">
+                    </div>
+                    
+                    <!-- Month-Year Range -->
+                    <div class="col-12 col-md-3 date-filter date-month_year d-none">
+                        <label class="form-label fw-semibold">From (MM-YYYY)</label>
+                        <input type="month" name="month_year_from" class="form-control shadow-sm"
+                            value="<?= htmlspecialchars($_GET['month_year_from'] ?? '') ?>"
+                            placeholder="e.g., 2023-01">
+                    </div>
+                    <div class="col-12 col-md-3 date-filter date-month_year d-none">
+                        <label class="form-label fw-semibold">To (MM-YYYY)</label>
+                        <input type="month" name="month_year_to" class="form-control shadow-sm"
+                            value="<?= htmlspecialchars($_GET['month_year_to'] ?? '') ?>"
+                            placeholder="e.g., 2023-12">
+                    </div>
+                    
+                    <!-- Search bar -->
+                    <div class="col-12 col-sm-6 col-md-3">
+                        <label class="form-label fw-semibold">Search</label>
+                        <div class="input-group shadow-sm">
                             <span class="input-group-text"><i class="fas fa-search"></i></span>
-                            <input type="text" id="searchInput" class="form-control" placeholder="Search archives...">
+                            <input type="text" name="search" id="searchInput" class="form-control" 
+                                placeholder="Search archives..." 
+                                value="<?= htmlspecialchars($_GET['search'] ?? '') ?>">
                         </div>
                     </div>
-                    <div class="col-md-4 mb-2">
-                        <select id="filterAction" class="form-select">
-                            <option value="">All Actions</option>
-                            <option value="create">Create</option>
-                            <option value="modified">Modified</option>
-                            <option value="remove">Remove</option>
-                            <option value="delete">Delete</option>
-                            <option value="restored">Restored</option>
-                        </select>
+                    
+                    <div class="col-6 col-md-2 d-grid">
+                        <button type="submit" id="applyFilters" class="btn btn-dark">
+                            <i class="fas fa-filter"></i> Filter
+                        </button>
                     </div>
-                    <div class="col-md-4 mb-2">
-                        <select id="filterStatus" class="form-select">
-                            <option value="">All Status</option>
-                            <option value="successful">Successful</option>
-                            <option value="failed">Failed</option>
-                        </select>
+                    
+                    <div class="col-6 col-md-2 d-grid">
+                        <button type="button" id="clearFilters" class="btn btn-secondary shadow-sm">
+                            <i class="fas fa-times-circle"></i> Clear
+                        </button>
                     </div>
-                </div>
+                </form>
                 
                 <div class="table-responsive" id="table">
                     <table id="archiveTable" class="table table-hover">
@@ -478,28 +615,32 @@ function formatChanges($oldJsonStr)
         const statusFilter = document.getElementById('filterStatus');
         const searchInput = document.getElementById('searchInput');
         
-        // Set up direct event handlers on this page
-        if (actionFilter) {
-            actionFilter.addEventListener('change', function() {
-                if (typeof filterTable === 'function') {
-                    filterTable();
-                }
-            });
-        }
+        // Remove direct event handlers to prevent immediate filtering
+        // Only filter when the form is submitted via the Filter button
         
-        if (statusFilter) {
-            statusFilter.addEventListener('change', function() {
-                if (typeof filterTable === 'function') {
-                    filterTable();
-                }
-            });
+        // Date filter handling
+        const filterType = document.getElementById('dateFilterType');
+        const allDateFilters = document.querySelectorAll('.date-filter');
+
+        function updateDateFields() {
+            allDateFilters.forEach(field => field.classList.add('d-none'));
+            if (!filterType.value) return;
+            document.querySelectorAll('.date-' + filterType.value).forEach(field => field.classList.remove('d-none'));
         }
-        
-        if (searchInput) {
-            searchInput.addEventListener('input', function() {
-                if (typeof filterTable === 'function') {
-                    filterTable();
-                }
+
+        if (filterType) {
+            filterType.addEventListener('change', updateDateFields);
+            updateDateFields(); // Initialize on page load
+        }
+
+        // Clear filters button
+        const clearFiltersBtn = document.getElementById('clearFilters');
+        if (clearFiltersBtn) {
+            clearFiltersBtn.addEventListener('click', function() {
+                const form = document.getElementById('archiveFilterForm');
+                form.reset();
+                updateDateFields();
+                form.submit();
             });
         }
     });
@@ -555,30 +696,8 @@ function formatChanges($oldJsonStr)
             }
         }
         
-        // Run forcePaginationCheck after pagination updates
-        const originalUpdatePagination = window.updatePagination || function() {};
-        window.updatePagination = function() {
-            // Get all rows again in case the DOM was updated
-            window.allRows = Array.from(document.querySelectorAll('#archiveTableBody tr'));
-            
-            // If filtered rows is empty or not defined, use all rows
-            if (!window.filteredRows || window.filteredRows.length === 0) {
-                window.filteredRows = window.allRows;
-            }
-            
-            // Update total rows display
-            const totalRowsEl = document.getElementById('totalRows');
-            if (totalRowsEl) {
-                totalRowsEl.textContent = window.filteredRows.length;
-            }
-            
-            // Call original updatePagination
-            originalUpdatePagination();
-            forcePaginationCheck();
-        };
-        
-        // Call updatePagination immediately
-        updatePagination();
+        // Initial check
+        setTimeout(forcePaginationCheck, 100);
     });
     
     var deleteId = null;

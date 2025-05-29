@@ -40,6 +40,80 @@ if (!in_array(strtolower($sort_order), ['asc', 'desc'])) {
     $sort_order = 'desc'; // Fallback to default
 }
 
+// --- Filter Logic ---
+$dateFilterType = $_GET['date_filter_type'] ?? '';
+$baseWhere = "a.Module IN ('Purchase Order', 'Charge Invoice', 'Receiving Report')
+  AND LOWER(a.Action) IN ('delete', 'remove', 'soft delete', 'permanent delete')
+  AND a.TrackID = (
+      SELECT MAX(a2.TrackID)
+      FROM audit_log a2
+      WHERE a2.EntityID = a.EntityID
+        AND a2.Module = a.Module
+  )
+  AND (
+      (a.Module = 'Purchase Order' AND po.is_disabled = 1)
+      OR (a.Module = 'Charge Invoice' AND ci.is_disabled = 1)
+      OR (a.Module = 'Receiving Report' AND rr.is_disabled = 1)
+  )";
+$params = [];
+
+// Apply action filter
+if (!empty($_GET['action_type'])) {
+    $baseWhere .= " AND a.Action = :action_type";
+    $params[':action_type'] = $_GET['action_type'];
+}
+
+// Apply status filter
+if (!empty($_GET['status'])) {
+    $baseWhere .= " AND a.Status = :status";
+    $params[':status'] = $_GET['status'];
+}
+
+// Apply search filter
+if (!empty($_GET['search'])) {
+    $searchTerm = '%' . $_GET['search'] . '%';
+    $baseWhere .= " AND (
+        op.Email LIKE :search_email 
+        OR a.Details LIKE :search_details
+        OR a.OldVal LIKE :search_oldval
+        OR a.NewVal LIKE :search_newval
+    )";
+    $params[':search_email'] = $searchTerm;
+    $params[':search_details'] = $searchTerm;
+    $params[':search_oldval'] = $searchTerm;
+    $params[':search_newval'] = $searchTerm;
+}
+
+// Apply date filters
+if ($dateFilterType === 'mdy') {
+    if (!empty($_GET['date_from'])) {
+        $baseWhere .= " AND DATE(a.Date_Time) >= :date_from";
+        $params[':date_from'] = $_GET['date_from'];
+    }
+    if (!empty($_GET['date_to'])) {
+        $baseWhere .= " AND DATE(a.Date_Time) <= :date_to";
+        $params[':date_to'] = $_GET['date_to'];
+    }
+} else if ($dateFilterType === 'month_year') {
+    if (!empty($_GET['month_year_from'])) {
+        $baseWhere .= " AND a.Date_Time >= STR_TO_DATE(:month_year_from, '%Y-%m')";
+        $params[':month_year_from'] = $_GET['month_year_from'];
+    }
+    if (!empty($_GET['month_year_to'])) {
+        $baseWhere .= " AND a.Date_Time < DATE_ADD(STR_TO_DATE(:month_year_to, '%Y-%m'), INTERVAL 1 MONTH)";
+        $params[':month_year_to'] = $_GET['month_year_to'];
+    }
+} else if ($dateFilterType === 'year') {
+    if (!empty($_GET['year_from'])) {
+        $baseWhere .= " AND YEAR(a.Date_Time) >= :year_from";
+        $params[':year_from'] = $_GET['year_from'];
+    }
+    if (!empty($_GET['year_to'])) {
+        $baseWhere .= " AND YEAR(a.Date_Time) <= :year_to";
+        $params[':year_to'] = $_GET['year_to'];
+    }
+}
+
 $orderByClause = "ORDER BY " . $allowedSortColumns[$sort_by] . " " . strtoupper($sort_order);
 
 $query = "
@@ -60,26 +134,14 @@ JOIN users op ON a.UserID = op.id
 LEFT JOIN purchase_order po ON a.Module = 'Purchase Order' AND a.EntityID = po.id
 LEFT JOIN charge_invoice ci ON a.Module = 'Charge Invoice' AND a.EntityID = ci.id
 LEFT JOIN receive_report rr ON a.Module = 'Receiving Report' AND a.EntityID = rr.id
-WHERE a.Module IN ('Purchase Order', 'Charge Invoice', 'Receiving Report')
-  AND LOWER(a.Action) IN ('delete', 'remove', 'soft delete', 'permanent delete')
-  AND a.TrackID = (
-      SELECT MAX(a2.TrackID)
-      FROM audit_log a2
-      WHERE a2.EntityID = a.EntityID
-        AND a2.Module = a.Module
-  )
-  AND (
-      (a.Module = 'Purchase Order' AND po.is_disabled = 1)
-      OR (a.Module = 'Charge Invoice' AND ci.is_disabled = 1)
-      OR (a.Module = 'Receiving Report' AND rr.is_disabled = 1)
-  )
+WHERE " . $baseWhere . "
 {$orderByClause}
 ";
 
 
 try {
     $stmt = $pdo->prepare($query);
-    $stmt->execute();
+    $stmt->execute($params);
     $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
     if (!$logs) {
         $logs = [];
@@ -236,31 +298,107 @@ function formatChanges($oldJsonStr)
                         </div>
                     </div>
 
-                    <div class="row mb-4">
-                        <div class="col-md-4 mb-2">
-                            <div class="input-group">
+                    <!-- Filter Section -->
+                    <form method="GET" class="row g-3 mb-4" id="archiveFilterForm" action="">
+                        <div class="col-md-3">
+                            <label for="action_type" class="form-label">Action Type</label>
+                            <select class="form-select" name="action_type" id="filterAction">
+                                <option value="">All Actions</option>
+                                <option value="Create" <?= ($_GET['action_type'] ?? '') === 'Create' ? 'selected' : '' ?>>Create</option>
+                                <option value="Modified" <?= ($_GET['action_type'] ?? '') === 'Modified' ? 'selected' : '' ?>>Modified</option>
+                                <option value="Remove" <?= ($_GET['action_type'] ?? '') === 'Remove' ? 'selected' : '' ?>>Remove</option>
+                                <option value="Delete" <?= ($_GET['action_type'] ?? '') === 'Delete' ? 'selected' : '' ?>>Delete</option>
+                                <option value="Restored" <?= ($_GET['action_type'] ?? '') === 'Restored' ? 'selected' : '' ?>>Restored</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-select" name="status" id="filterStatus">
+                                <option value="">All Status</option>
+                                <option value="Successful" <?= ($_GET['status'] ?? '') === 'Successful' ? 'selected' : '' ?>>Successful</option>
+                                <option value="Failed" <?= ($_GET['status'] ?? '') === 'Failed' ? 'selected' : '' ?>>Failed</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Date Range selector -->
+                        <div class="col-12 col-md-3">
+                            <label class="form-label fw-semibold">Date Filter Type</label>
+                            <select id="dateFilterType" name="date_filter_type" class="form-select shadow-sm">
+                                <option value="" <?= empty($_GET['date_filter_type']) ? 'selected' : '' ?>>-- Select Type --</option>
+                                <option value="month_year" <?= (($_GET['date_filter_type'] ?? '') === 'month_year') ? 'selected' : '' ?>>Month-Year Range</option>
+                                <option value="year" <?= (($_GET['date_filter_type'] ?? '') === 'year') ? 'selected' : '' ?>>Year Range</option>
+                                <option value="mdy" <?= (($_GET['date_filter_type'] ?? '') === 'mdy') ? 'selected' : '' ?>>Month-Date-Year Range</option>
+                            </select>
+                        </div>
+                        
+                        <!-- MDY Range -->
+                        <div class="col-12 col-md-3 date-filter date-mdy d-none">
+                            <label class="form-label fw-semibold">Date From</label>
+                            <input type="date" name="date_from" class="form-control shadow-sm"
+                                value="<?= htmlspecialchars($_GET['date_from'] ?? '') ?>"
+                                placeholder="Start Date (YYYY-MM-DD)">
+                        </div>
+                        <div class="col-12 col-md-3 date-filter date-mdy d-none">
+                            <label class="form-label fw-semibold">Date To</label>
+                            <input type="date" name="date_to" class="form-control shadow-sm"
+                                value="<?= htmlspecialchars($_GET['date_to'] ?? '') ?>"
+                                placeholder="End Date (YYYY-MM-DD)">
+                        </div>
+                        
+                        <!-- Year Range -->
+                        <div class="col-12 col-md-3 date-filter date-year d-none">
+                            <label class="form-label fw-semibold">Year From</label>
+                            <input type="number" name="year_from" class="form-control shadow-sm"
+                                min="1900" max="2100"
+                                placeholder="e.g., 2023"
+                                value="<?= htmlspecialchars($_GET['year_from'] ?? '') ?>">
+                        </div>
+                        <div class="col-12 col-md-3 date-filter date-year d-none">
+                            <label class="form-label fw-semibold">Year To</label>
+                            <input type="number" name="year_to" class="form-control shadow-sm"
+                                min="1900" max="2100"
+                                placeholder="e.g., 2025"
+                                value="<?= htmlspecialchars($_GET['year_to'] ?? '') ?>">
+                        </div>
+                        
+                        <!-- Month-Year Range -->
+                        <div class="col-12 col-md-3 date-filter date-month_year d-none">
+                            <label class="form-label fw-semibold">From (MM-YYYY)</label>
+                            <input type="month" name="month_year_from" class="form-control shadow-sm"
+                                value="<?= htmlspecialchars($_GET['month_year_from'] ?? '') ?>"
+                                placeholder="e.g., 2023-01">
+                        </div>
+                        <div class="col-12 col-md-3 date-filter date-month_year d-none">
+                            <label class="form-label fw-semibold">To (MM-YYYY)</label>
+                            <input type="month" name="month_year_to" class="form-control shadow-sm"
+                                value="<?= htmlspecialchars($_GET['month_year_to'] ?? '') ?>"
+                                placeholder="e.g., 2023-12">
+                        </div>
+                        
+                        <!-- Search bar -->
+                        <div class="col-12 col-sm-6 col-md-3">
+                            <label class="form-label fw-semibold">Search</label>
+                            <div class="input-group shadow-sm">
                                 <span class="input-group-text"><i class="fas fa-search"></i></span>
-                                <input type="text" id="searchInput" class="form-control" placeholder="Search equipment type archives...">
+                                <input type="text" name="search" id="searchInput" class="form-control" 
+                                    placeholder="Search equipment type archives..." 
+                                    value="<?= htmlspecialchars($_GET['search'] ?? '') ?>">
                             </div>
                         </div>
-                        <div class="col-md-4 mb-2">
-                            <select id="filterAction" class="form-select">
-                                <option value="">All Actions</option>
-                                <option value="create">Create</option>
-                                <option value="modified">Modified</option>
-                                <option value="remove">Remove</option>
-                                <option value="delete">Delete</option>
-                                <option value="restored">Restored</option>
-                            </select>
+                        
+                        <div class="col-6 col-md-2 d-grid">
+                            <button type="submit" id="applyFilters" class="btn btn-dark">
+                                <i class="fas fa-filter"></i> Filter
+                            </button>
                         </div>
-                        <div class="col-md-4 mb-2">
-                            <select id="filterStatus" class="form-select">
-                                <option value="">All Status</option>
-                                <option value="successful">Successful</option>
-                                <option value="failed">Failed</option>
-                            </select>
+                        
+                        <div class="col-6 col-md-2 d-grid">
+                            <button type="button" id="clearFilters" class="btn btn-secondary shadow-sm">
+                                <i class="fas fa-times-circle"></i> Clear
+                            </button>
                         </div>
-                    </div>
+                    </form>
 
                     <div class="table-responsive" id="table">
                         <table id="archiveTable" class="table table-hover">
@@ -482,6 +620,7 @@ function formatChanges($oldJsonStr)
     <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js" defer></script>
     <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/archive_filters.js" defer></script>
     <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/sort_archives.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <?php include '../../../general/footer.php'; ?>
     <script>
         // Pass RBAC permissions to JavaScript
@@ -962,6 +1101,38 @@ function formatChanges($oldJsonStr)
                 }
             });
         }); // End of jQuery document ready
+
+        // Custom script to ensure filtering only happens on button click
+        document.addEventListener('DOMContentLoaded', function() {
+            // Only keep the date filter type handler to show/hide date inputs
+            // Remove any handlers that might trigger filtering on input change
+            
+            // Date filter handling - keep this functionality
+            const filterType = document.getElementById('dateFilterType');
+            const allDateFilters = document.querySelectorAll('.date-filter');
+
+            function updateDateFields() {
+                allDateFilters.forEach(field => field.classList.add('d-none'));
+                if (!filterType.value) return;
+                document.querySelectorAll('.date-' + filterType.value).forEach(field => field.classList.remove('d-none'));
+            }
+
+            if (filterType) {
+                // Remove any previous listeners
+                const newFilterType = filterType.cloneNode(true);
+                filterType.parentNode.replaceChild(newFilterType, filterType);
+                
+                // Add only the date field visibility listener
+                newFilterType.addEventListener('change', updateDateFields);
+                updateDateFields(); // Initialize on page load
+            }
+            
+            // Override any filterTable function that might be called on input
+            window.filterTable = function() {
+                console.log("Auto-filtering disabled - click Filter button instead");
+                return false;
+            };
+        });
     </script>
 </body>
 

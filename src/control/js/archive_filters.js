@@ -39,8 +39,14 @@ document.addEventListener('DOMContentLoaded', function() {
             jQuery('#filterAction, #filterStatus').trigger('change');
         }
         
-        // Re-apply filters (which will show all rows since filters are cleared)
-        applyFilters();
+        // Submit form to reload with cleared parameters
+        const filterForm = document.getElementById('archiveFilterForm');
+        if (filterForm) {
+            filterForm.submit();
+        } else {
+            // If form doesn't exist, manually apply filters
+            applyFilters();
+        }
     }
     
     // Apply filters to rows
@@ -131,32 +137,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Wire up event handlers
-    const filterAction = document.getElementById('filterAction');
-    if (filterAction) {
-        filterAction.addEventListener('change', applyFilters);
-    }
-    
-    const filterStatus = document.getElementById('filterStatus');
-    if (filterStatus) {
-        filterStatus.addEventListener('change', applyFilters);
-    }
-    
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput) {
-        // Add debounce for search input to improve performance
-        let debounceTimer;
-        searchInput.addEventListener('input', function() {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(applyFilters, 300);
-        });
-    }
-    
-    // Wire up clear filters button
-    const clearFiltersBtn = document.getElementById('clearArchiveFilters');
-    if (clearFiltersBtn) {
-        clearFiltersBtn.addEventListener('click', clearFilters);
-    }
+    // REMOVED: Event listeners for real-time filtering
+    // Filtering will now happen only when form is submitted
     
     // Handle pagination button clicks
     const prevPage = document.getElementById('prevPage');
@@ -171,6 +153,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const rowsPerPageSelect = document.getElementById('rowsPerPageSelect');
     if (rowsPerPageSelect) {
         rowsPerPageSelect.addEventListener('change', () => setTimeout(captureRows, 100));
+    }
+    
+    // Wire up clear filters button - KEPT FOR BACKWARDS COMPATIBILITY
+    const clearFiltersBtn = document.getElementById('clearFilters');
+    if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener('click', clearFilters);
     }
     
     // Make functions available globally for AJAX callbacks
