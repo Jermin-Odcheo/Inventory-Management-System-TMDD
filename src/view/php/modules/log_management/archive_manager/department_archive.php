@@ -13,12 +13,12 @@ if (!isset($_SESSION['user_id'])) {
 
 // Initialize RBAC for Roles and Privileges
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
-$rbac->requirePrivilege('Roles and Privileges', 'View');
+$rbac->requirePrivilege('Management', 'View');
 
 // Check for additional privileges
-$canRestore = $rbac->hasPrivilege('Roles and Privileges', 'Restore');
-$canRemove = $rbac->hasPrivilege('Roles and Privileges', 'Remove');
-$canDelete = $rbac->hasPrivilege('Roles and Privileges', 'Permanently Delete');
+$canRestore = $rbac->hasPrivilege('Management', 'Restore');
+$canRemove = $rbac->hasPrivilege('Management', 'Remove');
+$canDelete = $rbac->hasPrivilege('Management', 'Permanently Delete');
 
 // --- Sorting Logic ---
 $sort_by = $_GET['sort_by'] ?? 'track_id'; // Default sort column
