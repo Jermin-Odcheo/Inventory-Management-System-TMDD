@@ -739,27 +739,18 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                             <!-- STATUS -->
                                             <td data-label="Status">
                                                 <?php
-                                                // Get the raw status value from the database
-                                                $status = $log['Status'] ?? $log['status'] ?? '';
-                                                
-                                                // Normalize for comparison
-                                                $normalizedStatus = strtolower(trim($status));
-                                                
-                                                // Check if it's a success status
-                                                $isSuccess = in_array($normalizedStatus, ['successful', 'success']);
-                                                
-                                                // Set display text
-                                                $statusText = $isSuccess ? 'Successful' : 'Failed';
-                                                
-                                                // Debug info - hidden in HTML comments
-                                                echo "<!-- Raw Status: '" . htmlspecialchars($status) . "' -->";
-                                                echo "<!-- Normalized: '" . htmlspecialchars($normalizedStatus) . "' -->";
-                                                echo "<!-- Is Success: " . ($isSuccess ? 'true' : 'false') . " -->";
+                                                $rawStatus = $log['Status'] ?? $log['status'] ?? '';
+                                                $normalized = strtolower(trim($rawStatus));
+                                                $isSuccess = in_array($normalized, ['successful', 'success']);
                                                 ?>
+                                                <!-- Raw Status: '<?= htmlspecialchars($rawStatus) ?>' -->
+                                                <!-- Normalized: '<?= htmlspecialchars($normalized) ?>' -->
+                                                <!-- Is Success: <?= $isSuccess ? 'true' : 'false' ?> -->
                                                 <span class="badge <?= $isSuccess ? 'bg-success' : 'bg-danger' ?>">
-                                                    <?= getStatusIcon($status) . ' ' . htmlspecialchars($statusText) ?>
+                                                    <?= getStatusIcon($rawStatus) . ' ' . ($isSuccess ? 'Successful' : 'Failed') ?>
                                                 </span>
                                             </td>
+
 
                                             <!-- DATE & TIME -->
                                             <td data-label="Date & Time">
