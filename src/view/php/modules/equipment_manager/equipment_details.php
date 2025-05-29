@@ -47,26 +47,30 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) 
             $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
             $search = trim($_POST['query'] ?? '');
             $filter = trim($_POST['filter'] ?? '');
-            $sql = "SELECT id, asset_tag, asset_description_1, asset_description_2, specifications, 
-brand, model, serial_number, date_acquired, location, accountable_individual, rr_no, remarks, date_created, 
-date_modified FROM equipment_details WHERE is_disabled = 0 AND ("
-                . "asset_tag LIKE ? OR "
-                . "asset_description_1 LIKE ? OR "
-                . "asset_description_2 LIKE ? OR "
-                . "specifications LIKE ? OR "
-                . "brand LIKE ? OR "
-                . "model LIKE ? OR "
-                . "serial_number LIKE ? OR "
-                . "location LIKE ? OR "
-                . "accountable_individual LIKE ? OR "
-                . "rr_no LIKE ? OR "
-                . "remarks LIKE ?)";
+            $sql = "SELECT ed.id, ed.asset_tag, ed.asset_description_1, ed.asset_description_2, ed.specifications, 
+ed.brand, ed.model, ed.serial_number, ed.date_acquired, ed.location, ed.accountable_individual, 
+CASE WHEN rr.is_disabled = 1 OR rr.rr_no IS NULL THEN NULL ELSE ed.rr_no END as rr_no, 
+ed.remarks, ed.date_created, ed.date_modified 
+FROM equipment_details ed
+LEFT JOIN receive_report rr ON ed.rr_no = rr.rr_no
+WHERE ed.is_disabled = 0 AND ("
+                . "ed.asset_tag LIKE ? OR "
+                . "ed.asset_description_1 LIKE ? OR "
+                . "ed.asset_description_2 LIKE ? OR "
+                . "ed.specifications LIKE ? OR "
+                . "ed.brand LIKE ? OR "
+                . "ed.model LIKE ? OR "
+                . "ed.serial_number LIKE ? OR "
+                . "ed.location LIKE ? OR "
+                . "ed.accountable_individual LIKE ? OR "
+                . "ed.rr_no LIKE ? OR "
+                . "ed.remarks LIKE ?)";
             $params = array_fill(0, 11, "%$search%");
             if ($filter !== '') {
-                $sql .= " AND asset_description_1 = ?";
+                $sql .= " AND ed.asset_description_1 = ?";
                 $params[] = $filter;
             }
-            $sql .= " ORDER BY id DESC";
+            $sql .= " ORDER BY ed.id DESC";
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
             $equipmentDetails = $stmt->fetchAll();
@@ -458,11 +462,16 @@ if (isset($_SESSION['equipment_details_updated']) && $_SESSION['equipment_detail
 }
 
 try {
-    $stmt = $pdo->query("SELECT id, asset_tag, asset_description_1, asset_description_2,
-                         specifications, brand, model, serial_number, date_acquired, location, 
-accountable_individual, rr_no,
-                         remarks, date_created, date_modified FROM equipment_details WHERE 
-is_disabled = 0 ORDER BY id DESC");
+    // Modified query to join with receive_report table to validate RR numbers
+    $stmt = $pdo->query("SELECT ed.id, ed.asset_tag, ed.asset_description_1, ed.asset_description_2,
+                         ed.specifications, ed.brand, ed.model, ed.serial_number, ed.date_acquired, ed.location, 
+                         ed.accountable_individual, 
+                         CASE WHEN rr.is_disabled = 1 OR rr.rr_no IS NULL THEN NULL ELSE ed.rr_no END as rr_no,
+                         ed.remarks, ed.date_created, ed.date_modified 
+                         FROM equipment_details ed
+                         LEFT JOIN receive_report rr ON ed.rr_no = rr.rr_no
+                         WHERE ed.is_disabled = 0 
+                         ORDER BY ed.id DESC");
     $equipmentDetails = $stmt->fetchAll();
 } catch (PDOException $e) {
     $errors[] = "Error retrieving Equipment Details: " . $e->getMessage();
