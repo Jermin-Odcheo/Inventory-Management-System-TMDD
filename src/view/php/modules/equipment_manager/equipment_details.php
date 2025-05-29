@@ -115,6 +115,7 @@ WHERE ed.is_disabled = 0 AND ("
                             . ' data-brand="' . safeHtml($equipment['brand']) . '"'
                             . ' data-model="' . safeHtml($equipment['model']) . '"'
                             . ' data-serial="' . safeHtml($equipment['serial_number']) . '"'
+                            . ' data-date-acquired="' . safeHtml($equipment['date_acquired']) . '"'
                             . ' data-location="' . safeHtml($equipment['location']) . '"'
                             . ' data-accountable="' . safeHtml($equipment['accountable_individual'])
                             . '"'
@@ -791,6 +792,36 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
         .filtered-out {
             display: none !important;
         }
+        
+        /* Style for highlighting updated rows */
+        .updated-row {
+            animation: highlight-row 3s ease-in-out;
+        }
+
+        @keyframes highlight-row {
+            0% {
+                background-color: rgba(255, 255, 0, 0.5);
+            }
+
+            70% {
+                background-color: rgba(255, 255, 0, 0.5);
+            }
+
+            100% {
+                background-color: transparent;
+            }
+        }
+        
+        /* Filter form styles */
+        #equipmentFilterForm .row {
+            margin-bottom: 10px;
+        }
+        
+        #dateInputsContainer {
+            padding-top: 10px;
+            padding-bottom: 10px;
+            border-top: 1px solid #e9ecef;
+        }
     </style>
 </head>
 
@@ -813,92 +844,197 @@ align-items-center">
             </div>
             <div class="card-body">
                 <div class="container-fluid px-0">
-                    <div class="filter-container" id="filterContainer">
-                        <div class="col-auto">
-                            <?php if ($canCreate): ?>
-                                <button class="btn btn-dark" data-bs-toggle="modal"
-                                    data-bs-target="#addEquipmentModal">
-                                    <i class="bi bi-plus-lg"></i> Create Equipment
-                                </button>
-                            <?php endif; ?>
-                        </div>
-                        <div class="col-md-3">
-                            <select class="form-select" id="filterEquipment">
-                                <option value="">Filter Equipment Type</option>
-                                <option value="all" selected>All Equipment Types</option>
-                                <?php
-                                $equipmentTypes = array_unique(array_column(
-                                    $equipmentDetails,
-                                    'asset_description_1'
-                                ));
-                                foreach ($equipmentTypes as $type) {
-                                    if (!empty($type)) {
-                                        echo "<option value='" . safeHtml($type) . "'>" .
-                                            safeHtml($type) . "</option>";
+                    <form id="equipmentFilterForm" class="mb-4">
+                        <div class="row g-3">
+                            <div class="col-auto">
+                                <?php if ($canCreate): ?>
+                                    <label class="form-label d-none d-md-block">&nbsp;</label>
+                                    <button type="button" class="btn btn-dark" data-bs-toggle="modal"
+                                        data-bs-target="#addEquipmentModal">
+                                        <i class="bi bi-plus-lg"></i> Create Equipment
+                                    </button>
+                                <?php endif; ?>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="filterEquipment" class="form-label">Equipment Type</label>
+                                <select class="form-select" id="filterEquipment" name="filterEquipment">
+                                    <option value="">All Equipment Types</option>
+                                    <?php
+                                    $equipmentTypes = array_unique(array_column(
+                                        $equipmentDetails,
+                                        'asset_description_1'
+                                    ));
+                                    foreach ($equipmentTypes as $type) {
+                                        if (!empty($type)) {
+                                            echo "<option value='" . safeHtml($type) . "'>" .
+                                                safeHtml($type) . "</option>";
+                                        }
                                     }
-                                }
-                                ?>
-                            </select>
-                        </div>
+                                    ?>
+                                </select>
+                            </div>
 
-                        <div class="col-md-3">
-                            <select class="form-select" id="dateFilter">
-                                <option value="">Filter by Date</option>
-                                <option value="desc">Newest to Oldest</option>
-                                <option value="asc">Oldest to Newest</option>
-                                <option value="month">Specific Month</option>
-                                <option value="range">Custom Date Range</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="input-group">
-                                <input type="text" id="searchEquipment" class="form-control"
-                                    placeholder="Search equipment...">
-                                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <div class="col-md-3">
+                                <label for="dateFilter" class="form-label">Date Filter</label>
+                                <select class="form-select" id="dateFilter" name="dateFilter">
+                                    <option value="">No Date Filter</option>
+                                    <option value="desc">Newest to Oldest</option>
+                                    <option value="asc">Oldest to Newest</option>
+                                    <option value="month_year">Month-Year</option>
+                                    <option value="year_range">Year Range</option>
+                                    <option value="mdy">Month-Day-Year</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="searchEquipment" class="form-label">Search</label>
+                                <div class="input-group">
+                                    <input type="text" id="searchEquipment" name="searchEquipment" class="form-control"
+                                        placeholder="Search equipment...">
+                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-2 d-grid">
+                                <label class="form-label d-none d-md-block">&nbsp;</label>
+                                <button type="button" id="applyFilters" class="btn btn-dark">
+                                    <i class="bi bi-filter"></i> Filter
+                                </button>
+                            </div>
+                            <div class="col-6 col-md-2 d-grid">
+                                <label class="form-label d-none d-md-block">&nbsp;</label>
+                                <button type="button" id="clearFilters" class="btn btn-secondary">
+                                    <i class="bi bi-x-circle"></i> Clear
+                                </button>
                             </div>
                         </div>
-                    </div>
 
-                    <div id="dateInputsContainer" class="date-inputs-container">
-                        <div class="month-picker-container" id="monthPickerContainer">
-                            <select class="form-select" id="monthSelect">
-                                <option value="">Select Month</option>
-                                <?php
-                                $months = [
-                                    'January',
-                                    'February',
-                                    'March',
-                                    'April',
-                                    'May',
-                                    'June',
-                                    'July',
-                                    'August',
-                                    'September',
-                                    'October',
-                                    'November',
-                                    'December'
-                                ];
-                                foreach ($months as $index => $month) {
-                                    echo "<option value='" . ($index + 1) . "'>" . $month .
-                                        "</option>";
-                                }
-                                ?>
-                            </select>
-                            <select class="form-select" id="yearSelect">
-                                <option value="">Select Year</option>
-                                <?php
-                                $currentYear = date('Y');
-                                for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
-                                    echo "<option value='" . $year . "'>" . $year . "</option>";
-                                }
-                                ?>
-                            </select>
+                        <div id="dateInputsContainer" class="row g-3 mt-2 d-none">
+                            <!-- Month-Year Selector -->
+                            <div class="col-md-6 date-filter date-month_year d-none">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label for="monthSelect" class="form-label">Month</label>
+                                        <select class="form-select" id="monthSelect" name="monthSelect">
+                                            <option value="">Select Month</option>
+                                            <?php
+                                            $months = [
+                                                'January',
+                                                'February',
+                                                'March',
+                                                'April',
+                                                'May',
+                                                'June',
+                                                'July',
+                                                'August',
+                                                'September',
+                                                'October',
+                                                'November',
+                                                'December'
+                                            ];
+                                            foreach ($months as $index => $month) {
+                                                echo "<option value='" . ($index + 1) . "'>" . $month .
+                                                    "</option>";
+                                            }
+                                            ?>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="yearSelect" class="form-label">Year</label>
+                                        <select class="form-select" id="yearSelect" name="yearSelect">
+                                            <option value="">Select Year</option>
+                                            <?php
+                                            $currentYear = date('Y');
+                                            for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
+                                                echo "<option value='" . $year . "'>" . $year . "</option>";
+                                            }
+                                            ?>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Year Range Selector -->
+                            <div class="col-md-6 date-filter date-year_range d-none">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label for="yearFrom" class="form-label">From Year</label>
+                                        <select class="form-select" id="yearFrom" name="yearFrom">
+                                            <option value="">Select Year</option>
+                                            <?php
+                                            for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
+                                                echo "<option value='" . $year . "'>" . $year . "</option>";
+                                            }
+                                            ?>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="yearTo" class="form-label">To Year</label>
+                                        <select class="form-select" id="yearTo" name="yearTo">
+                                            <option value="">Select Year</option>
+                                            <?php
+                                            for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
+                                                echo "<option value='" . $year . "'>" . $year . "</option>";
+                                            }
+                                            ?>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Date Range Picker -->
+                            <div class="col-md-6 date-filter date-range d-none">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label for="dateFrom" class="form-label">From Date</label>
+                                        <input type="date" class="form-control" id="dateFrom" name="dateFrom">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="dateTo" class="form-label">To Date</label>
+                                        <input type="date" class="form-control" id="dateTo" name="dateTo">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- MDY Picker -->
+                            <div class="col-md-6 date-filter date-mdy d-none">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <label for="mdyMonth" class="form-label">Month</label>
+                                        <select class="form-select" id="mdyMonth" name="mdyMonth">
+                                            <option value="">Month</option>
+                                            <?php
+                                            foreach ($months as $index => $month) {
+                                                echo "<option value='" . ($index + 1) . "'>" . $month .
+                                                    "</option>";
+                                            }
+                                            ?>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="mdyDay" class="form-label">Day</label>
+                                        <select class="form-select" id="mdyDay" name="mdyDay">
+                                            <option value="">Day</option>
+                                            <?php
+                                            for ($day = 1; $day <= 31; $day++) {
+                                                echo "<option value='" . $day . "'>" . $day . "</option>";
+                                            }
+                                            ?>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="mdyYear" class="form-label">Year</label>
+                                        <select class="form-select" id="mdyYear" name="mdyYear">
+                                            <option value="">Year</option>
+                                            <?php
+                                            for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
+                                                echo "<option value='" . $year . "'>" . $year . "</option>";
+                                            }
+                                            ?>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="date-range-container" id="dateRangePickers">
-                            <input type="date" class="form-control" id="dateFrom" placeholder="From">
-                            <input type="date" class="form-control" id="dateTo" placeholder="To">
-                        </div>
-                    </div>
+                    </form>
                 </div>
                 <div class="table-responsive" id="table">
                     <table class="table" id="edTable">
@@ -943,8 +1079,7 @@ H:i', strtotime($equipment['date_modified'])) : ''; ?></td>
                                         <td><?= safeHtml((strpos($equipment['rr_no'] ?? '', 'RR') ===
                                                 0 ? $equipment['rr_no'] : ('RR' . $equipment['rr_no']))); ?></td>
                                         <td><?= safeHtml($equipment['location']); ?></td>
-                                        <td><?= safeHtml($equipment['accountable_individual']);
-                                            ?></td>
+                                        <td><?= safeHtml($equipment['accountable_individual']); ?></td>
                                         <td><?= safeHtml($equipment['remarks']); ?></td>
                                         <td>
                                             <div class="btn-group">
@@ -1592,687 +1727,627 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
             });
         });
     </script>
-    <style>
-        .filtered-out {
-            display: none !important;
-        }
-
-        /* Style for highlighting updated rows */
-        .updated-row {
-            animation: highlight-row 3s ease-in-out;
-        }
-
-        @keyframes highlight-row {
-            0% {
-                background-color: rgba(255, 255, 0, 0.5);
-            }
-
-            70% {
-                background-color: rgba(255, 255, 0, 0.5);
-            }
-
-            100% {
-                background-color: transparent;
-            }
-        }
-    </style>
     <script>
         // Custom filterTable function for equipment details
-        window.filterTable = function() {
-            console.log('filterTable called.');
+        function filterEquipmentTable() {
+            console.log('----------- CUSTOM FILTER FUNCTION CALLED -----------');
+            
             // Get filter values
             const searchText = $('#searchEquipment').val() || '';
             const filterEquipment = $('#filterEquipment').val() || '';
             const dateFilterType = $('#dateFilter').val() || '';
+            
+            // Month-Year filter values
             const selectedMonth = $('#monthSelect').val() || '';
             const selectedYear = $('#yearSelect').val() || '';
+            
+            // Date Range filter values
             const dateFrom = $('#dateFrom').val() || '';
             const dateTo = $('#dateTo').val() || '';
+            
+            // Year Range filter values
+            const yearFrom = $('#yearFrom').val() || '';
+            const yearTo = $('#yearTo').val() || '';
+            
+            // MDY filter values
+            const mdyMonth = $('#mdyMonth').val() || '';
+            const mdyDay = $('#mdyDay').val() || '';
+            const mdyYear = $('#mdyYear').val() || '';
 
-            // Debug output
-            console.log('FILTER VALUES AT START OF filterTable:', {
-                searchText: searchText,
-                filterEquipment: filterEquipment,
-                dateFilterType: dateFilterType,
-                selectedMonth: selectedMonth,
-                selectedYear: selectedYear,
-                dateFrom: dateFrom,
-                dateTo: dateTo
+            // Debug output filter values
+            console.log('FILTER VALUES:', {
+                searchText,
+                filterEquipment,
+                dateFilterType,
+                selectedMonth,
+                selectedYear,
+                dateFrom,
+                dateTo,
+                yearFrom,
+                yearTo,
+                mdyMonth,
+                mdyDay,
+                mdyYear
             });
 
-            // Make sure we have allRows populated from the current DOM
-            window.allRows = Array.from(document.querySelectorAll('#equipmentTable tr:not(#noResultsMessage)'));
-
-            // Reset filteredRows array
-            window.filteredRows = [];
-
-            // Explicitly hide all rows before filtering and pagination to ensure a clean slate
-            $('#equipmentTable tr').hide(); // Hide all rows
-
-            // Filter each row
-            window.allRows.forEach(row => {
-                // Get text content for filtering
-                const rowText = row.textContent || '';
-
-                // Get equipment type column (3rd column, index 2)
-                const equipmentTypeCell = row.cells && row.cells.length > 2 ? row.cells[2] : null;
-                const equipmentTypeText = equipmentTypeCell ? equipmentTypeCell.textContent.trim() || '' : '';
-
-                // Get date column (10th column, index 9 - created date)
-                const dateCell = row.cells && row.cells.length > 9 ? row.cells[9] : null;
-                const dateText = dateCell ? dateCell.textContent.trim() || '' : '';
-                const date = dateText ? new Date(dateText) : null;
-
-                // Apply search filter (case insensitive)
-                const searchMatch = !searchText || rowText.toLowerCase().includes(searchText.toLowerCase());
-
-                // Apply equipment type filter (case insensitive, exact match)
-                let equipmentMatch = true;
-                if (filterEquipment && filterEquipment !== 'all' && filterEquipment.toLowerCase() !== 'filter equipment type') {
-                    equipmentMatch = equipmentTypeText.toLowerCase() === filterEquipment.trim().toLowerCase();
+            // Get all table rows directly
+            const tableRows = $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').toArray();
+            console.log(`Total rows in table: ${tableRows.length}`);
+            
+            // If no rows, show message and exit
+            if (tableRows.length === 0) {
+                console.log('No rows found in table');
+                return;
+            }
+            
+            // Create filtered array
+            const filteredRows = [];
+            
+            // Apply filters to each row
+            tableRows.forEach((row, index) => {
+                // Skip non-data rows (like messages)
+                if (row.id === 'noResultsMessage' || row.id === 'initialFilterMessage') {
+                    return;
                 }
-
-                // Apply date filter
-                let dateMatch = true;
-                if (dateFilterType && date) {
-                    if (dateFilterType === 'month' && selectedMonth && selectedYear) {
-                        dateMatch = (date.getMonth() + 1 === parseInt(selectedMonth)) &&
-                            (date.getFullYear() === parseInt(selectedYear));
-                    } else if (dateFilterType === 'range') {
-                        if (dateFrom && dateTo) {
-                            const from = new Date(dateFrom);
-                            const to = new Date(dateTo);
-                            to.setHours(23, 59, 59); // End of day
-                            dateMatch = date >= from && date <= to;
-                        } else {
-                            // If range is selected but dates are not, don't filter by date
-                            dateMatch = true;
+                
+                try {
+                    // Get all cells in the row
+                    const cells = Array.from(row.cells || []);
+                    
+                    if (cells.length === 0) {
+                        console.log(`Row ${index} has no cells`);
+                        return;
+                    }
+                    
+                    // Extract text content from all cells for easier access
+                    const cellTexts = [];
+                    let equipmentTypeText = '';
+                    let dateText = '';
+                    
+                    // Process each cell
+                    cells.forEach((cell, cellIndex) => {
+                        const text = (cell.textContent || '').trim();
+                        cellTexts.push(text.toLowerCase());
+                        
+                        // Store important column values
+                        if (cellIndex === 2) equipmentTypeText = text.toLowerCase(); // Equipment Type (Col 3)
+                        if (cellIndex === 9) dateText = text; // Created Date (Col 10)
+                    });
+                    
+                    // Full row text for search
+                    const rowText = cellTexts.join(' ');
+                    
+                    // 1. SEARCH FILTER - Check if search text is in any cell
+                    const searchMatch = !searchText || rowText.includes(searchText.toLowerCase());
+                    
+                    // 2. EQUIPMENT TYPE FILTER - Check equipment type
+                    let equipmentMatch = true;
+                    if (filterEquipment && filterEquipment !== '') {
+                        const filterValue = filterEquipment.toLowerCase();
+                        equipmentMatch = equipmentTypeText === filterValue;
+                        
+                        // Debug for first few rows
+                        if (index < 5) {
+                            console.log(`Row ${index} equipment: "${equipmentTypeText}" vs filter: "${filterValue}" = ${equipmentMatch}`);
                         }
                     }
-                }
-
-                // Show or hide row based on filter match
-                const shouldShow = searchMatch && equipmentMatch && dateMatch;
-                if (shouldShow) {
-                    window.filteredRows.push(row);
+                    
+                    // 3. DATE FILTER - Apply date filter if selected
+                    let dateMatch = true;
+                    if (dateFilterType && dateText) {
+                        const date = new Date(dateText);
+                        if (!isNaN(date.getTime())) { // Valid date
+                            if (dateFilterType === 'month_year' && selectedMonth && selectedYear) {
+                                // Month-Year filter
+                                const month = date.getMonth() + 1; // getMonth is 0-indexed
+                                const year = date.getFullYear();
+                                dateMatch = (month === parseInt(selectedMonth)) && (year === parseInt(selectedYear));
+                                if (index < 5) {
+                                    console.log(`Row ${index} month-year filter: ${month}/${year} vs ${selectedMonth}/${selectedYear} = ${dateMatch}`);
+                                }
+                            } else if (dateFilterType === 'range' && dateFrom && dateTo) {
+                                // Date Range filter
+                                const fromDate = new Date(dateFrom);
+                                const toDate = new Date(dateTo);
+                                toDate.setHours(23, 59, 59); // End of day
+                                dateMatch = date >= fromDate && date <= toDate;
+                                if (index < 5) {
+                                    console.log(`Row ${index} date range filter: ${date} between ${fromDate} and ${toDate} = ${dateMatch}`);
+                                }
+                            } else if (dateFilterType === 'year_range' && yearFrom && yearTo) {
+                                // Year Range filter
+                                const year = date.getFullYear();
+                                dateMatch = (year >= parseInt(yearFrom)) && (year <= parseInt(yearTo));
+                                if (index < 5) {
+                                    console.log(`Row ${index} year range filter: ${year} between ${yearFrom} and ${yearTo} = ${dateMatch}`);
+                                }
+                            } else if (dateFilterType === 'mdy' && mdyMonth && mdyDay && mdyYear) {
+                                // MDY filter (exact date match)
+                                const month = date.getMonth() + 1;
+                                const day = date.getDate();
+                                const year = date.getFullYear();
+                                dateMatch = (month === parseInt(mdyMonth)) && 
+                                           (day === parseInt(mdyDay)) && 
+                                           (year === parseInt(mdyYear));
+                                if (index < 5) {
+                                    console.log(`Row ${index} MDY filter: ${month}/${day}/${year} vs ${mdyMonth}/${mdyDay}/${mdyYear} = ${dateMatch}`);
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Final decision - row should be shown if it matches all filters
+                    const shouldShow = searchMatch && equipmentMatch && dateMatch;
+                    
+                    if (shouldShow) {
+                        filteredRows.push(row);
+                        $(row).show();
+                    } else {
+                        $(row).hide();
+                    }
+                    
+                } catch (error) {
+                    console.error(`Error processing row ${index}:`, error);
                 }
             });
-
-            // Sort if needed
+            
+            console.log(`Filtered rows: ${filteredRows.length} of ${tableRows.length}`);
+            
+            // Hide all rows first
+            $(tableRows).hide();
+            
+            // Store filtered rows in global variable for pagination
+            window.allRows = tableRows;
+            window.filteredRows = filteredRows;
+            
+            // Sort if needed (date ascending/descending)
             if (dateFilterType === 'asc' || dateFilterType === 'desc') {
-                window.filteredRows.sort((a, b) => {
-                    const dateA = a.cells && a.cells[9] ? new Date(a.cells[9].textContent) : new Date(0);
-                    const dateB = b.cells && b.cells[9] ? new Date(b.cells[9].textContent) : new Date(0);
+                filteredRows.sort((a, b) => {
+                    const dateA = a.cells && a.cells[9] ? new Date(a.cells[9].textContent || '') : new Date(0);
+                    const dateB = b.cells && b.cells[9] ? new Date(b.cells[9].textContent || '') : new Date(0);
                     return dateFilterType === 'asc' ? dateA - dateB : dateB - dateA;
                 });
+                
+                // Re-order the DOM elements based on sort
+                const tbody = document.getElementById('equipmentTable');
+                filteredRows.forEach(row => {
+                    tbody.appendChild(row); // Move to the end in sorted order
+                });
             }
-
-            // Reset to page 1 and update pagination
-            if (typeof paginationConfig !== 'undefined') {
-                paginationConfig.currentPage = 1;
-            }
-
-            // Update pagination to show/hide rows based on current page
-            if (typeof updatePagination === 'function') {
-                console.log('filterTable calling updatePagination. filteredRows count:', window.filteredRows.length);
-                updatePagination();
+            
+            // Reset to page 1 after filtering
+            window.currentPage = 1;
+            
+            // Initialize or reset pagination with the filtered rows
+            const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
+            const totalRows = window.filteredRows.length;
+            const totalPages = Math.ceil(totalRows / rowsPerPage);
+            
+            // Update display counts
+            $('#currentPage').text(window.currentPage);
+            $('#rowsPerPage').text(rowsPerPage);
+            $('#totalRows').text(totalRows);
+            
+            // Rebuild pagination UI
+            buildPaginationButtons(totalPages);
+            updatePaginationButtons();
+            
+            // Show only the rows for the current page
+            showCurrentPageRows();
+            
+            // Show "no results" message if no matches found
+            if (filteredRows.length === 0) {
+                // Remove any existing no results message
+                $('#noResultsMessage').remove();
+                
+                // Create and insert a "no results" message
+                const tbody = document.getElementById('equipmentTable');
+                const noResultsRow = document.createElement('tr');
+                noResultsRow.id = 'noResultsMessage';
+                noResultsRow.innerHTML = `
+                    <td colspan="16" class="text-center py-4">
+                        <div class="alert alert-warning mb-0">
+                            <i class="bi bi-exclamation-circle me-2"></i> No results found for the current filter criteria.
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(noResultsRow);
+                $(noResultsRow).show();
             } else {
-                console.error('updatePagination function not found in filterTable!');
+                // Remove any "no results" message if we have matches
+                $('#noResultsMessage').remove();
             }
-
-            // Show a message if no results found
-            const noResultsMessage = document.getElementById('noResultsMessage');
-            const tbody = document.getElementById('equipmentTable');
-
-            if (window.filteredRows.length === 0) {
-                if (!noResultsMessage) {
-                    // Create and insert a "no results" message if it doesn't exist
-                    if (tbody) {
-                        const noResultsRow = document.createElement('tr');
-                        noResultsRow.id = 'noResultsMessage';
-                        noResultsRow.innerHTML = `
-                            <td colspan="16" class="text-center py-4">
-                                <div class="alert alert-warning mb-0">
-                                    <i class="bi bi-exclamation-circle me-2"></i> No results found for the current filter criteria.
-                                </div>
-                            </td>
-                        `;
-                        tbody.appendChild(noResultsRow);
-                    }
-                } else {
-                    noResultsMessage.style.display = 'table-row';
-                }
-            } else if (noResultsMessage) {
-                // If there are results, ensure the no results message is hidden
-                noResultsMessage.style.display = 'none';
+            
+            console.log('----------- CUSTOM FILTER FUNCTION COMPLETED -----------');
+            
+            return filteredRows;
+        }
+        
+        // Initialize pagination
+        function initPagination() {
+            // Get pagination configuration
+            const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
+            const totalRows = window.filteredRows ? window.filteredRows.length : 0;
+            const totalPages = Math.ceil(totalRows / rowsPerPage);
+            
+            // Set current page to 1 when initializing (if not already set)
+            window.currentPage = window.currentPage || 1;
+            
+            // If current page is beyond total pages, reset to page 1
+            if (window.currentPage > totalPages && totalPages > 0) {
+                window.currentPage = 1;
             }
+            
+            // Update display counts
+            $('#currentPage').text(window.currentPage);
+            $('#rowsPerPage').text(rowsPerPage);
+            $('#totalRows').text(totalRows);
+            
+            // Update pagination buttons
+            updatePaginationButtons();
+            
+            // Build page number buttons
+            buildPaginationButtons(totalPages);
+            
+            // Show only the rows for the current page
+            showCurrentPageRows();
+            
+            console.log(`Pagination initialized: ${totalRows} rows, ${rowsPerPage} per page, ${totalPages} total pages, current page: ${window.currentPage}`);
+        }
+        
+        // Update the Previous/Next button states
+        function updatePaginationButtons() {
+            const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
+            const totalPages = Math.ceil(window.filteredRows.length / rowsPerPage);
+            
+            // Disable/enable Previous button
+            $('#prevPage').prop('disabled', window.currentPage <= 1);
+            
+            // Disable/enable Next button
+            $('#nextPage').prop('disabled', window.currentPage >= totalPages);
+        }
+        
+        // Build the pagination number buttons
+        function buildPaginationButtons(totalPages) {
+            const $pagination = $('#pagination');
+            $pagination.empty();
+            
+            // No need for pagination if only one page
+            if (totalPages <= 1) {
+                return;
+            }
+            
+            // Calculate range of pages to show
+            let startPage = Math.max(1, window.currentPage - 2);
+            let endPage = Math.min(totalPages, startPage + 4);
+            
+            // Adjust start if end is maxed out
+            if (endPage === totalPages) {
+                startPage = Math.max(1, endPage - 4);
+            }
+            
+            // Add "First" button if not on first page
+            if (window.currentPage > 1) {
+                $pagination.append(`
+                    <li class="page-item">
+                        <a class="page-link" href="#" data-page="1"><i class="bi bi-chevron-double-left"></i></a>
+                    </li>
+                `);
+            }
+            
+            // Add "Previous" page button
+            if (window.currentPage > 1) {
+                $pagination.append(`
+                    <li class="page-item">
+                        <a class="page-link" href="#" data-page="${window.currentPage - 1}"><i class="bi bi-chevron-left"></i></a>
+                    </li>
+                `);
+            }
+            
+            // Add ellipsis if needed at start
+            if (startPage > 1) {
+                $pagination.append('<li class="page-item disabled"><span class="page-link">...</span></li>');
+            }
+            
+            // Add page numbers
+            for (let i = startPage; i <= endPage; i++) {
+                $pagination.append(`
+                    <li class="page-item ${window.currentPage === i ? 'active' : ''}">
+                        <a class="page-link" href="#" data-page="${i}">${i}</a>
+                    </li>
+                `);
+            }
+            
+            // Add ellipsis if needed at end
+            if (endPage < totalPages) {
+                $pagination.append('<li class="page-item disabled"><span class="page-link">...</span></li>');
+            }
+            
+            // Add "Next" page button
+            if (window.currentPage < totalPages) {
+                $pagination.append(`
+                    <li class="page-item">
+                        <a class="page-link" href="#" data-page="${window.currentPage + 1}"><i class="bi bi-chevron-right"></i></a>
+                    </li>
+                `);
+            }
+            
+            // Add "Last" button if not on last page
+            if (window.currentPage < totalPages) {
+                $pagination.append(`
+                    <li class="page-item">
+                        <a class="page-link" href="#" data-page="${totalPages}"><i class="bi bi-chevron-double-right"></i></a>
+                    </li>
+                `);
+            }
+            
+            // Add click handlers to page number buttons
+            $('.page-link[data-page]').on('click', function(e) {
+                e.preventDefault();
+                const page = parseInt($(this).data('page'));
+                goToPage(page);
+            });
+        }
+        
+        // Go to a specific page
+        function goToPage(page) {
+            const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
+            const totalPages = Math.ceil(window.filteredRows.length / rowsPerPage);
+            
+            // Validate page number
+            if (page < 1 || page > totalPages) {
+                return;
+            }
+            
+            // Update current page
+            window.currentPage = page;
+            
+            // Update display
+            $('#currentPage').text(window.currentPage);
+            
+            // Update buttons
+            updatePaginationButtons();
+            buildPaginationButtons(totalPages);
+            
+            // Show rows for the current page
+            showCurrentPageRows();
+        }
+        
+        // Show only the rows for the current page
+        function showCurrentPageRows() {
+            const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
+            const startIndex = (window.currentPage - 1) * rowsPerPage;
+            const endIndex = startIndex + rowsPerPage;
+            
+            // Ensure filteredRows exists
+            if (!window.filteredRows || window.filteredRows.length === 0) {
+                console.log('No filtered rows to display');
+                // Show "no results" message if there is one
+                $('#noResultsMessage').show();
+                return;
+            }
+            
+            console.log(`Showing rows ${startIndex+1} to ${Math.min(endIndex, window.filteredRows.length)} of ${window.filteredRows.length} (Page ${window.currentPage})`);
+            
+            // Hide all rows first
+            $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').hide();
+            
+            // Show only the rows for the current page
+            window.filteredRows.slice(startIndex, endIndex).forEach(row => {
+                $(row).show();
+            });
+            
+            // Make sure "no results" message is visible if present
+            $('#noResultsMessage').show();
+        }
 
-            console.log('Filtered rows after filterTable execution:', window.filteredRows.length);
-        };
-
-        // Set up event listeners for filtering
+        // Setup events when document is ready
         $(document).ready(function() {
-            console.log('Document Ready: Initializing equipment_details.php script.');
-            // Initialize allRows for pagination.js
-            window.allRows = Array.from(document.querySelectorAll('#equipmentTable tr:not(#noResultsMessage)'));
+            console.log('Document ready - initializing equipment filters');
+            
+            // Initialize with all rows visible
+            window.allRows = $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').toArray();
             window.filteredRows = [...window.allRows];
-
-            // Initialize paginationConfig if not already present or initialized
-            if (typeof window.paginationConfig === 'undefined' || !window.paginationConfig.isInitialized) {
-                window.paginationConfig = window.paginationConfig || {}; // Ensure it's an object
-                window.paginationConfig.isInitialized = false; // Set to false initially if not set
-
-                if (typeof window.initPagination === 'function' && !window.paginationConfig.isInitialized) {
-                    window.initPagination({
-                        tableId: 'equipmentTable',
-                        currentPage: 1
-                    });
-                    window.paginationConfig.isInitialized = true; // Mark as initialized
-                    console.log('Main pagination initialized and event listeners attached.');
-                } else {
-                    console.error('initPagination function not found or already initialized. Ensure pagination.js is loaded correctly and only once.');
-                }
-            }
-
-            // Set up the standard event handlers for filtering
-            $('#filterEquipment').on('change', function() {
-                console.log('Event: Equipment filter changed to:', $(this).val());
-
-                // Reset date filters when equipment filter changes
-                if ($(this).val() && $(this).val() !== 'all') {
-                    $('#dateFilter').val('');
-                    $('#monthSelect').val('');
-                    $('#yearSelect').val('');
-                    $('#dateFrom').val('');
-                    $('#dateTo').val('');
-                    $('#dateInputsContainer').hide();
-                }
-
-                filterTable();
+            window.currentPage = 1;
+            
+            // Initialize pagination
+            initPagination();
+            
+            // Ensure pagination shows only first page on initial load and builds pagination buttons
+            setTimeout(function() {
+                const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
+                const totalRows = window.filteredRows.length;
+                const totalPages = Math.ceil(totalRows / rowsPerPage);
+                
+                // Force rebuild pagination buttons
+                buildPaginationButtons(totalPages);
+                showCurrentPageRows();
+                updatePaginationButtons();
+                
+                console.log('Enforced pagination on initial load - Total pages:', totalPages);
+            }, 300);
+            
+            // Apply Filter button click handler
+            $('#applyFilters').off('click').on('click', function(e) {
+                e.preventDefault();
+                console.log('Filter button clicked - applying filters');
+                filterEquipmentTable();
             });
 
-            // Then initialize Select2 with the proper configuration
-            if ($.fn.select2) {
-                try {
-                    // First destroy any existing instance
-                    if ($('#filterEquipment').data('select2')) {
-                        $('#filterEquipment').select2('destroy');
-                    }
+            // Clear filters button handler
+            $('#clearFilters').off('click').on('click', function(e) {
+                e.preventDefault();
+                console.log('Clear button clicked - resetting filters');
+                
+                // Reset all filter inputs
+                $('#searchEquipment').val('');
+                
+                // Reset select2 dropdown
+                if ($('#filterEquipment').data('select2')) {
+                    $('#filterEquipment').val(null).trigger('change');
+                } else {
+                    $('#filterEquipment').val('');
+                }
+                
+                // Reset Date Filter
+                $('#dateFilter').val('');
+                
+                // Reset Month-Year values
+                $('#monthSelect').val('');
+                $('#yearSelect').val('');
+                
+                // Reset Date Range values
+                $('#dateFrom').val('');
+                $('#dateTo').val('');
+                
+                // Reset Year Range values
+                $('#yearFrom').val('');
+                $('#yearTo').val('');
+                
+                // Reset MDY values
+                $('#mdyMonth').val('');
+                $('#mdyDay').val('');
+                $('#mdyYear').val('');
+                
+                // Hide date inputs container
+                $('#dateInputsContainer').addClass('d-none');
+                $('.date-filter').addClass('d-none');
+                
+                // Reset to show all rows (unfiltered state)
+                $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').show();
+                
+                // Remove any "no results" message
+                $('#noResultsMessage').remove();
+                
+                // Reset the filtered rows to include all rows
+                window.allRows = $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').toArray();
+                window.filteredRows = [...window.allRows];
+                
+                // Reset to page 1
+                window.currentPage = 1;
+                
+                // Update display counts
+                const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
+                const totalRows = window.filteredRows.length;
+                $('#currentPage').text(window.currentPage);
+                $('#rowsPerPage').text(rowsPerPage);
+                $('#totalRows').text(totalRows);
+                
+                // Rebuild pagination with all rows
+                const totalPages = Math.ceil(totalRows / rowsPerPage);
+                buildPaginationButtons(totalPages);
+                updatePaginationButtons();
+                
+                // Show only the first page of rows
+                showCurrentPageRows();
+                
+                console.log('Filters cleared, showing all rows');
+            });
+            
+            // Previous page button
+            $('#prevPage').on('click', function(e) {
+                e.preventDefault();
+                if (window.currentPage > 1) {
+                    goToPage(window.currentPage - 1);
+                }
+            });
+            
+            // Next page button
+            $('#nextPage').on('click', function(e) {
+                e.preventDefault();
+                const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
+                const totalPages = Math.ceil(window.filteredRows.length / rowsPerPage);
+                if (window.currentPage < totalPages) {
+                    goToPage(window.currentPage + 1);
+                }
+            });
+            
+            // Rows per page select
+            $('#rowsPerPageSelect').on('change', function() {
+                // Reset to page 1 when changing rows per page
+                window.currentPage = 1;
+                initPagination();
+            });
 
-                    // Initialize with proper settings
+            // Date filter type change handler
+            $('#dateFilter').on('change', function() {
+                const filterType = $(this).val();
+                console.log('Date filter changed to:', filterType);
+
+                // Hide all date containers first
+                $('#dateInputsContainer').addClass('d-none');
+                $('.date-filter').addClass('d-none');
+
+                // Show appropriate containers based on selection
+                if (filterType) {
+                    $('#dateInputsContainer').removeClass('d-none');
+                    
+                    // Show specific date input based on filter type
+                    if (filterType === 'month_year') {
+                        $('.date-month_year').removeClass('d-none');
+                    } else if (filterType === 'year_range') {
+                        $('.date-year_range').removeClass('d-none');
+                    } else if (filterType === 'range') {
+                        $('.date-range').removeClass('d-none');
+                    } else if (filterType === 'mdy') {
+                        $('.date-mdy').removeClass('d-none');
+                    }
+                }
+            });
+            
+            // Initialize Select2 for equipment type filter
+            try {
+                if ($.fn.select2) {
                     $('#filterEquipment').select2({
                         placeholder: 'Filter Equipment Type',
                         allowClear: true,
                         width: '100%',
                         dropdownAutoWidth: true,
                         minimumResultsForSearch: 0
+                    }).on('select2:select', function(e) {
+                        console.log('Equipment type selected:', e.params.data);
+                    }).on('select2:unselect', function() {
+                        console.log('Equipment type filter cleared');
                     });
-
-                    // No need to trigger change here, filterTable() will be called once at the end of $(document).ready
-                    // $('#filterEquipment').val('all').trigger('change'); 
-                } catch (e) {
-                    console.error('Error initializing Select2:', e);
+                    
+                    console.log('Select2 initialized for equipment filter');
                 }
+            } catch (e) {
+                console.error('Error initializing Select2:', e);
             }
-
-            // Add reset button if it doesn't exist
-            if ($('#resetFilters').length === 0) {
-                $('.filter-container').append('<button id="resetFilters" class="btn btn-outline-secondary ms-2">Reset Filters</button>');
-            }
-
-            // Set up event listeners for filtering
-            $('#searchEquipment').on('input', filterTable);
-
-            // Reset filters button handler
-            $(document).on('click', '#resetFilters', function() {
-                console.log('Event: Reset Filters clicked.');
-                // Reset all filter inputs
-                $('#searchEquipment').val('');
-
-                // Set select value first
-                $('#filterEquipment').val('all');
-
-                // Then update Select2 UI if it exists
-                if ($('#filterEquipment').data('select2')) {
-                    // Only trigger select2 change to update UI, not to re-filter
-                    $('#filterEquipment').trigger('change.select2');
-                }
-
-                // Reset other filters
-                $('#dateFilter').val('');
-                $('#monthSelect').val('');
-                $('#yearSelect').val('');
-                $('#dateFrom').val('');
-                $('#dateTo').val('');
-                $('#dateInputsContainer').hide();
-
-                // Apply the filter reset
-                filterTable();
-            });
-
-            $('#dateFilter').on('change', function() {
-                const filterType = $(this).val();
-                console.log('Event: Date filter changed to:', filterType);
-
-                // Hide all containers first
-                $('#dateInputsContainer').hide();
-                $('#monthPickerContainer').hide();
-                $('#dateRangePickers').hide();
-
-                // Reset equipment filter if date filter is applied
-                if (filterType) {
-                    // Set select value first
-                    $('#filterEquipment').val('all');
-
-                    // Then update Select2 UI if it exists
-                    if ($('#filterEquipment').data('select2')) {
-                        $('#filterEquipment').trigger('change.select2');
-                    }
-                }
-
-                // Show appropriate containers based on selection
-                if (filterType === 'month') {
-                    $('#dateInputsContainer').show();
-                    $('#monthPickerContainer').show();
-                } else if (filterType === 'range') {
-                    $('#dateInputsContainer').show();
-                    $('#dateRangePickers').show();
-                } else if (filterType === 'desc' || filterType === 'asc') {
-                    // Apply sorting without showing date inputs
-                    filterTable();
-                }
-            });
-
-            // Handle month/year selection changes
-            $('#monthSelect, #yearSelect').on('change', function() {
-                const month = $('#monthSelect').val();
-                const year = $('#yearSelect').val();
-
-                if (month && year) {
-                    filterTable();
-                }
-            });
-
-            // Handle date range changes
-            $('#dateFrom, #dateTo').on('change', function() {
-                const dateFrom = $('#dateFrom').val();
-                const dateTo = $('#dateTo').val();
-
-                if (dateFrom && dateTo) {
-                    filterTable();
-                }
-            });
-
-            // Check if we need to highlight updated rows
-            <?php if ($forceRefresh && !empty($updatedAssetTag)): ?>
-                setTimeout(function() {
-                    const updatedAssetTag = "<?= htmlspecialchars($updatedAssetTag) ?>";
-                    const rows = document.querySelectorAll('#equipmentTable tr');
-
-                    rows.forEach(row => {
-                        const cells = row.querySelectorAll('td');
-                        if (cells.length > 1) {
-                            const assetTagCell = cells[1]; // Asset tag is in the second column
-                            if (assetTagCell.textContent.trim() === updatedAssetTag) {
-                                // Scroll to the row
-                                row.scrollIntoView({
-                                    behavior: 'smooth',
-                                    block: 'center'
-                                });
-                                // Add highlight class
-                                row.classList.add('updated-row');
-                                // Show toast notification
-                                if (typeof showToast === 'function') {
-                                    showToast('Equipment details for asset tag ' + updatedAssetTag + ' have been updated from location changes', 'success');
-                                }
-                            }
-                        }
-                    });
-                }, 500); // Short delay to ensure DOM is ready
-            <?php endif; ?>
-
-            // Run initial filter to make sure everything is displayed correctly
-            console.log('Document Ready: Calling filterTable for initial render.');
-            filterTable();
-        });
-
-        document.querySelectorAll(".sortable").forEach(header => {
-            header.style.cursor = "pointer";
-            header.addEventListener("click", () => {
-                console.log('Event: Sortable header clicked.');
-                const table = document.querySelector("#edTable");
-                const tbody = table.querySelector("tbody");
-                const columnIndex = parseInt(header.dataset.column);
-                const ascending = !header.classList.contains("asc");
-
-                // Remove asc/desc classes from all headers
-                document.querySelectorAll(".sortable").forEach(h => h.classList.remove("asc", "desc"));
-                header.classList.add(ascending ? "asc" : "desc");
-
-                const rows = Array.from(window.filteredRows).sort((a, b) => { // Sort filteredRows
-                    const aText = a.children[columnIndex] ? a.children[columnIndex].textContent.trim() : '';
-                    const bText = b.children[columnIndex] ? b.children[columnIndex].textContent.trim() : '';
-
-                    const isDate = /\d{4}-\d{2}-\d{2}/.test(aText) || !isNaN(Date.parse(aText));
+            
+            // Set up column sorting
+            $('.sortable').on('click', function() {
+                const columnIndex = parseInt($(this).data('column'));
+                const ascending = !$(this).hasClass('asc');
+                
+                // Update sort indicators
+                $('.sortable').removeClass('asc desc');
+                $(this).addClass(ascending ? 'asc' : 'desc');
+                
+                // Sort the visible rows
+                window.filteredRows.sort((a, b) => {
+                    const aText = a.cells[columnIndex] ? a.cells[columnIndex].textContent.trim() : '';
+                    const bText = b.cells[columnIndex] ? b.cells[columnIndex].textContent.trim() : '';
+                    
+                    const isDate = /^\d{4}-\d{2}-\d{2}/.test(aText);
                     const isNumeric = !isNaN(parseFloat(aText)) && !isNaN(parseFloat(bText));
-
+                    
                     if (isNumeric) {
-                        return ascending ?
-                            parseFloat(aText) - parseFloat(bText) :
-                            parseFloat(bText) - parseFloat(aText);
+                        return ascending ? parseFloat(aText) - parseFloat(bText) : parseFloat(bText) - parseFloat(aText);
                     } else if (isDate) {
-                        return ascending ?
-                            new Date(aText) - new Date(bText) :
-                            new Date(bText) - new Date(aText);
+                        return ascending ? new Date(aText) - new Date(bText) : new Date(bText) - new Date(aText);
                     } else {
-                        return ascending ?
-                            aText.localeCompare(bText) :
-                            bText.localeCompare(aText);
+                        return ascending ? aText.localeCompare(bText) : bText.localeCompare(aText);
                     }
                 });
-
-                // Update filteredRows for pagination
-                window.filteredRows = rows;
-
-                // Reset to page 1 and update pagination
-                paginationConfig.currentPage = 1;
-                updatePagination();
+                
+                // Reset pagination to page 1
+                window.currentPage = 1;
+                initPagination();
             });
-        });
-
-        $(function() {
-            // Add event listener for modal hidden to remove backdrop
-            $('#addEquipmentModal').on('hidden.bs.modal', function () {
-                $('.modal-backdrop').remove();
-            });
-
-            $('#editEquipmentModal').on('hidden.bs.modal', function () {
-                $('.modal-backdrop').remove();
-            });
-
-            $('#deleteEDModal').on('hidden.bs.modal', function () {
-                $('.modal-backdrop').remove();
-            });
-
-            // 1) EDIT button handler
-            $(document).on('click', '.edit-equipment', function() {
-                try {
-                    console.log('Event: Edit Equipment button clicked.');
-                    const d = $(this).data();
-                    $('#edit_equipment_id').val(d.id);
-                    // make sure the asset-tag exists in the dropdown
-                    const $asset = $('#edit_equipment_asset_tag');
-                    if (!$asset.find(`option[value="${d.asset}"]`).length) {
-                        $asset.append(`<option value="${d.asset}">${d.asset}</option>`);
-                    }
-
-                    // First populate all fields from the data attributes
-                    $('#edit_asset_description_1').val(d.desc1);
-                    $('#edit_asset_description_2').val(d.desc2);
-                    $('#edit_specifications').val(d.spec);
-                    $('#edit_brand').val(d.brand);
-                    $('#edit_model').val(d.model);
-                    $('#edit_serial_number').val(d.serial);
-                    $('#edit_date_acquired').val(d.dateAcquired);
-                    $('#edit_location').val(d.location);
-                    $('#edit_accountable_individual').val(d.accountable);
-                    $('#edit_remarks').val(d.remarks);
-
-                    // same for RR#
-                    const $rr = $('#edit_rr_no');
-                    if (d.rr && !$rr.find(`option[value="${d.rr}"]`).length) {
-                        $rr.append(`<option value="${d.rr}">${d.rr}</option>`);
-                    }
-                    $rr.val(d.rr).trigger('change');
-
-                    // Set the asset tag value last and trigger change to activate autofill
-                    $asset.val(d.asset).trigger('change');
-
-                    // show the modal
-                    $('#editEquipmentModal').modal('show');
-                } catch (error) {
-                    console.error('Error in edit-equipment handler:', error);
-                    showToast('Error opening edit form. Please try again.', 'error');
-                }
-            });
-
-            // 2) REMOVE button handler
-            let deleteId = null;
-            $(document).on('click', '.remove-equipment', function(e) {
-                e.preventDefault();
-                console.log('Event: Remove Equipment button clicked.');
-                deleteId = $(this).data('id');
-                $('#deleteEDModal').modal('show');
-            });
-
-            $('#confirmDeleteBtn').on('click', function() {
-                if (!deleteId) return;
-                console.log('Event: Confirm Delete button clicked.');
-                $.ajax({
-                    url: window.location.href,
-                    method: 'POST',
-                    data: {
-                        action: 'remove',
-                        details_id: deleteId
-                    },
-                    dataType: 'json',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    success(resp) {
-                        showToast(resp.message, resp.status === 'success' ? 'success' : 'error');
-                        refreshEquipmentList(false); // Do not show refresh toast
-                        $('#deleteEDModal').modal('hide');
-                    },
-                    error(xhr, _, err) {
-                        showToast(`Error removing equipment: ${err}`, 'error');
-                    }
-                });
-            });
-
-            // 3) Refresh the list (after any CRUD) via AJAX POST to search endpoint
-            // Added showRefreshToast parameter, defaults to true
-            function refreshEquipmentList(showRefreshToast = true) {
-                console.log('refreshEquipmentList called. showRefreshToast:', showRefreshToast);
-
-                // Always send empty filters to the server to get ALL non-disabled data
-                $.ajax({
-                    url: window.location.href, // Same PHP file handles AJAX
-                    method: 'POST',
-                    data: {
-                        action: 'search',
-                        query: '', // Explicitly clear query
-                        filter: '', // Explicitly clear filter
-                        dateFilterType: '', // Explicitly clear date filters
-                        month: '',
-                        year: '',
-                        dateFrom: '',
-                        dateTo: ''
-                    },
-                    dataType: 'json',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    success(resp) {
-                        if (resp.status === 'success') {
-                            $('#equipmentTable').html(resp.html); // Directly replace tbody content
-
-                            // Re-initialize the pagination system completely
-                            if (typeof window.initPagination === 'function') {
-                                // Re-initialize with default settings, which should reset current page to 1
-                                window.initPagination({
-                                    tableId: 'equipmentTable',
-                                    currentPage: 1 // Ensure it starts from the first page
-                                });
-                                console.log('Pagination re-initialized after table refresh.');
-                            } else {
-                                console.error('initPagination function not found after table refresh!');
-                                // Fallback: manually update counts and try to filter
-                                window.allRows = Array.from(document.querySelectorAll('#equipmentTable tr:not(#noResultsMessage)'));
-                                window.filteredRows = [...window.allRows];
-                                const totalRows = window.allRows.length;
-                                $('#totalRows').text(totalRows);
-                                filterTable(); // Call filterTable to manage visibility and pagination
-                            }
-
-                            if (showRefreshToast) {
-                                showToast('Equipment list refreshed successfully', 'success');
-                            }
-                        } else {
-                            showToast(resp.message || 'Error refreshing list', 'error');
-                        }
-                    },
-                    error(xhr, status, error) {
-                        showToast(`Error refreshing equipment list: ${error}`, 'error');
-                        console.error('AJAX Error refreshing list:', xhr.responseText);
-                    }
-                });
-            }
-
-            // 4) CREATE form submit
-            $('#addEquipmentForm').on('submit', function(e) {
-                e.preventDefault();
-                console.log('Event: Add Equipment form submitted.');
-                const btn = $(this).find('button[type=submit]').prop('disabled', true)
-                    .html('<span class="spinner-border spinner-border-sm"></span> Adding…');
-                $.ajax({
-                    url: window.location.href,
-                    method: 'POST',
-                    data: $(this).serialize(),
-                    dataType: 'json',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    success(resp) {
-                        if (resp.status === 'success') {
-                            $('#addEquipmentModal').modal('hide');
-                            showToast(resp.message, 'success');
-                            $('#addEquipmentForm')[0].reset();
-
-                            // Reset search and filter inputs
-                            $('#searchEquipment').val('');
-                            $('#filterEquipment').val('all').trigger('change.select2'); // Reset Select2
-                            $('#dateFilter').val('');
-                            $('#monthSelect').val('');
-                            $('#yearSelect').val('');
-                            $('#dateFrom').val('');
-                            $('#dateTo').val('');
-                            $('#dateInputsContainer').hide();
-
-                            refreshEquipmentList(false); // Do not show refresh toast
-                        } else {
-                            showToast(resp.message, 'error');
-                        }
-                    },
-                    error() {
-                        showToast('Error creating equipment', 'error');
-                    },
-                    complete() {
-                        btn.prop('disabled', false).text('Create Equipment');
-                    }
-                });
-            });
-
-            // 5) UPDATE form submit
-            $('#editEquipmentForm').on('submit', function(e) {
-                e.preventDefault();
-                console.log('Event: Edit Equipment form submitted.');
-
-                // Get the original values from data attributes
-                const $form = $(this);
-                const $editBtn = $('.edit-equipment[data-id="' + $('#edit_equipment_id').val() + '"]');
-                const originalValues = {
-                    asset_tag: $editBtn.data('asset'),
-                    asset_description_1: $editBtn.data('desc1'),
-                    asset_description_2: $editBtn.data('desc2'),
-                    specifications: $editBtn.data('spec'),
-                    brand: $editBtn.data('brand'),
-                    model: $editBtn.data('model'),
-                    serial_number: $editBtn.data('serial'),
-                    location: $editBtn.data('location'),
-                    accountable_individual: $editBtn.data('accountable'),
-                    rr_no: $editBtn.data('rr'),
-                    remarks: $editBtn.data('remarks')
-                };
-
-                // Get current form values
-                const currentValues = {
-                    asset_tag: $('#edit_equipment_asset_tag').val(),
-                    asset_description_1: $('#edit_asset_description_1').val(),
-                    asset_description_2: $('#edit_asset_description_2').val(),
-                    specifications: $('#edit_specifications').val(),
-                    brand: $('#edit_brand').val(),
-                    model: $('#edit_model').val(),
-                    serial_number: $('#edit_serial_number').val(),
-                    location: $('#edit_location').val(),
-                    accountable_individual: $('#edit_accountable_individual').val(),
-                    rr_no: $('#edit_rr_no').val(),
-                    remarks: $('#edit_remarks').val()
-                };
-
-                // Check if any values changed
-                let hasChanges = false;
-                for (const key in originalValues) {
-                    // Handle null/undefined/empty string consistently
-                    const origVal = originalValues[key] || '';
-                    const currVal = currentValues[key] || '';
-                    if (origVal.toString().trim() !== currVal.toString().trim()) {
-                        hasChanges = true;
-                        break;
-                    }
-                }
-
-                // If no changes, show notification and don't submit
-                if (!hasChanges) {
-                    showToast('No changes detected', 'info');
-                    $('#editEquipmentModal').modal('hide');
-                    return;
-                }
-
-                const btn = $(this).find('button[type=submit]').prop('disabled', true)
-                    .html('<span class="spinner-border spinner-border-sm"></span> Saving…');
-                $.ajax({
-                    url: window.location.href,
-                    method: 'POST',
-                    data: $(this).serialize(),
-                    dataType: 'json',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    success(resp) {
-                        if (resp.status === 'success') {
-                            $('#editEquipmentModal').modal('hide');
-                            showToast(resp.message, 'success');
-
-                            // Reset search and filter inputs
-                            $('#searchEquipment').val('');
-                            $('#filterEquipment').val('all').trigger('change.select2'); // Reset Select2
-                            $('#dateFilter').val('');
-                            $('#monthSelect').val('');
-                            $('#yearSelect').val('');
-                            $('#dateFrom').val('');
-                            $('#dateTo').val('');
-                            $('#dateInputsContainer').hide();
-
-                            refreshEquipmentList(false); // Do not show refresh toast
-                        } else {
-                            showToast(resp.message, 'error');
-                        }
-                    },
-                    error(xhr) {
-                        let msg = 'Error updating equipment: ';
-                        try {
-                            msg += JSON.parse(xhr.responseText).message
-                        } catch (e) {
-                            msg += e
-                        }
-                        showToast(msg, 'error');
-                    },
-                    complete() {
-                        btn.prop('disabled', false).text('Save Changes');
-                    }
-                });
-            });
+            
+            console.log('Equipment filters initialization complete');
         });
     </script>
 </body>
