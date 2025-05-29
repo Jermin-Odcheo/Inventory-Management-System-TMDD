@@ -599,6 +599,7 @@ switch ($privNameLower) {
         // Get the module ID from the checkbox ID
         const checkboxId = $(this).attr('id');
         const moduleId = checkboxId.split('_')[1];
+        const privilegeId = checkboxId.split('_')[2];
         const checkboxLabel = $(`label[for="${checkboxId}"]`).text().trim().toLowerCase();
         
         // Skip this logic if the current checkbox is "View"
@@ -606,25 +607,14 @@ switch ($privNameLower) {
             return;
         }
         
-        // Find the View checkbox for this module
+        // Find the View checkbox for this specific module only
         const viewCheckbox = window.editRoleHelpers.getViewCheckboxForModule(moduleId);
         
         if (viewCheckbox) {
             // If this checkbox is checked and it's not View, make sure View is checked too
+            // But ONLY for the current module
             if ($(this).prop('checked')) {
                 viewCheckbox.prop('checked', true);
-            } else {
-                // If this checkbox is unchecked, check if any other non-View privileges are checked
-                const otherChecked = $(`input[name="privileges[]"][id^="priv_${moduleId}_"]:checked`).filter(function() {
-                    const label = $(`label[for="${$(this).attr('id')}"]`).text().trim().toLowerCase();
-                    return label !== 'view';
-                }).length > 0;
-                
-                // Only allow unchecking View if no other privileges are checked
-                if (!otherChecked) {
-                    // All other privileges are unchecked, so View can be unchecked
-                    // Do nothing, allow View to be unchecked manually
-                }
             }
         }
     };
@@ -642,14 +632,27 @@ switch ($privNameLower) {
         $('input[name="privileges[]"]').on('change', window.editRoleHelpers.handlePrivilegeChange);
         
         // Run once on page load to ensure initial state is correct
-        $('input[name="privileges[]"]:checked').each(function() {
-            const checkboxId = $(this).attr('id');
-            const checkboxLabel = $(`label[for="${checkboxId}"]`).text().trim().toLowerCase();
+        // Process each module separately to avoid cross-module effects
+        const moduleIds = new Set();
+        $('input[name="privileges[]"]').each(function() {
+            const id = $(this).attr('id');
+            const moduleId = id.split('_')[1];
+            moduleIds.add(moduleId);
+        });
+        
+        // Process each module independently
+        moduleIds.forEach(function(moduleId) {
+            const moduleCheckboxes = $(`input[name="privileges[]"][id^="priv_${moduleId}_"]:checked`).filter(function() {
+                const label = $(`label[for="${$(this).attr('id')}"]`).text().trim().toLowerCase();
+                return label !== 'view';
+            });
             
-            // Skip if this is the View checkbox
-            if (checkboxLabel !== 'view') {
-                // Trigger the change handler to ensure View is checked if needed
-                $(this).trigger('change');
+            // If any non-View privileges are checked in this module, ensure View is checked for this module
+            if (moduleCheckboxes.length > 0) {
+                const viewCheckbox = window.editRoleHelpers.getViewCheckboxForModule(moduleId);
+                if (viewCheckbox && !viewCheckbox.prop('checked')) {
+                    viewCheckbox.prop('checked', true);
+                }
             }
         });
     });
@@ -664,27 +667,25 @@ switch ($privNameLower) {
             return false;
         }
         
-        // Ensure all modules with any privileges have View checked
-        let moduleIds = [];
+        // Process each module separately during form submission
+        const moduleIds = new Set();
         
         // Get all unique module IDs from checkboxes
         $('input[name="privileges[]"]').each(function() {
             const id = $(this).attr('id');
             const moduleId = id.split('_')[1];
-            if (!moduleIds.includes(moduleId)) {
-                moduleIds.push(moduleId);
-            }
+            moduleIds.add(moduleId);
         });
         
-        // For each module, check if any non-View privileges are checked
+        // Process each module independently - avoid cross-module effects
         moduleIds.forEach(function(moduleId) {
-            // Check if any non-View privileges are checked for this module
+            // Check if any non-View privileges are checked for this specific module
             const hasNonViewChecked = $(`input[name="privileges[]"][id^="priv_${moduleId}_"]:checked`).filter(function() {
                 const label = $(`label[for="${$(this).attr('id')}"]`).text().trim().toLowerCase();
                 return label !== 'view';
             }).length > 0;
             
-            // If any non-View privileges are checked, ensure View is checked too
+            // If any non-View privileges are checked, ensure View is checked too - for this module only
             if (hasNonViewChecked) {
                 const viewCheckbox = window.editRoleHelpers.getViewCheckboxForModule(moduleId);
                 if (viewCheckbox && !viewCheckbox.prop('checked')) {

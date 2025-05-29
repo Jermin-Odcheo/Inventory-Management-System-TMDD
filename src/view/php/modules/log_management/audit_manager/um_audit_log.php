@@ -18,6 +18,22 @@ $rbac = new RBACService($pdo, $_SESSION['user_id']);
 $hasAuditPermission = $rbac->hasPrivilege('Audit', 'Track');
 $hasUMPermission = $rbac->hasPrivilege('User Management', 'Track');
 
+// Initialize date filter type from GET parameter
+$dateFilterType = $_GET['date_filter_type'] ?? '';
+
+// Initialize sorting parameters
+$sortColumn = $_GET['sort'] ?? 'TrackID';
+$sortOrder = $_GET['order'] ?? 'DESC';
+
+// Validate sort column to prevent SQL injection
+$allowedColumns = ['TrackID', 'email', 'Module', 'Action', 'Details', 'Status', 'Date_Time'];
+if (!in_array($sortColumn, $allowedColumns)) {
+    $sortColumn = 'TrackID';
+}
+
+// Validate sort order
+$sortOrder = strtoupper($sortOrder) === 'ASC' ? 'ASC' : 'DESC';
+
 // If user doesn't have permission, show an inline "no permission" page
 if (!$hasAuditPermission && !$hasUMPermission) {
     echo '
@@ -42,6 +58,16 @@ $query = "SELECT audit_log.*, users.email AS email
 $stmt = $pdo->prepare($query);
 $stmt->execute();
 $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Fetch unique values for dropdowns
+$actionTypesQuery = "SELECT DISTINCT Action FROM audit_log WHERE Module = 'User Management' ORDER BY Action";
+$statusTypesQuery = "SELECT DISTINCT Status FROM audit_log WHERE Module = 'User Management' ORDER BY Status";
+
+$actionTypesStmt = $pdo->query($actionTypesQuery);
+$statusTypesStmt = $pdo->query($statusTypesQuery);
+
+$actionTypes = $actionTypesStmt->fetchAll(PDO::FETCH_COLUMN);
+$statusTypes = $statusTypesStmt->fetchAll(PDO::FETCH_COLUMN);
 
 /**
  * Formats a JSON string into an HTML list.
@@ -481,15 +507,25 @@ if ($dateFilterType === 'month_year') {
     }
 }
 
-// Year filter is okay as is.
+// Year filter
+if ($dateFilterType === 'year') {
+    if (!empty($_GET['year_from'])) {
+        $where .= " AND YEAR(audit_log.date_time) >= :year_from";
+        $params[':year_from'] = $_GET['year_from'];
+    }
+    if (!empty($_GET['year_to'])) {
+        $where .= " AND YEAR(audit_log.date_time) <= :year_to";
+        $params[':year_to'] = $_GET['year_to'];
+    }
+}
 
-
+// Modify the query to include sorting
 $query = "
   SELECT audit_log.*, users.email AS email 
   FROM audit_log 
   LEFT JOIN users ON audit_log.UserID = users.id 
   $where 
-  ORDER BY audit_log.TrackID DESC
+  ORDER BY $sortColumn $sortOrder
 ";
 
 $stmt = $pdo->prepare($query);
@@ -539,30 +575,32 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <form method="GET" class="row g-3 mb-4" id="auditFilterForm">
                         <div class="col-md-3">
                             <label for="actionType" class="form-label">Action Type</label>
-                            <select class="form-select live-filter" name="action_type" id="actionType">
+                            <select class="form-select" name="action_type" id="actionType">
                                 <option value="">All</option>
-                                <option value="Create" <?= ($_GET['action_type'] ?? '') === 'Create' ? 'selected' : '' ?>>Create</option>
-                                <option value="Modified" <?= ($_GET['action_type'] ?? '') === 'Modified' ? 'selected' : '' ?>>Modified</option>
-                                <option value="Remove" <?= ($_GET['action_type'] ?? '') === 'Remove' ? 'selected' : '' ?>>Remove</option>
-                                <option value="Restored" <?= ($_GET['action_type'] ?? '') === 'Restored' ? 'selected' : '' ?>>Restored</option>
-                                <option value="Login" <?= ($_GET['action_type'] ?? '') === 'Login' ? 'selected' : '' ?>>Login</option>
-                                <option value="Logout" <?= ($_GET['action_type'] ?? '') === 'Logout' ? 'selected' : '' ?>>Logout</option>
+                                <?php foreach ($actionTypes as $action): ?>
+                                    <option value="<?= htmlspecialchars($action) ?>" <?= ($_GET['action_type'] ?? '') === $action ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($action) ?>
+                                    </option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
 
                         <div class="col-md-3">
                             <label for="status" class="form-label">Status</label>
-                            <select class="form-select live-filter" name="status" id="status">
+                            <select class="form-select" name="status" id="status">
                                 <option value="">All</option>
-                                <option value="Successful" <?= ($_GET['status'] ?? '') === 'Successful' ? 'selected' : '' ?>>Successful</option>
-                                <option value="Failed" <?= ($_GET['status'] ?? '') === 'Failed' ? 'selected' : '' ?>>Failed</option>
+                                <?php foreach ($statusTypes as $status): ?>
+                                    <option value="<?= htmlspecialchars($status) ?>" <?= ($_GET['status'] ?? '') === $status ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($status) ?>
+                                    </option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
 
                         <!-- Date Range selector -->
                         <div class="col-12 col-md-3">
                             <label class="form-label fw-semibold">Date Filter Type</label>
-                            <select id="dateFilterType" name="date_filter_type" class="form-select shadow-sm live-filter">
+                            <select id="dateFilterType" name="date_filter_type" class="form-select shadow-sm">
                                 <option value="" <?= empty($filters['date_filter_type']) ? 'selected' : '' ?>>-- Select Type --</option>
                                 <option value="month_year" <?= (($_GET['date_filter_type'] ?? '') === 'month_year') ? 'selected' : '' ?>>Month-Year Range</option>
                                 <option value="year" <?= (($_GET['date_filter_type'] ?? '') === 'year') ? 'selected' : '' ?>>Year Range</option>
@@ -573,13 +611,13 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <!-- MDY Range -->
                         <div class="col-12 col-md-3 date-filter date-mdy d-none">
                             <label class="form-label fw-semibold">Date From</label>
-                            <input type="date" name="date_from" class="form-control shadow-sm live-filter"
+                            <input type="date" name="date_from" class="form-control shadow-sm"
                                 value="<?= htmlspecialchars($_GET['date_from'] ?? '') ?>"
                                 placeholder="Start Date (YYYY-MM-DD)">
                         </div>
                         <div class="col-12 col-md-3 date-filter date-mdy d-none">
                             <label class="form-label fw-semibold">Date To</label>
-                            <input type="date" name="date_to" class="form-control shadow-sm live-filter"
+                            <input type="date" name="date_to" class="form-control shadow-sm"
                                 value="<?= htmlspecialchars($_GET['date_to'] ?? '') ?>"
                                 placeholder="End Date (YYYY-MM-DD)">
                         </div>
@@ -587,7 +625,7 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <!-- Year Range -->
                         <div class="col-12 col-md-3 date-filter date-year d-none">
                             <label class="form-label fw-semibold">Year From</label>
-                            <input type="number" name="year_from" class="form-control shadow-sm live-filter"
+                            <input type="number" name="year_from" class="form-control shadow-sm"
                                 min="1900" max="2100"
                                 placeholder="e.g., 2023"
                                 value="<?= htmlspecialchars($_GET['year_from'] ?? '') ?>">
@@ -595,7 +633,7 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                         <div class="col-12 col-md-3 date-filter date-year d-none">
                             <label class="form-label fw-semibold">Year To</label>
-                            <input type="number" name="year_to" class="form-control shadow-sm live-filter"
+                            <input type="number" name="year_to" class="form-control shadow-sm"
                                 min="1900" max="2100"
                                 placeholder="e.g., 2025"
                                 value="<?= htmlspecialchars($_GET['year_to'] ?? '') ?>">
@@ -604,13 +642,13 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <!-- Month-Year Range -->
                         <div class="col-12 col-md-3 date-filter date-month_year d-none">
                             <label class="form-label fw-semibold">From (MM-YYYY)</label>
-                            <input type="month" name="month_year_from" class="form-control shadow-sm live-filter"
+                            <input type="month" name="month_year_from" class="form-control shadow-sm"
                                 value="<?= htmlspecialchars($_GET['month_year_from'] ?? '') ?>"
                                 placeholder="e.g., 2023-01">
                         </div>
                         <div class="col-12 col-md-3 date-filter date-month_year d-none">
                             <label class="form-label fw-semibold">To (MM-YYYY)</label>
-                            <input type="month" name="month_year_to" class="form-control shadow-sm live-filter"
+                            <input type="month" name="month_year_to" class="form-control shadow-sm"
                                 value="<?= htmlspecialchars($_GET['month_year_to'] ?? '') ?>"
                                 placeholder="e.g., 2023-12">
                         </div>
@@ -620,7 +658,7 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <label class="form-label fw-semibold">Search</label>
                             <div class="input-group shadow-sm">
                                 <span class="input-group-text"><i class="bi bi-search"></i></span>
-                                <input type="text" name="search" id="searchInput" class="form-control live-filter" placeholder="Search keyword..." value="<?= htmlspecialchars($_GET['search'] ?? '') ?>">
+                                <input type="text" name="search" id="searchInput" class="form-control" placeholder="Search keyword..." value="<?= htmlspecialchars($_GET['search'] ?? '') ?>">
                             </div>
                         </div>
 
@@ -632,7 +670,7 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <button type="button" id="clearFilters" class="btn btn-secondary shadow-sm" style="align-items: center;">
                                 <i class="bi bi-x-circle"></i> Clear
                             </button>
-                    </div>
+                        </div>
                     </form>
 
                     <!-- Table container -->
@@ -650,14 +688,56 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             </colgroup>
                             <thead class="table-light">
                                 <tr>
-                                    <th>Track ID</th>
-                                    <th>User</th>
-                                    <th>Module</th>
-                                    <th>Action</th>
+                                    <th class="sortable" data-column="TrackID">
+                                        Track ID
+                                        <?php if ($sortColumn === 'TrackID'): ?>
+                                            <i class="fas fa-sort-<?= $sortOrder === 'ASC' ? 'up' : 'down' ?>"></i>
+                                        <?php else: ?>
+                                            <i class="fas fa-sort"></i>
+                                        <?php endif; ?>
+                                    </th>
+                                    <th class="sortable" data-column="email">
+                                        User
+                                        <?php if ($sortColumn === 'email'): ?>
+                                            <i class="fas fa-sort-<?= $sortOrder === 'ASC' ? 'up' : 'down' ?>"></i>
+                                        <?php else: ?>
+                                            <i class="fas fa-sort"></i>
+                                        <?php endif; ?>
+                                    </th>
+                                    <th class="sortable" data-column="Module">
+                                        Module
+                                        <?php if ($sortColumn === 'Module'): ?>
+                                            <i class="fas fa-sort-<?= $sortOrder === 'ASC' ? 'up' : 'down' ?>"></i>
+                                        <?php else: ?>
+                                            <i class="fas fa-sort"></i>
+                                        <?php endif; ?>
+                                    </th>
+                                    <th class="sortable" data-column="Action">
+                                        Action
+                                        <?php if ($sortColumn === 'Action'): ?>
+                                            <i class="fas fa-sort-<?= $sortOrder === 'ASC' ? 'up' : 'down' ?>"></i>
+                                        <?php else: ?>
+                                            <i class="fas fa-sort"></i>
+                                        <?php endif; ?>
+                                    </th>
                                     <th>Details</th>
                                     <th>Changes</th>
-                                    <th>Status</th>
-                                    <th>Date & Time</th>
+                                    <th class="sortable" data-column="Status">
+                                        Status
+                                        <?php if ($sortColumn === 'Status'): ?>
+                                            <i class="fas fa-sort-<?= $sortOrder === 'ASC' ? 'up' : 'down' ?>"></i>
+                                        <?php else: ?>
+                                            <i class="fas fa-sort"></i>
+                                        <?php endif; ?>
+                                    </th>
+                                    <th class="sortable" data-column="Date_Time">
+                                        Date & Time
+                                        <?php if ($sortColumn === 'Date_Time'): ?>
+                                            <i class="fas fa-sort-<?= $sortOrder === 'ASC' ? 'up' : 'down' ?>"></i>
+                                        <?php else: ?>
+                                            <i class="fas fa-sort"></i>
+                                        <?php endif; ?>
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody id="auditTable">
@@ -797,6 +877,8 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 document.addEventListener('DOMContentLoaded', function() {
     const filterType = document.getElementById('dateFilterType');
     const allDateFilters = document.querySelectorAll('.date-filter');
+    const form = document.getElementById('auditFilterForm');
+    const clearButton = document.getElementById('clearFilters');
 
     function updateDateFields() {
         allDateFilters.forEach(field => field.classList.add('d-none'));
@@ -807,13 +889,74 @@ document.addEventListener('DOMContentLoaded', function() {
     filterType.addEventListener('change', updateDateFields);
     updateDateFields();
 
-    document.getElementById('clearFilters').addEventListener('click', function() {
-        document.getElementById('auditFilterForm').reset();
+    clearButton.addEventListener('click', function(e) {
+        e.preventDefault(); // Prevent default button behavior
+        
+        // Reset all form fields
+        form.reset();
+        
+        // Clear any hidden fields
+        const hiddenFields = form.querySelectorAll('input[type="hidden"]');
+        hiddenFields.forEach(field => field.value = '');
+        
+        // Reset date filter visibility
         updateDateFields();
-        document.getElementById('auditFilterForm').submit();
+        
+        // Clear URL parameters and reload the page
+        window.location.href = window.location.pathname;
+    });
+
+    // Add sorting functionality
+    const sortableHeaders = document.querySelectorAll('.sortable');
+    sortableHeaders.forEach(header => {
+        header.addEventListener('click', function() {
+            const column = this.dataset.column;
+            const currentOrder = '<?= $sortOrder ?>';
+            const currentColumn = '<?= $sortColumn ?>';
+            
+            // Determine new sort order
+            let newOrder = 'ASC';
+            if (column === currentColumn) {
+                newOrder = currentOrder === 'ASC' ? 'DESC' : 'ASC';
+            }
+            
+            // Get current URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            // Update sort parameters
+            urlParams.set('sort', column);
+            urlParams.set('order', newOrder);
+            
+            // Redirect to new URL with sort parameters
+            window.location.href = window.location.pathname + '?' + urlParams.toString();
+        });
     });
 });
 </script>
+
+<style>
+.sortable {
+    cursor: pointer;
+    position: relative;
+    padding-right: 20px !important;
+}
+
+.sortable:hover {
+    background-color: #f8f9fa;
+}
+
+.sortable i {
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+}
+
+.sortable:hover i {
+    color: #0d6efd;
+}
+</style>
 
 </body>
 

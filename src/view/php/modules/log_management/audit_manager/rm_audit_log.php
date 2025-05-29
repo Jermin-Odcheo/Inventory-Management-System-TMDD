@@ -33,16 +33,152 @@ if (!$hasAuditPermission && !$hasRMPermission) {
     exit();
 }
 
-// Fetch all audit logs for Roles and Privileges module
-$query = "SELECT audit_log.*, users.Email AS email 
+// Initialize sorting parameters
+$sortColumn = $_GET['sort'] ?? 'TrackID';
+$sortOrder = $_GET['order'] ?? 'DESC';
+
+// Fetch unique values for dropdowns
+try {
+    // Get unique action types
+    $actionTypesQuery = "SELECT DISTINCT Action 
+                        FROM audit_log 
+                        WHERE Module = 'Roles and Privileges' 
+                        AND Action IS NOT NULL 
+                        AND Action != '' 
+                        ORDER BY Action";
+    $actionTypesStmt = $pdo->prepare($actionTypesQuery);
+    $actionTypesStmt->execute();
+    $actionTypes = $actionTypesStmt->fetchAll(PDO::FETCH_COLUMN);
+
+    // Debug action types query
+    error_log("Action Types Query: " . $actionTypesQuery);
+    error_log("Action Types Found: " . print_r($actionTypes, true));
+
+    // Get unique status types
+    $statusTypesQuery = "SELECT DISTINCT Status 
+                        FROM audit_log 
+                        WHERE Module = 'Roles and Privileges' 
+                        AND Status IS NOT NULL 
+                        AND Status != '' 
+                        ORDER BY Status";
+    $statusTypesStmt = $pdo->prepare($statusTypesQuery);
+    $statusTypesStmt->execute();
+    $statusTypes = $statusTypesStmt->fetchAll(PDO::FETCH_COLUMN);
+
+    // Debug status types query
+    error_log("Status Types Query: " . $statusTypesQuery);
+    error_log("Status Types Found: " . print_r($statusTypes, true));
+
+} catch (PDOException $e) {
+    error_log("Error fetching dropdown values: " . $e->getMessage());
+    $actionTypes = [];
+    $statusTypes = [];
+}
+
+// Validate sort column to prevent SQL injection
+$allowedColumns = ['TrackID', 'email', 'Module', 'Action', 'Details', 'Status', 'Date_Time'];
+if (!in_array($sortColumn, $allowedColumns)) {
+    $sortColumn = 'TrackID';
+}
+
+// Validate sort order
+$sortOrder = strtoupper($sortOrder) === 'ASC' ? 'ASC' : 'DESC';
+
+// Start with a base WHERE clause
+$where = "WHERE audit_log.Module = 'Roles and Privileges'";
+$params = [];
+
+// Filter by action type
+if (!empty($_GET['action_type'])) {
+    $where .= " AND audit_log.Action = :action_type";
+    $params[':action_type'] = $_GET['action_type'];
+}
+
+// Filter by status
+if (!empty($_GET['status'])) {
+    $where .= " AND audit_log.Status = :status";
+    $params[':status'] = $_GET['status'];
+}
+
+// Filter by search string
+if (!empty($_GET['search'])) {
+    $searchTerm = '%' . $_GET['search'] . '%';
+    $where .= " AND (
+        users.email LIKE :search_email 
+        OR audit_log.NewVal LIKE :search_newval 
+        OR audit_log.OldVal LIKE :search_oldval
+        OR audit_log.Details LIKE :search_details
+        OR audit_log.Action LIKE :search_action
+        OR audit_log.Status LIKE :search_status
+    )";
+    $params[':search_email'] = $searchTerm;
+    $params[':search_newval'] = $searchTerm;
+    $params[':search_oldval'] = $searchTerm;
+    $params[':search_details'] = $searchTerm;
+    $params[':search_action'] = $searchTerm;
+    $params[':search_status'] = $searchTerm;
+}
+
+// Date filters
+$dateFilterType = $_GET['date_filter_type'] ?? '';
+
+switch ($dateFilterType) {
+    case 'mdy':
+        if (!empty($_GET['date_from'])) {
+            $where .= " AND DATE(audit_log.date_time) >= :date_from";
+            $params[':date_from'] = date('Y-m-d', strtotime($_GET['date_from']));
+        }
+        if (!empty($_GET['date_to'])) {
+            $where .= " AND DATE(audit_log.date_time) <= :date_to";
+            $params[':date_to'] = date('Y-m-d', strtotime($_GET['date_to']));
+        }
+        break;
+
+    case 'month_year':
+        if (!empty($_GET['month_year_from'])) {
+            $where .= " AND DATE_FORMAT(audit_log.date_time, '%Y-%m') >= :month_year_from";
+            $params[':month_year_from'] = date('Y-m', strtotime($_GET['month_year_from']));
+        }
+        if (!empty($_GET['month_year_to'])) {
+            $where .= " AND DATE_FORMAT(audit_log.date_time, '%Y-%m') <= :month_year_to";
+            $params[':month_year_to'] = date('Y-m', strtotime($_GET['month_year_to']));
+        }        
+        break;
+
+    case 'year':
+        if (!empty($_GET['year_from'])) {
+            $where .= " AND YEAR(audit_log.date_time) >= :year_from";
+            $params[':year_from'] = intval($_GET['year_from']);
+        }
+        if (!empty($_GET['year_to'])) {
+            $where .= " AND YEAR(audit_log.date_time) <= :year_to";
+            $params[':year_to'] = intval($_GET['year_to']);
+        }
+        break;
+}
+
+// Debug the query and parameters
+error_log("Query WHERE clause: " . $where);
+error_log("Query parameters: " . print_r($params, true));
+
+// Modify the query to include sorting
+$query = "SELECT audit_log.*, users.email AS email 
           FROM audit_log 
           LEFT JOIN users ON audit_log.UserID = users.id
-          WHERE audit_log.Module = 'Roles and Privileges'
-          ORDER BY audit_log.TrackID DESC";
+          $where
+          ORDER BY $sortColumn $sortOrder";
 
-$stmt = $pdo->prepare($query);
-$stmt->execute();
-$auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+try {
+    $stmt = $pdo->prepare($query);
+    $stmt->execute($params);
+    $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Debug the results
+    error_log("Number of records found: " . count($auditLogs));
+} catch (PDOException $e) {
+    error_log("Error executing query: " . $e->getMessage());
+    $auditLogs = [];
+}
 
 /**
  * Formats a JSON string into an HTML list.
@@ -351,158 +487,258 @@ function getNormalizedAction($log)
                     You have permission to view Roles and Privileges audit logs.
                 </div>
                 
-                <!-- Filter Section -->
-                <div class="row mb-4">
+                    <!-- Filter Section -->
                     <form method="GET" class="row g-3 mb-4" id="auditFilterForm" onsubmit="return false;">
-                        <div class="col-md-4 mb-2">
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-search"></i></span>
-                                <input type="text" id="searchInput" class="form-control live-filter" placeholder="Search audit logs...">
+                        <div class="col-md-3">
+                            <label for="actionType" class="form-label">Action Type</label>
+                            <select class="form-select" name="action_type" id="actionType">
+                                <option value="">All</option>
+                                <?php 
+                                if (!empty($actionTypes)) {
+                                    foreach ($actionTypes as $action) {
+                                        $selected = ($_GET['action_type'] ?? '') === $action ? 'selected' : '';
+                                        echo '<option value="' . htmlspecialchars($action) . '" ' . $selected . '>' . 
+                                             htmlspecialchars($action) . '</option>';
+                                    }
+                                } else {
+                                    // Fallback options if database query fails
+                                    $defaultActions = ['Create', 'Modified', 'Remove', 'Restore', 'Delete'];
+                                    foreach ($defaultActions as $action) {
+                                        $selected = ($_GET['action_type'] ?? '') === $action ? 'selected' : '';
+                                        echo '<option value="' . htmlspecialchars($action) . '" ' . $selected . '>' . 
+                                             htmlspecialchars($action) . '</option>';
+                                    }
+                                }
+                                ?>
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-select" name="status" id="status">
+                                <option value="">All</option>
+                                <?php 
+                                if (!empty($statusTypes)) {
+                                    foreach ($statusTypes as $status) {
+                                        $selected = ($_GET['status'] ?? '') === $status ? 'selected' : '';
+                                        echo '<option value="' . htmlspecialchars($status) . '" ' . $selected . '>' . 
+                                             htmlspecialchars($status) . '</option>';
+                                    }
+                                } else {
+                                    // Fallback options if database query fails
+                                    $defaultStatuses = ['Successful', 'Failed'];
+                                    foreach ($defaultStatuses as $status) {
+                                        $selected = ($_GET['status'] ?? '') === $status ? 'selected' : '';
+                                        echo '<option value="' . htmlspecialchars($status) . '" ' . $selected . '>' . 
+                                             htmlspecialchars($status) . '</option>';
+                                    }
+                                }
+                                ?>
+                            </select>
+                        </div>
+
+                        <!-- Date Range selector -->
+                        <div class="col-12 col-md-3">
+                            <label class="form-label fw-semibold">Date Filter Type</label>
+                            <select id="dateFilterType" name="date_filter_type" class="form-select shadow-sm">
+                                <option value="" <?= empty($filters['date_filter_type']) ? 'selected' : '' ?>>-- Select Type --</option>
+                                <option value="month_year" <?= (($_GET['date_filter_type'] ?? '') === 'month_year') ? 'selected' : '' ?>>Month-Year Range</option>
+                                <option value="year" <?= (($_GET['date_filter_type'] ?? '') === 'year') ? 'selected' : '' ?>>Year Range</option>
+                                <option value="mdy" <?= (($_GET['date_filter_type'] ?? '') === 'mdy') ? 'selected' : '' ?>>Month-Date-Year Range</option>
+                            </select>
+                        </div>
+
+                        <!-- MDY Range -->
+                        <div class="col-12 col-md-3 date-filter date-mdy d-none">
+                            <label class="form-label fw-semibold">Date From</label>
+                            <input type="date" name="date_from" class="form-control shadow-sm"
+                                value="<?= htmlspecialchars($_GET['date_from'] ?? '') ?>"
+                                placeholder="Start Date (YYYY-MM-DD)">
+                        </div>
+                        <div class="col-12 col-md-3 date-filter date-mdy d-none">
+                            <label class="form-label fw-semibold">Date To</label>
+                            <input type="date" name="date_to" class="form-control shadow-sm"
+                                value="<?= htmlspecialchars($_GET['date_to'] ?? '') ?>"
+                                placeholder="End Date (YYYY-MM-DD)">
+                        </div>
+
+                        <!-- Year Range -->
+                        <div class="col-12 col-md-3 date-filter date-year d-none">
+                            <label class="form-label fw-semibold">Year From</label>
+                            <input type="number" name="year_from" class="form-control shadow-sm"
+                                min="1900" max="2100"
+                                placeholder="e.g., 2023"
+                                value="<?= htmlspecialchars($_GET['year_from'] ?? '') ?>">
+                        </div>
+
+                        <div class="col-12 col-md-3 date-filter date-year d-none">
+                            <label class="form-label fw-semibold">Year To</label>
+                            <input type="number" name="year_to" class="form-control shadow-sm"
+                                min="1900" max="2100"
+                                placeholder="e.g., 2025"
+                                value="<?= htmlspecialchars($_GET['year_to'] ?? '') ?>">
+                        </div>
+
+                        <!-- Month-Year Range -->
+                        <div class="col-12 col-md-3 date-filter date-month_year d-none">
+                            <label class="form-label fw-semibold">From (MM-YYYY)</label>
+                            <input type="month" name="month_year_from" class="form-control shadow-sm"
+                                value="<?= htmlspecialchars($_GET['month_year_from'] ?? '') ?>"
+                                placeholder="e.g., 2023-01">
+                        </div>
+                        <div class="col-12 col-md-3 date-filter date-month_year d-none">
+                            <label class="form-label fw-semibold">To (MM-YYYY)</label>
+                            <input type="month" name="month_year_to" class="form-control shadow-sm"
+                                value="<?= htmlspecialchars($_GET['month_year_to'] ?? '') ?>"
+                                placeholder="e.g., 2023-12">
+                        </div>
+
+                        <!-- Search bar -->
+                        <div class="col-12 col-sm-6 col-md-3">
+                            <label class="form-label fw-semibold">Search</label>
+                            <div class="input-group shadow-sm">
+                                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                <input type="text" name="search" id="searchInput" class="form-control" placeholder="Search keyword..."
+                                    value="<?= htmlspecialchars($_GET['search'] ?? '') ?>">
                             </div>
                         </div>
-                        <div class="col-md-4 mb-2">
-                            <select id="actionType" class="form-select live-filter">
-                                <option value="">All Actions</option>
-                                <option value="create">Create</option>
-                                <option value="modified">Modified</option>
-                                <option value="remove">Remove</option>
-                                <option value="delete">Delete</option>
-                                <option value="restored">Restored</option>
-                            </select>
+                        <!-- Filter Button-->
+                        <div class="col-6 col-md-2 d-grid" style="align-items: center;">
+                            <button type="button" id="applyFilters" class="btn btn-dark">
+                                <i class="bi bi-funnel"></i> Filter
+                            </button>
                         </div>
-                        <div class="col-md-4 mb-2">
-                            <select id="status" class="form-select live-filter">
-                                <option value="">All Status</option>
-                                <option value="successful">Successful</option>
-                                <option value="failed">Failed</option>
-                            </select>
-                        </div>
-                        
-                        <div class="col-md-6 mt-2">
-                            <button type="button" id="applyFilters" class="btn btn-dark"><i class="bi bi-funnel"></i> Apply Filters</button>
-                            <button type="button" id="clearFilters" class="btn btn-secondary"><i class="bi bi-x-circle"></i> Clear Filters</button>
+                        <!-- Clear Filter Button -->
+                        <div class="col-6 col-md-2 d-grid" style="align-items: center;">
+                            <button type="button" id="clearFilters" class="btn btn-secondary shadow-sm">
+                                <i class="bi bi-x-circle"></i> Clear
+                            </button>
                         </div>
                     </form>
                 </div>
                 
-                <!-- Add JavaScript for live filtering -->
+
                 <script>
-                    document.addEventListener('DOMContentLoaded', function() {
-                        // Store all table rows for filtering
-                        const tableBody = document.getElementById('auditTable');
-                        const allRows = Array.from(tableBody.querySelectorAll('tr'));
-                        let filteredRows = [...allRows]; // Start with all rows
-                        
-                        // Get filter elements
-                        const filterForm = document.getElementById('auditFilterForm');
-                        const searchInput = document.getElementById('searchInput');
-                        const actionTypeFilter = document.getElementById('actionType');
-                        const statusFilter = document.getElementById('status');
-                        const applyFiltersBtn = document.getElementById('applyFilters');
-                        const clearFiltersBtn = document.getElementById('clearFilters');
-                        
-                        // Set up event listeners for live filtering
-                        document.querySelectorAll('.live-filter').forEach(filter => {
-                            filter.addEventListener('change', applyFilters);
-                        });
-                        
-                        // For search input, use input event with debounce
-                        if (searchInput) {
-                            let debounceTimer;
-                            searchInput.addEventListener('input', function() {
-                                clearTimeout(debounceTimer);
-                                debounceTimer = setTimeout(function() {
-                                    applyFilters();
-                                }, 300); // 300ms debounce for search
-                            });
-                        }
-                        
-                        // Apply filters button
-                        applyFiltersBtn.addEventListener('click', applyFilters);
-                        
-                        // Clear filters button
-                        clearFiltersBtn.addEventListener('click', function() {
-                            // Reset all form fields
-                            filterForm.reset();
-                            
-                            // Show all rows
-                            filteredRows = [...allRows];
-                            updateTable();
-                        });
-                        
-                        // Function to apply all filters
-                        function applyFilters() {
-                            const searchTerm = searchInput.value.toLowerCase().trim();
-                            const actionType = actionTypeFilter.value.toLowerCase();
-                            const status = statusFilter.value.toLowerCase();
-                            
-                            // Filter the rows
-                            filteredRows = allRows.filter(row => {
-                                // Text search (across all columns)
-                                const rowText = row.textContent.toLowerCase();
-                                const matchesSearch = searchTerm === '' || rowText.includes(searchTerm);
-                                
-                                // Action type filter
-                                const actionCell = row.querySelector('[data-label="Action"]');
-                                const actionText = actionCell ? actionCell.textContent.toLowerCase() : '';
-                                const matchesAction = actionType === '' || actionText.includes(actionType);
-                                
-                                // Status filter
-                                const statusCell = row.querySelector('[data-label="Status"]');
-                                const statusText = statusCell ? statusCell.textContent.toLowerCase() : '';
-                                const matchesStatus = status === '' || statusText.includes(status);
-                                
-                                return matchesSearch && matchesAction && matchesStatus;
-                            });
-                            
-                            // Update the table with filtered rows
-                            updateTable();
-                        }
-                        
-                        // Function to update table with filtered rows
-                        function updateTable() {
-                            // Clear the table
-                            tableBody.innerHTML = '';
-                            
-                            // Show no results message if no matches
-                            if (filteredRows.length === 0) {
-                                const noResultsRow = document.createElement('tr');
-                                noResultsRow.innerHTML = `
-                                    <td colspan="8">
-                                        <div class="empty-state text-center py-4">
-                                            <i class="fas fa-search fa-3x mb-3"></i>
-                                            <h4>No matching records found</h4>
-                                            <p class="text-muted">Try adjusting your search or filter criteria.</p>
-                                        </div>
-                                    </td>
-                                `;
-                                tableBody.appendChild(noResultsRow);
-                            } else {
-                                // Add filtered rows to the table
-                                filteredRows.forEach(row => {
-                                    tableBody.appendChild(row.cloneNode(true));
-                                });
-                            }
-                            
-                            // Update pagination if it exists
-                            if (typeof updatePagination === 'function') {
-                                // Store filtered rows for pagination
-                                window.filteredRows = filteredRows;
-                                // Reset to first page
-                                if (window.paginationConfig) {
-                                    window.paginationConfig.currentPage = 1;
-                                }
-                                updatePagination();
-                            }
-                            
-                            // Update counts display
-                            const totalRowsElement = document.getElementById('totalRows');
-                            if (totalRowsElement) {
-                                totalRowsElement.textContent = filteredRows.length;
-                            }
-                        }
-                    });
-                </script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set a flag to indicate that this page explicitly initializes pagination
+        window.paginationInitialized = true;
+        
+        // Initialize pagination with the audit table ID
+        initPagination({
+            tableId: 'auditTable'
+        });
+
+        // Get form and filter elements
+        const filterForm = document.getElementById('auditFilterForm');
+        const actionTypeSelect = document.getElementById('actionType');
+        const statusSelect = document.getElementById('status');
+        const searchInput = document.getElementById('searchInput');
+        const applyFiltersBtn = document.getElementById('applyFilters');
+        const clearFiltersBtn = document.getElementById('clearFilters');
+        const dateFilterType = document.getElementById('dateFilterType');
+
+        // Function to submit the form
+        function submitForm() {
+            const formData = new FormData(filterForm);
+            const queryString = new URLSearchParams(formData).toString();
+            window.location.href = window.location.pathname + '?' + queryString;
+        }
+
+        // Add event listener for search input - only trigger on Enter key or Apply button
+        if (searchInput) {
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    submitForm();
+                }
+            });
+        }
+
+        // Add event listener for apply filters button
+        if (applyFiltersBtn) {
+            applyFiltersBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                submitForm();
+            });
+        }
+
+        // Add event listener for clear filters button
+        if (clearFiltersBtn) {
+            clearFiltersBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Reset all form fields
+                filterForm.reset();
+                
+                // Reset date fields visibility
+                const allDateFilters = document.querySelectorAll('.date-filter');
+                allDateFilters.forEach(field => field.classList.add('d-none'));
+                
+                // Clear URL parameters and reload page
+                window.location.href = window.location.pathname;
+            });
+        }
+
+        // Date filter type change handler - only update visibility, don't submit
+        if (dateFilterType) {
+            dateFilterType.addEventListener('change', function() {
+                const allDateFilters = document.querySelectorAll('.date-filter');
+                allDateFilters.forEach(field => field.classList.add('d-none'));
+                
+                if (this.value) {
+                    const selected = document.querySelectorAll('.date-' + this.value);
+                    selected.forEach(field => field.classList.remove('d-none'));
+                }
+            });
+
+            // Initialize date fields visibility
+            const allDateFilters = document.querySelectorAll('.date-filter');
+            allDateFilters.forEach(field => field.classList.add('d-none'));
+            if (dateFilterType.value) {
+                const selected = document.querySelectorAll('.date-' + dateFilterType.value);
+                selected.forEach(field => field.classList.remove('d-none'));
+            }
+        }
+
+        // Add event listeners for date inputs - only trigger on Apply button
+        document.querySelectorAll('.date-filter input').forEach(input => {
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    submitForm();
+                }
+            });
+        });
+    });
+
+    // Add sorting functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const sortableHeaders = document.querySelectorAll('.sortable');
+        sortableHeaders.forEach(header => {
+            header.addEventListener('click', function() {
+                const column = this.dataset.column;
+                const currentOrder = '<?= $sortOrder ?>';
+                const currentColumn = '<?= $sortColumn ?>';
+                
+                // Determine new sort order
+                let newOrder = 'ASC';
+                if (column === currentColumn) {
+                    newOrder = currentOrder === 'ASC' ? 'DESC' : 'ASC';
+                }
+                
+                // Get current URL parameters
+                const urlParams = new URLSearchParams(window.location.search);
+                
+                // Update sort parameters
+                urlParams.set('sort', column);
+                urlParams.set('order', newOrder);
+                
+                // Redirect to new URL with sort parameters
+                window.location.href = window.location.pathname + '?' + urlParams.toString();
+            });
+        });
+    });
+    </script>
 
                 <!-- Table container -->
                 <div class="table-responsive" id="table">
@@ -519,14 +755,38 @@ function getNormalizedAction($log)
                         </colgroup>
                         <thead class="table-light">
                         <tr>
-                            <th>Track ID</th>
-                            <th>User</th>
-                            <th>Module</th>
-                            <th>Action</th>
-                            <th>Details</th>
-                            <th>Changes</th>
-                            <th>Status</th>
-                            <th>Date & Time</th>
+                            <th class="sortable" data-column="TrackID">
+                                Track ID
+                                <i class="fas fa-sort<?= $sortColumn === 'TrackID' ? '-' . ($sortOrder === 'ASC' ? 'up' : 'down') : '' ?>"></i>
+                            </th>
+                            <th class="sortable" data-column="email">
+                                User
+                                <i class="fas fa-sort<?= $sortColumn === 'email' ? '-' . ($sortOrder === 'ASC' ? 'up' : 'down') : '' ?>"></i>
+                            </th>
+                            <th class="sortable" data-column="Module">
+                                Module
+                                <i class="fas fa-sort<?= $sortColumn === 'Module' ? '-' . ($sortOrder === 'ASC' ? 'up' : 'down') : '' ?>"></i>
+                            </th>
+                            <th class="sortable" data-column="Action">
+                                Action
+                                <i class="fas fa-sort<?= $sortColumn === 'Action' ? '-' . ($sortOrder === 'ASC' ? 'up' : 'down') : '' ?>"></i>
+                            </th>
+                            <th class="sortable" data-column="Details">
+                                Details
+                                <i class="fas fa-sort<?= $sortColumn === 'Details' ? '-' . ($sortOrder === 'ASC' ? 'up' : 'down') : '' ?>"></i>
+                            </th>
+                            <th class="sortable" data-column="Changes">
+                                Changes
+                                <i class="fas fa-sort<?= $sortColumn === 'Changes' ? '-' . ($sortOrder === 'ASC' ? 'up' : 'down') : '' ?>"></i>
+                            </th>
+                            <th class="sortable" data-column="Status">
+                                Status
+                                <i class="fas fa-sort<?= $sortColumn === 'Status' ? '-' . ($sortOrder === 'ASC' ? 'up' : 'down') : '' ?>"></i>
+                            </th>
+                            <th class="sortable" data-column="Date_Time">
+                                Date & Time
+                                <i class="fas fa-sort<?= $sortColumn === 'Date_Time' ? '-' . ($sortOrder === 'ASC' ? 'up' : 'down') : '' ?>"></i>
+                            </th>
                         </tr>
                         </thead>
                         <tbody id="auditTable">
@@ -605,6 +865,63 @@ function getNormalizedAction($log)
                         <?php endif; ?>
                         </tbody>
                     </table>
+
+                    <!-- Add some CSS for the sortable headers -->
+                    <style>
+                        .sortable {
+                            cursor: pointer;
+                            position: relative;
+                            padding-right: 20px;
+                        }
+                        .sortable:hover {
+                            background-color: #f8f9fa;
+                        }
+                        .sortable i {
+                            position: absolute;
+                            right: 5px;
+                            top: 50%;
+                            transform: translateY(-50%);
+                            color: #6c757d;
+                            font-size: 0.8em;
+                        }
+                        .sortable:hover i {
+                            color: #495057;
+                        }
+                        .sortable i.fa-sort-up,
+                        .sortable i.fa-sort-down {
+                            color: #0d6efd;
+                        }
+                    </style>
+
+                    <!-- Update the sorting JavaScript -->
+                    <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const sortableHeaders = document.querySelectorAll('.sortable');
+                        sortableHeaders.forEach(header => {
+                            header.addEventListener('click', function() {
+                                const column = this.dataset.column;
+                                const currentOrder = '<?= $sortOrder ?>';
+                                const currentColumn = '<?= $sortColumn ?>';
+                                
+                                // Determine new sort order
+                                let newOrder = 'ASC';
+                                if (column === currentColumn) {
+                                    newOrder = currentOrder === 'ASC' ? 'DESC' : 'ASC';
+                                }
+                                
+                                // Get current URL parameters
+                                const urlParams = new URLSearchParams(window.location.search);
+                                
+                                // Update sort parameters
+                                urlParams.set('sort', column);
+                                urlParams.set('order', newOrder);
+                                
+                                // Redirect to new URL with sort parameters
+                                window.location.href = window.location.pathname + '?' + urlParams.toString();
+                            });
+                        });
+                    });
+                    </script>
 
                     <!-- Pagination Controls -->
                     <div class="container-fluid">

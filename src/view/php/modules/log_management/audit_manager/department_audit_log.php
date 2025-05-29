@@ -18,6 +18,74 @@ $rbac = new RBACService($pdo, $_SESSION['user_id']);
 $hasAuditPermission = $rbac->hasPrivilege('Audit', 'Track');
 $hasDeptPermission = $rbac->hasPrivilege('Management', 'Track');
 
+// Initialize sorting parameters
+$sortColumn = $_GET['sort'] ?? 'TrackID';
+$sortOrder = $_GET['order'] ?? 'DESC';
+
+// Fetch unique values for dropdowns
+try {
+    // Get unique action types
+    $actionTypesQuery = "SELECT DISTINCT Action 
+                        FROM audit_log 
+                        WHERE Module = 'Department Management' 
+                        AND Action IS NOT NULL 
+                        AND Action != '' 
+                        ORDER BY Action";
+    $actionTypesStmt = $pdo->prepare($actionTypesQuery);
+    $actionTypesStmt->execute();
+    $actionTypes = $actionTypesStmt->fetchAll(PDO::FETCH_COLUMN);
+
+    // Debug action types query
+    error_log("Action Types Query: " . $actionTypesQuery);
+    error_log("Action Types Found: " . print_r($actionTypes, true));
+
+    // Get unique status types
+    $statusTypesQuery = "SELECT DISTINCT Status 
+                        FROM audit_log 
+                        WHERE Module = 'Department Management' 
+                        AND Status IS NOT NULL 
+                        AND Status != '' 
+                        ORDER BY Status";
+    $statusTypesStmt = $pdo->prepare($statusTypesQuery);
+    $statusTypesStmt->execute();
+    $statusTypes = $statusTypesStmt->fetchAll(PDO::FETCH_COLUMN);
+
+    // Debug status types query
+    error_log("Status Types Query: " . $statusTypesQuery);
+    error_log("Status Types Found: " . print_r($statusTypes, true));
+
+    // If no values found, try without the Module filter to debug
+    if (empty($actionTypes)) {
+        $debugActionQuery = "SELECT DISTINCT Action, Module FROM audit_log WHERE Action IS NOT NULL AND Action != ''";
+        $debugActionStmt = $pdo->prepare($debugActionQuery);
+        $debugActionStmt->execute();
+        $debugActions = $debugActionStmt->fetchAll(PDO::FETCH_ASSOC);
+        error_log("Debug - All Actions in Database: " . print_r($debugActions, true));
+    }
+
+    if (empty($statusTypes)) {
+        $debugStatusQuery = "SELECT DISTINCT Status, Module FROM audit_log WHERE Status IS NOT NULL AND Status != ''";
+        $debugStatusStmt = $pdo->prepare($debugStatusQuery);
+        $debugStatusStmt->execute();
+        $debugStatuses = $debugStatusStmt->fetchAll(PDO::FETCH_ASSOC);
+        error_log("Debug - All Statuses in Database: " . print_r($debugStatuses, true));
+    }
+
+} catch (PDOException $e) {
+    error_log("Error fetching dropdown values: " . $e->getMessage());
+    $actionTypes = [];
+    $statusTypes = [];
+}
+
+// Validate sort column to prevent SQL injection
+$allowedColumns = ['TrackID', 'email', 'Module', 'Action', 'Details', 'Status', 'Date_Time'];
+if (!in_array($sortColumn, $allowedColumns)) {
+    $sortColumn = 'TrackID';
+}
+
+// Validate sort order
+$sortOrder = strtoupper($sortOrder) === 'ASC' ? 'ASC' : 'DESC';
+
 // If user doesn't have permission, show an inline "no permission" page
 if (!$hasAuditPermission && !$hasDeptPermission) {
     echo '
@@ -32,16 +100,101 @@ if (!$hasAuditPermission && !$hasDeptPermission) {
     exit();
 }
 
-// Fetch all audit logs - only showing Department Management logs
+// Start with a base WHERE clause
+$where = "WHERE audit_log.Module = 'Department Management'";
+$params = [];
+
+// Filter by action type
+if (!empty($_GET['action_type'])) {
+    $where .= " AND audit_log.Action = :action_type";
+    $params[':action_type'] = $_GET['action_type'];
+}
+
+// Filter by status
+if (!empty($_GET['status'])) {
+    $where .= " AND audit_log.Status = :status";
+    $params[':status'] = $_GET['status'];
+}
+
+// Filter by search string
+if (!empty($_GET['search'])) {
+    $searchTerm = '%' . $_GET['search'] . '%';
+    $where .= " AND (
+        users.email LIKE :search_email 
+        OR audit_log.NewVal LIKE :search_newval 
+        OR audit_log.OldVal LIKE :search_oldval
+        OR audit_log.Details LIKE :search_details
+        OR audit_log.Action LIKE :search_action
+        OR audit_log.Status LIKE :search_status
+    )";
+    $params[':search_email'] = $searchTerm;
+    $params[':search_newval'] = $searchTerm;
+    $params[':search_oldval'] = $searchTerm;
+    $params[':search_details'] = $searchTerm;
+    $params[':search_action'] = $searchTerm;
+    $params[':search_status'] = $searchTerm;
+}
+
+// Date filters
+$dateFilterType = $_GET['date_filter_type'] ?? '';
+
+switch ($dateFilterType) {
+    case 'mdy':
+        if (!empty($_GET['date_from'])) {
+            $where .= " AND DATE(audit_log.date_time) >= :date_from";
+            $params[':date_from'] = date('Y-m-d', strtotime($_GET['date_from']));
+        }
+        if (!empty($_GET['date_to'])) {
+            $where .= " AND DATE(audit_log.date_time) <= :date_to";
+            $params[':date_to'] = date('Y-m-d', strtotime($_GET['date_to']));
+        }
+        break;
+
+    case 'month_year':
+        if (!empty($_GET['month_year_from'])) {
+            $where .= " AND DATE_FORMAT(audit_log.date_time, '%Y-%m') >= :month_year_from";
+            $params[':month_year_from'] = date('Y-m', strtotime($_GET['month_year_from']));
+        }
+        if (!empty($_GET['month_year_to'])) {
+            $where .= " AND DATE_FORMAT(audit_log.date_time, '%Y-%m') <= :month_year_to";
+            $params[':month_year_to'] = date('Y-m', strtotime($_GET['month_year_to']));
+        }        
+        break;
+
+    case 'year':
+        if (!empty($_GET['year_from'])) {
+            $where .= " AND YEAR(audit_log.date_time) >= :year_from";
+            $params[':year_from'] = intval($_GET['year_from']);
+        }
+        if (!empty($_GET['year_to'])) {
+            $where .= " AND YEAR(audit_log.date_time) <= :year_to";
+            $params[':year_to'] = intval($_GET['year_to']);
+        }
+        break;
+}
+
+// Debug the query and parameters
+error_log("Query WHERE clause: " . $where);
+error_log("Query parameters: " . print_r($params, true));
+
+// Modify the query to include sorting
 $query = "SELECT audit_log.*, users.email AS email 
           FROM audit_log 
           LEFT JOIN users ON audit_log.UserID = users.id
-          WHERE audit_log.Module = 'Department Management'
-          ORDER BY audit_log.TrackID DESC";
+          $where
+          ORDER BY $sortColumn $sortOrder";
 
+try {
 $stmt = $pdo->prepare($query);
-$stmt->execute();
+    $stmt->execute($params);
 $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Debug the results
+    error_log("Number of records found: " . count($auditLogs));
+} catch (PDOException $e) {
+    error_log("Error executing query: " . $e->getMessage());
+    $auditLogs = [];
+}
 
 /**
  * Formats a JSON string into an HTML list.
@@ -235,78 +388,6 @@ function getDisplayAction($action)
 
     return $actionMap[$action] ?? ucfirst($action);
 }
-// Start with a base WHERE clause
-$where = "WHERE audit_log.Module = 'Department Management'";
-$params = [];
-
-// Filter by action type
-if (!empty($_GET['action_type'])) {
-    $where .= " AND audit_log.Action = :action_type";
-    $params[':action_type'] = $_GET['action_type'];
-}
-
-// Filter by status
-if (!empty($_GET['status'])) {
-    $where .= " AND audit_log.Status = :status";
-    $params[':status'] = $_GET['status'];
-}
-
-// Filter by search string
-if (!empty($_GET['search'])) {
-    $where .= " AND (users.email LIKE :search_email OR audit_log.NewVal LIKE :search_newval OR audit_log.OldVal LIKE :search_oldval)";
-    $searchParam = '%' . $_GET['search'] . '%';
-    $params[':search_email'] = $searchParam;
-    $params[':search_newval'] = $searchParam;
-    $params[':search_oldval'] = $searchParam;
-}
-
-// Date filters
-$dateFilterType = $_GET['date_filter_type'] ?? '';
-
-switch ($dateFilterType) {
-    case 'mdy':
-        if (!empty($_GET['date_from'])) {
-            $where .= " AND DATE(audit_log.date_time) >= :date_from";
-            $params[':date_from'] = date('Y-m-d', strtotime($_GET['date_from']));
-        }
-        if (!empty($_GET['date_to'])) {
-            $where .= " AND DATE(audit_log.date_time) <= :date_to";
-            $params[':date_to'] = date('Y-m-d', strtotime($_GET['date_to']));
-        }
-        break;
-
-    case 'month_year':
-        if (!empty($_GET['month_year_from'])) {
-            $where .= " AND DATE_FORMAT(audit_log.date_time, '%Y-%m') >= :month_year_from";
-            $params[':month_year_from'] = date('Y-m', strtotime($_GET['month_year_from']));
-        }
-        if (!empty($_GET['month_year_to'])) {  // <-- FIXED KEY
-            $where .= " AND DATE_FORMAT(audit_log.date_time, '%Y-%m') <= :month_year_to";
-            $params[':month_year_to'] = date('Y-m', strtotime($_GET['month_year_to']));  // <-- FIXED PARAM
-        }        
-        break;
-
-    case 'year':
-        if (!empty($_GET['year_from'])) {
-            $where .= " AND YEAR(audit_log.date_time) >= :year_from";
-            $params[':year_from'] = intval($_GET['year_from']);
-        }
-        if (!empty($_GET['year_to'])) {
-            $where .= " AND YEAR(audit_log.date_time) <= :year_to";
-            $params[':year_to'] = intval($_GET['year_to']);
-        }
-        break;
-}
-
-$query = "SELECT audit_log.*, users.email AS email 
-          FROM audit_log 
-          LEFT JOIN users ON audit_log.UserID = users.id
-          $where
-          ORDER BY audit_log.date_time DESC";
-
-$stmt = $pdo->prepare($query);
-$stmt->execute($params);
-$auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 ?>
 
@@ -350,24 +431,53 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <form method="GET" class="row g-3 mb-4" id="auditFilterForm" onsubmit="return false;">
                         <div class="col-md-3">
                             <label for="actionType" class="form-label">Action Type</label>
-                            <select class="form-select live-filter" name="action_type" id="actionType">
+                            <select class="form-select" name="action_type" id="actionType">
                                 <option value="">All</option>
-                                <option value="Create" <?= ($_GET['action_type'] ?? '') === 'Create' ? 'selected' : '' ?>>Create</option>
-                                <option value="Modified" <?= ($_GET['action_type'] ?? '') === 'Modified' ? 'selected' : '' ?>>Modified</option>
-                                <option value="Remove" <?= ($_GET['action_type'] ?? '') === 'Remove' ? 'selected' : '' ?>>Remove</option>
-                                <option value="Restored" <?= ($_GET['action_type'] ?? '') === 'Restored' ? 'selected' : '' ?>>Restored</option>
-                                <option value="Login" <?= ($_GET['action_type'] ?? '') === 'Login' ? 'selected' : '' ?>>Login</option>
-                                <option value="Logout" <?= ($_GET['action_type'] ?? '') === 'Logout' ? 'selected' : '' ?>>Logout</option>
-
+                                <?php 
+                                if (!empty($actionTypes)) {
+                                    foreach ($actionTypes as $action) {
+                                        $selected = ($_GET['action_type'] ?? '') === $action ? 'selected' : '';
+                                        echo '<option value="' . htmlspecialchars($action) . '" ' . $selected . '>' . 
+                                             htmlspecialchars($action) . '</option>';
+                                    }
+                                } else {
+                                    // Fallback options if database query fails
+                                    $defaultActions = ['Create', 'Modified', 'Remove', 'Restore', 'Delete'];
+                                    foreach ($defaultActions as $action) {
+                                        $selected = ($_GET['action_type'] ?? '') === $action ? 'selected' : '';
+                                        echo '<option value="' . htmlspecialchars($action) . '" ' . $selected . '>' . 
+                                             htmlspecialchars($action) . '</option>';
+                                    }
+                                    // Add debug info
+                                    error_log("Using fallback action types as no values were found in database");
+                                }
+                                ?>
                             </select>
                         </div>
 
                         <div class="col-md-3">
                             <label for="status" class="form-label">Status</label>
-                            <select class="form-select live-filter" name="status" id="status">
+                            <select class="form-select" name="status" id="status">
                                 <option value="">All</option>
-                                <option value="Successful" <?= ($_GET['status'] ?? '') === 'Successful' ? 'selected' : '' ?>>Successful</option>
-                                <option value="Failed" <?= ($_GET['status'] ?? '') === 'Failed' ? 'selected' : '' ?>>Failed</option>
+                                <?php 
+                                if (!empty($statusTypes)) {
+                                    foreach ($statusTypes as $status) {
+                                        $selected = ($_GET['status'] ?? '') === $status ? 'selected' : '';
+                                        echo '<option value="' . htmlspecialchars($status) . '" ' . $selected . '>' . 
+                                             htmlspecialchars($status) . '</option>';
+                                    }
+                                } else {
+                                    // Fallback options if database query fails
+                                    $defaultStatuses = ['Successful', 'Failed'];
+                                    foreach ($defaultStatuses as $status) {
+                                        $selected = ($_GET['status'] ?? '') === $status ? 'selected' : '';
+                                        echo '<option value="' . htmlspecialchars($status) . '" ' . $selected . '>' . 
+                                             htmlspecialchars($status) . '</option>';
+                                    }
+                                    // Add debug info
+                                    error_log("Using fallback status types as no values were found in database");
+                                }
+                                ?>
                             </select>
                         </div>
 
@@ -466,14 +576,56 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         </colgroup>
                         <thead class="table-light">
                             <tr>
-                                <th>Track ID</th>
-                                <th>User</th>
-                                <th>Module</th>
-                                <th>Action</th>
+                                <th class="sortable" data-column="TrackID">
+                                    Track ID
+                                    <?php if ($sortColumn === 'TrackID'): ?>
+                                        <i class="fas fa-sort-<?= $sortOrder === 'ASC' ? 'up' : 'down' ?>"></i>
+                                    <?php else: ?>
+                                        <i class="fas fa-sort"></i>
+                                    <?php endif; ?>
+                                </th>
+                                <th class="sortable" data-column="email">
+                                    User
+                                    <?php if ($sortColumn === 'email'): ?>
+                                        <i class="fas fa-sort-<?= $sortOrder === 'ASC' ? 'up' : 'down' ?>"></i>
+                                    <?php else: ?>
+                                        <i class="fas fa-sort"></i>
+                                    <?php endif; ?>
+                                </th>
+                                <th class="sortable" data-column="Module">
+                                    Module
+                                    <?php if ($sortColumn === 'Module'): ?>
+                                        <i class="fas fa-sort-<?= $sortOrder === 'ASC' ? 'up' : 'down' ?>"></i>
+                                    <?php else: ?>
+                                        <i class="fas fa-sort"></i>
+                                    <?php endif; ?>
+                                </th>
+                                <th class="sortable" data-column="Action">
+                                    Action
+                                    <?php if ($sortColumn === 'Action'): ?>
+                                        <i class="fas fa-sort-<?= $sortOrder === 'ASC' ? 'up' : 'down' ?>"></i>
+                                    <?php else: ?>
+                                        <i class="fas fa-sort"></i>
+                                    <?php endif; ?>
+                                </th>
                                 <th>Details</th>
                                 <th>Changes</th>
-                                <th>Status</th>
-                                <th>Date & Time</th>
+                                <th class="sortable" data-column="Status">
+                                    Status
+                                    <?php if ($sortColumn === 'Status'): ?>
+                                        <i class="fas fa-sort-<?= $sortOrder === 'ASC' ? 'up' : 'down' ?>"></i>
+                                    <?php else: ?>
+                                        <i class="fas fa-sort"></i>
+                                    <?php endif; ?>
+                                </th>
+                                <th class="sortable" data-column="Date_Time">
+                                    Date & Time
+                                    <?php if ($sortColumn === 'Date_Time'): ?>
+                                        <i class="fas fa-sort-<?= $sortOrder === 'ASC' ? 'up' : 'down' ?>"></i>
+                                    <?php else: ?>
+                                        <i class="fas fa-sort"></i>
+                                    <?php endif; ?>
+                                </th>
                             </tr>
                         </thead>
                         <tbody id="auditTable">
@@ -593,245 +745,135 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Set a flag to indicate that this page explicitly initializes pagination
-            window.paginationInitialized = true; // NEW LINE ADDED HERE
-            // Initialize pagination with the audit table ID.
-            // The initPagination function in pagination.js will now handle
-            // capturing all rows, setting up filter event listeners,
-            // and performing the initial updatePagination call.
+        window.paginationInitialized = true;
+        
+        // Initialize pagination with the audit table ID
             initPagination({
                 tableId: 'auditTable'
             });
-        });
-        // date-time filter script
-        document.addEventListener('DOMContentLoaded', function() {
-            const filterType = document.getElementById('dateFilterType');
-            const allDateFilters = document.querySelectorAll('.date-filter');
 
-            function updateDateFields() {
-                allDateFilters.forEach(field => field.classList.add('d-none'));
-                if (!filterType.value) return;
-
-                const selected = document.querySelectorAll('.date-' + filterType.value);
-                selected.forEach(field => field.classList.remove('d-none'));
-            }
-
-            filterType.addEventListener('change', updateDateFields);
-            updateDateFields(); // initial load
-        });
-
-        document.addEventListener('DOMContentLoaded', function() {
-            const dateFilterTypeSelect = document.getElementById('dateFilterType');
-            const allDateFilters = document.querySelectorAll('.date-filter');
-
-            function toggleDateFilters() {
-                const selectedType = dateFilterTypeSelect.value;
-                allDateFilters.forEach(el => el.classList.add('d-none'));
-                if (selectedType) {
-                    document.querySelectorAll(`.date-filter.date-${selectedType}`).forEach(el => el.classList.remove('d-none'));
-                }
-            }
-
-            dateFilterTypeSelect.addEventListener('change', toggleDateFilters);
-            toggleDateFilters(); // initial call
-        });
-
-        // Add JavaScript for live filtering
-        document.addEventListener('DOMContentLoaded', function() {
-            // Store all table rows for filtering
-            const tableBody = document.getElementById('auditTable');
-            const allRows = Array.from(tableBody.querySelectorAll('tr'));
-            let filteredRows = [...allRows]; // Start with all rows
-            
-            // Get filter elements
+        // Get form and filter elements
             const filterForm = document.getElementById('auditFilterForm');
-            const filterType = document.getElementById('dateFilterType');
-            const allDateFilters = document.querySelectorAll('.date-filter');
+        const actionTypeSelect = document.getElementById('actionType');
+        const statusSelect = document.getElementById('status');
             const searchInput = document.getElementById('searchInput');
-            const actionTypeFilter = document.getElementById('actionType');
-            const statusFilter = document.getElementById('status');
             const applyFiltersBtn = document.getElementById('applyFilters');
             const clearFiltersBtn = document.getElementById('clearFilters');
-            
-            // Date filter fields
-            const dateFromInput = filterForm.querySelector('[name="date_from"]');
-            const dateToInput = filterForm.querySelector('[name="date_to"]');
-            const yearFromInput = filterForm.querySelector('[name="year_from"]');
-            const yearToInput = filterForm.querySelector('[name="year_to"]');
-            const monthYearFromInput = filterForm.querySelector('[name="month_year_from"]');
-            const monthYearToInput = filterForm.querySelector('[name="month_year_to"]');
-            
-            // Handle date filter type changes
-            function updateDateFields() {
-                allDateFilters.forEach(field => field.classList.add('d-none'));
-                if (!filterType.value) return;
+        const dateFilterType = document.getElementById('dateFilterType');
 
-                const selected = document.querySelectorAll('.date-' + filterType.value);
-                selected.forEach(field => field.classList.remove('d-none'));
-            }
+        // Function to submit the form
+        function submitForm() {
+            const formData = new FormData(filterForm);
+            const queryString = new URLSearchParams(formData).toString();
+            window.location.href = window.location.pathname + '?' + queryString;
+        }
 
-            filterType.addEventListener('change', function() {
-                updateDateFields();
+        // Add event listeners for dropdowns
+        if (actionTypeSelect) {
+            actionTypeSelect.addEventListener('change', function() {
+                submitForm();
             });
-            
-            // Initial date fields setup
-            updateDateFields();
-            
-            // Set up event listeners for live filtering
-            document.querySelectorAll('.live-filter').forEach(filter => {
-                filter.addEventListener('change', applyFilters);
+        }
+
+        if (statusSelect) {
+            statusSelect.addEventListener('change', function() {
+                submitForm();
             });
-            
-            // For search input, use input event with debounce
+        }
+
+        // Add event listener for search input - only trigger on Enter key or Apply button
             if (searchInput) {
-                let debounceTimer;
-                searchInput.addEventListener('input', function() {
-                    clearTimeout(debounceTimer);
-                    debounceTimer = setTimeout(function() {
-                        applyFilters();
-                    }, 300); // 300ms debounce for search
-                });
-            }
-            
-            // Apply filters button
-            applyFiltersBtn.addEventListener('click', applyFilters);
-            
-            // Clear filters button
-            clearFiltersBtn.addEventListener('click', function() {
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    submitForm();
+                }
+            });
+        }
+
+        // Add event listener for apply filters button
+        if (applyFiltersBtn) {
+            applyFiltersBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                submitForm();
+            });
+        }
+
+        // Add event listener for clear filters button
+        if (clearFiltersBtn) {
+            clearFiltersBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                
                 // Reset all form fields
                 filterForm.reset();
                 
                 // Reset date fields visibility
-                updateDateFields();
+                const allDateFilters = document.querySelectorAll('.date-filter');
+                allDateFilters.forEach(field => field.classList.add('d-none'));
                 
-                // Show all rows
-                filteredRows = [...allRows];
-                updateTable();
+                // Clear URL parameters and reload page
+                window.location.href = window.location.pathname;
             });
-            
-            // Function to apply all filters
-            function applyFilters() {
-                const searchTerm = searchInput.value.toLowerCase().trim();
-                const actionType = actionTypeFilter.value.toLowerCase();
-                const status = statusFilter.value.toLowerCase();
-                const dateFilterTypeValue = filterType.value;
+        }
+
+        // Date filter type change handler
+        if (dateFilterType) {
+            dateFilterType.addEventListener('change', function() {
+                const allDateFilters = document.querySelectorAll('.date-filter');
+                allDateFilters.forEach(field => field.classList.add('d-none'));
                 
-                // Filter the rows
-                filteredRows = allRows.filter(row => {
-                    // Text search (across all columns)
-                    const rowText = row.textContent.toLowerCase();
-                    const matchesSearch = searchTerm === '' || rowText.includes(searchTerm);
-                    
-                    // Action type filter
-                    const actionCell = row.querySelector('[data-label="Action"]');
-                    const actionText = actionCell ? actionCell.textContent.toLowerCase() : '';
-                    const matchesAction = actionType === '' || actionText.includes(actionType);
-                    
-                    // Status filter
-                    const statusCell = row.querySelector('[data-label="Status"]');
-                    const statusText = statusCell ? statusCell.textContent.toLowerCase() : '';
-                    const matchesStatus = status === '' || statusText.includes(status);
-                    
-                    // Date filtering
-                    let matchesDate = true;
-                    
-                    if (dateFilterTypeValue) {
-                        const dateCell = row.querySelector('[data-label="Date & Time"]');
-                        const dateText = dateCell ? dateCell.textContent.trim() : '';
-                        
-                        if (dateText) {
-                            const rowDate = new Date(dateText);
-                            
-                            switch (dateFilterTypeValue) {
-                                case 'mdy':
-                                    if (dateFromInput.value) {
-                                        const fromDate = new Date(dateFromInput.value);
-                                        if (rowDate < fromDate) matchesDate = false;
-                                    }
-                                    if (dateToInput.value) {
-                                        const toDate = new Date(dateToInput.value);
-                                        toDate.setHours(23, 59, 59); // End of day
-                                        if (rowDate > toDate) matchesDate = false;
-                                    }
-                                    break;
-                                    
-                                case 'year':
-                                    const rowYear = rowDate.getFullYear();
-                                    if (yearFromInput.value && rowYear < parseInt(yearFromInput.value)) {
-                                        matchesDate = false;
-                                    }
-                                    if (yearToInput.value && rowYear > parseInt(yearToInput.value)) {
-                                        matchesDate = false;
-                                    }
-                                    break;
-                                    
-                                case 'month_year':
-                                    const rowYearMonth = rowDate.getFullYear() * 100 + rowDate.getMonth() + 1;
-                                    
-                                    if (monthYearFromInput.value) {
-                                        const [fromYear, fromMonth] = monthYearFromInput.value.split('-').map(Number);
-                                        const fromYearMonth = fromYear * 100 + fromMonth;
-                                        if (rowYearMonth < fromYearMonth) matchesDate = false;
-                                    }
-                                    
-                                    if (monthYearToInput.value) {
-                                        const [toYear, toMonth] = monthYearToInput.value.split('-').map(Number);
-                                        const toYearMonth = toYear * 100 + toMonth;
-                                        if (rowYearMonth > toYearMonth) matchesDate = false;
-                                    }
-                                    break;
-                            }
-                        }
-                    }
-                    
-                    return matchesSearch && matchesAction && matchesStatus && matchesDate;
-                });
-                
-                // Update the table with filtered rows
-                updateTable();
+                if (this.value) {
+                    const selected = document.querySelectorAll('.date-' + this.value);
+                    selected.forEach(field => field.classList.remove('d-none'));
+                }
+            });
+
+            // Initialize date fields visibility
+            const allDateFilters = document.querySelectorAll('.date-filter');
+            allDateFilters.forEach(field => field.classList.add('d-none'));
+            if (dateFilterType.value) {
+                const selected = document.querySelectorAll('.date-' + dateFilterType.value);
+                selected.forEach(field => field.classList.remove('d-none'));
             }
-            
-            // Function to update table with filtered rows
-            function updateTable() {
-                // Clear the table
-                tableBody.innerHTML = '';
+        }
+
+        // Add event listeners for date inputs - only trigger on Apply button
+        document.querySelectorAll('.date-filter input').forEach(input => {
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    submitForm();
+                }
+            });
+        });
+    });
+
+    // Add sorting functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const sortableHeaders = document.querySelectorAll('.sortable');
+        sortableHeaders.forEach(header => {
+            header.addEventListener('click', function() {
+                const column = this.dataset.column;
+                const currentOrder = '<?= $sortOrder ?>';
+                const currentColumn = '<?= $sortColumn ?>';
                 
-                // Show no results message if no matches
-                if (filteredRows.length === 0) {
-                    const noResultsRow = document.createElement('tr');
-                    noResultsRow.innerHTML = `
-                        <td colspan="8">
-                            <div class="empty-state text-center py-4">
-                                <i class="fas fa-search fa-3x mb-3"></i>
-                                <h4>No matching records found</h4>
-                                <p class="text-muted">Try adjusting your search or filter criteria.</p>
-                            </div>
-                        </td>
-                    `;
-                    tableBody.appendChild(noResultsRow);
-                } else {
-                    // Add filtered rows to the table
-                    filteredRows.forEach(row => {
-                        tableBody.appendChild(row.cloneNode(true));
-                    });
+                // Determine new sort order
+                let newOrder = 'ASC';
+                if (column === currentColumn) {
+                    newOrder = currentOrder === 'ASC' ? 'DESC' : 'ASC';
                 }
                 
-                // Update pagination if it exists
-                if (typeof updatePagination === 'function') {
-                    // Store filtered rows for pagination
-                    window.filteredRows = filteredRows;
-                    // Reset to first page
-                    if (window.paginationConfig) {
-                        window.paginationConfig.currentPage = 1;
-                    }
-                    updatePagination();
-                }
+                // Get current URL parameters
+                const urlParams = new URLSearchParams(window.location.search);
                 
-                // Update counts display
-                const totalRowsElement = document.getElementById('totalRows');
-                if (totalRowsElement) {
-                    totalRowsElement.textContent = filteredRows.length;
-                }
-            }
+                // Update sort parameters
+                urlParams.set('sort', column);
+                urlParams.set('order', newOrder);
+                
+                // Redirect to new URL with sort parameters
+                window.location.href = window.location.pathname + '?' + urlParams.toString();
+            });
+        });
         });
     </script>
 </body>
