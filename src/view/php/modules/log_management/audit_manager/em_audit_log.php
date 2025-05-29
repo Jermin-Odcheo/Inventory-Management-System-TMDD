@@ -395,6 +395,13 @@ if (!empty($_GET['search'])) {
     $params[':search_oldval'] = $searchParam;
 }
 
+// Filter by module type
+if (!empty($_GET['module_type'])) {
+    $where .= " AND audit_log.Module = :module_type";
+    $params[':module_type'] = $_GET['module_type'];
+    error_log("Module type filter applied: " . $_GET['module_type']);
+}
+
 // Date filters based on date_filter_type
 $dateFilterType = $_GET['date_filter_type'] ?? '';
 
@@ -434,120 +441,33 @@ switch ($dateFilterType) {
 }
 
 // Query to get audit logs with user emails
-$query = "SELECT audit_log.*, users.email AS email 
-          FROM audit_log 
-          LEFT JOIN users ON audit_log.UserID = users.id
-          $where
-          ORDER BY audit_log.date_time DESC";
+$query = "SELECT audit_log.TrackID,
+    audit_log.UserID,
+    audit_log.EntityID,
+    audit_log.Module,
+    audit_log.Action,
+    audit_log.Details,
+    audit_log.OldVal,
+    audit_log.NewVal,
+    UPPER(audit_log.Status) AS status,
+    audit_log.Date_Time,
+    users.email AS email
+    FROM audit_log 
+    LEFT JOIN users ON audit_log.UserID = users.id
+    $where
+    ORDER BY audit_log.date_time DESC";
+
+// Debug the query and parameters
+error_log("Final Query: " . $query);
+error_log("Parameters: " . print_r($params, true));
 
 $stmt = $pdo->prepare($query);
 $stmt->execute($params);
 $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-try {
-    // Fetch unique values for dropdowns
-    $actionTypesQuery = "SELECT DISTINCT Action FROM audit_log WHERE Module IN ('Equipment Location', 'Equipment Details', 'Equipment Status') ORDER BY Action";
-    $statusTypesQuery = "SELECT DISTINCT Status FROM audit_log WHERE Module IN ('Equipment Location', 'Equipment Details', 'Equipment Status') ORDER BY Status";
-    $moduleTypesQuery = "SELECT DISTINCT Module FROM audit_log WHERE Module IN ('Equipment Location', 'Equipment Details', 'Equipment Status') ORDER BY Module";
-    
-    $actionTypes = $conn->query($actionTypesQuery)->fetch_all(MYSQLI_ASSOC);
-    $statusTypes = $conn->query($statusTypesQuery)->fetch_all(MYSQLI_ASSOC);
-    $moduleTypes = $conn->query($moduleTypesQuery)->fetch_all(MYSQLI_ASSOC);
-    
-    // Initialize base WHERE clause
-    $whereClause = "WHERE Module IN ('Equipment Location', 'Equipment Details', 'Equipment Status')";
-    $params = [];
-    $types = "";
-    
-    // Add filters
-    if (!empty($_GET['module_type'])) {
-        $whereClause .= " AND Module = ?";
-        $params[] = $_GET['module_type'];
-        $types .= "s";
-    }
-    
-    if (!empty($_GET['action_type'])) {
-        $whereClause .= " AND Action = ?";
-        $params[] = $_GET['action_type'];
-        $types .= "s";
-    }
-    
-    if (!empty($_GET['status'])) {
-        $whereClause .= " AND Status = ?";
-        $params[] = $_GET['status'];
-        $types .= "s";
-    }
-    
-    if (!empty($_GET['search'])) {
-        $whereClause .= " AND (User LIKE ? OR Details LIKE ? OR Changes LIKE ?)";
-        $searchTerm = "%" . $_GET['search'] . "%";
-        $params[] = $searchTerm;
-        $params[] = $searchTerm;
-        $params[] = $searchTerm;
-        $types .= "sss";
-    }
-    
-    // Add date range filter
-    if (!empty($_GET['date_from']) && !empty($_GET['date_to'])) {
-        $whereClause .= " AND Date_Time BETWEEN ? AND ?";
-        $params[] = $_GET['date_from'] . " 00:00:00";
-        $params[] = $_GET['date_to'] . " 23:59:59";
-        $types .= "ss";
-    }
-    
-    // Initialize sorting parameters
-    $sortColumn = isset($_GET['sort']) ? $_GET['sort'] : 'Date_Time';
-    $sortOrder = isset($_GET['order']) ? $_GET['order'] : 'DESC';
-    
-    // Validate sort column to prevent SQL injection
-    $allowedColumns = ['Track_ID', 'User', 'Module', 'Action', 'Details', 'Changes', 'Status', 'Date_Time'];
-    if (!in_array($sortColumn, $allowedColumns)) {
-        $sortColumn = 'Date_Time';
-    }
-    
-    // Validate sort order
-    $sortOrder = strtoupper($sortOrder) === 'ASC' ? 'ASC' : 'DESC';
-    
-    // Add sorting to query
-    $orderClause = "ORDER BY $sortColumn $sortOrder";
-    
-    // Get total count for pagination
-    $countQuery = "SELECT COUNT(*) as total FROM audit_log $whereClause";
-    $stmt = $conn->prepare($countQuery);
-    if (!empty($params)) {
-        $stmt->bind_param($types, ...$params);
-    }
-    $stmt->execute();
-    $totalRecords = $stmt->get_result()->fetch_assoc()['total'];
-    
-    // Calculate pagination
-    $recordsPerPage = 10;
-    $totalPages = ceil($totalRecords / $recordsPerPage);
-    $currentPage = isset($_GET['page']) ? max(1, min($totalPages, intval($_GET['page']))) : 1;
-    $offset = ($currentPage - 1) * $recordsPerPage;
-    
-    // Main query with pagination
-    $query = "SELECT * FROM audit_log $whereClause $orderClause LIMIT ? OFFSET ?";
-    $stmt = $conn->prepare($query);
-    
-    // Add pagination parameters
-    $params[] = $recordsPerPage;
-    $params[] = $offset;
-    $types .= "ii";
-    
-    // Bind all parameters
-    $stmt->bind_param($types, ...$params);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    // Log debug information
-    error_log("Query: " . $query);
-    error_log("Parameters: " . print_r($params, true));
-    error_log("Types: " . $types);
-} catch (Exception $e) {
-    // Handle exception
-    error_log("Error in query: " . $e->getMessage());
-}
+// Debug the results
+error_log("Number of results: " . count($auditLogs));
+
 ?>
 
 <!DOCTYPE html>
@@ -584,20 +504,19 @@ try {
                             <select class="form-select" name="module_type" id="moduleType">
                                 <option value="">All</option>
                                 <?php
-                                if (!empty($moduleTypes)) {
-                                    foreach ($moduleTypes as $module) {
-                                        $selected = ($_GET['module_type'] ?? '') === $module ? 'selected' : '';
-                                        echo '<option value="' . htmlspecialchars($module) . '" ' . $selected . '>' .
-                                            htmlspecialchars($module) . '</option>';
-                                    }
-                                } else {
-                                    // Fallback options if database query fails
-                                    $defaultModules = ['Purchase Order', 'Charge Invoice', 'Receiving Report'];
-                                    foreach ($defaultModules as $module) {
-                                        $selected = ($_GET['module_type'] ?? '') === $module ? 'selected' : '';
-                                        echo '<option value="' . htmlspecialchars($module) . '" ' . $selected . '>' .
-                                            htmlspecialchars($module) . '</option>';
-                                    }
+                                // Define the allowed modules
+                                $allowedModules = ['Equipment Management', 'Equipment Details', 'Equipment Location', 'Equipment Status'];
+                                
+                                // If no modules found in database, use the allowed modules
+                                if (empty($moduleTypes)) {
+                                    $moduleTypes = $allowedModules;
+                                }
+                                
+                                // Output the options
+                                foreach ($moduleTypes as $module) {
+                                    $selected = ($_GET['module_type'] ?? '') === $module ? 'selected' : '';
+                                    echo '<option value="' . htmlspecialchars($module) . '" ' . $selected . '>' .
+                                        htmlspecialchars($module) . '</option>';
                                 }
                                 ?>
                             </select>
@@ -608,21 +527,21 @@ try {
                             <select class="form-select" name="action_type" id="actionType">
                                 <option value="">All</option>
                                 <?php
-                                if (!empty($actionTypes)) {
-                                    foreach ($actionTypes as $action) {
+                                if (!empty($actionTypes)):
+                                    foreach ($actionTypes as $action):
                                         $selected = ($_GET['action_type'] ?? '') === $action ? 'selected' : '';
                                         echo '<option value="' . htmlspecialchars($action) . '" ' . $selected . '>' .
                                             htmlspecialchars($action) . '</option>';
-                                    }
-                                } else {
+                                    endforeach;
+                                else:
                                     // Fallback options if database query fails
                                     $defaultActions = ['Create', 'Modified', 'Remove', 'Restore', 'Delete'];
-                                    foreach ($defaultActions as $action) {
+                                    foreach ($defaultActions as $action):
                                         $selected = ($_GET['action_type'] ?? '') === $action ? 'selected' : '';
                                         echo '<option value="' . htmlspecialchars($action) . '" ' . $selected . '>' .
                                             htmlspecialchars($action) . '</option>';
-                                    }
-                                }
+                                    endforeach;
+                                endif;
                                 ?>
                             </select>
                         </div>
@@ -632,129 +551,23 @@ try {
                             <select class="form-select" name="status" id="status">
                                 <option value="">All</option>
                                 <?php
-                                if (!empty($statusTypes)) {
-                                    foreach ($statusTypes as $status) {
+                                if (!empty($statusTypes)):
+                                    foreach ($statusTypes as $status):
                                         $selected = ($_GET['status'] ?? '') === $status ? 'selected' : '';
                                         echo '<option value="' . htmlspecialchars($status) . '" ' . $selected . '>' .
                                             htmlspecialchars($status) . '</option>';
-                                    }
-                                } else {
+                                    endforeach;
+                                else:
                                     // Fallback options if database query fails
                                     $defaultStatuses = ['Successful', 'Failed'];
-                                    foreach ($defaultStatuses as $status) {
+                                    foreach ($defaultStatuses as $status):
                                         $selected = ($_GET['status'] ?? '') === $status ? 'selected' : '';
                                         echo '<option value="' . htmlspecialchars($status) . '" ' . $selected . '>' .
                                             htmlspecialchars($status) . '</option>';
-                                    }
+                                    endforeach;
                                     // Add debug info
                                     error_log("Using fallback status types as no values were found in database");
-                                }
-                                ?>
-                            </select>
-                        </div>
-
-                        <!-- Date Range selector -->
-                        <div class="col-12 col-md-3">
-                            <label class="form-label fw-semibold">Date Filter Type</label>
-                            <select id="dateFilterType" name="date_filter_type" class="form-select shadow-sm live-filter">
-                                <option value="" <?= empty($filters['date_filter_type']) ? 'selected' : '' ?>>-- Select Type --</option>
-                                <option value="month_year" <?= (($_GET['date_filter_type'] ?? '') === 'month_year') ? 'selected' : '' ?>>Month-Year Range</option>
-                                <option value="year" <?= (($_GET['date_filter_type'] ?? '') === 'year') ? 'selected' : '' ?>>Year Range</option>
-                                <option value="mdy" <?= (($_GET['date_filter_type'] ?? '') === 'mdy') ? 'selected' : '' ?>>Month-Date-Year Range</option>
-
-                            </select>
-
-                        </div>
-
-                        <!-- MDY Range -->
-                        <div class="col-12 col-md-3 date-filter date-mdy d-none">
-                            <label class="form-label fw-semibold">Date From</label>
-                            <input type="date" name="date_from" class="form-control shadow-sm live-filter"
-                                value="<?= htmlspecialchars($_GET['date_from'] ?? '') ?>"
-                                placeholder="Start Date (YYYY-MM-DD)">
-                        </div>
-                        <div class="col-12 col-md-3 date-filter date-mdy d-none">
-                            <label class="form-label fw-semibold">Date To</label>
-                            <input type="date" name="date_to" class="form-control shadow-sm live-filter"
-                                value="<?= htmlspecialchars($_GET['date_to'] ?? '') ?>"
-                                placeholder="End Date (YYYY-MM-DD)">
-                        </div>
-
-                        <!-- Year Range -->
-                        <div class="col-12 col-md-3 date-filter date-year d-none">
-                            <label class="form-label fw-semibold">Year From</label>
-                            <input type="number" name="year_from" class="form-control shadow-sm live-filter"
-                                min="1900" max="2100"
-                                placeholder="e.g., 2023"
-                                value="<?= htmlspecialchars($_GET['year_from'] ?? '') ?>">
-                        </div>
-
-                        <div class="col-12 col-md-3 date-filter date-year d-none">
-                            <label class="form-label fw-semibold">Year To</label>
-                            <input type="number" name="year_to" class="form-control shadow-sm live-filter"
-                                min="1900" max="2100"
-                                placeholder="e.g., 2025"
-                                value="<?= htmlspecialchars($_GET['year_to'] ?? '') ?>">
-                        </div>
-
-                        <!-- Month-Year Range -->
-                        <div class="col-12 col-md-3 date-filter date-month_year d-none">
-                            <label class="form-label fw-semibold">From (MM-YYYY)</label>
-                            <input type="month" name="month_year_from" class="form-control shadow-sm live-filter"
-                                value="<?= htmlspecialchars($_GET['month_year_from'] ?? '') ?>"
-                                placeholder="e.g., 2023-01">
-                        </div>
-                        <div class="col-12 col-md-3 date-filter date-month_year d-none">
-                            <label class="form-label fw-semibold">To (MM-YYYY)</label>
-                            <input type="month" name="month_year_to" class="form-control shadow-sm live-filter"
-                                value="<?= htmlspecialchars($_GET['month_year_to'] ?? '') ?>"
-                                placeholder="e.g., 2023-12">
-                        </div>
-
-                        <!-- Search bar -->
-                        <div class="col-12 col-sm-6 col-md-3">
-                            <label class="form-label fw-semibold">Search</label>
-                            <div class="input-group shadow-sm">
-                                <span class="input-group-text"><i class="bi bi-search"></i></span>
-                                <input type="text" name="search" id="searchInput" class="form-control live-filter" placeholder="Search keyword..."
-                                    value="<?= htmlspecialchars($_GET['search'] ?? '') ?>">
-                            </div>
-                        </div>
-                        <!-- Filter Button-->
-                        <div class="col-6 col-md-2 d-grid" style="align-items: center;">
-                            <button type="button" id="applyFilters" class="btn btn-dark"><i class="bi bi-funnel"></i> Filter</button>
-                        </div>
-                        <!-- Clear Filter Button -->
-                        <div class="col-6 col-md-2 d-grid" style="align-items: center;">
-                            <button type="button" id="clearFilters" class="btn btn-secondary shadow-sm">
-                                <i class="bi bi-x-circle"></i> Clear
-                            </button>
-                        </div>
-                    </form>
-                </div>
-
-                        <div class="col-md-3">
-                            <label for="status" class="form-label">Status</label>
-                            <select class="form-select" name="status" id="status">
-                                <option value="">All</option>
-                                <?php 
-                                if (!empty($statusTypes)) {
-                                    foreach ($statusTypes as $status) {
-                                        $selected = ($_GET['status'] ?? '') === $status ? 'selected' : '';
-                                        echo '<option value="' . htmlspecialchars($status) . '" ' . $selected . '>' . 
-                                             htmlspecialchars($status) . '</option>';
-                                    }
-                                } else {
-                                    // Fallback options if database query fails
-                                    $defaultStatuses = ['Successful', 'Failed'];
-                                    foreach ($defaultStatuses as $status) {
-                                        $selected = ($_GET['status'] ?? '') === $status ? 'selected' : '';
-                                        echo '<option value="' . htmlspecialchars($status) . '" ' . $selected . '>' . 
-                                             htmlspecialchars($status) . '</option>';
-                                    }
-                                    // Add debug info
-                                    error_log("Using fallback status types as no values were found in database");
-                                }
+                                endif;
                                 ?>
                             </select>
                         </div>
@@ -1015,221 +828,89 @@ try {
     
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const dateFilterTypeSelect = document.getElementById('dateFilterType');
-        const allDateFilters = document.querySelectorAll('.date-filter');
+        // Get filter elements
+        const filterForm = document.getElementById('auditFilterForm');
+        const searchInput = document.getElementById('searchInput');
+        const moduleTypeFilter = document.getElementById('moduleType');
+        const actionTypeFilter = document.getElementById('actionType');
+        const statusFilter = document.getElementById('status');
+        const dateFilterType = document.getElementById('dateFilterType');
+        const applyFiltersBtn = document.getElementById('applyFilters');
+        const clearFiltersBtn = document.getElementById('clearFilters');
 
-        function toggleDateFilters() {
-            const selectedType = dateFilterTypeSelect.value;
-            allDateFilters.forEach(el => el.classList.add('d-none'));
-            if (selectedType) {
-                document.querySelectorAll(`.date-filter.date-${selectedType}`).forEach(el => el.classList.remove('d-none'));
-            }
-        }
-
-        dateFilterTypeSelect.addEventListener('change', toggleDateFilters);
-        toggleDateFilters(); // initial call
-    });
-    </script>
-
-    <!-- Add JavaScript for live filtering -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Store all table rows for filtering
-            const tableBody = document.getElementById('auditTable');
-            const allRows = Array.from(tableBody.querySelectorAll('tr'));
-            let filteredRows = [...allRows]; // Start with all rows
-            
-            // Get filter elements
-            const filterForm = document.getElementById('auditFilterForm');
-            const filterType = document.getElementById('dateFilterType');
-            const allDateFilters = document.querySelectorAll('.date-filter');
-            const searchInput = document.getElementById('searchInput');
-            const actionTypeFilter = document.getElementById('actionType');
-            const statusFilter = document.getElementById('status');
-            const applyFiltersBtn = document.getElementById('applyFilters');
-            const clearFiltersBtn = document.getElementById('clearFilters');
-            
-            // Date filter fields
-            const dateFromInput = filterForm.querySelector('[name="date_from"]');
-            const dateToInput = filterForm.querySelector('[name="date_to"]');
-            const yearFromInput = filterForm.querySelector('[name="year_from"]');
-            const yearToInput = filterForm.querySelector('[name="year_to"]');
-            const monthYearFromInput = filterForm.querySelector('[name="month_year_from"]');
-            const monthYearToInput = filterForm.querySelector('[name="month_year_to"]');
-            
-            // Handle date filter type changes
-            function updateDateFields() {
-                allDateFilters.forEach(field => field.classList.add('d-none'));
-                if (!filterType.value) return;
-
-                const selected = document.querySelectorAll('.date-' + filterType.value);
-                selected.forEach(field => field.classList.remove('d-none'));
-            }
-
-            filterType.addEventListener('change', function() {
-                updateDateFields();
-            });
-            
-            // Initial date fields setup
-            updateDateFields();
-            
-            // Set up event listeners for live filtering
-            document.querySelectorAll('.live-filter').forEach(filter => {
-                filter.addEventListener('change', applyFilters);
-            });
-            
-            // For search input, use input event with debounce
-            if (searchInput) {
-                let debounceTimer;
-                searchInput.addEventListener('input', function() {
-                    clearTimeout(debounceTimer);
-                    debounceTimer = setTimeout(function() {
-                        applyFilters();
-                    }, 300); // 300ms debounce for search
-                });
-            }
-            
-            // Apply filters button
-            applyFiltersBtn.addEventListener('click', applyFilters);
-            
-            // Clear filters button
-            clearFiltersBtn.addEventListener('click', function() {
-                // Reset all form fields
-                filterForm.reset();
-                
-                // Reset date fields visibility
-                updateDateFields();
-                
-                // Show all rows
-                filteredRows = [...allRows];
-                updateTable();
-            });
-            
-            // Function to apply all filters
-            function applyFilters() {
-                const searchTerm = searchInput.value.toLowerCase().trim();
-                const actionType = actionTypeFilter.value.toLowerCase();
-                const status = statusFilter.value.toLowerCase();
-                const dateFilterTypeValue = filterType.value;
-                
-                // Filter the rows
-                filteredRows = allRows.filter(row => {
-                    // Text search (across all columns)
-                    const rowText = row.textContent.toLowerCase();
-                    const matchesSearch = searchTerm === '' || rowText.includes(searchTerm);
-                    
-                    // Action type filter
-                    const actionCell = row.querySelector('[data-label="Action"]');
-                    const actionText = actionCell ? actionCell.textContent.toLowerCase() : '';
-                    const matchesAction = actionType === '' || actionText.includes(actionType);
-                    
-                    // Status filter
-                    const statusCell = row.querySelector('[data-label="Status"]');
-                    const statusText = statusCell ? statusCell.textContent.toLowerCase() : '';
-                    const matchesStatus = status === '' || statusText.includes(status);
-                    
-                    // Date filtering
-                    let matchesDate = true;
-                    
-                    if (dateFilterTypeValue) {
-                        const dateCell = row.querySelector('[data-label="Date & Time"]');
-                        const dateText = dateCell ? dateCell.textContent.trim() : '';
-                        
-                        if (dateText) {
-                            const rowDate = new Date(dateText);
-                            
-                            switch (dateFilterTypeValue) {
-                                case 'mdy':
-                                    if (dateFromInput.value) {
-                                        const fromDate = new Date(dateFromInput.value);
-                                        if (rowDate < fromDate) matchesDate = false;
-                                    }
-                                    if (dateToInput.value) {
-                                        const toDate = new Date(dateToInput.value);
-                                        toDate.setHours(23, 59, 59); // End of day
-                                        if (rowDate > toDate) matchesDate = false;
-                                    }
-                                    break;
-                                    
-                                case 'year':
-                                    const rowYear = rowDate.getFullYear();
-                                    if (yearFromInput.value && rowYear < parseInt(yearFromInput.value)) {
-                                        matchesDate = false;
-                                    }
-                                    if (yearToInput.value && rowYear > parseInt(yearToInput.value)) {
-                                        matchesDate = false;
-                                    }
-                                    break;
-                                    
-                                case 'month_year':
-                                    const rowYearMonth = rowDate.getFullYear() * 100 + rowDate.getMonth() + 1;
-                                    
-                                    if (monthYearFromInput.value) {
-                                        const [fromYear, fromMonth] = monthYearFromInput.value.split('-').map(Number);
-                                        const fromYearMonth = fromYear * 100 + fromMonth;
-                                        if (rowYearMonth < fromYearMonth) matchesDate = false;
-                                    }
-                                    
-                                    if (monthYearToInput.value) {
-                                        const [toYear, toMonth] = monthYearToInput.value.split('-').map(Number);
-                                        const toYearMonth = toYear * 100 + toMonth;
-                                        if (rowYearMonth > toYearMonth) matchesDate = false;
-                                    }
-                                    break;
-                            }
-                        }
-                    }
-                    
-                    return matchesSearch && matchesAction && matchesStatus && matchesDate;
+        // Handle date filter type changes
+        if (dateFilterType) {
+            // Initial setup of date filter fields
+            function setupDateFilters() {
+                // Hide all date filter fields first
+                document.querySelectorAll('.date-filter').forEach(field => {
+                    field.classList.add('d-none');
                 });
                 
-                // Update the table with filtered rows
-                updateTable();
-            }
-            
-            // Function to update table with filtered rows
-            function updateTable() {
-                // Clear the table
-                tableBody.innerHTML = '';
-                
-                // Show no results message if no matches
-                if (filteredRows.length === 0) {
-                    const noResultsRow = document.createElement('tr');
-                    noResultsRow.innerHTML = `
-                        <td colspan="8">
-                            <div class="empty-state text-center py-4">
-                                <i class="fas fa-search fa-3x mb-3"></i>
-                                <h4>No matching records found</h4>
-                                <p class="text-muted">Try adjusting your search or filter criteria.</p>
-                            </div>
-                        </td>
-                    `;
-                    tableBody.appendChild(noResultsRow);
-                } else {
-                    // Add filtered rows to the table
-                    filteredRows.forEach(row => {
-                        tableBody.appendChild(row.cloneNode(true));
+                // Show the relevant date filter fields based on current selection
+                const selectedType = dateFilterType.value;
+                if (selectedType) {
+                    document.querySelectorAll('.date-' + selectedType).forEach(field => {
+                        field.classList.remove('d-none');
                     });
                 }
-                
-                // Update pagination if it exists
-                if (typeof updatePagination === 'function') {
-                    // Store filtered rows for pagination
-                    window.filteredRows = filteredRows;
-                    // Reset to first page
-                    if (window.paginationConfig) {
-                        window.paginationConfig.currentPage = 1;
-                    }
-                    updatePagination();
-                }
-                
-                // Update counts display
-                const totalRowsElement = document.getElementById('totalRows');
-                if (totalRowsElement) {
-                    totalRowsElement.textContent = filteredRows.length;
-                }
             }
+
+            // Run initial setup
+            setupDateFilters();
+
+            // Add change event listener
+            dateFilterType.addEventListener('change', setupDateFilters);
+        }
+
+        // Clear filters button
+        clearFiltersBtn.addEventListener('click', function() {
+            // Reset all form fields
+            filterForm.reset();
+            
+            // Explicitly reset module type dropdown to first option
+            if (moduleTypeFilter) {
+                moduleTypeFilter.value = '';
+            }
+            
+            // Explicitly reset action type dropdown to first option
+            if (actionTypeFilter) {
+                actionTypeFilter.value = '';
+            }
+            
+            // Explicitly reset status dropdown to first option
+            if (statusFilter) {
+                statusFilter.value = '';
+            }
+            
+            // Clear search input
+            if (searchInput) {
+                searchInput.value = '';
+            }
+            
+            // Reset date filter type and hide all date filter fields
+            if (dateFilterType) {
+                dateFilterType.value = '';
+                document.querySelectorAll('.date-filter').forEach(field => {
+                    field.classList.add('d-none');
+                });
+            }
+            
+            // Clear any hidden inputs
+            const hiddenInputs = filterForm.querySelectorAll('input[type="hidden"]');
+            hiddenInputs.forEach(input => {
+                input.value = '';
+            });
+            
+            // Redirect to the base URL without any query parameters
+            window.location.href = window.location.pathname;
         });
+
+        // Apply filters button
+        applyFiltersBtn.addEventListener('click', function() {
+            filterForm.submit();
+        });
+    });
     </script>
 </body>
 
