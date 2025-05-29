@@ -11,14 +11,12 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Initialize RBAC for Equipment Management
+// Initialize RBAC for Equipment Transaction
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
-$rbac->requirePrivilege('Equipment Management', 'View');
-
-// Check for additional privileges
-$canRestore = $rbac->hasPrivilege('Equipment Management', 'Restore');
-$canRemove = $rbac->hasPrivilege('Equipment Management', 'Remove');
-$canDelete = $rbac->hasPrivilege('Equipment Management', 'Permanently Delete');
+$rbac->requirePrivilege('Equipment Transactions', 'View');
+$canRestore = $rbac->hasPrivilege('Equipment Transactions', 'Restore');
+$canRemove = $rbac->hasPrivilege('Equipment Transactions', 'Remove');
+$canDelete = $rbac->hasPrivilege('Equipment Transactions', 'Permanently Delete');
 
 // --- Sorting Logic ---
 $sort_by = $_GET['sort_by'] ?? 'track_id'; // Default sort column
@@ -167,7 +165,6 @@ function formatChanges($oldJsonStr)
 ?>
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <title>Equipment Transaction Archives</title>
@@ -213,7 +210,6 @@ function formatChanges($oldJsonStr)
         }
     </style>
 </head>
-
 <body>
     <?php include '../../../general/sidebar.php'; ?>
 
