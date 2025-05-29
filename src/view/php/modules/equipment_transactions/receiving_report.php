@@ -124,9 +124,21 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
         $oldData = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($oldData) {
+            $pdo->beginTransaction();
+            
+            // First get the RR number for updating related records
+            $rrNo = $oldData['rr_no'];
+            
+            // 1. Update equipment_details to clear RR references
+            $equipmentStmt = $pdo->prepare("UPDATE equipment_details SET rr_no = NULL WHERE rr_no = ? AND is_disabled = 0");
+            $equipmentStmt->execute([$rrNo]);
+            $affectedEquipment = $equipmentStmt->rowCount();
+            
+            // 2. Mark the receive_report as disabled
             $stmt = $pdo->prepare("UPDATE receive_report SET is_disabled = 1 WHERE id = ?");
             $stmt->execute([$id]);
-            $_SESSION['success'] = "Receiving Report deleted successfully.";
+            
+            // Main audit log for RR deletion
             logAudit(
                 $pdo,
                 'remove',
@@ -136,6 +148,22 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                 null,
                 $id
             );
+            
+            // Additional audit log for affected equipment_details
+            if ($affectedEquipment > 0) {
+                logAudit(
+                    $pdo,
+                    'cascade-update',
+                    "Updated {$affectedEquipment} equipment_details records to remove reference to deleted RR: {$rrNo}",
+                    'Successful',
+                    json_encode(['rr_no' => $rrNo, 'affected_records' => $affectedEquipment]),
+                    null,
+                    $id
+                );
+            }
+            
+            $pdo->commit();
+            $_SESSION['success'] = "Receiving Report deleted successfully. {$affectedEquipment} equipment records updated.";
         } else {
             $_SESSION['errors'] = ["Receiving Report not found for deletion."];
             logAudit(
@@ -149,6 +177,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             );
         }
     } catch (PDOException $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         $_SESSION['errors'] = ["Error deleting Receiving Report: " . $e->getMessage()];
         logAudit(
             $pdo,
@@ -160,6 +191,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             $id
         );
     } catch (Exception $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         $_SESSION['errors'] = [$e->getMessage()];
         logAudit(
             $pdo,
@@ -606,7 +640,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                                             <td><?= htmlspecialchars($rr['accountable_individual']) ?></td>
                                             <td><?= htmlspecialchars($rr['po_no']) ?></td>
                                             <td><?= htmlspecialchars($rr['ai_loc']) ?></td>
-                                            <td><?= date('Y-m-d H:i', strtotime($rr['date_created'])) ?></td>
+                                            <td><?= date('Y-m-d h:i A', strtotime($rr['date_created'])) ?></td>
                                             <td class="text-center">
                                                 <div class="btn-group" role="group">
                                                     <?php if ($canModify): ?>
@@ -1173,12 +1207,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                                     <td>${report.accountable_individual}</td>
                                     <td>${report.po_no}</td>
                                     <td>${report.ai_loc}</td>
-                                    <td>${new Date(report.date_created).toLocaleString()}</td>
-                                    <td>
-                                        ${report.is_disabled == 1 
-                                            ? '<span class="badge bg-danger">Disabled</span>'
-                                            : '<span class="badge bg-success">Active</span>'}
-                                    </td>
+                                    <td>${(() => { const d = new Date(report.date_created); return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}-${d.getDate().toString().padStart(2,'0')} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}` })()}</td>
                                     <td class="text-center">
                                         <div class="btn-group" role="group">
                                             <button class="btn btn-sm btn-outline-primary edit-report"
