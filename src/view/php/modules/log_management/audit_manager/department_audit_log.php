@@ -185,9 +185,9 @@ $query = "SELECT audit_log.*, users.email AS email
           ORDER BY $sortColumn $sortOrder";
 
 try {
-    $stmt = $pdo->prepare($query);
+$stmt = $pdo->prepare($query);
     $stmt->execute($params);
-    $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     // Debug the results
     error_log("Number of records found: " . count($auditLogs));
@@ -743,22 +743,22 @@ function getDisplayAction($action)
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Set a flag to indicate that this page explicitly initializes pagination
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set a flag to indicate that this page explicitly initializes pagination
         window.paginationInitialized = true;
         
         // Initialize pagination with the audit table ID
-        initPagination({
-            tableId: 'auditTable'
-        });
+            initPagination({
+                tableId: 'auditTable'
+            });
 
         // Get form and filter elements
-        const filterForm = document.getElementById('auditFilterForm');
+            const filterForm = document.getElementById('auditFilterForm');
         const actionTypeSelect = document.getElementById('actionType');
         const statusSelect = document.getElementById('status');
-        const searchInput = document.getElementById('searchInput');
-        const applyFiltersBtn = document.getElementById('applyFilters');
-        const clearFiltersBtn = document.getElementById('clearFilters');
+            const searchInput = document.getElementById('searchInput');
+            const applyFiltersBtn = document.getElementById('applyFilters');
+            const clearFiltersBtn = document.getElementById('clearFilters');
         const dateFilterType = document.getElementById('dateFilterType');
 
         // Function to submit the form
@@ -782,7 +782,7 @@ function getDisplayAction($action)
         }
 
         // Add event listener for search input - only trigger on Enter key or Apply button
-        if (searchInput) {
+            if (searchInput) {
             searchInput.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
@@ -874,7 +874,7 @@ function getDisplayAction($action)
                 window.location.href = window.location.pathname + '?' + urlParams.toString();
             });
         });
-    });
+        });
     </script>
 </body>
 
