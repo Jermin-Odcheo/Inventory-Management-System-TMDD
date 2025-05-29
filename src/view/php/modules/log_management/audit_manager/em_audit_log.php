@@ -449,7 +449,7 @@ $query = "SELECT audit_log.TrackID,
     audit_log.Details,
     audit_log.OldVal,
     audit_log.NewVal,
-    UPPER(audit_log.Status) AS status,
+    audit_log.Status,
     audit_log.Date_Time,
     users.email AS email
     FROM audit_log 
@@ -749,7 +749,7 @@ error_log("Number of results: " . count($auditLogs));
                                             <!-- STATUS -->
                                             <td data-label="Status">
                                                 <span class="badge <?php echo (strtolower($log['Status'] ?? '') === 'successful') ? 'bg-success' : 'bg-danger'; ?>">
-                                                    <?php echo getStatusIcon($log['Status']) . ' ' . htmlspecialchars($log['Status']); ?>
+                                                    <?php echo getStatusIcon($log['Status'] ?? '') . ' ' . htmlspecialchars($log['Status'] ?? 'Unknown'); ?>
                                                 </span>
                                             </td>
 
