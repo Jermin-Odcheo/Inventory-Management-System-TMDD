@@ -117,40 +117,42 @@ function formatAuditDiff($oldJson, $newJson, $status = null)
     }
 
     $descriptions = [];
-    
-    // Compare role name if it exists in both old and new data
+
+    // Compare role name if it exists
     if (isset($oldData['role_name'], $newData['role_name']) && 
         $oldData['role_name'] !== $newData['role_name']) {
-        $descriptions[] = "Role name was changed from '<em>" . htmlspecialchars($oldData['role_name']) . 
+        $descriptions[] = "Role name changed from '<em>" . htmlspecialchars($oldData['role_name']) . 
                          "</em>' to '<strong>" . htmlspecialchars($newData['role_name']) . "</strong>'.";
     }
-    
-    // Special handling for modules_and_privileges
-    if (isset($oldData['modules_and_privileges']) && isset($newData['modules_and_privileges'])) {
-        $allModules = array_unique(array_merge(
-            array_keys($oldData['modules_and_privileges']), 
-            array_keys($newData['modules_and_privileges'])
-        ));
-        
-        foreach ($allModules as $module) {
-            $oldPrivs = isset($oldData['modules_and_privileges'][$module]) ? 
-                       $oldData['modules_and_privileges'][$module] : [];
-            $newPrivs = isset($newData['modules_and_privileges'][$module]) ? 
-                       $newData['modules_and_privileges'][$module] : [];
-            
-            // Added privileges
-            $added = array_diff($newPrivs, $oldPrivs);
-            // Removed privileges
-            $removed = array_diff($oldPrivs, $newPrivs);
-            
-            if (!empty($added)) {
-                $descriptions[] = "Module <strong>" . htmlspecialchars($module) . "</strong>: Added privileges: " . 
-                                "<strong>" . htmlspecialchars(implode(', ', $added)) . "</strong>";
-            }
-            if (!empty($removed)) {
-                $descriptions[] = "Module <strong>" . htmlspecialchars($module) . "</strong>: Removed privileges: " . 
-                                "<em>" . htmlspecialchars(implode(', ', $removed)) . "</em>";
-            }
+
+    // Compare privileges (per module)
+    $oldPrivileges = $oldData['privileges'] ?? [];
+    $newPrivileges = $newData['privileges'] ?? [];
+
+    $allModules = array_unique(array_merge(
+        array_keys($oldPrivileges),
+        array_keys($newPrivileges)
+    ));
+
+    foreach ($allModules as $module) {
+        $oldPrivs = $oldPrivileges[$module] ?? [];
+        $newPrivs = $newPrivileges[$module] ?? [];
+
+        // Normalize arrays to avoid issues if they are associative
+        $oldPrivs = array_values($oldPrivs);
+        $newPrivs = array_values($newPrivs);
+
+        // Added and removed privileges
+        $added = array_diff($newPrivs, $oldPrivs);
+        $removed = array_diff($oldPrivs, $newPrivs);
+
+        if (!empty($added)) {
+            $descriptions[] = "Module <strong>" . htmlspecialchars($module) . "</strong>: Added privileges → " . 
+                              "<strong>" . htmlspecialchars(implode(', ', $added)) . "</strong>";
+        }
+        if (!empty($removed)) {
+            $descriptions[] = "Module <strong>" . htmlspecialchars($module) . "</strong>: Removed privileges → " . 
+                              "<em>" . htmlspecialchars(implode(', ', $removed)) . "</em>";
         }
     }
 
@@ -169,8 +171,10 @@ function formatAuditDiff($oldJson, $newJson, $status = null)
         $html .= "</li>";
     }
     $html .= "</ul>";
+
     return $html;
 }
+
 
 /**
  * Returns an icon based on the given action.
