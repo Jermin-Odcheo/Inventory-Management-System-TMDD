@@ -640,7 +640,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                                             <td><?= htmlspecialchars($rr['accountable_individual']) ?></td>
                                             <td><?= htmlspecialchars($rr['po_no']) ?></td>
                                             <td><?= htmlspecialchars($rr['ai_loc']) ?></td>
-                                            <td><?= date('Y-m-d H:i', strtotime($rr['date_created'])) ?></td>
+                                            <td><?= date('Y-m-d h:i A', strtotime($rr['date_created'])) ?></td>
                                             <td class="text-center">
                                                 <div class="btn-group" role="group">
                                                     <?php if ($canModify): ?>
@@ -1207,12 +1207,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                                     <td>${report.accountable_individual}</td>
                                     <td>${report.po_no}</td>
                                     <td>${report.ai_loc}</td>
-                                    <td>${new Date(report.date_created).toLocaleString()}</td>
-                                    <td>
-                                        ${report.is_disabled == 1 
-                                            ? '<span class="badge bg-danger">Disabled</span>'
-                                            : '<span class="badge bg-success">Active</span>'}
-                                    </td>
+                                    <td>${(() => { const d = new Date(report.date_created); return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}-${d.getDate().toString().padStart(2,'0')} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}` })()}</td>
                                     <td class="text-center">
                                         <div class="btn-group" role="group">
                                             <button class="btn btn-sm btn-outline-primary edit-report"
