@@ -19,7 +19,7 @@ body {
     top: 0;
     left: 300px; /* Match the sidebar width */
     right: 0; /* Extend to the right edge */
-    z-index: 900; /* Lower than sidebar's z-index */
+    z-index: 10000; /* Lower than sidebar's z-index */
 }
 
 .main-content {

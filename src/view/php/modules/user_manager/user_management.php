@@ -1,15 +1,19 @@
 <?php
 
 declare(strict_types=1);
+
 require_once '../../../../../config/ims-tmdd.php';
 session_start();
-include '../../general/header.php';
-include '../../general/sidebar.php';
-include '../../general/footer.php';
 
-// Enable error reporting for debugging (disable in production)
+// Maximum error reporting for debugging
 ini_set('display_errors', '1');
 error_reporting(E_ALL);
+
+
+    include '../../general/header.php';
+    include '../../general/sidebar.php';
+    include '../../general/footer.php';
+
 
 // 1) Auth guard
 $userId = $_SESSION['user_id'] ?? null;
@@ -72,7 +76,57 @@ $sortMap = [
 $sortBy = 'id';
 $sortDir = 'asc';
 
-// Base SQL - simplified to load all users without server-side filtering
+// Initialize date filter type from GET parameter
+$dateFilterType = $_GET['date_filter_type'] ?? '';
+
+// Check if the filter form has been submitted
+// We only want to apply filters if the user has explicitly clicked the Filter button
+$isFiltered = isset($_GET['apply-filters']);
+
+// Check if created_at column exists in the users table
+try {
+    $columnCheckStmt = $pdo->query("SHOW COLUMNS FROM users LIKE 'created_at'");
+    $hasCreatedAt = $columnCheckStmt->rowCount() > 0;
+    echo "<!-- DEBUG: created_at column exists: " . ($hasCreatedAt ? "Yes" : "No") . " -->";
+    
+    // If the column doesn't exist, try to create it
+    if (!$hasCreatedAt) {
+        // First check if we have ALTER privilege
+        $canAlter = false;
+        try {
+            $privCheckStmt = $pdo->query("SHOW GRANTS FOR CURRENT_USER()");
+            while ($row = $privCheckStmt->fetch(PDO::FETCH_ASSOC)) {
+                $grant = array_values($row)[0];
+                if (strpos($grant, 'ALL PRIVILEGES') !== false || 
+                    strpos($grant, 'ALTER') !== false) {
+                    $canAlter = true;
+                    break;
+                }
+            }
+        } catch (PDOException $e) {
+            // Can't check privileges, assume we don't have them
+            $canAlter = false;
+        }
+        
+        // If we have ALTER privilege, try to add the column
+        if ($canAlter) {
+            try {
+                $pdo->exec("ALTER TABLE users ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
+                // Update all existing records to have a created_at value
+                $pdo->exec("UPDATE users SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL");
+                $hasCreatedAt = true;
+                echo "<!-- DEBUG: created_at column was added successfully -->";
+            } catch (PDOException $e) {
+                echo "<!-- DEBUG: Failed to add created_at column: " . htmlspecialchars($e->getMessage()) . " -->";
+            }
+        }
+    }
+} catch (PDOException $e) {
+    echo "<!-- DEBUG: Error checking created_at column: " . htmlspecialchars($e->getMessage()) . " -->";
+    $hasCreatedAt = false;
+}
+
+// Base SQL query - adjust based on column existence
 $sql = "
 SELECT
   u.id,
@@ -83,6 +137,7 @@ SELECT
   u.status AS Status,
   u.is_disabled,
   u.profile_pic_path,
+  " . ($hasCreatedAt ? "u.created_at," : "") . "
   GROUP_CONCAT(DISTINCT d.department_name ORDER BY d.department_name) AS departments,
   GROUP_CONCAT(DISTINCT d.abbreviation ORDER BY d.abbreviation) AS dept_abbreviations,
   GROUP_CONCAT(DISTINCT r.role_name ORDER BY r.role_name) AS roles
@@ -94,17 +149,122 @@ LEFT JOIN departments d
 LEFT JOIN roles r
   ON udr.role_id = r.id
 WHERE u.is_disabled = 0
-GROUP BY u.id, u.email, u.username, u.first_name, u.last_name, u.status, u.is_disabled
+";
+
+// Add filtering conditions
+$params = [];
+
+// Only apply filters if the filter button was clicked
+if ($isFiltered) {
+// Department filter
+if (!empty($_GET['department']) && $_GET['department'] !== 'all') {
+    $sql .= " AND d.department_name = :department";
+    $params[':department'] = $_GET['department'];
+}
+
+// Search filter
+if (!empty($_GET['search'])) {
+    $searchParam = '%' . $_GET['search'] . '%';
+    $sql .= " AND (u.email LIKE :search_email OR u.username LIKE :search_username OR u.first_name LIKE :search_fname OR u.last_name LIKE :search_lname OR d.department_name LIKE :search_dept OR r.role_name LIKE :search_role)";
+    $params[':search_email'] = $searchParam;
+    $params[':search_username'] = $searchParam;
+    $params[':search_fname'] = $searchParam;
+    $params[':search_lname'] = $searchParam;
+    $params[':search_dept'] = $searchParam;
+    $params[':search_role'] = $searchParam;
+}
+
+    // Only apply date filters if created_at column exists
+    if ($hasCreatedAt) {
+// Date filters
+if ($dateFilterType === 'mdy') {
+    if (!empty($_GET['date_from'])) {
+        $sql .= " AND DATE(u.created_at) >= :date_from";
+        $params[':date_from'] = $_GET['date_from'];
+    }
+    if (!empty($_GET['date_to'])) {
+        $sql .= " AND DATE(u.created_at) <= :date_to";
+        $params[':date_to'] = $_GET['date_to'];
+    }    
+}
+
+// For month-year filter
+if ($dateFilterType === 'month_year') {
+    if (!empty($_GET['month_year_from'])) {
+        // Add debug output to see the actual value being passed
+        echo "<!-- DEBUG: month_year_from value: " . htmlspecialchars($_GET['month_year_from']) . " -->";
+        $monthYearFrom = $_GET['month_year_from'];
+        // Ensure proper format with day component (first day of month)
+        $monthYearFromFormatted = date('Y-m-01', strtotime($monthYearFrom));
+        $sql .= " AND u.created_at >= :month_year_from";
+        $params[':month_year_from'] = $monthYearFromFormatted;
+        echo "<!-- DEBUG: Formatted month_year_from: " . $monthYearFromFormatted . " -->";
+    }
+    
+    if (!empty($_GET['month_year_to'])) {
+        // Add debug output to see the actual value being passed
+        echo "<!-- DEBUG: month_year_to value: " . htmlspecialchars($_GET['month_year_to']) . " -->";
+        $monthYearTo = $_GET['month_year_to'];
+        // Get the last day of the selected month
+        $lastDay = date('t', strtotime($monthYearTo)); // t returns the number of days in the month
+        $monthYearToFormatted = date('Y-m-' . $lastDay, strtotime($monthYearTo));
+        $sql .= " AND u.created_at <= :month_year_to";
+        $params[':month_year_to'] = $monthYearToFormatted;
+        echo "<!-- DEBUG: Formatted month_year_to: " . $monthYearToFormatted . " -->";
+    }
+}
+
+// Year filter
+if ($dateFilterType === 'year') {
+    if (!empty($_GET['year_from'])) {
+        $sql .= " AND YEAR(u.created_at) >= :year_from";
+        $params[':year_from'] = $_GET['year_from'];
+    }
+    if (!empty($_GET['year_to'])) {
+        $sql .= " AND YEAR(u.created_at) <= :year_to";
+        $params[':year_to'] = $_GET['year_to'];
+    }
+}
+    } else if ($dateFilterType) {
+        // If date filter is selected but created_at doesn't exist, show a warning
+        echo "<div class='alert alert-warning'>
+            <h5><i class='bi bi-exclamation-triangle'></i> Date Filtering Unavailable</h5>
+            <p>The <code>created_at</code> column required for date filtering does not exist in the users table.</p>
+            <p>Please contact your database administrator to add this column or try using other filter options.</p>
+        </div>";
+    }
+}
+
+// Complete the query - Simplified GROUP BY to avoid SQL errors
+$groupByClause = "GROUP BY u.id";
+
+// Add the ORDER BY clause
+$sql .= "
+$groupByClause
 ORDER BY u.id DESC
 ";
 
 try {
+    // Debug SQL and params
+    echo "<!-- DEBUG SQL: " . htmlspecialchars($sql) . " -->\n";
+    echo "<!-- DEBUG PARAMS: " . htmlspecialchars(print_r($params, true)) . " -->\n";
+    
     $stmt = $pdo->prepare($sql);
-    $stmt->execute();
+    $stmt->execute($params);
     $users = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    
+    // Debug user count
+    echo "<!-- DEBUG USERS COUNT: " . count($users) . " -->\n";
 } catch (PDOException $e) {
+    // Display error instead of dying silently
+    echo "<div class='alert alert-danger'>";
+    echo "<h4>Database Error:</h4>";
+    echo "<p>" . htmlspecialchars($e->getMessage()) . "</p>";
+    echo "<p>SQL: " . htmlspecialchars($sql) . "</p>";
+    echo "</div>";
     error_log('User fetch error: ' . $e->getMessage());
-    die('An error occurred while fetching users.');
+    // Continue execution to show the page with error message
+    $users = [];
 }
 
 ?>
@@ -130,6 +290,8 @@ try {
     <script src="<?php echo BASE_URL; ?>src/control/js/user_management.js" defer></script>
     <!-- Pagination JS -->
     <script src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
+    <!-- Date Filter Handler JS -->
+    <script src="<?php echo BASE_URL; ?>src/control/js/date_filter_handler.js" defer></script>
 
     <title>Manage Users</title>
     <style>
@@ -231,6 +393,135 @@ try {
             pointer-events: none;
             background-color: #fff;
         }
+
+        /* Filter form styling */
+        #userFilterForm {
+            background-color: #f8f9fa;
+            border-radius: 0.25rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+
+        #userFilterForm .form-label {
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        #userFilterForm .input-group-text {
+            background-color: #e9ecef;
+        }
+
+        .action-buttons {
+            margin-top: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        /* Make the filters container responsive */
+        .filters-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (min-width: 768px) {
+            .filters-container {
+                flex-direction: row;
+                align-items: flex-start;
+            }
+        }
+        
+        /* Additional filter form styling from equipment_details.php */
+        #userFilterForm .row {
+            margin-bottom: 10px;
+        }
+        
+        #dateInputsContainer {
+            padding-top: 10px;
+            padding-bottom: 10px;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        /* Ensure Select2 input matches form-control size and font */
+        .select2-container--default .select2-selection--single {
+            height: 38px !important;
+            padding: 6px 12px;
+            font-size: 1rem;
+            border: 1px solid #ced4da;
+            border-radius: 0.375rem;
+            background-color: #fff;
+            box-shadow: none;
+            display: flex;
+            align-items: center;
+        }
+
+        .select2-container .select2-selection--single .select2-selection__rendered {
+            line-height: 24px;
+            color: #212529;
+            padding-left: 0;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 36px;
+            right: 10px;
+        }
+
+        .select2-container--open .select2-dropdown {
+            z-index: 9999 !important;
+        }
+        
+        /* Make Select2 match Bootstrap form-control height */
+        .select2-container .select2-selection {
+            min-height: 38px !important;
+        }
+        
+        /* Fix padding for the select2 input */
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            padding-top: 2px;
+        }
+        
+        /* Adjust the clear button position */
+        .select2-container--default .select2-selection--single .select2-selection__clear {
+            margin-right: 20px;
+        }
+        
+        /* Make the dropdown match Bootstrap styling */
+        .select2-dropdown {
+            border-color: #ced4da;
+            border-radius: 0.375rem;
+        }
+        
+        /* Make the search field match Bootstrap input */
+        .select2-container--default .select2-search--dropdown .select2-search__field {
+            border: 1px solid #ced4da;
+            border-radius: 0.25rem;
+            padding: 0.375rem 0.75rem;
+        }
+
+        .sortable {
+            cursor: pointer;
+            position: relative;
+            padding-right: 20px !important;
+        }
+
+        .sortable:hover {
+            background-color: #f8f9fa;
+        }
+
+        .sortable i {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+        }
+
+        .sortable:hover i {
+            color: #0d6efd;
+        }
     </style>
 </head>
 
@@ -239,48 +530,138 @@ try {
         <header>
             <h1>USER MANAGER</h1>
         </header>
+ 
+            <!-- Enhanced Filter Section -->
+            <form method="GET" class="row g-3 mb-4" id="userFilterForm">
+                <div class="card-body">
+                    <div class="container-fluid px-0">
+                        <div class="row g-3">
+                            <div class="col-auto">
+                                <?php if ($canCreate): ?>
+                                <button type="button" id="create-btn" class="btn btn-dark">
+                                    <i class="bi bi-plus-lg"></i> Create New User
+                                </button>
+                                <?php endif; ?>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="department-filter" class="form-label">Department</label>
+                                <select class="form-select" name="department" id="department-filter" autocomplete="off">
+                                    <option value="all">All Departments</option>
+                                    <?php
+                                    // Fetch all departments directly for the filter dropdown, show ALL regardless of is_disabled
+                                    try {
+                                        // Fetch both acronym and department_name
+                                        $deptStmt = $pdo->query("SELECT department_name, abbreviation FROM departments WHERE is_disabled = 0 ORDER BY department_name");
+                                        $allDepartments = $deptStmt->fetchAll(PDO::FETCH_ASSOC);
 
-        <div class="filters-container">
-            <?php if ($canCreate): ?>
-                <button type="button" id="create-btn" class="btn btn-dark">
-                    <i class="bi bi-plus-lg"></i> Create New User
-                </button>
-            <?php endif; ?>
-            <!--Filter -->
-            <div class="filter-container">
-                <!-- <label for="department-filter">FILTER BY DEPARTMENT</label>
-                <select id="department-filter" name="department" autocomplete="off">
-                    <option value="all">All Departments</option>
-                    <?php
-                    // Fetch all departments directly for the filter dropdown, show ALL regardless of is_disabled
-                    try {
-                        // Fetch both acronym and department_name
-                        $deptStmt = $pdo->query("SELECT department_name, abbreviation FROM departments WHERE is_disabled = 0 ORDER BY department_name");
-                        $allDepartments = $deptStmt->fetchAll(PDO::FETCH_ASSOC);
+                                        foreach ($allDepartments as $dept) {
+                                            $name = htmlspecialchars($dept['department_name']);
+                                            $abbreviation = htmlspecialchars($dept['abbreviation']);
+                                            $label = "($abbreviation) $name";
+                                            echo '<option value="' . $name . '">' . $label . '</option>';
+                                        }
+                                    } catch (PDOException $e) {
+                                        // fallback: empty
+                                    }
+                                    ?>
+                                </select>
+                            </div>
 
-                        foreach ($allDepartments as $dept) {
-                            $name = htmlspecialchars($dept['department_name']);
-                            $abbreviation = htmlspecialchars($dept['abbreviation']);
-                            $label = "($abbreviation) $name";
-                            echo '<option value="' . $name . '">' . $label . '</option>';
-                        }
-                    } catch (PDOException $e) {
-                        // fallback: empty
-                    }
-                    ?>
-                </select> -->
-            </div>
+                            <!-- Date Filter Type -->
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Date Filter Type</label>
+                                <select id="dateFilterType" name="date_filter_type" class="form-select shadow-sm">
+                                    <option value="">-- Select Type --</option>
+                                    <option value="month_year" <?= (($_GET['date_filter_type'] ?? '') === 'month_year') ? 'selected' : '' ?>>Month-Year Range</option>
+                                    <option value="year" <?= (($_GET['date_filter_type'] ?? '') === 'year') ? 'selected' : '' ?>>Year Range</option>
+                                    <option value="mdy" <?= (($_GET['date_filter_type'] ?? '') === 'mdy') ? 'selected' : '' ?>>Month-Date-Year Range</option>
+                                </select>
+                            </div>
 
-            <!-- Buttons -->
-            <div class="col-6 col-md-2 d-grid">
-                <button type="submit" class="btn btn-dark"><i class="bi bi-funnel"></i> Filter</button>
-            </div>
+                            <!-- Search bar -->
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Search</label>
+                                <div class="input-group">
+                                    <input type="text" name="search" id="search-filters" class="form-control" placeholder="Search keyword..." value="<?= htmlspecialchars($_GET['search'] ?? '') ?>">
+                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                </div>
+                            </div>
 
-            <div class="col-6 col-md-2 d-grid">
-                <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary shadow-sm"><i class="bi bi-x-circle"></i> Clear</a>
-            </div>
+                            <!-- Buttons -->
+                            <div class="col-6 col-md-2 d-grid">
+                                <label class="form-label d-none d-md-block">&nbsp;</label>
+                                <button type="submit" id="apply-filters" name="apply-filters" class="btn btn-dark"><i class="bi bi-funnel"></i> Filter</button>
+                            </div>
 
-            <div class="action-buttons">
+                            <div class="col-6 col-md-2 d-grid">
+                                <label class="form-label d-none d-md-block">&nbsp;</label>
+                                <a href="<?= $_SERVER['PHP_SELF'] ?>" id="clear-filters-btn" class="btn btn-secondary"><i class="bi bi-x-circle"></i> Clear</a>
+                            </div>
+                        </div>
+
+                        <!-- Date filter fields container -->
+                        <div id="dateInputsContainer" class="row g-3 mt-2 <?= !empty($_GET['date_filter_type']) ? '' : 'd-none' ?>">
+                            <!-- MDY Range -->
+                            <div class="col-md-6 date-filter date-mdy <?= (($_GET['date_filter_type'] ?? '') === 'mdy') ? '' : 'd-none' ?>">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Date From</label>
+                                        <input type="date" name="date_from" class="form-control shadow-sm"
+                                            value="<?= htmlspecialchars($_GET['date_from'] ?? '') ?>"
+                                            placeholder="Start Date (YYYY-MM-DD)">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Date To</label>
+                                        <input type="date" name="date_to" class="form-control shadow-sm"
+                                            value="<?= htmlspecialchars($_GET['date_to'] ?? '') ?>"
+                                            placeholder="End Date (YYYY-MM-DD)">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Year Range -->
+                            <div class="col-md-6 date-filter date-year <?= (($_GET['date_filter_type'] ?? '') === 'year') ? '' : 'd-none' ?>">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Year From</label>
+                                        <input type="number" name="year_from" class="form-control shadow-sm"
+                                            min="1900" max="2100"
+                                            placeholder="e.g., 2023"
+                                            value="<?= htmlspecialchars($_GET['year_from'] ?? '') ?>">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Year To</label>
+                                        <input type="number" name="year_to" class="form-control shadow-sm"
+                                            min="1900" max="2100"
+                                            placeholder="e.g., 2025"
+                                            value="<?= htmlspecialchars($_GET['year_to'] ?? '') ?>">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Month-Year Range -->
+                            <div class="col-md-6 date-filter date-month_year <?= (($_GET['date_filter_type'] ?? '') === 'month_year') ? '' : 'd-none' ?>">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">From (MM-YYYY)</label>
+                                        <input type="month" name="month_year_from" class="form-control shadow-sm"
+                                            value="<?= htmlspecialchars($_GET['month_year_from'] ?? '') ?>"
+                                            placeholder="e.g., 2023-01">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">To (MM-YYYY)</label>
+                                        <input type="month" name="month_year_to" class="form-control shadow-sm"
+                                            value="<?= htmlspecialchars($_GET['month_year_to'] ?? '') ?>"
+                                            placeholder="e.g., 2023-12">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            <div class="action-buttons mb-3">
                 <?php if ($rbac->hasPrivilege('User Management', 'Modify')): ?>
                     <a href="user_roles_management.php" class="btn btn-primary"> Manage Role Assignments</a>
                 <?php endif; ?>
@@ -294,7 +675,6 @@ try {
                     </button>
                 <?php endif; ?>
             </div>
-        </div>
 
         <div class="table-responsive" id="table">
             <table class="table table-striped table-hover" id="umTable">
@@ -661,8 +1041,26 @@ try {
         </div>
     </div>
 
+    <!-- Add Toast notification container -->
+    <div class="toast-container position-fixed top-0 end-0 p-3">
+        <!-- Toasts will be inserted here dynamically -->
+    </div>
+
     <script>
         $(document).ready(function() {
+            // Create button handler - show the create user modal
+            $('#create-btn').on('click', function() {
+                // Reset the form first
+                $('#createUserForm')[0].reset();
+                
+                // Clear any previously selected departments
+                selectedDepartments = [];
+                $('#createAssignedDepartmentsTable tbody').empty();
+                
+                // Show the modal
+                $('#createUserModal').modal('show');
+            });
+            
             // Initialize pagination
             if (typeof initPagination === 'function') {
                 console.log("Initializing pagination for user management");
@@ -718,7 +1116,7 @@ try {
 
             window.updatePagination = function() {
                 // Get all rows again in case the DOM was updated
-                window.allRows = Array.from(document.querySelectorAll('#umTableBody tbody tr'));
+                window.allRows = Array.from(document.querySelectorAll('#umTableBody tr'));
 
                 // If filtered rows is empty or not defined, use all rows
                 if (!window.filteredRows || window.filteredRows.length === 0) {
@@ -731,6 +1129,13 @@ try {
                     totalRowsEl.textContent = window.filteredRows.length;
                 }
 
+                // Update rows per page display
+                const rowsPerPageEl = document.getElementById('rowsPerPage');
+                if (rowsPerPageEl) {
+                    const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value) || 10;
+                    rowsPerPageEl.textContent = Math.min(rowsPerPage, window.filteredRows.length);
+                }
+
                 // Call original updatePagination
                 originalUpdatePagination();
                 forcePaginationCheck();
@@ -738,125 +1143,72 @@ try {
 
             // Call updatePagination immediately
             updatePagination();
-
-            // Handle edit user form submission
-            $('#submitEditUser').on('click', function() {
-                const form = $('#editUserForm');
-                const formData = new FormData(form[0]);
-
-                // Validate email has domain
-                const email = $('#editEmail').val();
-                if (!validateEmail(email)) {
-                    $('#editEmail').addClass('is-invalid');
-                    return;
-                } else {
-                    $('#editEmail').removeClass('is-invalid');
-                }
-
-                // Check if departments are selected from the assigned departments table
-                const departmentRows = $('#assignedDepartmentsTable tbody tr');
-                if (departmentRows.length === 0) {
-                    Toast.error('At least one department must be assigned');
-                    return;
-                }
-
-                // Clear any existing department values to avoid duplicates
-                formData.delete('departments[]');
-                formData.delete('department');
-
-                // Add all departments as array
-                departmentRows.each(function(index) {
-                    const deptId = $(this).data('department-id');
-                    if (deptId) {
-                        formData.append(`departments[${index}]`, deptId);
-                        // Also set the first department as the primary one for compatibility
-                        if (index === 0) {
-                            formData.append('department', deptId);
-                        }
-                    }
+            
+            // Initialize Select2 for date filter type dropdown - ONLY ONCE
+            if ($.fn.select2 && $('#dateFilterType').length && !$('#dateFilterType').hasClass('select2-hidden-accessible')) {
+                console.log('Initializing Select2 for dateFilterType');
+                $('#dateFilterType').select2({
+                    placeholder: '-- Select Type --',
+                    allowClear: true,
+                    width: '100%',
+                    minimumResultsForSearch: -1 // Hide search box
+                }).on('select2:select', function(e) {
+                    console.log('Date filter type selected:', e.params.data.id);
+                    handleDateFilterTypeChange(e.params.data.id);
+                }).on('select2:clear', function() {
+                    console.log('Date filter type cleared');
+                    handleDateFilterTypeChange('');
                 });
+            }
+            
+            // Function to handle date filter type changes
+            function handleDateFilterTypeChange(selectedType) {
+                console.log('Handling date filter type change:', selectedType);
+                
+                // Hide all date filter containers first
+                    $('.date-filter').addClass('d-none');
+                
+                // Hide the container if no filter type selected
+                if (!selectedType) {
+                    $('#dateInputsContainer').addClass('d-none');
+                    return;
+                }
+                
+                // Show the container and the specific filter type fields
+                $('#dateInputsContainer').removeClass('d-none');
+                
+                // Make sure to use the correct selector
+                console.log('Looking for element with class: date-' + selectedType);
+                $('.date-' + selectedType).removeClass('d-none');
+            }
+            
+            // Initialize date filter UI based on current selection
+            const currentValue = $('#dateFilterType').val();
+            if (currentValue) {
+                console.log('Initial date filter type:', currentValue);
+                handleDateFilterTypeChange(currentValue);
+            }
 
-                $.ajax({
-                    url: form.attr('action'),
-                    type: 'POST',
-                    data: formData,
-                    processData: false,
-                    contentType: false,
-                    success: function(response) {
-                        try {
-                            const result = typeof response === 'string' ? JSON.parse(response) : response;
-                            if (result.success) {
-                                Toast.success('User updated successfully');
-                                $('#editUserModal').modal('hide');
-                                // Use reloadUserTable function instead of page reload
-                                if (typeof reloadUserTable === 'function') {
-                                    reloadUserTable();
-                                } else {
-                                    // Fallback to page reload if function not available
-                                    setTimeout(function() {
-                                        window.location.reload();
-                                    }, 1000);
-                                }
-                            } else {
-                                Toast.error(result.message || 'Failed to update user');
-                            }
-                        } catch (e) {
-                            // Handle non-JSON responses which might still indicate success
-                            if (typeof response === 'string' && response.includes('success')) {
-                                Toast.success('User updated successfully');
-                                $('#editUserModal').modal('hide');
-                                // Use reloadUserTable function instead of page reload
-                                if (typeof reloadUserTable === 'function') {
-                                    reloadUserTable();
-                                } else {
-                                    // Fallback to page reload if function not available
-                                    setTimeout(function() {
-                                        window.location.reload();
-                                    }, 1000);
-                                }
-                            } else {
-                                Toast.error('Error processing response');
-                                console.error('Error parsing response:', e, response);
-                            }
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error("Error updating user:", error);
-                        console.error("Response text:", xhr.responseText);
-
-                        try {
-                            // First try to extract JSON from the response if it contains HTML errors
-                            let jsonStr = xhr.responseText;
-                            if (jsonStr.includes('{') && jsonStr.includes('}')) {
-                                jsonStr = jsonStr.substring(jsonStr.indexOf('{'), jsonStr.lastIndexOf('}') + 1);
-                                const result = JSON.parse(jsonStr);
-                                Toast.error(result.message || 'Failed to update user');
-                            } else {
-                                const result = JSON.parse(xhr.responseText);
-                                Toast.error(result.message || 'Failed to update user');
-                            }
-                        } catch (e) {
-                            // If there's a username error in the response text, extract and show it
-                            if (xhr.responseText.includes('username is already taken')) {
-                                Toast.error('Username is already taken. Please try a different username.');
-                            } else {
-                                Toast.error('Server error occurred. Please try again.');
-                            }
-                            console.error('Parse error:', e);
-                        }
-                    }
-                });
+            // Add a direct change handler (in addition to the Select2 events)
+            $('#dateFilterType').on('change', function() {
+                const selectedType = $(this).val();
+                console.log('Date filter type changed via regular change event:', selectedType);
+                handleDateFilterTypeChange(selectedType);
             });
-        });
-
-        // Initialize selectedDepartments array for the global scope
-        let selectedDepartments = [];
-
-        // Email validation function
-        function validateEmail(email) {
-            const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-            return regex.test(email);
-        }
+            
+            // Handle the clear filters button
+            $('#clear-filters-btn').on('click', function() {
+                // Reset the date filter type dropdown
+                if ($('#dateFilterType').hasClass('select2-hidden-accessible')) {
+                    $('#dateFilterType').val('').trigger('change.select2').trigger('change');
+                            } else {
+                    $('#dateFilterType').val('').trigger('change');
+                }
+                
+                // Hide all date filter containers
+                $('#dateInputsContainer').addClass('d-none');
+                $('.date-filter').addClass('d-none');
+            });
 
         // Initialize Select2 for department filter with custom positioning
         $('#department-filter').select2({
@@ -903,7 +1255,7 @@ try {
 
         // Use event delegation for dynamically added elements
         $(document).on('click', '.edit-btn', function() {
-            $(".modal-backdrop").hide();
+            $(".modal-backdrop").remove(); // Remove any existing modal backdrops
             const userId = $(this).data('id');
             const email = $(this).data('email');
             const username = $(this).data('username');
@@ -948,10 +1300,9 @@ try {
                 }
             });
 
-            // Show the modal
-            var editModal = document.getElementById('editUserModal');
-            var modal = new bootstrap.Modal(editModal);
-            modal.show();
+            // Show the modal using Bootstrap 5 modal API
+            const editModal = new bootstrap.Modal(document.getElementById('editUserModal'));
+            editModal.show();
         });
 
         // Add department selection handler for edit user modal
@@ -1103,7 +1454,7 @@ try {
             filterTable();
         }
 
-        // Direct client-side filtering function
+        // Client-side filtering function
         function filterTable() {
             const searchText = $('#search-filters').val().toLowerCase();
             const deptFilter = $('#department-filter').val();
@@ -1112,6 +1463,15 @@ try {
                 searchText,
                 deptFilter
             });
+
+            // If we're using server-side filtering, don't do client-side filtering
+            // This is to prevent double-filtering when the form is submitted
+            if (window.location.search.includes('apply-filters=') || 
+                window.location.search.includes('search=') || 
+                window.location.search.includes('department=') ||
+                window.location.search.includes('date_filter_type=')) {
+                return;
+            }
 
             // Store all table rows for filtering
             const tableBody = document.getElementById('umTableBody');
@@ -1402,6 +1762,268 @@ try {
             const $pwdToggleIcon = $modal.find('.toggle-password i');
             $modal.find('#password').attr('type', 'password');
             $pwdToggleIcon.removeClass('bi-eye-slash').addClass('bi-eye');
+            });
+        });
+
+        // Initialize selectedDepartments array for the global scope
+        let selectedDepartments = [];
+
+        // Email validation function
+        function validateEmail(email) {
+            const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            return regex.test(email);
+        }
+
+        // Handle delete button click
+        $(document).on('click', '.delete-btn', function() {
+            const userId = $(this).data('id');
+            const username = $(this).closest('tr').find('td:eq(4)').text(); // Get username from the row
+            
+            // Set up the confirmation modal
+            $('#confirmDeleteMessage').text(`Are you sure you want to remove user "${username}"?`);
+            
+            // Set up the confirm button action
+            $('#confirmDeleteButton').off('click').on('click', function() {
+                // Send delete request
+                $.ajax({
+                    url: 'delete_user.php',
+                    type: 'POST',
+                    data: {
+                        user_id: userId
+                    },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            Toast.success('User removed successfully');
+                            // Reload the page after successful deletion
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 1000);
+                        } else {
+                            Toast.error(response.message || 'Failed to remove user');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        Toast.error('An error occurred while removing the user');
+                        console.error("Error:", error);
+                    }
+                });
+                
+                // Hide the modal
+                $('#confirmDeleteModal').modal('hide');
+            });
+            
+            // Show the confirmation modal
+            const deleteModal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
+            deleteModal.show();
+        });
+    </script>
+
+    <!-- Add Toast notification utility and date filter handling -->
+    <script>
+        // Toast notification utility
+        const Toast = {
+            container: document.createElement('div'),
+            
+            init: function() {
+                // Create container if it doesn't exist
+                if (!document.querySelector('.toast-container')) {
+                    const container = document.createElement('div');
+                    container.className = 'toast-container position-fixed top-0 end-0 p-3';
+                    document.body.appendChild(container);
+                }
+                this.container = document.querySelector('.toast-container');
+            },
+            
+            create: function(message, type) {
+                this.init();
+                
+                // Create toast element
+                const toastEl = document.createElement('div');
+                toastEl.className = `toast align-items-center text-white bg-${type} border-0`;
+                toastEl.setAttribute('role', 'alert');
+                toastEl.setAttribute('aria-live', 'assertive');
+                toastEl.setAttribute('aria-atomic', 'true');
+                
+                // Create toast content
+                toastEl.innerHTML = `
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                `;
+                
+                // Add to container
+                this.container.appendChild(toastEl);
+                
+                // Initialize and show toast
+                const toast = new bootstrap.Toast(toastEl, {
+                    autohide: true,
+                    delay: 5000
+                });
+                toast.show();
+                
+                // Remove from DOM after hidden
+                toastEl.addEventListener('hidden.bs.toast', function() {
+                    toastEl.remove();
+                });
+            },
+            
+            success: function(message) {
+                this.create(message, 'success');
+            },
+            
+            error: function(message) {
+                this.create(message, 'danger');
+            },
+            
+            warning: function(message) {
+                this.create(message, 'warning');
+            },
+            
+            info: function(message) {
+                this.create(message, 'info');
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Date filter handling
+            const filterType = document.getElementById('dateFilterType');
+            const allDateFilters = document.querySelectorAll('.date-filter');
+            const form = document.getElementById('userFilterForm');
+            const clearButton = document.getElementById('clear-filters-btn');
+            const dateInputsContainer = document.getElementById('dateInputsContainer');
+
+            function updateDateFields() {
+                allDateFilters.forEach(field => field.classList.add('d-none'));
+                if (!filterType.value) {
+                    dateInputsContainer.classList.add('d-none');
+                    return;
+                }
+                dateInputsContainer.classList.remove('d-none');
+                document.querySelectorAll('.date-' + filterType.value).forEach(field => field.classList.remove('d-none'));
+            }
+
+            filterType.addEventListener('change', updateDateFields);
+            updateDateFields();
+
+            clearButton.addEventListener('click', function(e) {
+                e.preventDefault(); // Prevent default button behavior
+                
+                // Reset all form fields
+                form.reset();
+                
+                // Clear any hidden fields
+                const hiddenFields = form.querySelectorAll('input[type="hidden"]');
+                hiddenFields.forEach(field => field.value = '');
+                
+                // Reset date filter visibility
+                updateDateFields();
+                
+                // Clear URL parameters and reload the page
+                window.location.href = window.location.pathname;
+            });
+
+            // Initialize Select2 for date filter type dropdown if needed
+            if ($.fn.select2 && $('#dateFilterType').length) {
+                $('#dateFilterType').select2({
+                    placeholder: '-- Select Type --',
+                    allowClear: true,
+                    width: '100%',
+                    minimumResultsForSearch: -1 // Hide search box
+                }).on('select2:select select2:clear', function() {
+                    // Force trigger the change event
+                    setTimeout(() => {
+                        $(this).trigger('change');
+                    }, 10);
+                });
+            }
+
+            // Add sorting functionality
+            const sortableHeaders = document.querySelectorAll('.sortable');
+            sortableHeaders.forEach(header => {
+                header.addEventListener('click', function() {
+                    const column = this.dataset.column;
+                    const currentOrder = '<?= $sortOrder ?>';
+                    const currentColumn = '<?= $sortColumn ?>';
+                    
+                    // Determine new sort order
+                    let newOrder = 'ASC';
+                    if (column === currentColumn) {
+                        newOrder = currentOrder === 'ASC' ? 'DESC' : 'ASC';
+                    }
+                    
+                    // Get current URL parameters
+                    const urlParams = new URLSearchParams(window.location.search);
+                    
+                    // Update sort parameters
+                    urlParams.set('sort', column);
+                    urlParams.set('order', newOrder);
+                    
+                    // Redirect to new URL with sort parameters
+                    window.location.href = window.location.pathname + '?' + urlParams.toString();
+                });
+            });
+        });
+    </script>
+
+    <!-- Direct date filter handler - This will ensure the date filter UI works immediately -->
+    <script>
+        $(function() {
+            // Initialize Select2 for date filter type dropdown if not already initialized
+            if ($.fn.select2 && $('#dateFilterType').length && !$('#dateFilterType').hasClass('select2-hidden-accessible')) {
+                $('#dateFilterType').select2({
+                    placeholder: '-- Select Type --',
+                    allowClear: true,
+                    width: '100%',
+                    minimumResultsForSearch: -1 // Hide search box
+                }).on('select2:select select2:clear', function() {
+                    // Force trigger the change event
+                    setTimeout(() => {
+                        $(this).trigger('change');
+                    }, 10);
+                });
+            }
+            
+            // Direct handler for date filter type changes
+            $('#dateFilterType').off('change').on('change', function() {
+                const selectedType = $(this).val();
+                console.log('DIRECT HANDLER: Date filter type changed to:', selectedType);
+                
+                // Hide all date filter containers first
+                $('.date-filter').addClass('d-none');
+                
+                // Hide the container if no filter type selected
+                if (!selectedType) {
+                    $('#dateInputsContainer').addClass('d-none');
+                    return;
+                }
+                
+                // Show the container and the specific filter type fields
+                $('#dateInputsContainer').removeClass('d-none');
+                $('.date-' + selectedType).removeClass('d-none');
+            });
+            
+            // Trigger the change event on page load if a value is already selected
+            if ($('#dateFilterType').val()) {
+                $('#dateFilterType').trigger('change');
+            }
+            
+            // Also handle the clear filters button
+            $('#clear-filters-btn').on('click', function() {
+                // Reset the date filter type dropdown
+                if ($('#dateFilterType').hasClass('select2-hidden-accessible')) {
+                    $('#dateFilterType').val('').trigger('change.select2').trigger('change');
+                } else {
+                    $('#dateFilterType').val('').trigger('change');
+                }
+                
+                // Hide all date filter containers
+                $('#dateInputsContainer').addClass('d-none');
+                $('.date-filter').addClass('d-none');
+            });
         });
     </script>
 </body>
