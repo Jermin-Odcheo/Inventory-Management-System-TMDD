@@ -42,7 +42,7 @@ SELECT
 FROM roles r
 CROSS JOIN modules m
 WHERE r.is_disabled = 0
-ORDER BY r.id, m.id;
+ORDER BY r.id DESC, m.id;
 ";
 
 $stmt = $pdo->prepare($sql);
