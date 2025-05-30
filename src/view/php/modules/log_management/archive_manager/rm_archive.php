@@ -413,13 +413,13 @@ function formatChanges($oldJsonStr)
 
                     <div class="table-responsive" id="table">
                         <table id="archivedRolesTable" class="table table-striped table-hover align-middle">
-                            <thead class="table-dark">
+                            <thead class="table-light">
                                 <tr>
                                     <th><input type="checkbox" id="select-all"></th>
                                     <th class="sortable" data-sort-by="role_id" style="width: 25px;">ID <i class="fas fa-sort"></i></th>
-                                    <th class="sortable" data-sort-by="operator_name">User <i class="fas fa-sort"></i></th>
-                                    <th class="sortable" data-sort-by="module">Module <i class="fas fa-sort"></i></th>
-                                    <th class="sortable" data-sort-by="action">Action <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-sort-by="operator_name">User<i class="fas fa-sort"></i></th>
+                                    <th>Module</th>
+                                    <th>Action</th>
                                     <th>Details</th>
                                     <th>Changes</th>
                                     <th class="sortable" data-sort-by="date_time">Date &amp; Time <i class="fas fa-sort"></i></th>

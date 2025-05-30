@@ -385,8 +385,8 @@ function formatChanges($oldJsonStr)
                             <th><input type="checkbox" id="select-all"></th>
                             <th class="sortable" data-sort-by="track_id"># <i class="fas fa-sort"></i></th>
                             <th class="sortable" data-sort-by="operator_name">User <i class="fas fa-sort"></i></th>
-                            <th class="sortable" data-sort-by="module">Module <i class="fas fa-sort"></i></th>
-                            <th class="sortable" data-sort-by="action">Action <i class="fas fa-sort"></i></th>
+                            <th>Module </th>
+                            <th>Action</th>
                             <th>Details</th> 
                             <th>Changes</th> 
                             <th class="sortable" data-sort-by="date_time">Date &amp; Time <i class="fas fa-sort"></i></th>
