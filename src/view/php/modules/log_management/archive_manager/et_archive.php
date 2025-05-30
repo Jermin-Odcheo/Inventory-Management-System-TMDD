@@ -42,6 +42,8 @@ if (!in_array(strtolower($sort_order), ['asc', 'desc'])) {
 
 // --- Filter Logic ---
 $dateFilterType = $_GET['date_filter_type'] ?? '';
+$moduleType = $_GET['module_type'] ?? '';
+
 $baseWhere = "a.Module IN ('Purchase Order', 'Charge Invoice', 'Receiving Report')
   AND LOWER(a.Action) IN ('delete', 'remove', 'soft delete', 'permanent delete')
   AND a.TrackID = (
@@ -55,18 +57,11 @@ $baseWhere = "a.Module IN ('Purchase Order', 'Charge Invoice', 'Receiving Report
       OR (a.Module = 'Charge Invoice' AND ci.is_disabled = 1)
       OR (a.Module = 'Receiving Report' AND rr.is_disabled = 1)
   )";
-$params = [];
 
-// Apply action filter
-if (!empty($_GET['action_type'])) {
-    $baseWhere .= " AND a.Action = :action_type";
-    $params[':action_type'] = $_GET['action_type'];
-}
-
-// Apply status filter
-if (!empty($_GET['status'])) {
-    $baseWhere .= " AND a.Status = :status";
-    $params[':status'] = $_GET['status'];
+// Apply module type filter
+if (!empty($moduleType)) {
+    $baseWhere .= " AND a.Module = :module_type";
+    $params[':module_type'] = $moduleType;
 }
 
 // Apply search filter
@@ -134,7 +129,7 @@ JOIN users op ON a.UserID = op.id
 LEFT JOIN purchase_order po ON a.Module = 'Purchase Order' AND a.EntityID = po.id
 LEFT JOIN charge_invoice ci ON a.Module = 'Charge Invoice' AND a.EntityID = ci.id
 LEFT JOIN receive_report rr ON a.Module = 'Receiving Report' AND a.EntityID = rr.id
-WHERE " . $baseWhere . "
+WHERE $baseWhere
 {$orderByClause}
 ";
 
@@ -239,7 +234,7 @@ function formatChanges($oldJsonStr)
 
     <style>
         .main-content {
-            padding-top: 150px;
+            padding-top: 100px;
         }
         /* Styles for sortable headers */
         th.sortable {
@@ -301,23 +296,25 @@ function formatChanges($oldJsonStr)
                     <!-- Filter Section -->
                     <form method="GET" class="row g-3 mb-4" id="archiveFilterForm" action="">
                         <div class="col-md-3">
-                            <label for="action_type" class="form-label">Action Type</label>
-                            <select class="form-select" name="action_type" id="filterAction">
-                                <option value="">All Actions</option>
-                                <option value="Create" <?= ($_GET['action_type'] ?? '') === 'Create' ? 'selected' : '' ?>>Create</option>
-                                <option value="Modified" <?= ($_GET['action_type'] ?? '') === 'Modified' ? 'selected' : '' ?>>Modified</option>
-                                <option value="Remove" <?= ($_GET['action_type'] ?? '') === 'Remove' ? 'selected' : '' ?>>Remove</option>
-                                <option value="Delete" <?= ($_GET['action_type'] ?? '') === 'Delete' ? 'selected' : '' ?>>Delete</option>
-                                <option value="Restored" <?= ($_GET['action_type'] ?? '') === 'Restored' ? 'selected' : '' ?>>Restored</option>
-                            </select>
-                        </div>
-                        
-                        <div class="col-md-3">
-                            <label for="status" class="form-label">Status</label>
-                            <select class="form-select" name="status" id="filterStatus">
-                                <option value="">All Status</option>
-                                <option value="Successful" <?= ($_GET['status'] ?? '') === 'Successful' ? 'selected' : '' ?>>Successful</option>
-                                <option value="Failed" <?= ($_GET['status'] ?? '') === 'Failed' ? 'selected' : '' ?>>Failed</option>
+                            <label for="moduleType" class="form-label">Module Type</label>
+                            <select class="form-select" name="module_type" id="moduleType">
+                                <option value="">All</option>
+                                <?php
+                                // Define the allowed modules
+                                $allowedModules = ['Purchase Order', 'Charge Invoice', 'Receiving Report'];
+                                
+                                // If no modules found in database, use the allowed modules
+                                if (empty($moduleTypes)) {
+                                    $moduleTypes = $allowedModules;
+                                }
+                                
+                                // Output the options
+                                foreach ($moduleTypes as $module) {
+                                    $selected = ($_GET['module_type'] ?? '') === $module ? 'selected' : '';
+                                    echo '<option value="' . htmlspecialchars($module) . '" ' . $selected . '>' .
+                                        htmlspecialchars($module) . '</option>';
+                                }
+                                ?>
                             </select>
                         </div>
                         
@@ -420,10 +417,9 @@ function formatChanges($oldJsonStr)
                                     <th class="sortable" data-sort-by="track_id"># <i class="fas fa-sort"></i></th>
                                     <th class="sortable" data-sort-by="operator_name">User <i class="fas fa-sort"></i></th>
                                     <th class="sortable" data-sort-by="module">Module <i class="fas fa-sort"></i></th>
-                                    <th class="sortable" data-sort-by="action">Action <i class="fas fa-sort"></i></th>
+                                    <th>Action</th>
                                     <th>Details</th>
                                     <th>Changes</th>
-                                    <th class="sortable" data-sort-by="status">Status <i class="fas fa-sort"></i></th>
                                     <th class="sortable" data-sort-by="date_time">Date &amp; Time <i class="fas fa-sort"></i></th>
                                     <th>Actions</th>
                                 </tr>
@@ -465,15 +461,7 @@ function formatChanges($oldJsonStr)
                                             <td data-label="Changes">
                                                 <?php echo formatChanges($log['old_val']); ?>
                                             </td>
-                                            <td data-label="Status">
-                                                <?php
-                                                $statusText = (strtolower((string)$log['status']) === 'successful') ? 'Successful' : 'Failed';
-                                                $statusClass = (strtolower((string)$log['status']) === 'successful') ? 'bg-success' : 'bg-danger';
-                                                ?>
-                                                <span class="badge <?php echo $statusClass; ?>">
-                                                    <?php echo getStatusIcon($log['status']) . ' ' . htmlspecialchars($statusText); ?>
-                                                </span>
-                                            </td>
+                        
                                             <td data-label="Date &amp; Time">
                                                 <div class="d-flex align-items-center">
                                                     <i class="far fa-clock me-2"></i>
@@ -1104,12 +1092,11 @@ function formatChanges($oldJsonStr)
 
         // Custom script to ensure filtering only happens on button click
         document.addEventListener('DOMContentLoaded', function() {
-            // Only keep the date filter type handler to show/hide date inputs
-            // Remove any handlers that might trigger filtering on input change
-            
-            // Date filter handling - keep this functionality
+            // Date filter handling
             const filterType = document.getElementById('dateFilterType');
             const allDateFilters = document.querySelectorAll('.date-filter');
+            const filterForm = document.getElementById('archiveFilterForm');
+            const moduleTypeSelect = document.getElementById('moduleType');
 
             function updateDateFields() {
                 allDateFilters.forEach(field => field.classList.add('d-none'));
@@ -1118,20 +1105,88 @@ function formatChanges($oldJsonStr)
             }
 
             if (filterType) {
-                // Remove any previous listeners
-                const newFilterType = filterType.cloneNode(true);
-                filterType.parentNode.replaceChild(newFilterType, filterType);
-                
-                // Add only the date field visibility listener
-                newFilterType.addEventListener('change', updateDateFields);
+                filterType.addEventListener('change', updateDateFields);
                 updateDateFields(); // Initialize on page load
             }
+
+            // Filter form submission
+            if (filterForm) {
+                filterForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    // Get all form data
+                    const formData = new FormData(filterForm);
+                    const params = new URLSearchParams();
+                    
+                    // Add all form fields to params
+                    for (let [key, value] of formData.entries()) {
+                        // Only add non-empty values and handle date filters properly
+                        if (value && value.trim() !== '') {
+                            // Special handling for date filters
+                            if (key === 'date_filter_type') {
+                                params.append(key, value);
+                                // Only add date values if a filter type is selected
+                                if (value === 'mdy') {
+                                    if (formData.get('date_from')) params.append('date_from', formData.get('date_from'));
+                                    if (formData.get('date_to')) params.append('date_to', formData.get('date_to'));
+                                } else if (value === 'month_year') {
+                                    if (formData.get('month_year_from')) params.append('month_year_from', formData.get('month_year_from'));
+                                    if (formData.get('month_year_to')) params.append('month_year_to', formData.get('month_year_to'));
+                                } else if (value === 'year') {
+                                    if (formData.get('year_from')) params.append('year_from', formData.get('year_from'));
+                                    if (formData.get('year_to')) params.append('year_to', formData.get('year_to'));
+                                }
+                            } else {
+                                // For non-date fields, just add them if they have a value
+                                params.append(key, value);
+                            }
+                        }
+                    }
+                    
+                    // Redirect to the same page with the filter parameters
+                    window.location.href = window.location.pathname + '?' + params.toString();
+                });
+            }
             
-            // Override any filterTable function that might be called on input
-            window.filterTable = function() {
-                console.log("Auto-filtering disabled - click Filter button instead");
-                return false;
-            };
+            // Clear filters button
+            const clearFiltersBtn = document.getElementById('clearFilters');
+            if (clearFiltersBtn) {
+                clearFiltersBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Reset all form fields
+                    if (filterForm) {
+                        filterForm.reset();
+                    }
+                    
+                    // Reset date filter type
+                    if (filterType) {
+                        filterType.value = '';
+                    }
+                    
+                    // Reset module type
+                    if (moduleTypeSelect) {
+                        moduleTypeSelect.value = '';
+                    }
+                    
+                    // Hide all date filter fields
+                    allDateFilters.forEach(field => {
+                        field.classList.add('d-none');
+                        // Clear the value of any input within the field
+                        const inputs = field.querySelectorAll('input');
+                        inputs.forEach(input => input.value = '');
+                    });
+                    
+                    // Clear search input
+                    const searchInput = document.getElementById('searchInput');
+                    if (searchInput) {
+                        searchInput.value = '';
+                    }
+                    
+                    // Redirect to the base URL without any parameters
+                    window.location.href = window.location.pathname;
+                });
+            }
         });
     </script>
 </body>

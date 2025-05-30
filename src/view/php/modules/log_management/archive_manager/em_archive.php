@@ -234,7 +234,7 @@ function formatChanges($oldJsonStr)
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/pagination.css">
     <style>
         .main-content {
-            padding-top: 150px;
+            padding-top: 100px;
         }
 
         /* Styles for sortable headers */
@@ -308,7 +308,7 @@ function formatChanges($oldJsonStr)
                                 <option value="">All</option>
                                 <?php
                                 // Define the allowed modules
-                                $allowedModules = ['Equipment Details', 'Equipment Location', 'Equipment Status'];
+                                $allowedModules = ['Equipment Management', 'Equipment Details', 'Equipment Location', 'Equipment Status'];
                                 
                                 // If no modules found in database, use the allowed modules
                                 if (empty($moduleTypes)) {
