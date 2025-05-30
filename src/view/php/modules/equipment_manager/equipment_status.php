@@ -285,7 +285,7 @@ if (
                         $_SESSION['user_id'],
                         $statusData['equipment_status_id'],
                         'Equipment Status',
-                        'Delete',
+                        'Remove',
                         'Equipment status has been deleted',
                         $oldValue,
                         null,
