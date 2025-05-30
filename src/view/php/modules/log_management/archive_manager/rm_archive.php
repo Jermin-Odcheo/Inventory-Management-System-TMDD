@@ -31,48 +31,46 @@ $sort_order = $_GET['sort_order'] ?? 'desc'; // Default sort order
 $allowedSortColumns = [
     'role_id' => 'r.id',
     'operator_name' => 'operator_name', // Alias from CONCAT
-    'module' => 'al.Module',
-    'action' => 'al.Action',
-    'status' => 'al.Status',
-    'date_time' => 'al.Date_Time'
+    'module' => 'a.Module',
+    'action' => 'a.Action',
+    'status' => 'a.Status',
+    'date_time' => 'a.Date_Time'
 ];
 
 // Validate sort_by and sort_order
 if (!array_key_exists($sort_by, $allowedSortColumns)) {
-    $sort_by = 'role_name'; // Fallback to default
+    $sort_by = 'date_time'; // Fallback to default
 }
 if (!in_array(strtolower($sort_order), ['asc', 'desc'])) {
-    $sort_order = 'asc'; // Fallback to default
+    $sort_order = 'desc'; // Fallback to default
 }
 
 // --- Filter Logic ---
 $dateFilterType = $_GET['date_filter_type'] ?? '';
-$baseWhere = "r.is_deleted = 1";
+$baseWhere = "r.is_disabled = 1 
+    AND LOWER(a.Module) = 'roles and privileges'
+    AND LOWER(a.Action) IN ('delete', 'remove')
+    AND a.Status = 'successful'
+    AND a.TrackID = (
+        SELECT MAX(a2.TrackID)
+        FROM audit_log a2
+        WHERE a2.EntityID = a.EntityID 
+        AND a2.Module = a.Module
+        AND a2.Status = 'successful'
+    )";
 $params = [];
-
-// Apply action filter
-if (!empty($_GET['action_type'])) {
-    $baseWhere .= " AND a.Action = :action_type";
-    $params[':action_type'] = $_GET['action_type'];
-}
-
-// Apply status filter
-if (!empty($_GET['status'])) {
-    $baseWhere .= " AND a.Status = :status";
-    $params[':status'] = $_GET['status'];
-}
 
 // Apply search filter
 if (!empty($_GET['search'])) {
     $searchTerm = '%' . $_GET['search'] . '%';
     $baseWhere .= " AND (
         r.role_name LIKE :search_role
-        OR r.description LIKE :search_desc
         OR op.Email LIKE :search_email
+        OR a.Details LIKE :search_details
     )";
     $params[':search_role'] = $searchTerm;
-    $params[':search_desc'] = $searchTerm;
     $params[':search_email'] = $searchTerm;
+    $params[':search_details'] = $searchTerm;
 }
 
 // Apply date filters
@@ -112,21 +110,23 @@ $sql = "
     SELECT 
         r.id AS role_id,
         r.role_name,
-        r.description,
-        r.is_deleted,
-        r.created_at,
-        r.updated_at,
-        r.deleted_at,
+        r.is_disabled,
         a.TrackID AS last_audit_id,
         a.Action AS last_action,
         a.Status AS action_status,
         a.OldVal AS old_values,
         a.NewVal AS new_values,
         a.Date_Time AS audit_timestamp,
+        a.Details AS details,
+        a.Module AS module,
+        a.Action AS action,
+        a.Status AS status,
+        a.OldVal AS old_val,
+        a.Date_Time AS date_time,
         CONCAT(op.First_Name, ' ', op.Last_Name) AS operator_name,
         op.Email AS operator_email
     FROM roles r
-    LEFT JOIN audit_log a ON a.EntityID = r.id AND a.Module = 'Role Management'
+    LEFT JOIN audit_log a ON a.EntityID = r.id AND a.Module = 'Roles and Privileges'
     LEFT JOIN users op ON a.UserID = op.id
     WHERE $baseWhere
     $orderByClause
@@ -257,8 +257,6 @@ function formatChanges($oldJsonStr)
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" src="<?php echo BASE_URL; ?> /src/view/styles/css/audit_log.css">
-
-
     <style>
         .wrapper {
             display: flex;
@@ -333,26 +331,6 @@ function formatChanges($oldJsonStr)
 
                     <!-- Filter Section -->
                     <form method="GET" class="row g-3 mb-4" id="archiveFilterForm" action="">
-                        <div class="col-md-3">
-                            <label for="action_type" class="form-label">Action Type</label>
-                            <select class="form-select" name="action_type" id="filterAction">
-                                <option value="">All Actions</option>
-                                <option value="Create" <?= ($_GET['action_type'] ?? '') === 'Create' ? 'selected' : '' ?>>Create</option>
-                                <option value="Modified" <?= ($_GET['action_type'] ?? '') === 'Modified' ? 'selected' : '' ?>>Modified</option>
-                                <option value="Remove" <?= ($_GET['action_type'] ?? '') === 'Remove' ? 'selected' : '' ?>>Remove</option>
-                                <option value="Delete" <?= ($_GET['action_type'] ?? '') === 'Delete' ? 'selected' : '' ?>>Delete</option>
-                                <option value="Restored" <?= ($_GET['action_type'] ?? '') === 'Restored' ? 'selected' : '' ?>>Restored</option>
-                            </select>
-                        </div>
-                        
-                        <div class="col-md-3">
-                            <label for="status" class="form-label">Status</label>
-                            <select class="form-select" name="status" id="filterStatus">
-                                <option value="">All Status</option>
-                                <option value="Successful" <?= ($_GET['status'] ?? '') === 'Successful' ? 'selected' : '' ?>>Successful</option>
-                                <option value="Failed" <?= ($_GET['status'] ?? '') === 'Failed' ? 'selected' : '' ?>>Failed</option>
-                            </select>
-                        </div>
                         
                         <!-- Date Range selector -->
                         <div class="col-12 col-md-3">
@@ -444,7 +422,6 @@ function formatChanges($oldJsonStr)
                                     <th class="sortable" data-sort-by="action">Action <i class="fas fa-sort"></i></th>
                                     <th>Details</th>
                                     <th>Changes</th>
-                                    <th class="sortable" data-sort-by="status">Status <i class="fas fa-sort"></i></th>
                                     <th class="sortable" data-sort-by="date_time">Date &amp; Time <i class="fas fa-sort"></i></th>
                                     <th>Actions</th>
                                 </tr>
@@ -475,20 +452,15 @@ function formatChanges($oldJsonStr)
                                                 ?>
                                             </td>
                                             <td class="details">
-                                                <?php echo nl2br(htmlspecialchars($role['details'])); ?>
+                                                <?php echo nl2br(htmlspecialchars($role['details'] ?? '')); ?>
                                             </td>
                                             <td class="changes">
-                                                <?php echo formatChanges($role['old_val']); ?>
-                                            </td>
-                                            <td class="status">
-                                                <span class="badge <?php echo (strtolower($role['status']) === 'successful') ? 'bg-success' : 'bg-danger'; ?>">
-                                                    <?php echo getStatusIcon($role['status']) . ' ' . htmlspecialchars($role['status']); ?>
-                                                </span>
+                                                <?php echo formatChanges($role['old_val'] ?? ''); ?>
                                             </td>
                                             <td class="date-time">
                                                 <div class="d-flex align-items-center">
                                                     <i class="far fa-clock me-2"></i>
-                                                    <?php echo htmlspecialchars($role['date_time']); ?>
+                                                    <?php echo htmlspecialchars($role['date_time'] ?? 'N/A'); ?>
                                                 </div>
                                             </td>
                                             <td class="actions">
@@ -716,12 +688,10 @@ function formatChanges($oldJsonStr)
                     dataType: 'json',
                     success: function(response) {
                         if (response.success) {
-                            $('#archivedRolesTable').load(location.href + ' #archivedRolesTable', function() {
-                                updatePagination();
-                                showToast(response.message, 'success', 5000);
-                            });
+                            showToast(response.message, 'success', 5000);
                             $('#confirmRestoreModal').modal('hide');
                             $('.modal-backdrop').remove();
+                            window.location.reload();
                         } else {
                             showToast(response.message || 'An error occurred', 'error', 5000);
                         }
@@ -762,12 +732,10 @@ function formatChanges($oldJsonStr)
                     dataType: 'json',
                     success: function(response) {
                         if (response.success) {
-                            $('#archivedRolesTable').load(location.href + ' #archivedRolesTable', function() {
-                                updatePagination();
-                                showToast(response.message, 'success', 5000);
-                            });
+                            showToast(response.message, 'success', 5000);
                             $('#confirmDeleteModal').modal('hide');
                             $('.modal-backdrop').remove();
+                            window.location.reload();
                         } else {
                             showToast(response.message || 'An error occurred', 'error', 5000);
                         }
@@ -801,7 +769,7 @@ function formatChanges($oldJsonStr)
 
                 $.ajax({
                     type: 'POST',
-                    url: '../../rolesandprivilege_manager/restore_role.php',
+                    url: '../../rolesandprivilege_manager/role_manager/restore_role.php',
                     data: {
                         ids: bulkRestoreIds
                     },
@@ -811,6 +779,9 @@ function formatChanges($oldJsonStr)
                             $('#archivedRolesTable').load(location.href + ' #archivedRolesTable', function() {
                                 updatePagination();
                                 showToast(response.message, 'success', 5000);
+                                setTimeout(function() {
+                                    window.location.reload();
+                                }, 500);
                             });
                             $('#bulkRestoreModal').modal('hide');
                         } else {
@@ -856,6 +827,9 @@ function formatChanges($oldJsonStr)
                             $('#archivedRolesTable').load(location.href + ' #archivedRolesTable', function() {
                                 updatePagination();
                                 showToast(response.message, 'success', 5000);
+                                setTimeout(function() {
+                                    window.location.reload();
+                                }, 500);
                             });
                             $('#bulkDeleteModal').modal('hide');
                         } else {
@@ -932,49 +906,199 @@ function formatChanges($oldJsonStr)
 
         // Custom script to ensure filtering only happens on button click
         document.addEventListener('DOMContentLoaded', function() {
-            // Only keep the date filter type handler to show/hide date inputs
-            // Remove any handlers that might trigger filtering on input change
-            
-            // Date filter handling - keep this functionality
-            const filterType = document.getElementById('dateFilterType');
-            const allDateFilters = document.querySelectorAll('.date-filter');
-
-            function updateDateFields() {
-                allDateFilters.forEach(field => field.classList.add('d-none'));
-                if (!filterType.value) return;
-                document.querySelectorAll('.date-' + filterType.value).forEach(field => field.classList.remove('d-none'));
-            }
-
-            if (filterType) {
-                // Remove any previous listeners
-                const newFilterType = filterType.cloneNode(true);
-                filterType.parentNode.replaceChild(newFilterType, filterType);
-                
-                // Add only the date field visibility listener
-                newFilterType.addEventListener('change', updateDateFields);
-                updateDateFields(); // Initialize on page load
-            }
-            
-            // Override any filterTable function that might be called on input
-            window.filterTable = function() {
-                console.log("Auto-filtering disabled - click Filter button instead");
-                return false;
-            };
-            
-            // Make sure the clear filters button still works
+            // Clear filters button
             const clearFiltersBtn = document.getElementById('clearFilters');
             if (clearFiltersBtn) {
-                // Remove any previous listeners
-                const newClearBtn = clearFiltersBtn.cloneNode(true);
-                clearFiltersBtn.parentNode.replaceChild(newClearBtn, clearFiltersBtn);
-                
-                // Add click handler to reset and submit form
-                newClearBtn.addEventListener('click', function() {
-                    document.getElementById('archiveFilterForm').reset();
-                    updateDateFields();
-                    document.getElementById('archiveFilterForm').submit();
+                clearFiltersBtn.addEventListener('click', function() {
+                    const form = document.getElementById('archiveFilterForm');
+                    form.reset();
+                    
+                    // Clear date filter type and hide all date filter fields
+                    const filterType = document.getElementById('dateFilterType');
+                    if (filterType) {
+                        filterType.value = '';
+                        document.querySelectorAll('.date-filter').forEach(field => field.classList.add('d-none'));
+                    }
+                    
+                    // Clear search input
+                    const searchInput = document.getElementById('searchInput');
+                    if (searchInput) {
+                        searchInput.value = '';
+                    }
+                    
+                    // Submit the form to reset the data
+                    form.submit();
                 });
             }
+
+            // Date filter type change handler
+            const filterType = document.getElementById('dateFilterType');
+            if (filterType) {
+                filterType.addEventListener('change', function() {
+                    // Hide all date filter fields first
+                    document.querySelectorAll('.date-filter').forEach(field => field.classList.add('d-none'));
+                    
+                    // Show relevant date filter fields based on selection
+                    if (this.value) {
+                        document.querySelectorAll('.date-' + this.value).forEach(field => field.classList.remove('d-none'));
+                    }
+                });
+                
+                // Initialize date filter fields visibility
+                if (filterType.value) {
+                    document.querySelectorAll('.date-' + filterType.value).forEach(field => field.classList.remove('d-none'));
+                }
+            }
+        });
+
+        // --- Individual Restore AJAX Call ---
+        useJQuery(function($) {
+            $(document).on('click', '#confirmRestoreBtn', function () {
+                if (!userPrivileges.canRestore || !restoreId) return;
+                
+                $.ajax({
+                    url: '../../rolesandprivilege_manager/role_manager/restore_role.php',
+                    method: 'POST',
+                    data: { 
+                        id: restoreId,
+                        action: 'restore',
+                        module: 'Roles and Privileges' 
+                    },
+                    dataType: 'json',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    success: function(response) {
+                        // Hide restore modal immediately
+                        var modalInstance = bootstrap.Modal.getInstance(document.getElementById('restoreArchiveModal'));
+                        modalInstance.hide();
+
+                        if (response.status && response.status.toLowerCase() === 'success') {
+                            showToast(response.message, 'success');
+                            // Reload the page after a short delay
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 500);
+                        } else {
+                            showToast(response.message || 'Unknown error occurred', 'error');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        handleAjaxError(xhr, status, error, 'restore');
+                    }
+                });
+            });
+        });
+
+        // --- Individual Permanent Delete AJAX Call ---
+        useJQuery(function($) {
+            $(document).on('click', '#confirmDeleteBtn', function () {
+                if (!userPrivileges.canDelete || !deleteId) return;
+                
+                $.ajax({
+                    url: '../../rolesandprivilege_manager/role_manager/permanent_delete_role.php',
+                    method: 'POST',
+                    data: { 
+                        id: deleteId, 
+                        permanent: 1,
+                        action: 'delete',
+                        module: 'Roles and Privileges' 
+                    },
+                    dataType: 'json',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    success: function(response) {
+                        // Hide delete modal immediately
+                        var modalInstance = bootstrap.Modal.getInstance(document.getElementById('deleteArchiveModal'));
+                        modalInstance.hide();
+
+                        if (response.status && response.status.toLowerCase() === 'success') {
+                            showToast(response.message, 'success');
+                            // Reload the page after a short delay
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 500);
+                        } else {
+                            showToast(response.message || 'Unknown error occurred', 'error');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        handleAjaxError(xhr, status, error, 'delete');
+                    }
+                });
+            });
+        });
+
+        // --- Bulk Restore AJAX Call ---
+        useJQuery(function($) {
+            $(document).on('click', '#confirmBulkRestoreBtn', function () {
+                if (!userPrivileges.canRestore || bulkRestoreIds.length === 0) return;
+            
+                $.ajax({
+                    url: '../../rolesandprivilege_manager/role_manager/restore_role.php',
+                    method: 'POST',
+                    data: { 
+                        ids: bulkRestoreIds,
+                        action: 'bulk_restore',
+                        module: 'Roles and Privileges'
+                    },
+                    dataType: 'json',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    success: function(response) {
+                        // Hide the bulk restore modal
+                        var modalInstance = bootstrap.Modal.getInstance(document.getElementById('bulkRestoreModal'));
+                        modalInstance.hide();
+
+                        if (response.status === 'success') {
+                            showToast(response.message, 'success');
+                            // Reload the page after a short delay
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 500);
+                        } else {
+                            showToast(response.message || 'Unknown error occurred', 'error');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        handleAjaxError(xhr, status, error, 'bulk restore');
+                    }
+                });
+            });
+        });
+
+        // --- Bulk Delete AJAX Call ---
+        useJQuery(function($) {
+            $(document).on('click', '#confirmBulkDeleteBtn', function () {
+                if (!userPrivileges.canDelete || bulkDeleteIds.length === 0) return;
+            
+                $.ajax({
+                    url: '../../rolesandprivilege_manager/role_manager/permanent_delete_role.php',
+                    method: 'POST',
+                    data: { 
+                        ids: bulkDeleteIds, 
+                        permanent: 1,
+                        action: 'bulk_delete',
+                        module: 'Roles and Privileges'
+                    },
+                    dataType: 'json',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    success: function(response) {
+                        // Hide bulk delete modal immediately
+                        var bulkModalInstance = bootstrap.Modal.getInstance(document.getElementById('bulkDeleteModal'));
+                        bulkModalInstance.hide();
+
+                        if (response.status === 'success') {
+                            showToast(response.message, 'success');
+                            // Reload the page after a short delay
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 500);
+                        } else {
+                            showToast(response.message || 'Unknown error occurred', 'error');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        handleAjaxError(xhr, status, error, 'bulk delete');
+                    }
+                });
+            });
         });
     </script>
 </body>
