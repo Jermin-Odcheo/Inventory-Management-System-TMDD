@@ -673,7 +673,6 @@ error_log("Number of results: " . count($auditLogs));
                                     <th>Action</th>
                                     <th>Details</th>
                                     <th>Changes</th>
-                                    <th>Status</th>
                                     <th>Date & Time</th>
                                 </tr>
                             </thead>
@@ -752,6 +751,7 @@ error_log("Number of results: " . count($auditLogs));
                                                     <?php echo htmlspecialchars($log['Date_Time'] ?? ''); ?>
                                                 </div>
                                             </td>
+
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>

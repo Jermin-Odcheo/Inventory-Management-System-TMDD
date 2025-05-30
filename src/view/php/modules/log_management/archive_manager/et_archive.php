@@ -46,6 +46,7 @@ $moduleType = $_GET['module_type'] ?? '';
 
 $baseWhere = "a.Module IN ('Purchase Order', 'Charge Invoice', 'Receiving Report')
   AND LOWER(a.Action) IN ('delete', 'remove', 'soft delete', 'permanent delete')
+  AND a.Status = 'Successful'
   AND a.TrackID = (
       SELECT MAX(a2.TrackID)
       FROM audit_log a2
@@ -417,9 +418,10 @@ function formatChanges($oldJsonStr)
                                     <th class="sortable" data-sort-by="track_id"># <i class="fas fa-sort"></i></th>
                                     <th class="sortable" data-sort-by="operator_name">User <i class="fas fa-sort"></i></th>
                                     <th class="sortable" data-sort-by="module">Module <i class="fas fa-sort"></i></th>
-                                    <th>Action</th>
+                                    <th class="sortable" data-sort-by="action">Action <i class="fas fa-sort"></i></th>
                                     <th>Details</th>
                                     <th>Changes</th>
+                                    <th class="sortable" data-sort-by="status">Status <i class="fas fa-sort"></i></th>
                                     <th class="sortable" data-sort-by="date_time">Date &amp; Time <i class="fas fa-sort"></i></th>
                                     <th>Actions</th>
                                 </tr>
@@ -461,11 +463,22 @@ function formatChanges($oldJsonStr)
                                             <td data-label="Changes">
                                                 <?php echo formatChanges($log['old_val']); ?>
                                             </td>
-                        
-                                            <td data-label="Date &amp; Time">
+                                            <td data-label="Status">
+                                                <?php
+                                                $statusText = (strtolower((string)$log['status']) === 'successful') ? 'Successful' : 'Failed';
+                                                $statusClass = (strtolower((string)$log['status']) === 'successful') ? 'bg-success' : 'bg-danger';
+                                                ?>
+                                                <span class="badge <?php echo $statusClass; ?>">
+                                                    <?php echo getStatusIcon($log['status']) . ' ' . htmlspecialchars($statusText); ?>
+                                                </span>
+                                            </td>
+                                            <td data-label="Date & Time">
                                                 <div class="d-flex align-items-center">
                                                     <i class="far fa-clock me-2"></i>
-                                                    <?php echo htmlspecialchars((string)($log['date_time'] ?? '')); ?>
+                                                    <?php 
+                                                    $date = new DateTime($log['Date_Time']);
+                                                    echo $date->format('M d, Y h:i A'); 
+                                                    ?>
                                                 </div>
                                             </td>
                                             <td data-label="Actions">

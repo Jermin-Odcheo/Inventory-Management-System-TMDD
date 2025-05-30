@@ -50,7 +50,7 @@ if (isset($_POST['id']) && isset($_POST['permanent']) && $_POST['permanent'] == 
         // Log the permanent delete action
         logAudit(
             $pdo,
-            'delete',
+            'Remove',
             'Purchase Order "' . ($oldData['po_no'] ?? 'ID: '.$poId) . '" has been permanently deleted',
             'Successful',
             json_encode($oldData),
@@ -62,7 +62,7 @@ if (isset($_POST['id']) && isset($_POST['permanent']) && $_POST['permanent'] == 
         // Log the error
         logAudit(
             $pdo,
-            'delete',
+            'Remove',
             'Purchase Order ID: ' . $poId . ' permanent deletion failed',
             'Failed',
             json_encode(['id' => $poId, 'error' => $e->getMessage()]),
@@ -97,7 +97,7 @@ if (isset($_POST['id']) && isset($_POST['permanent']) && $_POST['permanent'] == 
         foreach ($oldDataRecords as $oldData) {
             logAudit(
                 $pdo,
-                'delete',
+                'Remove',
                 'Purchase Order "' . ($oldData['po_no'] ?? 'ID: '.$oldData['id']) . '" has been permanently deleted',
                 'Successful',
                 json_encode($oldData),
@@ -110,7 +110,7 @@ if (isset($_POST['id']) && isset($_POST['permanent']) && $_POST['permanent'] == 
         // Log the error
         logAudit(
             $pdo,
-            'delete',
+            'Remove',
             'Bulk Purchase Order deletion failed for IDs: ' . implode(', ', $poIds),
             'Failed',
             json_encode(['ids' => implode(',', $poIds), 'error' => $e->getMessage()]),

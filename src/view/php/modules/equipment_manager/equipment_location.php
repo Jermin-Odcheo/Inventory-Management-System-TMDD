@@ -252,7 +252,7 @@ if (
                 $_SESSION['user_id'],
                 $id,
                 'Equipment Location',
-                'Delete',
+                'Remove',
                 'Equipment location deleted',
                 $oldValues,
                 null,
