@@ -225,6 +225,17 @@ $userRoleDepartments = array_values($userRoleMap);
             color: #0d6efd;
         }
         
+        /* Style for active sort column */
+        .sort-header.active-sort {
+            background-color: #e9f0ff;
+            font-weight: 600;
+        }
+        
+        .sort-header.active-sort i {
+            color: #0d6efd;
+            font-weight: bold;
+        }
+        
         /* Center pagination on mobile */
         @media (max-width: 767.98px) {
             .pagination {
@@ -296,6 +307,21 @@ $userRoleDepartments = array_values($userRoleMap);
                 flex: 0 0 100%;
             }
         }
+
+        /* Filter button states */
+        .btn-filtering {
+            background-color: #6c757d !important; 
+            opacity: 0.8;
+            pointer-events: none;
+        }
+        
+        /* Center pagination on mobile */
+        @media (max-width: 767.98px) {
+            .pagination {
+                justify-content: center;
+                margin: 0.5rem 0;
+            }
+        }
     </style>
 </head>
 
@@ -334,17 +360,17 @@ $userRoleDepartments = array_values($userRoleMap);
                 </select>
             </div>
             <div class="search-filter">
-                <label for="search-users">SEARCH FOR USERS</label>
-                <input type="text" id="search-users" placeholder="Search user...">
+                <label for="search-users">SEARCH</label>
+                <input type="text" id="search-users" placeholder="Search users, departments, roles...">
             </div>
 
             <!-- Buttons -->
             <div class="col-6 col-md-2 d-grid">
-                <button type="submit" class="btn btn-dark"><i class="bi bi-funnel"></i> Filter</button>
+                <button type="button" id="filter-btn" class="btn btn-dark"><i class="bi bi-funnel"></i> Filter</button>
             </div>
 
             <div class="col-6 col-md-2 d-grid">
-                <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary shadow-sm"><i class="bi bi-x-circle"></i> Clear</a>
+                <button type="button" id="clear-btn" class="btn btn-secondary shadow-sm"><i class="bi bi-x-circle"></i> Clear</button>
             </div>
 
             <div class="action-buttons">
@@ -591,6 +617,7 @@ $userRoleDepartments = array_values($userRoleMap);
     </script>
 
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/user_roles_management.js" defer></script>
+    <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/user_roles_fixes.js" defer></script>
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
@@ -608,6 +635,10 @@ $userRoleDepartments = array_values($userRoleMap);
                 currentPage: 1
             };
 
+            // Initialize rows arrays for pagination and filtering
+            window.allRows = Array.from(document.querySelectorAll('#urTable tbody tr'));
+            window.filteredRows = [...window.allRows];
+
             // Initialize event listeners for pagination buttons
             document.getElementById('prevPage').addEventListener('click', function(e) {
                 e.preventDefault();
@@ -620,7 +651,11 @@ $userRoleDepartments = array_values($userRoleMap);
             document.getElementById('nextPage').addEventListener('click', function(e) {
                 e.preventDefault();
                 const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value) || 10;
-                const totalPages = Math.ceil(window.filteredRows.length / rowsPerPage);
+                
+                // Get the right number of users for pagination, not rows
+                const userIds = getUserIdsFromRows(window.filteredRows);
+                const totalPages = Math.ceil(userIds.length / rowsPerPage);
+                
                 if (window.paginationConfig.currentPage < totalPages) {
                     window.paginationConfig.currentPage++;
                     window.updatePagination();
@@ -632,548 +667,498 @@ $userRoleDepartments = array_values($userRoleMap);
                 window.paginationConfig.currentPage = 1; // Reset to first page
                 window.updatePagination();
             });
-
-            // Function to check and update pagination visibility
-            window.forcePaginationCheck = function() {
-                const totalRows = window.filteredRows ? window.filteredRows.length : 0;
-                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value) || 10;
-                const totalPages = Math.ceil(totalRows / rowsPerPage);
-                const currentPage = window.paginationConfig ? window.paginationConfig.currentPage : 1;
-                
-                const prevBtn = document.getElementById('prevPage');
-                const nextBtn = document.getElementById('nextPage');
-                const paginationEl = document.getElementById('pagination');
-                const paginationContainer = paginationEl ? paginationEl.closest('.row') : null;
-
-                // Hide pagination completely if all rows fit on one page
-                if (totalRows <= rowsPerPage) {
-                    if (prevBtn) prevBtn.style.display = 'none';
-                    if (nextBtn) nextBtn.style.display = 'none';
-                    if (paginationContainer) paginationContainer.style.display = 'none';
-                } else {
-                    // Show pagination but conditionally hide prev/next buttons
-                    if (paginationContainer) paginationContainer.style.display = '';
-
-                    if (prevBtn) {
-                        prevBtn.style.display = '';
-                        if (currentPage <= 1) {
-                            prevBtn.classList.add('disabled');
-                        } else {
-                            prevBtn.classList.remove('disabled');
+            
+            // Helper function to get unique user IDs from rows
+            function getUserIdsFromRows(rows) {
+                const userIds = new Set();
+                rows.forEach(row => {
+                    let userId = null;
+                    const checkbox = row.querySelector('.select-row');
+                    if (checkbox) {
+                        userId = checkbox.value;
+                    } else {
+                        const editBtn = row.querySelector('.edit-btn');
+                        if (editBtn) {
+                            userId = editBtn.getAttribute('data-user-id');
                         }
                     }
-
-                    if (nextBtn) {
-                        nextBtn.style.display = '';
-                        if (currentPage >= totalPages) {
-                            nextBtn.classList.add('disabled');
-                        } else {
-                            nextBtn.classList.remove('disabled');
-                        }
+                    if (userId) {
+                        userIds.add(userId);
                     }
-                }
-                
-                // Update the showing X to Y of Z entries text
-                const currentPageEl = document.getElementById('currentPage');
-                const rowsPerPageEl = document.getElementById('rowsPerPage');
-                
-                if (currentPageEl && rowsPerPageEl) {
-                    const start = totalRows === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1;
-                    const end = Math.min(start + rowsPerPage - 1, totalRows);
-                    
-                    currentPageEl.textContent = start;
-                    rowsPerPageEl.textContent = end;
-                }
+                });
+                return Array.from(userIds);
             }
-
-            // Override the standard updatePagination function
+            
+            // Override the standard updatePagination function to handle user grouping properly
             window.updatePagination = function() {
-                // Get all rows again in case the DOM was updated
-                window.allRows = Array.from(document.querySelectorAll('#urTable tbody tr'));
-
-                // If filtered rows is empty or not defined, use all rows
-                if (!window.filteredRows || window.filteredRows.length === 0) {
-                    window.filteredRows = window.allRows;
+                console.log('Updating pagination');
+                
+                // Get all rows currently in the table
+                const rows = Array.from(document.querySelectorAll('#urTable tbody tr'));
+                
+                // Skip pagination if we're showing the empty state
+                if (rows.length === 1 && rows[0].cells.length === 1 && rows[0].cells[0].colSpan === 5) {
+                    console.log('Empty state detected, skipping pagination');
+                    
+                    // Update count displays to show 0
+                    const totalRowsEl = document.getElementById('totalRows');
+                    if (totalRowsEl) totalRowsEl.textContent = '0';
+                    
+                    const currentPageEl = document.getElementById('currentPage');
+                    if (currentPageEl) currentPageEl.textContent = '0';
+                    
+                    const rowsPerPageEl = document.getElementById('rowsPerPage');
+                    if (rowsPerPageEl) rowsPerPageEl.textContent = '0';
+                    
+                    // Hide pagination elements
+                    forcePaginationCheck();
+                    return;
                 }
-
+                
+                // Group rows by user ID
+                const userGroups = {};
+                rows.forEach(row => {
+                    // Extract user ID from the row
+                    let userId = null;
+                    const checkbox = row.querySelector('.select-row');
+                    if (checkbox) {
+                        userId = checkbox.value;
+                    } else {
+                        // Try to get from edit button data attribute as fallback
+                        const editBtn = row.querySelector('.edit-btn');
+                        if (editBtn) {
+                            userId = editBtn.getAttribute('data-user-id');
+                        }
+                    }
+                    
+                    if (userId) {
+                        if (!userGroups[userId]) {
+                            userGroups[userId] = [];
+                        }
+                        userGroups[userId].push(row);
+                    }
+                });
+                
+                // Get unique user IDs and count
+                const uniqueUserIds = Object.keys(userGroups);
+                const totalUniqueUsers = uniqueUserIds.length;
+                
+                // Get pagination settings
+                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value) || 10;
+                const currentPage = window.paginationConfig.currentPage || 1;
+                const totalPages = Math.ceil(totalUniqueUsers / rowsPerPage);
+                
+                // Adjust current page if it's out of range
+                if (currentPage > totalPages && totalPages > 0) {
+                    window.paginationConfig.currentPage = totalPages;
+                }
+                
                 // Update total rows display
                 const totalRowsEl = document.getElementById('totalRows');
                 if (totalRowsEl) {
-                    totalRowsEl.textContent = window.filteredRows.length;
+                    totalRowsEl.textContent = totalUniqueUsers;
                 }
-
-                // Get pagination elements
-                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value) || 10;
-                const totalRows = window.filteredRows.length;
-                const totalPages = Math.ceil(totalRows / rowsPerPage);
-                const currentPage = window.paginationConfig ? window.paginationConfig.currentPage : 1;
-
-                // Update rows per page display
+                
+                // Calculate which users to show on current page
+                const startUserIndex = (currentPage - 1) * rowsPerPage;
+                const endUserIndex = Math.min(startUserIndex + rowsPerPage, totalUniqueUsers);
+                const visibleUserIds = uniqueUserIds.slice(startUserIndex, endUserIndex);
+                
+                // Update pagination display
                 const rowsPerPageEl = document.getElementById('rowsPerPage');
                 if (rowsPerPageEl) {
-                    const visibleRows = Math.min(rowsPerPage, window.filteredRows.length - (currentPage - 1) * rowsPerPage);
-                    rowsPerPageEl.textContent = visibleRows;
+                    rowsPerPageEl.textContent = Math.min(endUserIndex, totalUniqueUsers);
                 }
                 
-                // Update current page display
                 const currentPageEl = document.getElementById('currentPage');
                 if (currentPageEl) {
-                    const start = totalRows === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1;
-                    currentPageEl.textContent = start;
+                    currentPageEl.textContent = totalUniqueUsers > 0 ? startUserIndex + 1 : 0;
                 }
                 
-                // Generate pagination numbers
-                const paginationEl = document.getElementById('pagination');
-                if (paginationEl) {
-                    paginationEl.innerHTML = '';
-                    
-                    // Previous button
-                    const prevLi = document.createElement('li');
-                    prevLi.className = 'page-item' + (currentPage <= 1 ? ' disabled' : '');
-                    const prevLink = document.createElement('a');
-                    prevLink.className = 'page-link';
-                    prevLink.href = '#';
-                    prevLink.innerHTML = '<i class="bi bi-chevron-left"></i>';
-                    prevLink.setAttribute('aria-label', 'Previous');
-                    prevLink.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        if (currentPage > 1) {
-                            window.paginationConfig.currentPage--;
-                            window.updatePagination();
-                        }
-                    });
-                    prevLi.appendChild(prevLink);
-                    paginationEl.appendChild(prevLi);
-                    
-                    // Calculate range of page numbers to show
-                    let startPage = Math.max(1, currentPage - 1);
-                    let endPage = Math.min(totalPages, startPage + 2);
-                    
-                    // Adjust if we're near the end
-                    if (endPage - startPage < 2 && startPage > 1) {
-                        startPage = Math.max(1, endPage - 2);
-                    }
-                    
-                    // First page if not in range
-                    if (startPage > 1) {
-                        const firstLi = document.createElement('li');
-                        firstLi.className = 'page-item';
-                        const firstLink = document.createElement('a');
-                        firstLink.className = 'page-link';
-                        firstLink.href = '#';
-                        firstLink.textContent = '1';
-                        firstLink.addEventListener('click', function(e) {
-                            e.preventDefault();
-                            window.paginationConfig.currentPage = 1;
-                            window.updatePagination();
-                        });
-                        firstLi.appendChild(firstLink);
-                        paginationEl.appendChild(firstLi);
-                        
-                        // Add ellipsis if needed
-                        if (startPage > 2) {
-                            const ellipsisLi = document.createElement('li');
-                            ellipsisLi.className = 'page-item disabled';
-                            const ellipsisSpan = document.createElement('span');
-                            ellipsisSpan.className = 'page-link';
-                            ellipsisSpan.textContent = '...';
-                            ellipsisLi.appendChild(ellipsisSpan);
-                            paginationEl.appendChild(ellipsisLi);
-                        }
-                    }
-                    
-                    // Page numbers
-                    for (let i = startPage; i <= endPage; i++) {
-                        const pageLi = document.createElement('li');
-                        pageLi.className = 'page-item' + (i === currentPage ? ' active' : '');
-                        const pageLink = document.createElement('a');
-                        pageLink.className = 'page-link';
-                        pageLink.href = '#';
-                        pageLink.textContent = i;
-                        pageLink.addEventListener('click', function(e) {
-                            e.preventDefault();
-                            window.paginationConfig.currentPage = i;
-                            window.updatePagination();
-                        });
-                        pageLi.appendChild(pageLink);
-                        paginationEl.appendChild(pageLi);
-                    }
-                    
-                    // Last page if not in range
-                    if (endPage < totalPages) {
-                        // Add ellipsis if needed
-                        if (endPage < totalPages - 1) {
-                            const ellipsisLi = document.createElement('li');
-                            ellipsisLi.className = 'page-item disabled';
-                            const ellipsisSpan = document.createElement('span');
-                            ellipsisSpan.className = 'page-link';
-                            ellipsisSpan.textContent = '...';
-                            ellipsisLi.appendChild(ellipsisSpan);
-                            paginationEl.appendChild(ellipsisLi);
-                        }
-                        
-                        const lastLi = document.createElement('li');
-                        lastLi.className = 'page-item';
-                        const lastLink = document.createElement('a');
-                        lastLink.className = 'page-link';
-                        lastLink.href = '#';
-                        lastLink.textContent = totalPages;
-                        lastLink.addEventListener('click', function(e) {
-                            e.preventDefault();
-                            window.paginationConfig.currentPage = totalPages;
-                            window.updatePagination();
-                        });
-                        lastLi.appendChild(lastLink);
-                        paginationEl.appendChild(lastLi);
-                    }
-                    
-                    // Next button
-                    const nextLi = document.createElement('li');
-                    nextLi.className = 'page-item' + (currentPage >= totalPages ? ' disabled' : '');
-                    const nextLink = document.createElement('a');
-                    nextLink.className = 'page-link';
-                    nextLink.href = '#';
-                    nextLink.innerHTML = '<i class="bi bi-chevron-right"></i>';
-                    nextLink.setAttribute('aria-label', 'Next');
-                    nextLink.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        if (currentPage < totalPages) {
-                            window.paginationConfig.currentPage++;
-                            window.updatePagination();
-                        }
-                    });
-                    nextLi.appendChild(nextLink);
-                    paginationEl.appendChild(nextLi);
-                }
-
-                // Update visibility of rows
-                window.filteredRows.forEach(function(row, index) {
-                    const pageIndex = Math.floor(index / rowsPerPage);
-                    if (pageIndex === currentPage - 1) {
-                        row.style.display = '';
-                    } else {
-                        row.style.display = 'none';
-                    }
+                // Hide all rows first
+                rows.forEach(row => row.style.display = 'none');
+                
+                // Show only rows for users on the current page
+                visibleUserIds.forEach(userId => {
+                    const userRows = userGroups[userId] || [];
+                    userRows.forEach(row => row.style.display = '');
                 });
+                
+                // Generate pagination links
+                generatePaginationLinks(currentPage, totalPages);
                 
                 // Update prev/next button visibility
                 forcePaginationCheck();
             };
-
-            // Initialize Select2 for department filter
-            $('#dept-filter').select2({
-                placeholder: 'All Departments',
-                allowClear: true,
-                minimumResultsForSearch: 5,
-                dropdownParent: $('body'), // Attach to body for proper z-index handling
-                matcher: function(params, data) {
-                    // If there are no search terms, return all of the data
-                    if ($.trim(params.term) === '') {
-                        return data;
-                    }
-
-                    // Search in both department name and abbreviation
-                    if (data.text.toLowerCase().indexOf(params.term.toLowerCase()) > -1) {
-                        return data;
-                    }
-
-                    // Try to extract abbreviation from the data text (format: "(ABBR) Department Name")
-                    const abbr = data.text.match(/^\(([^)]+)\)/);
-                    if (abbr && abbr[1].toLowerCase().indexOf(params.term.toLowerCase()) > -1) {
-                        return data;
-                    }
-
-                    // Return `null` if the term should not be displayed
-                    return null;
-                }
-            });
-
-            // Initialize Select2 for role filter
-            $('#role-filter').select2({
-                placeholder: 'All Roles',
-                allowClear: true,
-                width: '100%',
-                minimumResultsForSearch: 5,
-                dropdownParent: $('body')
-            });
-
-            // Initialize Select2 for modal dropdowns
-            $('#search-department-dropdown').select2({
-                placeholder: 'Select Department',
-                allowClear: true,
-                width: '100%',
-                dropdownParent: $('#add-user-roles-modal .modal-body'),
-                matcher: function(params, data) {
-                    // If there are no search terms, return all of the data
-                    if ($.trim(params.term) === '') {
-                        return data;
-                    }
-
-                    // Search in both department name and abbreviation
-                    if (data.text.toLowerCase().indexOf(params.term.toLowerCase()) > -1) {
-                        return data;
-                    }
-
-                    // Try to extract abbreviation from the data text (format: "(ABBR) Department Name")
-                    const abbr = data.text.match(/^\(([^)]+)\)/);
-                    if (abbr && abbr[1].toLowerCase().indexOf(params.term.toLowerCase()) > -1) {
-                        return data;
-                    }
-
-                    // Return `null` if the term should not be displayed
-                    return null;
-                }
-            }).on('select2:select', function(e) {
-                // Get the selected department ID
-                const deptId = parseInt($(this).val());
-                if (deptId) {
-                    // Get the department object
-                    const dept = departmentsData.find(d => d.id === deptId);
-                    if (dept) {
-                        // Add the department to the selection
-                        const container = document.getElementById('selected-department-container');
-
-                        // Clear previous selection (only one department allowed)
-                        container.innerHTML = '';
-
-                        // Create the selected item element
-                        const selectedItem = document.createElement('span');
-                        selectedItem.className = 'selected-item';
-                        selectedItem.dataset.id = dept.id;
-                        selectedItem.innerHTML = `
-                            ${dept.department_name}
-                            <button class="remove-btn" data-id="${dept.id}" data-type="department">✕</button>
-                        `;
-                        container.appendChild(selectedItem);
-
-                        // Add remove button event listener
-                        selectedItem.querySelector('.remove-btn').addEventListener('click', function() {
-                            // Remove the department selection
-                            window.selectedDepartment = null;
-                            selectedItem.remove();
-                        });
-
-                        // Set the selectedDepartment
-                        window.selectedDepartment = dept;
-                    }
-                }
-
-                // Reset the select
-                $(this).val(null).trigger('change');
-            });
             
-            // Initialize Select2 for roles dropdown in the modal
-            $('#search-role-dropdown').select2({
-                placeholder: 'Select Roles',
-                allowClear: true,
-                width: '100%',
-                dropdownParent: $('#add-user-roles-modal .modal-body')
-            }).on('select2:select', function(e) {
-                // Get the selected role ID
-                const roleId = parseInt($(this).val());
-                if (roleId) {
-                    // Get the role object
-                    const role = rolesData.find(r => r.id === roleId);
-                    if (role) {
-                        // Add the role to the selection
-                        const container = document.getElementById('selected-roles-container');
-
-                        // Check if this role is already selected
-                        const alreadySelected = Array.from(container.children).some(
-                            child => parseInt(child.dataset.id) === roleId
-                        );
-
-                        if (!alreadySelected) {
-                            // Create the selected item element
-                            const selectedItem = document.createElement('span');
-                            selectedItem.className = 'selected-item';
-                            selectedItem.dataset.id = role.id;
-                            selectedItem.innerHTML = `
-                                ${role.role_name}
-                                <button class="remove-btn" data-id="${role.id}" data-type="role">✕</button>
-                            `;
-                            container.appendChild(selectedItem);
-
-                            // Add remove button event listener
-                            selectedItem.querySelector('.remove-btn').addEventListener('click', function() {
-                                // Remove from the selectedRoles array
-                                window.selectedRoles = window.selectedRoles.filter(r => r.id !== role.id);
-                                selectedItem.remove();
-                            });
-
-                            // Add to the selectedRoles array
-                            if (!window.selectedRoles) window.selectedRoles = [];
-                            window.selectedRoles.push(role);
-                        }
+            // Function to generate pagination links
+            function generatePaginationLinks(currentPage, totalPages) {
+                const paginationEl = document.getElementById('pagination');
+                if (!paginationEl) return;
+                
+                paginationEl.innerHTML = '';
+                
+                // Don't show pagination if there's only one page or no pages
+                if (totalPages <= 1) return;
+                
+                // Previous button
+                const prevLi = document.createElement('li');
+                prevLi.className = 'page-item' + (currentPage <= 1 ? ' disabled' : '');
+                const prevLink = document.createElement('a');
+                prevLink.className = 'page-link';
+                prevLink.href = '#';
+                prevLink.innerHTML = '<i class="bi bi-chevron-left"></i>';
+                prevLink.setAttribute('aria-label', 'Previous');
+                prevLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (currentPage > 1) {
+                        window.paginationConfig.currentPage--;
+                        window.updatePagination();
+                    }
+                });
+                prevLi.appendChild(prevLink);
+                paginationEl.appendChild(prevLi);
+                
+                // Calculate page range to show
+                let startPage = Math.max(1, currentPage - 1);
+                let endPage = Math.min(totalPages, startPage + 2);
+                
+                // Adjust if we're near the end
+                if (endPage - startPage < 2 && startPage > 1) {
+                    startPage = Math.max(1, endPage - 2);
+                }
+                
+                // First page if not in range
+                if (startPage > 1) {
+                    const firstLi = document.createElement('li');
+                    firstLi.className = 'page-item';
+                    const firstLink = document.createElement('a');
+                    firstLink.className = 'page-link';
+                    firstLink.href = '#';
+                    firstLink.textContent = '1';
+                    firstLink.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        window.paginationConfig.currentPage = 1;
+                        window.updatePagination();
+                    });
+                    firstLi.appendChild(firstLink);
+                    paginationEl.appendChild(firstLi);
+                    
+                    // Add ellipsis if needed
+                    if (startPage > 2) {
+                        const ellipsisLi = document.createElement('li');
+                        ellipsisLi.className = 'page-item disabled';
+                        const ellipsisSpan = document.createElement('span');
+                        ellipsisSpan.className = 'page-link';
+                        ellipsisSpan.textContent = '...';
+                        ellipsisLi.appendChild(ellipsisSpan);
+                        paginationEl.appendChild(ellipsisLi);
                     }
                 }
-
-                // Reset the select
-                $(this).val(null).trigger('change');
-            });
-
-            // Initialize Select2 for users dropdown in the modal
-            $('#search-users-dropdown').select2({
-                placeholder: 'Select Users',
-                allowClear: true,
-                width: '100%',
-                dropdownParent: $('#add-user-roles-modal .modal-body')
-            }).on('select2:select', function(e) {
-                // Get the selected user ID
-                const userId = parseInt($(this).val());
-                if (userId) {
-                    // Get the user object
-                    const user = usersData.find(u => u.id === userId);
-                    if (user) {
-                        // Add the user to the selection
-                        const container = document.getElementById('selected-users-container');
-
-                        // Check if this user is already selected
-                        const alreadySelected = Array.from(container.children).some(
-                            child => parseInt(child.dataset.id) === userId
-                        );
-
-                        if (!alreadySelected) {
-                            // Create the selected item element
-                            const selectedItem = document.createElement('span');
-                            selectedItem.className = 'selected-item';
-                            selectedItem.dataset.id = user.id;
-                            selectedItem.innerHTML = `
-                                ${user.username}
-                                <button class="remove-btn" data-id="${user.id}" data-type="user">✕</button>
-                            `;
-                            container.appendChild(selectedItem);
-
-                            // Add remove button event listener
-                            selectedItem.querySelector('.remove-btn').addEventListener('click', function() {
-                                // Remove from the selectedUsers array
-                                window.selectedUsers = window.selectedUsers.filter(u => u.id !== user.id);
-                                selectedItem.remove();
-                            });
-
-                            // Add to the selectedUsers array
-                            if (!window.selectedUsers) window.selectedUsers = [];
-                            window.selectedUsers.push(user);
-                        }
-                    }
+                
+                // Page numbers
+                for (let i = startPage; i <= endPage; i++) {
+                    const pageLi = document.createElement('li');
+                    pageLi.className = 'page-item' + (i === currentPage ? ' active' : '');
+                    const pageLink = document.createElement('a');
+                    pageLink.className = 'page-link';
+                    pageLink.href = '#';
+                    pageLink.textContent = i;
+                    pageLink.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        window.paginationConfig.currentPage = i;
+                        window.updatePagination();
+                    });
+                    pageLi.appendChild(pageLink);
+                    paginationEl.appendChild(pageLi);
                 }
+                
+                // Last page if not in range
+                if (endPage < totalPages) {
+                    // Add ellipsis if needed
+                    if (endPage < totalPages - 1) {
+                        const ellipsisLi = document.createElement('li');
+                        ellipsisLi.className = 'page-item disabled';
+                        const ellipsisSpan = document.createElement('span');
+                        ellipsisSpan.className = 'page-link';
+                        ellipsisSpan.textContent = '...';
+                        ellipsisLi.appendChild(ellipsisSpan);
+                        paginationEl.appendChild(ellipsisLi);
+                    }
+                    
+                    const lastLi = document.createElement('li');
+                    lastLi.className = 'page-item';
+                    const lastLink = document.createElement('a');
+                    lastLink.className = 'page-link';
+                    lastLink.href = '#';
+                    lastLink.textContent = totalPages;
+                    lastLink.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        window.paginationConfig.currentPage = totalPages;
+                        window.updatePagination();
+                    });
+                    lastLi.appendChild(lastLink);
+                    paginationEl.appendChild(lastLi);
+                }
+                
+                // Next button
+                const nextLi = document.createElement('li');
+                nextLi.className = 'page-item' + (currentPage >= totalPages ? ' disabled' : '');
+                const nextLink = document.createElement('a');
+                nextLink.className = 'page-link';
+                nextLink.href = '#';
+                nextLink.innerHTML = '<i class="bi bi-chevron-right"></i>';
+                nextLink.setAttribute('aria-label', 'Next');
+                nextLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (currentPage < totalPages) {
+                        window.paginationConfig.currentPage++;
+                        window.updatePagination();
+                    }
+                });
+                nextLi.appendChild(nextLink);
+                paginationEl.appendChild(nextLi);
+            }
 
-                // Reset the select
-                $(this).val(null).trigger('change');
-            });
+            // Define a flag to control automatic filtering
+            let allowAutoFiltering = false;
             
-            // Initialize Select2 for department-dropdown (edit modal)
-            $('#department-dropdown').select2({
-                placeholder: 'Select Role',
-                allowClear: true,
-                width: '100%',
-                dropdownParent: $('#add-department-role-modal .modal-body')
-            }).on('select2:select', function(e) {
-                // Get the selected role ID
-                const roleId = parseInt($(this).val());
-                if (roleId) {
-                    // Get the role object
-                    const role = rolesData.find(r => r.id === roleId);
-                    if (role) {
-                        // Add the role to the table
-                        const tbody = $('#assigned-roles-table tbody');
-
-                        // Check if this role is already selected
-                        const alreadySelected = tbody.find(`tr[data-id="${roleId}"]`).length > 0;
-
-                        if (!alreadySelected) {
-                            // Create the table row
-                            const tr = $(`
-                                <tr data-id="${role.id}">
-                                    <td>${role.role_name}</td>
-                                    <td class="text-end">
-                                        <button class="btn-outline-danger delete-btn" data-role-id="${role.id}">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            `);
-
-                            // Add to table
-                            tbody.append(tr);
-
-                            // Add click handler for delete button
-                            tr.find('.delete-btn').on('click', function() {
-                                // Remove from the selectedRoles array
-                                window.selectedRoles = window.selectedRoles.filter(r => r.id !== role.id);
-                                tr.remove();
-                            });
-
-                            // Add to the selectedRoles array
-                            if (!window.selectedRoles) window.selectedRoles = [];
-                            window.selectedRoles.push(role);
-                        }
-                    }
-                }
-
-                // Reset the select
-                $(this).val(null).trigger('change');
-            });
-            
-            // Always show the placeholder as an option for both filters
-            $('#dept-filter').val('').trigger('change');
-            $('#role-filter').val('').trigger('change');
-
-            // Function to filter the table based on search and filter criteria
             function filterTable() {
+                // Check if this was called from an event that should be ignored
+                if (!allowAutoFiltering && window.filterCalledFrom === 'auto') {
+                    console.log('Automatic filtering prevented');
+                    window.filterCalledFrom = null;
+                    return;
+                }
+                
+                // Double-check if this was triggered by the filter button
+                const calledByButton = window.filterCalledFrom === 'button';
+                if (!calledByButton) {
+                    console.log('Filtering not triggered by button - prevented');
+                    window.filterCalledFrom = null;
+                    return;
+                }
+                
+                console.log('Filtering table (allowed)');
                 const searchText = $('#search-users').val().toLowerCase();
                 const roleFilter = $('#role-filter').val();
-                const deptFilter = $('#dept-filter').val().toLowerCase();
+                const deptFilter = $('#dept-filter').val().toLowerCase(); // Use value instead of text
+
+                // Get the department filter text (not just the value)
+                const deptFilterText = deptFilter ? $('#dept-filter option:selected').text().toLowerCase() : '';
+
+                // Make sure allRows is initialized
+                if (!window.allRows || window.allRows.length === 0) {
+                    window.allRows = Array.from(document.querySelectorAll('#urTable tbody tr'));
+                }
 
                 // Convert role ID to name for filtering
                 const roleFilterName = roleFilter ? 
                     rolesData.find(r => r.id == roleFilter)?.role_name.toLowerCase() : '';
 
-                // Get all rows
-                const allRows = Array.from(document.querySelectorAll('#urTable tbody tr'));
-                
-                // Filter rows based on criteria
-                window.filteredRows = allRows.filter(row => {
-                    const userText = row.querySelector('td:nth-child(2)')?.textContent.toLowerCase() || '';
-                    const deptText = row.querySelector('td:nth-child(3)')?.textContent.toLowerCase() || '';
-                    const roleText = row.querySelector('td:nth-child(4)')?.textContent.toLowerCase() || '';
-                    
-                    // Apply user search filter
-                    const matchesSearch = !searchText || userText.includes(searchText);
-                    
-                    // Apply role filter
-                    const matchesRole = !roleFilter || roleText.includes(roleFilterName);
-                    
-                    // Apply department filter
-                    const matchesDept = !deptFilter || deptText.includes(deptFilter);
-                    
-                    return matchesSearch && matchesRole && matchesDept;
+                console.log('Filtering with:', { 
+                    searchText, 
+                    roleFilter, 
+                    deptFilter,
+                    deptFilterText,
+                    roleFilterName 
                 });
 
+                // Create a copy of all rows to work with
+                const allRowsCopy = window.allRows.map(row => row.cloneNode(true));
+                
+                // Reset the table body
+                const tbody = document.querySelector('#urTable tbody');
+                
+                // Group rows by user ID to handle multiple departments/roles per user
+                const userGroups = {};
+                allRowsCopy.forEach(row => {
+                    // Extract user ID from the row
+                    let userId = null;
+                    const checkbox = row.querySelector('.select-row');
+                    if (checkbox) {
+                        userId = checkbox.value;
+                    } else {
+                        // Try to get from edit button data attribute as fallback
+                        const editBtn = row.querySelector('.edit-btn');
+                        if (editBtn) {
+                            userId = editBtn.getAttribute('data-user-id');
+                        }
+                    }
+                    
+                    if (userId) {
+                        if (!userGroups[userId]) {
+                            userGroups[userId] = {
+                                rows: [],
+                                userData: {
+                                    username: row.querySelector('td:nth-child(2)')?.textContent.toLowerCase() || '',
+                                    departments: row.querySelector('td:nth-child(3)')?.textContent.toLowerCase() || '',
+                                    roles: row.querySelector('td:nth-child(4)')?.textContent.toLowerCase() || ''
+                                }
+                            };
+                        }
+                        userGroups[userId].rows.push(row);
+                    }
+                });
+
+                // Filter users based on criteria
+                const filteredUserIds = [];
+                Object.keys(userGroups).forEach(userId => {
+                    const userData = userGroups[userId].userData;
+                    
+                    // Apply search filter across all columns (username, departments, roles)
+                    const matchesSearch = !searchText || 
+                        userData.username.includes(searchText) ||
+                        userData.departments.includes(searchText) || 
+                        userData.roles.includes(searchText);
+                    
+                    // Apply role filter using role name instead of ID
+                    let matchesRole = !roleFilter;
+                    if (roleFilter && roleFilterName) {
+                        // Check for exact match
+                        matchesRole = userData.roles.includes(roleFilterName);
+                        
+                        // If no exact match, try checking for partial/case-insensitive match
+                        if (!matchesRole) {
+                            const rolesLower = userData.roles.toLowerCase();
+                            matchesRole = rolesLower.includes(roleFilterName.toLowerCase());
+                        }
+                    }
+                    
+                    // Debug logging for role filtering
+                    if (roleFilter && roleFilterName) {
+                        console.log(`User ${userData.username} - Role check:`, {
+                            roleFilterName: roleFilterName,
+                            userRoles: userData.roles,
+                            matches: userData.roles.includes(roleFilterName)
+                        });
+                    }
+                    
+                    // Apply department filter using the value
+                    let matchesDept = true;
+                    if (deptFilter && deptFilter !== '') {
+                        const userDepts = userData.departments.split(', ').map(d => d.trim().toLowerCase());
+                        matchesDept = userDepts.includes(deptFilter);
+                    }
+                    
+                    if (matchesSearch && matchesRole && matchesDept) {
+                        filteredUserIds.push(userId);
+                    }
+                });
+
+                // Clear the table
+                tbody.innerHTML = '';
+                
+                // Collect all rows for filtered users
+                window.filteredRows = [];
+                filteredUserIds.forEach(userId => {
+                    userGroups[userId].rows.forEach(row => {
+                        window.filteredRows.push(row);
+                        tbody.appendChild(row);
+                    });
+                });
+
+                console.log('Filtered users:', filteredUserIds.length);
+                console.log('Filtered rows:', window.filteredRows.length);
+
+                // Show empty state if no results
+                if (window.filteredRows.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="text-center">
+                                <div class="empty-state">
+                                    <div class="empty-state-icon">🔍</div>
+                                    <div class="empty-state-message">No matching user roles found</div>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }
+
+                // Rebind event handlers to the rows
+                rebindRowEvents();
+                
                 // Reset to first page and update pagination
                 window.paginationConfig.currentPage = 1;
                 window.updatePagination();
+                
+                // Reset flag after successful filtering
+                window.filterCalledFrom = null;
+            }
+            
+            // Mark filterTable as page-specific to prevent automatic triggering from pagination.js
+            window.filterTable = filterTable;
+            window.filterTable.isPageSpecific = true;
+            
+            // Function to rebind events to table rows
+            function rebindRowEvents() {
+                // Rebind edit button click events
+                document.querySelectorAll('#urTable .edit-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const userId = this.getAttribute('data-user-id');
+                        const username = this.getAttribute('data-username');
+                        openEditModal(userId, username);
+                    });
+                });
+                
+                // Rebind delete button click events
+                document.querySelectorAll('#urTable .delete-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const userId = this.getAttribute('data-user-id');
+                        openDeleteModal(userId);
+                    });
+                });
+                
+                // Rebind checkbox events if they exist
+                document.querySelectorAll('#urTable .select-row').forEach(checkbox => {
+                    checkbox.addEventListener('change', function() {
+                        if (typeof updateDeleteSelectedButton === 'function') {
+                            updateDeleteSelectedButton();
+                        }
+                    });
+                });
             }
 
-            // Bind search input to filter function
-            $('#search-users').on('input', function() {
-                filterTable();
-            });
-            
-            // Bind filter selects to filter function
-            $('#role-filter, #dept-filter').on('change', function() {
-                filterTable();
+            // ONLY bind filter function to filter button click event
+            $('#filter-btn').on('click', function() {
+                console.log('Filter button clicked in PHP');
+                
+                // Add visual feedback that filtering is happening
+                $(this).addClass('btn-filtering').html('<i class="bi bi-hourglass-split"></i> Filtering...');
+                
+                // Set a small timeout to allow the UI to update before filtering
+                setTimeout(() => {
+                    window.filterCalledFrom = 'button';
+                    filterTable();
+                    
+                    // Check if we have any results after filtering
+                    if (window.filteredRows && window.filteredRows.length === 0) {
+                        console.log('No matching results found');
+                        
+                        // Use Toast notification if available
+                        if (typeof Toast !== 'undefined') {
+                            const deptFilter = $('#dept-filter').val();
+                            const deptFilterText = $('#dept-filter option:selected').text();
+                            
+                            let message = 'No matching results found.';
+                            if (deptFilter) {
+                                message += ' Try a different department filter.';
+                            }
+                            
+                            Toast.info(message, 3000, 'Filter Results');
+                        }
+                    }
+                    
+                    // Reset button after filtering is done
+                    $(this).removeClass('btn-filtering').html('<i class="bi bi-funnel"></i> Filter');
+                }, 100);
             });
             
             // Handle clear filters button
-            $('#clear-filters-btn').on('click', function() {
-                $('#search-users').val('');
-                $('#role-filter').val('').trigger('change');
-                $('#dept-filter').val('').trigger('change');
-                
-                window.filteredRows = window.allRows;
-                window.paginationConfig.currentPage = 1;
-                window.updatePagination();
+            $('#clear-btn').on('click', function() {
+                console.log('Clear button clicked - Reloading page');
+                // Reload the page without any filter parameters
+                window.location.href = window.location.pathname;
             });
 
             // Sorting handler
@@ -1190,9 +1175,7 @@ $userRoleDepartments = array_values($userRoleMap);
                 }
                 
                 // Update sort icons
-                $('.sort-icon').removeClass('bi-caret-up-fill bi-caret-down-fill');
-                const iconClass = currentSortOrder === 'asc' ? 'bi-caret-up-fill' : 'bi-caret-down-fill';
-                $(this).find('.sort-icon').addClass(iconClass);
+                updateSortIcons();
                 
                 // Perform client-side sorting
                 sortTable(sortField, currentSortOrder);
@@ -1236,11 +1219,25 @@ $userRoleDepartments = array_values($userRoleMap);
                 window.updatePagination();
             }
             
-            // Function to update sort icons based on current sort state
+            // Function to update sort icons (up/down arrows) based on current URL parameters
             function updateSortIcons() {
+                // Remove all sort icons from all headers first
                 $('.sort-icon').removeClass('bi-caret-up-fill bi-caret-down-fill');
-                const iconClass = currentSortOrder === 'asc' ? 'bi-caret-up-fill' : 'bi-caret-down-fill';
-                $(`.sort-header[data-sort="${currentSortBy}"] .sort-icon`).addClass(iconClass);
+                
+                // Only proceed if we have a valid sort field
+                if (!currentSortBy) return;
+                
+                // Find the matching sort header
+                const activeHeader = $(`.sort-header[data-sort="${currentSortBy}"]`);
+                if (activeHeader.length) {
+                    // Set the appropriate icon based on sort direction
+                    const iconClass = currentSortOrder === 'asc' ? 'bi-caret-up-fill' : 'bi-caret-down-fill';
+                    activeHeader.find('.sort-icon').addClass(iconClass);
+                    
+                    // Highlight the active header column
+                    $('.sort-header').removeClass('active-sort');
+                    activeHeader.addClass('active-sort');
+                }
             }
             
             // Initialize the table
@@ -1250,10 +1247,224 @@ $userRoleDepartments = array_values($userRoleMap);
             window.allRows = Array.from(document.querySelectorAll('#urTable tbody tr'));
             window.filteredRows = [...window.allRows];
             
-            // Initial pagination update
-            window.updatePagination();
+            // Run initial setup to properly initialize pagination and remove automatic filters
+            $(document).ready(function() {
+                // Initialize pagination with correct user grouping
+                setTimeout(function() {
+                    // Make sure rows are properly initialized
+                    window.allRows = Array.from(document.querySelectorAll('#urTable tbody tr'));
+                    window.filteredRows = [...window.allRows];
+                    
+                    // Force a proper pagination update with user grouping
+                    window.updatePagination();
+                    
+                    console.log('Initial pagination setup complete');
+                    
+                    // *** NUCLEAR OPTION: REPLACE SEARCH FIELD WITH A CLONE TO REMOVE ALL LISTENERS ***
+                    // This completely removes any attached event listeners by creating a fresh copy
+                    const searchField = document.getElementById('search-users');
+                    if (searchField) {
+                        const clone = searchField.cloneNode(true);
+                        searchField.parentNode.replaceChild(clone, searchField);
+                        
+                        // Add a special class to mark it as protected
+                        clone.classList.add('no-auto-filter');
+                        
+                        // Add a capture phase event listener to block ANY events before they propagate
+                        clone.addEventListener('input', function(e) {
+                            console.log('Search input changed, blocking auto-filter');
+                            window.filterCalledFrom = 'auto';
+                            e.stopPropagation();
+                        }, true);
+                        
+                        clone.addEventListener('keyup', function(e) {
+                            console.log('Search keyup, blocking auto-filter');
+                            window.filterCalledFrom = 'auto';
+                            e.stopPropagation();
+                        }, true);
+                        
+                        clone.addEventListener('change', function(e) {
+                            console.log('Search changed, blocking auto-filter');
+                            window.filterCalledFrom = 'auto';
+                            e.stopPropagation();
+                        }, true);
+                    }
+                    
+                    // Also replace role and department filters with clones
+                    const roleFilter = document.getElementById('role-filter');
+                    const deptFilter = document.getElementById('dept-filter');
+                    
+                    // We need to save the selected values before replacing
+                    const roleValue = roleFilter ? roleFilter.value : '';
+                    const deptValue = deptFilter ? deptFilter.value : '';
+                    
+                    // Clone and replace the role filter
+                    if (roleFilter) {
+                        const roleClone = roleFilter.cloneNode(true);
+                        roleFilter.parentNode.replaceChild(roleClone, roleFilter);
+                        roleClone.value = roleValue;
+                        roleClone.classList.add('no-auto-filter');
+                    }
+                    
+                    // Clone and replace the department filter
+                    if (deptFilter) {
+                        const deptClone = deptFilter.cloneNode(true);
+                        deptFilter.parentNode.replaceChild(deptClone, deptFilter);
+                        deptClone.value = deptValue;
+                        deptClone.classList.add('no-auto-filter');
+                    }
+                    
+                    // *** DISABLE AUTOMATIC FILTERING ***
+                    // Remove any and all automatic filter triggers
+                    $('#search-users').off('input');
+                    $('#search-users').off('keyup');
+                    $('#search-users').off('keydown');
+                    $('#search-users').off('change');
+                    
+                    $('#role-filter').off('change');
+                    $('#dept-filter').off('change');
+                    
+                    // Remove Select2 event handlers that might trigger filtering
+                    if ($.fn.select2) {
+                        $('#role-filter').off('select2:select');
+                        $('#role-filter').off('select2:unselect');
+                        $('#dept-filter').off('select2:select');
+                        $('#dept-filter').off('select2:unselect');
+                    }
+                    
+                    // Make sure filter-btn only has one click handler
+                    $('#filter-btn').off('click').on('click', function() {
+                        console.log('Filter button clicked after rebinding');
+                        window.filterCalledFrom = 'button';
+                        filterTable();
+                    });
+                    
+                    // Make sure the JS file's filter button handler is removed
+                    // This is needed because the JS file also attaches a handler
+                    if (window.handleFilterButtonClick) {
+                        $('#filter-btn').off('click', window.handleFilterButtonClick);
+                    }
+                    
+                    // Override standard change/input events for all filter inputs
+                    $('#search-users, #role-filter, #dept-filter').on('input change keyup select2:select select2:unselect', function(e) {
+                        // Set flag that this was triggered automatically
+                        window.filterCalledFrom = 'auto';
+                        console.log('Input/change event intercepted, not filtering automatically');
+                        e.stopPropagation();
+                        // Don't call filterTable() here - let the button do it
+                    });
+                    
+                    // Re-initialize Select2 with explicit event handling to prevent auto-filtering
+                    if ($.fn.select2) {
+                        try {
+                            // Destroy existing Select2 instances
+                            $('#role-filter').select2('destroy');
+                            $('#dept-filter').select2('destroy');
+                            
+                            // Initialize with new options
+                            $('#role-filter').select2({
+                                placeholder: 'All Roles',
+                                allowClear: true,
+                                width: '100%',
+                                minimumResultsForSearch: 0
+                            });
+                            
+                            $('#dept-filter').select2({
+                                placeholder: 'All Departments',
+                                allowClear: true,
+                                width: '100%',
+                                minimumResultsForSearch: 0
+                            });
+                            
+                            // Add explicit non-filtering event handlers
+                            $('#role-filter').on('select2:select', function(e) {
+                                console.log('Role select2:select, preventing auto-filter');
+                                window.filterCalledFrom = 'auto';
+                                e.stopPropagation();
+                            });
+                            
+                            $('#role-filter').on('select2:unselect', function(e) {
+                                console.log('Role select2:unselect, preventing auto-filter');
+                                window.filterCalledFrom = 'auto';
+                                e.stopPropagation();
+                            });
+                            
+                            $('#dept-filter').on('select2:select', function(e) {
+                                console.log('Department select2:select, preventing auto-filter');
+                                window.filterCalledFrom = 'auto';
+                                e.stopPropagation();
+                            });
+                            
+                            $('#dept-filter').on('select2:unselect', function(e) {
+                                console.log('Department select2:unselect, preventing auto-filter');
+                                window.filterCalledFrom = 'auto';
+                                e.stopPropagation();
+                            });
+                        } catch(e) {
+                            console.error('Error reinitializing Select2:', e);
+                        }
+                    }
+                    
+                    // MOST IMPORTANT FIX: Override the window.filterTable function with a controlled version
+                    // This is what pagination.js is likely calling automatically
+                    const originalFilterTable = window.filterTable;
+                    window.filterTable = function() {
+                        // Only run the real filter if it was called from the button
+                        if (window.filterCalledFrom === 'button') {
+                            console.log('Running filterTable from button click');
+                            return originalFilterTable.apply(this, arguments);
+                        } else {
+                            console.log('Prevented automatic filtering call from pagination.js');
+                            // Still update pagination without filtering
+                            if (typeof window.updatePagination === 'function') {
+                                window.updatePagination();
+                            }
+                            return false;
+                        }
+                    };
+                    
+                    // Keep the isPageSpecific flag
+                    window.filterTable.isPageSpecific = true;
+                    
+                    // Add global event capturing to block any input events on the search field
+                    document.addEventListener('input', function(e) {
+                        if (e.target.id === 'search-users' || e.target.classList.contains('no-auto-filter')) {
+                            console.log('Blocked input event at document level');
+                            window.filterCalledFrom = 'auto';
+                            // We don't stop propagation here to allow normal input behavior,
+                            // but we set the flag to prevent filtering
+                        }
+                    }, true);
+                    
+                    // Add global handler for Select2 opening to prevent any auto-filtering
+                    $(document).on('select2:open', function() {
+                        console.log('Select2 opened, preventing auto-filtering');
+                        window.filterCalledFrom = 'auto';
+                    });
+                    
+                    // Apply these overrides after a short delay to make sure they take effect last
+                    setTimeout(function() {
+                        // Double-check and forcibly prevent filtering on input
+                        const inputs = document.querySelectorAll('input, select');
+                        inputs.forEach(input => {
+                            input.setAttribute('data-no-auto-filter', 'true');
+                        });
+                        
+                        // Completely disable the native prototype addEventListener for search-users
+                        const searchElement = document.getElementById('search-users');
+                        if (searchElement) {
+                            const originalAddEventListener = searchElement.addEventListener;
+                            searchElement.addEventListener = function(type, listener, options) {
+                                if (type === 'input' || type === 'change' || type === 'keyup') {
+                                    console.log(`Blocked attempt to add ${type} listener to search field`);
+                                    return;
+                                }
+                            };
+                        }
+                    });
+                });
+            });
         });
     </script>
 </body>
-
 </html>

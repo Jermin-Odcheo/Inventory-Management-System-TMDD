@@ -202,10 +202,22 @@ document.addEventListener("DOMContentLoaded", function () {
     let filteredUsers = usersData.filter((user) => {
         let matchesSearch = true;
         if (urlSearch) {
-            matchesSearch = user.username.toLowerCase().includes(urlSearch.toLowerCase()) ||
-                            user.email.toLowerCase().includes(urlSearch.toLowerCase()) ||
-                            (user.first_name && user.first_name.toLowerCase().includes(urlSearch.toLowerCase())) ||
-                            (user.last_name && user.last_name.toLowerCase().includes(urlSearch.toLowerCase()));
+            const searchLower = urlSearch.toLowerCase();
+            
+            // Check username, email, first_name, last_name
+            matchesSearch = user.username.toLowerCase().includes(searchLower) ||
+                            user.email.toLowerCase().includes(searchLower) ||
+                            (user.first_name && user.first_name.toLowerCase().includes(searchLower)) ||
+                            (user.last_name && user.last_name.toLowerCase().includes(searchLower));
+                            
+            // If no match yet, also check departments_concat and roles_concat fields
+            if (!matchesSearch && user.departments_concat) {
+                matchesSearch = user.departments_concat.toLowerCase().includes(searchLower);
+            }
+            
+            if (!matchesSearch && user.roles_concat) {
+                matchesSearch = user.roles_concat.toLowerCase().includes(searchLower);
+            }
         }
 
         if (!matchesSearch) return false;
@@ -221,13 +233,26 @@ document.addEventListener("DOMContentLoaded", function () {
 
         let matchesDepartment = true;
         if (urlDepartment) {
+            // Extract department name without the abbreviation
+            const deptNameToMatch = urlDepartment.replace(/^\([^)]+\)\s*/, '').trim();
+            
             // Check if this user has any assignment in the selected department name
             matchesDepartment = userRoleDepartments.some(assignment =>
                 assignment.userId === user.id && assignment.departmentIds.some(deptId => {
                     const dept = getDepartmentById(deptId);
-                    return dept && dept.department_name === urlDepartment;
+                    // More flexible department matching
+                    return dept && (
+                        dept.department_name === deptNameToMatch || 
+                        dept.department_name.toLowerCase() === deptNameToMatch.toLowerCase()
+                    );
                 })
             );
+            
+            // If still no match, try checking the departments_concat field directly
+            if (!matchesDepartment && user.departments_concat) {
+                const deptParts = user.departments_concat.toLowerCase().split(',').map(d => d.trim());
+                matchesDepartment = deptParts.some(d => d === deptNameToMatch.toLowerCase());
+            }
         }
         if (!matchesDepartment) return false;
 
@@ -363,6 +388,20 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Update the hidden input for pagination to ensure correct counting
     document.getElementById('total-users').value = totalDisplayUsers;
+    
+    // Make sure all rows are properly initialized for pagination
+    window.allRows = Array.from(document.querySelectorAll('#urTable tbody tr'));
+    window.filteredRows = [...window.allRows];
+    
+    // Reset to first page
+    if (window.paginationConfig) {
+      window.paginationConfig.currentPage = 1;
+    }
+    
+    // Force pagination update after rendering
+    if (typeof window.updatePagination === 'function') {
+      window.updatePagination();
+    }
 
     if ($.trim(tbody.html()) === "") {
       const tr = $(`
@@ -942,8 +981,8 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // Filter handlers
-  // Modified to use updateUrlAndReload for consistent URL-based filtering/sorting
+  // DISABLED: These automatic triggers are removed to only filter when the filter button is clicked
+  /*
   if (searchUsersInput) {
     searchUsersInput.addEventListener("input", updateUrlAndReload);
   }
@@ -955,19 +994,62 @@ document.addEventListener("DOMContentLoaded", function () {
   if (deptFilterDropdown) {
     deptFilterDropdown.addEventListener("change", updateUrlAndReload);
   }
-
-  // REMOVED: Client-side sort handler is replaced by URL-based sorting
-  // if (sortUserBtn) {
-  //   sortUserBtn.addEventListener("click", function () {
-  //     userSortDirection = userSortDirection === "asc" ? "desc" : "asc";
-  //     this.innerHTML = userSortDirection === "asc" ? "A→Z" : "Z→A";
-  //     renderUserRolesTable(
-  //       searchUsersInput ? searchUsersInput.value : null,
-  //       roleFilterDropdown ? roleFilterDropdown.value : null,
-  //       deptFilterDropdown ? deptFilterDropdown.value : null,
-  //       userSortDirection
-  //     );
-  //   });
+  */
+  
+  // New function to handle filter button click
+  function handleFilterButtonClick() {
+    console.log('Filter button clicked in JS');
+    
+    // Get filter values
+    const searchText = searchUsersInput ? searchUsersInput.value.toLowerCase() : '';
+    const roleFilter = roleFilterDropdown ? roleFilterDropdown.value : '';
+    const deptFilter = deptFilterDropdown ? deptFilterDropdown.value : '';
+    
+    console.log('Filtering with:', { searchText, roleFilter, deptFilter });
+    
+    // If we're using URL-based filtering, update the URL and reload
+    const useUrlFiltering = false; // Set to true if you want URL-based filtering
+    
+    if (useUrlFiltering) {
+      // Update URL parameters and reload
+      const urlParams = new URLSearchParams(window.location.search);
+      
+      if (searchText) {
+        urlParams.set('search', encodeURIComponent(searchText));
+      } else {
+        urlParams.delete('search');
+      }
+      
+      if (roleFilter) {
+        urlParams.set('role', encodeURIComponent(roleFilter));
+      } else {
+        urlParams.delete('role');
+      }
+      
+      if (deptFilter) {
+        urlParams.set('department', encodeURIComponent(deptFilter));
+      } else {
+        urlParams.delete('department');
+      }
+      
+      // Reload with new URL parameters
+      window.location.href = window.location.pathname + '?' + urlParams.toString();
+    } else {
+      // Use client-side filtering
+      // This will call the filterTable function defined in the PHP file
+      if (typeof window.filterTable === 'function') {
+        window.filterTable();
+      }
+    }
+  }
+  
+  // Expose the handler globally so it can be removed if needed
+  window.handleFilterButtonClick = handleFilterButtonClick;
+  
+  // DO NOT attach the handler here - it's handled in the PHP file
+  // const filterBtn = document.getElementById('filter-btn');
+  // if (filterBtn) {
+  //   filterBtn.addEventListener('click', handleFilterButtonClick);
   // }
 
   // Modal open/close handlers
@@ -1081,6 +1163,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
               // Re-render the table with the updated data
               renderUserRolesTable(); // No sortDirection needed here anymore
+              
+              // Trigger event for pagination reinitialization
+              $(document).trigger('userRoleDeleted');
+              
               Toast.success(
                 "All roles removed successfully",
                 5000,
@@ -1293,6 +1379,10 @@ document.addEventListener("DOMContentLoaded", function () {
             // Close modal and refresh table
             addUserRolesModal.style.display = "none";
             renderUserRolesTable(); // No sortDirection needed here anymore
+            
+            // Trigger event for pagination reinitialization
+            $(document).trigger('userRoleCreated');
+            
             Toast.success("New roles assigned successfully", 5000, "Success");
           } else {
             // Display the error message from the server
@@ -1447,7 +1537,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
               // Completely re-render the table with fresh data
               renderUserRolesTable(); // No sortDirection needed here anymore
-
+              
+              // Trigger event for pagination reinitialization
+              $(document).trigger('userRoleModified');
+              
               Toast.success("Roles updated successfully", 5000, "Success");
             } else {
               Toast.error(data.error || "Failed to update roles", 5000, "Error");
