@@ -155,141 +155,123 @@ unset($role, $privileges);
 
     <div class="wrapper">
         <div class="main-content container-fluid">
-            <header class="main-header">
-                <h1> Role Management</h1>
-            </header>
+            <div class="row">
+                <main class="col-md-12 px-md-4 py-4">
+                    <h2 class="mb-4">Role Management</h2>
 
-            <!-- Add Filter Section -->
-            <div class="row mb-3">
-                
-            <div class="d-flex justify-content-end mb-3">
-                <?php if ($canCreate): ?>
-                    <button type="button" class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#addRoleModal">
-                        <i class="bi bi-plus-lg"></i> Create New Role
-                    </button>
-                <?php endif; ?>
-            </div>
-            
-                <!-- <div class="col-md-3">
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-search"></i></span>
-                        <input type="text" id="roleNameFilter" class="form-control" placeholder="Filter by role name...">
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <select id="moduleFilter" class="form-select">
-                        <option value="">All Modules</option>
-                        <?php
-                        $modules = array_unique(array_column($roleData, 'Module_Name'));
-                        foreach ($modules as $module) {
-                            echo "<option value='" . htmlspecialchars($module) . "'>" . htmlspecialchars($module) . "</option>";
-                        }
-                        ?>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <select id="privilegeFilter" class="form-select" multiple>
-                        <?php
-                        $fixedPrivileges = ['Track', 'Create', 'Remove', 'Permanently Delete', 'Modify', 'View', 'Restore'];
-                        foreach ($fixedPrivileges as $privilege) {
-                            echo "<option value='" . htmlspecialchars($privilege) . "'>" . htmlspecialchars($privilege) . "</option>";
-                        }
-                        ?>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <button id="clear-filters-btn" class="btn btn-outline-secondary w-100">
-                        <i class="bi bi-x-circle"></i> Clear Filters
-                    </button>
-                </div> -->
-            </div>
+                    <div class="card shadow-sm">
+                        <div class="card-header d-flex justify-content-between align-items-center bg-dark text-white">
+                            <span><i class="bi bi-list-ul"></i> List of Roles</span>
+                        </div>
+                        <div class="card-body">
+                            <?php if (!empty($roles)): ?>
+                                <div class="filter-container">
+                                    <div class="d-flex justify-content-start mb-3 gap-2 align-items-center">
+                                        <?php if ($canCreate): ?>
+                                            <button type="button" class="btn btn-success btn-dark" data-bs-toggle="modal"
+                                                data-bs-target="#addRoleModal">
+                                                <i class="bi bi-plus-lg"></i> Create New Role
+                                            </button>
+                                        <?php endif; ?>
 
-            <!-- Table Filter Section -->
-            <div class="table-responsive" id="table">
-                <table id="rolesTable" class="table table-striped table-hover align-middle">
-                    <thead class="table-dark">
-                        <tr>
-                            <th style="width: 25px;">ID</th>
-                            <th style="width: 250px;">Role Name</th>
-                            <th>Modules & Privileges</th>
-                            <th style="width: 250px;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="auditTable">
-                        <?php if (!empty($roles)): ?>
-                            <?php foreach ($roles as $roleID => $role): ?>
-                                <tr data-role-id="<?php echo $roleID; ?>">
-                                    <td><?php echo htmlspecialchars($roleID); ?></td>
-                                    <td class="role-name"><?php echo htmlspecialchars($role['Role_Name']); ?></td>
-                                    <td class="privilege-list">
-                                        <?php foreach ($role['Modules'] as $moduleName => $privileges): ?>
-                                            <div>
-                                                <strong><?php echo htmlspecialchars($moduleName); ?></strong>:
-                                                <?php echo !empty($privileges)
-                                                    ? implode(', ', array_map('htmlspecialchars', $privileges))
-                                                    : '<em>No privileges</em>'; ?>
+                                        <div class="input-group w-auto" id="livesearch">
+                                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                            <input type="text" class="form-control" placeholder="Search..." id="eqSearch">
+                                        </div>
+
+                                        <button type="button" id="clearFilters" class="btn btn-secondary shadow-sm">
+                                            <i class="bi bi-x-circle"></i> Clear
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Table -->
+                                <div class="table-responsive" id="table">
+                                    <table id="rolesTable" class="table table-striped table-hover align-middle">
+                                        <thead class="table-dark">
+                                            <tr>
+                                                <th style="width: 25px;">ID</th>
+                                                <th style="width: 250px;">Role Name</th>
+                                                <th>Modules & Privileges</th>
+                                                <th style="width: 250px;">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="auditTable">
+                                            <?php foreach ($roles as $roleID => $role): ?>
+                                                <tr data-role-id="<?php echo $roleID; ?>">
+                                                    <td><?php echo htmlspecialchars($roleID); ?></td>
+                                                    <td class="role-name"><?php echo htmlspecialchars($role['Role_Name']); ?></td>
+                                                    <td class="privilege-list">
+                                                        <?php foreach ($role['Modules'] as $moduleName => $privileges): ?>
+                                                            <div>
+                                                                <strong><?php echo htmlspecialchars($moduleName); ?></strong>:
+                                                                <?php echo !empty($privileges)
+                                                                    ? implode(', ', array_map('htmlspecialchars', $privileges))
+                                                                    : '<em>No privileges</em>'; ?>
+                                                            </div>
+                                                        <?php endforeach; ?>
+                                                    </td>
+                                                    <td>
+                                                        <?php if ($canModify): ?>
+                                                            <button type="button" class="edit-btn edit-role-btn"
+                                                                data-role-id="<?php echo $roleID; ?>" data-bs-toggle="modal"
+                                                                data-bs-target="#editRoleModal">
+                                                                <i class="bi bi-pencil-square"></i>
+                                                            </button>
+                                                        <?php endif; ?>
+                                                        <?php if ($canRemove): ?>
+                                                            <button type="button" class="delete-btn delete-role-btn"
+                                                                data-role-id="<?php echo $roleID; ?>"
+                                                                data-role-name="<?php echo htmlspecialchars($role['Role_Name']); ?>"
+                                                                data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
+                                                                <i class="bi bi-trash"></i>
+                                                            </button>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+
+                                    <!-- Pagination -->
+                                    <div class="container-fluid">
+                                        <div class="row align-items-center g-3">
+                                            <div class="col-12 col-sm-auto">
+                                                <div class="text-muted">
+                                                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage"><?php echo min(10, count($roles)); ?></span> of <span
+                                                        id="totalRows"><?php echo count($roles); ?></span> entries
+                                                </div>
                                             </div>
-                                        <?php endforeach; ?>
-                                    </td>
-                                    <td>
-                                        <?php if ($canModify): ?>
-                                            <button type="button" class="edit-btn edit-role-btn"
-                                                data-role-id="<?php echo $roleID; ?>" data-bs-toggle="modal"
-                                                data-bs-target="#editRoleModal">
-                                                <i class="bi bi-pencil-square"></i>
-                                            </button>
-                                        <?php endif; ?>
-                                        <?php if ($canRemove): ?>
-                                            <button type="button" class="delete-btn delete-role-btn"
-                                                data-role-id="<?php echo $roleID; ?>"
-                                                data-role-name="<?php echo htmlspecialchars($role['Role_Name']); ?>"
-                                                data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        <?php endif; ?>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <tr>
-                                <td colspan="4">No roles found.</td>
-                            </tr>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-
-                <!-- Pagination -->
-                <div class="container-fluid">
-                    <div class="row align-items-center g-3">
-                        <div class="col-12 col-sm-auto">
-                            <div class="text-muted">
-                                Showing <span id="currentPage">1</span> to <span id="rowsPerPage"><?php echo min(10, count($roles)); ?></span> of <span
-                                    id="totalRows"><?php echo count($roles); ?></span> entries
-                            </div>
-                        </div>
-                        <div class="col-12 col-sm-auto ms-sm-auto">
-                            <div class="d-flex align-items-center gap-2">
-                                <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                    <i class="bi bi-chevron-left"></i> Previous
-                                </button>
-                                <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
-                                    <option value="5">5</option>
-                                    <option value="10" selected>10</option>
-                                    <option value="20">20</option>
-                                    <option value="50">50</option>
-                                </select>
-                                <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                    Next <i class="bi bi-chevron-right"></i>
-                                </button>
-                            </div>
+                                            <div class="col-12 col-sm-auto ms-sm-auto">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                                        <i class="bi bi-chevron-left"></i> Previous
+                                                    </button>
+                                                    <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                                        <option value="5">5</option>
+                                                        <option value="10" selected>10</option>
+                                                        <option value="20">20</option>
+                                                        <option value="50">50</option>
+                                                    </select>
+                                                    <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                                        Next <i class="bi bi-chevron-right"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row mt-3">
+                                            <div class="col-12">
+                                                <ul class="pagination justify-content-center" id="pagination"></ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php else: ?>
+                                <p class="mb-0">No roles found.</p>
+                            <?php endif; ?>
                         </div>
                     </div>
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <ul class="pagination justify-content-center" id="pagination"></ul>
-                        </div>
-                    </div>
-                </div>
+                </main>
             </div>
         </div>
     </div>
@@ -436,12 +418,14 @@ unset($role, $privileges);
 
             // Ensure scrolling is properly restored when any modal is closed
             $('.modal').on('hidden.bs.modal', function() {
-                setTimeout(function() {
-                    $('body').removeClass('modal-open');
-                    $('body').css('overflow', '');
-                    $('body').css('padding-right', '');
-                    $('.modal-backdrop').remove();
-                }, 100);
+                // Remove modal backdrop
+                $('.modal-backdrop').remove();
+                // Remove modal-open class and reset body styles
+                $('body').removeClass('modal-open');
+                $('body').css({
+                    'overflow': '',
+                    'padding-right': ''
+                });
             });
 
             // Check if Select2 is available
@@ -556,26 +540,63 @@ unset($role, $privileges);
             $('#moduleFilter').on('change', filterTable);
             $('#privilegeFilter').on('change', filterTable);
 
-            // Clear filters button
-            $('#clear-filters-btn').on('click', function() {
-                $('#roleNameFilter').val('');
+            // Add clear filters functionality
+            $('#clearFilters').on('click', function() {
+                // Clear search input
+                $('#eqSearch').val('');
+                
+                // Reset table to initial state
+                window.allRows = Array.from(document.querySelectorAll('#auditTable tr'));
+                window.filteredRows = window.allRows;
+                
+                // Reset to first page
+                window.currentPage = 1;
+                
+                // Update pagination
+                updatePagination();
+                
+                // Force pagination check
+                forcePaginationCheck();
+                
+                // Remove any "no results" message
+                $('#no-results-row').remove();
+            });
 
-                // Handle Select2 dropdowns if available
-                if ($.fn.select2) {
-                    $('#moduleFilter').val('').trigger('change');
-                    $('#privilegeFilter').val(null).trigger('change');
-                } else {
-                    $('#moduleFilter').val('');
-                    $('#privilegeFilter').val([]);
+            // Live search functionality
+            $('#eqSearch').on('keyup', function() {
+                const searchText = $(this).val().toLowerCase();
+                
+                // Get all rows if not already stored
+                if (!window.allRows) {
+                    window.allRows = Array.from(document.querySelectorAll('#auditTable tr'));
                 }
 
-                // Reset to show all rows (use original allRows)
-                window.filteredRows = window.allRows;
-                window.currentPage = 1;
-                updatePagination();
+                if (searchText.length > 0) {
+                    window.filteredRows = window.allRows.filter(row => {
+                        const rowText = $(row).text().toLowerCase();
+                        return rowText.includes(searchText);
+                    });
+                } else {
+                    window.filteredRows = window.allRows;
+                }
 
                 // Remove any "no results" message
                 $('#no-results-row').remove();
+
+                // Show "no results" message if no matches
+                if (window.filteredRows.length === 0) {
+                    $('#auditTable').append(
+                        '<tr id="no-results-row"><td colspan="4" class="text-center py-3">' +
+                        '<div class="alert alert-info mb-0">' +
+                        '<i class="bi bi-info-circle me-2"></i>No matching roles found. Try adjusting your search.' +
+                        '</div></td></tr>'
+                    );
+                }
+
+                // Reset to first page and update
+                window.currentPage = 1;
+                updatePagination();
+                forcePaginationCheck();
             });
 
             // Initialize the pagination system correctly
@@ -760,6 +781,14 @@ unset($role, $privileges);
             $(document).on('click', '.edit-role-btn', function() {
                 if (!userPrivileges.canModify) return;
 
+                // Clean up any existing modal state
+                $('.modal-backdrop').remove();
+                $('body').removeClass('modal-open');
+                $('body').css({
+                    'overflow': '',
+                    'padding-right': ''
+                });
+
                 var roleID = $(this).data('role-id');
                 $('#editRoleContent').html("Loading...");
                 $.ajax({
@@ -774,9 +803,6 @@ unset($role, $privileges);
                     success: function(response) {
                         $('#editRoleContent').html(response);
                         $('#roleID').val(roleID);
-
-                        // Form is loaded in modal content, no need for parent window access
-                        // The script in edit_roles.php will handle capturing the original state
                     },
                     error: function(xhr, status, error) {
                         console.error('AJAX Error:', status, error);
@@ -791,6 +817,14 @@ unset($role, $privileges);
                     event.preventDefault();
                     return false;
                 }
+
+                // Clean up any existing modal state
+                $('.modal-backdrop').remove();
+                $('body').removeClass('modal-open');
+                $('body').css({
+                    'overflow': '',
+                    'padding-right': ''
+                });
 
                 var button = $(event.relatedTarget);
                 var roleID = button.data('role-id');
@@ -840,6 +874,19 @@ unset($role, $privileges);
                 if (!userPrivileges.canCreate) {
                     event.preventDefault();
                     return false;
+                }
+
+                // Clean up any existing modal state
+                $('.modal-backdrop').remove();
+                $('body').removeClass('modal-open');
+                $('body').css({
+                    'overflow': '',
+                    'padding-right': ''
+                });
+
+                // Reset form if it exists
+                if ($('#addRoleForm').length) {
+                    $('#addRoleForm')[0].reset();
                 }
 
                 $('#addRoleContent').html("Loading...");
@@ -954,6 +1001,46 @@ unset($role, $privileges);
             
             // Force an initial check of pagination controls
             setTimeout(forcePaginationCheck, 100);
+
+            // Handle add role form submission
+            $(document).on('submit', '#addRoleForm', function(e) {
+                e.preventDefault();
+                
+                $.ajax({
+                    url: 'add_role.php',
+                    type: 'POST',
+                    data: $(this).serialize(),
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            // Close modal and clean up
+                            $('#addRoleModal').modal('hide');
+                            
+                            // Force cleanup of modal state
+                            $('.modal-backdrop').remove();
+                            $('body').removeClass('modal-open');
+                            $('body').css({
+                                'overflow': '',
+                                'padding-right': ''
+                            });
+                            
+                            // Reset form
+                            $('#addRoleForm')[0].reset();
+                            
+                            // Refresh table
+                            refreshRolesTable();
+                            
+                            // Show success message
+                            showToast(response.message, 'success', 5000);
+                        } else {
+                            showToast(response.message || 'An error occurred', 'error', 5000);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        showToast('Error creating role: ' + error, 'error', 5000);
+                    }
+                });
+            });
         });
     </script>
 </body>

@@ -31,8 +31,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // 1) Start transaction
         $pdo->beginTransaction();
 
-        // 2) Check for duplicate
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM roles WHERE Role_Name = ? AND is_disabled = 0");
+        // 2) Check for duplicate (case-insensitive)
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM roles WHERE LOWER(TRIM(Role_Name)) = LOWER(TRIM(?)) AND is_disabled = 0");
         $stmt->execute([$roleName]);
         if ($stmt->fetchColumn() > 0) {
             echo json_encode(['success' => false, 'message' => 'Role already exists.']);
