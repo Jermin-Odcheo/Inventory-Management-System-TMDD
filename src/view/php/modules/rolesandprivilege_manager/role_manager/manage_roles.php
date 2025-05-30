@@ -298,7 +298,7 @@ unset($role, $privileges);
 
     <!-- Modals (unchanged) -->
     <div class="modal fade" id="editRoleModal" tabindex="-1" aria-labelledby="editRoleModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
                 <div id="editRoleContent">Loading...</div>
             </div>
@@ -307,7 +307,7 @@ unset($role, $privileges);
 
     <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel"
         aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Confirm Delete</h5>
@@ -325,7 +325,7 @@ unset($role, $privileges);
     </div>
 
     <div class="modal fade" id="addRoleModal" tabindex="-1" aria-labelledby="addRoleModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Create New Role</h5>
@@ -354,8 +354,20 @@ unset($role, $privileges);
 
             // Ensure modals are properly cleaned up
             $('.modal').modal('hide');
-            $('body').removeClass('modal-open');
-            $('.modal-backdrop').remove();
+            
+            // Make sure we properly clean up all modal-related elements
+            setTimeout(function() {
+                // Use the global cleanup function if it exists, otherwise do it directly
+                if (typeof cleanupModalElements === 'function') {
+                    cleanupModalElements();
+                } else {
+                    // Fallback if the function isn't defined yet
+                    $('.modal-backdrop').remove();
+                    $('body').removeClass('modal-open');
+                    $('body').css('overflow', '');
+                    $('body').css('padding-right', '');
+                }
+            }, 100);
 
             $.ajax({
                 url: location.href,
@@ -386,9 +398,14 @@ unset($role, $privileges);
                             window.scrollTo(0, scrollPosition);
 
                             // Double check that modal classes are removed
-                            $('body').removeClass('modal-open');
-                            $('body').css('overflow', '');
-                            $('body').css('padding-right', '');
+                            if (typeof cleanupModalElements === 'function') {
+                                cleanupModalElements();
+                            } else {
+                                $('.modal-backdrop').remove();
+                                $('body').removeClass('modal-open');
+                                $('body').css('overflow', '');
+                                $('body').css('padding-right', '');
+                            }
                         }, 150);
                     } else {
                         console.error('Could not find table in response');
@@ -425,6 +442,20 @@ unset($role, $privileges);
                 console.error("Could not find next page button");
             }
 
+            // Global function to properly clean up modal elements
+            function cleanupModalElements() {
+                // Hide any visible modals
+                $('.modal').modal('hide');
+                
+                // Remove all modal backdrops
+                $('.modal-backdrop').remove();
+                
+                // Remove modal open class and inline styles from body
+                $('body').removeClass('modal-open');
+                $('body').css('overflow', '');
+                $('body').css('padding-right', '');
+            }
+
             // Remove any custom pagination functions that might interfere with pagination.js
             // and replace with a compatible function
             function updatePaginationControls(visibleRows) {
@@ -437,11 +468,16 @@ unset($role, $privileges);
             // Ensure scrolling is properly restored when any modal is closed
             $('.modal').on('hidden.bs.modal', function() {
                 setTimeout(function() {
-                    $('body').removeClass('modal-open');
-                    $('body').css('overflow', '');
-                    $('body').css('padding-right', '');
-                    $('.modal-backdrop').remove();
+                    cleanupModalElements();
                 }, 100);
+            });
+
+            // Ensure modals are properly cleaned up when they're opened
+            $('.modal').on('show.bs.modal', function() {
+                // Remove any stray backdrops before opening a new modal
+                if ($('.modal-backdrop').length > 0 && $('.modal.show').length === 0) {
+                    cleanupModalElements();
+                }
             });
 
             // Check if Select2 is available
@@ -817,14 +853,15 @@ unset($role, $privileges);
                         if (response.success) {
                             // Close modal first to avoid UI issues
                             $('#confirmDeleteModal').modal('hide');
-                            $('body').removeClass('modal-open');
-                            $('body').css('overflow', '');
-                            $('body').css('padding-right', '');
-                            $('.modal-backdrop').remove();
-
-                            // Refresh the table without reloading the whole page
-                            refreshRolesTable();
-                            showToast(response.message, 'success', 5000);
+                            
+                            // Ensure all modal elements are properly cleaned up
+                            setTimeout(function() {
+                                cleanupModalElements();
+                                
+                                // Refresh the table without reloading the whole page
+                                refreshRolesTable();
+                                showToast(response.message, 'success', 5000);
+                            }, 300);
                         } else {
                             showToast(response.message || 'An error occurred', 'error', 5000);
                         }
