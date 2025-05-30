@@ -65,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $response = array('status' => '', 'message' => '');
 
     if (isset($_POST['action']) && $_POST['action'] === 'create') {
-        // RBAC: check “Create” privilege
+        // RBAC: check "Create" privilege
         if (!$canCreate) {
             $response = [
                 'status'  => 'error',
@@ -94,9 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ");
             $checkStmt->execute([$DepartmentName, $DepartmentAcronym]);
             if ($checkStmt->fetchColumn() > 0) {
-                throw new Exception(
-                    "Department “{$DepartmentName} ({$DepartmentAcronym})” already exists."
-                );
+                throw new Exception('Department "' . $DepartmentName . ' (' . $DepartmentAcronym . ')" already exists.');
             }
 
             $pdo->beginTransaction();
@@ -273,7 +271,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // RETRIEVE ALL DEPARTMENTS
 // ------------------------
 try {
-    $stmt = $pdo->query("SELECT * FROM departments WHERE is_disabled = 0 ORDER BY id");
+    $stmt = $pdo->query("SELECT * FROM departments WHERE is_disabled = 0 ORDER BY id DESC");
     $departments = $stmt->fetchAll();
 } catch (PDOException $e) {
     $errors[] = "Error retrieving departments: " . $e->getMessage();
@@ -437,6 +435,40 @@ if (isset($_GET["q"])) {
         .table-responsive {
             position: static !important;
         }
+
+        /* Sortable header styles */
+        .sortable {
+            cursor: pointer;
+            position: relative;
+            padding-right: 20px;
+        }
+
+        .sortable:hover {
+            background-color: #2c3034;
+        }
+
+        .sortable i {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.8em;
+            opacity: 0.5;
+        }
+
+        .sortable:hover i {
+            opacity: 1;
+        }
+
+        .sortable.asc i:before {
+            content: "\f0de";
+            opacity: 1;
+        }
+
+        .sortable.desc i:before {
+            content: "\f0dd";
+            opacity: 1;
+        }
     </style>
 
 </head>
@@ -466,23 +498,14 @@ if (isset($_GET["q"])) {
                                             </button>
                                         <?php endif; ?>
 
-                                        <!-- Filter -->
-                                        <div class="d-flex align-items-center gap-2" id="sortFilter">
-                                            <label class="mb-0">Sort by:</label>
-                                            <div class="dropdown" data-bs-popper="static">
-                                                <button class="btn btn-dark btn-sm dropdown-toggle" type="button" id="sortNameBtn" data-bs-toggle="dropdown" aria-expanded="false">
-                                                    Department Name (A–Z) ▼
-                                                </button>
-                                                <ul class="dropdown-menu sort-dropdown-menu" aria-labelledby="sortNameBtn">
-                                                    <li><a class="dropdown-item sort-dropdown" href="#" data-sort-col="name" data-sort-order="asc">Department Name (A–Z)</a></li>
-                                                    <li><a class="dropdown-item sort-dropdown" href="#" data-sort-col="name" data-sort-order="desc">Department Name (Z–A)</a></li>
-                                                </ul>
-                                            </div>
-                                        </div>
                                         <div class="input-group w-auto" id="livesearch">
                                             <span class="input-group-text"><i class="bi bi-search"></i></span>
                                             <input type="text" class="form-control" placeholder="Search..." id="eqSearch">
                                         </div>
+
+                                        <button type="button" id="clearFilters" class="btn btn-secondary shadow-sm">
+                                            <i class="bi bi-x-circle"></i> Clear
+                                        </button>
                                     </div>
                                 </div>
 
@@ -492,8 +515,8 @@ if (isset($_GET["q"])) {
                                     <table id="departmentTable" class="table table-striped table-hover align-middle">
                                         <thead class="table-dark">
                                             <tr>
-                                                <th>Department Acronym</th>
-                                                <th>Department Name</th>
+                                                <th class="sortable" data-sort="acronym">Department Acronym <i class="fas fa-sort"></i></th>
+                                                <th class="sortable" data-sort="name">Department Name <i class="fas fa-sort"></i></th>
                                                 <th class="text-center">Actions</th>
                                             </tr>
                                         </thead>
@@ -804,29 +827,28 @@ if (isset($_GET["q"])) {
                     $('#deleteDepartmentModal').modal('show');
                 });
 
-                // Sorting functionality for Department Name (dropdown version) (delegated event listener)
-                $(document).off('click', '.sort-dropdown').on('click', '.sort-dropdown', function(e) {
-                    e.preventDefault();
-                    var sortCol = $(this).data('sort-col');
-                    var sortOrder = $(this).data('sort-order');
+                // Remove the old sort dropdown code and add header sorting
+                $('.sortable').off('click').on('click', function() {
+                    const sortCol = $(this).data('sort');
+                    const currentOrder = $(this).hasClass('asc') ? 'desc' : 'asc';
+                    
+                    // Reset all headers
+                    $('.sortable').removeClass('asc desc');
+                    // Set current header state
+                    $(this).addClass(currentOrder);
 
                     let rows = allTableRows;
-
-                    var colIndex = 1;
+                    const colIndex = sortCol === 'acronym' ? 0 : 1;
 
                     rows.sort(function(a, b) {
-                        var A = $(a).children('td').eq(colIndex).text().toUpperCase();
-                        var B = $(b).children('td').eq(colIndex).text().toUpperCase();
-                        if (A < B) return sortOrder === 'asc' ? -1 : 1;
-                        if (A > B) return sortOrder === 'asc' ? 1 : -1;
+                        const A = $(a).children('td').eq(colIndex).text().toUpperCase();
+                        const B = $(b).children('td').eq(colIndex).text().toUpperCase();
+                        if (A < B) return currentOrder === 'asc' ? -1 : 1;
+                        if (A > B) return currentOrder === 'asc' ? 1 : -1;
                         return 0;
                     });
 
                     allTableRows = rows;
-
-                    var label = sortOrder === 'asc' ? 'Department Name (A–Z) ▼' : 'Department Name (Z–A) ▼';
-                    $('#sortNameBtn').text(label);
-
                     currentPage = 1;
                     renderTableRows();
                     updatePaginationControls();
@@ -951,9 +973,11 @@ if (isset($_GET["q"])) {
 
             // AJAX: Handle delete confirmation
             $('#confirmDeleteBtn').on('click', function() {
-                if (deptIdToDelete) { // Use the globally set deptIdToDelete
+                if (deptIdToDelete) {
                     const currentPageBeforeAction = currentPage;
                     const currentRowsPerPageBeforeAction = rowsPerPage;
+                    const currentSortColumn = $('.sortable.asc, .sortable.desc').data('sort');
+                    const currentSortOrder = $('.sortable.asc, .sortable.desc').hasClass('asc') ? 'asc' : 'desc';
 
                     $.ajax({
                         url: 'delete_department.php',
@@ -967,8 +991,29 @@ if (isset($_GET["q"])) {
                             if (response.status === 'success') {
                                 setTimeout(function() {
                                     $('#table').load(location.href + ' #table > *', function() {
+                                        // Reinitialize pagination with previous state
                                         window.initDepartmentPagination(currentPageBeforeAction, currentRowsPerPageBeforeAction);
-                                        attachTableEventListeners(); // Re-attach listeners after table reload
+                                        
+                                        // Reapply sorting if it was active
+                                        if (currentSortColumn) {
+                                            const sortHeader = $(`.sortable[data-sort="${currentSortColumn}"]`);
+                                            sortHeader.addClass(currentSortOrder);
+                                            const rows = allTableRows;
+                                            const colIndex = currentSortColumn === 'acronym' ? 0 : 1;
+                                            
+                                            rows.sort(function(a, b) {
+                                                const A = $(a).children('td').eq(colIndex).text().toUpperCase();
+                                                const B = $(b).children('td').eq(colIndex).text().toUpperCase();
+                                                if (A < B) return currentSortOrder === 'asc' ? -1 : 1;
+                                                if (A > B) return currentSortOrder === 'asc' ? 1 : -1;
+                                                return 0;
+                                            });
+                                            
+                                            allTableRows = rows;
+                                            renderTableRows();
+                                        }
+                                        
+                                        attachTableEventListeners();
                                         showToast(response.message, 'success', 5000);
                                     });
                                 }, 300);
@@ -1011,6 +1056,46 @@ if (isset($_GET["q"])) {
             // Initial setup: call initDepartmentPagination and attachTableEventListeners
             window.initDepartmentPagination();
             attachTableEventListeners(); // Attach listeners on initial page load
+
+            // Set initial sort state to newest first (by ID)
+            const initialSortHeader = $('.sortable[data-sort="acronym"]');
+            initialSortHeader.addClass('desc');
+            const rows = allTableRows;
+            rows.sort(function(a, b) {
+                const A = $(a).children('td').eq(0).text().toUpperCase();
+                const B = $(b).children('td').eq(0).text().toUpperCase();
+                return A < B ? 1 : A > B ? -1 : 0;
+            });
+            allTableRows = rows;
+            renderTableRows();
+
+            // Add clear filters functionality
+            $('#clearFilters').on('click', function() {
+                // Clear search input
+                $('#eqSearch').val('');
+                
+                // Reset sort headers
+                $('.sortable').removeClass('asc desc');
+                
+                // Reset to initial sort (newest first)
+                const initialSortHeader = $('.sortable[data-sort="acronym"]');
+                initialSortHeader.addClass('desc');
+                
+                // Reset table to initial state
+                allTableRows = $('#departmentTable').data('original-rows') || $('#departmentTable tbody tr').get();
+                const rows = allTableRows;
+                rows.sort(function(a, b) {
+                    const A = $(a).children('td').eq(0).text().toUpperCase();
+                    const B = $(b).children('td').eq(0).text().toUpperCase();
+                    return A < B ? 1 : A > B ? -1 : 0;
+                });
+                allTableRows = rows;
+                
+                // Reset to first page and render
+                currentPage = 1;
+                renderTableRows();
+                updatePaginationControls();
+            });
         });
     </script>
 

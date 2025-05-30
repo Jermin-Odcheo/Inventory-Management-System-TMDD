@@ -295,7 +295,7 @@ function formatChanges($oldJsonStr)
                     </div>
 
                     <!-- Filter Section -->
-                    <form method="GET" class="row g-3 mb-4" id="archiveFilterForm" action="">
+                    <form method="GET" class="row g-3 mb-4 w-100" id="archiveFilterForm" action="">
                         <div class="col-md-3">
                             <label for="moduleType" class="form-label">Module Type</label>
                             <select class="form-select" name="module_type" id="moduleType">
@@ -320,7 +320,7 @@ function formatChanges($oldJsonStr)
                         </div>
                         
                         <!-- Date Range selector -->
-                        <div class="col-12 col-md-3">
+                        <div class="col-md-3">
                             <label class="form-label fw-semibold">Date Filter Type</label>
                             <select id="dateFilterType" name="date_filter_type" class="form-select shadow-sm">
                                 <option value="" <?= empty($_GET['date_filter_type']) ? 'selected' : '' ?>>-- Select Type --</option>
@@ -331,13 +331,13 @@ function formatChanges($oldJsonStr)
                         </div>
                         
                         <!-- MDY Range -->
-                        <div class="col-12 col-md-3 date-filter date-mdy d-none">
+                        <div class="col-md-3 date-filter date-mdy d-none">
                             <label class="form-label fw-semibold">Date From</label>
                             <input type="date" name="date_from" class="form-control shadow-sm"
                                 value="<?= htmlspecialchars($_GET['date_from'] ?? '') ?>"
                                 placeholder="Start Date (YYYY-MM-DD)">
                         </div>
-                        <div class="col-12 col-md-3 date-filter date-mdy d-none">
+                        <div class="col-md-3 date-filter date-mdy d-none">
                             <label class="form-label fw-semibold">Date To</label>
                             <input type="date" name="date_to" class="form-control shadow-sm"
                                 value="<?= htmlspecialchars($_GET['date_to'] ?? '') ?>"
@@ -345,14 +345,14 @@ function formatChanges($oldJsonStr)
                         </div>
                         
                         <!-- Year Range -->
-                        <div class="col-12 col-md-3 date-filter date-year d-none">
+                        <div class="col-md-3 date-filter date-year d-none">
                             <label class="form-label fw-semibold">Year From</label>
                             <input type="number" name="year_from" class="form-control shadow-sm"
                                 min="1900" max="2100"
                                 placeholder="e.g., 2023"
                                 value="<?= htmlspecialchars($_GET['year_from'] ?? '') ?>">
                         </div>
-                        <div class="col-12 col-md-3 date-filter date-year d-none">
+                        <div class="col-md-3 date-filter date-year d-none">
                             <label class="form-label fw-semibold">Year To</label>
                             <input type="number" name="year_to" class="form-control shadow-sm"
                                 min="1900" max="2100"
@@ -361,13 +361,13 @@ function formatChanges($oldJsonStr)
                         </div>
                         
                         <!-- Month-Year Range -->
-                        <div class="col-12 col-md-3 date-filter date-month_year d-none">
+                        <div class="col-md-3 date-filter date-month_year d-none">
                             <label class="form-label fw-semibold">From (MM-YYYY)</label>
                             <input type="month" name="month_year_from" class="form-control shadow-sm"
                                 value="<?= htmlspecialchars($_GET['month_year_from'] ?? '') ?>"
                                 placeholder="e.g., 2023-01">
                         </div>
-                        <div class="col-12 col-md-3 date-filter date-month_year d-none">
+                        <div class="col-md-3 date-filter date-month_year d-none">
                             <label class="form-label fw-semibold">To (MM-YYYY)</label>
                             <input type="month" name="month_year_to" class="form-control shadow-sm"
                                 value="<?= htmlspecialchars($_GET['month_year_to'] ?? '') ?>"
@@ -375,7 +375,7 @@ function formatChanges($oldJsonStr)
                         </div>
                         
                         <!-- Search bar -->
-                        <div class="col-12 col-sm-6 col-md-3">
+                        <div class="col-md-3">
                             <label class="form-label fw-semibold">Search</label>
                             <div class="input-group shadow-sm">
                                 <span class="input-group-text"><i class="fas fa-search"></i></span>
@@ -385,14 +385,11 @@ function formatChanges($oldJsonStr)
                             </div>
                         </div>
                         
-                        <div class="col-6 col-md-2 d-grid">
-                            <button type="submit" id="applyFilters" class="btn btn-dark">
+                        <div class="col-md-3 d-flex align-items-end gap-2">
+                            <button type="submit" id="applyFilters" class="btn btn-dark flex-grow-1">
                                 <i class="fas fa-filter"></i> Filter
                             </button>
-                        </div>
-                        
-                        <div class="col-6 col-md-2 d-grid">
-                            <button type="button" id="clearFilters" class="btn btn-secondary shadow-sm">
+                            <button type="button" id="clearFilters" class="btn btn-secondary shadow-sm flex-grow-1">
                                 <i class="fas fa-times-circle"></i> Clear
                             </button>
                         </div>
@@ -476,8 +473,12 @@ function formatChanges($oldJsonStr)
                                                 <div class="d-flex align-items-center">
                                                     <i class="far fa-clock me-2"></i>
                                                     <?php 
-                                                    $date = new DateTime($log['Date_Time']);
-                                                    echo $date->format('M d, Y h:i A'); 
+                                                    if (!empty($log['date_time'])) {
+                                                        $date = new DateTime($log['date_time']);
+                                                        echo $date->format('M d, Y h:i A');
+                                                    } else {
+                                                        echo '<em class="text-muted">N/A</em>';
+                                                    }
                                                     ?>
                                                 </div>
                                             </td>
