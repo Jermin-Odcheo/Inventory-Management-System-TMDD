@@ -141,6 +141,162 @@ $userRoleDepartments = array_values($userRoleMap);
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
     <title>User Roles Management</title>
+    <style>
+        /* Pagination styles */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .pagination .page-item {
+            margin: 0 2px;
+        }
+
+        .pagination .page-item.active .page-link {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+            color: white;
+        }
+
+        .pagination .page-link {
+            color: #0d6efd;
+            border: 1px solid #dee2e6;
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.25rem;
+            text-decoration: none;
+        }
+
+        .pagination .page-link:hover {
+            background-color: #e9ecef;
+        }
+
+        .pagination .page-item.disabled .page-link {
+            color: #6c757d;
+            pointer-events: none;
+            background-color: #fff;
+        }
+        
+        /* Enhanced pagination styles */
+        .pagination {
+            display: inline-flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-bottom: 0;
+        }
+        
+        .pagination .page-item .page-link {
+            min-width: 36px;
+            height: 36px;
+            text-align: center;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.375rem;
+            border-radius: 0.25rem;
+        }
+        
+        .pagination .page-item .page-link i {
+            font-size: 0.875rem;
+        }
+        
+        /* Sortable column header styles */
+        .sortable, .sort-header {
+            cursor: pointer;
+            position: relative;
+            padding-right: 20px !important;
+        }
+
+        .sortable:hover, .sort-header:hover {
+            background-color: #f8f9fa;
+        }
+
+        .sortable i, .sort-header i {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+        }
+
+        .sortable:hover i, .sort-header:hover i {
+            color: #0d6efd;
+        }
+        
+        /* Center pagination on mobile */
+        @media (max-width: 767.98px) {
+            .pagination {
+                justify-content: center;
+                margin: 0.5rem 0;
+            }
+            
+            /* Center info text on mobile */
+            .text-muted {
+                text-align: center;
+                margin-bottom: 0.5rem;
+            }
+            
+            /* Center prev/next buttons on mobile */
+            .justify-content-md-end {
+                justify-content: center !important;
+                margin-top: 0.5rem;
+            }
+        }
+    .container-fluid{
+        padding: 20px
+    }
+        /* Improved filters container styling */
+        .filters-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            
+        }
+
+        .filter-container {
+            flex: 1 1 220px;
+            min-width: 200px;
+            margin-bottom: 0.5rem;
+        }
+
+        .search-filter {
+            flex: 1 1 220px;
+            min-width: 200px;
+            margin-bottom: 0.5rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            width: 100%;
+        }
+
+        /* Button containers in filters */
+        .filters-container .col-6 {
+            flex: 0 0 auto;
+            width: auto;
+            min-width: 120px;
+            margin-bottom: 0.5rem;
+        }
+
+        @media (max-width: 767.98px) {
+            .filters-container {
+                flex-direction: column;
+            }
+
+            .filter-container, 
+            .search-filter, 
+            .filters-container .col-6 {
+                width: 100%;
+                flex: 0 0 100%;
+            }
+        }
+    </style>
 </head>
 
 <body>
@@ -155,7 +311,7 @@ $userRoleDepartments = array_values($userRoleMap);
                 <i class="bi bi-plus-lg"></i> Add User/s to role</button>
             <?php endif; ?>
 
-            <!-- <div class="filter-container">
+            <div class="filter-container">
                 <label for="role-filter">FILTER BY ROLE</label>
                 <select id="role-filter">
                     <option value="">All Roles</option>
@@ -180,7 +336,7 @@ $userRoleDepartments = array_values($userRoleMap);
             <div class="search-filter">
                 <label for="search-users">SEARCH FOR USERS</label>
                 <input type="text" id="search-users" placeholder="Search user...">
-            </div> -->
+            </div>
 
             <!-- Buttons -->
             <div class="col-6 col-md-2 d-grid">
@@ -210,6 +366,35 @@ $userRoleDepartments = array_values($userRoleMap);
                     </tr>
                 </thead>
                 <tbody>
+                    <?php if (empty($usersData)): ?>
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">No users found.</td>
+                        </tr>
+                    <?php else: ?>
+                        <?php foreach ($usersData as $user): ?>
+                            <tr>
+                                <td><?php if ($canRemove): ?><input type="checkbox" class="select-row" value="<?= htmlspecialchars($user['id']); ?>"><?php endif; ?></td>
+                                <td><?= htmlspecialchars($user['username']); ?></td>
+                                <td><?= htmlspecialchars($user['departments_concat'] ?? 'Not assigned'); ?></td>
+                                <td><?= htmlspecialchars($user['roles_concat'] ?? 'No roles assigned'); ?></td>
+                                <td>
+                                    <?php if ($canModify): ?>
+                                        <button class="btn-outline-primary edit-btn" 
+                                            data-user-id="<?= htmlspecialchars($user['id']); ?>"
+                                            data-username="<?= htmlspecialchars($user['username']); ?>">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
+                                    <?php endif; ?>
+                                    <?php if ($canRemove): ?>
+                                        <button class="btn-outline-danger delete-btn"
+                                            data-user-id="<?= htmlspecialchars($user['id']); ?>">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                 </tbody>
             </table>
 
@@ -222,7 +407,7 @@ $userRoleDepartments = array_values($userRoleMap);
             <?php endif; ?>
             <div class="container-fluid">
                 <div class="row align-items-center g-3">
-                    <div class="col-12 col-sm-auto">
+                    <div class="col-12 col-md-4">
                         <div class="text-muted">
                             <?php
                             // Use the actual user count, not the number of rows in the table
@@ -234,25 +419,25 @@ $userRoleDepartments = array_values($userRoleMap);
                             Showing <span id="currentPage">1</span> to <span id="rowsPerPage"> <?= $displayEnd ?></span> of <span id="totalRows"><?= $totalUsers ?></span> entries
                         </div>
                     </div>
-                    <div class="col-12 col-sm-auto ms-sm-auto">
-                        <div class="d-flex align-items-center gap-2">
-                            <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                    <div class="col-12 col-md-4 text-center">
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination pagination-sm d-inline-flex justify-content-center mb-0" id="pagination"></ul>
+                        </nav>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="d-flex align-items-center gap-2 justify-content-md-end">
+                            <button id="prevPage" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1">
                                 <i class="bi bi-chevron-left"></i> Previous
                             </button>
-                            <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                            <select id="rowsPerPageSelect" class="form-select form-select-sm" style="width: auto;">
                                 <option value="10" selected>10</option>
                                 <option value="20">20</option>
                                 <option value="30">30</option>
                                 <option value="50">50</option>
                             </select>
-                            <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                            <button id="nextPage" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1">
                                 Next <i class="bi bi-chevron-right"></i>
                             </button>
-                        </div>
-                    </div>
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <ul class="pagination justify-content-center" id="pagination"></ul>
                         </div>
                     </div>
                 </div>
@@ -410,6 +595,271 @@ $userRoleDepartments = array_values($userRoleMap);
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
         $(document).ready(function() {
+            // Initialize pagination for user roles table
+            window.paginationConfig = {
+                tableId: 'urTable',
+                rowsPerPageSelectId: 'rowsPerPageSelect',
+                currentPageId: 'currentPage',
+                rowsPerPageId: 'rowsPerPage',
+                totalRowsId: 'totalRows',
+                prevPageId: 'prevPage',
+                nextPageId: 'nextPage',
+                paginationId: 'pagination',
+                currentPage: 1
+            };
+
+            // Initialize event listeners for pagination buttons
+            document.getElementById('prevPage').addEventListener('click', function(e) {
+                e.preventDefault();
+                if (window.paginationConfig.currentPage > 1) {
+                    window.paginationConfig.currentPage--;
+                    window.updatePagination();
+                }
+            });
+            
+            document.getElementById('nextPage').addEventListener('click', function(e) {
+                e.preventDefault();
+                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value) || 10;
+                const totalPages = Math.ceil(window.filteredRows.length / rowsPerPage);
+                if (window.paginationConfig.currentPage < totalPages) {
+                    window.paginationConfig.currentPage++;
+                    window.updatePagination();
+                }
+            });
+            
+            // Listen for rows per page changes
+            document.getElementById('rowsPerPageSelect').addEventListener('change', function() {
+                window.paginationConfig.currentPage = 1; // Reset to first page
+                window.updatePagination();
+            });
+
+            // Function to check and update pagination visibility
+            window.forcePaginationCheck = function() {
+                const totalRows = window.filteredRows ? window.filteredRows.length : 0;
+                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value) || 10;
+                const totalPages = Math.ceil(totalRows / rowsPerPage);
+                const currentPage = window.paginationConfig ? window.paginationConfig.currentPage : 1;
+                
+                const prevBtn = document.getElementById('prevPage');
+                const nextBtn = document.getElementById('nextPage');
+                const paginationEl = document.getElementById('pagination');
+                const paginationContainer = paginationEl ? paginationEl.closest('.row') : null;
+
+                // Hide pagination completely if all rows fit on one page
+                if (totalRows <= rowsPerPage) {
+                    if (prevBtn) prevBtn.style.display = 'none';
+                    if (nextBtn) nextBtn.style.display = 'none';
+                    if (paginationContainer) paginationContainer.style.display = 'none';
+                } else {
+                    // Show pagination but conditionally hide prev/next buttons
+                    if (paginationContainer) paginationContainer.style.display = '';
+
+                    if (prevBtn) {
+                        prevBtn.style.display = '';
+                        if (currentPage <= 1) {
+                            prevBtn.classList.add('disabled');
+                        } else {
+                            prevBtn.classList.remove('disabled');
+                        }
+                    }
+
+                    if (nextBtn) {
+                        nextBtn.style.display = '';
+                        if (currentPage >= totalPages) {
+                            nextBtn.classList.add('disabled');
+                        } else {
+                            nextBtn.classList.remove('disabled');
+                        }
+                    }
+                }
+                
+                // Update the showing X to Y of Z entries text
+                const currentPageEl = document.getElementById('currentPage');
+                const rowsPerPageEl = document.getElementById('rowsPerPage');
+                
+                if (currentPageEl && rowsPerPageEl) {
+                    const start = totalRows === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1;
+                    const end = Math.min(start + rowsPerPage - 1, totalRows);
+                    
+                    currentPageEl.textContent = start;
+                    rowsPerPageEl.textContent = end;
+                }
+            }
+
+            // Override the standard updatePagination function
+            window.updatePagination = function() {
+                // Get all rows again in case the DOM was updated
+                window.allRows = Array.from(document.querySelectorAll('#urTable tbody tr'));
+
+                // If filtered rows is empty or not defined, use all rows
+                if (!window.filteredRows || window.filteredRows.length === 0) {
+                    window.filteredRows = window.allRows;
+                }
+
+                // Update total rows display
+                const totalRowsEl = document.getElementById('totalRows');
+                if (totalRowsEl) {
+                    totalRowsEl.textContent = window.filteredRows.length;
+                }
+
+                // Get pagination elements
+                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value) || 10;
+                const totalRows = window.filteredRows.length;
+                const totalPages = Math.ceil(totalRows / rowsPerPage);
+                const currentPage = window.paginationConfig ? window.paginationConfig.currentPage : 1;
+
+                // Update rows per page display
+                const rowsPerPageEl = document.getElementById('rowsPerPage');
+                if (rowsPerPageEl) {
+                    const visibleRows = Math.min(rowsPerPage, window.filteredRows.length - (currentPage - 1) * rowsPerPage);
+                    rowsPerPageEl.textContent = visibleRows;
+                }
+                
+                // Update current page display
+                const currentPageEl = document.getElementById('currentPage');
+                if (currentPageEl) {
+                    const start = totalRows === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1;
+                    currentPageEl.textContent = start;
+                }
+                
+                // Generate pagination numbers
+                const paginationEl = document.getElementById('pagination');
+                if (paginationEl) {
+                    paginationEl.innerHTML = '';
+                    
+                    // Previous button
+                    const prevLi = document.createElement('li');
+                    prevLi.className = 'page-item' + (currentPage <= 1 ? ' disabled' : '');
+                    const prevLink = document.createElement('a');
+                    prevLink.className = 'page-link';
+                    prevLink.href = '#';
+                    prevLink.innerHTML = '<i class="bi bi-chevron-left"></i>';
+                    prevLink.setAttribute('aria-label', 'Previous');
+                    prevLink.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        if (currentPage > 1) {
+                            window.paginationConfig.currentPage--;
+                            window.updatePagination();
+                        }
+                    });
+                    prevLi.appendChild(prevLink);
+                    paginationEl.appendChild(prevLi);
+                    
+                    // Calculate range of page numbers to show
+                    let startPage = Math.max(1, currentPage - 1);
+                    let endPage = Math.min(totalPages, startPage + 2);
+                    
+                    // Adjust if we're near the end
+                    if (endPage - startPage < 2 && startPage > 1) {
+                        startPage = Math.max(1, endPage - 2);
+                    }
+                    
+                    // First page if not in range
+                    if (startPage > 1) {
+                        const firstLi = document.createElement('li');
+                        firstLi.className = 'page-item';
+                        const firstLink = document.createElement('a');
+                        firstLink.className = 'page-link';
+                        firstLink.href = '#';
+                        firstLink.textContent = '1';
+                        firstLink.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            window.paginationConfig.currentPage = 1;
+                            window.updatePagination();
+                        });
+                        firstLi.appendChild(firstLink);
+                        paginationEl.appendChild(firstLi);
+                        
+                        // Add ellipsis if needed
+                        if (startPage > 2) {
+                            const ellipsisLi = document.createElement('li');
+                            ellipsisLi.className = 'page-item disabled';
+                            const ellipsisSpan = document.createElement('span');
+                            ellipsisSpan.className = 'page-link';
+                            ellipsisSpan.textContent = '...';
+                            ellipsisLi.appendChild(ellipsisSpan);
+                            paginationEl.appendChild(ellipsisLi);
+                        }
+                    }
+                    
+                    // Page numbers
+                    for (let i = startPage; i <= endPage; i++) {
+                        const pageLi = document.createElement('li');
+                        pageLi.className = 'page-item' + (i === currentPage ? ' active' : '');
+                        const pageLink = document.createElement('a');
+                        pageLink.className = 'page-link';
+                        pageLink.href = '#';
+                        pageLink.textContent = i;
+                        pageLink.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            window.paginationConfig.currentPage = i;
+                            window.updatePagination();
+                        });
+                        pageLi.appendChild(pageLink);
+                        paginationEl.appendChild(pageLi);
+                    }
+                    
+                    // Last page if not in range
+                    if (endPage < totalPages) {
+                        // Add ellipsis if needed
+                        if (endPage < totalPages - 1) {
+                            const ellipsisLi = document.createElement('li');
+                            ellipsisLi.className = 'page-item disabled';
+                            const ellipsisSpan = document.createElement('span');
+                            ellipsisSpan.className = 'page-link';
+                            ellipsisSpan.textContent = '...';
+                            ellipsisLi.appendChild(ellipsisSpan);
+                            paginationEl.appendChild(ellipsisLi);
+                        }
+                        
+                        const lastLi = document.createElement('li');
+                        lastLi.className = 'page-item';
+                        const lastLink = document.createElement('a');
+                        lastLink.className = 'page-link';
+                        lastLink.href = '#';
+                        lastLink.textContent = totalPages;
+                        lastLink.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            window.paginationConfig.currentPage = totalPages;
+                            window.updatePagination();
+                        });
+                        lastLi.appendChild(lastLink);
+                        paginationEl.appendChild(lastLi);
+                    }
+                    
+                    // Next button
+                    const nextLi = document.createElement('li');
+                    nextLi.className = 'page-item' + (currentPage >= totalPages ? ' disabled' : '');
+                    const nextLink = document.createElement('a');
+                    nextLink.className = 'page-link';
+                    nextLink.href = '#';
+                    nextLink.innerHTML = '<i class="bi bi-chevron-right"></i>';
+                    nextLink.setAttribute('aria-label', 'Next');
+                    nextLink.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        if (currentPage < totalPages) {
+                            window.paginationConfig.currentPage++;
+                            window.updatePagination();
+                        }
+                    });
+                    nextLi.appendChild(nextLink);
+                    paginationEl.appendChild(nextLi);
+                }
+
+                // Update visibility of rows
+                window.filteredRows.forEach(function(row, index) {
+                    const pageIndex = Math.floor(index / rowsPerPage);
+                    if (pageIndex === currentPage - 1) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+                
+                // Update prev/next button visibility
+                forcePaginationCheck();
+            };
+
             // Initialize Select2 for department filter
             $('#dept-filter').select2({
                 placeholder: 'All Departments',
@@ -511,7 +961,8 @@ $userRoleDepartments = array_values($userRoleMap);
                 // Reset the select
                 $(this).val(null).trigger('change');
             });
-
+            
+            // Initialize Select2 for roles dropdown in the modal
             $('#search-role-dropdown').select2({
                 placeholder: 'Select Roles',
                 allowClear: true,
@@ -561,6 +1012,7 @@ $userRoleDepartments = array_values($userRoleMap);
                 $(this).val(null).trigger('change');
             });
 
+            // Initialize Select2 for users dropdown in the modal
             $('#search-users-dropdown').select2({
                 placeholder: 'Select Users',
                 allowClear: true,
@@ -609,141 +1061,7 @@ $userRoleDepartments = array_values($userRoleMap);
                 // Reset the select
                 $(this).val(null).trigger('change');
             });
-
-            // Always show the placeholder as an option for both filters
-            $('#dept-filter').val('').trigger('change');
-            $('#role-filter').val('').trigger('change');
-
-            // Find the role name from the role ID
-            function getRoleName(roleId) {
-                const role = rolesData.find(r => r.id == roleId);
-                return role ? role.role_name : '';
-            }
-
-            // Direct table filtering without relying on external functions
-            function filterTable() {
-                const userSearch = $('#search-users').val().toLowerCase();
-                const roleFilter = $('#role-filter').val();
-                const deptFilter = $('#dept-filter').val().toLowerCase();
-
-                // Get role name for display and filtering
-                const roleFilterName = roleFilter ? getRoleName(roleFilter).toLowerCase() : '';
-                // Show all rows first
-                $('#urTable tbody tr').show();
-
-                // Apply user search filter if present
-                if (userSearch) {
-                    $('#urTable tbody tr').each(function() {
-                        const userCell = $(this).find('td:nth-child(2)').text().toLowerCase();
-                        if (!userCell.includes(userSearch)) {
-                            $(this).hide();
-                        }
-                    });
-                }
-
-                // Apply role filter if selected
-                if (roleFilter) {
-                    $('#urTable tbody tr:visible').each(function() {
-                        const roleCell = $(this).find('td:nth-child(4)').text().toLowerCase();
-                        if (!roleCell.includes(roleFilterName)) {
-                            $(this).hide();
-                        }
-                    });
-                }
-
-                // Apply department filter if selected
-                if (deptFilter) {
-                    $('#urTable tbody tr:visible').each(function() {
-                        const deptCell = $(this).find('td:nth-child(3)').text().toLowerCase();
-                        if (!deptCell.includes(deptFilter)) {
-                            $(this).hide();
-                        }
-                    });
-                }
-
-                // Count unique users instead of rows
-                const uniqueUsernames = new Set();
-                $('#urTable tbody tr:visible').each(function() {
-                    const username = $(this).find('td:nth-child(2)').text().trim();
-                    if (username) {
-                        uniqueUsernames.add(username);
-                    }
-                });
-
-                // Update the visibility count - THIS IS THE KEY PART
-                const visibleCount = uniqueUsernames.size;
-
-                // Update pagination info
-                $('#totalRows').text(visibleCount);
-                if (visibleCount > 0) {
-                    const rowsPerPage = parseInt($('#rowsPerPageSelect').val()) || 10;
-                    $('#rowsPerPage').text(Math.min(rowsPerPage, visibleCount));
-                    $('#currentPage').text('1');
-                } else {
-                    $('#rowsPerPage').text('0');
-                    $('#currentPage').text('0');
-                }
-
-                // Update pagination controls
-                updatePaginationControls(visibleCount);
-            }
-
-            // Helper to update pagination visibility
-            function updatePaginationControls(visibleCount) {
-                const rowsPerPage = parseInt($('#rowsPerPageSelect').val()) || 10;
-
-                if (visibleCount <= rowsPerPage) {
-                    $('#prevPage, #nextPage').addClass('d-none');
-                    $('#pagination').empty();
-                } else {
-                    $('#prevPage, #nextPage').removeClass('d-none');
-                    // If you have a pagination function, call it here
-                }
-            }
-
-            // Bind to search input with debounce for performance
-            let searchTimer;
-            $('#search-users').on('input', function() {
-                clearTimeout(searchTimer);
-                searchTimer = setTimeout(filterTable, 300);
-            });
-
-            // Bind to select2 changes
-            $('#dept-filter, #role-filter').on('change', function() {
-                filterTable();
-            });
-
-            // Clear filters button
-            $('#clear-filters-btn').on('click', function() {
-                // Clear all filters
-                $('#search-users').val('');
-                $('#dept-filter').val('').trigger('change');
-                $('#role-filter').val('').trigger('change');
-
-                // Show all rows
-                $('#urTable tbody tr').show();
-
-                // Count unique users
-                const uniqueUsernames = new Set();
-                $('#urTable tbody tr').each(function() {
-                    const username = $(this).find('td:nth-child(2)').text().trim();
-                    if (username) {
-                        uniqueUsernames.add(username);
-                    }
-                });
-
-                const totalRows = uniqueUsernames.size;
-                $('#totalRows').text(totalRows);
-                $('#rowsPerPage').text(Math.min(totalRows, parseInt($('#rowsPerPageSelect').val()) || 10));
-                $('#currentPage').text('1');
-
-                // Update pagination controls
-                updatePaginationControls(totalRows);
-            });
-
-            // Run initial filter
-            filterTable();
-
+            
             // Initialize Select2 for department-dropdown (edit modal)
             $('#department-dropdown').select2({
                 placeholder: 'Select Role',
@@ -796,6 +1114,144 @@ $userRoleDepartments = array_values($userRoleMap);
                 // Reset the select
                 $(this).val(null).trigger('change');
             });
+            
+            // Always show the placeholder as an option for both filters
+            $('#dept-filter').val('').trigger('change');
+            $('#role-filter').val('').trigger('change');
+
+            // Function to filter the table based on search and filter criteria
+            function filterTable() {
+                const searchText = $('#search-users').val().toLowerCase();
+                const roleFilter = $('#role-filter').val();
+                const deptFilter = $('#dept-filter').val().toLowerCase();
+
+                // Convert role ID to name for filtering
+                const roleFilterName = roleFilter ? 
+                    rolesData.find(r => r.id == roleFilter)?.role_name.toLowerCase() : '';
+
+                // Get all rows
+                const allRows = Array.from(document.querySelectorAll('#urTable tbody tr'));
+                
+                // Filter rows based on criteria
+                window.filteredRows = allRows.filter(row => {
+                    const userText = row.querySelector('td:nth-child(2)')?.textContent.toLowerCase() || '';
+                    const deptText = row.querySelector('td:nth-child(3)')?.textContent.toLowerCase() || '';
+                    const roleText = row.querySelector('td:nth-child(4)')?.textContent.toLowerCase() || '';
+                    
+                    // Apply user search filter
+                    const matchesSearch = !searchText || userText.includes(searchText);
+                    
+                    // Apply role filter
+                    const matchesRole = !roleFilter || roleText.includes(roleFilterName);
+                    
+                    // Apply department filter
+                    const matchesDept = !deptFilter || deptText.includes(deptFilter);
+                    
+                    return matchesSearch && matchesRole && matchesDept;
+                });
+
+                // Reset to first page and update pagination
+                window.paginationConfig.currentPage = 1;
+                window.updatePagination();
+            }
+
+            // Bind search input to filter function
+            $('#search-users').on('input', function() {
+                filterTable();
+            });
+            
+            // Bind filter selects to filter function
+            $('#role-filter, #dept-filter').on('change', function() {
+                filterTable();
+            });
+            
+            // Handle clear filters button
+            $('#clear-filters-btn').on('click', function() {
+                $('#search-users').val('');
+                $('#role-filter').val('').trigger('change');
+                $('#dept-filter').val('').trigger('change');
+                
+                window.filteredRows = window.allRows;
+                window.paginationConfig.currentPage = 1;
+                window.updatePagination();
+            });
+
+            // Sorting handler
+            $('.sort-header').on('click', function(e) {
+                e.preventDefault();
+                const sortField = $(this).data('sort');
+                
+                // Toggle sort direction or set to ascending if changing column
+                if (currentSortBy === sortField) {
+                    currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+                } else {
+                    currentSortBy = sortField;
+                    currentSortOrder = 'asc';
+                }
+                
+                // Update sort icons
+                $('.sort-icon').removeClass('bi-caret-up-fill bi-caret-down-fill');
+                const iconClass = currentSortOrder === 'asc' ? 'bi-caret-up-fill' : 'bi-caret-down-fill';
+                $(this).find('.sort-icon').addClass(iconClass);
+                
+                // Perform client-side sorting
+                sortTable(sortField, currentSortOrder);
+            });
+            
+            // Function to sort the table
+            function sortTable(field, direction) {
+                const tbody = document.querySelector('#urTable tbody');
+                const rows = Array.from(tbody.querySelectorAll('tr'));
+                
+                // Sort the rows
+                rows.sort((a, b) => {
+                    let aValue, bValue;
+                    
+                    // Get values based on the field
+                    if (field === 'username') {
+                        aValue = a.querySelector('td:nth-child(2)')?.textContent.toLowerCase() || '';
+                        bValue = b.querySelector('td:nth-child(2)')?.textContent.toLowerCase() || '';
+                    } else if (field === 'departments') {
+                        aValue = a.querySelector('td:nth-child(3)')?.textContent.toLowerCase() || '';
+                        bValue = b.querySelector('td:nth-child(3)')?.textContent.toLowerCase() || '';
+                    } else if (field === 'roles') {
+                        aValue = a.querySelector('td:nth-child(4)')?.textContent.toLowerCase() || '';
+                        bValue = b.querySelector('td:nth-child(4)')?.textContent.toLowerCase() || '';
+                    }
+                    
+                    // Compare values based on direction
+                    if (direction === 'asc') {
+                        return aValue.localeCompare(bValue);
+                    } else {
+                        return bValue.localeCompare(aValue);
+                    }
+                });
+                
+                // Update the DOM
+                rows.forEach(row => tbody.appendChild(row));
+                
+                // Update filteredRows and pagination
+                window.filteredRows = rows;
+                window.paginationConfig.currentPage = 1;
+                window.updatePagination();
+            }
+            
+            // Function to update sort icons based on current sort state
+            function updateSortIcons() {
+                $('.sort-icon').removeClass('bi-caret-up-fill bi-caret-down-fill');
+                const iconClass = currentSortOrder === 'asc' ? 'bi-caret-up-fill' : 'bi-caret-down-fill';
+                $(`.sort-header[data-sort="${currentSortBy}"] .sort-icon`).addClass(iconClass);
+            }
+            
+            // Initialize the table
+            updateSortIcons();
+            
+            // Set initial filtered rows
+            window.allRows = Array.from(document.querySelectorAll('#urTable tbody tr'));
+            window.filteredRows = [...window.allRows];
+            
+            // Initial pagination update
+            window.updatePagination();
         });
     </script>
 </body>

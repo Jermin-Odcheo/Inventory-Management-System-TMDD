@@ -499,7 +499,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
     try {
         $query = "SELECT * FROM receive_report WHERE is_disabled = 0";
         $params = [];
-
         switch ($_GET['type']) {
             case 'desc':
                 $query .= " ORDER BY date_created DESC";
@@ -507,8 +506,35 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
             case 'asc':
                 $query .= " ORDER BY date_created ASC";
                 break;
+            case 'mdy':
+                $query .= " AND date_created BETWEEN ? AND ?";
+                $params[] = $_GET['dateFrom'];
+                $params[] = $_GET['dateTo'];
+                break;
+            case 'month':
+                $from = $_GET['monthFrom'] . '-01';
+                $toMonth = $_GET['monthTo'];
+                $to = date('Y-m-t', strtotime($toMonth . '-01'));
+                $query .= " AND date_created BETWEEN ? AND ?";
+                $params[] = $from;
+                $params[] = $to;
+                break;
+            case 'year':
+                $from = $_GET['yearFrom'] . '-01-01';
+                $to = $_GET['yearTo'] . '-12-31';
+                $query .= " AND date_created BETWEEN ? AND ?";
+                $params[] = $from;
+                $params[] = $to;
+                break;
+            case 'month_year':
+                $from = $_GET['monthYearFrom'] . '-01';
+                $toMonth = $_GET['monthYearTo'];
+                $to = date('Y-m-t', strtotime($toMonth . '-01'));
+                $query .= " AND date_created BETWEEN ? AND ?";
+                $params[] = $from;
+                $params[] = $to;
+                break;
         }
-
         $stmt = $pdo->prepare($query);
         $stmt->execute($params);
         $filteredReports = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -574,7 +600,53 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                                 <option value="">Filter by Date</option>
                                 <option value="desc">Newest to Oldest</option>
                                 <option value="asc">Oldest to Newest</option>
+                                <option value="mdy">Month-Day-Year Range</option>
+                                <option value="month">Month Range</option>
+                                <option value="year">Year Range</option>
+                                <option value="month_year">Month-Year Range</option>
                             </select>
+                            <div id="dateInputsContainer" class="d-flex align-items-center gap-3" style="display: none;">
+                                <div class="date-group d-none flex-row" id="mdy-group">
+                                    <div class="d-flex flex-column me-2">
+                                        <label for="dateFrom" class="form-label mb-0" style="font-size: 0.9em;">Date From</label>
+                                        <input type="date" id="dateFrom" class="form-control form-control-sm" style="width: 140px;">
+                                    </div>
+                                    <div class="d-flex flex-column">
+                                        <label for="dateTo" class="form-label mb-0" style="font-size: 0.9em;">Date To</label>
+                                        <input type="date" id="dateTo" class="form-control form-control-sm" style="width: 140px;">
+                                    </div>
+                                </div>
+                                <div class="date-group d-none flex-row" id="month-group">
+                                    <div class="d-flex flex-column me-2">
+                                        <label for="monthFrom" class="form-label mb-0" style="font-size: 0.9em;">Month From</label>
+                                        <input type="month" id="monthFrom" class="form-control form-control-sm" style="width: 120px;">
+                                    </div>
+                                    <div class="d-flex flex-column">
+                                        <label for="monthTo" class="form-label mb-0" style="font-size: 0.9em;">Month To</label>
+                                        <input type="month" id="monthTo" class="form-control form-control-sm" style="width: 120px;">
+                                    </div>
+                                </div>
+                                <div class="date-group d-none flex-row" id="year-group">
+                                    <div class="d-flex flex-column me-2">
+                                        <label for="yearFrom" class="form-label mb-0" style="font-size: 0.9em;">Year From</label>
+                                        <input type="number" id="yearFrom" class="form-control form-control-sm" style="width: 90px;" min="1900" max="2100">
+                                    </div>
+                                    <div class="d-flex flex-column">
+                                        <label for="yearTo" class="form-label mb-0" style="font-size: 0.9em;">Year To</label>
+                                        <input type="number" id="yearTo" class="form-control form-control-sm" style="width: 90px;" min="1900" max="2100">
+                                    </div>
+                                </div>
+                                <div class="date-group d-none flex-row" id="monthyear-group">
+                                    <div class="d-flex flex-column me-2">
+                                        <label for="monthYearFrom" class="form-label mb-0" style="font-size: 0.9em;">From (MM-YYYY)</label>
+                                        <input type="month" id="monthYearFrom" class="form-control form-control-sm" style="width: 120px;">
+                                    </div>
+                                    <div class="d-flex flex-column">
+                                        <label for="monthYearTo" class="form-label mb-0" style="font-size: 0.9em;">To (MM-YYYY)</label>
+                                        <input type="month" id="monthYearTo" class="form-control form-control-sm" style="width: 120px;">
+                                    </div>
+                                </div>
+                            </div>
                             <button type="button" id="applyFilters" class="btn btn-dark btn-sm ms-2"><i class="bi bi-funnel"></i> Filter</button>
                             <button type="button" id="clearFilters" class="btn btn-secondary btn-sm ms-1"><i class="bi bi-x-circle"></i> Clear</button>
                         </div>
@@ -1173,81 +1245,93 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
         blockNonNumericInput('#edit_po_no');
 
         $(document).ready(function() {
-            // Date filter UI handling (show/hide inputs only, not filtering)
+            // Date filter UI handling (show/hide label+input pairs for advanced types)
             $('#dateFilter').on('change', function() {
                 const filterType = $(this).val();
-                $('#dateInputsContainer').hide();
-                $('#monthPickerContainer').hide();
-                $('#dateRangePickers').hide();
-                if (filterType === 'month') {
-                    $('#dateInputsContainer').show();
-                    $('#monthPickerContainer').show();
-                } else if (filterType === 'range') {
-                    $('#dateInputsContainer').show();
-                    $('#dateRangePickers').show();
+                const container = $('#dateInputsContainer');
+                container.show();
+                // Hide all groups first
+                container.find('.date-group').addClass('d-none');
+                if (!filterType || filterType === 'desc' || filterType === 'asc') {
+                    container.hide();
+                    return;
+                }
+                if (filterType === 'mdy') {
+                    $('#mdy-group').removeClass('d-none');
+                } else if (filterType === 'month') {
+                    $('#month-group').removeClass('d-none');
+                } else if (filterType === 'year') {
+                    $('#year-group').removeClass('d-none');
+                } else if (filterType === 'month_year') {
+                    $('#monthyear-group').removeClass('d-none');
                 }
             });
 
-            // Only trigger filtering when the Filter button is clicked
-            $('#applyFilters').on('click', function() {
+            $('#applyFilters').off('click').on('click', function() {
                 const filterType = $('#dateFilter').val();
                 if (!filterType) {
                     showToast('Please select a filter type.', 'error');
                     return;
                 }
-                let params = gatherFilterParams();
-                if (filterType === 'desc' || filterType === 'asc') {
-                    applyFilter(filterType);
-                } else if (filterType === 'month') {
-                    if (!params.month || !params.year) {
-                        showToast('Please select both month and year.', 'error');
-                        return;
-                    }
-                    applyFilter('month', { month: params.month, year: params.year });
-                } else if (filterType === 'range') {
+                let params = {};
+                if (filterType === 'mdy') {
+                    params.dateFrom = $('#dateFrom').val();
+                    params.dateTo = $('#dateTo').val();
                     if (!params.dateFrom || !params.dateTo) {
-                        showToast('Please select both start and end dates.', 'error');
+                        showToast('Please select both Date From and Date To.', 'error');
                         return;
                     }
-                    applyFilter('range', { dateFrom: params.dateFrom, dateTo: params.dateTo });
+                } else if (filterType === 'month') {
+                    params.monthFrom = $('#monthFrom').val();
+                    params.monthTo = $('#monthTo').val();
+                    if (!params.monthFrom || !params.monthTo) {
+                        showToast('Please select both Month From and Month To.', 'error');
+                        return;
+                    }
+                } else if (filterType === 'year') {
+                    params.yearFrom = $('#yearFrom').val();
+                    params.yearTo = $('#yearTo').val();
+                    if (!params.yearFrom || !params.yearTo) {
+                        showToast('Please select both Year From and Year To.', 'error');
+                        return;
+                    }
+                } else if (filterType === 'month_year') {
+                    params.monthYearFrom = $('#monthYearFrom').val();
+                    params.monthYearTo = $('#monthYearTo').val();
+                    if (!params.monthYearFrom || !params.monthYearTo) {
+                        showToast('Please select both From and To (MM-YYYY).', 'error');
+                        return;
+                    }
                 }
+                applyFilter(filterType, params);
             });
 
-            // Clear filters and reload table
-            $('#clearFilters').on('click', function() {
+            $('#clearFilters').off('click').on('click', function() {
                 $('#dateFilter').val('');
-                $('#monthSelect').val('');
-                $('#yearSelect').val('');
-                $('#dateFrom').val('');
-                $('#dateTo').val('');
+                $('#dateInputsContainer input').val('');
+                $('#dateInputsContainer .date-group').addClass('d-none');
                 $('#dateInputsContainer').hide();
-                $('#monthPickerContainer').hide();
-                $('#dateRangePickers').hide();
                 window.location.reload();
             });
 
-            // Helper to gather filter params
-            function gatherFilterParams() {
-                const filterType = $('#dateFilter').val();
-                let params = { action: 'filter', type: filterType };
-                if (filterType === 'month') {
-                    params.month = $('#monthSelect').val();
-                    params.year = $('#yearSelect').val();
-                } else if (filterType === 'range') {
-                    params.dateFrom = $('#dateFrom').val();
-                    params.dateTo = $('#dateTo').val();
-                }
-                return params;
-            }
-
-            // Function to apply the filter
             function applyFilter(type, params = {}) {
                 let filterData = {
                     action: 'filter',
                     type: type
                 };
-                // No additional params for desc/asc
-
+                if (type === 'mdy') {
+                    filterData.dateFrom = params.dateFrom;
+                    filterData.dateTo = params.dateTo;
+                } else if (type === 'month') {
+                    filterData.monthFrom = params.monthFrom;
+                    filterData.monthTo = params.monthTo;
+                } else if (type === 'year') {
+                    filterData.yearFrom = params.yearFrom;
+                    filterData.yearTo = params.yearTo;
+                } else if (type === 'month_year') {
+                    filterData.monthYearFrom = params.monthYearFrom;
+                    filterData.monthYearTo = params.monthYearTo;
+                }
                 $.ajax({
                     url: 'receiving_report.php',
                     method: 'GET',
@@ -1256,7 +1340,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                         try {
                             const data = JSON.parse(response);
                             if (data.status === 'success') {
-                                // Update table body with filtered results
                                 let tableBody = '';
                                 data.reports.forEach(report => {
                                     tableBody += `
@@ -1302,13 +1385,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                     }
                 });
             }
-
-            // Reset filter when empty option is selected
-            $('#dateFilter').on('change', function() {
-                if (!$(this).val()) {
-                    window.location.reload();
-                }
-            });
         });
     </script>
 

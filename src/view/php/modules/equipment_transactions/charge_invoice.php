@@ -379,7 +379,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
               )
         ";
         $params = [];
-
         switch (
             $_GET['type'] ?? ''
         ) {
@@ -389,12 +388,38 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
             case 'asc':
                 $query .= " ORDER BY ci.date_of_purchase ASC";
                 break;
+            case 'mdy':
+                $query .= " AND ci.date_of_purchase BETWEEN ? AND ?";
+                $params[] = $_GET['dateFrom'];
+                $params[] = $_GET['dateTo'];
+                break;
+            case 'month':
+                $from = $_GET['monthFrom'] . '-01';
+                $toMonth = $_GET['monthTo'];
+                $to = date('Y-m-t', strtotime($toMonth . '-01'));
+                $query .= " AND ci.date_of_purchase BETWEEN ? AND ?";
+                $params[] = $from;
+                $params[] = $to;
+                break;
+            case 'year':
+                $from = $_GET['yearFrom'] . '-01-01';
+                $to = $_GET['yearTo'] . '-12-31';
+                $query .= " AND ci.date_of_purchase BETWEEN ? AND ?";
+                $params[] = $from;
+                $params[] = $to;
+                break;
+            case 'month_year':
+                $from = $_GET['monthYearFrom'] . '-01';
+                $toMonth = $_GET['monthYearTo'];
+                $to = date('Y-m-t', strtotime($toMonth . '-01'));
+                $query .= " AND ci.date_of_purchase BETWEEN ? AND ?";
+                $params[] = $from;
+                $params[] = $to;
+                break;
         }
-
         $stmt = $pdo->prepare($query);
         $stmt->execute($params);
         $filteredInvoices = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
         if (is_ajax_request()) {
             ob_clean();
             echo json_encode([
@@ -732,47 +757,93 @@ $(document).ready(function() {
         });
     }
 
-    // Date filter UI handling (show/hide inputs only, not filtering)
+    // Date filter UI handling (show/hide label+input pairs for advanced types)
     $('#dateFilter').on('change', function() {
         const filterType = $(this).val();
-        $('#dateInputsContainer').hide();
-        $('#monthPickerContainer').hide();
-        $('#dateRangePickers').hide();
-        // No additional date input UI for desc/asc
-        if (!filterType) {
-            window.location.reload();
+        const container = $('#dateInputsContainer');
+        container.show();
+        // Hide all groups first
+        container.find('.date-group').addClass('d-none');
+        if (!filterType || filterType === 'desc' || filterType === 'asc') {
+            container.hide();
+            return;
+        }
+        if (filterType === 'mdy') {
+            $('#mdy-group').removeClass('d-none');
+        } else if (filterType === 'month') {
+            $('#month-group').removeClass('d-none');
+        } else if (filterType === 'year') {
+            $('#year-group').removeClass('d-none');
+        } else if (filterType === 'month_year') {
+            $('#monthyear-group').removeClass('d-none');
         }
     });
 
-    // Only trigger filtering when the Filter button is clicked
     $('#applyFilters').off('click').on('click', function() {
         const filterType = $('#dateFilter').val();
         if (!filterType) {
             showToast('Please select a filter type.', 'error');
             return;
         }
-        if (filterType === 'desc' || filterType === 'asc') {
-            applyInvoiceFilter(filterType);
-        } else {
-            showToast('Invalid filter type.', 'error');
+        let params = {};
+        if (filterType === 'mdy') {
+            params.dateFrom = $('#dateFrom').val();
+            params.dateTo = $('#dateTo').val();
+            if (!params.dateFrom || !params.dateTo) {
+                showToast('Please select both Date From and Date To.', 'error');
+                return;
+            }
+        } else if (filterType === 'month') {
+            params.monthFrom = $('#monthFrom').val();
+            params.monthTo = $('#monthTo').val();
+            if (!params.monthFrom || !params.monthTo) {
+                showToast('Please select both Month From and Month To.', 'error');
+                return;
+            }
+        } else if (filterType === 'year') {
+            params.yearFrom = $('#yearFrom').val();
+            params.yearTo = $('#yearTo').val();
+            if (!params.yearFrom || !params.yearTo) {
+                showToast('Please select both Year From and Year To.', 'error');
+                return;
+            }
+        } else if (filterType === 'month_year') {
+            params.monthYearFrom = $('#monthYearFrom').val();
+            params.monthYearTo = $('#monthYearTo').val();
+            if (!params.monthYearFrom || !params.monthYearTo) {
+                showToast('Please select both From and To (MM-YYYY).', 'error');
+                return;
+            }
         }
+        applyInvoiceFilter(filterType, params);
     });
 
-    // Clear filters and reload table
     $('#clearFilters').off('click').on('click', function() {
         $('#dateFilter').val('');
+        $('#dateInputsContainer input').val('');
+        $('#dateInputsContainer .date-group').addClass('d-none');
         $('#dateInputsContainer').hide();
-        $('#monthPickerContainer').hide();
-        $('#dateRangePickers').hide();
         window.location.reload();
     });
 
-    // Function to apply the filter
     function applyInvoiceFilter(type, params = {}) {
         let filterData = {
             action: 'filter',
             type: type
         };
+        if (type === 'mdy') {
+            filterData.dateFrom = params.dateFrom;
+            filterData.dateTo = params.dateTo;
+        } else if (type === 'month') {
+            filterData.monthFrom = params.monthFrom;
+            filterData.monthTo = params.monthTo;
+        } else if (type === 'year') {
+            filterData.yearFrom = params.yearFrom;
+            filterData.yearTo = params.yearTo;
+        } else if (type === 'month_year') {
+            filterData.monthYearFrom = params.monthYearFrom;
+            filterData.monthYearTo = params.monthYearTo;
+        }
         $.ajax({
             url: 'charge_invoice.php',
             method: 'GET',
@@ -781,7 +852,6 @@ $(document).ready(function() {
                 try {
                     const data = JSON.parse(response);
                     if (data.status === 'success') {
-                        // Update table body with filtered results
                         let tableBody = '';
                         data.invoices.forEach(invoice => {
                             let formattedDate = '';
@@ -861,7 +931,53 @@ $(document).ready(function() {
                             <option value="">Filter by Date</option>
                             <option value="desc">Newest to Oldest</option>
                             <option value="asc">Oldest to Newest</option>
+                            <option value="mdy">Month-Day-Year Range</option>
+                            <option value="month">Month Range</option>
+                            <option value="year">Year Range</option>
+                            <option value="month_year">Month-Year Range</option>
                         </select>
+                        <div id="dateInputsContainer" class="d-flex align-items-center gap-3" style="display: none;">
+                            <div class="date-group d-none flex-row" id="mdy-group">
+                                <div class="d-flex flex-column me-2">
+                                    <label for="dateFrom" class="form-label mb-0" style="font-size: 0.9em;">Date From</label>
+                                    <input type="date" id="dateFrom" class="form-control form-control-sm" style="width: 140px;">
+                                </div>
+                                <div class="d-flex flex-column">
+                                    <label for="dateTo" class="form-label mb-0" style="font-size: 0.9em;">Date To</label>
+                                    <input type="date" id="dateTo" class="form-control form-control-sm" style="width: 140px;">
+                                </div>
+                            </div>
+                            <div class="date-group d-none flex-row" id="month-group">
+                                <div class="d-flex flex-column me-2">
+                                    <label for="monthFrom" class="form-label mb-0" style="font-size: 0.9em;">Month From</label>
+                                    <input type="month" id="monthFrom" class="form-control form-control-sm" style="width: 120px;">
+                                </div>
+                                <div class="d-flex flex-column">
+                                    <label for="monthTo" class="form-label mb-0" style="font-size: 0.9em;">Month To</label>
+                                    <input type="month" id="monthTo" class="form-control form-control-sm" style="width: 120px;">
+                                </div>
+                            </div>
+                            <div class="date-group d-none flex-row" id="year-group">
+                                <div class="d-flex flex-column me-2">
+                                    <label for="yearFrom" class="form-label mb-0" style="font-size: 0.9em;">Year From</label>
+                                    <input type="number" id="yearFrom" class="form-control form-control-sm" style="width: 90px;" min="1900" max="2100">
+                                </div>
+                                <div class="d-flex flex-column">
+                                    <label for="yearTo" class="form-label mb-0" style="font-size: 0.9em;">Year To</label>
+                                    <input type="number" id="yearTo" class="form-control form-control-sm" style="width: 90px;" min="1900" max="2100">
+                                </div>
+                            </div>
+                            <div class="date-group d-none flex-row" id="monthyear-group">
+                                <div class="d-flex flex-column me-2">
+                                    <label for="monthYearFrom" class="form-label mb-0" style="font-size: 0.9em;">From (MM-YYYY)</label>
+                                    <input type="month" id="monthYearFrom" class="form-control form-control-sm" style="width: 120px;">
+                                </div>
+                                <div class="d-flex flex-column">
+                                    <label for="monthYearTo" class="form-label mb-0" style="font-size: 0.9em;">To (MM-YYYY)</label>
+                                    <input type="month" id="monthYearTo" class="form-control form-control-sm" style="width: 120px;">
+                                </div>
+                            </div>
+                        </div>
                         <button type="button" id="applyFilters" class="btn btn-dark btn-sm ms-2"><i class="bi bi-funnel"></i> Filter</button>
                         <button type="button" id="clearFilters" class="btn btn-secondary btn-sm ms-1"><i class="bi bi-x-circle"></i> Clear</button>
                     </div>
