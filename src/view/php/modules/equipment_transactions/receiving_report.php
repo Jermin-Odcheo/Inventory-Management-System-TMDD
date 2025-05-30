@@ -507,16 +507,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
             case 'asc':
                 $query .= " ORDER BY date_created ASC";
                 break;
-            case 'month':
-                $query .= " AND MONTH(date_created) = ? AND YEAR(date_created) = ?";
-                $params[] = $_GET['month'];
-                $params[] = $_GET['year'];
-                break;
-            case 'range':
-                $query .= " AND date_created BETWEEN ? AND ?";
-                $params[] = $_GET['dateFrom'];
-                $params[] = $_GET['dateTo'];
-                break;
         }
 
         $stmt = $pdo->prepare($query);
@@ -584,35 +574,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                                 <option value="">Filter by Date</option>
                                 <option value="desc">Newest to Oldest</option>
                                 <option value="asc">Oldest to Newest</option>
-                                <option value="month">Specific Month</option>
-                                <option value="range">Custom Date Range</option>
                             </select>
-                            <div id="dateInputsContainer" style="display: none;">
-                                <div class="d-flex gap-2" id="monthPickerContainer" style="display: none;">
-                                    <select class="form-select form-select-sm" id="monthSelect" style="min-width: 130px;">
-                                        <option value="">Select Month</option>
-                                        <?php
-                                        $months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-                                        foreach ($months as $index => $month) {
-                                            echo "<option value='" . ($index + 1) . "'>" . $month . "</option>";
-                                        }
-                                        ?>
-                                    </select>
-                                    <select class="form-select form-select-sm" id="yearSelect" style="min-width: 110px;">
-                                        <option value="">Select Year</option>
-                                        <?php
-                                        $currentYear = date('Y');
-                                        for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
-                                            echo "<option value='" . $year . "'>" . $year . "</option>";
-                                        }
-                                        ?>
-                                    </select>
-                                </div>
-                                <div class="d-flex gap-2" id="dateRangePickers" style="display: none;">
-                                    <input type="date" class="form-control form-control-sm" id="dateFrom" placeholder="From">
-                                    <input type="date" class="form-control form-control-sm" id="dateTo" placeholder="To">
-                                </div>
-                            </div>
                             <button type="button" id="applyFilters" class="btn btn-dark btn-sm ms-2"><i class="bi bi-funnel"></i> Filter</button>
                             <button type="button" id="clearFilters" class="btn btn-secondary btn-sm ms-1"><i class="bi bi-x-circle"></i> Clear</button>
                         </div>
@@ -722,7 +684,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
     <?php if ($canCreate): ?>
         <!-- Add Report Modal -->
         <div class="modal fade" id="addReportModal" tabindex="-1">
-            <div class="modal-dialog">
+            <div class="modal-dialog" style="margin-top:100px;">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title">Create New Receiving Report</h5>
@@ -779,7 +741,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
     <?php if ($canModify): ?>
         <!-- Edit Report Modal -->
         <div class="modal fade" id="editReportModal" tabindex="-1">
-            <div class="modal-dialog">
+            <div class="modal-dialog" style="margin-top:100px;">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title">Edit Receiving Report</h5>
@@ -995,10 +957,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
 
             $('#clearFilters').on('click', function() {
                 $('#dateFilter').val('');
-                $('#monthSelect').val('');
-                $('#yearSelect').val('');
-                $('#dateFrom').val('');
-                $('#dateTo').val('');
+                // Hide any date containers just in case
                 $('#dateInputsContainer').hide();
                 $('#monthPickerContainer').hide();
                 $('#dateRangePickers').hide();
@@ -1287,15 +1246,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                     action: 'filter',
                     type: type
                 };
-
-                // Add additional parameters based on filter type
-                if (type === 'month') {
-                    filterData.month = params.month;
-                    filterData.year = params.year;
-                } else if (type === 'range') {
-                    filterData.dateFrom = params.dateFrom;
-                    filterData.dateTo = params.dateTo;
-                }
+                // No additional params for desc/asc
 
                 $.ajax({
                     url: 'receiving_report.php',
