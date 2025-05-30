@@ -26,16 +26,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         echo json_encode(['success' => false, 'message' => 'Role name is required.']);
         exit();
     }
+    
+    // Additional validation and debugging for role name
+    $originalRoleName = $_POST['role_name']; // Before trim
+    $trimmedRoleName = trim($originalRoleName); // After trim
+    
+    // Check for invisible characters or encoding issues
+    $hexEncoded = bin2hex($trimmedRoleName);
+    $unicodePoints = [];
+    for ($i = 0; $i < mb_strlen($trimmedRoleName, 'UTF-8'); $i++) {
+        $char = mb_substr($trimmedRoleName, $i, 1, 'UTF-8');
+        $unicodePoints[] = 'U+' . dechex(mb_ord($char));
+    }
 
     try {
         // 1) Start transaction
         $pdo->beginTransaction();
 
-        // 2) Check for duplicate (case-insensitive)
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM roles WHERE LOWER(TRIM(Role_Name)) = LOWER(TRIM(?)) AND is_disabled = 0");
+        // 2) Check for duplicate (case-insensitive) with improved debugging
+        $checkQuery = "SELECT COUNT(*) FROM roles 
+                      WHERE LOWER(TRIM(Role_Name)) = LOWER(TRIM(?)) 
+                      AND is_disabled = 0";
+        $stmt = $pdo->prepare($checkQuery);
         $stmt->execute([$roleName]);
-        if ($stmt->fetchColumn() > 0) {
-            echo json_encode(['success' => false, 'message' => 'Role already exists.']);
+        $count = $stmt->fetchColumn();
+        
+        // Also check if there are any roles with similar names (ignoring case and whitespace)
+        $similarQuery = "SELECT id, Role_Name, HEX(Role_Name) as hex_name 
+                        FROM roles 
+                        WHERE (SOUNDEX(Role_Name) = SOUNDEX(?) 
+                        OR LOWER(REPLACE(TRIM(Role_Name), ' ', '')) = LOWER(REPLACE(TRIM(?), ' ', '')))
+                        AND is_disabled = 0
+                        LIMIT 5";
+        $similarStmt = $pdo->prepare($similarQuery);
+        $similarStmt->execute([$roleName, $roleName]);
+        $similarRoles = $similarStmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        if ($count > 0) {
+            // Let's find what role is matching to help debugging
+            $debugStmt = $pdo->prepare("SELECT id, Role_Name, HEX(Role_Name) as hex_name, 
+                                      LENGTH(Role_Name) as name_length,
+                                      LENGTH(TRIM(Role_Name)) as trimmed_length
+                                      FROM roles 
+                                      WHERE LOWER(TRIM(Role_Name)) = LOWER(TRIM(?)) 
+                                      AND is_disabled = 0");
+            $debugStmt->execute([$roleName]);
+            $matchingRole = $debugStmt->fetch(PDO::FETCH_ASSOC);
+            
+            // Return detailed error with the matching role information
+            echo json_encode([
+                'success' => false, 
+                'message' => 'Role already exists.', 
+                'debug' => [
+                    'input_role' => [
+                        'original' => $originalRoleName,
+                        'trimmed' => $trimmedRoleName,
+                        'hex' => $hexEncoded,
+                        'unicode' => $unicodePoints,
+                        'length_original' => strlen($originalRoleName),
+                        'length_trimmed' => strlen($trimmedRoleName)
+                    ],
+                    'matching_role' => [
+                        'name' => $matchingRole['Role_Name'] ?? 'Unknown',
+                        'hex' => $matchingRole['hex_name'] ?? 'Unknown',
+                        'id' => $matchingRole['id'] ?? 'Unknown',
+                        'length' => $matchingRole['name_length'] ?? 0,
+                        'trimmed_length' => $matchingRole['trimmed_length'] ?? 0
+                    ],
+                    'similar_roles' => $similarRoles,
+                    'query' => $checkQuery
+                ]
+            ]);
             exit();
         }
 
@@ -111,7 +172,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ?>
 
 <!-- Display the add role form when not processing a POST request -->
-<form id="addRoleForm" method="POST" action="add_role.php">
+<form id="addRoleForm" method="POST">
     <div class="mb-3">
         <label for="role_name" class="form-label">Role Name</label>
         <input type="text" name="role_name" id="role_name" class="form-control" placeholder="Enter role name" required>
@@ -125,7 +186,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <script>
     // Submit form via AJAX with toast notifications.
     $("#addRoleForm").submit(function(e) {
+        // Prevent the default form submission
         e.preventDefault();
+        
+        // Disable the submit button to prevent double submission
+        $(this).find('button[type="submit"]').prop('disabled', true);
+        
         $.ajax({
             url: "add_role.php",
             type: "POST",
@@ -133,23 +199,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             dataType: "json",
             success: function(response) {
                 if(response.success) {
+                    // Show only success message
                     showToast(response.message, 'success', 5000);
+                    
                     // Close the modal before refreshing table
                     $('#addRoleModal').modal('hide');
-                    $('body').removeClass('modal-open');
-                    $('body').css('overflow', '');
-                    $('body').css('padding-right', '');
-                    $('.modal-backdrop').remove();
                     
-                    // Refresh the table without reloading the whole page
-                    window.parent.refreshRolesTable();
+                    // Clean up modal elements
+                    setTimeout(function() {
+                        $('body').removeClass('modal-open');
+                        $('body').css('overflow', '');
+                        $('body').css('padding-right', '');
+                        $('.modal-backdrop').remove();
+                        
+                        // Refresh the table without reloading the whole page
+                        if (typeof window.parent.refreshRolesTable === 'function') {
+                            window.parent.refreshRolesTable();
+                        }
+                    }, 300);
                 } else {
-                    showToast(response.message, 'error');
+                    // Re-enable the submit button on error
+                    $("#addRoleForm").find('button[type="submit"]').prop('disabled', false);
+                    
+                    // Check if we have debug information
+                    if (response.debug) {
+                        console.log('Role creation debug info:', response.debug);
+                        
+                        // Create a simplified error message
+                        let errorMessage = 'Role "' + response.debug.input_role.trimmed + '" already exists.';
+                        
+                        showToast(errorMessage, 'error', 5000);
+                    } else {
+                        showToast(response.message, 'error', 5000);
+                    }
                 }
             },
             error: function() {
-                showToast('System error occurred. Please try again.', 'error');
+                // Re-enable the submit button on error
+                $("#addRoleForm").find('button[type="submit"]').prop('disabled', false);
+                showToast('System error occurred. Please try again.', 'error', 5000);
             },
+            complete: function() {
+                // Additional cleanup if needed
+            }
         });
     });
 </script>
