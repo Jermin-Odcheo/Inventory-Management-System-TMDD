@@ -858,6 +858,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const roleId = parseInt(this.value);
       if (roleId) {
         const role = getRoleById(roleId);
+        if (!selectedRoles) selectedRoles = [];
         addItemToSelection("selected-roles-container", role, "role");
         this.value = "";
         // Reset Select2 to show placeholder after selection
@@ -871,6 +872,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const userId = parseInt(this.value);
       if (userId) {
         const user = getUserById(userId);
+        if (!selectedUsers) selectedUsers = [];
         addItemToSelection("selected-users-container", user, "user");
         this.value = "";
         // Reset Select2 to show placeholder after selection
@@ -1167,12 +1169,10 @@ document.addEventListener("DOMContentLoaded", function () {
   // Save handler for adding users to roles
   if (saveUserRolesBtn && userPrivileges.canCreate) {
     saveUserRolesBtn.addEventListener("click", function () {
-
-
-      // Use window.selectedUsers and window.selectedDepartment which are set by the Select2 handlers
-      const usersToSave = window.selectedUsers || selectedUsers || [];
-      const departmentToSave = window.selectedDepartment || selectedDepartment;
-      const rolesToSave = window.selectedRoles || selectedRoles || [];
+      // Get selected users from the local array first
+      const usersToSave = selectedUsers;
+      const departmentToSave = selectedDepartment;
+      const rolesToSave = selectedRoles;
 
       // Changed validation: only users and department are required, roles are optional
       if (!usersToSave || usersToSave.length === 0) {
