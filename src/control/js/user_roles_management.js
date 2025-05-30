@@ -70,9 +70,9 @@ document.addEventListener("DOMContentLoaded", function () {
       const urlParams = new URLSearchParams(window.location.search);
 
       // Get current filter values
-      const searchValue = searchUsersInput ? searchUsersInput.value : '';
-      const roleFilterValue = roleFilterDropdown ? roleFilterDropdown.value : '';
-      const deptFilterValue = deptFilterDropdown ? deptFilterDropdown.value : '';
+      const searchValue = searchUsersInput.value;
+      const roleFilterValue = roleFilterDropdown.value;
+      const deptFilterValue = deptFilterDropdown.value;
 
       // Set/update search parameter
       if (searchValue) {
@@ -95,51 +95,85 @@ document.addEventListener("DOMContentLoaded", function () {
           urlParams.delete('department');
       }
 
-      // Preserve current sort parameters if they exist
-      const currentSortBy = urlParams.get('sort_by') || window.currentSortBy;
-      const currentSortOrder = urlParams.get('sort_order') || window.currentSortOrder;
-      
-      if (currentSortBy) {
-          urlParams.set('sort_by', currentSortBy);
-      }
-      
-      if (currentSortOrder) {
-          urlParams.set('sort_order', currentSortOrder);
-      }
-
       // Construct the new URL and navigate
       window.location.href = window.location.pathname + '?' + urlParams.toString();
   }
 
-  // Function to update sort icons (up/down arrows) based on current URL parameters
-  function updateSortIcons() {
-      // First remove all active classes and reset icons
+  // Event listener for sort headers (delegated to document for dynamic content)
+  $(document).on('click', '.sort-header', function(e) {
+      e.preventDefault(); // Prevent default link behavior
+      
+      // Show loading indicator
+      $(this).addClass('sorting');
+      
+      const sortBy = $(this).data('sort'); // Get the column to sort by (e.g., 'username', 'departments')
+      const urlParams = new URLSearchParams(window.location.search); // Get current URL parameters
+
+      let currentSortBy = urlParams.get('sort_by') || 'username'; // Default to username if not set
+      let currentSortOrder = urlParams.get('sort_order') || 'asc'; // Default to asc if not set
+
+      let newSortOrder = 'asc'; // Default new sort order
+
+      // If clicking the same header, toggle sort order
+      if (sortBy === currentSortBy) {
+          newSortOrder = (currentSortOrder === 'asc') ? 'desc' : 'asc';
+      }
+
+      // Set the new sort parameters
+      urlParams.set('sort_by', sortBy);
+      urlParams.set('sort_order', newSortOrder);
+
+      // Preserve existing filters (search, role, department)
+      // This is crucial to prevent filters from being removed on sort
+      const searchValue = searchUsersInput ? searchUsersInput.value : '';
+      const roleFilterValue = roleFilterDropdown ? roleFilterDropdown.value : '';
+      const deptFilterValue = deptFilterDropdown ? deptFilterDropdown.value : '';
+
+      if (searchValue) {
+          urlParams.set('search', encodeURIComponent(searchValue));
+      }
+
+      if (roleFilterValue) {
+          urlParams.set('role', encodeURIComponent(roleFilterValue));
+      }
+
+      if (deptFilterValue) {
+          urlParams.set('department', encodeURIComponent(deptFilterValue));
+      }
+
+      // Update visual indicator before page reload
+      updateSortIcons(sortBy, newSortOrder);
+
+      // Reload the page with the new URL parameters
+      window.location.href = window.location.pathname + '?' + urlParams.toString();
+  });
+
+  // Function to update sort icons (up/down arrows) based on current URL parameters or passed values
+  function updateSortIcons(activeSortBy, activeSortOrder) {
+      // If parameters not provided, get from URL
+      if (!activeSortBy || !activeSortOrder) {
+          const urlParams = new URLSearchParams(window.location.search);
+          // Get current sort state, default to 'username' ascending if not set
+          activeSortBy = urlParams.get('sort_by') || 'username';
+          activeSortOrder = urlParams.get('sort_order') || 'asc';
+      }
+
+      // Remove all active sort classes and reset icons
       $('.sort-header').removeClass('active-sort');
       $('.sort-icon').removeClass('bi-caret-up-fill bi-caret-down-fill').addClass('bi-caret-up-fill');
-      
-      // Get the active sort field and direction from either URL or current state variables
-      const urlParams = new URLSearchParams(window.location.search);
-      const activeSortBy = urlParams.get('sort_by') || window.currentSortBy || 'username';
-      const activeSortOrder = urlParams.get('sort_order') || window.currentSortOrder || 'asc';
-      
-      // Store the current sort state in global variables
-      window.currentSortBy = activeSortBy;
-      window.currentSortOrder = activeSortOrder;
 
       // Find the active sort header and add the correct icon
-      const activeHeader = $(`th a.sort-header[data-sort="${activeSortBy}"]`);
+      const activeHeader = $(`.sort-header[data-sort="${activeSortBy}"]`);
       if (activeHeader.length) {
-          // Add active class to the header
+          // Add active class to highlight the sorted column
           activeHeader.addClass('active-sort');
           
-          // Set the appropriate icon based on sort direction
+          // Update the icon based on sort direction
           const icon = activeHeader.find('.sort-icon');
-          icon.removeClass('bi-caret-up-fill bi-caret-down-fill');
-          
           if (activeSortOrder === 'asc') {
-              icon.addClass('bi-caret-up-fill');
+              icon.removeClass('bi-caret-down-fill').addClass('bi-caret-up-fill');
           } else {
-              icon.addClass('bi-caret-down-fill');
+              icon.removeClass('bi-caret-up-fill').addClass('bi-caret-down-fill');
           }
       }
   }
@@ -858,7 +892,6 @@ document.addEventListener("DOMContentLoaded", function () {
       const roleId = parseInt(this.value);
       if (roleId) {
         const role = getRoleById(roleId);
-        if (!selectedRoles) selectedRoles = [];
         addItemToSelection("selected-roles-container", role, "role");
         this.value = "";
         // Reset Select2 to show placeholder after selection
@@ -872,7 +905,6 @@ document.addEventListener("DOMContentLoaded", function () {
       const userId = parseInt(this.value);
       if (userId) {
         const user = getUserById(userId);
-        if (!selectedUsers) selectedUsers = [];
         addItemToSelection("selected-users-container", user, "user");
         this.value = "";
         // Reset Select2 to show placeholder after selection
@@ -958,6 +990,21 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
+  // DISABLED: These automatic triggers are removed to only filter when the filter button is clicked
+  /*
+  if (searchUsersInput) {
+    searchUsersInput.addEventListener("input", updateUrlAndReload);
+  }
+
+  if (roleFilterDropdown) {
+    roleFilterDropdown.addEventListener("change", updateUrlAndReload);
+  }
+
+  if (deptFilterDropdown) {
+    deptFilterDropdown.addEventListener("change", updateUrlAndReload);
+  }
+  */
+  
   // New function to handle filter button click
   function handleFilterButtonClick() {
     console.log('Filter button clicked in JS');
@@ -1169,10 +1216,12 @@ document.addEventListener("DOMContentLoaded", function () {
   // Save handler for adding users to roles
   if (saveUserRolesBtn && userPrivileges.canCreate) {
     saveUserRolesBtn.addEventListener("click", function () {
-      // Get selected users from the local array first
-      const usersToSave = selectedUsers;
-      const departmentToSave = selectedDepartment;
-      const rolesToSave = selectedRoles;
+
+
+      // Use window.selectedUsers and window.selectedDepartment which are set by the Select2 handlers
+      const usersToSave = window.selectedUsers || selectedUsers || [];
+      const departmentToSave = window.selectedDepartment || selectedDepartment;
+      const rolesToSave = window.selectedRoles || selectedRoles || [];
 
       // Changed validation: only users and department are required, roles are optional
       if (!usersToSave || usersToSave.length === 0) {
@@ -1619,14 +1668,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Initial render of the table and update sort icons on page load
   renderUserRolesTable();
-  
-  // Initialize sort variables from URL if available
-  const urlParams = new URLSearchParams(window.location.search);
-  window.currentSortBy = urlParams.get('sort_by') || 'username';
-  window.currentSortOrder = urlParams.get('sort_order') || 'asc';
-  
-  // Update sort icons based on current state
-  updateSortIcons();
+  updateSortIcons(); // Call this to set initial sort icon state
 
   // Count unique users for initial pagination
   const uniqueUsernamesOnLoad = new Set(usersData.map(user => user.username));
@@ -1640,4 +1682,36 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Update the hidden input for pagination to use the correct count
   document.getElementById('total-users').value = totalUsersOnLoad;
+  
+  // Add CSS for sorting visual feedback
+  $('<style>')
+    .prop('type', 'text/css')
+    .html(`
+      .sort-header {
+          position: relative;
+          cursor: pointer;
+          user-select: none;
+          color: #212529;
+          text-decoration: none;
+      }
+      .sort-header:hover {
+          background-color: #f8f9fa;
+          color: #0d6efd;
+      }
+      .sort-header.active-sort {
+          background-color: #e9f0ff;
+          font-weight: 600;
+      }
+      .sort-header.active-sort .sort-icon {
+          color: #0d6efd;
+      }
+      .sort-header.sorting {
+          opacity: 0.7;
+      }
+      .sort-icon {
+          margin-left: 5px;
+          font-size: 0.8em;
+      }
+    `)
+    .appendTo('head');
 });
