@@ -70,9 +70,9 @@ document.addEventListener("DOMContentLoaded", function () {
       const urlParams = new URLSearchParams(window.location.search);
 
       // Get current filter values
-      const searchValue = searchUsersInput.value;
-      const roleFilterValue = roleFilterDropdown.value;
-      const deptFilterValue = deptFilterDropdown.value;
+      const searchValue = searchUsersInput ? searchUsersInput.value : '';
+      const roleFilterValue = roleFilterDropdown ? roleFilterDropdown.value : '';
+      const deptFilterValue = deptFilterDropdown ? deptFilterDropdown.value : '';
 
       // Set/update search parameter
       if (searchValue) {
@@ -95,76 +95,51 @@ document.addEventListener("DOMContentLoaded", function () {
           urlParams.delete('department');
       }
 
+      // Preserve current sort parameters if they exist
+      const currentSortBy = urlParams.get('sort_by') || window.currentSortBy;
+      const currentSortOrder = urlParams.get('sort_order') || window.currentSortOrder;
+      
+      if (currentSortBy) {
+          urlParams.set('sort_by', currentSortBy);
+      }
+      
+      if (currentSortOrder) {
+          urlParams.set('sort_order', currentSortOrder);
+      }
+
       // Construct the new URL and navigate
       window.location.href = window.location.pathname + '?' + urlParams.toString();
   }
 
-  // Event listener for sort headers (delegated to document for dynamic content)
-  $(document).on('click', '.sort-header', function(e) {
-      e.preventDefault(); // Prevent default link behavior
-      const sortBy = $(this).data('sort'); // Get the column to sort by (e.g., 'username', 'departments')
-      const urlParams = new URLSearchParams(window.location.search); // Get current URL parameters
-
-      let currentSortBy = urlParams.get('sort_by');
-      let currentSortOrder = urlParams.get('sort_order');
-
-      let newSortOrder = 'asc'; // Default new sort order
-
-      // If clicking the same header, toggle sort order
-      if (sortBy === currentSortBy) {
-          newSortOrder = (currentSortOrder === 'asc') ? 'desc' : 'asc';
-      }
-
-      // Set the new sort parameters
-      urlParams.set('sort_by', sortBy);
-      urlParams.set('sort_order', newSortOrder);
-
-      // Preserve existing filters (search, role, department)
-      // This is crucial to prevent filters from being removed on sort
-      const searchValue = searchUsersInput.value;
-      const roleFilterValue = roleFilterDropdown.value;
-      const deptFilterValue = deptFilterDropdown.value;
-
-      if (searchValue) {
-          urlParams.set('search', encodeURIComponent(searchValue));
-      } else {
-          urlParams.delete('search');
-      }
-
-      if (roleFilterValue) {
-          urlParams.set('role', encodeURIComponent(roleFilterValue));
-      } else {
-          urlParams.delete('role');
-      }
-
-      if (deptFilterValue) {
-          urlParams.set('department', encodeURIComponent(deptFilterValue));
-      } else {
-          urlParams.delete('department');
-      }
-
-      // Reload the page with the new URL parameters
-      window.location.href = window.location.pathname + '?' + urlParams.toString();
-  });
-
   // Function to update sort icons (up/down arrows) based on current URL parameters
   function updateSortIcons() {
+      // First remove all active classes and reset icons
+      $('.sort-header').removeClass('active-sort');
+      $('.sort-icon').removeClass('bi-caret-up-fill bi-caret-down-fill').addClass('bi-caret-up-fill');
+      
+      // Get the active sort field and direction from either URL or current state variables
       const urlParams = new URLSearchParams(window.location.search);
-      // Get current sort state, default to 'username' ascending if not set
-      const activeSortBy = urlParams.get('sort_by') || 'username';
-      const activeSortOrder = urlParams.get('sort_order') || 'asc';
-
-      // Remove all sort icons from all headers first
-      $('.sort-icon').removeClass('bi-caret-up-fill bi-caret-down-fill');
+      const activeSortBy = urlParams.get('sort_by') || window.currentSortBy || 'username';
+      const activeSortOrder = urlParams.get('sort_order') || window.currentSortOrder || 'asc';
+      
+      // Store the current sort state in global variables
+      window.currentSortBy = activeSortBy;
+      window.currentSortOrder = activeSortOrder;
 
       // Find the active sort header and add the correct icon
       const activeHeader = $(`th a.sort-header[data-sort="${activeSortBy}"]`);
       if (activeHeader.length) {
+          // Add active class to the header
+          activeHeader.addClass('active-sort');
+          
+          // Set the appropriate icon based on sort direction
           const icon = activeHeader.find('.sort-icon');
+          icon.removeClass('bi-caret-up-fill bi-caret-down-fill');
+          
           if (activeSortOrder === 'asc') {
-              icon.addClass('bi-caret-up-fill'); // Set to up arrow for ascending
+              icon.addClass('bi-caret-up-fill');
           } else {
-              icon.addClass('bi-caret-down-fill'); // Set to down arrow for descending
+              icon.addClass('bi-caret-down-fill');
           }
       }
   }
@@ -981,21 +956,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // DISABLED: These automatic triggers are removed to only filter when the filter button is clicked
-  /*
-  if (searchUsersInput) {
-    searchUsersInput.addEventListener("input", updateUrlAndReload);
-  }
-
-  if (roleFilterDropdown) {
-    roleFilterDropdown.addEventListener("change", updateUrlAndReload);
-  }
-
-  if (deptFilterDropdown) {
-    deptFilterDropdown.addEventListener("change", updateUrlAndReload);
-  }
-  */
-  
   // New function to handle filter button click
   function handleFilterButtonClick() {
     console.log('Filter button clicked in JS');
@@ -1659,7 +1619,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Initial render of the table and update sort icons on page load
   renderUserRolesTable();
-  updateSortIcons(); // Call this to set initial sort icon state
+  
+  // Initialize sort variables from URL if available
+  const urlParams = new URLSearchParams(window.location.search);
+  window.currentSortBy = urlParams.get('sort_by') || 'username';
+  window.currentSortOrder = urlParams.get('sort_order') || 'asc';
+  
+  // Update sort icons based on current state
+  updateSortIcons();
 
   // Count unique users for initial pagination
   const uniqueUsernamesOnLoad = new Set(usersData.map(user => user.username));

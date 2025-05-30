@@ -614,6 +614,16 @@ $userRoleDepartments = array_values($userRoleMap);
         // Pass current sort state to JavaScript
         var currentSortBy = "<?php echo htmlspecialchars($sortBy); ?>";
         var currentSortOrder = "<?php echo htmlspecialchars($sortDir); ?>";
+        
+        // Make sure global window variables are set
+        window.currentSortBy = currentSortBy;
+        window.currentSortOrder = currentSortOrder;
+        
+        // Log the initial sort state for debugging
+        console.log('Initial sort state:', { 
+            currentSortBy: window.currentSortBy,
+            currentSortOrder: window.currentSortOrder
+        });
     </script>
 
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/user_roles_management.js" defer></script>
@@ -622,6 +632,43 @@ $userRoleDepartments = array_values($userRoleMap);
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
         $(document).ready(function() {
+            // Make sure sort variables are properly initialized
+            window.currentSortBy = currentSortBy || "username";
+            window.currentSortOrder = currentSortOrder || "asc";
+            
+            // Ensure the sort headers reflect the current sort state on page load
+            $(document).ready(function() {
+                const urlParams = new URLSearchParams(window.location.search);
+                const urlSortBy = urlParams.get('sort_by');
+                const urlSortOrder = urlParams.get('sort_order');
+                
+                // If URL has sort parameters, use them
+                if (urlSortBy) {
+                    window.currentSortBy = urlSortBy;
+                }
+                
+                if (urlSortOrder) {
+                    window.currentSortOrder = urlSortOrder;
+                }
+                
+                // Update the sort header visual state
+                $('.sort-header').removeClass('active-sort');
+                $('.sort-icon').removeClass('bi-caret-up-fill bi-caret-down-fill').addClass('bi-caret-up-fill');
+                
+                const activeHeader = $(`.sort-header[data-sort="${window.currentSortBy}"]`);
+                if (activeHeader.length) {
+                    activeHeader.addClass('active-sort');
+                    const icon = activeHeader.find('.sort-icon');
+                    icon.removeClass('bi-caret-up-fill bi-caret-down-fill');
+                    
+                    if (window.currentSortOrder === 'asc') {
+                        icon.addClass('bi-caret-up-fill');
+                    } else {
+                        icon.addClass('bi-caret-down-fill');
+                    }
+                }
+            });
+            
             // Initialize pagination for user roles table
             window.paginationConfig = {
                 tableId: 'urTable',
@@ -1161,309 +1208,102 @@ $userRoleDepartments = array_values($userRoleMap);
                 window.location.href = window.location.pathname;
             });
 
-            // Sorting handler
+            // REMOVE THE DUPLICATE SORTING HANDLER AND USE ONLY THE ONE FROM THE JS FILE
+            // Unbind any existing click handlers from sort headers
+            $('.sort-header').off('click');
+            
+            // Re-bind the sort handler with a fixed implementation
             $('.sort-header').on('click', function(e) {
                 e.preventDefault();
                 const sortField = $(this).data('sort');
                 
                 // Toggle sort direction or set to ascending if changing column
-                if (currentSortBy === sortField) {
-                    currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
-                } else {
-                    currentSortBy = sortField;
-                    currentSortOrder = 'asc';
+                let newSortOrder = 'asc';
+                
+                // If clicking the same header that's already active, toggle sort order
+                if (window.currentSortBy === sortField) {
+                    newSortOrder = (window.currentSortOrder === 'asc') ? 'desc' : 'asc';
                 }
                 
-                // Update sort icons
-                updateSortIcons();
+                // Add loading indicator to the clicked header
+                $('.sort-header').removeClass('sorting');
+                $(this).addClass('sorting');
+                $(this).find('.sort-icon')
+                    .removeClass('bi-caret-up-fill bi-caret-down-fill')
+                    .addClass('bi-hourglass-split');
                 
-                // Perform client-side sorting
-                sortTable(sortField, currentSortOrder);
+                // Update URL with sort parameters
+                const urlParams = new URLSearchParams(window.location.search);
+                
+                // Set the new sort parameters
+                urlParams.set('sort_by', sortField);
+                urlParams.set('sort_order', newSortOrder);
+                
+                // Preserve existing filters
+                const searchValue = $('#search-users').val();
+                const roleFilterValue = $('#role-filter').val();
+                const deptFilterValue = $('#dept-filter').val();
+                
+                if (searchValue) {
+                    urlParams.set('search', encodeURIComponent(searchValue));
+                } else {
+                    urlParams.delete('search');
+                }
+                
+                if (roleFilterValue) {
+                    urlParams.set('role', encodeURIComponent(roleFilterValue));
+                } else {
+                    urlParams.delete('role');
+                }
+                
+                if (deptFilterValue) {
+                    urlParams.set('department', encodeURIComponent(deptFilterValue));
+                } else {
+                    urlParams.delete('department');
+                }
+                
+                // Save the sort state to window variables before reloading
+                window.currentSortBy = sortField;
+                window.currentSortOrder = newSortOrder;
+                
+                console.log(`Sorting by ${sortField} in ${newSortOrder} order`);
+                
+                // Add a short delay to show the loading indicator
+                setTimeout(function() {
+                    // Reload the page with the new URL parameters for server-side sorting
+                    window.location.href = window.location.pathname + '?' + urlParams.toString();
+                }, 300);
             });
             
-            // Function to sort the table
-            function sortTable(field, direction) {
-                const tbody = document.querySelector('#urTable tbody');
-                const rows = Array.from(tbody.querySelectorAll('tr'));
-                
-                // Sort the rows
-                rows.sort((a, b) => {
-                    let aValue, bValue;
-                    
-                    // Get values based on the field
-                    if (field === 'username') {
-                        aValue = a.querySelector('td:nth-child(2)')?.textContent.toLowerCase() || '';
-                        bValue = b.querySelector('td:nth-child(2)')?.textContent.toLowerCase() || '';
-                    } else if (field === 'departments') {
-                        aValue = a.querySelector('td:nth-child(3)')?.textContent.toLowerCase() || '';
-                        bValue = b.querySelector('td:nth-child(3)')?.textContent.toLowerCase() || '';
-                    } else if (field === 'roles') {
-                        aValue = a.querySelector('td:nth-child(4)')?.textContent.toLowerCase() || '';
-                        bValue = b.querySelector('td:nth-child(4)')?.textContent.toLowerCase() || '';
-                    }
-                    
-                    // Compare values based on direction
-                    if (direction === 'asc') {
-                        return aValue.localeCompare(bValue);
-                    } else {
-                        return bValue.localeCompare(aValue);
-                    }
-                });
-                
-                // Update the DOM
-                rows.forEach(row => tbody.appendChild(row));
-                
-                // Update filteredRows and pagination
-                window.filteredRows = rows;
-                window.paginationConfig.currentPage = 1;
-                window.updatePagination();
-            }
-            
-            // Function to update sort icons (up/down arrows) based on current URL parameters
+            // Function to update sort icons (up/down arrows) based on current sort state
             function updateSortIcons() {
-                // Remove all sort icons from all headers first
-                $('.sort-icon').removeClass('bi-caret-up-fill bi-caret-down-fill');
+                // Remove all active classes first
+                $('.sort-header').removeClass('active-sort');
+                $('.sort-icon').removeClass('bi-caret-up-fill bi-caret-down-fill').addClass('bi-caret-up-fill');
                 
                 // Only proceed if we have a valid sort field
-                if (!currentSortBy) return;
+                if (!window.currentSortBy) return;
                 
                 // Find the matching sort header
-                const activeHeader = $(`.sort-header[data-sort="${currentSortBy}"]`);
+                const activeHeader = $(`.sort-header[data-sort="${window.currentSortBy}"]`);
                 if (activeHeader.length) {
-                    // Set the appropriate icon based on sort direction
-                    const iconClass = currentSortOrder === 'asc' ? 'bi-caret-up-fill' : 'bi-caret-down-fill';
-                    activeHeader.find('.sort-icon').addClass(iconClass);
-                    
-                    // Highlight the active header column
-                    $('.sort-header').removeClass('active-sort');
+                    // Add active class to the header
                     activeHeader.addClass('active-sort');
+                    
+                    // Set the appropriate icon based on sort direction
+                    const icon = activeHeader.find('.sort-icon');
+                    icon.removeClass('bi-caret-up-fill bi-caret-down-fill');
+                    
+                    if (window.currentSortOrder === 'asc') {
+                        icon.addClass('bi-caret-up-fill');
+                    } else {
+                        icon.addClass('bi-caret-down-fill');
+                    }
                 }
             }
             
-            // Initialize the table
+            // Initialize the table with proper sort icons
             updateSortIcons();
-            
-            // Set initial filtered rows
-            window.allRows = Array.from(document.querySelectorAll('#urTable tbody tr'));
-            window.filteredRows = [...window.allRows];
-            
-            // Run initial setup to properly initialize pagination and remove automatic filters
-            $(document).ready(function() {
-                // Initialize pagination with correct user grouping
-                setTimeout(function() {
-                    // Make sure rows are properly initialized
-                    window.allRows = Array.from(document.querySelectorAll('#urTable tbody tr'));
-                    window.filteredRows = [...window.allRows];
-                    
-                    // Force a proper pagination update with user grouping
-                    window.updatePagination();
-                    
-                    console.log('Initial pagination setup complete');
-                    
-                    // *** NUCLEAR OPTION: REPLACE SEARCH FIELD WITH A CLONE TO REMOVE ALL LISTENERS ***
-                    // This completely removes any attached event listeners by creating a fresh copy
-                    const searchField = document.getElementById('search-users');
-                    if (searchField) {
-                        const clone = searchField.cloneNode(true);
-                        searchField.parentNode.replaceChild(clone, searchField);
-                        
-                        // Add a special class to mark it as protected
-                        clone.classList.add('no-auto-filter');
-                        
-                        // Add a capture phase event listener to block ANY events before they propagate
-                        clone.addEventListener('input', function(e) {
-                            console.log('Search input changed, blocking auto-filter');
-                            window.filterCalledFrom = 'auto';
-                            e.stopPropagation();
-                        }, true);
-                        
-                        clone.addEventListener('keyup', function(e) {
-                            console.log('Search keyup, blocking auto-filter');
-                            window.filterCalledFrom = 'auto';
-                            e.stopPropagation();
-                        }, true);
-                        
-                        clone.addEventListener('change', function(e) {
-                            console.log('Search changed, blocking auto-filter');
-                            window.filterCalledFrom = 'auto';
-                            e.stopPropagation();
-                        }, true);
-                    }
-                    
-                    // Also replace role and department filters with clones
-                    const roleFilter = document.getElementById('role-filter');
-                    const deptFilter = document.getElementById('dept-filter');
-                    
-                    // We need to save the selected values before replacing
-                    const roleValue = roleFilter ? roleFilter.value : '';
-                    const deptValue = deptFilter ? deptFilter.value : '';
-                    
-                    // Clone and replace the role filter
-                    if (roleFilter) {
-                        const roleClone = roleFilter.cloneNode(true);
-                        roleFilter.parentNode.replaceChild(roleClone, roleFilter);
-                        roleClone.value = roleValue;
-                        roleClone.classList.add('no-auto-filter');
-                    }
-                    
-                    // Clone and replace the department filter
-                    if (deptFilter) {
-                        const deptClone = deptFilter.cloneNode(true);
-                        deptFilter.parentNode.replaceChild(deptClone, deptFilter);
-                        deptClone.value = deptValue;
-                        deptClone.classList.add('no-auto-filter');
-                    }
-                    
-                    // *** DISABLE AUTOMATIC FILTERING ***
-                    // Remove any and all automatic filter triggers
-                    $('#search-users').off('input');
-                    $('#search-users').off('keyup');
-                    $('#search-users').off('keydown');
-                    $('#search-users').off('change');
-                    
-                    $('#role-filter').off('change');
-                    $('#dept-filter').off('change');
-                    
-                    // Remove Select2 event handlers that might trigger filtering
-                    if ($.fn.select2) {
-                        $('#role-filter').off('select2:select');
-                        $('#role-filter').off('select2:unselect');
-                        $('#dept-filter').off('select2:select');
-                        $('#dept-filter').off('select2:unselect');
-                    }
-                    
-                    // Make sure filter-btn only has one click handler
-                    $('#filter-btn').off('click').on('click', function() {
-                        console.log('Filter button clicked after rebinding');
-                        window.filterCalledFrom = 'button';
-                        filterTable();
-                    });
-                    
-                    // Make sure the JS file's filter button handler is removed
-                    // This is needed because the JS file also attaches a handler
-                    if (window.handleFilterButtonClick) {
-                        $('#filter-btn').off('click', window.handleFilterButtonClick);
-                    }
-                    
-                    // Override standard change/input events for all filter inputs
-                    $('#search-users, #role-filter, #dept-filter').on('input change keyup select2:select select2:unselect', function(e) {
-                        // Set flag that this was triggered automatically
-                        window.filterCalledFrom = 'auto';
-                        console.log('Input/change event intercepted, not filtering automatically');
-                        e.stopPropagation();
-                        // Don't call filterTable() here - let the button do it
-                    });
-                    
-                    // Re-initialize Select2 with explicit event handling to prevent auto-filtering
-                    if ($.fn.select2) {
-                        try {
-                            // Destroy existing Select2 instances
-                            $('#role-filter').select2('destroy');
-                            $('#dept-filter').select2('destroy');
-                            
-                            // Initialize with new options
-                            $('#role-filter').select2({
-                                placeholder: 'All Roles',
-                                allowClear: true,
-                                width: '100%',
-                                minimumResultsForSearch: 0
-                            });
-                            
-                            $('#dept-filter').select2({
-                                placeholder: 'All Departments',
-                                allowClear: true,
-                                width: '100%',
-                                minimumResultsForSearch: 0
-                            });
-                            
-                            // Add explicit non-filtering event handlers
-                            $('#role-filter').on('select2:select', function(e) {
-                                console.log('Role select2:select, preventing auto-filter');
-                                window.filterCalledFrom = 'auto';
-                                e.stopPropagation();
-                            });
-                            
-                            $('#role-filter').on('select2:unselect', function(e) {
-                                console.log('Role select2:unselect, preventing auto-filter');
-                                window.filterCalledFrom = 'auto';
-                                e.stopPropagation();
-                            });
-                            
-                            $('#dept-filter').on('select2:select', function(e) {
-                                console.log('Department select2:select, preventing auto-filter');
-                                window.filterCalledFrom = 'auto';
-                                e.stopPropagation();
-                            });
-                            
-                            $('#dept-filter').on('select2:unselect', function(e) {
-                                console.log('Department select2:unselect, preventing auto-filter');
-                                window.filterCalledFrom = 'auto';
-                                e.stopPropagation();
-                            });
-                        } catch(e) {
-                            console.error('Error reinitializing Select2:', e);
-                        }
-                    }
-                    
-                    // MOST IMPORTANT FIX: Override the window.filterTable function with a controlled version
-                    // This is what pagination.js is likely calling automatically
-                    const originalFilterTable = window.filterTable;
-                    window.filterTable = function() {
-                        // Only run the real filter if it was called from the button
-                        if (window.filterCalledFrom === 'button') {
-                            console.log('Running filterTable from button click');
-                            return originalFilterTable.apply(this, arguments);
-                        } else {
-                            console.log('Prevented automatic filtering call from pagination.js');
-                            // Still update pagination without filtering
-                            if (typeof window.updatePagination === 'function') {
-                                window.updatePagination();
-                            }
-                            return false;
-                        }
-                    };
-                    
-                    // Keep the isPageSpecific flag
-                    window.filterTable.isPageSpecific = true;
-                    
-                    // Add global event capturing to block any input events on the search field
-                    document.addEventListener('input', function(e) {
-                        if (e.target.id === 'search-users' || e.target.classList.contains('no-auto-filter')) {
-                            console.log('Blocked input event at document level');
-                            window.filterCalledFrom = 'auto';
-                            // We don't stop propagation here to allow normal input behavior,
-                            // but we set the flag to prevent filtering
-                        }
-                    }, true);
-                    
-                    // Add global handler for Select2 opening to prevent any auto-filtering
-                    $(document).on('select2:open', function() {
-                        console.log('Select2 opened, preventing auto-filtering');
-                        window.filterCalledFrom = 'auto';
-                    });
-                    
-                    // Apply these overrides after a short delay to make sure they take effect last
-                    setTimeout(function() {
-                        // Double-check and forcibly prevent filtering on input
-                        const inputs = document.querySelectorAll('input, select');
-                        inputs.forEach(input => {
-                            input.setAttribute('data-no-auto-filter', 'true');
-                        });
-                        
-                        // Completely disable the native prototype addEventListener for search-users
-                        const searchElement = document.getElementById('search-users');
-                        if (searchElement) {
-                            const originalAddEventListener = searchElement.addEventListener;
-                            searchElement.addEventListener = function(type, listener, options) {
-                                if (type === 'input' || type === 'change' || type === 'keyup') {
-                                    console.log(`Blocked attempt to add ${type} listener to search field`);
-                                    return;
-                                }
-                            };
-                        }
-                    });
-                });
-            });
         });
     </script>
 </body>
