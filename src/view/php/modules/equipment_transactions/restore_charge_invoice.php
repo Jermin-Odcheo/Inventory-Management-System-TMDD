@@ -61,17 +61,39 @@ if (isset($_POST['id'])) {
         
         echo json_encode(['status' => 'success', 'message' => 'Charge invoice restored successfully']);
     } catch (PDOException $e) {
-        // Log the error
-        logAudit(
-            $pdo,
-            'restored',
-            'Charge Invoice ID: ' . $ciId . ' restoration failed',
-            'Failed',
-            json_encode(['id' => $ciId, 'error' => $e->getMessage()]),
-            null,
-            $ciId
-        );
-        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        // Check for duplicate entry errors (integrity constraint violations)
+        if ($e->getCode() == '23000' && 
+            (strpos($e->getMessage(), 'Duplicate entry') !== false || 
+             strpos($e->getMessage(), 'Integrity constraint violation: 1062') !== false)) {
+            
+            // Log the error with a more specific message
+            logAudit(
+                $pdo,
+                'restored',
+                'Charge Invoice ID: ' . $ciId . ' restoration failed - A document with the same CI number already exists',
+                'Failed',
+                json_encode(['id' => $ciId, 'error' => $e->getMessage()]),
+                null,
+                $ciId
+            );
+            
+            echo json_encode([
+                'status' => 'error', 
+                'message' => 'A document with the same CI number already exists in the system. Please check existing charge invoices before restoring.'
+            ]);
+        } else {
+            // Log the general error
+            logAudit(
+                $pdo,
+                'restored',
+                'Charge Invoice ID: ' . $ciId . ' restoration failed',
+                'Failed',
+                json_encode(['id' => $ciId, 'error' => $e->getMessage()]),
+                null,
+                $ciId
+            );
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        }
     }
 } else if (isset($_POST['ci_ids']) && is_array($_POST['ci_ids'])) {
     $ciIds = array_filter(array_map('intval', $_POST['ci_ids']));
@@ -124,17 +146,39 @@ if (isset($_POST['id'])) {
         
         echo json_encode(['status' => 'success', 'message' => 'Selected charge invoices restored successfully']);
     } catch (PDOException $e) {
-        // Log the error
-        logAudit(
-            $pdo,
-            'restored',
-            'Bulk Charge Invoice restoration failed for IDs: ' . implode(', ', $ciIds),
-            'Failed',
-            json_encode(['ids' => implode(',', $ciIds), 'error' => $e->getMessage()]),
-            null,
-            null
-        );
-        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        // Check for duplicate entry errors (integrity constraint violations)
+        if ($e->getCode() == '23000' && 
+            (strpos($e->getMessage(), 'Duplicate entry') !== false || 
+             strpos($e->getMessage(), 'Integrity constraint violation: 1062') !== false)) {
+            
+            // Log the error with a more specific message
+            logAudit(
+                $pdo,
+                'restored',
+                'Bulk Charge Invoice restoration failed for IDs: ' . implode(', ', $ciIds) . ' - Documents with the same CI numbers already exist',
+                'Failed',
+                json_encode(['ids' => implode(',', $ciIds), 'error' => $e->getMessage()]),
+                null,
+                null
+            );
+            
+            echo json_encode([
+                'status' => 'error', 
+                'message' => 'One or more charge invoices cannot be restored because documents with the same CI numbers already exist in the system.'
+            ]);
+        } else {
+            // Log the general error
+            logAudit(
+                $pdo,
+                'restored',
+                'Bulk Charge Invoice restoration failed for IDs: ' . implode(', ', $ciIds),
+                'Failed',
+                json_encode(['ids' => implode(',', $ciIds), 'error' => $e->getMessage()]),
+                null,
+                null
+            );
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        }
     }
 } else {
     echo json_encode(['status' => 'error', 'message' => 'No charge invoice selected']);

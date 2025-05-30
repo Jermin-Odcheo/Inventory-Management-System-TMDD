@@ -765,7 +765,24 @@ function formatChanges($oldJsonStr)
                                 showToast(response.message, 'success');
                             });
                         } else {
-                            showToast(response.message, 'error');
+                            // Check for specific duplicate entry error and display user-friendly message
+                            if (response.message && (
+                                response.message.includes('Duplicate entry') || 
+                                response.message.includes('Integrity constraint violation: 1062')
+                            )) {
+                                // Display a user-friendly message based on the module type
+                                if (restoreModule === 'Purchase Order') {
+                                    showToast('This Purchase Order cannot be restored because a document with the same PO number already exists in the system.', 'error');
+                                } else if (restoreModule === 'Charge Invoice') {
+                                    showToast('This Charge Invoice cannot be restored because a document with the same CI number already exists in the system.', 'error');
+                                } else if (restoreModule === 'Receiving Report') {
+                                    showToast('This Receiving Report cannot be restored because a document with the same RR number already exists in the system.', 'error');
+                                } else {
+                                    showToast('This record cannot be restored because a similar active record already exists in the system.', 'error');
+                                }
+                            } else {
+                                showToast(response.message, 'error');
+                            }
                         }
                     },
                     error: function() {
@@ -927,7 +944,24 @@ function formatChanges($oldJsonStr)
                             if (response.status && response.status.toLowerCase() === 'success') {
                                 successCount++;
                             } else {
+                                // Check for duplicate entry errors and format user-friendly messages
+                                if (response.message && (
+                                    response.message.includes('Duplicate entry') || 
+                                    response.message.includes('Integrity constraint violation: 1062')
+                                )) {
+                                    // Create more user-friendly error messages based on module type
+                                    if (module === 'Purchase Order') {
+                                        errorMessages.push('One or more Purchase Orders cannot be restored because documents with the same PO numbers already exist in the system');
+                                    } else if (module === 'Charge Invoice') {
+                                        errorMessages.push('One or more Charge Invoices cannot be restored because documents with the same CI numbers already exist in the system');
+                                    } else if (module === 'Receiving Report') {
+                                        errorMessages.push('One or more Receiving Reports cannot be restored because documents with the same RR numbers already exist in the system');
+                                    } else {
+                                        errorMessages.push('One or more records cannot be restored because similar active records already exist in the system');
+                                    }
+                                } else {
                                 errorMessages.push(response.message || 'Error processing request');
+                                }
                             }
                             
                             // Check if all requests are completed
@@ -1035,11 +1069,25 @@ function formatChanges($oldJsonStr)
                     $.ajax({
                         url: deleteUrl,
                         method: 'POST',
-                        data: {
-                            bulk: 1,
-                            ids: moduleGroups[module],
-                            permanent: 1
-                        },
+                        data: function() {
+                            // Use the correct parameter name based on module type
+                            var data = { 
+                                bulk: 1,
+                                permanent: 1
+                            };
+                            
+                            if (module === 'Purchase Order') {
+                                data.po_ids = moduleGroups[module];
+                            } else if (module === 'Charge Invoice') {
+                                data.ci_ids = moduleGroups[module];
+                            } else if (module === 'Receiving Report') {
+                                data.rr_ids = moduleGroups[module];
+                            } else {
+                                data.ids = moduleGroups[module]; // Fallback for compatibility
+                            }
+                            
+                            return data;
+                        }(),
                         dataType: 'json',
                         headers: {
                             'X-Requested-With': 'XMLHttpRequest'

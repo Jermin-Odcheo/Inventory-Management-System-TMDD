@@ -65,17 +65,39 @@ if (isset($_POST['id'])) {
         
         echo json_encode(['status' => 'success', 'message' => 'Purchase order restored successfully']);
     } catch (PDOException $e) {
-        // Log the error
-        logAudit(
-            $pdo,
-            'restored',
-            'Purchase Order ID: ' . $poId . ' restoration failed',
-            'Failed',
-            json_encode(['id' => $poId, 'error' => $e->getMessage()]),
-            null,
-            $poId
-        );
-        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        // Check for duplicate entry errors (integrity constraint violations)
+        if ($e->getCode() == '23000' && 
+            (strpos($e->getMessage(), 'Duplicate entry') !== false || 
+             strpos($e->getMessage(), 'Integrity constraint violation: 1062') !== false)) {
+            
+            // Log the error with a more specific message
+            logAudit(
+                $pdo,
+                'restored',
+                'Purchase Order ID: ' . $poId . ' restoration failed - A document with the same PO number already exists',
+                'Failed',
+                json_encode(['id' => $poId, 'error' => $e->getMessage()]),
+                null,
+                $poId
+            );
+            
+            echo json_encode([
+                'status' => 'error', 
+                'message' => 'A document with the same PO number already exists in the system. Please check existing purchase orders before restoring.'
+            ]);
+        } else {
+            // Log the general error
+            logAudit(
+                $pdo,
+                'restored',
+                'Purchase Order ID: ' . $poId . ' restoration failed',
+                'Failed',
+                json_encode(['id' => $poId, 'error' => $e->getMessage()]),
+                null,
+                $poId
+            );
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        }
     }
 } else if (isset($_POST['po_ids']) && is_array($_POST['po_ids'])) {
     $poIds = array_filter(array_map('intval', $_POST['po_ids']));
@@ -128,17 +150,39 @@ if (isset($_POST['id'])) {
         
         echo json_encode(['status' => 'success', 'message' => 'Selected purchase orders restored successfully']);
     } catch (PDOException $e) {
-        // Log the error
-        logAudit(
-            $pdo,
-            'restored',
-            'Bulk Purchase Order restoration failed for IDs: ' . implode(', ', $poIds),
-            'Failed',
-            json_encode(['ids' => implode(',', $poIds), 'error' => $e->getMessage()]),
-            null,
-            null
-        );
-        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        // Check for duplicate entry errors (integrity constraint violations)
+        if ($e->getCode() == '23000' && 
+            (strpos($e->getMessage(), 'Duplicate entry') !== false || 
+             strpos($e->getMessage(), 'Integrity constraint violation: 1062') !== false)) {
+            
+            // Log the error with a more specific message
+            logAudit(
+                $pdo,
+                'restored',
+                'Bulk Purchase Order restoration failed for IDs: ' . implode(', ', $poIds) . ' - Documents with the same PO numbers already exist',
+                'Failed',
+                json_encode(['ids' => implode(',', $poIds), 'error' => $e->getMessage()]),
+                null,
+                null
+            );
+            
+            echo json_encode([
+                'status' => 'error', 
+                'message' => 'One or more purchase orders cannot be restored because documents with the same PO numbers already exist in the system.'
+            ]);
+        } else {
+            // Log the general error
+            logAudit(
+                $pdo,
+                'restored',
+                'Bulk Purchase Order restoration failed for IDs: ' . implode(', ', $poIds),
+                'Failed',
+                json_encode(['ids' => implode(',', $poIds), 'error' => $e->getMessage()]),
+                null,
+                null
+            );
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        }
     }
 } else {
     echo json_encode(['status' => 'error', 'message' => 'No purchase order selected']);

@@ -70,8 +70,12 @@ if (isset($_POST['id']) && isset($_POST['permanent']) && $_POST['permanent'] == 
         );
         echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
     }
-} else if (isset($_POST['ids']) && is_array($_POST['ids']) && isset($_POST['permanent']) && $_POST['permanent'] == 1) {
-    $rrIds = array_filter(array_map('intval', $_POST['ids']));
+} else if (((isset($_POST['ids']) && is_array($_POST['ids'])) || (isset($_POST['rr_ids']) && is_array($_POST['rr_ids']))) && isset($_POST['permanent']) && $_POST['permanent'] == 1) {
+    // Get IDs from either ids or rr_ids parameter
+    $rrIds = isset($_POST['rr_ids']) && is_array($_POST['rr_ids']) ? 
+        array_filter(array_map('intval', $_POST['rr_ids'])) : 
+        array_filter(array_map('intval', $_POST['ids'] ?? []));
+    
     if(empty($rrIds)) {
         echo json_encode(['status' => 'error', 'message' => 'No valid receiving report IDs provided']);
         exit();

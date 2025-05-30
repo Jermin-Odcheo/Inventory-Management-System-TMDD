@@ -70,8 +70,12 @@ if (isset($_POST['id']) && isset($_POST['permanent']) && $_POST['permanent'] == 
         );
         echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
     }
-} else if (isset($_POST['ids']) && is_array($_POST['ids']) && isset($_POST['permanent']) && $_POST['permanent'] == 1) {
-    $ciIds = array_filter(array_map('intval', $_POST['ids']));
+} else if (((isset($_POST['ids']) && is_array($_POST['ids'])) || (isset($_POST['ci_ids']) && is_array($_POST['ci_ids']))) && isset($_POST['permanent']) && $_POST['permanent'] == 1) {
+    // Get IDs from either ids or ci_ids parameter
+    $ciIds = isset($_POST['ci_ids']) && is_array($_POST['ci_ids']) ? 
+        array_filter(array_map('intval', $_POST['ci_ids'])) : 
+        array_filter(array_map('intval', $_POST['ids'] ?? []));
+    
     if(empty($ciIds)) {
         echo json_encode(['status' => 'error', 'message' => 'No valid charge invoice IDs provided']);
         exit();
@@ -98,7 +102,7 @@ if (isset($_POST['id']) && isset($_POST['permanent']) && $_POST['permanent'] == 
             logAudit(
                 $pdo,
                 'Remove',
-                'Charge Invoice "' . ($oldData['ci_no'] ?? 'ID: '.$ciIds) . '" has been permanently deleted',
+                'Charge Invoice "' . ($oldData['ci_no'] ?? 'ID: '.$oldData['id']) . '" has been permanently deleted',
                 'Successful',
                 json_encode($oldData),
                 $oldData['id']

@@ -61,17 +61,39 @@ if (isset($_POST['id'])) {
         
         echo json_encode(['status' => 'success', 'message' => 'Receiving report restored successfully']);
     } catch (PDOException $e) {
-        // Log the error
-        logAudit(
-            $pdo,
-            'restored',
-            'Receiving Report ID: ' . $rrId . ' restoration failed',
-            'Failed',
-            json_encode(['id' => $rrId, 'error' => $e->getMessage()]),
-            null,
-            $rrId
-        );
-        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        // Check for duplicate entry errors (integrity constraint violations)
+        if ($e->getCode() == '23000' && 
+            (strpos($e->getMessage(), 'Duplicate entry') !== false || 
+             strpos($e->getMessage(), 'Integrity constraint violation: 1062') !== false)) {
+            
+            // Log the error with a more specific message
+            logAudit(
+                $pdo,
+                'restored',
+                'Receiving Report ID: ' . $rrId . ' restoration failed - A document with the same RR number already exists',
+                'Failed',
+                json_encode(['id' => $rrId, 'error' => $e->getMessage()]),
+                null,
+                $rrId
+            );
+            
+            echo json_encode([
+                'status' => 'error', 
+                'message' => 'A document with the same RR number already exists in the system. Please check existing receiving reports before restoring.'
+            ]);
+        } else {
+            // Log the general error
+            logAudit(
+                $pdo,
+                'restored',
+                'Receiving Report ID: ' . $rrId . ' restoration failed',
+                'Failed',
+                json_encode(['id' => $rrId, 'error' => $e->getMessage()]),
+                null,
+                $rrId
+            );
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        }
     }
 } else if (isset($_POST['rr_ids']) && is_array($_POST['rr_ids'])) {
     $rrIds = array_filter(array_map('intval', $_POST['rr_ids']));
@@ -124,17 +146,39 @@ if (isset($_POST['id'])) {
         
         echo json_encode(['status' => 'success', 'message' => 'Selected receiving reports restored successfully']);
     } catch (PDOException $e) {
-        // Log the error
-        logAudit(
-            $pdo,
-            'restored',
-            'Bulk Receiving Report restoration failed for IDs: ' . implode(', ', $rrIds),
-            'Failed',
-            json_encode(['ids' => implode(',', $rrIds), 'error' => $e->getMessage()]),
-            null,
-            null
-        );
-        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        // Check for duplicate entry errors (integrity constraint violations)
+        if ($e->getCode() == '23000' && 
+            (strpos($e->getMessage(), 'Duplicate entry') !== false || 
+             strpos($e->getMessage(), 'Integrity constraint violation: 1062') !== false)) {
+            
+            // Log the error with a more specific message
+            logAudit(
+                $pdo,
+                'restored',
+                'Bulk Receiving Report restoration failed for IDs: ' . implode(', ', $rrIds) . ' - Documents with the same RR numbers already exist',
+                'Failed',
+                json_encode(['ids' => implode(',', $rrIds), 'error' => $e->getMessage()]),
+                null,
+                null
+            );
+            
+            echo json_encode([
+                'status' => 'error', 
+                'message' => 'One or more receiving reports cannot be restored because documents with the same RR numbers already exist in the system.'
+            ]);
+        } else {
+            // Log the general error
+            logAudit(
+                $pdo,
+                'restored',
+                'Bulk Receiving Report restoration failed for IDs: ' . implode(', ', $rrIds),
+                'Failed',
+                json_encode(['ids' => implode(',', $rrIds), 'error' => $e->getMessage()]),
+                null,
+                null
+            );
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        }
     }
 } else {
     echo json_encode(['status' => 'error', 'message' => 'No receiving report selected']);
