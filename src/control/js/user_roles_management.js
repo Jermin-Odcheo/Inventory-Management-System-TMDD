@@ -526,6 +526,10 @@ document.addEventListener("DOMContentLoaded", function () {
   function addItemToSelection(containerId, item, type) {
     const container = document.getElementById(containerId);
 
+    // Initialize arrays if they don't exist
+    if (!selectedRoles) selectedRoles = [];
+    if (!selectedUsers) selectedUsers = [];
+
     // Check for duplicates based on type
     if (
       type === "role" &&
@@ -543,14 +547,6 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
-    if (
-      type === "role_for_dept" &&
-      selectedRoles.some((r) => r.id === item.id)
-    ) {
-      Toast.info(`${item.role_name} is already selected`, 2000, "Info");
-      return;
-    }
-
     // For department, allow only one selection
     if (type === "department") {
       // Clear previous selection
@@ -560,8 +556,6 @@ document.addEventListener("DOMContentLoaded", function () {
       selectedRoles.push(item);
     } else if (type === "user") {
       selectedUsers.push(item);
-    } else if (type === "role_for_dept") {
-      selectedRoles.push(item);
     }
 
     const selectedItem = document.createElement("span");
@@ -582,8 +576,6 @@ document.addEventListener("DOMContentLoaded", function () {
         if (type === "user")
           selectedUsers = selectedUsers.filter((u) => u.id !== item.id);
         if (type === "department") selectedDepartment = null;
-        if (type === "role_for_dept")
-          selectedRoles = selectedRoles.filter((r) => r.id !== item.id);
         selectedItem.remove();
       });
   }
@@ -892,6 +884,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const roleId = parseInt(this.value);
       if (roleId) {
         const role = getRoleById(roleId);
+        if (!selectedRoles) selectedRoles = [];
         addItemToSelection("selected-roles-container", role, "role");
         this.value = "";
         // Reset Select2 to show placeholder after selection
@@ -905,6 +898,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const userId = parseInt(this.value);
       if (userId) {
         const user = getUserById(userId);
+        if (!selectedUsers) selectedUsers = [];
         addItemToSelection("selected-users-container", user, "user");
         this.value = "";
         // Reset Select2 to show placeholder after selection
@@ -1216,12 +1210,10 @@ document.addEventListener("DOMContentLoaded", function () {
   // Save handler for adding users to roles
   if (saveUserRolesBtn && userPrivileges.canCreate) {
     saveUserRolesBtn.addEventListener("click", function () {
-
-
-      // Use window.selectedUsers and window.selectedDepartment which are set by the Select2 handlers
-      const usersToSave = window.selectedUsers || selectedUsers || [];
-      const departmentToSave = window.selectedDepartment || selectedDepartment;
-      const rolesToSave = window.selectedRoles || selectedRoles || [];
+      // Get selected users from the local array
+      const usersToSave = selectedUsers;
+      const departmentToSave = selectedDepartment;
+      const rolesToSave = selectedRoles;
 
       // Changed validation: only users and department are required, roles are optional
       if (!usersToSave || usersToSave.length === 0) {
