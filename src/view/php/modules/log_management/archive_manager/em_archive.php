@@ -44,6 +44,75 @@ if (!in_array(strtolower($sort_order), ['asc', 'desc'])) {
 
 $orderByClause = "ORDER BY " . $allowedSortColumns[$sort_by] . " " . strtoupper($sort_order);
 
+// --- Filter Logic ---
+$dateFilterType = $_GET['date_filter_type'] ?? '';
+$moduleType = $_GET['module_type'] ?? '';
+
+$baseWhere = "a.Module IN ('Equipment Location', 'Equipment Status', 'Equipment Details')
+  AND LOWER(a.Action) IN ('delete', 'remove', 'soft delete', 'permanent delete')
+  AND a.TrackID = (
+      SELECT MAX(a2.TrackID)
+      FROM audit_log a2
+      WHERE a2.EntityID = a.EntityID
+        AND a2.Module = a.Module
+  )
+  AND (
+      (a.Module = 'Equipment Location' AND el.is_disabled = 1)
+      OR (a.Module = 'Equipment Status' AND es.is_disabled = 1)
+      OR (a.Module = 'Equipment Details' AND ed.is_disabled = 1)
+  )";
+
+// Apply module type filter
+if (!empty($moduleType)) {
+    $baseWhere .= " AND a.Module = :module_type";
+    $params[':module_type'] = $moduleType;
+}
+
+// Apply search filter
+if (!empty($_GET['search'])) {
+    $searchTerm = '%' . $_GET['search'] . '%';
+    $baseWhere .= " AND (
+        op.Email LIKE :search_email 
+        OR a.Details LIKE :search_details
+        OR a.OldVal LIKE :search_oldval
+        OR a.NewVal LIKE :search_newval
+    )";
+    $params[':search_email'] = $searchTerm;
+    $params[':search_details'] = $searchTerm;
+    $params[':search_oldval'] = $searchTerm;
+    $params[':search_newval'] = $searchTerm;
+}
+
+// Apply date filters
+if ($dateFilterType === 'mdy') {
+    if (!empty($_GET['date_from'])) {
+        $baseWhere .= " AND DATE(a.Date_Time) >= :date_from";
+        $params[':date_from'] = $_GET['date_from'];
+    }
+    if (!empty($_GET['date_to'])) {
+        $baseWhere .= " AND DATE(a.Date_Time) <= :date_to";
+        $params[':date_to'] = $_GET['date_to'];
+    }
+} else if ($dateFilterType === 'month_year') {
+    if (!empty($_GET['month_year_from'])) {
+        $baseWhere .= " AND a.Date_Time >= STR_TO_DATE(:month_year_from, '%Y-%m')";
+        $params[':month_year_from'] = $_GET['month_year_from'];
+    }
+    if (!empty($_GET['month_year_to'])) {
+        $baseWhere .= " AND a.Date_Time < DATE_ADD(STR_TO_DATE(:month_year_to, '%Y-%m'), INTERVAL 1 MONTH)";
+        $params[':month_year_to'] = $_GET['month_year_to'];
+    }
+} else if ($dateFilterType === 'year') {
+    if (!empty($_GET['year_from'])) {
+        $baseWhere .= " AND YEAR(a.Date_Time) >= :year_from";
+        $params[':year_from'] = $_GET['year_from'];
+    }
+    if (!empty($_GET['year_to'])) {
+        $baseWhere .= " AND YEAR(a.Date_Time) <= :year_to";
+        $params[':year_to'] = $_GET['year_to'];
+    }
+}
+
 $query = "
 SELECT
     a.TrackID AS track_id,
@@ -62,26 +131,14 @@ JOIN users op ON a.UserID = op.id
 LEFT JOIN equipment_location el ON a.Module = 'Equipment Location' AND a.EntityID = el.equipment_location_id
 LEFT JOIN equipment_status es ON a.Module = 'Equipment Status' AND a.EntityID = es.equipment_status_id
 LEFT JOIN equipment_details ed ON a.Module = 'Equipment Details' AND a.EntityID = ed.id
-WHERE a.Module IN ('Equipment Location', 'Equipment Status', 'Equipment Details')
-  AND LOWER(a.Action) IN ('delete', 'remove', 'soft delete', 'permanent delete')
-  AND a.TrackID = (
-      SELECT MAX(a2.TrackID)
-      FROM audit_log a2
-      WHERE a2.EntityID = a.EntityID
-        AND a2.Module = a.Module
-  )
-  AND (
-      (a.Module = 'Equipment Location' AND el.is_disabled = 1)
-      OR (a.Module = 'Equipment Status' AND es.is_disabled = 1)
-      OR (a.Module = 'Equipment Details' AND ed.is_disabled = 1)
-  )
+WHERE $baseWhere
 {$orderByClause}
 ";
 
 
 try {
     $stmt = $pdo->prepare($query);
-    $stmt->execute();
+    $stmt->execute($params);
     $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
     if (!$logs) {
         $logs = [];
@@ -179,11 +236,13 @@ function formatChanges($oldJsonStr)
         .main-content {
             padding-top: 150px;
         }
+
         /* Styles for sortable headers */
         th.sortable {
             cursor: pointer;
             position: relative;
-            padding-right: 25px; /* Make space for the icon */
+            padding-right: 25px;
+            /* Make space for the icon */
         }
 
         th.sortable .fas {
@@ -191,22 +250,26 @@ function formatChanges($oldJsonStr)
             right: 8px;
             top: 50%;
             transform: translateY(-50%);
-            color: #ccc; /* Default icon color */
+            color: #ccc;
+            /* Default icon color */
             transition: color 0.2s ease;
         }
 
         th.sortable:hover .fas {
-            color: #888; /* Hover color */
+            color: #888;
+            /* Hover color */
         }
 
         th.sortable.asc .fas.fa-sort-up,
         th.sortable.desc .fas.fa-sort-down {
-            color: #333; /* Active icon color */
+            color: #333;
+            /* Active icon color */
         }
 
         th.sortable.asc .fas.fa-sort,
         th.sortable.desc .fas.fa-sort {
-            display: none; /* Hide generic sort icon when specific order is applied */
+            display: none;
+            /* Hide generic sort icon when specific order is applied */
         }
     </style>
 </head>
@@ -237,31 +300,108 @@ function formatChanges($oldJsonStr)
                         </div>
                     </div>
 
-                    <div class="row mb-4">
-                        <div class="col-md-4 mb-2">
-                            <div class="input-group">
+                    <!-- Filter Section -->
+                    <form method="GET" class="row g-3 mb-4" id="archiveFilterForm" action="">
+                    <div class="col-md-3">
+                            <label for="moduleType" class="form-label">Module Type</label>
+                            <select class="form-select" name="module_type" id="moduleType">
+                                <option value="">All</option>
+                                <?php
+                                // Define the allowed modules
+                                $allowedModules = ['Equipment Details', 'Equipment Location', 'Equipment Status'];
+                                
+                                // If no modules found in database, use the allowed modules
+                                if (empty($moduleTypes)) {
+                                    $moduleTypes = $allowedModules;
+                                }
+                                
+                                // Output the options
+                                foreach ($moduleTypes as $module) {
+                                    $selected = ($_GET['module_type'] ?? '') === $module ? 'selected' : '';
+                                    echo '<option value="' . htmlspecialchars($module) . '" ' . $selected . '>' .
+                                        htmlspecialchars($module) . '</option>';
+                                }
+                                ?>
+                            </select>
+                        </div>
+                        <!-- Date Range selector -->
+                        <div class="col-12 col-md-3">
+                            <label class="form-label fw-semibold">Date Filter Type</label>
+                            <select id="dateFilterType" name="date_filter_type" class="form-select shadow-sm">
+                                <option value="" <?= empty($_GET['date_filter_type']) ? 'selected' : '' ?>>-- Select Type --</option>
+                                <option value="month_year" <?= (($_GET['date_filter_type'] ?? '') === 'month_year') ? 'selected' : '' ?>>Month-Year Range</option>
+                                <option value="year" <?= (($_GET['date_filter_type'] ?? '') === 'year') ? 'selected' : '' ?>>Year Range</option>
+                                <option value="mdy" <?= (($_GET['date_filter_type'] ?? '') === 'mdy') ? 'selected' : '' ?>>Month-Date-Year Range</option>
+                            </select>
+                        </div>
+
+                        <!-- MDY Range -->
+                        <div class="col-12 col-md-3 date-filter date-mdy d-none">
+                            <label class="form-label fw-semibold">Date From</label>
+                            <input type="date" name="date_from" class="form-control shadow-sm"
+                                value="<?= htmlspecialchars($_GET['date_from'] ?? '') ?>"
+                                placeholder="Start Date (YYYY-MM-DD)">
+                        </div>
+                        <div class="col-12 col-md-3 date-filter date-mdy d-none">
+                            <label class="form-label fw-semibold">Date To</label>
+                            <input type="date" name="date_to" class="form-control shadow-sm"
+                                value="<?= htmlspecialchars($_GET['date_to'] ?? '') ?>"
+                                placeholder="End Date (YYYY-MM-DD)">
+                        </div>
+
+                        <!-- Year Range -->
+                        <div class="col-12 col-md-3 date-filter date-year d-none">
+                            <label class="form-label fw-semibold">Year From</label>
+                            <input type="number" name="year_from" class="form-control shadow-sm"
+                                min="1900" max="2100"
+                                placeholder="e.g., 2023"
+                                value="<?= htmlspecialchars($_GET['year_from'] ?? '') ?>">
+                        </div>
+                        <div class="col-12 col-md-3 date-filter date-year d-none">
+                            <label class="form-label fw-semibold">Year To</label>
+                            <input type="number" name="year_to" class="form-control shadow-sm"
+                                min="1900" max="2100"
+                                placeholder="e.g., 2025"
+                                value="<?= htmlspecialchars($_GET['year_to'] ?? '') ?>">
+                        </div>
+
+                        <!-- Month-Year Range -->
+                        <div class="col-12 col-md-3 date-filter date-month_year d-none">
+                            <label class="form-label fw-semibold">From (MM-YYYY)</label>
+                            <input type="month" name="month_year_from" class="form-control shadow-sm"
+                                value="<?= htmlspecialchars($_GET['month_year_from'] ?? '') ?>"
+                                placeholder="e.g., 2023-01">
+                        </div>
+                        <div class="col-12 col-md-3 date-filter date-month_year d-none">
+                            <label class="form-label fw-semibold">To (MM-YYYY)</label>
+                            <input type="month" name="month_year_to" class="form-control shadow-sm"
+                                value="<?= htmlspecialchars($_GET['month_year_to'] ?? '') ?>"
+                                placeholder="e.g., 2023-12">
+                        </div>
+
+                        <!-- Search bar -->
+                        <div class="col-12 col-sm-6 col-md-3">
+                            <label class="form-label fw-semibold">Search</label>
+                            <div class="input-group shadow-sm">
                                 <span class="input-group-text"><i class="fas fa-search"></i></span>
-                                <input type="text" id="searchInput" class="form-control" placeholder="Search equipment model archives...">
+                                <input type="text" name="search" id="searchInput" class="form-control"
+                                    placeholder="Search department archives..."
+                                    value="<?= htmlspecialchars($_GET['search'] ?? '') ?>">
                             </div>
                         </div>
-                        <div class="col-md-4 mb-2">
-                            <select id="filterAction" class="form-select">
-                                <option value="">All Actions</option>
-                                <option value="create">Create</option>
-                                <option value="modified">Modified</option>
-                                <option value="remove">Remove</option>
-                                <option value="delete">Delete</option>
-                                <option value="restored">Restored</option>
-                            </select>
+
+                        <div class="col-6 col-md-2 d-grid">
+                            <button type="submit" id="applyFilters" class="btn btn-dark">
+                                <i class="fas fa-filter"></i> Filter
+                            </button>
                         </div>
-                        <div class="col-md-4 mb-2">
-                            <select id="filterStatus" class="form-select">
-                                <option value="">All Status</option>
-                                <option value="successful">Successful</option>
-                                <option value="failed">Failed</option>
-                            </select>
+
+                        <div class="col-6 col-md-2 d-grid">
+                            <button type="button" id="clearFilters" class="btn btn-secondary shadow-sm">
+                                <i class="fas fa-times-circle"></i> Clear
+                            </button>
                         </div>
-                    </div>
+                    </form>
 
                     <div class="table-responsive" id="table">
                         <table id="archiveTable" class="table table-hover">
@@ -395,10 +535,12 @@ function formatChanges($oldJsonStr)
                                 <ul class="pagination justify-content-center" id="pagination"></ul>
                             </div>
                         </div>
-                    </div> </div>
+                    </div>
+                </div>
             </div>
         </div>
-    </div> <div class="modal fade" id="deleteArchiveModal" tabindex="-1">
+    </div>
+    <div class="modal fade" id="deleteArchiveModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
@@ -809,6 +951,105 @@ function formatChanges($oldJsonStr)
                 });
             });
         }); // End of jQuery document ready
+
+        // Custom script to ensure filtering only happens on button click
+        document.addEventListener('DOMContentLoaded', function() {
+            // Date filter handling
+            const filterType = document.getElementById('dateFilterType');
+            const allDateFilters = document.querySelectorAll('.date-filter');
+            const filterForm = document.getElementById('archiveFilterForm');
+            const moduleTypeSelect = document.getElementById('moduleType');
+
+            function updateDateFields() {
+                allDateFilters.forEach(field => field.classList.add('d-none'));
+                if (!filterType.value) return;
+                document.querySelectorAll('.date-' + filterType.value).forEach(field => field.classList.remove('d-none'));
+            }
+
+            if (filterType) {
+                filterType.addEventListener('change', updateDateFields);
+                updateDateFields(); // Initialize on page load
+            }
+
+            // Filter form submission
+            if (filterForm) {
+                filterForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    // Get all form data
+                    const formData = new FormData(filterForm);
+                    const params = new URLSearchParams();
+                    
+                    // Add all form fields to params
+                    for (let [key, value] of formData.entries()) {
+                        // Only add non-empty values and handle date filters properly
+                        if (value && value.trim() !== '') {
+                            // Special handling for date filters
+                            if (key === 'date_filter_type') {
+                                params.append(key, value);
+                                // Only add date values if a filter type is selected
+                                if (value === 'mdy') {
+                                    if (formData.get('date_from')) params.append('date_from', formData.get('date_from'));
+                                    if (formData.get('date_to')) params.append('date_to', formData.get('date_to'));
+                                } else if (value === 'month_year') {
+                                    if (formData.get('month_year_from')) params.append('month_year_from', formData.get('month_year_from'));
+                                    if (formData.get('month_year_to')) params.append('month_year_to', formData.get('month_year_to'));
+                                } else if (value === 'year') {
+                                    if (formData.get('year_from')) params.append('year_from', formData.get('year_from'));
+                                    if (formData.get('year_to')) params.append('year_to', formData.get('year_to'));
+                                }
+                            } else {
+                                // For non-date fields, just add them if they have a value
+                                params.append(key, value);
+                            }
+                        }
+                    }
+                    
+                    // Redirect to the same page with the filter parameters
+                    window.location.href = window.location.pathname + '?' + params.toString();
+                });
+            }
+            
+            // Clear filters button
+            const clearFiltersBtn = document.getElementById('clearFilters');
+            if (clearFiltersBtn) {
+                clearFiltersBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Reset all form fields
+                    if (filterForm) {
+                        filterForm.reset();
+                    }
+                    
+                    // Reset date filter type
+                    if (filterType) {
+                        filterType.value = '';
+                    }
+                    
+                    // Reset module type
+                    if (moduleTypeSelect) {
+                        moduleTypeSelect.value = '';
+                    }
+                    
+                    // Hide all date filter fields
+                    allDateFilters.forEach(field => {
+                        field.classList.add('d-none');
+                        // Clear the value of any input within the field
+                        const inputs = field.querySelectorAll('input');
+                        inputs.forEach(input => input.value = '');
+                    });
+                    
+                    // Clear search input
+                    const searchInput = document.getElementById('searchInput');
+                    if (searchInput) {
+                        searchInput.value = '';
+                    }
+                    
+                    // Redirect to the base URL without any parameters
+                    window.location.href = window.location.pathname;
+                });
+            }
+        });
     </script>
 </body>
 
