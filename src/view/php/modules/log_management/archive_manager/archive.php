@@ -288,27 +288,6 @@ function formatChanges($oldJsonStr)
                 
                 <!-- Filter Section -->
                 <form method="GET" class="row g-3 mb-4" id="archiveFilterForm" action="">
-                    <div class="col-md-3">
-                        <label for="action_type" class="form-label">Action Type</label>
-                        <select class="form-select" name="action_type" id="filterAction">
-                            <option value="">All Actions</option>
-                            <option value="Create" <?= ($_GET['action_type'] ?? '') === 'Create' ? 'selected' : '' ?>>Create</option>
-                            <option value="Modified" <?= ($_GET['action_type'] ?? '') === 'Modified' ? 'selected' : '' ?>>Modified</option>
-                            <option value="Remove" <?= ($_GET['action_type'] ?? '') === 'Remove' ? 'selected' : '' ?>>Remove</option>
-                            <option value="Delete" <?= ($_GET['action_type'] ?? '') === 'Delete' ? 'selected' : '' ?>>Delete</option>
-                            <option value="Restored" <?= ($_GET['action_type'] ?? '') === 'Restored' ? 'selected' : '' ?>>Restored</option>
-                        </select>
-                    </div>
-                    
-                    <div class="col-md-3">
-                        <label for="status" class="form-label">Status</label>
-                        <select class="form-select" name="status" id="filterStatus">
-                            <option value="">All Status</option>
-                            <option value="Successful" <?= ($_GET['status'] ?? '') === 'Successful' ? 'selected' : '' ?>>Successful</option>
-                            <option value="Failed" <?= ($_GET['status'] ?? '') === 'Failed' ? 'selected' : '' ?>>Failed</option>
-                        </select>
-                    </div>
-                    
                     <!-- Date Range selector -->
                     <div class="col-12 col-md-3">
                         <label class="form-label fw-semibold">Date Filter Type</label>
@@ -398,7 +377,6 @@ function formatChanges($oldJsonStr)
                             <col class="action">
                             <col class="details">
                             <col class="changes">
-                            <col class="status">
                             <col class="date">
                             <col class="actions">
                         </colgroup>
@@ -409,7 +387,8 @@ function formatChanges($oldJsonStr)
                             <th class="sortable" data-sort-by="operator_name">User <i class="fas fa-sort"></i></th>
                             <th class="sortable" data-sort-by="module">Module <i class="fas fa-sort"></i></th>
                             <th class="sortable" data-sort-by="action">Action <i class="fas fa-sort"></i></th>
-                            <th>Details</th> <th>Changes</th> <th class="sortable" data-sort-by="status">Status <i class="fas fa-sort"></i></th>
+                            <th>Details</th> 
+                            <th>Changes</th> 
                             <th class="sortable" data-sort-by="date_time">Date &amp; Time <i class="fas fa-sort"></i></th>
                             <th>Actions</th>
                         </tr>
@@ -446,11 +425,6 @@ function formatChanges($oldJsonStr)
                                     </td>
                                     <td data-label="Changes">
                                         <?php echo formatChanges($log['old_val']); ?>
-                                    </td>
-                                    <td data-label="Status">
-                                        <span class="badge <?php echo (strtolower($log['status']) === 'successful') ? 'bg-success' : 'bg-danger'; ?>">
-                                            <?php echo getStatusIcon($log['status']) . ' ' . htmlspecialchars($log['status']); ?>
-                                        </span>
                                     </td>
                                     <td data-label="Date &amp; Time">
                                         <div class="d-flex align-items-center">
@@ -639,7 +613,21 @@ function formatChanges($oldJsonStr)
             clearFiltersBtn.addEventListener('click', function() {
                 const form = document.getElementById('archiveFilterForm');
                 form.reset();
-                updateDateFields();
+                
+                // Clear date filter type and hide all date filter fields
+                const filterType = document.getElementById('dateFilterType');
+                if (filterType) {
+                    filterType.value = '';
+                    document.querySelectorAll('.date-filter').forEach(field => field.classList.add('d-none'));
+                }
+                
+                // Clear search input
+                const searchInput = document.getElementById('searchInput');
+                if (searchInput) {
+                    searchInput.value = '';
+                }
+                
+                // Submit the form to reset the data
                 form.submit();
             });
         }
