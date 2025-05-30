@@ -373,7 +373,6 @@ function formatChanges($oldJsonStr)
                             <col class="checkbox">
                             <col class="track">
                             <col class="user">
-                            <col class="module">
                             <col class="action">
                             <col class="details">
                             <col class="changes">
@@ -385,8 +384,7 @@ function formatChanges($oldJsonStr)
                             <th><input type="checkbox" id="select-all"></th>
                             <th class="sortable" data-sort-by="track_id"># <i class="fas fa-sort"></i></th>
                             <th class="sortable" data-sort-by="operator_name">User <i class="fas fa-sort"></i></th>
-                            <th class="sortable" data-sort-by="module">Module <i class="fas fa-sort"></i></th>
-                            <th class="sortable" data-sort-by="action">Action <i class="fas fa-sort"></i></th>
+                            <th>Action</th>
                             <th>Details</th> 
                             <th>Changes</th> 
                             <th class="sortable" data-sort-by="date_time">Date &amp; Time <i class="fas fa-sort"></i></th>
@@ -408,9 +406,6 @@ function formatChanges($oldJsonStr)
                                             <i class="fas fa-user-circle me-2"></i>
                                             <small><?php echo htmlspecialchars($log['operator_email']); ?></small>
                                         </div>
-                                    </td>
-                                    <td data-label="Module">
-                                        <?php echo !empty($log['module']) ? htmlspecialchars(trim($log['module'])) : '<em class="text-muted">N/A</em>'; ?>
                                     </td>
                                     <td data-label="Action">
                                         <?php
