@@ -460,7 +460,6 @@ function formatChanges($oldJsonStr)
                             <col class="checkbox">
                             <col class="track">
                             <col class="user">
-                            <col class="module">
                             <col class="action">
                             <col class="details">
                             <col class="changes">
@@ -472,9 +471,8 @@ function formatChanges($oldJsonStr)
                             <th><input type="checkbox" id="select-all"></th>
                             <th class="sortable" data-sort-by="track_id"># <i class="fas fa-sort"></i></th>
                             <th class="sortable" data-sort-by="operator_name">User <i class="fas fa-sort"></i></th>
-                            <th class="sortable" data-sort-by="module">Module <i class="fas fa-sort"></i></th>
-                            <th class="sortable" data-sort-by="action">Action <i class="fas fa-sort"></i></th>
-                            <th class="sortable" data-sort-by="department_name">Details <i class="fas fa-sort"></i></th>
+                            <th>Action</th>
+                            <th>Details</th>
                             <th>Changes</th>
                             <th class="sortable" data-sort-by="date_time">Date &amp; Time <i class="fas fa-sort"></i></th>
                             <th>Actions</th>
@@ -495,9 +493,6 @@ function formatChanges($oldJsonStr)
                                             <i class="fas fa-user-circle me-2"></i>
                                             <small><?php echo htmlspecialchars($log['operator_email']); ?></small>
                                         </div>
-                                    </td>
-                                    <td data-label="Module">
-                                        <?php echo !empty($log['module']) ? htmlspecialchars(trim($log['module'])) : '<em class="text-muted">N/A</em>'; ?>
                                     </td>
                                     <td data-label="Action" class="action-cell">
                                         <?php
@@ -1076,12 +1071,10 @@ function formatChanges($oldJsonStr)
 <script>
     // Custom script to ensure filtering only happens on button click
     document.addEventListener('DOMContentLoaded', function() {
-        // Only keep the date filter type handler to show/hide date inputs
-        // Remove any handlers that might trigger filtering on input change
-        
-        // Date filter handling - keep this functionality
+        // Date filter handling
         const filterType = document.getElementById('dateFilterType');
         const allDateFilters = document.querySelectorAll('.date-filter');
+        const filterForm = document.getElementById('archiveFilterForm');
 
         function updateDateFields() {
             allDateFilters.forEach(field => field.classList.add('d-none'));
@@ -1090,33 +1083,63 @@ function formatChanges($oldJsonStr)
         }
 
         if (filterType) {
-            // Remove any previous listeners
-            const newFilterType = filterType.cloneNode(true);
-            filterType.parentNode.replaceChild(newFilterType, filterType);
-            
-            // Add only the date field visibility listener
-            newFilterType.addEventListener('change', updateDateFields);
+            filterType.addEventListener('change', updateDateFields);
             updateDateFields(); // Initialize on page load
         }
+
+        // Filter form submission
+        if (filterForm) {
+            filterForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Get all form data
+                const formData = new FormData(filterForm);
+                const params = new URLSearchParams();
+                
+                // Add all form fields to params
+                for (let [key, value] of formData.entries()) {
+                    if (value) { // Only add non-empty values
+                        params.append(key, value);
+                    }
+                }
+                
+                // Redirect to the same page with the filter parameters
+                window.location.href = window.location.pathname + '?' + params.toString();
+            });
+        }
         
-        // Override any filterTable function that might be called on input
-        window.filterTable = function() {
-            console.log("Auto-filtering disabled - click Filter button instead");
-            return false;
-        };
-        
-        // Make sure the clear filters button still works
+        // Clear filters button
         const clearFiltersBtn = document.getElementById('clearFilters');
         if (clearFiltersBtn) {
-            // Remove any previous listeners
-            const newClearBtn = clearFiltersBtn.cloneNode(true);
-            clearFiltersBtn.parentNode.replaceChild(newClearBtn, clearFiltersBtn);
-            
-            // Add click handler to reset and submit form
-            newClearBtn.addEventListener('click', function() {
-                document.getElementById('archiveFilterForm').reset();
-                updateDateFields();
-                document.getElementById('archiveFilterForm').submit();
+            clearFiltersBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Reset all form fields
+                if (filterForm) {
+                    filterForm.reset();
+                }
+                
+                // Reset date filter type
+                if (filterType) {
+                    filterType.value = '';
+                }
+                
+                // Hide all date filter fields
+                allDateFilters.forEach(field => {
+                    field.classList.add('d-none');
+                    // Clear the value of any input within the field
+                    const inputs = field.querySelectorAll('input');
+                    inputs.forEach(input => input.value = '');
+                });
+                
+                // Clear search input
+                const searchInput = document.getElementById('searchInput');
+                if (searchInput) {
+                    searchInput.value = '';
+                }
+                
+                // Redirect to the base URL without any parameters
+                window.location.href = window.location.pathname;
             });
         }
     });
