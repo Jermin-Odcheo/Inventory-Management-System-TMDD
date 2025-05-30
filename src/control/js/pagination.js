@@ -250,35 +250,85 @@ function updatePagination() {
             colspan = table.tHead.rows[0].cells.length;
         }
         cell.colSpan = colspan;
+        cell.className = 'text-center';
         cell.innerHTML = `
-            <div class="empty-state text-center py-4">
-                <i class="bi bi-search" style="font-size: 3rem; margin-bottom: 1rem;"></i>
-                <h4>No matching records found</h4>
-                <p class="text-muted">Try adjusting your search or filter criteria.</p>
-            </div>`;
+            <div class="empty-state">
+                <div class="empty-state-icon">🔍</div>
+                <div class="empty-state-message">No matching records found</div>
+            </div>
+        `;
         tbody.appendChild(noResultsRow);
     } else {
-        rowsToPaginate.slice(start, end).forEach(row => {
-            tbody.appendChild(row.cloneNode(true)); 
+        // Slice the visible rows for the current page
+        const visibleRows = rowsToPaginate.slice(start, end);
+        visibleRows.forEach(row => {
+            tbody.appendChild(row.cloneNode(true));
         });
     }
 
-    const currentPageEl = document.getElementById(paginationConfig.currentPageId);
-    if (currentPageEl) currentPageEl.textContent = totalRows === 0 ? 0 : start + 1;
+    // Update pagination info
+    updatePaginationInfo(totalRows, rowsPerPage, start, end);
     
-    const rowsPerPageEl = document.getElementById(paginationConfig.rowsPerPageId);
-    if (rowsPerPageEl) rowsPerPageEl.textContent = Math.min(end, totalRows);
-    
-    const totalRowsEl = document.getElementById(paginationConfig.totalRowsId);
-    if (totalRowsEl) totalRowsEl.textContent = totalRows;
-
-    const prevPageEl = document.getElementById(paginationConfig.prevPageId);
-    if (prevPageEl) prevPageEl.disabled = (paginationConfig.currentPage <= 1 || totalRows === 0);
-    
-    const nextPageEl = document.getElementById(paginationConfig.nextPageId);
-    if (nextPageEl) nextPageEl.disabled = (paginationConfig.currentPage >= totalPages || totalRows === 0);
-
+    // Update pagination controls
     renderPaginationControls(totalPages);
+    
+    // Update prev/next button states
+    updateNavigationButtons(totalPages);
+    
+    // Preserve sort parameters when navigating between pages
+    preserveSortParameters();
+}
+
+// New function to preserve sort parameters when navigating between pages
+function preserveSortParameters() {
+    // Get current sort parameters from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const sortBy = urlParams.get('sort_by');
+    const sortOrder = urlParams.get('sort_order');
+    
+    // If sort parameters exist, make sure they're preserved in pagination links
+    if (sortBy && sortOrder) {
+        // Update pagination links to include sort parameters
+        const paginationLinks = document.querySelectorAll('.pagination .page-link');
+        paginationLinks.forEach(link => {
+            // Skip links that don't have an href attribute
+            if (!link.hasAttribute('href')) return;
+            
+            // Parse the current href
+            const linkUrl = new URL(link.getAttribute('href'), window.location.href);
+            const linkParams = new URLSearchParams(linkUrl.search);
+            
+            // Add or update sort parameters
+            linkParams.set('sort_by', sortBy);
+            linkParams.set('sort_order', sortOrder);
+            
+            // Update the href with the new parameters
+            linkUrl.search = linkParams.toString();
+            link.setAttribute('href', linkUrl.toString());
+        });
+        
+        // Also update next/prev buttons if they use href
+        const prevButton = document.getElementById(paginationConfig.prevPageId);
+        const nextButton = document.getElementById(paginationConfig.nextPageId);
+        
+        if (prevButton && prevButton.hasAttribute('href')) {
+            const prevUrl = new URL(prevButton.getAttribute('href'), window.location.href);
+            const prevParams = new URLSearchParams(prevUrl.search);
+            prevParams.set('sort_by', sortBy);
+            prevParams.set('sort_order', sortOrder);
+            prevUrl.search = prevParams.toString();
+            prevButton.setAttribute('href', prevUrl.toString());
+        }
+        
+        if (nextButton && nextButton.hasAttribute('href')) {
+            const nextUrl = new URL(nextButton.getAttribute('href'), window.location.href);
+            const nextParams = new URLSearchParams(nextUrl.search);
+            nextParams.set('sort_by', sortBy);
+            nextParams.set('sort_order', sortOrder);
+            nextUrl.search = nextParams.toString();
+            nextButton.setAttribute('href', nextUrl.toString());
+        }
+    }
 }
 
 function getTotalPages() {
@@ -294,70 +344,190 @@ function getTotalPages() {
 }
 
 function renderPaginationControls(totalPages) {
-    if (!paginationConfig || !paginationConfig.paginationId) {
-        console.error("renderPaginationControls: paginationConfig or paginationId is undefined.");
-        return;
-    }
     const paginationContainer = document.getElementById(paginationConfig.paginationId);
-    if (!paginationContainer) {
-        console.error(`renderPaginationControls: Could not find pagination container with ID ${paginationConfig.paginationId}`);
-        return;
-    }
-    paginationContainer.innerHTML = ''; 
-    if (totalPages <= 1) {
-        paginationContainer.style.display = 'none';
-        return;
-    }
-    paginationContainer.style.display = ''; 
-    const currentPage = paginationConfig.currentPage;
-
-    if (totalPages <= 7) { 
-        for (let i = 1; i <= totalPages; i++) {
-            addPaginationItem(paginationContainer, i, i === currentPage);
-        }
-    } else {
-        addPaginationItem(paginationContainer, 1, 1 === currentPage);
-        if (currentPage > 3) addPaginationItem(paginationContainer, '...');
+    if (!paginationContainer) return;
+    
+    paginationContainer.innerHTML = '';
+    
+    if (totalPages <= 1) return; // Don't show pagination if only one page
+    
+    // Get current sort parameters from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const sortBy = urlParams.get('sort_by');
+    const sortOrder = urlParams.get('sort_order');
+    
+    // Previous button
+    addPaginationItem(
+        paginationContainer,
+        '<i class="bi bi-chevron-left"></i>',
+        false,
+        paginationConfig.currentPage <= 1,
+        () => {
+            if (paginationConfig.currentPage > 1) {
+                paginationConfig.currentPage--;
+                updatePagination();
+            }
+        },
+        // Add sort parameters to the URL if they exist
+        sortBy && sortOrder ? { sort_by: sortBy, sort_order: sortOrder } : null
+    );
+    
+    // First page
+    if (paginationConfig.currentPage > 3) {
+        addPaginationItem(
+            paginationContainer,
+            '1',
+            false,
+            false,
+            () => {
+                paginationConfig.currentPage = 1;
+                updatePagination();
+            },
+            sortBy && sortOrder ? { sort_by: sortBy, sort_order: sortOrder } : null
+        );
         
-        let startPage = Math.max(2, currentPage - 1);
-        let endPage = Math.min(totalPages - 1, currentPage + 1);
-
-        if (currentPage <= 2) { startPage = 2; endPage = Math.min(totalPages -1, 3); }
-        else if (currentPage >= totalPages - 1) { startPage = Math.max(2, totalPages - 2); endPage = totalPages - 1; }
-        
-        for (let i = startPage; i <= endPage; i++) {
-            addPaginationItem(paginationContainer, i, i === currentPage);
+        // Ellipsis if needed
+        if (paginationConfig.currentPage > 4) {
+            addPaginationItem(paginationContainer, '...', false, true);
         }
-        if (currentPage < totalPages - 2) addPaginationItem(paginationContainer, '...');
-        addPaginationItem(paginationContainer, totalPages, totalPages === currentPage);
     }
+    
+    // Page numbers around current page
+    const startPage = Math.max(1, paginationConfig.currentPage - 1);
+    const endPage = Math.min(totalPages, paginationConfig.currentPage + 1);
+    
+    for (let i = startPage; i <= endPage; i++) {
+        addPaginationItem(
+            paginationContainer,
+            i.toString(),
+            i === paginationConfig.currentPage,
+            false,
+            () => {
+                paginationConfig.currentPage = i;
+                updatePagination();
+            },
+            sortBy && sortOrder ? { sort_by: sortBy, sort_order: sortOrder } : null
+        );
+    }
+    
+    // Last page
+    if (paginationConfig.currentPage < totalPages - 2) {
+        // Ellipsis if needed
+        if (paginationConfig.currentPage < totalPages - 3) {
+            addPaginationItem(paginationContainer, '...', false, true);
+        }
+        
+        addPaginationItem(
+            paginationContainer,
+            totalPages.toString(),
+            false,
+            false,
+            () => {
+                paginationConfig.currentPage = totalPages;
+                updatePagination();
+            },
+            sortBy && sortOrder ? { sort_by: sortBy, sort_order: sortOrder } : null
+        );
+    }
+    
+    // Next button
+    addPaginationItem(
+        paginationContainer,
+        '<i class="bi bi-chevron-right"></i>',
+        false,
+        paginationConfig.currentPage >= totalPages,
+        () => {
+            if (paginationConfig.currentPage < totalPages) {
+                paginationConfig.currentPage++;
+                updatePagination();
+            }
+        },
+        sortBy && sortOrder ? { sort_by: sortBy, sort_order: sortOrder } : null
+    );
 }
 
-function addPaginationItem(container, pageContent, isActive = false, isDisabled = false, clickHandler) {
+function addPaginationItem(container, pageContent, isActive = false, isDisabled = false, clickHandler, sortParams = null) {
     const li = document.createElement('li');
     li.className = 'page-item';
     if (isActive) li.classList.add('active');
-    if (isDisabled || pageContent === '...') li.classList.add('disabled');
+    if (isDisabled) li.classList.add('disabled');
 
     const a = document.createElement('a');
     a.className = 'page-link';
-    a.href = '#';
-    a.innerHTML = pageContent; 
+    a.innerHTML = pageContent;
 
-    if (!isDisabled && pageContent !== '...') {
-        a.addEventListener('click', function (e) {
+    if (clickHandler && !isActive && !isDisabled) {
+        a.href = '#';
+        a.addEventListener('click', function(e) {
             e.preventDefault();
-            if (clickHandler) {
-                clickHandler();
-            } else {
-                console.log(`PAGINATION_LINK_CLICK: Page: ${pageContent}`);
-                if (paginationConfig) paginationConfig.currentPage = parseInt(pageContent);
-                updatePagination();
-            }
+            clickHandler();
         });
-    } else if (pageContent === '...') {
+    } else if (isDisabled) {
         a.style.pointerEvents = 'none'; 
     }
+
+    if (sortParams) {
+        // If this is a page number (not an ellipsis), add page parameter
+        if (!isNaN(pageContent) && pageContent !== '...') {
+            const linkParams = new URLSearchParams();
+            linkParams.set('page', pageContent);
+            
+            // Add sort parameters
+            Object.entries(sortParams).forEach(([key, value]) => {
+                linkParams.set(key, value);
+            });
+            
+            // Add any other existing parameters except page
+            const currentParams = new URLSearchParams(window.location.search);
+            for (const [key, value] of currentParams.entries()) {
+                if (key !== 'page' && key !== 'sort_by' && key !== 'sort_order') {
+                    linkParams.set(key, value);
+                }
+            }
+            
+            a.href = `?${linkParams.toString()}`;
+        }
+    }
+
     li.appendChild(a);
     container.appendChild(li);
+}
+
+// Helper function to update pagination info display
+function updatePaginationInfo(totalRows, rowsPerPage, start, end) {
+    const currentPageEl = document.getElementById(paginationConfig.currentPageId);
+    if (currentPageEl) currentPageEl.textContent = totalRows === 0 ? 0 : start + 1;
+    
+    const rowsPerPageEl = document.getElementById(paginationConfig.rowsPerPageId);
+    if (rowsPerPageEl) rowsPerPageEl.textContent = Math.min(end, totalRows);
+    
+    const totalRowsEl = document.getElementById(paginationConfig.totalRowsId);
+    if (totalRowsEl) totalRowsEl.textContent = totalRows;
+}
+
+// Helper function to update navigation button states
+function updateNavigationButtons(totalPages) {
+    const prevPageEl = document.getElementById(paginationConfig.prevPageId);
+    if (prevPageEl) {
+        prevPageEl.disabled = (paginationConfig.currentPage <= 1 || totalPages === 0);
+        
+        // Update href attribute if it exists
+        if (prevPageEl.hasAttribute('href') && paginationConfig.currentPage > 1) {
+            const urlParams = new URLSearchParams(window.location.search);
+            urlParams.set('page', paginationConfig.currentPage - 1);
+            prevPageEl.href = `?${urlParams.toString()}`;
+        }
+    }
+    
+    const nextPageEl = document.getElementById(paginationConfig.nextPageId);
+    if (nextPageEl) {
+        nextPageEl.disabled = (paginationConfig.currentPage >= totalPages || totalPages === 0);
+        
+        // Update href attribute if it exists
+        if (nextPageEl.hasAttribute('href') && paginationConfig.currentPage < totalPages) {
+            const urlParams = new URLSearchParams(window.location.search);
+            urlParams.set('page', paginationConfig.currentPage + 1);
+            nextPageEl.href = `?${urlParams.toString()}`;
+        }
+    }
 }

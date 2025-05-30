@@ -53,9 +53,77 @@ $orderByClause = "ORDER BY " . $sortMap[$sortBy] . " " . $sortDir;
 
 // --- END SORTING IMPLEMENTATION ---
 
+// --- START FILTERING IMPLEMENTATION ---
+
+// Get filter parameters from GET request
+$searchFilter = isset($_GET['search']) ? trim($_GET['search']) : '';
+$roleFilter = isset($_GET['role']) ? (int)$_GET['role'] : 0;
+$deptFilter = isset($_GET['department']) ? trim($_GET['department']) : '';
+
+// Build WHERE clause for filtering
+$whereClause = "u.is_disabled = 0";
+
+// Add search filter if provided
+if (!empty($searchFilter)) {
+    $searchFilter = '%' . $pdo->quote($searchFilter) . '%';
+    $searchFilter = str_replace("'", "", $searchFilter); // Remove quotes added by PDO::quote
+    $whereClause .= " AND (u.username LIKE '%{$searchFilter}%' OR 
+                          u.email LIKE '%{$searchFilter}%' OR 
+                          u.first_name LIKE '%{$searchFilter}%' OR 
+                          u.last_name LIKE '%{$searchFilter}%' OR 
+                          d.department_name LIKE '%{$searchFilter}%' OR 
+                          r.role_name LIKE '%{$searchFilter}%')";
+}
+
+// Add role filter if provided
+if ($roleFilter > 0) {
+    $whereClause .= " AND r.id = {$roleFilter}";
+}
+
+// Add department filter if provided
+if (!empty($deptFilter)) {
+    $deptFilter = '%' . $pdo->quote($deptFilter) . '%';
+    $deptFilter = str_replace("'", "", $deptFilter); // Remove quotes added by PDO::quote
+    $whereClause .= " AND d.department_name LIKE '%{$deptFilter}%'";
+}
+
+// --- END FILTERING IMPLEMENTATION ---
+
+// --- START SERVER-SIDE PAGINATION ---
+
+// Get current page from URL parameter
+$currentPage = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+
+// Default rows per page
+$rowsPerPage = isset($_GET['rows_per_page']) ? max(10, intval($_GET['rows_per_page'])) : 10;
+
+// Calculate offset for SQL query
+$offset = ($currentPage - 1) * $rowsPerPage;
+
+// --- END SERVER-SIDE PAGINATION ---
+
 // Query active users with their roles and departments for display and sorting
 // Use GROUP_CONCAT to get all departments and roles for a user in a single row
-$stmt = $pdo->query(
+$countStmt = $pdo->query(
+    "SELECT COUNT(DISTINCT u.id) AS total_users
+    FROM
+        users u
+    LEFT JOIN
+        user_department_roles udr ON u.id = udr.user_id
+    LEFT JOIN
+        departments d ON udr.department_id = d.id
+    LEFT JOIN
+        roles r ON udr.role_id = r.id
+    WHERE
+        {$whereClause}"
+);
+$totalUsersCount = $countStmt->fetch(PDO::FETCH_ASSOC)['total_users'];
+
+// Calculate total pages
+$totalPages = ceil($totalUsersCount / $rowsPerPage);
+
+// Query with pagination, filtering, and sorting
+$stmt = $pdo->prepare(
     "SELECT
         u.id,
         u.username,
@@ -75,15 +143,19 @@ $stmt = $pdo->query(
     LEFT JOIN
         roles r ON udr.role_id = r.id
     WHERE
-        u.is_disabled = 0
+        {$whereClause}
     GROUP BY
         u.id, u.username, u.email, u.first_name, u.last_name, u.date_created, u.status
-    {$orderByClause}" // Apply dynamic ORDER BY clause here
+    {$orderByClause}
+    LIMIT :limit OFFSET :offset"
 );
+$stmt->bindParam(':limit', $rowsPerPage, PDO::PARAM_INT);
+$stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
+$stmt->execute();
 $usersData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Store the actual count of users (after filtering for is_disabled)
-$totalUsers = count($usersData);
+// Store the actual count of users (after filtering)
+$totalUsers = $totalUsersCount;
 
 // Query active roles (for dropdowns)
 $stmt = $pdo->query("SELECT id, role_name FROM roles WHERE is_disabled = 0");
@@ -207,10 +279,16 @@ $userRoleDepartments = array_values($userRoleMap);
             cursor: pointer;
             position: relative;
             padding-right: 20px !important;
+            transition: all 0.2s ease;
+            display: block;
+            width: 100%;
+            color: #212529;
+            text-decoration: none;
         }
 
         .sortable:hover, .sort-header:hover {
             background-color: #f8f9fa;
+            color: #0d6efd;
         }
 
         .sortable i, .sort-header i {
@@ -219,6 +297,7 @@ $userRoleDepartments = array_values($userRoleMap);
             top: 50%;
             transform: translateY(-50%);
             color: #6c757d;
+            transition: all 0.2s ease;
         }
 
         .sortable:hover i, .sort-header:hover i {
@@ -234,6 +313,18 @@ $userRoleDepartments = array_values($userRoleMap);
         .sort-header.active-sort i {
             color: #0d6efd;
             font-weight: bold;
+        }
+        
+        /* Loading state for sort headers */
+        .sort-header.sorting {
+            opacity: 0.7;
+        }
+        
+        /* Improved sort icon styling */
+        .sort-icon {
+            font-size: 0.75rem;
+            margin-left: 5px;
+            vertical-align: middle;
         }
         
         /* Center pagination on mobile */
@@ -292,7 +383,7 @@ $userRoleDepartments = array_values($userRoleMap);
             flex: 0 0 auto;
             width: auto;
             min-width: 120px;
-            margin-bottom: 0.5rem;
+            margin-bottom: 1.2rem;
         }
 
         @media (max-width: 767.98px) {
@@ -337,41 +428,52 @@ $userRoleDepartments = array_values($userRoleMap);
                 <i class="bi bi-plus-lg"></i> Add User/s to role</button>
             <?php endif; ?>
 
-            <div class="filter-container">
-                <label for="role-filter">FILTER BY ROLE</label>
-                <select id="role-filter">
-                    <option value="">All Roles</option>
-                    <?php foreach ($rolesData as $role): ?>
-                        <option value="<?php echo $role['id']; ?>">
-                            <?php echo htmlspecialchars($role['role_name']); ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="filter-container">
-                <label for="dept-filter">FILTER BY DEPARTMENT</label>
-                <select id="dept-filter">
-                    <option value="" selected>All Departments</option>
-                    <?php foreach ($departmentsData as $dept): ?>
-                        <option value="<?php echo htmlspecialchars($dept['department_name']); ?>">
-                            <?php echo '(' . htmlspecialchars($dept['abbreviation']) . ') ' . htmlspecialchars($dept['department_name']); ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="search-filter">
-                <label for="search-users">SEARCH</label>
-                <input type="text" id="search-users" placeholder="Search users, departments, roles...">
-            </div>
+            <form id="filter-form" method="get" class="row g-3 align-items-end w-100">
+                <?php 
+                // Preserve sort parameters if they exist
+                if (isset($_GET['sort_by']) && isset($_GET['sort_order'])): 
+                ?>
+                <input type="hidden" name="sort_by" value="<?= htmlspecialchars($_GET['sort_by']) ?>">
+                <input type="hidden" name="sort_order" value="<?= htmlspecialchars($_GET['sort_order']) ?>">
+                <?php endif; ?>
 
-            <!-- Buttons -->
-            <div class="col-6 col-md-2 d-grid">
-                <button type="button" id="filter-btn" class="btn btn-dark"><i class="bi bi-funnel"></i> Filter</button>
-            </div>
+                <div class="filter-container">
+                    <label for="role-filter">FILTER BY ROLE</label>
+                    <select id="role-filter" name="role">
+                        <option value="">All Roles</option>
+                        <?php foreach ($rolesData as $role): ?>
+                            <option value="<?php echo $role['id']; ?>" <?= $roleFilter == $role['id'] ? 'selected' : '' ?>>
+                                <?php echo htmlspecialchars($role['role_name']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="filter-container">
+                    <label for="dept-filter">FILTER BY DEPARTMENT</label>
+                    <select id="dept-filter" name="department">
+                        <option value="" selected>All Departments</option>
+                        <?php foreach ($departmentsData as $dept): ?>
+                            <?php $deptName = htmlspecialchars($dept['department_name']); ?>
+                            <option value="<?php echo $deptName; ?>" <?= $deptFilter == $deptName ? 'selected' : '' ?>>
+                                <?php echo '(' . htmlspecialchars($dept['abbreviation']) . ') ' . $deptName; ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="search-filter">
+                    <label for="search-users">SEARCH</label>
+                    <input type="text" id="search-users" name="search" placeholder="Search users, departments, roles..." value="<?= htmlspecialchars($searchFilter) ?>">
+                </div>
 
-            <div class="col-6 col-md-2 d-grid">
-                <button type="button" id="clear-btn" class="btn btn-secondary shadow-sm"><i class="bi bi-x-circle"></i> Clear</button>
-            </div>
+                <!-- Buttons -->
+                <div class="col-6 col-md-2 d-grid">
+                    <button type="submit" id="filter-btn" class="btn btn-dark"><i class="bi bi-funnel"></i> Filter</button>
+                </div>
+
+                <div class="col-6 col-md-2 d-grid">
+                    <button type="button" id="clear-btn" class="btn btn-secondary shadow-sm"><i class="bi bi-x-circle"></i> Clear</button>
+                </div>
+            </form>
 
             <div class="action-buttons">
                 <?php if ($rbac->hasPrivilege('User Management', 'Modify')): ?>
@@ -385,9 +487,24 @@ $userRoleDepartments = array_values($userRoleMap);
                 <thead>
                     <tr>
                         <th><?php if ($canRemove): ?><input type="checkbox" id="select-all"><?php endif; ?></th>
-                        <th><a href="#" class="sort-header" data-sort="username">User <i class="bi bi-caret-up-fill sort-icon"></i></a></th>
-                        <th><a href="#" class="sort-header" data-sort="departments">Departments <i class="bi bi-caret-up-fill sort-icon"></i></a></th>
-                        <th><a href="#" class="sort-header" data-sort="roles">Roles <i class="bi bi-caret-up-fill sort-icon"></i></a></th>
+                        <th>
+                            <a href="#" class="sort-header <?php echo $sortBy === 'username' ? 'active-sort' : ''; ?>" data-sort="username">
+                                User 
+                                <i class="bi <?php echo $sortBy === 'username' ? ($sortDir === 'asc' ? 'bi-caret-up-fill' : 'bi-caret-down-fill') : 'bi-caret-up-fill'; ?> sort-icon"></i>
+                            </a>
+                        </th>
+                        <th>
+                            <a href="#" class="sort-header <?php echo $sortBy === 'departments' ? 'active-sort' : ''; ?>" data-sort="departments">
+                                Departments 
+                                <i class="bi <?php echo $sortBy === 'departments' ? ($sortDir === 'asc' ? 'bi-caret-up-fill' : 'bi-caret-down-fill') : 'bi-caret-up-fill'; ?> sort-icon"></i>
+                            </a>
+                        </th>
+                        <th>
+                            <a href="#" class="sort-header <?php echo $sortBy === 'roles' ? 'active-sort' : ''; ?>" data-sort="roles">
+                                Roles 
+                                <i class="bi <?php echo $sortBy === 'roles' ? ($sortDir === 'asc' ? 'bi-caret-up-fill' : 'bi-caret-down-fill') : 'bi-caret-up-fill'; ?> sort-icon"></i>
+                            </a>
+                        </th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -436,32 +553,120 @@ $userRoleDepartments = array_values($userRoleMap);
                     <div class="col-12 col-md-4">
                         <div class="text-muted">
                             <?php
-                            // Use the actual user count, not the number of rows in the table
-                            $rowsPerPage = 10; // Default rows per page
-                            $displayEnd = min($rowsPerPage, $totalUsers);
+                            // Use the actual user count from server-side pagination
+                            $displayStart = ($currentPage - 1) * $rowsPerPage + 1;
+                            $displayEnd = min($currentPage * $rowsPerPage, $totalUsers);
                             ?>
                             <input type="hidden" id="total-users" value="<?= $totalUsers ?>">
-                            <input type="hidden" id="actual-user-count" value="<?= $totalUsers ?>">
-                            Showing <span id="currentPage">1</span> to <span id="rowsPerPage"> <?= $displayEnd ?></span> of <span id="totalRows"><?= $totalUsers ?></span> entries
+                            <input type="hidden" id="current-page" value="<?= $currentPage ?>">
+                            <input type="hidden" id="rows-per-page" value="<?= $rowsPerPage ?>">
+                            <input type="hidden" id="total-pages" value="<?= $totalPages ?>">
+                            Showing <span id="currentPage"><?= $displayStart ?></span> to <span id="rowsPerPage"><?= $displayEnd ?></span> of <span id="totalRows"><?= $totalUsers ?></span> entries
                         </div>
                     </div>
                     <div class="col-12 col-md-4 text-center">
                         <nav aria-label="Page navigation">
-                            <ul class="pagination pagination-sm d-inline-flex justify-content-center mb-0" id="pagination"></ul>
+                            <ul class="pagination pagination-sm d-inline-flex justify-content-center mb-0" id="pagination">
+                                <?php
+                                // Previous button
+                                $prevDisabled = ($currentPage <= 1) ? ' disabled' : '';
+                                $prevPage = max(1, $currentPage - 1);
+                                $prevUrl = '?page=' . $prevPage;
+                                // Add sort parameters if they exist
+                                if (isset($_GET['sort_by']) && isset($_GET['sort_order'])) {
+                                    $prevUrl .= '&sort_by=' . urlencode($_GET['sort_by']) . '&sort_order=' . urlencode($_GET['sort_order']);
+                                }
+                                ?>
+                                <li class="page-item<?= $prevDisabled ?>">
+                                    <a class="page-link" href="<?= $prevUrl ?>" aria-label="Previous">
+                                        <i class="bi bi-chevron-left"></i>
+                                    </a>
+                                </li>
+                                
+                                <?php
+                                // First page
+                                if ($currentPage > 3) {
+                                    $firstUrl = '?page=1';
+                                    if (isset($_GET['sort_by']) && isset($_GET['sort_order'])) {
+                                        $firstUrl .= '&sort_by=' . urlencode($_GET['sort_by']) . '&sort_order=' . urlencode($_GET['sort_order']);
+                                    }
+                                    ?>
+                                    <li class="page-item">
+                                        <a class="page-link" href="<?= $firstUrl ?>">1</a>
+                                    </li>
+                                    <?php
+                                    if ($currentPage > 4) {
+                                        echo '<li class="page-item disabled"><span class="page-link">...</span></li>';
+                                    }
+                                }
+                                
+                                // Page numbers
+                                $startPage = max(1, $currentPage - 1);
+                                $endPage = min($totalPages, $currentPage + 1);
+                                
+                                for ($i = $startPage; $i <= $endPage; $i++) {
+                                    $isActive = ($i == $currentPage) ? ' active' : '';
+                                    $pageUrl = '?page=' . $i;
+                                    if (isset($_GET['sort_by']) && isset($_GET['sort_order'])) {
+                                        $pageUrl .= '&sort_by=' . urlencode($_GET['sort_by']) . '&sort_order=' . urlencode($_GET['sort_order']);
+                                    }
+                                    ?>
+                                    <li class="page-item<?= $isActive ?>">
+                                        <a class="page-link" href="<?= $pageUrl ?>"><?= $i ?></a>
+                                    </li>
+                                    <?php
+                                }
+                                
+                                // Last page
+                                if ($currentPage < $totalPages - 2) {
+                                    if ($currentPage < $totalPages - 3) {
+                                        echo '<li class="page-item disabled"><span class="page-link">...</span></li>';
+                                    }
+                                    $lastUrl = '?page=' . $totalPages;
+                                    if (isset($_GET['sort_by']) && isset($_GET['sort_order'])) {
+                                        $lastUrl .= '&sort_by=' . urlencode($_GET['sort_by']) . '&sort_order=' . urlencode($_GET['sort_order']);
+                                    }
+                                    ?>
+                                    <li class="page-item">
+                                        <a class="page-link" href="<?= $lastUrl ?>"><?= $totalPages ?></a>
+                                    </li>
+                                    <?php
+                                }
+                                
+                                // Next button
+                                $nextDisabled = ($currentPage >= $totalPages) ? ' disabled' : '';
+                                $nextPage = min($totalPages, $currentPage + 1);
+                                $nextUrl = '?page=' . $nextPage;
+                                if (isset($_GET['sort_by']) && isset($_GET['sort_order'])) {
+                                    $nextUrl .= '&sort_by=' . urlencode($_GET['sort_by']) . '&sort_order=' . urlencode($_GET['sort_order']);
+                                }
+                                ?>
+                                <li class="page-item<?= $nextDisabled ?>">
+                                    <a class="page-link" href="<?= $nextUrl ?>" aria-label="Next">
+                                        <i class="bi bi-chevron-right"></i>
+                                    </a>
+                                </li>
+                            </ul>
                         </nav>
                     </div>
                     <div class="col-12 col-md-4">
                         <div class="d-flex align-items-center gap-2 justify-content-md-end">
-                            <button id="prevPage" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1">
+                            <button id="prevPage" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1" <?= ($currentPage <= 1) ? 'disabled' : '' ?>>
                                 <i class="bi bi-chevron-left"></i> Previous
                             </button>
-                            <select id="rowsPerPageSelect" class="form-select form-select-sm" style="width: auto;">
-                                <option value="10" selected>10</option>
-                                <option value="20">20</option>
-                                <option value="30">30</option>
-                                <option value="50">50</option>
-                            </select>
-                            <button id="nextPage" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1">
+                            <form method="get" class="d-inline-flex">
+                                <?php if (isset($_GET['sort_by']) && isset($_GET['sort_order'])): ?>
+                                    <input type="hidden" name="sort_by" value="<?= htmlspecialchars($_GET['sort_by']) ?>">
+                                    <input type="hidden" name="sort_order" value="<?= htmlspecialchars($_GET['sort_order']) ?>">
+                                <?php endif; ?>
+                                <select id="rowsPerPageSelect" name="rows_per_page" class="form-select form-select-sm" style="width: auto;" onchange="this.form.submit()">
+                                    <option value="10" <?= $rowsPerPage == 10 ? 'selected' : '' ?>>10</option>
+                                    <option value="20" <?= $rowsPerPage == 20 ? 'selected' : '' ?>>20</option>
+                                    <option value="30" <?= $rowsPerPage == 30 ? 'selected' : '' ?>>30</option>
+                                    <option value="50" <?= $rowsPerPage == 50 ? 'selected' : '' ?>>50</option>
+                                </select>
+                            </form>
+                            <button id="nextPage" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1" <?= ($currentPage >= $totalPages) ? 'disabled' : '' ?>>
                                 Next <i class="bi bi-chevron-right"></i>
                             </button>
                         </div>
@@ -614,16 +819,6 @@ $userRoleDepartments = array_values($userRoleMap);
         // Pass current sort state to JavaScript
         var currentSortBy = "<?php echo htmlspecialchars($sortBy); ?>";
         var currentSortOrder = "<?php echo htmlspecialchars($sortDir); ?>";
-        
-        // Make sure global window variables are set
-        window.currentSortBy = currentSortBy;
-        window.currentSortOrder = currentSortOrder;
-        
-        // Log the initial sort state for debugging
-        console.log('Initial sort state:', { 
-            currentSortBy: window.currentSortBy,
-            currentSortOrder: window.currentSortOrder
-        });
     </script>
 
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/user_roles_management.js" defer></script>
@@ -632,678 +827,128 @@ $userRoleDepartments = array_values($userRoleMap);
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
         $(document).ready(function() {
-            // Make sure sort variables are properly initialized
-            window.currentSortBy = currentSortBy || "username";
-            window.currentSortOrder = currentSortOrder || "asc";
-            
-            // Ensure the sort headers reflect the current sort state on page load
-            $(document).ready(function() {
-                const urlParams = new URLSearchParams(window.location.search);
-                const urlSortBy = urlParams.get('sort_by');
-                const urlSortOrder = urlParams.get('sort_order');
-                
-                // If URL has sort parameters, use them
-                if (urlSortBy) {
-                    window.currentSortBy = urlSortBy;
-                }
-                
-                if (urlSortOrder) {
-                    window.currentSortOrder = urlSortOrder;
-                }
-                
-                // Update the sort header visual state
-                $('.sort-header').removeClass('active-sort');
-                $('.sort-icon').removeClass('bi-caret-up-fill bi-caret-down-fill').addClass('bi-caret-up-fill');
-                
-                const activeHeader = $(`.sort-header[data-sort="${window.currentSortBy}"]`);
-                if (activeHeader.length) {
-                    activeHeader.addClass('active-sort');
-                    const icon = activeHeader.find('.sort-icon');
-                    icon.removeClass('bi-caret-up-fill bi-caret-down-fill');
-                    
-                    if (window.currentSortOrder === 'asc') {
-                        icon.addClass('bi-caret-up-fill');
-                    } else {
-                        icon.addClass('bi-caret-down-fill');
-                    }
-                }
-            });
-            
-            // Initialize pagination for user roles table
-            window.paginationConfig = {
-                tableId: 'urTable',
-                rowsPerPageSelectId: 'rowsPerPageSelect',
-                currentPageId: 'currentPage',
-                rowsPerPageId: 'rowsPerPage',
-                totalRowsId: 'totalRows',
-                prevPageId: 'prevPage',
-                nextPageId: 'nextPage',
-                paginationId: 'pagination',
-                currentPage: 1
-            };
-
-            // Initialize rows arrays for pagination and filtering
-            window.allRows = Array.from(document.querySelectorAll('#urTable tbody tr'));
-            window.filteredRows = [...window.allRows];
-
-            // Initialize event listeners for pagination buttons
-            document.getElementById('prevPage').addEventListener('click', function(e) {
+            // Initialize the Previous and Next buttons to use the server-side pagination
+            $('#prevPage').on('click', function(e) {
                 e.preventDefault();
-                if (window.paginationConfig.currentPage > 1) {
-                    window.paginationConfig.currentPage--;
-                    window.updatePagination();
-                }
-            });
-            
-            document.getElementById('nextPage').addEventListener('click', function(e) {
-                e.preventDefault();
-                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value) || 10;
-                
-                // Get the right number of users for pagination, not rows
-                const userIds = getUserIdsFromRows(window.filteredRows);
-                const totalPages = Math.ceil(userIds.length / rowsPerPage);
-                
-                if (window.paginationConfig.currentPage < totalPages) {
-                    window.paginationConfig.currentPage++;
-                    window.updatePagination();
-                }
-            });
-            
-            // Listen for rows per page changes
-            document.getElementById('rowsPerPageSelect').addEventListener('change', function() {
-                window.paginationConfig.currentPage = 1; // Reset to first page
-                window.updatePagination();
-            });
-            
-            // Helper function to get unique user IDs from rows
-            function getUserIdsFromRows(rows) {
-                const userIds = new Set();
-                rows.forEach(row => {
-                    let userId = null;
-                    const checkbox = row.querySelector('.select-row');
-                    if (checkbox) {
-                        userId = checkbox.value;
-                    } else {
-                        const editBtn = row.querySelector('.edit-btn');
-                        if (editBtn) {
-                            userId = editBtn.getAttribute('data-user-id');
-                        }
-                    }
-                    if (userId) {
-                        userIds.add(userId);
-                    }
-                });
-                return Array.from(userIds);
-            }
-            
-            // Override the standard updatePagination function to handle user grouping properly
-            window.updatePagination = function() {
-                console.log('Updating pagination');
-                
-                // Get all rows currently in the table
-                const rows = Array.from(document.querySelectorAll('#urTable tbody tr'));
-                
-                // Skip pagination if we're showing the empty state
-                if (rows.length === 1 && rows[0].cells.length === 1 && rows[0].cells[0].colSpan === 5) {
-                    console.log('Empty state detected, skipping pagination');
-                    
-                    // Update count displays to show 0
-                    const totalRowsEl = document.getElementById('totalRows');
-                    if (totalRowsEl) totalRowsEl.textContent = '0';
-                    
-                    const currentPageEl = document.getElementById('currentPage');
-                    if (currentPageEl) currentPageEl.textContent = '0';
-                    
-                    const rowsPerPageEl = document.getElementById('rowsPerPage');
-                    if (rowsPerPageEl) rowsPerPageEl.textContent = '0';
-                    
-                    // Hide pagination elements
-                    forcePaginationCheck();
-                    return;
-                }
-                
-                // Group rows by user ID
-                const userGroups = {};
-                rows.forEach(row => {
-                    // Extract user ID from the row
-                    let userId = null;
-                    const checkbox = row.querySelector('.select-row');
-                    if (checkbox) {
-                        userId = checkbox.value;
-                    } else {
-                        // Try to get from edit button data attribute as fallback
-                        const editBtn = row.querySelector('.edit-btn');
-                        if (editBtn) {
-                            userId = editBtn.getAttribute('data-user-id');
-                        }
-                    }
-                    
-                    if (userId) {
-                        if (!userGroups[userId]) {
-                            userGroups[userId] = [];
-                        }
-                        userGroups[userId].push(row);
-                    }
-                });
-                
-                // Get unique user IDs and count
-                const uniqueUserIds = Object.keys(userGroups);
-                const totalUniqueUsers = uniqueUserIds.length;
-                
-                // Get pagination settings
-                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value) || 10;
-                const currentPage = window.paginationConfig.currentPage || 1;
-                const totalPages = Math.ceil(totalUniqueUsers / rowsPerPage);
-                
-                // Adjust current page if it's out of range
-                if (currentPage > totalPages && totalPages > 0) {
-                    window.paginationConfig.currentPage = totalPages;
-                }
-                
-                // Update total rows display
-                const totalRowsEl = document.getElementById('totalRows');
-                if (totalRowsEl) {
-                    totalRowsEl.textContent = totalUniqueUsers;
-                }
-                
-                // Calculate which users to show on current page
-                const startUserIndex = (currentPage - 1) * rowsPerPage;
-                const endUserIndex = Math.min(startUserIndex + rowsPerPage, totalUniqueUsers);
-                const visibleUserIds = uniqueUserIds.slice(startUserIndex, endUserIndex);
-                
-                // Update pagination display
-                const rowsPerPageEl = document.getElementById('rowsPerPage');
-                if (rowsPerPageEl) {
-                    rowsPerPageEl.textContent = Math.min(endUserIndex, totalUniqueUsers);
-                }
-                
-                const currentPageEl = document.getElementById('currentPage');
-                if (currentPageEl) {
-                    currentPageEl.textContent = totalUniqueUsers > 0 ? startUserIndex + 1 : 0;
-                }
-                
-                // Hide all rows first
-                rows.forEach(row => row.style.display = 'none');
-                
-                // Show only rows for users on the current page
-                visibleUserIds.forEach(userId => {
-                    const userRows = userGroups[userId] || [];
-                    userRows.forEach(row => row.style.display = '');
-                });
-                
-                // Generate pagination links
-                generatePaginationLinks(currentPage, totalPages);
-                
-                // Update prev/next button visibility
-                forcePaginationCheck();
-            };
-            
-            // Function to generate pagination links
-            function generatePaginationLinks(currentPage, totalPages) {
-                const paginationEl = document.getElementById('pagination');
-                if (!paginationEl) return;
-                
-                paginationEl.innerHTML = '';
-                
-                // Don't show pagination if there's only one page or no pages
-                if (totalPages <= 1) return;
-                
-                // Previous button
-                const prevLi = document.createElement('li');
-                prevLi.className = 'page-item' + (currentPage <= 1 ? ' disabled' : '');
-                const prevLink = document.createElement('a');
-                prevLink.className = 'page-link';
-                prevLink.href = '#';
-                prevLink.innerHTML = '<i class="bi bi-chevron-left"></i>';
-                prevLink.setAttribute('aria-label', 'Previous');
-                prevLink.addEventListener('click', function(e) {
-                    e.preventDefault();
+                if (!$(this).prop('disabled')) {
+                    const currentPage = parseInt($('#current-page').val());
                     if (currentPage > 1) {
-                        window.paginationConfig.currentPage--;
-                        window.updatePagination();
-                    }
-                });
-                prevLi.appendChild(prevLink);
-                paginationEl.appendChild(prevLi);
-                
-                // Calculate page range to show
-                let startPage = Math.max(1, currentPage - 1);
-                let endPage = Math.min(totalPages, startPage + 2);
-                
-                // Adjust if we're near the end
-                if (endPage - startPage < 2 && startPage > 1) {
-                    startPage = Math.max(1, endPage - 2);
-                }
-                
-                // First page if not in range
-                if (startPage > 1) {
-                    const firstLi = document.createElement('li');
-                    firstLi.className = 'page-item';
-                    const firstLink = document.createElement('a');
-                    firstLink.className = 'page-link';
-                    firstLink.href = '#';
-                    firstLink.textContent = '1';
-                    firstLink.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        window.paginationConfig.currentPage = 1;
-                        window.updatePagination();
-                    });
-                    firstLi.appendChild(firstLink);
-                    paginationEl.appendChild(firstLi);
-                    
-                    // Add ellipsis if needed
-                    if (startPage > 2) {
-                        const ellipsisLi = document.createElement('li');
-                        ellipsisLi.className = 'page-item disabled';
-                        const ellipsisSpan = document.createElement('span');
-                        ellipsisSpan.className = 'page-link';
-                        ellipsisSpan.textContent = '...';
-                        ellipsisLi.appendChild(ellipsisSpan);
-                        paginationEl.appendChild(ellipsisLi);
+                        navigateToPage(currentPage - 1);
                     }
                 }
-                
-                // Page numbers
-                for (let i = startPage; i <= endPage; i++) {
-                    const pageLi = document.createElement('li');
-                    pageLi.className = 'page-item' + (i === currentPage ? ' active' : '');
-                    const pageLink = document.createElement('a');
-                    pageLink.className = 'page-link';
-                    pageLink.href = '#';
-                    pageLink.textContent = i;
-                    pageLink.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        window.paginationConfig.currentPage = i;
-                        window.updatePagination();
-                    });
-                    pageLi.appendChild(pageLink);
-                    paginationEl.appendChild(pageLi);
-                }
-                
-                // Last page if not in range
-                if (endPage < totalPages) {
-                    // Add ellipsis if needed
-                    if (endPage < totalPages - 1) {
-                        const ellipsisLi = document.createElement('li');
-                        ellipsisLi.className = 'page-item disabled';
-                        const ellipsisSpan = document.createElement('span');
-                        ellipsisSpan.className = 'page-link';
-                        ellipsisSpan.textContent = '...';
-                        ellipsisLi.appendChild(ellipsisSpan);
-                        paginationEl.appendChild(ellipsisLi);
-                    }
-                    
-                    const lastLi = document.createElement('li');
-                    lastLi.className = 'page-item';
-                    const lastLink = document.createElement('a');
-                    lastLink.className = 'page-link';
-                    lastLink.href = '#';
-                    lastLink.textContent = totalPages;
-                    lastLink.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        window.paginationConfig.currentPage = totalPages;
-                        window.updatePagination();
-                    });
-                    lastLi.appendChild(lastLink);
-                    paginationEl.appendChild(lastLi);
-                }
-                
-                // Next button
-                const nextLi = document.createElement('li');
-                nextLi.className = 'page-item' + (currentPage >= totalPages ? ' disabled' : '');
-                const nextLink = document.createElement('a');
-                nextLink.className = 'page-link';
-                nextLink.href = '#';
-                nextLink.innerHTML = '<i class="bi bi-chevron-right"></i>';
-                nextLink.setAttribute('aria-label', 'Next');
-                nextLink.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    if (currentPage < totalPages) {
-                        window.paginationConfig.currentPage++;
-                        window.updatePagination();
-                    }
-                });
-                nextLi.appendChild(nextLink);
-                paginationEl.appendChild(nextLi);
-            }
-
-            // Define a flag to control automatic filtering
-            let allowAutoFiltering = false;
-            
-            function filterTable() {
-                // Check if this was called from an event that should be ignored
-                if (!allowAutoFiltering && window.filterCalledFrom === 'auto') {
-                    console.log('Automatic filtering prevented');
-                    window.filterCalledFrom = null;
-                    return;
-                }
-                
-                // Double-check if this was triggered by the filter button
-                const calledByButton = window.filterCalledFrom === 'button';
-                if (!calledByButton) {
-                    console.log('Filtering not triggered by button - prevented');
-                    window.filterCalledFrom = null;
-                    return;
-                }
-                
-                console.log('Filtering table (allowed)');
-                const searchText = $('#search-users').val().toLowerCase();
-                const roleFilter = $('#role-filter').val();
-                const deptFilter = $('#dept-filter').val().toLowerCase(); // Use value instead of text
-
-                // Get the department filter text (not just the value)
-                const deptFilterText = deptFilter ? $('#dept-filter option:selected').text().toLowerCase() : '';
-
-                // Make sure allRows is initialized
-                if (!window.allRows || window.allRows.length === 0) {
-                    window.allRows = Array.from(document.querySelectorAll('#urTable tbody tr'));
-                }
-
-                // Convert role ID to name for filtering
-                const roleFilterName = roleFilter ? 
-                    rolesData.find(r => r.id == roleFilter)?.role_name.toLowerCase() : '';
-
-                console.log('Filtering with:', { 
-                    searchText, 
-                    roleFilter, 
-                    deptFilter,
-                    deptFilterText,
-                    roleFilterName 
-                });
-
-                // Create a copy of all rows to work with
-                const allRowsCopy = window.allRows.map(row => row.cloneNode(true));
-                
-                // Reset the table body
-                const tbody = document.querySelector('#urTable tbody');
-                
-                // Group rows by user ID to handle multiple departments/roles per user
-                const userGroups = {};
-                allRowsCopy.forEach(row => {
-                    // Extract user ID from the row
-                    let userId = null;
-                    const checkbox = row.querySelector('.select-row');
-                    if (checkbox) {
-                        userId = checkbox.value;
-                    } else {
-                        // Try to get from edit button data attribute as fallback
-                        const editBtn = row.querySelector('.edit-btn');
-                        if (editBtn) {
-                            userId = editBtn.getAttribute('data-user-id');
-                        }
-                    }
-                    
-                    if (userId) {
-                        if (!userGroups[userId]) {
-                            userGroups[userId] = {
-                                rows: [],
-                                userData: {
-                                    username: row.querySelector('td:nth-child(2)')?.textContent.toLowerCase() || '',
-                                    departments: row.querySelector('td:nth-child(3)')?.textContent.toLowerCase() || '',
-                                    roles: row.querySelector('td:nth-child(4)')?.textContent.toLowerCase() || ''
-                                }
-                            };
-                        }
-                        userGroups[userId].rows.push(row);
-                    }
-                });
-
-                // Filter users based on criteria
-                const filteredUserIds = [];
-                Object.keys(userGroups).forEach(userId => {
-                    const userData = userGroups[userId].userData;
-                    
-                    // Apply search filter across all columns (username, departments, roles)
-                    const matchesSearch = !searchText || 
-                        userData.username.includes(searchText) ||
-                        userData.departments.includes(searchText) || 
-                        userData.roles.includes(searchText);
-                    
-                    // Apply role filter using role name instead of ID
-                    let matchesRole = !roleFilter;
-                    if (roleFilter && roleFilterName) {
-                        // Check for exact match
-                        matchesRole = userData.roles.includes(roleFilterName);
-                        
-                        // If no exact match, try checking for partial/case-insensitive match
-                        if (!matchesRole) {
-                            const rolesLower = userData.roles.toLowerCase();
-                            matchesRole = rolesLower.includes(roleFilterName.toLowerCase());
-                        }
-                    }
-                    
-                    // Debug logging for role filtering
-                    if (roleFilter && roleFilterName) {
-                        console.log(`User ${userData.username} - Role check:`, {
-                            roleFilterName: roleFilterName,
-                            userRoles: userData.roles,
-                            matches: userData.roles.includes(roleFilterName)
-                        });
-                    }
-                    
-                    // Apply department filter using the value
-                    let matchesDept = true;
-                    if (deptFilter && deptFilter !== '') {
-                        const userDepts = userData.departments.split(', ').map(d => d.trim().toLowerCase());
-                        matchesDept = userDepts.includes(deptFilter);
-                    }
-                    
-                    if (matchesSearch && matchesRole && matchesDept) {
-                        filteredUserIds.push(userId);
-                    }
-                });
-
-                // Clear the table
-                tbody.innerHTML = '';
-                
-                // Collect all rows for filtered users
-                window.filteredRows = [];
-                filteredUserIds.forEach(userId => {
-                    userGroups[userId].rows.forEach(row => {
-                        window.filteredRows.push(row);
-                        tbody.appendChild(row);
-                    });
-                });
-
-                console.log('Filtered users:', filteredUserIds.length);
-                console.log('Filtered rows:', window.filteredRows.length);
-
-                // Show empty state if no results
-                if (window.filteredRows.length === 0) {
-                    tbody.innerHTML = `
-                        <tr>
-                            <td colspan="5" class="text-center">
-                                <div class="empty-state">
-                                    <div class="empty-state-icon">🔍</div>
-                                    <div class="empty-state-message">No matching user roles found</div>
-                                </div>
-                            </td>
-                        </tr>
-                    `;
-                }
-
-                // Rebind event handlers to the rows
-                rebindRowEvents();
-                
-                // Reset to first page and update pagination
-                window.paginationConfig.currentPage = 1;
-                window.updatePagination();
-                
-                // Reset flag after successful filtering
-                window.filterCalledFrom = null;
-            }
-            
-            // Mark filterTable as page-specific to prevent automatic triggering from pagination.js
-            window.filterTable = filterTable;
-            window.filterTable.isPageSpecific = true;
-            
-            // Function to rebind events to table rows
-            function rebindRowEvents() {
-                // Rebind edit button click events
-                document.querySelectorAll('#urTable .edit-btn').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        const userId = this.getAttribute('data-user-id');
-                        const username = this.getAttribute('data-username');
-                        openEditModal(userId, username);
-                    });
-                });
-                
-                // Rebind delete button click events
-                document.querySelectorAll('#urTable .delete-btn').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        const userId = this.getAttribute('data-user-id');
-                        openDeleteModal(userId);
-                    });
-                });
-                
-                // Rebind checkbox events if they exist
-                document.querySelectorAll('#urTable .select-row').forEach(checkbox => {
-                    checkbox.addEventListener('change', function() {
-                        if (typeof updateDeleteSelectedButton === 'function') {
-                            updateDeleteSelectedButton();
-                        }
-                    });
-                });
-            }
-
-            // ONLY bind filter function to filter button click event
-            $('#filter-btn').on('click', function() {
-                console.log('Filter button clicked in PHP');
-                
-                // Add visual feedback that filtering is happening
-                $(this).addClass('btn-filtering').html('<i class="bi bi-hourglass-split"></i> Filtering...');
-                
-                // Set a small timeout to allow the UI to update before filtering
-                setTimeout(() => {
-                    window.filterCalledFrom = 'button';
-                    filterTable();
-                    
-                    // Check if we have any results after filtering
-                    if (window.filteredRows && window.filteredRows.length === 0) {
-                        console.log('No matching results found');
-                        
-                        // Use Toast notification if available
-                        if (typeof Toast !== 'undefined') {
-                            const deptFilter = $('#dept-filter').val();
-                            const deptFilterText = $('#dept-filter option:selected').text();
-                            
-                            let message = 'No matching results found.';
-                            if (deptFilter) {
-                                message += ' Try a different department filter.';
-                            }
-                            
-                            Toast.info(message, 3000, 'Filter Results');
-                        }
-                    }
-                    
-                    // Reset button after filtering is done
-                    $(this).removeClass('btn-filtering').html('<i class="bi bi-funnel"></i> Filter');
-                }, 100);
             });
             
-            // Handle clear filters button
-            $('#clear-btn').on('click', function() {
-                console.log('Clear button clicked - Reloading page');
-                // Reload the page without any filter parameters
-                window.location.href = window.location.pathname;
-            });
-
-            // REMOVE THE DUPLICATE SORTING HANDLER AND USE ONLY THE ONE FROM THE JS FILE
-            // Unbind any existing click handlers from sort headers
-            $('.sort-header').off('click');
-            
-            // Re-bind the sort handler with a fixed implementation
-            $('.sort-header').on('click', function(e) {
+            $('#nextPage').on('click', function(e) {
                 e.preventDefault();
-                const sortField = $(this).data('sort');
-                
-                // Toggle sort direction or set to ascending if changing column
-                let newSortOrder = 'asc';
-                
-                // If clicking the same header that's already active, toggle sort order
-                if (window.currentSortBy === sortField) {
-                    newSortOrder = (window.currentSortOrder === 'asc') ? 'desc' : 'asc';
+                if (!$(this).prop('disabled')) {
+                    const currentPage = parseInt($('#current-page').val());
+                    const totalPages = parseInt($('#total-pages').val());
+                    if (currentPage < totalPages) {
+                        navigateToPage(currentPage + 1);
+                    }
                 }
-                
-                // Add loading indicator to the clicked header
-                $('.sort-header').removeClass('sorting');
-                $(this).addClass('sorting');
-                $(this).find('.sort-icon')
-                    .removeClass('bi-caret-up-fill bi-caret-down-fill')
-                    .addClass('bi-hourglass-split');
-                
-                // Update URL with sort parameters
-                const urlParams = new URLSearchParams(window.location.search);
-                
-                // Set the new sort parameters
-                urlParams.set('sort_by', sortField);
-                urlParams.set('sort_order', newSortOrder);
-                
-                // Preserve existing filters
-                const searchValue = $('#search-users').val();
-                const roleFilterValue = $('#role-filter').val();
-                const deptFilterValue = $('#dept-filter').val();
-                
-                if (searchValue) {
-                    urlParams.set('search', encodeURIComponent(searchValue));
-                } else {
-                    urlParams.delete('search');
-                }
-                
-                if (roleFilterValue) {
-                    urlParams.set('role', encodeURIComponent(roleFilterValue));
-                } else {
-                    urlParams.delete('role');
-                }
-                
-                if (deptFilterValue) {
-                    urlParams.set('department', encodeURIComponent(deptFilterValue));
-                } else {
-                    urlParams.delete('department');
-                }
-                
-                // Save the sort state to window variables before reloading
-                window.currentSortBy = sortField;
-                window.currentSortOrder = newSortOrder;
-                
-                console.log(`Sorting by ${sortField} in ${newSortOrder} order`);
-                
-                // Add a short delay to show the loading indicator
-                setTimeout(function() {
-                    // Reload the page with the new URL parameters for server-side sorting
-                    window.location.href = window.location.pathname + '?' + urlParams.toString();
-                }, 300);
             });
             
-            // Function to update sort icons (up/down arrows) based on current sort state
-            function updateSortIcons() {
-                // Remove all active classes first
+            // Function to navigate to a specific page while preserving sort parameters
+            function navigateToPage(page) {
+                const urlParams = new URLSearchParams(window.location.search);
+                urlParams.set('page', page);
+                
+                // Preserve sort parameters
+                const sortBy = urlParams.get('sort_by');
+                const sortOrder = urlParams.get('sort_order');
+                if (sortBy && sortOrder) {
+                    urlParams.set('sort_by', sortBy);
+                    urlParams.set('sort_order', sortOrder);
+                }
+                
+                // Preserve rows per page if set
+                const rowsPerPage = $('#rowsPerPageSelect').val();
+                if (rowsPerPage) {
+                    urlParams.set('rows_per_page', rowsPerPage);
+                }
+                
+                // Preserve filter parameters
+                const searchValue = urlParams.get('search');
+                if (searchValue) {
+                    urlParams.set('search', searchValue);
+                }
+                
+                const roleValue = urlParams.get('role');
+                if (roleValue) {
+                    urlParams.set('role', roleValue);
+                }
+                
+                const deptValue = urlParams.get('department');
+                if (deptValue) {
+                    urlParams.set('department', deptValue);
+                }
+                
+                // Navigate to the new URL
+                window.location.href = window.location.pathname + '?' + urlParams.toString();
+            }
+            
+            // Handle clear button click
+            $('#clear-btn').on('click', function() {
+                // Get current sort parameters to preserve them
+                const urlParams = new URLSearchParams(window.location.search);
+                const sortBy = urlParams.get('sort_by');
+                const sortOrder = urlParams.get('sort_order');
+                
+                // Create a new URL with only sort parameters if they exist
+                let newUrl = window.location.pathname;
+                if (sortBy && sortOrder) {
+                    newUrl += `?sort_by=${sortBy}&sort_order=${sortOrder}`;
+                }
+                
+                // Navigate to the new URL
+                window.location.href = newUrl;
+            });
+            
+            // Update the active sort header based on URL parameters
+            function updateActiveSortHeader() {
+                const urlParams = new URLSearchParams(window.location.search);
+                const sortBy = urlParams.get('sort_by') || 'username';
+                const sortOrder = urlParams.get('sort_order') || 'asc';
+                
+                // Remove active class and reset icons
                 $('.sort-header').removeClass('active-sort');
                 $('.sort-icon').removeClass('bi-caret-up-fill bi-caret-down-fill').addClass('bi-caret-up-fill');
                 
-                // Only proceed if we have a valid sort field
-                if (!window.currentSortBy) return;
-                
-                // Find the matching sort header
-                const activeHeader = $(`.sort-header[data-sort="${window.currentSortBy}"]`);
+                // Find the active header and update it
+                const activeHeader = $(`.sort-header[data-sort="${sortBy}"]`);
                 if (activeHeader.length) {
-                    // Add active class to the header
                     activeHeader.addClass('active-sort');
-                    
-                    // Set the appropriate icon based on sort direction
                     const icon = activeHeader.find('.sort-icon');
-                    icon.removeClass('bi-caret-up-fill bi-caret-down-fill');
-                    
-                    if (window.currentSortOrder === 'asc') {
-                        icon.addClass('bi-caret-up-fill');
+                    if (sortOrder === 'asc') {
+                        icon.removeClass('bi-caret-down-fill').addClass('bi-caret-up-fill');
                     } else {
-                        icon.addClass('bi-caret-down-fill');
+                        icon.removeClass('bi-caret-up-fill').addClass('bi-caret-down-fill');
                     }
                 }
             }
             
-            // Initialize the table with proper sort icons
-            updateSortIcons();
+            // Call the function on page load
+            updateActiveSortHeader();
+            
+            // Disable client-side pagination since we're using server-side pagination
+            if (typeof window.updatePagination === 'function') {
+                // Store the original function
+                const originalUpdatePagination = window.updatePagination;
+                
+                // Override with a version that doesn't modify the DOM
+                window.updatePagination = function() {
+                    console.log('Client-side pagination disabled - using server-side pagination');
+                    return;
+                };
+            }
+            
+            // Initialize Select2 for filter dropdowns
+            $('#role-filter, #dept-filter').select2({
+                placeholder: 'Select...',
+                allowClear: true,
+                width: '100%'
+            });
         });
     </script>
 </body>
