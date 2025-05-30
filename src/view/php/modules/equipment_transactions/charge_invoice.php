@@ -389,16 +389,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
             case 'asc':
                 $query .= " ORDER BY ci.date_of_purchase ASC";
                 break;
-            case 'month':
-                $query .= " AND MONTH(ci.date_of_purchase) = ? AND YEAR(ci.date_of_purchase) = ?";
-                $params[] = $_GET['month'];
-                $params[] = $_GET['year'];
-                break;
-            case 'range':
-                $query .= " AND ci.date_of_purchase BETWEEN ? AND ?";
-                $params[] = $_GET['dateFrom'];
-                $params[] = $_GET['dateTo'];
-                break;
         }
 
         $stmt = $pdo->prepare($query);
@@ -748,14 +738,7 @@ $(document).ready(function() {
         $('#dateInputsContainer').hide();
         $('#monthPickerContainer').hide();
         $('#dateRangePickers').hide();
-        if (filterType === 'month') {
-            $('#dateInputsContainer').show();
-            $('#monthPickerContainer').show();
-        } else if (filterType === 'range') {
-            $('#dateInputsContainer').show();
-            $('#dateRangePickers').show();
-        }
-        // If filter is cleared, reload
+        // No additional date input UI for desc/asc
         if (!filterType) {
             window.location.reload();
         }
@@ -770,32 +753,14 @@ $(document).ready(function() {
         }
         if (filterType === 'desc' || filterType === 'asc') {
             applyInvoiceFilter(filterType);
-        } else if (filterType === 'month') {
-            const month = $('#monthSelect').val();
-            const year = $('#yearSelect').val();
-            if (!month || !year) {
-                showToast('Please select both month and year.', 'error');
-                return;
-            }
-            applyInvoiceFilter('month', { month, year });
-        } else if (filterType === 'range') {
-            const dateFrom = $('#dateFrom').val();
-            const dateTo = $('#dateTo').val();
-            if (!dateFrom || !dateTo) {
-                showToast('Please select both start and end dates.', 'error');
-                return;
-            }
-            applyInvoiceFilter('range', { dateFrom, dateTo });
+        } else {
+            showToast('Invalid filter type.', 'error');
         }
     });
 
     // Clear filters and reload table
     $('#clearFilters').off('click').on('click', function() {
         $('#dateFilter').val('');
-        $('#monthSelect').val('');
-        $('#yearSelect').val('');
-        $('#dateFrom').val('');
-        $('#dateTo').val('');
         $('#dateInputsContainer').hide();
         $('#monthPickerContainer').hide();
         $('#dateRangePickers').hide();
@@ -808,14 +773,6 @@ $(document).ready(function() {
             action: 'filter',
             type: type
         };
-        // Add additional parameters based on filter type
-        if (type === 'month') {
-            filterData.month = params.month;
-            filterData.year = params.year;
-        } else if (type === 'range') {
-            filterData.dateFrom = params.dateFrom;
-            filterData.dateTo = params.dateTo;
-        }
         $.ajax({
             url: 'charge_invoice.php',
             method: 'GET',
@@ -904,35 +861,7 @@ $(document).ready(function() {
                             <option value="">Filter by Date</option>
                             <option value="desc">Newest to Oldest</option>
                             <option value="asc">Oldest to Newest</option>
-                            <option value="month">Specific Month</option>
-                            <option value="range">Custom Date Range</option>
                         </select>
-                        <div id="dateInputsContainer" style="display: none;">
-                            <div class="d-flex gap-2" id="monthPickerContainer" style="display: none;">
-                                <select class="form-select form-select-sm" id="monthSelect" style="min-width: 130px;">
-                                    <option value="">Select Month</option>
-                                    <?php
-                                    $months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-                                    foreach ($months as $index => $month) {
-                                        echo "<option value='" . ($index + 1) . "'>" . $month . "</option>";
-                                    }
-                                    ?>
-                                </select>
-                                <select class="form-select form-select-sm" id="yearSelect" style="min-width: 110px;">
-                                    <option value="">Select Year</option>
-                                    <?php
-                                    $currentYear = date('Y');
-                                    for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
-                                        echo "<option value='" . $year . "'>" . $year . "</option>";
-                                    }
-                                    ?>
-                                </select>
-                            </div>
-                            <div class="d-flex gap-2" id="dateRangePickers" style="display: none;">
-                                <input type="date" class="form-control form-control-sm" id="dateFrom" placeholder="From">
-                                <input type="date" class="form-control form-control-sm" id="dateTo" placeholder="To">
-                            </div>
-                        </div>
                         <button type="button" id="applyFilters" class="btn btn-dark btn-sm ms-2"><i class="bi bi-funnel"></i> Filter</button>
                         <button type="button" id="clearFilters" class="btn btn-secondary btn-sm ms-1"><i class="bi bi-x-circle"></i> Clear</button>
                     </div>
@@ -962,7 +891,7 @@ $(document).ready(function() {
                                         <td><?php echo htmlspecialchars($invoice['invoice_no'] ?? ''); ?></td>
                                         <td><?php echo htmlspecialchars($invoice['date_of_purchase'] ?? ''); ?></td>
                                         <td><?php echo htmlspecialchars($invoice['po_no'] ?? ''); ?></td>
-                                        <td><?php echo date('Y-m-d H:i', strtotime($invoice['date_created'] ?? '')); ?></td>
+                                        <td><?php echo date('Y-m-d h:i A', strtotime($invoice['date_created'] ?? '')); ?></td>
                                         <td class="text-center">
                                             <div class="btn-group" role="group">
                                                 <?php if ($canModify): ?>
@@ -1060,7 +989,7 @@ $(document).ready(function() {
     <?php if ($canCreate): ?>
         <!-- Add Invoice Modal -->
         <div class="modal fade" id="addInvoiceModal" tabindex="-1">
-            <div class="modal-dialog">
+            <div class="modal-dialog" style="margin-top:100px;">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title">Add New Charge Invoice</h5>
@@ -1103,7 +1032,7 @@ $(document).ready(function() {
     <?php if ($canModify): ?>
         <!-- Edit Invoice Modal -->
         <div class="modal fade" id="editInvoiceModal" tabindex="-1">
-            <div class="modal-dialog">
+            <div class="modal-dialog" style="margin-top:100px;">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title">Edit Charge Invoice</h5>

@@ -363,7 +363,7 @@ try {
             `Status`,
             Date_Time
         )
-        VALUES (?, ?, 'modified', ?, 'User Management', 'Success', NOW())
+        VALUES (?, ?, 'modified', ?, 'User Management', 'Successful', NOW())
     ");
     // … after inserting user_department_roles …
 

@@ -476,34 +476,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
         <option value="">Filter by Date</option>
         <option value="desc">Newest to Oldest</option>
         <option value="asc">Oldest to Newest</option>
-        <option value="month">Specific Month</option>
-        <option value="range">Custom Date Range</option>
+
     </select>
     <div id="dateInputsContainer" style="display: none;">
-        <div class="d-flex gap-2" id="monthPickerContainer" style="display: none;">
-            <select class="form-select form-select-sm" id="monthSelect" style="min-width: 130px;">
-                <option value="">Select Month</option>
-                <?php
-                $months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-                foreach ($months as $index => $month) {
-                    echo "<option value='" . ($index + 1) . "'>" . $month . "</option>";
-                }
-                ?>
-            </select>
-            <select class="form-select form-select-sm" id="yearSelect" style="min-width: 110px;">
-                <option value="">Select Year</option>
-                <?php
-                $currentYear = date('Y');
-                for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
-                    echo "<option value='" . $year . "'>" . $year . "</option>";
-                }
-                ?>
-            </select>
-        </div>
-        <div class="d-flex gap-2" id="dateRangePickers" style="display: none;">
-            <input type="date" class="form-control form-control-sm" id="dateFrom" placeholder="From">
-            <input type="date" class="form-control form-control-sm" id="dateTo" placeholder="To">
-        </div>
+
+
     </div>
     <button type="button" id="applyFilters" class="btn btn-dark btn-sm ms-2"><i class="bi bi-funnel"></i> Filter</button>
     <button type="button" id="clearFilters" class="btn btn-secondary btn-sm ms-1"><i class="bi bi-x-circle"></i> Clear</button>
@@ -536,7 +513,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                                                 <td><?php echo htmlspecialchars($po['date_of_order']); ?></td>
                                                 <td><?php echo htmlspecialchars($po['no_of_units']); ?></td>
                                                 <td><?php echo htmlspecialchars($po['item_specifications']); ?></td>
-                                                <td><?php echo date('Y-m-d H:i', strtotime($po['date_created'])); ?></td>
+                                                <td><?php echo date('Y-m-d h:i A', strtotime($po['date_created'])); ?></td>
                                                 <td class="text-center">
                                                     <div class="btn-group" role="group">
                                                         <?php if ($canModify): ?>
@@ -630,8 +607,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
 
 
     <?php if ($canCreate): ?>
-        <div class="modal fade" id="addPOModal" tabindex="-1">
-            <div class="modal-dialog">
+        <link rel="stylesheet" href="src/view/php/modules/equipment_transactions/add_po_modal.css">
+<div class="modal fade" id="addPOModal" tabindex="-1">
+            <div class="modal-dialog" style="margin-top:100px;">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title">Create New Purchase Order</h5>
@@ -676,7 +654,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
 
     <?php if ($canModify): ?>
         <div class="modal fade" id="editPOModal" tabindex="-1">
-            <div class="modal-dialog">
+            <div class="modal-dialog" style="margin-top:100px;">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title">Edit Purchase Order</h5>
@@ -712,19 +690,17 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
         </div>
     <?php endif; ?>
 
+    <!-- Toast notification system -->
+    <link rel="stylesheet" href="/src/view/styles/css/toast.css">
+    <script src="/src/control/js/toast.js"></script>
     <script>
-        // Placeholder for showToast function if not defined elsewhere
+        // Use the global showToast from toast.js, with durations matching Receiving Report
         function showToast(message, type) {
-            console.log(`Toast (${type}): ${message}`);
-            // In a real application, you'd show a Bootstrap toast here
-            // Example:
-            // const toastEl = document.getElementById('liveToast');
-            // const toastBody = toastEl.querySelector('.toast-body');
-            // toastBody.textContent = message;
-            // toastEl.classList.remove('text-bg-success', 'text-bg-danger');
-            // toastEl.classList.add(type === 'success' ? 'text-bg-success' : 'text-bg-danger');
-            // const toast = new bootstrap.Toast(toastEl);
-            // toast.show();
+            // Match durations: 3500ms for success, 5000ms for error
+            let duration = 3500;
+            if (type === 'success') duration = 3500;
+            else if (type === 'error') duration = 5000;
+            window.showToast(message, type, duration);
         }
 
         // Function to ensure modal backdrop is removed
@@ -801,8 +777,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                     dataType: 'json',
                     success: function(response) {
                         if (response.status === 'success') {
-                            showToast(response.message, 'success');
-                            location.reload();
+                            // Instantly remove the row visually
+                            $("tr[data-id='" + removeId + "']").remove();
+                            $('#purchaseTable').load(location.href + ' #purchaseTable', function() {
+                                showToast(response.message, 'success');
+                                if (typeof reinitPurchaseTableJS === 'function') reinitPurchaseTableJS();
+                            });
                         } else {
                             showToast(response.message, 'error');
                         }
@@ -821,6 +801,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
         // Add Purchase Order AJAX submission
         $('#addPOForm').on('submit', function(e) {
             e.preventDefault();
+            // Immediately close the modal for instant feedback
+            var addModalEl = document.getElementById('addPOModal');
+            var addModal = bootstrap.Modal.getInstance(addModalEl);
+            if (addModal) {
+                addModal.hide();
+            }
+            // Remove any lingering modal backdrop and restore scrolling
+            removeModalBackdrop();
             // Add PO prefix before sending
             let poNo = $('input[name="po_no"]', this).val();
             let formData = $(this).serializeArray();
@@ -839,8 +827,16 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                 dataType: 'json',
                 success: function(response) {
                     if (response.status === 'success') {
-                        showToast(response.message, 'success');
-                        location.reload();
+                        // Close the modal
+                        var addModalEl = document.getElementById('addPOModal');
+                        var addModal = bootstrap.Modal.getInstance(addModalEl);
+                        if (addModal) {
+                            addModal.hide();
+                        }
+                        $('#purchaseTable').load(location.href + ' #purchaseTable', function() {
+                            showToast(response.message, 'success');
+                            if (typeof reinitPurchaseTableJS === 'function') reinitPurchaseTableJS();
+                        });
                     } else {
                         showToast(response.message, 'error');
                     }
@@ -922,16 +918,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
         // Date filter UI handling (show/hide inputs only, not filtering)
 $('#dateFilter').on('change', function() {
     const filterType = $(this).val();
-    $('#dateInputsContainer').hide();
-    $('#monthPickerContainer').hide();
-    $('#dateRangePickers').hide();
-    if (filterType === 'month') {
-        $('#dateInputsContainer').show();
-        $('#monthPickerContainer').show();
-    } else if (filterType === 'range') {
-        $('#dateInputsContainer').show();
-        $('#dateRangePickers').show();
-    }
+        $('#dateInputsContainer').hide();
+        $('#monthPickerContainer').hide();
+        $('#dateRangePickers').hide();
+        // No additional date input UI for desc/asc
+        
 });
 
 // Only trigger filtering when the Filter button is clicked
@@ -943,35 +934,14 @@ $('#applyFilters').on('click', function() {
     }
     if (filterType === 'desc' || filterType === 'asc') {
         applyFilter(filterType);
-    } else if (filterType === 'month') {
-        const month = $('#monthSelect').val();
-        const year = $('#yearSelect').val();
-        if (!month || !year) {
-            showToast('Please select both month and year.', 'error');
-            return;
-        }
-        applyFilter('month', { month, year });
-    } else if (filterType === 'range') {
-        const dateFrom = $('#dateFrom').val();
-        const dateTo = $('#dateTo').val();
-        if (!dateFrom || !dateTo) {
-            showToast('Please select both start and end dates.', 'error');
-            return;
-        }
-        applyFilter('range', { dateFrom, dateTo });
+    } else {
+        showToast('Invalid filter type.', 'error');
     }
 });
 
 // Clear filters and reload table
 $('#clearFilters').on('click', function() {
     $('#dateFilter').val('');
-    $('#monthSelect').val('');
-    $('#yearSelect').val('');
-    $('#dateFrom').val('');
-    $('#dateTo').val('');
-    $('#dateInputsContainer').hide();
-    $('#monthPickerContainer').hide();
-    $('#dateRangePickers').hide();
     window.location.reload();
 });
 
@@ -981,15 +951,6 @@ $('#clearFilters').on('click', function() {
                 action: 'filter',
                 type: type
             };
-
-            // Add additional parameters based on filter type
-            if (type === 'month') {
-                filterData.month = params.month;
-                filterData.year = params.year;
-            } else if (type === 'range') {
-                filterData.dateFrom = params.dateFrom;
-                filterData.dateTo = params.dateTo;
-            }
 
             $.ajax({
                 url: 'purchase_order.php',
@@ -1002,6 +963,10 @@ $('#clearFilters').on('click', function() {
                             // Update table body with filtered results
                             let tableBody = '';
                             data.orders.forEach(po => {
+                                let formattedDate = '';
+                                if (po.date_created) {
+                                    formattedDate = formatDateAMPM(po.date_created);
+                                }
                                 tableBody += `
                                 <tr>
                                     <td>${po.id}</td>
@@ -1009,7 +974,7 @@ $('#clearFilters').on('click', function() {
                                     <td>${po.date_of_order}</td>
                                     <td>${po.no_of_units}</td>
                                     <td>${po.item_specifications}</td>
-                                    <td>${new Date(po.date_created).toLocaleString()}</td>
+                                    <td>${formattedDate}</td>
                                     <td class="text-center">
                                         <div class="btn-group" role="group">
                                             <a class="btn btn-sm btn-outline-primary edit-po"
@@ -1052,6 +1017,23 @@ $('#clearFilters').on('click', function() {
                 window.location.reload();
             }
         });
+
+        // Function to format date with AM/PM (12-hour format)
+        function formatDateAMPM(dateString) {
+            if (!dateString) return '';
+            // Accepts 'YYYY-MM-DD HH:MM:SS' or 'YYYY-MM-DDTHH:MM:SS'
+            const d = new Date(dateString.replace(' ', 'T'));
+            const year = d.getFullYear();
+            const month = (d.getMonth() + 1).toString().padStart(2, '0');
+            const day = d.getDate().toString().padStart(2, '0');
+            let hours = d.getHours();
+            const minutes = d.getMinutes().toString().padStart(2, '0');
+            const seconds = d.getSeconds().toString().padStart(2, '0');
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12; // the hour '0' should be '12'
+            return `${year}-${month}-${day} ${hours.toString().padStart(2, '0')}:${minutes}:${seconds} ${ampm}`;
+        }
     </script>
 
     <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js"></script>
