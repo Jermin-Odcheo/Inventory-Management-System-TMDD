@@ -100,6 +100,9 @@ function showToast(message, type = 'info', duration = 2800, title = null) {
     // Only animate progress if duration is positive
     if (duration > 0) {
         progress.style.animation = `countdown ${duration}ms linear forwards`;
+        // Remove any min-duration for short toasts
+        progress.style.webkitAnimationDuration = `${duration}ms`;
+        progress.style.animationDuration = `${duration}ms`;
     }
 
     toast.appendChild(progress);

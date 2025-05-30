@@ -962,7 +962,7 @@ $(document).ready(function() {
                                         <td><?php echo htmlspecialchars($invoice['invoice_no'] ?? ''); ?></td>
                                         <td><?php echo htmlspecialchars($invoice['date_of_purchase'] ?? ''); ?></td>
                                         <td><?php echo htmlspecialchars($invoice['po_no'] ?? ''); ?></td>
-                                        <td><?php echo date('Y-m-d H:i', strtotime($invoice['date_created'] ?? '')); ?></td>
+                                        <td><?php echo date('Y-m-d h:i A', strtotime($invoice['date_created'] ?? '')); ?></td>
                                         <td class="text-center">
                                             <div class="btn-group" role="group">
                                                 <?php if ($canModify): ?>
