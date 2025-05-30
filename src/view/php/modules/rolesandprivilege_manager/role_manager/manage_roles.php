@@ -148,6 +148,43 @@ unset($role, $privileges);
         .edit-btn:active {
             transform: translateY(0);
         }
+
+        /* Modal backdrop fix */
+        .modal-backdrop {
+            opacity: 0.5 !important; /* Force consistent opacity with !important */
+            background-color: #000;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1040;
+            width: 100vw;
+            height: 100vh;
+            transition: none !important; /* Disable any transitions */
+            animation: none !important; /* Disable any animations */
+        }
+        
+        /* Disable fade transitions for modals and backdrops */
+        .modal-backdrop.fade,
+        .modal.fade,
+        .modal.fade .modal-dialog {
+            transition: none !important;
+            animation: none !important;
+        }
+        
+        /* Ensure consistent backdrop appearance in all states */
+        .modal-backdrop.show {
+            opacity: 0.5 !important;
+        }
+        
+        body.modal-open {
+            overflow: hidden;
+            padding-right: 0 !important;
+        }
+        
+        /* Ensure modals are on top of backdrop */
+        .modal {
+            z-index: 1050;
+        }
     </style>
 </head>
 
@@ -279,17 +316,17 @@ unset($role, $privileges);
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 
     <!-- Modals (unchanged) -->
-    <div class="modal fade" id="editRoleModal" tabindex="-1" aria-labelledby="editRoleModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal" id="editRoleModal" tabindex="-1" aria-labelledby="editRoleModalLabel" aria-hidden="true" style="transition: none !important;">
+        <div class="modal-dialog modal-lg modal-dialog-centered" style="transition: none !important;">
             <div class="modal-content">
                 <div id="editRoleContent">Loading...</div>
             </div>
         </div>
     </div>
 
-    <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel"
-        aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+    <div class="modal" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel"
+        aria-hidden="true" style="transition: none !important;">
+        <div class="modal-dialog modal-dialog-centered" style="transition: none !important;">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Confirm Delete</h5>
@@ -306,8 +343,8 @@ unset($role, $privileges);
         </div>
     </div>
 
-    <div class="modal fade" id="addRoleModal" tabindex="-1" aria-labelledby="addRoleModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+    <div class="modal" id="addRoleModal" tabindex="-1" aria-labelledby="addRoleModalLabel" aria-hidden="true" style="transition: none !important;">
+        <div class="modal-dialog modal-dialog-centered" style="transition: none !important;">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Create New Role</h5>
@@ -334,23 +371,7 @@ unset($role, $privileges);
             // Store current scroll position
             const scrollPosition = window.scrollY || document.documentElement.scrollTop;
 
-            // Ensure modals are properly cleaned up
-            $('.modal').modal('hide');
-            
-            // Make sure we properly clean up all modal-related elements
-            setTimeout(function() {
-                // Use the global cleanup function if it exists, otherwise do it directly
-                if (typeof cleanupModalElements === 'function') {
-                    cleanupModalElements();
-                } else {
-                    // Fallback if the function isn't defined yet
-                    $('.modal-backdrop').remove();
-                    $('body').removeClass('modal-open');
-                    $('body').css('overflow', '');
-                    $('body').css('padding-right', '');
-                }
-            }, 100);
-
+            // Don't hide modals or remove backdrops here - just refresh the table data
             $.ajax({
                 url: location.href,
                 type: 'GET',
@@ -378,16 +399,6 @@ unset($role, $privileges);
                         // Restore scroll position after everything is loaded
                         setTimeout(function() {
                             window.scrollTo(0, scrollPosition);
-
-                            // Double check that modal classes are removed
-                            if (typeof cleanupModalElements === 'function') {
-                                cleanupModalElements();
-                            } else {
-                                $('.modal-backdrop').remove();
-                                $('body').removeClass('modal-open');
-                                $('body').css('overflow', '');
-                                $('body').css('padding-right', '');
-                            }
                         }, 150);
                     } else {
                         console.error('Could not find table in response');
@@ -424,7 +435,92 @@ unset($role, $privileges);
                 console.error("Could not find next page button");
             }
 
-            // Global function to properly clean up modal elements
+            // Initialize all modals with proper backdrop
+            $('.modal').each(function() {
+                var modalId = $(this).attr('id');
+                $('#' + modalId).modal({
+                    backdrop: true,
+                    keyboard: true,
+                    focus: true
+                });
+            });
+
+            // Function to ensure modal backdrop is present
+            function ensureModalBackdrop() {
+                console.log('Ensuring modal backdrop...');
+                
+                // Check if any modal is currently visible
+                const visibleModals = $('.modal.show');
+                const hasVisibleModal = visibleModals.length > 0;
+                
+                // Check if backdrop exists
+                const existingBackdrop = $('.modal-backdrop');
+                const hasBackdrop = existingBackdrop.length > 0;
+                
+                console.log('Visible modals:', visibleModals.length, 'Existing backdrops:', existingBackdrop.length);
+                
+                // If there's a visible modal but no backdrop, create one
+                if (hasVisibleModal && !hasBackdrop) {
+                    console.log('Creating new backdrop for visible modal');
+                    
+                    // Create and append the backdrop
+                    const backdrop = document.createElement('div');
+                    backdrop.className = 'modal-backdrop show';
+                    backdrop.style.opacity = '0.5';
+                    backdrop.style.transition = 'none !important';
+                    backdrop.style.animation = 'none !important';
+                    document.body.appendChild(backdrop);
+                    
+                    // Ensure body has modal-open class
+                    $('body').addClass('modal-open');
+                    
+                    return true;
+                } 
+                // If there's a backdrop but no visible modal, remove it
+                else if (!hasVisibleModal && hasBackdrop) {
+                    console.log('No visible modals, removing backdrop');
+                    
+                    // Check if any modal is in the process of being shown
+                    const modalBeingShown = $('.modal').filter(function() {
+                        return $(this).css('display') !== 'none' && !$(this).hasClass('show');
+                    });
+                    
+                    if (modalBeingShown.length === 0) {
+                        // Safe to remove backdrop
+                        existingBackdrop.remove();
+                        $('body').removeClass('modal-open');
+                        $('body').css({
+                            'overflow': '',
+                            'padding-right': ''
+                        });
+                    } else {
+                        console.log('Modal in transition, keeping backdrop');
+                    }
+                    
+                    return false;
+                }
+                // If there's a visible modal and a backdrop, ensure correct styling
+                else if (hasVisibleModal && hasBackdrop) {
+                    console.log('Ensuring backdrop styling');
+                    
+                    // Ensure correct styling
+                    existingBackdrop.addClass('show');
+                    existingBackdrop.css({
+                        'opacity': '0.5',
+                        'transition': 'none !important',
+                        'animation': 'none !important'
+                    });
+                    
+                    // Ensure body has modal-open class
+                    $('body').addClass('modal-open');
+                    
+                    return true;
+                }
+                
+                return hasBackdrop;
+            }
+            
+            // Function to clean up modal elements
             function cleanupModalElements() {
                 // Hide any visible modals
                 $('.modal').modal('hide');
@@ -448,23 +544,58 @@ unset($role, $privileges);
             }
 
             // Ensure scrolling is properly restored when any modal is closed
-            $('.modal').on('hidden.bs.modal', function() {
-                // Remove modal backdrop
-                $('.modal-backdrop').remove();
-                // Remove modal-open class and reset body styles
-                $('body').removeClass('modal-open');
-                $('body').css({
-                    'overflow': '',
-                    'padding-right': ''
-                });
+            $('.modal').on('hidden.bs.modal', function(e) {
+                console.log('Modal hidden event triggered');
+                
+                // Only remove backdrop if there are no other visible modals
+                if ($('.modal.show').length === 0) {
+                    console.log('No visible modals, removing backdrop');
+                    // Remove modal backdrop
+                    $('.modal-backdrop').remove();
+                    // Remove modal-open class and reset body styles
+                    $('body').removeClass('modal-open');
+                    $('body').css({
+                        'overflow': '',
+                        'padding-right': ''
+                    });
+                } else {
+                    console.log('Other modals still visible, keeping backdrop');
+                    // Ensure backdrop exists for other visible modals
+                    ensureModalBackdrop();
+                }
             });
 
             // Ensure modals are properly cleaned up when they're opened
-            $('.modal').on('show.bs.modal', function() {
-                // Remove any stray backdrops before opening a new modal
-                if ($('.modal-backdrop').length > 0 && $('.modal.show').length === 0) {
-                    cleanupModalElements();
+            $('.modal').on('show.bs.modal', function(e) {
+                console.log('Modal show event triggered for', this.id);
+                
+                // Don't remove existing backdrops if other modals are showing
+                if ($('.modal.show').length === 0 && $('.modal-backdrop').length > 1) {
+                    // Only remove excess backdrops
+                    $('.modal-backdrop').not(':first').remove();
                 }
+                
+                // Always ensure this modal has a backdrop
+                ensureModalBackdrop();
+            });
+            
+            // Add additional handler for backdrop clicks
+            $(document).on('click', '.modal-backdrop', function(e) {
+                console.log('Backdrop clicked');
+                // Ensure proper cleanup when backdrop is clicked
+                if ($('.modal.show').length === 0) {
+                    $('.modal-backdrop').remove();
+                    $('body').removeClass('modal-open');
+                    $('body').css({
+                        'overflow': '',
+                        'padding-right': ''
+                    });
+                }
+            });
+
+            // Special handler for edit modal to ensure backdrop
+            $('#editRoleModal').on('show.bs.modal', function() {
+                ensureModalBackdrop();
             });
 
             // Check if Select2 is available
@@ -820,16 +951,14 @@ unset($role, $privileges);
             $(document).on('click', '.edit-role-btn', function() {
                 if (!userPrivileges.canModify) return;
 
-                // Clean up any existing modal state
-                $('.modal-backdrop').remove();
-                $('body').removeClass('modal-open');
-                $('body').css({
-                    'overflow': '',
-                    'padding-right': ''
-                });
-
                 var roleID = $(this).data('role-id');
                 $('#editRoleContent').html("Loading...");
+                
+                // Force backdrop to be visible
+                setTimeout(function() {
+                    ensureModalBackdrop();
+                }, 50);
+                
                 $.ajax({
                     url: 'edit_roles.php',
                     type: 'GET',
@@ -842,6 +971,11 @@ unset($role, $privileges);
                     success: function(response) {
                         $('#editRoleContent').html(response);
                         $('#roleID').val(roleID);
+                        
+                        // Force backdrop to be visible again after content is loaded
+                        setTimeout(function() {
+                            ensureModalBackdrop();
+                        }, 50);
                     },
                     error: function(xhr, status, error) {
                         console.error('AJAX Error:', status, error);
@@ -857,13 +991,8 @@ unset($role, $privileges);
                     return false;
                 }
 
-                // Clean up any existing modal state
-                $('.modal-backdrop').remove();
-                $('body').removeClass('modal-open');
-                $('body').css({
-                    'overflow': '',
-                    'padding-right': ''
-                });
+                // Ensure this modal has a backdrop
+                ensureModalBackdrop();
 
                 var button = $(event.relatedTarget);
                 var roleID = button.data('role-id');
@@ -891,9 +1020,15 @@ unset($role, $privileges);
                             // Close modal first to avoid UI issues
                             $('#confirmDeleteModal').modal('hide');
                             
-                            // Ensure all modal elements are properly cleaned up
+                            // Only cleanup this specific modal without removing all backdrops
                             setTimeout(function() {
-                                cleanupModalElements();
+                                // Only remove backdrop if there are no other visible modals
+                                if ($('.modal.show').length === 0) {
+                                    $('.modal-backdrop').remove();
+                                    $('body').removeClass('modal-open');
+                                    $('body').css('overflow', '');
+                                    $('body').css('padding-right', '');
+                                }
                                 
                                 // Refresh the table without reloading the whole page
                                 refreshRolesTable();
@@ -916,17 +1051,13 @@ unset($role, $privileges);
                     return false;
                 }
 
-                // Clean up any existing modal state
-                $('.modal-backdrop').remove();
-                $('body').removeClass('modal-open');
-                $('body').css({
-                    'overflow': '',
-                    'padding-right': ''
-                });
+                // Ensure this modal has a backdrop
+                ensureModalBackdrop();
 
                 // Reset form if it exists
                 if ($('#addRoleForm').length) {
                     $('#addRoleForm')[0].reset();
+                    $('#addRoleForm').find('button[type="submit"]').prop('disabled', false);
                 }
 
                 $('#addRoleContent').html("Loading...");
@@ -935,11 +1066,37 @@ unset($role, $privileges);
                     type: 'GET',
                     success: function(response) {
                         $('#addRoleContent').html(response);
+                        
+                        // Double-check backdrop after content is loaded
+                        setTimeout(function() {
+                            ensureModalBackdrop();
+                        }, 50);
                     },
                     error: function() {
                         $('#addRoleContent').html('<p class="text-danger">Error loading form.</p>');
                     }
                 });
+            });
+            
+            // Handle add role modal hidden event
+            $('#addRoleModal').on('hidden.bs.modal', function() {
+                // Reset form if it exists
+                if ($('#addRoleForm').length) {
+                    $('#addRoleForm')[0].reset();
+                    $('#addRoleForm').find('button[type="submit"]').prop('disabled', false);
+                }
+                
+                // Ensure proper cleanup
+                setTimeout(function() {
+                    if ($('.modal.show').length === 0) {
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open');
+                        $('body').css({
+                            'overflow': '',
+                            'padding-right': ''
+                        });
+                    }
+                }, 100);
             });
 
             // **7. Undo button via AJAX**
@@ -1042,42 +1199,240 @@ unset($role, $privileges);
             // Force an initial check of pagination controls
             setTimeout(forcePaginationCheck, 100);
 
-            // Handle add role form submission
-            $(document).on('submit', '#addRoleForm', function(e) {
-                e.preventDefault();
+            // Fix for modal backdrops - ensure they're properly initialized
+            $('#editRoleModal, #confirmDeleteModal, #addRoleModal').each(function() {
+                // Remove any existing modal backdrop configuration
+                $(this).data('bs.modal', null);
                 
-                $.ajax({
-                    url: 'add_role.php',
-                    type: 'POST',
-                    data: $(this).serialize(),
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.success) {
-                            // Close modal and clean up
-                            $('#addRoleModal').modal('hide');
-                            
-                            // Force cleanup of modal state
+                // Initialize with explicit backdrop option
+                var modalOptions = {
+                    backdrop: true,  // Set to 'static' to prevent closing when clicking outside
+                    keyboard: true,
+                    focus: true
+                };
+                
+                try {
+                    // Initialize the modal with Bootstrap 5 options
+                    var bsModal = new bootstrap.Modal(this, modalOptions);
+                    
+                    // Store the modal instance for future reference
+                    $(this).data('bs.modal', bsModal);
+                } catch (e) {
+                    console.error('Error initializing modal:', e);
+                }
+            });
+            
+            // Add global event listener for all modals to ensure backdrop
+            $(document).on('shown.bs.modal', '.modal', function() {
+                console.log('Modal fully shown, ensuring backdrop');
+                ensureModalBackdrop();
+            });
+            
+            // Add global event listener for when modal is about to be shown
+            $(document).on('show.bs.modal', '.modal', function() {
+                console.log('Modal about to show, ensuring backdrop');
+                ensureModalBackdrop();
+            });
+            
+            // Add event listener for when backdrop is clicked
+            $(document).on('click', function(e) {
+                // Check if the click was on the backdrop
+                if ($(e.target).hasClass('modal-backdrop')) {
+                    console.log('Backdrop clicked directly');
+                    
+                    // Force a small delay to let Bootstrap process the modal hiding
+                    setTimeout(function() {
+                        // If no modals are visible, remove backdrop
+                        if ($('.modal.show').length === 0) {
                             $('.modal-backdrop').remove();
                             $('body').removeClass('modal-open');
                             $('body').css({
                                 'overflow': '',
                                 'padding-right': ''
                             });
-                            
-                            // Reset form
-                            $('#addRoleForm')[0].reset();
-                            
-                            // Refresh table
-                            refreshRolesTable();
-                            
-                            // Show success message
-                            showToast(response.message, 'success', 5000);
                         } else {
-                            showToast(response.message || 'An error occurred', 'error', 5000);
+                            // Otherwise ensure backdrop exists
+                            ensureModalBackdrop();
                         }
-                    },
-                    error: function(xhr, status, error) {
-                        showToast('Error creating role: ' + error, 'error', 5000);
+                    }, 100);
+                }
+            });
+            
+            // Disable Bootstrap's default fade animations for modals
+            $(document).ready(function() {
+                // Override Bootstrap's modal animation
+                if ($.fn.modal && $.fn.modal.Constructor && $.fn.modal.Constructor.prototype) {
+                    try {
+                        // Save original method
+                        const originalBackdrop = $.fn.modal.Constructor.prototype._backdrop;
+                        
+                        // Override the backdrop method
+                        $.fn.modal.Constructor.prototype._backdrop = function(callback) {
+                            console.log('Custom backdrop method called');
+                            
+                            // Call original method first
+                            if (typeof originalBackdrop === 'function') {
+                                originalBackdrop.call(this, callback);
+                            }
+                            
+                            // Then ensure our custom backdrop styling
+                            ensureModalBackdrop();
+                            
+                            // Call the callback if provided
+                            if (typeof callback === 'function') {
+                                callback();
+                            }
+                        };
+                    } catch (e) {
+                        console.error('Error overriding Bootstrap modal:', e);
+                    }
+                }
+            });
+            
+            // Add a global click handler for modal triggers
+            $(document).on('click', '[data-bs-toggle="modal"]', function() {
+                console.log('Modal trigger clicked');
+                
+                // Force backdrop creation on next tick
+                setTimeout(function() {
+                    ensureModalBackdrop();
+                }, 10);
+            });
+
+            // Add a MutationObserver to monitor when modals are added to the DOM
+            $(document).ready(function() {
+                // Create a MutationObserver to monitor for modal changes
+                const modalObserver = new MutationObserver(function(mutations) {
+                    mutations.forEach(function(mutation) {
+                        // Check for added nodes
+                        if (mutation.addedNodes.length) {
+                            mutation.addedNodes.forEach(function(node) {
+                                // Check if the added node is a modal or contains a modal
+                                if (node.classList && node.classList.contains('modal')) {
+                                    console.log('Modal added to DOM:', node.id);
+                                    ensureModalBackdrop();
+                                } else if (node.querySelectorAll) {
+                                    const modals = node.querySelectorAll('.modal');
+                                    if (modals.length) {
+                                        console.log('Modal found inside added node');
+                                        ensureModalBackdrop();
+                                    }
+                                }
+                            });
+                        }
+                        
+                        // Check for attribute changes on modals
+                        if (mutation.type === 'attributes' && 
+                            mutation.target.classList && 
+                            mutation.target.classList.contains('modal')) {
+                            if (mutation.attributeName === 'class' && 
+                                mutation.target.classList.contains('show')) {
+                                console.log('Modal class changed to show');
+                                ensureModalBackdrop();
+                            }
+                        }
+                    });
+                });
+
+                // Start observing the document body for modal-related changes
+                modalObserver.observe(document.body, { 
+                    childList: true,
+                    subtree: true,
+                    attributes: true,
+                    attributeFilter: ['class']
+                });
+                
+                // Also ensure backdrop when page is fully loaded
+                setTimeout(function() {
+                    if ($('.modal.show').length > 0) {
+                        console.log('Modal found on page load');
+                        ensureModalBackdrop();
+                    }
+                }, 500);
+            });
+
+            // Add global event listener for when modal is hidden
+            $(document).on('hidden.bs.modal', '.modal', function() {
+                console.log('Modal hidden, checking if backdrop should be removed');
+                
+                // Use setTimeout to allow all modal events to complete
+                setTimeout(function() {
+                    // Check if any modals are still visible
+                    if ($('.modal.show').length === 0) {
+                        console.log('No visible modals after hiding, removing backdrop');
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open');
+                        $('body').css({
+                            'overflow': '',
+                            'padding-right': ''
+                        });
+                    } else {
+                        console.log('Other modals still visible, keeping backdrop');
+                        ensureModalBackdrop();
+                    }
+                }, 100);
+            });
+            
+            // Add global event listener for when modal is about to be hidden
+            $(document).on('hide.bs.modal', '.modal', function() {
+                console.log('Modal about to hide');
+                
+                // Store the number of visible modals before this one hides
+                const visibleModalsCount = $('.modal.show').length;
+                $(this).data('visibleModalsBeforeHide', visibleModalsCount);
+                
+                // If this is the last visible modal, mark it for potential backdrop removal
+                if (visibleModalsCount === 1 && $(this).hasClass('show')) {
+                    console.log('Last visible modal is being hidden');
+                    $(this).data('lastVisibleModal', true);
+                }
+            });
+
+            // Add direct event handler for backdrop clicks
+            $(document).ready(function() {
+                // Use event delegation for dynamically added backdrops
+                $(document).on('mousedown touchstart', '.modal-backdrop', function(e) {
+                    console.log('Direct backdrop click detected');
+                    
+                    // Get the currently visible modal(s)
+                    const visibleModals = $('.modal.show');
+                    
+                    if (visibleModals.length > 0) {
+                        console.log('Visible modals found when backdrop clicked:', visibleModals.length);
+                        
+                        // Mark that this was a direct backdrop click
+                        $(document).data('backdropDirectClick', true);
+                        
+                        // Store timestamp of the click
+                        $(document).data('backdropClickTime', new Date().getTime());
+                    }
+                });
+                
+                // Add a global document click handler to detect clicks outside modal content
+                $(document).on('mousedown touchstart', function(e) {
+                    // Check if click was outside any modal content
+                    if ($(e.target).closest('.modal-content').length === 0 && 
+                        $('.modal.show').length > 0 && 
+                        !$(e.target).hasClass('modal-backdrop')) {
+                        
+                        console.log('Click outside modal content detected');
+                        
+                        // Force check for backdrop on next tick
+                        setTimeout(function() {
+                            ensureModalBackdrop();
+                        }, 100);
+                    }
+                });
+                
+                // Special handler for ESC key (which can also close modals)
+                $(document).on('keydown', function(e) {
+                    if (e.key === 'Escape' && $('.modal.show').length > 0) {
+                        console.log('ESC key pressed with modal open');
+                        
+                        // Force check for backdrop on next tick
+                        setTimeout(function() {
+                            ensureModalBackdrop();
+                        }, 100);
                     }
                 });
             });
