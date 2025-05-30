@@ -92,7 +92,7 @@ $(document).ready(function() {
             return this.create(message, 'info');
         }
     };
-    
+    console.log("Toast contains " + Toast);
     // Initialize Toast
     Toast.init();
     

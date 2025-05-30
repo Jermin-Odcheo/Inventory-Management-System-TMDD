@@ -346,7 +346,7 @@ try {
             overflow: auto;
             background-color: rgba(0, 0, 0, 0.4);
         }
-        
+
         /* Fix z-index for modal and dropdowns */
         .modal {
             z-index: 1055 !important; /* Higher than select2 containers */
@@ -641,6 +641,24 @@ try {
         /* Additional Select2 fixes for modals */
         .modal-open .select2-container--open {
             z-index: 1 !important; /* Force below modal */
+        }
+
+        /* Add this to prevent dropdowns from showing through modal */
+        body.modal-open .select2-container--open {
+            z-index: 1039 !important; /* Lower than modal backdrop */
+        }
+        
+        .modal-backdrop {
+            z-index: 1040 !important; /* Ensure backdrop covers everything */
+        }
+        
+        .modal {
+            z-index: 1050 !important; /* Higher than backdrop */
+        }
+        
+        /* Fix for Select2 elements within modal */
+        .modal .select2-container--open {
+            z-index: 1060 !important; /* Higher than modal content */
         }
     </style>
 </head>
@@ -1143,7 +1161,7 @@ try {
 
     <!-- Confirm Delete Modal -->
     <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel"
-        aria-hidden="true">
+        aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -1339,7 +1357,7 @@ try {
                 const totalRows = window.filteredRows.length;
                 const totalPages = Math.ceil(totalRows / rowsPerPage);
                 const currentPage = window.paginationConfig ? window.paginationConfig.currentPage : 1;
-                
+
                 // Update rows per page display
                 const rowsPerPageEl = document.getElementById('rowsPerPage');
                 if (rowsPerPageEl) {
@@ -1516,7 +1534,7 @@ try {
                     return false;
                 }
             });
-
+            
             // Initialize Select2 for date filter type dropdown - ONLY ONCE
             if ($.fn.select2 && $('#dateFilterType').length && !$('#dateFilterType').hasClass('select2-hidden-accessible')) {
                 console.log('Initializing Select2 for dateFilterType');
@@ -1591,7 +1609,7 @@ try {
                 // Hide all date filter containers
                 $('#dateInputsContainer').addClass('d-none');
                 $('.date-filter').addClass('d-none');
-            });
+        });
 
         // Initialize Select2 for modal department dropdown
         $('#modal_department').select2({
@@ -2022,8 +2040,221 @@ try {
             }
         });
 
-        // Handle create user form submission
-        $('#submitCreateUser').on('click', function() {
+        // Function to refresh table data only without reloading the entire page
+        function refreshUserTable(callback) {
+            // Ensure any lingering modal artifacts are cleaned up before refresh
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css('padding-right', '');
+            
+            // Remove specific z-index backdrop
+            $('div.modal-backdrop[style*="z-index: 1040"]').remove();
+            
+            // Force enable scrolling
+            $('html, body').css({
+                'overflow': '',
+                'height': ''
+            });
+            
+            // Store current pagination and sort state
+            const currentPage = window.paginationConfig ? window.paginationConfig.currentPage : 1;
+            const rowsPerPage = $('#rowsPerPageSelect').val() || 10;
+            const sortColumn = currentSort || 'id';
+            const sortDirection = currentSortDir || 'asc';
+            
+            // Load just the table content
+            $('#umTable').load(location.href + ' #umTable > *', function() {
+                // Ensure modal artifacts are cleaned up after refresh too
+                $('.modal-backdrop').remove();
+                $('body').removeClass('modal-open').css('padding-right', '');
+                
+                // Remove specific z-index backdrop
+                $('div.modal-backdrop[style*="z-index: 1040"]').remove();
+                
+                // Force enable scrolling
+                $('html, body').css({
+                    'overflow': '',
+                    'height': ''
+                });
+                
+                // Re-initialize all rows for pagination after content is loaded
+                window.allRows = Array.from(document.querySelectorAll('#umTableBody tr'));
+                window.filteredRows = window.allRows;
+                
+                // Restore sort state
+                currentSort = sortColumn;
+                currentSortDir = sortDirection;
+                
+                // Update sort icons
+                $('.sort-icon').removeClass('bi-caret-up-fill bi-caret-down-fill');
+                const iconClass = currentSortDir === 'asc' ? 'bi-caret-up-fill' : 'bi-caret-down-fill';
+                $(`.sort-header[data-sort="${currentSort}"] .sort-icon`).addClass(iconClass);
+                
+                // Re-apply any active filters
+                filterTable();
+                
+                // Restore pagination state
+                if (window.paginationConfig) {
+                    window.paginationConfig.currentPage = currentPage;
+                    updatePagination();
+                }
+                
+                // Final modal cleanup check
+                $('.modal-backdrop').remove();
+                $('body').removeClass('modal-open').css('padding-right', '');
+                
+                // Rebind click events to the new elements
+                rebindTableEvents();
+                
+                // Execute callback if provided
+                if (typeof callback === 'function') {
+                    callback();
+                    
+                    // One last check after callback executes
+                    setTimeout(function() {
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open').css('padding-right', '');
+                        
+                        // Force enable scrolling
+                        $('html, body').css({
+                            'overflow': '',
+                            'height': ''
+                        });
+                    }, 50);
+                }
+            });
+        }
+        
+        // Function to rebind events to table elements after refresh
+        function rebindTableEvents() {
+            // Rebind edit buttons
+            $('.edit-btn').off('click').on('click', function() {
+                // ... existing edit button code ...
+            });
+            
+            // Rebind delete buttons
+            $('.delete-btn').off('click').on('click', function() {
+                const userId = $(this).data('id');
+                const username = $(this).closest('tr').find('td:eq(4)').text();
+                
+                // Set up the confirmation modal
+                $('#confirmDeleteMessage').text(`Are you sure you want to remove user "${username}"?`);
+                
+                // Set up the confirm button action
+                $('#confirmDeleteButton').off('click').on('click', function() {
+                    // First hide the modal completely and clean up
+                    $('#confirmDeleteModal').modal('hide');
+                    
+                    // Wait for the modal to finish hiding before continuing
+                    setTimeout(function() {
+                        // Clean up modal artifacts
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open').css('padding-right', '');
+                        
+                        // Remove backdrop with specific z-index
+                        $('div.modal-backdrop[style*="z-index: 1040"]').remove();
+                        
+                        // Send delete request
+                        $.ajax({
+                            url: 'delete_user.php',
+                            type: 'POST',
+                            data: {
+                                user_id: userId
+                            },
+                            dataType: 'json',
+                            success: function(response) {
+                                if (response.success) {
+                                    Toast.success('User removed successfully');
+                                    
+                                    // Clean up again before refreshing table
+                                    $('.modal-backdrop').remove();
+                                    $('body').removeClass('modal-open').css('padding-right', '');
+                                    
+                                    // Manually reload the table data
+                                    $.get(location.href, function(data) {
+                                        // Extract only the table HTML from the response
+                                        const tableHtml = $(data).find('#umTable').html();
+                                        $('#umTable').html(tableHtml);
+                                        
+                                        // Re-initialize pagination and events
+                                        window.allRows = Array.from(document.querySelectorAll('#umTableBody tr'));
+                                        window.filteredRows = window.allRows;
+                                        
+                                        // Restore pagination state
+                                        if (window.paginationConfig) {
+                                            updatePagination();
+                                        }
+                                        
+                                        // Rebind events
+                                        rebindTableEvents();
+                                        
+                                        // Final cleanup to ensure scrolling is enabled
+                                        $('.modal-backdrop').remove();
+                                        $('body').removeClass('modal-open').css('padding-right', '');
+                                    });
+                                } else {
+                                    Toast.error(response.message || 'Failed to remove user');
+                                }
+                            },
+                            error: function(xhr, status, error) {
+                                Toast.error('An error occurred while removing the user');
+                                console.error("Error:", error);
+                            },
+                            complete: function() {
+                                // Final cleanup in the complete handler
+                                $('.modal-backdrop').remove();
+                                $('body').removeClass('modal-open').css('padding-right', '');
+                                
+                                // Remove specific z-index backdrop
+                                $('div.modal-backdrop[style*="z-index: 1040"]').remove();
+                                
+                                // Force enable scrolling
+                                $('html, body').css({
+                                    'overflow': '',
+                                    'height': ''
+                                });
+                            }
+                        });
+                    }, 300); // Wait for modal hide animation to complete
+                });
+                
+                // Show the confirmation modal
+                $('#confirmDeleteModal').modal('show');
+            });
+            
+            // Rebind sort headers
+            $('.sort-header').off('click').on('click', function(e) {
+                e.preventDefault();
+                const column = $(this).data('sort');
+                sortTable(column);
+                filterTable(); // Apply filtering after sorting
+            });
+            
+            // Rebind select-all checkbox
+            $('#select-all').off('click').on('click', function() {
+                $('.select-row').prop('checked', $(this).prop('checked'));
+                updateBulkDeleteButtonVisibility();
+            });
+            
+            // Rebind individual checkboxes
+            $('.select-row').off('click').on('click', function() {
+                updateBulkDeleteButtonVisibility();
+            });
+        }
+        
+        // Function to update bulk delete button visibility
+        function updateBulkDeleteButtonVisibility() {
+            const checkedCount = $('.select-row:checked').length;
+            if (checkedCount >= 2) {
+                $('#delete-selected').show().prop('disabled', false);
+            } else {
+                $('#delete-selected').hide().prop('disabled', true);
+            }
+        }
+
+        // ... existing code ...
+
+        // Update submitCreateUser handler
+        $('#submitCreateUser').off('click').on('click', function() {
             const form = $('#createUserForm');
             const formData = new FormData(form[0]);
 
@@ -2077,16 +2308,21 @@ try {
                 success: function(response) {
                     const result = (typeof response === 'string') ? JSON.parse(response) : response;
                     if (result.success) {
-                        Toast.success('User created successfully');
+                        // Refresh only the table
+                        refreshUserTable(function() {
+                            Toast.success('User created successfully');
+                            // Clear form
+                            form[0].reset();
+                            selectedDepartments = [];
+                            $('#modal_department').val(null).trigger('change');
+                            $('#createAssignedDepartmentsTable tbody').empty();
+                            // Reset password UI
+                            $('.password-strength').addClass('d-none');
+                            $('.progress-bar').css('width', '0%').attr('aria-valuenow', '0');
 
-                        // only now clear everything:
-                        form[0].reset();
-                        selectedDepartments = [];
-                        $('#modal_department').val(null).trigger('change');
-                        $('#createAssignedDepartmentsTable tbody').empty();
-                        // reset your password-strength UI & toggle-icon here too…
-
-                        $('#createUserModal').modal('hide');
+                            // Hide modal
+                            $('#createUserModal').modal('hide');
+                        });
                     } else {
                         Toast.error(result.message || 'Failed to create user');
                     }
@@ -2098,23 +2334,149 @@ try {
                         if (jsonStr.includes('{') && jsonStr.includes('}')) {
                             jsonStr = jsonStr.substring(jsonStr.indexOf('{'), jsonStr.lastIndexOf('}') + 1);
                             const result = JSON.parse(jsonStr);
-                            alert('Error: ' + (result.message || 'Failed to create user'));
+                            Toast.error(result.message || 'Failed to create user');
                         } else {
                             const result = JSON.parse(xhr.responseText);
-                            alert('Error: ' + (result.message || 'Failed to create user'));
+                            Toast.error(result.message || 'Failed to create user');
                         }
                     } catch (e) {
                         // If there's a username error in the response text, extract and show it
                         if (xhr.responseText.includes('username is already taken')) {
-                            alert('Error: Username is already taken. Please try a different username.');
+                            Toast.error('Username is already taken. Please try a different username.');
                         } else {
-                            alert('Server error occurred. Please try again.');
+                            Toast.error('Server error occurred. Please try again.');
                         }
                         console.error('Parse error:', e);
                     }
                 }
             });
         });
+
+        // Add or update edit user submission handler
+        $('#submitEditUser').off('click').on('click', function() {
+            const form = $('#editUserForm');
+            const formData = new FormData(form[0]);
+            
+            // Validate email
+            const email = $('#editEmail').val();
+            if (!validateEmail(email)) {
+                $('#editEmail').addClass('is-invalid');
+                return;
+            }
+            
+            // Check if departments have been added
+            if (selectedDepartments.length === 0) {
+                Toast.error('At least one department must be assigned');
+                return;
+            }
+            
+            // Clear existing department values
+            formData.delete('departments[]');
+            
+            // Add all departments as array
+            selectedDepartments.forEach((dept, index) => {
+                formData.append(`departments[${index}]`, dept.id);
+            });
+            
+            $.ajax({
+                url: form.attr('action'),
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    const result = (typeof response === 'string') ? JSON.parse(response) : response;
+                    if (result.success) {
+                        // Refresh only the table
+                        refreshUserTable(function() {
+                            Toast.success('User updated successfully');
+                            // Hide modal
+                            $('#editUserModal').modal('hide');
+                        });
+                    } else {
+                        Toast.error(result.message || 'Failed to update user');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    try {
+                        const result = JSON.parse(xhr.responseText);
+                        Toast.error(result.message || 'Failed to update user');
+                    } catch (e) {
+                        Toast.error('Server error occurred. Please try again.');
+                        console.error('Parse error:', e);
+                    }
+                }
+            });
+        });
+
+        // Add bulk delete functionality
+        $('#delete-selected').off('click').on('click', function() {
+            const selectedIds = $('.select-row:checked').map(function() {
+                return $(this).val();
+            }).get();
+            
+            if (selectedIds.length === 0) {
+                Toast.warning('No users selected for removal');
+                return;
+            }
+            
+            // Set up confirmation modal
+            $('#confirmDeleteMessage').text(`Are you sure you want to remove ${selectedIds.length} selected users?`);
+            
+            // Set up confirm button action
+            $('#confirmDeleteButton').off('click').on('click', function() {
+                $.ajax({
+                    url: 'bulk_delete_users.php',
+                    type: 'POST',
+                    data: {
+                        user_ids: selectedIds
+                    },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            Toast.success(`${selectedIds.length} users removed successfully`);
+                            // Refresh table
+                            refreshUserTable();
+                            // Hide delete selected button
+                            $('#delete-selected').hide().prop('disabled', true);
+                            
+                            // Force remove any lingering backdrop
+                            $('.modal-backdrop').remove();
+                            $('body').removeClass('modal-open').css('padding-right', '');
+                        } else {
+                            Toast.error(response.message || 'Failed to remove users');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        Toast.error('An error occurred while removing users');
+                        console.error("Error:", error);
+                    }
+                });
+                
+                // Hide confirmation modal
+                $('#confirmDeleteModal').modal('hide');
+            });
+            
+            // Show confirmation modal
+            const deleteModal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
+            deleteModal.show();
+        });
+        
+        // Initial binding of events
+        rebindTableEvents();
+        
+        // Handle select-all checkbox
+        $('#select-all').off('click').on('click', function() {
+            $('.select-row').prop('checked', $(this).prop('checked'));
+            updateBulkDeleteButtonVisibility();
+        });
+        
+        // Handle individual row selection
+        $(document).on('click', '.select-row', function() {
+            updateBulkDeleteButtonVisibility();
+        });
+        
+        // ... existing code ...
 
         // Email input validation on change/input
         $('#email').on('input', function() {
@@ -2179,11 +2541,32 @@ try {
             const userId = $(this).data('id');
             const username = $(this).closest('tr').find('td:eq(4)').text(); // Get username from the row
             
+            // Close any open Select2 dropdowns first
+            if ($.fn.select2) {
+                $('select.select2-hidden-accessible').select2('close');
+            }
+            
+            // Ensure any existing backdrops are removed first
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css('padding-right', '');
+            
             // Set up the confirmation modal
             $('#confirmDeleteMessage').text(`Are you sure you want to remove user "${username}"?`);
             
             // Set up the confirm button action
             $('#confirmDeleteButton').off('click').on('click', function() {
+                // First hide the modal completely and clean up
+                $('#confirmDeleteModal').modal('hide');
+                
+                // Wait for the modal to finish hiding before continuing
+                setTimeout(function() {
+                    // Clean up modal artifacts
+                    $('.modal-backdrop').remove();
+                    $('body').removeClass('modal-open').css('padding-right', '');
+                    
+                    // Remove backdrop with specific z-index
+                    $('div.modal-backdrop[style*="z-index: 1040"]').remove();
+                    
                 // Send delete request
                 $.ajax({
                     url: 'delete_user.php',
@@ -2195,10 +2578,33 @@ try {
                     success: function(response) {
                         if (response.success) {
                             Toast.success('User removed successfully');
-                            // Reload the page after successful deletion
-                            setTimeout(function() {
-                                window.location.reload();
-                            }, 1000);
+                                
+                                // Clean up again before refreshing table
+                                $('.modal-backdrop').remove();
+                                $('body').removeClass('modal-open').css('padding-right', '');
+                                
+                                // Manually reload the table data
+                                $.get(location.href, function(data) {
+                                    // Extract only the table HTML from the response
+                                    const tableHtml = $(data).find('#umTable').html();
+                                    $('#umTable').html(tableHtml);
+                                    
+                                    // Re-initialize pagination and events
+                                    window.allRows = Array.from(document.querySelectorAll('#umTableBody tr'));
+                                    window.filteredRows = window.allRows;
+                                    
+                                    // Restore pagination state
+                                    if (window.paginationConfig) {
+                                        updatePagination();
+                                    }
+                                    
+                                    // Rebind events
+                                    rebindTableEvents();
+                                    
+                                    // Final cleanup to ensure scrolling is enabled
+                                    $('.modal-backdrop').remove();
+                                    $('body').removeClass('modal-open').css('padding-right', '');
+                                });
                         } else {
                             Toast.error(response.message || 'Failed to remove user');
                         }
@@ -2206,16 +2612,30 @@ try {
                     error: function(xhr, status, error) {
                         Toast.error('An error occurred while removing the user');
                         console.error("Error:", error);
-                    }
-                });
-                
-                // Hide the modal
-                $('#confirmDeleteModal').modal('hide');
+                        },
+                        complete: function() {
+                            // Final cleanup in the complete handler
+                            $('.modal-backdrop').remove();
+                            $('body').removeClass('modal-open').css('padding-right', '');
+                            
+                            // Remove specific z-index backdrop
+                            $('div.modal-backdrop[style*="z-index: 1040"]').remove();
+                            
+                            // Force enable scrolling
+                            $('html, body').css({
+                                'overflow': '',
+                                'height': ''
+                            });
+                        }
+                    });
+                }, 300); // Wait for modal hide animation to complete
             });
             
-            // Show the confirmation modal
-            const deleteModal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
-            deleteModal.show();
+            // Show the confirmation modal with static backdrop option
+            $('#confirmDeleteModal').modal({
+                backdrop: 'static',
+                keyboard: false
+            }).modal('show');
         });
     </script>
 
@@ -2429,4 +2849,3 @@ try {
 </body>
 
 </html>
-ritten_file>

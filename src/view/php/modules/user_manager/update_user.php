@@ -155,7 +155,7 @@ try {
      * Check if the new email already exists (excluding the current user)
      * Updating a user with existing email address will log and mark the status as 'Failed'
      */
-    $dupStmt = $pdo->prepare("SELECT id, username FROM users WHERE email = ? AND id != ?");
+    $dupStmt = $pdo->prepare("SELECT id, username FROM users WHERE email = ? AND id != ? AND is_disabled = 0");
     $dupStmt->execute([$email, $userId]);
     if ($dupStmt->rowCount() > 0) {
         // Get the existing user with this email

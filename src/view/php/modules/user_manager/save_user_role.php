@@ -74,64 +74,77 @@ function addToAuditLog($actionType, $details) {
             return true;
         }
         
-        // Get target user ID from the first assignment
-        $targetUserId = null;
-        $targetUsername = "Unknown User";
-        $roleInfo = "";
-        
-        if (isset($details['assignments']) && !empty($details['assignments']) && isset($details['assignments'][0]['userId'])) {
-            $targetUserId = $details['assignments'][0]['userId'];
+        // Get all assignments from the details
+        if (!isset($details['assignments']) || empty($details['assignments'])) {
+            error_log("No assignments found in details for audit log");
+            return true;
+        }
+
+        // Insert audit log entry for each user assignment
+        foreach ($details['assignments'] as $assignment) {
+            $targetUserId = $assignment['userId'];
             
             // Get target username
             $userQuery = $pdo->prepare("SELECT username FROM users WHERE id = ?");
             $userQuery->execute([$targetUserId]);
             $targetUsername = $userQuery->fetchColumn() ?: 'Unknown User';
             
-            // Get role info for the first assignment only (to keep it simple)
-            $firstAssignment = $details['assignments'][0];
-            $roleId = $firstAssignment['roleId'] ?? 0;
-            
-            // Get role name
+            // Get role info
+            $roleId = $assignment['roleId'] ?? 0;
+            $roleInfo = "No Role";
             if ($roleId && $roleId > 0) {
                 $roleQuery = $pdo->prepare("SELECT role_name FROM roles WHERE id = ?");
                 $roleQuery->execute([$roleId]);
                 $roleInfo = $roleQuery->fetchColumn() ?: 'Unknown Role';
-            } else {
-                $roleInfo = "No Role";
             }
+            
+            // Get department info
+            $departmentId = $assignment['departmentIds'][0] ?? null;
+            $departmentInfo = "Unknown Department";
+            if ($departmentId) {
+                $deptQuery = $pdo->prepare("SELECT department_name FROM departments WHERE id = ?");
+                $deptQuery->execute([$departmentId]);
+                $departmentInfo = $deptQuery->fetchColumn() ?: 'Unknown Department';
+            }
+            
+            // Create a human-readable details message
+            $detailsMessage = "Added: $roleInfo to $targetUsername in $departmentInfo";
+            
+            // Create simple strings for OldVal and NewVal
+            $oldValString = "{}";
+            $newValString = json_encode([
+                "username" => $targetUsername,
+                "role" => $roleInfo,
+                "department" => $departmentInfo
+            ]);
+            
+            // Insert into audit_log table using the correct column names
+            $sql = "INSERT INTO audit_log (
+                UserID, 
+                EntityID, 
+                Action, 
+                Details, 
+                OldVal,
+                NewVal,
+                Module, 
+                Status,
+                Date_Time
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([
+                $userId,
+                $targetUserId,
+                'Add',
+                $detailsMessage,
+                $oldValString,
+                $newValString,
+                'User Management',
+                'Successful'
+            ]);
         }
         
-        // Create a human-readable details message
-        $detailsMessage = "Added: $roleInfo";
-        
-        // Create simple strings for OldVal and NewVal
-        $oldValString = "{}";
-        $newValString = "{\"username\":\"$targetUsername\",\"role\":\"$roleInfo\"}";
-        
-        // Insert into audit_log table using the correct column names
-        $sql = "INSERT INTO audit_log (
-            UserID, 
-            EntityID, 
-            Action, 
-            Details, 
-            OldVal,
-            NewVal,
-            Module, 
-            Status,
-            Date_Time
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())";
-        
-        $stmt = $pdo->prepare($sql);
-        return $stmt->execute([
-            $userId,
-            $targetUserId,
-            'Add',
-            $detailsMessage,
-            $oldValString,
-            $newValString,
-            'User Management',
-            'Successful'
-        ]);
+        return true;
     } catch (Exception $e) {
         // Log the error but don't fail the main operation
         error_log("Error adding to audit log: " . $e->getMessage());
