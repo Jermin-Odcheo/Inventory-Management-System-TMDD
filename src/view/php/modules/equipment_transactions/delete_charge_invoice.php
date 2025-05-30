@@ -50,7 +50,7 @@ if (isset($_POST['id']) && isset($_POST['permanent']) && $_POST['permanent'] == 
         // Log the permanent delete action
         logAudit(
             $pdo,
-            'delete',
+            'Remove',
             'Charge Invoice "' . ($oldData['ci_no'] ?? 'ID: '.$ciId) . '" has been permanently deleted',
             'Successful',
             json_encode($oldData),
@@ -62,7 +62,7 @@ if (isset($_POST['id']) && isset($_POST['permanent']) && $_POST['permanent'] == 
         // Log the error
         logAudit(
             $pdo,
-            'delete',
+            'Remove',
             'Charge Invoice ID: ' . $ciId . ' permanent deletion failed',
             'Failed',
             json_encode(['id' => $ciId, 'error' => $e->getMessage()]),
@@ -97,7 +97,7 @@ if (isset($_POST['id']) && isset($_POST['permanent']) && $_POST['permanent'] == 
         foreach ($oldDataRecords as $oldData) {
             logAudit(
                 $pdo,
-                'delete',
+                'Remove',
                 'Charge Invoice "' . ($oldData['ci_no'] ?? 'ID: '.$ciIds) . '" has been permanently deleted',
                 'Successful',
                 json_encode($oldData),
@@ -110,7 +110,7 @@ if (isset($_POST['id']) && isset($_POST['permanent']) && $_POST['permanent'] == 
         // Log the error
         logAudit(
             $pdo,
-            'delete',
+            'Remove',
             'Bulk Charge Invoice deletion failed for IDs: ' . implode(', ', $ciIds),
             'Failed',
             json_encode(['ids' => implode(',', $ciIds), 'error' => $e->getMessage()]),

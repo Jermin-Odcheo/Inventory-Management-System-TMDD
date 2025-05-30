@@ -393,7 +393,7 @@ remarks
                     $_SESSION['user_id'],
                     $detailsData['id'],
                     'Equipment Details',
-                    'Delete',
+                    'Remove',
                     'Equipment details have been removed (soft delete)',
                     $oldValue,
                     $newValue,
@@ -406,7 +406,7 @@ remarks
                         $_SESSION['user_id'],
                         $detailsData['id'],
                         'Equipment Status',
-                        'Delete',
+                        'Remove',
                         'Equipment status entries for asset tag ' . $assetTag . ' have been removed (cascaded delete)',
                         json_encode(['asset_tag' => $assetTag, 'rows_affected' => $statusRowsAffected]),
                         null,
@@ -419,7 +419,7 @@ remarks
                         $_SESSION['user_id'],
                         $detailsData['id'],
                         'Equipment Location',
-                        'Delete',
+                        'Remove',
                         'Equipment location entries for asset tag ' . $assetTag . ' have been removed (cascaded delete)',
                         json_encode(['asset_tag' => $assetTag, 'rows_affected' => $locationRowsAffected]),
                         null,
@@ -2395,6 +2395,121 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
             
             console.log('Equipment filters initialization complete');
         });
+    </script>
+    <script>
+    $(document).ready(function() {
+        // Edit Equipment
+        $(document).on('click', '.edit-equipment', function() {
+            var id = $(this).data('id');
+            var asset = $(this).data('asset');
+            var desc1 = $(this).data('desc1');
+            var desc2 = $(this).data('desc2');
+            var spec = $(this).data('spec');
+            var brand = $(this).data('brand');
+            var model = $(this).data('model');
+            var serial = $(this).data('serial');
+            var dateAcquired = $(this).data('date-acquired');
+            var location = $(this).data('location');
+            var accountable = $(this).data('accountable');
+            var rr = $(this).data('rr');
+            var remarks = $(this).data('remarks');
+
+            // Ensure asset tag is present in the dropdown
+            var $assetTagSelect = $('#edit_equipment_asset_tag');
+            if ($assetTagSelect.find('option[value="' + asset + '"]').length === 0) {
+                $assetTagSelect.append('<option value="' + $('<div>').text(asset).html() + '">' + $('<div>').text(asset).html() + '</option>');
+            }
+            $assetTagSelect.val(asset).trigger('change');
+
+            $('#edit_equipment_id').val(id);
+            $('#edit_asset_description_1').val(desc1);
+            $('#edit_asset_description_2').val(desc2);
+            $('#edit_specifications').val(spec);
+            $('#edit_brand').val(brand);
+            $('#edit_model').val(model);
+            $('#edit_serial_number').val(serial);
+            $('#edit_date_acquired').val(dateAcquired);
+            $('#edit_location').val(location);
+            $('#edit_accountable_individual').val(accountable);
+            $('#edit_rr_no').val(rr).trigger('change');
+            $('#edit_remarks').val(remarks);
+
+            $('#editEquipmentModal').modal('show');
+        });
+
+        // Edit Equipment AJAX submit with toast
+        $('#editEquipmentForm').on('submit', function(e) {
+            e.preventDefault();
+            var $form = $(this);
+            var submitBtn = $form.find('button[type="submit"]');
+            var originalBtnText = submitBtn.text();
+            submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...');
+            $.ajax({
+                url: '../../modules/equipment_manager/equipment_details.php',
+                method: 'POST',
+                data: $form.serialize(),
+                success: function(response) {
+                    try {
+                        var result = typeof response === 'object' ? response : JSON.parse(response);
+                        submitBtn.prop('disabled', false).text(originalBtnText);
+                        if (result.status === 'success') {
+                            $('#editEquipmentModal').modal('hide');
+                            showToast(result.message || 'Equipment updated successfully', 'success');
+                            // Reload the table section only
+                            $('#edTable').load(location.href + ' #edTable > *', function() {
+                                window.allRows = $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').toArray();
+                                window.filteredRows = [...window.allRows];
+                                if (typeof filterEquipmentTable === 'function') filterEquipmentTable();
+                            });
+                        } else {
+                            showToast(result.message || 'Failed to update equipment.', 'error');
+                        }
+                    } catch (e) {
+                        submitBtn.prop('disabled', false).text(originalBtnText);
+                        showToast('Error processing the request', 'error');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    submitBtn.prop('disabled', false).text(originalBtnText);
+                    showToast('Error updating equipment.', 'error');
+                }
+            });
+        });
+
+        // Delete Equipment
+        let deleteEquipmentId = null;
+        $(document).on('click', '.remove-equipment', function() {
+            deleteEquipmentId = $(this).data('id');
+            $('#deleteEDModal').modal('show');
+        });
+
+        $('#confirmDeleteBtn').on('click', function() {
+            if (!deleteEquipmentId) return;
+            $.ajax({
+                url: '../../modules/equipment_manager/delete_equipment.php',
+                method: 'POST',
+                data: { id: deleteEquipmentId, permanent: 1, module: 'Equipment Details' },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        $('#deleteEDModal').modal('hide');
+                        showToast(response.message || 'Equipment deleted successfully', 'success');
+                        // Reload the table section only
+                        $('#edTable').load(location.href + ' #edTable > *', function() {
+                            window.allRows = $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').toArray();
+                            window.filteredRows = [...window.allRows];
+                            if (typeof filterEquipmentTable === 'function') filterEquipmentTable();
+                        });
+                    } else {
+                        showToast(response.message || 'Failed to delete equipment.', 'error');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    showToast('Error deleting equipment.', 'error');
+                }
+            });
+        });
+    });
     </script>
 </body>
 

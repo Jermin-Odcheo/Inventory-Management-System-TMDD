@@ -273,7 +273,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'remove' && isset($_GET['id'])
                 json_encode($oldData),
                 null,
                 $id,
-                "Purchase Order {$oldData['po_no']} removed",
+                "Purchase Order {$oldData['po_no']} deleted",
                 'Successful'
             );
         } else {

@@ -141,8 +141,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             // Main audit log for RR deletion
             logAudit(
                 $pdo,
-                'remove',
-                'Receiving Report has been remove',
+                'Remove',
+                'Receiving Report has been deleted',
                 'Successful',
                 json_encode($oldData),
                 null,
@@ -168,9 +168,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             $_SESSION['errors'] = ["Receiving Report not found for deletion."];
             logAudit(
                 $pdo,
-                'remove',
-                'Receiving Report has been remove',
-                'Failed',
+                'Remove',
+                'Receiving Report has been deleted',
                 null,
                 null,
                 $id
@@ -183,8 +182,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
         $_SESSION['errors'] = ["Error deleting Receiving Report: " . $e->getMessage()];
         logAudit(
             $pdo,
-            'remove',
-            'Receiving Report has been remove',
+            'Remove',
+            'Receiving Report has been deleted',
             'Failed',
             json_encode($oldData),
             null,
@@ -197,8 +196,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
         $_SESSION['errors'] = [$e->getMessage()];
         logAudit(
             $pdo,
-            'remove',
-            'Receiving Report has been remove',
+            'Remove',
+            'Receiving Report has been deleted',
             'Failed',
             json_encode($oldData),
             null,

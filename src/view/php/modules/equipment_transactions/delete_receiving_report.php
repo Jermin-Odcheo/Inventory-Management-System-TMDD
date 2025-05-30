@@ -50,19 +50,19 @@ if (isset($_POST['id']) && isset($_POST['permanent']) && $_POST['permanent'] == 
         // Log the permanent delete action
         logAudit(
             $pdo,
-            'delete',
-            'Receiving Report "' . ($oldData['rr_no'] ?? 'ID: '.$rrId) . '" has been permanently deleted',
+            'Remove',
+            'Receiving Report "' . ($oldData['rr_no'] ?? 'ID: '.$rrId) . '" has been permanently removed',
             'Successful',
             json_encode($oldData),
             $rrId
         );
         
-        echo json_encode(['status' => 'success', 'message' => 'Receiving report permanently deleted']);
+        echo json_encode(['status' => 'success', 'message' => 'Receiving report permanently removed']);
     } catch (PDOException $e) {
         // Log the error
         logAudit(
             $pdo,
-            'delete',
+            'Remove',
             'Receiving Report ID: ' . $rrId . ' permanent deletion failed',
             'Failed',
             json_encode(['id' => $rrId, 'error' => $e->getMessage()]),
@@ -97,20 +97,20 @@ if (isset($_POST['id']) && isset($_POST['permanent']) && $_POST['permanent'] == 
         foreach ($oldDataRecords as $oldData) {
             logAudit(
                 $pdo,
-                'delete',
-                'Receiving Report "' . ($oldData['rr_no'] ?? 'ID: '.$oldData['id']) . '" has been permanently deleted',
+                'Remove',
+                'Receiving Report "' . ($oldData['rr_no'] ?? 'ID: '.$oldData['id']) . '" has been permanently removed',
                 'Successful',
                 json_encode($oldData),
                 $oldData['id']
             );
         }
         
-        echo json_encode(['status' => 'success', 'message' => 'Selected receiving reports permanently deleted']);
+        echo json_encode(['status' => 'success', 'message' => 'Selected receiving reports permanently removed']);
     } catch (PDOException $e) {
         // Log the error
         logAudit(
             $pdo,
-            'delete',
+            'Remove',
             'Bulk Receiving Report deletion failed for IDs: ' . implode(', ', $rrIds),
             'Failed',
             json_encode(['ids' => implode(',', $rrIds), 'error' => $e->getMessage()]),

@@ -216,13 +216,9 @@ $(document).ready(function() {
             },
             error: function(xhr, status, error) {
                 console.error('Ajax error:', error); // Debug line
-                alert('Error submitting the form');
-            }
-        });
-    });
 
-    // Edit Equipment
-    $('.edit-equipment').click(function() {
+    // Edit Equipment (delegated)
+    $(document).on('click', '.edit-equipment', function() {
         var id = $(this).data('id');
         var asset = $(this).data('asset');
         var desc1 = $(this).data('desc1');
@@ -231,24 +227,53 @@ $(document).ready(function() {
         var brand = $(this).data('brand');
         var model = $(this).data('model');
         var serial = $(this).data('serial');
-        var date = $(this).data('date');
+        var dateAcquired = $(this).data('date-acquired');
+        var location = $(this).data('location');
         var accountable = $(this).data('accountable');
+        var rr = $(this).data('rr');
         var remarks = $(this).data('remarks');
 
         $('#edit_equipment_id').val(id);
-        $('#edit_asset_tag').val(asset);
-        $('#edit_asset_description1').val(desc1);
-        $('#edit_asset_description2').val(desc2);
-        $('#edit_specification').val(spec);
+        $('#edit_equipment_asset_tag').val(asset).trigger('change');
+        $('#edit_asset_description_1').val(desc1);
+        $('#edit_asset_description_2').val(desc2);
+        $('#edit_specifications').val(spec);
         $('#edit_brand').val(brand);
         $('#edit_model').val(model);
         $('#edit_serial_number').val(serial);
-        $('#edit_date_acquired').val(date);
+        $('#edit_date_acquired').val(dateAcquired);
+        $('#edit_location').val(location);
         $('#edit_accountable_individual').val(accountable);
+        $('#edit_rr_no').val(rr).trigger('change');
         $('#edit_remarks').val(remarks);
 
         $('#editEquipmentModal').modal('show');
     });
 
+    // Delete Equipment (delegated)
+    let deleteEquipmentId = null;
+    $(document).on('click', '.remove-equipment', function() {
+        deleteEquipmentId = $(this).data('id');
+        $('#deleteEDModal').modal('show');
+    });
 
-});
+    $('#confirmDeleteBtn').on('click', function() {
+        if (!deleteEquipmentId) return;
+        $.ajax({
+            url: '../../modules/equipment_manager/delete_equipment.php',
+            method: 'POST',
+            data: { id: deleteEquipmentId, permanent: 1, module: 'Equipment Details' },
+            dataType: 'json',
+            success: function(response) {
+                if (response.status === 'success') {
+                    $('#deleteEDModal').modal('hide');
+                    location.reload();
+                } else {
+                    alert(response.message || 'Failed to delete equipment.');
+                }
+            },
+            error: function(xhr, status, error) {
+                alert('Error deleting equipment.');
+            }
+        });
+    });
