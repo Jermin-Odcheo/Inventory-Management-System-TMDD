@@ -505,7 +505,7 @@ error_log("Number of results: " . count($auditLogs));
                                 <option value="">All</option>
                                 <?php
                                 // Define the allowed modules
-                                $allowedModules = ['Equipment Management', 'Equipment Details', 'Equipment Location', 'Equipment Status'];
+                                $allowedModules = ['Equipment Details', 'Equipment Location', 'Equipment Status'];
                                 
                                 // If no modules found in database, use the allowed modules
                                 if (empty($moduleTypes)) {
@@ -663,7 +663,6 @@ error_log("Number of results: " . count($auditLogs));
                                 <col class="action">
                                 <col class="details">
                                 <col class="changes">
-                                <col class="status">
                                 <col class="date">
                             </colgroup>
                             <thead class="table-light">
@@ -744,13 +743,6 @@ error_log("Number of results: " . count($auditLogs));
                                             <!-- CHANGES -->
                                             <td data-label="Changes" class="data-container">
                                                 <?php echo nl2br($changesHTML); ?>
-                                            </td>
-
-                                            <!-- STATUS -->
-                                            <td data-label="Status">
-                                                <span class="badge <?php echo (strtolower($log['Status'] ?? '') === 'successful') ? 'bg-success' : 'bg-danger'; ?>">
-                                                    <?php echo getStatusIcon($log['Status'] ?? '') . ' ' . htmlspecialchars($log['Status'] ?? 'Unknown'); ?>
-                                                </span>
                                             </td>
 
                                             <!-- DATE & TIME -->
