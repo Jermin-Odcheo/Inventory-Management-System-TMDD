@@ -418,7 +418,6 @@ function formatChanges($oldJsonStr)
                                     <th><input type="checkbox" id="select-all"></th>
                                     <th class="sortable" data-sort-by="role_id" style="width: 25px;">ID <i class="fas fa-sort"></i></th>
                                     <th class="sortable" data-sort-by="operator_name">User<i class="fas fa-sort"></i></th>
-                                    <th>Module</th>
                                     <th>Action</th>
                                     <th>Details</th>
                                     <th>Changes</th>
@@ -439,9 +438,6 @@ function formatChanges($oldJsonStr)
                                                     <i class="fas fa-user-circle me-2"></i>
                                                     <small><?php echo htmlspecialchars($role['operator_email'] ?? 'Unknown'); ?></small>
                                                 </div>
-                                            </td>
-                                            <td class="module">
-                                                <?php echo !empty($role['module']) ? htmlspecialchars(trim($role['module'])) : '<em class="text-muted">N/A</em>'; ?>
                                             </td>
                                             <td class="action">
                                                 <?php
