@@ -25,7 +25,38 @@ $canUndo = $rbac->hasPrivilege('Roles and Privileges', 'Undo');
 $canRedo = $rbac->hasPrivilege('Roles and Privileges', 'Redo');
 $canViewArchive = $rbac->hasPrivilege('Roles and Privileges', 'View');
 
-// In manage_roles.php, update the SQL query to:
+// Get all modules for filter dropdown
+$moduleQuery = "SELECT DISTINCT id, module_name FROM modules ORDER BY module_name";
+$moduleStmt = $pdo->prepare($moduleQuery);
+$moduleStmt->execute();
+$moduleOptions = $moduleStmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Get all privileges for filter dropdown
+$privilegeQuery = "SELECT DISTINCT id, priv_name FROM privileges WHERE is_disabled = 0 ORDER BY priv_name";
+$privilegeStmt = $pdo->prepare($privilegeQuery);
+$privilegeStmt->execute();
+$privilegeOptions = $privilegeStmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Check if filter is applied
+$isFiltered = isset($_GET['filter_applied']) && $_GET['filter_applied'] === '1';
+
+// Get current page from URL parameter (default to 1)
+$currentPage = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+
+// Default rows per page
+$rowsPerPage = isset($_GET['rows_per_page']) ? max(5, intval($_GET['rows_per_page'])) : 10;
+
+// Calculate offset for pagination
+$offset = ($currentPage - 1) * $rowsPerPage;
+
+// First, let's get the total count of distinct roles that match our filters
+$countSql = "
+SELECT COUNT(DISTINCT r.id) as total_count
+FROM roles r
+WHERE r.is_disabled = 0
+";
+
+// Build the SQL query with optional filters
 $sql = "
 SELECT 
     r.id AS Role_ID,
@@ -42,11 +73,181 @@ SELECT
 FROM roles r
 CROSS JOIN modules m
 WHERE r.is_disabled = 0
-ORDER BY r.id DESC, m.id;
 ";
 
+// Apply filters if the filter button was clicked
+$params = [];
+$whereConditions = [];
+$havingConditions = [];
+$filteredRoleIds = [];
+
+if ($isFiltered) {
+    // Module filter
+    if (!empty($_GET['module'])) {
+        $moduleFilter = $_GET['module'];
+        
+        // Get roles that have privileges for the specified module
+        $moduleFilterQuery = "
+            SELECT DISTINCT rmp.role_id
+            FROM role_module_privileges rmp
+            JOIN modules m ON rmp.module_id = m.id
+            WHERE m.module_name = :module_name
+        ";
+        $moduleFilterStmt = $pdo->prepare($moduleFilterQuery);
+        $moduleFilterStmt->execute([':module_name' => $moduleFilter]);
+        $filteredRoleIds = $moduleFilterStmt->fetchAll(PDO::FETCH_COLUMN);
+        
+        if (!empty($filteredRoleIds)) {
+            $whereConditions[] = "r.id IN (" . implode(',', $filteredRoleIds) . ")";
+        } else {
+            // No roles have this module, return empty result
+            $whereConditions[] = "1=0";
+        }
+    }
+
+    // Privilege filter
+    if (!empty($_GET['privilege']) && is_array($_GET['privilege'])) {
+        $privilegeFilters = array_filter($_GET['privilege']); // Remove empty values
+        
+        if (!empty($privilegeFilters)) {
+            // Initialize array to store roles that match ALL of the selected privileges
+            $firstPrivilege = true;
+            $privFilteredRoleIds = [];
+            
+            foreach ($privilegeFilters as $privilegeFilter) {
+        // Get roles that have the specified privilege
+        $privFilterQuery = "
+            SELECT DISTINCT rmp.role_id
+            FROM role_module_privileges rmp
+            JOIN privileges p ON rmp.privilege_id = p.id
+            WHERE p.priv_name = :priv_name
+        ";
+        $privFilterStmt = $pdo->prepare($privFilterQuery);
+        $privFilterStmt->execute([':priv_name' => $privilegeFilter]);
+                $currentPrivFilteredRoleIds = $privFilterStmt->fetchAll(PDO::FETCH_COLUMN);
+                
+                // For the first privilege, set the initial role IDs
+                if ($firstPrivilege) {
+                    $privFilteredRoleIds = $currentPrivFilteredRoleIds;
+                    $firstPrivilege = false;
+                } else {
+                    // For subsequent privileges, keep only roles that have ALL privileges (intersection)
+                    $privFilteredRoleIds = array_intersect($privFilteredRoleIds, $currentPrivFilteredRoleIds);
+                }
+                
+                // If at any point we have no matching roles, break early
+                if (empty($privFilteredRoleIds)) {
+                    break;
+                }
+            }
+        
+        if (!empty($privFilteredRoleIds)) {
+            // If we already have module filter results, intersect with privilege filter results
+            if (!empty($filteredRoleIds)) {
+                $filteredRoleIds = array_intersect($filteredRoleIds, $privFilteredRoleIds);
+                if (empty($filteredRoleIds)) {
+                    // No intersection, return empty result
+                    $whereConditions[] = "1=0";
+                } else {
+                    $whereConditions[] = "r.id IN (" . implode(',', $filteredRoleIds) . ")";
+                }
+            } else {
+                $whereConditions[] = "r.id IN (" . implode(',', $privFilteredRoleIds) . ")";
+            }
+        } else {
+                // No roles have ALL of these privileges, return empty result
+            $whereConditions[] = "1=0";
+            }
+        }
+    }
+
+    // Enhanced search filter (applies to role name, module name, and privileges)
+    if (!empty($_GET['search'])) {
+        $searchTerm = '%' . $_GET['search'] . '%';
+        
+        // Create a comprehensive search condition
+        $searchConditions = [];
+        
+        // Search in role names
+        $searchConditions[] = "r.role_name LIKE :search_role";
+        $params[':search_role'] = $searchTerm;
+        
+        // Search in module names
+        $searchConditions[] = "EXISTS (
+            SELECT 1 FROM modules m2 
+            WHERE m2.module_name LIKE :search_module 
+            AND EXISTS (
+                SELECT 1 FROM role_module_privileges rmp2 
+                WHERE rmp2.role_id = r.id AND rmp2.module_id = m2.id
+            )
+        )";
+        $params[':search_module'] = $searchTerm;
+        
+        // Search in privileges
+        $searchConditions[] = "EXISTS (
+            SELECT 1 FROM role_module_privileges rmp3
+            JOIN privileges p ON rmp3.privilege_id = p.id
+            WHERE rmp3.role_id = r.id AND p.priv_name LIKE :search_priv
+        )";
+        $params[':search_priv'] = $searchTerm;
+        
+        // Combine all search conditions with OR
+        $whereConditions[] = "(" . implode(" OR ", $searchConditions) . ")";
+    }
+}
+
+// Add where conditions to the SQL query and count query
+if (!empty($whereConditions)) {
+    $whereClause = " AND " . implode(" AND ", $whereConditions);
+    $sql .= $whereClause;
+    $countSql .= $whereClause;
+}
+
+// Execute the count query to get total roles
+$countStmt = $pdo->prepare($countSql);
+$countStmt->execute($params);
+$totalCount = $countStmt->fetchColumn();
+
+// Calculate total pages
+$totalPages = ceil($totalCount / $rowsPerPage);
+
+// Ensure current page is not beyond the last page
+if ($totalPages > 0 && $currentPage > $totalPages) {
+    $currentPage = $totalPages;
+    $offset = ($currentPage - 1) * $rowsPerPage;
+}
+
+// Get distinct role IDs for the current page
+$roleIdSql = "
+SELECT DISTINCT r.id
+FROM roles r
+WHERE r.is_disabled = 0
+";
+
+if (!empty($whereConditions)) {
+    $roleIdSql .= " AND " . implode(" AND ", $whereConditions);
+}
+
+$roleIdSql .= " ORDER BY r.id DESC LIMIT :limit OFFSET :offset";
+
+$roleIdStmt = $pdo->prepare($roleIdSql);
+$roleIdStmt->bindParam(':limit', $rowsPerPage, PDO::PARAM_INT);
+$roleIdStmt->bindParam(':offset', $offset, PDO::PARAM_INT);
+foreach ($params as $key => $value) {
+    $roleIdStmt->bindValue($key, $value);
+}
+$roleIdStmt->execute();
+$pageRoleIds = $roleIdStmt->fetchAll(PDO::FETCH_COLUMN);
+
+// If we have role IDs for this page, add them to the main query
+if (!empty($pageRoleIds)) {
+    $sql .= " AND r.id IN (" . implode(',', $pageRoleIds) . ")";
+}
+
+$sql .= " ORDER BY r.id DESC, m.id";
+
 $stmt = $pdo->prepare($sql);
-$stmt->execute();
+$stmt->execute($params);
 $roleData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Group data by role and module with improved uniqueness handling
@@ -185,6 +386,73 @@ unset($role, $privileges);
         .modal {
             z-index: 1050;
         }
+        
+        /* Select2 Multiple Select Styling */
+        .select2-container--default .select2-selection--multiple {
+            border: 1px solid #ced4da;
+            border-radius: 0.25rem;
+            min-height: 38px;
+            padding: 2px 5px;
+        }
+        
+        .select2-container--default .select2-selection--multiple .select2-selection__choice {
+            background-color: #212529;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 2px 8px;
+            margin: 3px 5px 3px 0;
+            display: flex;
+            align-items: center;
+        }
+        
+        .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+            color: #fff;
+            margin-right: 5px;
+            font-size: 16px;
+            /* line-height: 1; */
+            border: none;
+            background: transparent;
+            padding: 0 4px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+            color: #f8f9fa;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .select2-dropdown {
+            border-color: #ced4da;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+        
+        .select2-container--default .select2-results__option--highlighted[aria-selected] {
+            background-color: #212529;
+        }
+        .select2-container--default .select2-selection--multiple .select2-selection__choice__display{
+            padding-left: 10px;
+        }
+        /* Fix for select2 search box */
+        .select2-search--dropdown .select2-search__field {
+            padding: 6px 8px;
+            border-radius: 4px;
+            border: 1px solid #ced4da;
+        }
+        
+        /* Fix for select2 dropdown padding */
+        .select2-results__options {
+            padding: 6px;
+        }
+        
+        /* Improve select2 placeholder */
+        .select2-container--default .select2-selection--multiple .select2-selection__placeholder {
+            color: #6c757d;
+            padding: 0 5px;
+        }
     </style>
 </head>
 
@@ -201,39 +469,92 @@ unset($role, $privileges);
                             <span><i class="bi bi-list-ul"></i> List of Roles</span>
                         </div>
                         <div class="card-body">
-                            <?php if (!empty($roles)): ?>
-                                <div class="filter-container">
-                                    <div class="d-flex justify-content-start mb-3 gap-2 align-items-center">
-                                        <?php if ($canCreate): ?>
-                                            <button type="button" class="btn btn-success btn-dark" data-bs-toggle="modal"
-                                                data-bs-target="#addRoleModal">
-                                                <i class="bi bi-plus-lg"></i> Create New Role
-                                            </button>
-                                        <?php endif; ?>
-
-                                        <div class="input-group w-auto" id="livesearch">
-                                            <span class="input-group-text"><i class="bi bi-search"></i></span>
-                                            <input type="text" class="form-control" placeholder="Search..." id="eqSearch">
-                                        </div>
-
-                                        <button type="button" id="clearFilters" class="btn btn-secondary shadow-sm">
-                                            <i class="bi bi-x-circle"></i> Clear
+                            <!-- Always show the filter container -->
+                            <div class="filter-container">
+                                <div class="d-flex justify-content-start mb-3 gap-2 align-items-center">
+                                    <?php if ($canCreate): ?>
+                                        <button type="button" class="btn btn-success btn-dark" data-bs-toggle="modal"
+                                            data-bs-target="#addRoleModal">
+                                            <i class="bi bi-plus-lg"></i> Create New Role
                                         </button>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+
+                            <!-- Filter Section - Always visible -->
+                            <form method="GET" class="row g-3 mb-4" id="roleFilterForm">
+                                <input type="hidden" name="filter_applied" value="1">
+                                <!-- Add hidden page parameter to reset to page 1 when filtering -->
+                                <input type="hidden" name="page" value="1">
+                                <!-- Add hidden rows per page parameter to maintain the setting -->
+                                <input type="hidden" name="rows_per_page" value="<?= $rowsPerPage ?>">
+                                
+                                <div class="col-md-4">
+                                    <label for="moduleFilter" class="form-label">Module</label>
+                                    <select class="form-select" name="module" id="moduleFilter">
+                                        <option value="">All Modules</option>
+                                        <?php foreach ($moduleOptions as $module): ?>
+                                            <option value="<?= htmlspecialchars($module['module_name']) ?>" 
+                                                <?= ($_GET['module'] ?? '') === $module['module_name'] ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($module['module_name']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <label for="privilegeFilter" class="form-label">Privilege</label>
+                                    <select class="form-select" name="privilege[]" id="privilegeFilter" multiple>
+                                        <?php foreach ($privilegeOptions as $privilege): ?>
+                                            <?php 
+                                            $selectedPrivs = isset($_GET['privilege']) ? (is_array($_GET['privilege']) ? $_GET['privilege'] : [$_GET['privilege']]) : [];
+                                            $isSelected = in_array($privilege['priv_name'], $selectedPrivs) ? 'selected' : '';
+                                            ?>
+                                            <option value="<?= htmlspecialchars($privilege['priv_name']) ?>" <?= $isSelected ?>>
+                                                <?= htmlspecialchars($privilege['priv_name']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <div class="form-text">Select multiple privileges to find roles with ALL selected privileges. Click to search.</div>
+                                </div>
+                                
+                                <!-- Search bar - now with expanded width -->
+                                <div class="col-12 col-sm-6 col-md-4">
+                                    <label class="form-label">Search</label>
+                                    <div class="input-group shadow-sm">
+                                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                        <input type="text" name="search" id="searchInput" class="form-control" 
+                                               placeholder="Search roles, modules, or privileges..." 
+                                               value="<?= htmlspecialchars($_GET['search'] ?? '') ?>">
                                     </div>
                                 </div>
 
-                                <!-- Table -->
-                                <div class="table-responsive" id="table">
-                                    <table id="rolesTable" class="table table-striped table-hover align-middle">
-                                        <thead class="table-dark">
-                                            <tr>
-                                                <th style="width: 25px;">ID</th>
-                                                <th style="width: 250px;">Role Name</th>
-                                                <th>Modules & Privileges</th>
-                                                <th style="width: 250px;">Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="auditTable">
+                                <div class="col-6 col-md-2 d-grid">
+                                    <button type="submit" id="applyFilters" class="btn btn-dark">
+                                        <i class="bi bi-funnel"></i> Filter
+                                    </button>
+                                </div>
+
+                                <div class="col-6 col-md-2 d-grid">
+                                    <button type="button" id="clearFilters" class="btn btn-secondary shadow-sm">
+                                        <i class="bi bi-x-circle"></i> Clear
+                                    </button>
+                                </div>
+                            </form>
+
+                            <!-- Table - Show appropriate message if no roles found -->
+                            <div class="table-responsive" id="table">
+                                <table id="rolesTable" class="table table-striped table-hover align-middle">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th style="width: 25px;">ID</th>
+                                            <th style="width: 250px;">Role Name</th>
+                                            <th>Modules & Privileges</th>
+                                            <th style="width: 250px;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="auditTable">
+                                        <?php if (!empty($roles)): ?>
                                             <?php foreach ($roles as $roleID => $role): ?>
                                                 <tr data-role-id="<?php echo $roleID; ?>">
                                                     <td><?php echo htmlspecialchars($roleID); ?></td>
@@ -267,45 +588,107 @@ unset($role, $privileges);
                                                     </td>
                                                 </tr>
                                             <?php endforeach; ?>
-                                        </tbody>
-                                    </table>
+                                        <?php else: ?>
+                                            <tr>
+                                                <td colspan="4" class="text-center py-3">
+                                                    <div class="alert alert-info mb-0">
+                                                        <?php if ($isFiltered): ?>
+                                                            <i class="bi bi-info-circle me-2"></i>No roles found matching your filter criteria. 
+                                                            <button type="button" class="btn btn-link p-0 align-baseline" id="inlineResetFilters">Clear filters</button>
+                                                        <?php else: ?>
+                                                            <i class="bi bi-info-circle me-2"></i>No roles found in the system.
+                                                        <?php endif; ?>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
 
-                                    <!-- Pagination -->
-                                    <div class="container-fluid">
-                                        <div class="row align-items-center g-3">
-                                            <div class="col-12 col-sm-auto">
-                                                <div class="text-muted">
-                                                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage"><?php echo min(10, count($roles)); ?></span> of <span
-                                                        id="totalRows"><?php echo count($roles); ?></span> entries
-                                                </div>
-                                            </div>
-                                            <div class="col-12 col-sm-auto ms-sm-auto">
-                                                <div class="d-flex align-items-center gap-2">
-                                                    <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                                        <i class="bi bi-chevron-left"></i> Previous
-                                                    </button>
-                                                    <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
-                                                        <option value="5">5</option>
-                                                        <option value="10" selected>10</option>
-                                                        <option value="20">20</option>
-                                                        <option value="50">50</option>
-                                                    </select>
-                                                    <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                                        Next <i class="bi bi-chevron-right"></i>
-                                                    </button>
-                                                </div>
+                                <!-- Pagination -->
+                                <?php if (!empty($roles)): ?>
+                                <div class="container-fluid">
+                                    <div class="row align-items-center g-3">
+                                        <div class="col-12 col-sm-auto">
+                                            <div class="text-muted">
+                                                <?php 
+                                                $start = min(($currentPage - 1) * $rowsPerPage + 1, $totalCount);
+                                                $end = min($currentPage * $rowsPerPage, $totalCount);
+                                                ?>
+                                                Showing <span id="currentPage"><?= $start ?></span> to <span id="rowsPerPage"><?= $end ?></span> of <span
+                                                    id="totalRows"><?= $totalCount ?></span> entries
                                             </div>
                                         </div>
-                                        <div class="row mt-3">
-                                            <div class="col-12">
-                                                <ul class="pagination justify-content-center" id="pagination"></ul>
+                                        <div class="col-12 col-sm-auto ms-sm-auto">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <?php 
+                                                $prevPageUrl = http_build_query(array_merge($_GET, ['page' => max(1, $currentPage - 1)]));
+                                                $nextPageUrl = http_build_query(array_merge($_GET, ['page' => $currentPage + 1]));
+                                                $prevDisabled = $currentPage <= 1 ? 'disabled' : '';
+                                                $nextDisabled = $currentPage >= $totalPages ? 'disabled' : '';
+                                                ?>
+                                                <a href="?<?= $prevPageUrl ?>" id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1 <?= $prevDisabled ?>">
+                                                    <i class="bi bi-chevron-left"></i> Previous
+                                                </a>
+                                                <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                                    <option value="5" <?= $rowsPerPage == 5 ? 'selected' : '' ?>>5</option>
+                                                    <option value="10" <?= $rowsPerPage == 10 ? 'selected' : '' ?>>10</option>
+                                                    <option value="20" <?= $rowsPerPage == 20 ? 'selected' : '' ?>>20</option>
+                                                    <option value="50" <?= $rowsPerPage == 50 ? 'selected' : '' ?>>50</option>
+                                                </select>
+                                                <a href="?<?= $nextPageUrl ?>" id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1 <?= $nextDisabled ?>">
+                                                    Next <i class="bi bi-chevron-right"></i>
+                                                </a>
                                             </div>
                                         </div>
                                     </div>
+                                    <div class="row mt-3">
+                                        <div class="col-12">
+                                            <ul class="pagination justify-content-center" id="pagination">
+                                                <?php 
+                                                // Display pagination with ellipsis for large number of pages
+                                                $maxPagesToShow = 5;
+                                                $startPage = max(1, $currentPage - floor($maxPagesToShow / 2));
+                                                $endPage = min($totalPages, $startPage + $maxPagesToShow - 1);
+                                                
+                                                // Adjust start page if we're near the end
+                                                if ($endPage - $startPage + 1 < $maxPagesToShow) {
+                                                    $startPage = max(1, $endPage - $maxPagesToShow + 1);
+                                                }
+                                                
+                                                // First page link
+                                                if ($startPage > 1) {
+                                                    $pageUrl = http_build_query(array_merge($_GET, ['page' => 1]));
+                                                    echo '<li class="page-item"><a class="page-link" href="?' . $pageUrl . '">1</a></li>';
+                                                    
+                                                    if ($startPage > 2) {
+                                                        echo '<li class="page-item disabled"><span class="page-link">...</span></li>';
+                                                    }
+                                                }
+                                                
+                                                // Page links
+                                                for ($i = $startPage; $i <= $endPage; $i++) {
+                                                    $pageUrl = http_build_query(array_merge($_GET, ['page' => $i]));
+                                                    $activeClass = $i == $currentPage ? 'active' : '';
+                                                    echo '<li class="page-item ' . $activeClass . '"><a class="page-link" href="?' . $pageUrl . '">' . $i . '</a></li>';
+                                                }
+                                                
+                                                // Last page link
+                                                if ($endPage < $totalPages) {
+                                                    if ($endPage < $totalPages - 1) {
+                                                        echo '<li class="page-item disabled"><span class="page-link">...</span></li>';
+                                                    }
+                                                    
+                                                    $pageUrl = http_build_query(array_merge($_GET, ['page' => $totalPages]));
+                                                    echo '<li class="page-item"><a class="page-link" href="?' . $pageUrl . '">' . $totalPages . '</a></li>';
+                                                }
+                                                ?>
+                                            </ul>
+                                        </div>
+                                    </div>
                                 </div>
-                            <?php else: ?>
-                                <p class="mb-0">No roles found.</p>
-                            <?php endif; ?>
+                                <?php endif; ?>
+                            </div>
                         </div>
                     </div>
                 </main>
@@ -313,7 +696,7 @@ unset($role, $privileges);
         </div>
     </div>
 
-    <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
+    <!-- Removed pagination.js dependency since we're using server-side pagination -->
 
     <!-- Modals (unchanged) -->
     <div class="modal" id="editRoleModal" tabindex="-1" aria-labelledby="editRoleModalLabel" aria-hidden="true" style="transition: none !important;">
@@ -598,7 +981,6 @@ unset($role, $privileges);
                 ensureModalBackdrop();
             });
 
-            // Check if Select2 is available
             if ($.fn.select2) {
                 // Initialize Select2 for better dropdown experience
                 $('#moduleFilter').select2({
@@ -608,344 +990,54 @@ unset($role, $privileges);
                 });
 
                 $('#privilegeFilter').select2({
-                    placeholder: 'Select Privileges...',
+                    placeholder: 'Select one or more privileges...',
                     allowClear: true,
                     width: '100%',
-                    closeOnSelect: false
+                    closeOnSelect: false,
+                    multiple: true,
+                    tags: false,
+                    dropdownParent: $('#roleFilterForm'),
+                    language: {
+                        noResults: function() {
+                            return "No privileges found";
+                        },
+                        searching: function() {
+                            return "Searching...";
+                        }
+                    },
+                    templateResult: function(data) {
+                        if (data.loading) return data.text;
+                        var $result = $('<span></span>');
+                        $result.text(data.text);
+                        return $result;
+                    }
+                }).on('select2:opening', function() {
+                    // Focus the search field when dropdown opens
+                    setTimeout(function() {
+                        $('.select2-search__field').focus();
+                    }, 100);
                 });
             }
-
-            // Filter function
-            function filterTable() {
-                const roleNameFilter = $('#roleNameFilter').val().toLowerCase();
-                const moduleFilter = $('#moduleFilter').val();
-                const privilegeFilters = $('#privilegeFilter').val() || [];
-
-                // Remove any "no results" message first
-                $('#no-results-row').remove();
-
-                // Create a filtered array of rows that we'll use for pagination
-                window.filteredRows = window.allRows.filter(row => {
-                    const $row = $(row);
-                    const roleName = $row.find('.role-name').text().toLowerCase();
-                    const privilegeList = $row.find('.privilege-list');
-                    const privilegeText = privilegeList.text().toLowerCase();
-
-                    let showRow = true;
-
-                    // Apply role name filter
-                    if (roleNameFilter && !roleName.includes(roleNameFilter)) {
-                        showRow = false;
-                    }
-
-                    // Module and privilege combination filtering
-                    if (moduleFilter) {
-                        // Find the specific module section
-                        let moduleFound = false;
-                        let moduleHasSelectedPrivileges = true;
-
-                        privilegeList.find('div').each(function() {
-                            const moduleSection = $(this).text().toLowerCase();
-                            if (moduleSection.includes(moduleFilter.toLowerCase())) {
-                                moduleFound = true;
-
-                                // If privileges are selected, check if this module actually has them
-                                if (privilegeFilters.length > 0) {
-                                    // Check if module has "No privileges"
-                                    if (moduleSection.includes("no privileges")) {
-                                        moduleHasSelectedPrivileges = false;
-                                        return false; // Break the each loop
-                                    }
-
-                                    // Check if module has ALL selected privileges
-                                    const hasAllPrivileges = privilegeFilters.every(privilege =>
-                                        moduleSection.includes(privilege.toLowerCase())
-                                    );
-
-                                    if (!hasAllPrivileges) {
-                                        moduleHasSelectedPrivileges = false;
-                                        return false; // Break the each loop
-                                    }
-                                }
-
-                                return false; // Break the each loop once we found the module
-                            }
-                        });
-
-                        // Don't show if module wasn't found or doesn't have the selected privileges
-                        if (!moduleFound || !moduleHasSelectedPrivileges) {
-                            showRow = false;
-                        }
-                    }
-                    // Only privilege filtering (no module selected)
-                    else if (privilegeFilters.length > 0) {
-                        const hasAllPrivileges = privilegeFilters.every(privilege =>
-                            privilegeText.includes(privilege.toLowerCase())
-                        );
-                        if (!hasAllPrivileges) {
-                            showRow = false;
-                        }
-                    }
-
-                    return showRow;
-                });
-
-                // Show "no results" message if no matches
-                if (window.filteredRows.length === 0) {
-                    $('#auditTable').append(
-                        '<tr id="no-results-row"><td colspan="4" class="text-center py-3">' +
-                        '<div class="alert alert-info mb-0">' +
-                        '<i class="bi bi-info-circle me-2"></i>No matching roles found. Try adjusting your filters.' +
-                        '</div></td></tr>'
-                    );
-                }
-
-                // Reset pagination to first page and update with filtered rows
-                window.currentPage = 1;
-                updatePagination();
-            }
-
-            // Add event listeners for filters
-            $('#roleNameFilter').on('input', filterTable);
-            $('#moduleFilter').on('change', filterTable);
-            $('#privilegeFilter').on('change', filterTable);
 
             // Add clear filters functionality
-            $('#clearFilters').on('click', function() {
-                // Clear search input
-                $('#eqSearch').val('');
+            $('#clearFilters, #inlineResetFilters').on('click', function() {
+                // Redirect to the page without any query parameters
+                window.location.href = window.location.pathname;
+            });
+            
+            // Handle rows per page change
+            $('#rowsPerPageSelect').on('change', function() {
+                const rowsPerPage = $(this).val();
+                const currentUrl = new URL(window.location.href);
+                const params = new URLSearchParams(currentUrl.search);
                 
-                // Reset table to initial state
-                window.allRows = Array.from(document.querySelectorAll('#auditTable tr'));
-                window.filteredRows = window.allRows;
+                params.set('rows_per_page', rowsPerPage);
+                params.set('page', '1'); // Reset to first page when changing rows per page
                 
-                // Reset to first page
-                window.currentPage = 1;
-                
-                // Update pagination
-                updatePagination();
-                
-                // Force pagination check
-                forcePaginationCheck();
-                
-                // Remove any "no results" message
-                $('#no-results-row').remove();
+                window.location.href = `${currentUrl.pathname}?${params.toString()}`;
             });
 
-            // Live search functionality
-            $('#eqSearch').on('keyup', function() {
-                const searchText = $(this).val().toLowerCase();
-                
-                // Get all rows if not already stored
-                if (!window.allRows) {
-                    window.allRows = Array.from(document.querySelectorAll('#auditTable tr'));
-                }
-
-                if (searchText.length > 0) {
-                    window.filteredRows = window.allRows.filter(row => {
-                        const rowText = $(row).text().toLowerCase();
-                        return rowText.includes(searchText);
-                    });
-                } else {
-                    window.filteredRows = window.allRows;
-                }
-
-                // Remove any "no results" message
-                $('#no-results-row').remove();
-
-                // Show "no results" message if no matches
-                if (window.filteredRows.length === 0) {
-                    $('#auditTable').append(
-                        '<tr id="no-results-row"><td colspan="4" class="text-center py-3">' +
-                        '<div class="alert alert-info mb-0">' +
-                        '<i class="bi bi-info-circle me-2"></i>No matching roles found. Try adjusting your search.' +
-                        '</div></td></tr>'
-                    );
-                }
-
-                // Reset to first page and update
-                window.currentPage = 1;
-                updatePagination();
-                forcePaginationCheck();
-            });
-
-            // Initialize the pagination system correctly
-            window.allRows = Array.from(document.querySelectorAll('#auditTable tr'));
-            window.filteredRows = window.allRows; // Initially all rows are visible
-
-            // Add this override for pagination.js to work with our filtered rows
-            window.updatePagination = function() {
-                console.log("Custom updatePagination called. Current page:", window.currentPage);
-                
-                // Make sure we have the correct rows to paginate
-                window.allRows = Array.from(document.querySelectorAll('#auditTable tr'));
-                
-                // If filtered rows is empty or not defined, use all rows
-                if (!window.filteredRows || window.filteredRows.length === 0) {
-                    window.filteredRows = window.allRows;
-                }
-                
-                // Hide all rows first
-                window.allRows.forEach(row => {
-                    row.style.display = 'none';
-                });
-                
-                // Calculate which rows to show based on current page and rows per page
-                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value);
-                const startIndex = (window.currentPage - 1) * rowsPerPage;
-                const totalRows = window.filteredRows.length;
-                const endIndex = Math.min(startIndex + rowsPerPage, totalRows);
-                
-                console.log(`Displaying rows ${startIndex+1}-${endIndex} of ${totalRows}`);
-                
-                // Show only the rows for the current page
-                for (let i = startIndex; i < endIndex; i++) {
-                    if (window.filteredRows[i]) {
-                        window.filteredRows[i].style.display = '';
-                    }
-                }
-                
-                // Update pagination info display
-                document.getElementById('currentPage').textContent = totalRows === 0 ? 0 : (startIndex + 1);
-                document.getElementById('rowsPerPage').textContent = Math.min(endIndex, totalRows);
-                document.getElementById('totalRows').textContent = totalRows;
-                
-                // Update pagination controls
-                const totalPages = Math.ceil(totalRows / rowsPerPage) || 1;
-                renderPaginationControls(totalPages);
-                
-                // Enable/disable prev/next buttons
-                const prevBtn = document.getElementById('prevPage');
-                const nextBtn = document.getElementById('nextPage');
-                
-                if (prevBtn) {
-                    prevBtn.disabled = window.currentPage <= 1;
-                    prevBtn.style.display = window.currentPage <= 1 ? 'none' : '';
-                }
-                
-                if (nextBtn) {
-                    nextBtn.disabled = window.currentPage >= totalPages;
-                    nextBtn.style.display = window.currentPage >= totalPages ? 'none' : '';
-                }
-                
-                // Run the additional check for pagination visibility
-                forcePaginationCheck();
-            };
-
-            // Override pagination rendering to use ellipsis style
-            window.renderPaginationControls = function(totalPages) {
-                const paginationContainer = document.getElementById('pagination');
-                if (!paginationContainer) return;
-
-                paginationContainer.innerHTML = '';
-
-                if (totalPages <= 1) return;
-
-                // Always show first page
-                addPaginationItem(paginationContainer, 1, window.currentPage === 1);
-
-                // Show ellipses and a window of pages around current page
-                const maxVisiblePages = 5; // Adjust as needed
-                const halfWindow = Math.floor(maxVisiblePages / 2);
-
-                let startPage = Math.max(2, window.currentPage - halfWindow);
-                let endPage = Math.min(totalPages - 1, window.currentPage + halfWindow);
-
-                // Adjust for edge cases
-                if (window.currentPage <= halfWindow + 1) {
-                    // Near start, show more pages after current
-                    endPage = Math.min(totalPages - 1, maxVisiblePages);
-                } else if (window.currentPage >= totalPages - halfWindow) {
-                    // Near end, show more pages before current
-                    startPage = Math.max(2, totalPages - maxVisiblePages);
-                }
-
-                // Show ellipsis after first page if needed
-                if (startPage > 2) {
-                    addPaginationItem(paginationContainer, '...');
-                }
-
-                // Show pages in the window
-                for (let i = startPage; i <= endPage; i++) {
-                    addPaginationItem(paginationContainer, i, window.currentPage === i);
-                }
-
-                // Show ellipsis before last page if needed
-                if (endPage < totalPages - 1) {
-                    addPaginationItem(paginationContainer, '...');
-                }
-
-                // Always show last page
-                if (totalPages > 1) {
-                    addPaginationItem(paginationContainer, totalPages, window.currentPage === totalPages);
-                }
-            };
-
-            // Helper function to add pagination items
-            window.addPaginationItem = function(container, page, isActive = false) {
-                const li = document.createElement('li');
-                li.className = 'page-item' + (isActive ? ' active' : '');
-
-                const a = document.createElement('a');
-                a.className = 'page-link';
-                a.href = '#';
-                a.textContent = page;
-
-                if (page !== '...') {
-                    a.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        window.currentPage = parseInt(page);
-                        updatePagination();
-                    });
-                } else {
-                    li.classList.add('disabled');
-                }
-
-                li.appendChild(a);
-                container.appendChild(li);
-            };
-
-            // Function to refresh row data after any table modifications
-            function refreshTableRowData() {
-                // Update the allRows and filteredRows arrays
-                window.allRows = Array.from(document.querySelectorAll('#auditTable tr'));
-                // Apply any active filters
-                filterTable();
-                // Reset to page 1
-                window.currentPage = 1;
-                // Update pagination
-                updatePagination();
-            }
-
-            // Setup pagination controls
-            document.getElementById('prevPage').addEventListener('click', function(e) {
-                e.preventDefault();
-                console.log("Previous button clicked. Current page before:", window.currentPage);
-                if (window.currentPage > 1) {
-                    window.currentPage--;
-                    console.log("Current page after:", window.currentPage);
-                    updatePagination(); // Update display
-                }
-            });
-
-            document.getElementById('nextPage').addEventListener('click', function(e) {
-                e.preventDefault();
-                console.log("Next button clicked. Current page before:", window.currentPage);
-                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value);
-                const totalPages = Math.ceil(window.filteredRows.length / rowsPerPage);
-
-                if (window.currentPage < totalPages) {
-                    window.currentPage++;
-                    console.log("Current page after:", window.currentPage);
-                    updatePagination(); // Update display
-                }
-            });
-
-            document.getElementById('rowsPerPageSelect').addEventListener('change', function() {
-                console.log("Rows per page changed");
-                window.currentPage = 1;
-                updatePagination(); // Update display
-            });
+            // No need for client-side pagination initialization since we're using server-side pagination
 
             // **1. Load edit role modal content via AJAX**
             $(document).on('click', '.edit-role-btn', function() {
@@ -1030,9 +1122,8 @@ unset($role, $privileges);
                                     $('body').css('padding-right', '');
                                 }
                                 
-                                // Refresh the table without reloading the whole page
-                                refreshRolesTable();
-                                showToast(response.message, 'success', 5000);
+                                // Refresh the page to show updated data
+                                window.location.reload();
                             }, 300);
                         } else {
                             showToast(response.message || 'An error occurred', 'error', 5000);
@@ -1109,8 +1200,8 @@ unset($role, $privileges);
                     dataType: 'json',
                     success: function(response) {
                         if (response.success) {
-                            // Refresh the table without reloading the whole page
-                            refreshRolesTable();
+                            // Refresh the page to show updated data
+                            window.location.reload();
                             showToast(response.message, 'success', 5000);
                         } else {
                             showToast(response.message || 'An error occurred', 'error', 5000);
@@ -1132,8 +1223,8 @@ unset($role, $privileges);
                     dataType: 'json',
                     success: function(response) {
                         if (response.success) {
-                            // Refresh the table without reloading the whole page
-                            refreshRolesTable();
+                            // Refresh the page to show updated data
+                            window.location.reload();
                             showToast(response.message, 'success', 5000);
                         } else {
                             showToast(response.message || 'An error occurred', 'error', 5000);
@@ -1144,60 +1235,6 @@ unset($role, $privileges);
                     }
                 });
             });
-
-            // Function to force hide pagination buttons when not needed
-            function forcePaginationCheck() {
-                const totalRows = window.filteredRows ? window.filteredRows.length : 0;
-                const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect').value);
-                const prevBtn = document.getElementById('prevPage');
-                const nextBtn = document.getElementById('nextPage');
-                const paginationEl = document.getElementById('pagination');
-
-                // Hide pagination completely if all rows fit on one page
-                if (totalRows <= rowsPerPage) {
-                    if (prevBtn) prevBtn.style.cssText = 'display: none !important';
-                    if (nextBtn) nextBtn.style.cssText = 'display: none !important';
-                    if (paginationEl) paginationEl.style.cssText = 'display: none !important';
-                } else {
-                    // Show pagination but conditionally hide prev/next buttons
-                    if (paginationEl) paginationEl.style.cssText = '';
-
-                    if (prevBtn) {
-                        if (window.currentPage <= 1) {
-                            prevBtn.style.cssText = 'display: none !important';
-                        } else {
-                            prevBtn.style.cssText = '';
-                        }
-                    }
-
-                    if (nextBtn) {
-                        const totalPages = Math.ceil(totalRows / rowsPerPage);
-                        if (window.currentPage >= totalPages) {
-                            nextBtn.style.cssText = 'display: none !important';
-                        } else {
-                            nextBtn.style.cssText = '';
-                        }
-                    }
-                }
-            }
-
-            // Run immediately and after any filtering
-            forcePaginationCheck();
-            $('#roleNameFilter, #moduleFilter, #privilegeFilter').on('input change', function() {
-                setTimeout(forcePaginationCheck, 100);
-            });
-
-            // Initialize pagination
-            window.currentPage = 1;
-            
-            // Make sure we have the correct updatePagination function
-            console.log("Initializing pagination system");
-            
-            // Call the updatePagination function to show initial set of rows
-            updatePagination();
-            
-            // Force an initial check of pagination controls
-            setTimeout(forcePaginationCheck, 100);
 
             // Fix for modal backdrops - ensure they're properly initialized
             $('#editRoleModal, #confirmDeleteModal, #addRoleModal').each(function() {
