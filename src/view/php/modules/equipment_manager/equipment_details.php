@@ -581,9 +581,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             $auditStmt->execute([
                 $_SESSION['user_id'],
                 $detailsData['id'],
-                'Equipment Management',
-                'Delete',
-                'Equipment details has been deleted',
+                'Equipment Details',
+                'Remove',
+                'Equipment details have been removed',
                 $oldValue,
                 null,
                 'Successful'
@@ -609,7 +609,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                     $_SESSION['user_id'],
                     $detailsData['id'],
                     'Equipment Status',
-                    'Delete',
+                    'Remove',
                     'Equipment status entries for asset tag ' . $assetTag . ' have been removed (cascaded delete)',
                     json_encode(['asset_tag' => $assetTag, 'rows_affected' => $statusRowsAffected]),
                     null,
@@ -622,7 +622,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                     $_SESSION['user_id'],
                     $detailsData['id'],
                     'Equipment Location',
-                    'Delete',
+                    'Remove',
                     'Equipment location entries for asset tag ' . $assetTag . ' have been removed (cascaded delete)',
                     json_encode(['asset_tag' => $assetTag, 'rows_affected' => $locationRowsAffected]),
                     null,
@@ -2486,14 +2486,20 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
         $('#confirmDeleteBtn').on('click', function() {
             if (!deleteEquipmentId) return;
             $.ajax({
-                url: '../../modules/equipment_manager/delete_equipment.php',
+                url: '../../modules/equipment_manager/equipment_details.php',
                 method: 'POST',
-                data: { id: deleteEquipmentId, permanent: 1, module: 'Equipment Details' },
+                data: {
+                    action: 'remove',
+                    details_id: deleteEquipmentId
+                },
                 dataType: 'json',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
                 success: function(response) {
                     if (response.status === 'success') {
                         $('#deleteEDModal').modal('hide');
-                        showToast(response.message || 'Equipment deleted successfully', 'success');
+                        showToast(response.message || 'Equipment removed successfully', 'success');
                         // Reload the table section only
                         $('#edTable').load(location.href + ' #edTable > *', function() {
                             window.allRows = $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').toArray();
@@ -2501,11 +2507,11 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                             if (typeof filterEquipmentTable === 'function') filterEquipmentTable();
                         });
                     } else {
-                        showToast(response.message || 'Failed to delete equipment.', 'error');
+                        showToast(response.message || 'Failed to remove equipment.', 'error');
                     }
                 },
                 error: function(xhr, status, error) {
-                    showToast('Error deleting equipment.', 'error');
+                    showToast('Error removing equipment.', 'error');
                 }
             });
         });

@@ -200,8 +200,10 @@ function getActionIcon($action)
         return '<span class="action-badge action-modified"><i class="fas fa-pen me-1"></i> Modified</span>';
     } elseif ($action === 'create') {
         return '<span class="action-badge action-create"><i class="fas fa-plus-circle me-1"></i> Create</span>';
-    } elseif ($action === 'remove' || $action === 'delete') {
-        return '<span class="action-badge action-delete"><i class="fas fa-trash-alt me-1"></i> Removed</span>';
+    } elseif ($action === 'remove') {
+        return '<span class="action-badge action-delete"><i class="fas fa-trash-alt me-1"></i> Remove</span>';
+    } elseif ($action === 'delete') {
+        return '<span class="action-badge action-delete"><i class="fas fa-trash-alt me-1"></i> Delete</span>';
     } elseif ($action === 'restored') {
         return '<span class="action-badge action-restored"><i class="fas fa-trash-restore me-1"></i> Restored</span>';
     } else {
@@ -318,11 +320,11 @@ function formatDetailsAndChanges($log)
             break;
         case 'restored':
             $details = htmlspecialchars("$targetEntityName has been restored");
-            $changes = "is_deleted 1 -> 0";
+            $changes = formatNewValue($log['OldVal']);
             break;
         case 'remove':
             $details = htmlspecialchars("$targetEntityName has been removed");
-            $changes = "is_deleted 0 -> 1";
+            $changes = formatNewValue($log['NewVal']);
             break;
         case 'delete':
             $details = htmlspecialchars("$targetEntityName has been deleted from the database");
