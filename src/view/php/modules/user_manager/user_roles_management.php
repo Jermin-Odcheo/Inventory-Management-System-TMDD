@@ -491,7 +491,7 @@ $userRoleDepartments = array_values($userRoleMap);
             <table class="table table-striped table-hover" id="urTable">
                 <thead>
                     <tr>
-                        <th><?php if ($canRemove): ?><input type="checkbox" id="select-all"><?php endif; ?></th>
+                        <!-- <th><?php if ($canRemove): ?><input type="checkbox" id="select-all"><?php endif; ?></th> -->
                         <th>
                             <a href="#" class="sort-header <?php echo $sortBy === 'username' ? 'active-sort' : ''; ?>" data-sort="username">
                                 User
@@ -521,7 +521,7 @@ $userRoleDepartments = array_values($userRoleMap);
                     <?php else: ?>
                         <?php foreach ($usersData as $user): ?>
                             <tr>
-                                <td><?php if ($canRemove): ?><input type="checkbox" class="select-row" value="<?= htmlspecialchars($user['id']); ?>"><?php endif; ?></td>
+                                <!-- <td><?php if ($canRemove): ?><input type="checkbox" class="select-row" value="<?= htmlspecialchars($user['id']); ?>"><?php endif; ?></td> -->
                                 <td><?= htmlspecialchars($user['username']); ?></td>
                                 <td><?= htmlspecialchars($user['departments_concat'] ?? 'Not assigned'); ?></td>
                                 <td><?= htmlspecialchars($user['roles_concat'] ?? 'No roles assigned'); ?></td>

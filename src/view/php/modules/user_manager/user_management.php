@@ -832,7 +832,7 @@ try {
             <table class="table table-striped table-hover" id="umTable">
                 <thead>
                     <tr>
-                        <th><input type="checkbox" id="select-all"></th>
+                        <!-- <th><input type="checkbox" id="select-all"></th> -->
                         <th>
                             <a href="#" class="sort-header" data-sort="id">
                                 #<i class="bi bi-caret-up-fill sort-icon"></i>
@@ -873,11 +873,11 @@ try {
                         </tr>
                         <?php else: foreach ($users as $u): ?>
                             <tr>
-                                <td>
+                                <!-- <td>
                                     <input type="checkbox"
                                         class="select-row"
                                         value="<?= htmlspecialchars((string)$u['id'], ENT_QUOTES, 'UTF-8'); ?>">
-                                </td>
+                                </td> -->
                                 <td><?= htmlspecialchars((string)$u['id'], ENT_QUOTES, 'UTF-8'); ?></td>
                                 <td><?= htmlspecialchars($u['email'], ENT_QUOTES, 'UTF-8'); ?></td>
                                 <td>
