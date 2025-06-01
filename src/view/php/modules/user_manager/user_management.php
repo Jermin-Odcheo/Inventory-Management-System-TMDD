@@ -2651,6 +2651,56 @@ try {
                 keyboard: false
             }).modal('show');
         });
+
+        // Add debounce function to prevent too many searches
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Live search functionality
+        const searchInput = document.getElementById('search-filters');
+        const searchHandler = debounce(function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('#umTableBody tr');
+            
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                const matches = text.includes(searchTerm);
+                row.style.display = matches ? '' : 'none';
+            });
+
+            // Update pagination after search
+            if (typeof window.updatePagination === 'function') {
+                window.filteredRows = Array.from(document.querySelectorAll('#umTableBody tr:not([style*="display: none"])'));
+                window.paginationConfig.currentPage = 1; // Reset to first page
+                window.updatePagination();
+                window.forcePaginationCheck();
+            }
+        }, 300); // 300ms delay
+
+        // Add event listener for live search
+        searchInput.addEventListener('input', searchHandler);
+
+        // Preserve search value on form submit
+        const filterForm = document.getElementById('userFilterForm');
+        filterForm.addEventListener('submit', function(e) {
+            const searchValue = searchInput.value;
+            if (searchValue) {
+                const searchInput = document.createElement('input');
+                searchInput.type = 'hidden';
+                searchInput.name = 'search';
+                searchInput.value = searchValue;
+                filterForm.appendChild(searchInput);
+            }
+        });
     </script>
 
     <!-- Add Toast notification utility and date filter handling -->
