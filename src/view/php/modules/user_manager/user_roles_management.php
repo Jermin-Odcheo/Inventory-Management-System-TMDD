@@ -58,15 +58,17 @@ $orderByClause = "ORDER BY " . $sortMap[$sortBy] . " " . $sortDir;
 // Get filter parameters from GET request
 $searchFilter = isset($_GET['search']) ? trim($_GET['search']) : '';
 $roleFilter = isset($_GET['role']) ? (int)$_GET['role'] : 0;
-$deptFilter = isset($_GET['department']) ? trim($_GET['department']) : '';
 
 // Build WHERE clause for filtering
 $whereClause = "u.is_disabled = 0";
 
 // Add search filter if provided
 if (!empty($searchFilter)) {
-    $searchFilter = '%' . $pdo->quote($searchFilter) . '%';
-    $searchFilter = str_replace("'", "", $searchFilter); // Remove quotes added by PDO::quote
+    // Remove any existing % characters from the search term
+    $searchFilter = str_replace('%', '', $searchFilter);
+    // Properly escape the search term for SQL
+    $searchFilter = $pdo->quote($searchFilter);
+    $searchFilter = trim($searchFilter, "'"); // Remove quotes added by PDO::quote
     $whereClause .= " AND (u.username LIKE '%{$searchFilter}%' OR 
                           u.email LIKE '%{$searchFilter}%' OR 
                           u.first_name LIKE '%{$searchFilter}%' OR 
@@ -78,13 +80,6 @@ if (!empty($searchFilter)) {
 // Add role filter if provided
 if ($roleFilter > 0) {
     $whereClause .= " AND r.id = {$roleFilter}";
-}
-
-// Add department filter if provided
-if (!empty($deptFilter)) {
-    $deptFilter = '%' . $pdo->quote($deptFilter) . '%';
-    $deptFilter = str_replace("'", "", $deptFilter); // Remove quotes added by PDO::quote
-    $whereClause .= " AND d.department_name LIKE '%{$deptFilter}%'";
 }
 
 // --- END FILTERING IMPLEMENTATION ---
@@ -248,7 +243,7 @@ $userRoleDepartments = array_values($userRoleMap);
             pointer-events: none;
             background-color: #fff;
         }
-        
+
         /* Enhanced pagination styles */
         .pagination {
             display: inline-flex;
@@ -256,7 +251,7 @@ $userRoleDepartments = array_values($userRoleMap);
             gap: 4px;
             margin-bottom: 0;
         }
-        
+
         .pagination .page-item .page-link {
             min-width: 36px;
             height: 36px;
@@ -269,13 +264,14 @@ $userRoleDepartments = array_values($userRoleMap);
             padding: 0.375rem;
             border-radius: 0.25rem;
         }
-        
+
         .pagination .page-item .page-link i {
             font-size: 0.875rem;
         }
-        
+
         /* Sortable column header styles */
-        .sortable, .sort-header {
+        .sortable,
+        .sort-header {
             cursor: pointer;
             position: relative;
             padding-right: 20px !important;
@@ -286,12 +282,14 @@ $userRoleDepartments = array_values($userRoleMap);
             text-decoration: none;
         }
 
-        .sortable:hover, .sort-header:hover {
+        .sortable:hover,
+        .sort-header:hover {
             background-color: #f8f9fa;
             color: #0d6efd;
         }
 
-        .sortable i, .sort-header i {
+        .sortable i,
+        .sort-header i {
             position: absolute;
             right: 5px;
             top: 50%;
@@ -300,118 +298,119 @@ $userRoleDepartments = array_values($userRoleMap);
             transition: all 0.2s ease;
         }
 
-        .sortable:hover i, .sort-header:hover i {
+        .sortable:hover i,
+        .sort-header:hover i {
             color: #0d6efd;
         }
-        
+
         /* Style for active sort column */
         .sort-header.active-sort {
             background-color: #e9f0ff;
             font-weight: 600;
         }
-        
+
         .sort-header.active-sort i {
             color: #0d6efd;
             font-weight: bold;
         }
-        
+
         /* Loading state for sort headers */
         .sort-header.sorting {
             opacity: 0.7;
         }
-        
+
         /* Improved sort icon styling */
         .sort-icon {
             font-size: 0.75rem;
             margin-left: 5px;
             vertical-align: middle;
         }
-        
+
         /* Center pagination on mobile */
         @media (max-width: 767.98px) {
             .pagination {
                 justify-content: center;
                 margin: 0.5rem 0;
             }
-            
+
             /* Center info text on mobile */
             .text-muted {
                 text-align: center;
                 margin-bottom: 0.5rem;
             }
-            
+
             /* Center prev/next buttons on mobile */
             .justify-content-md-end {
                 justify-content: center !important;
                 margin-top: 0.5rem;
             }
         }
-    .container-fluid{
-        padding: 20px
-    }
-        /* Improved filters container styling */
+
+        .container-fluid {
+            padding: 20px
+        }
+
+        /* Updated filters container styling */
         .filters-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.75rem;
+            background-color: #f8f9fa;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
             margin-bottom: 1.5rem;
-            
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
         }
 
-        .filter-container {
-            flex: 1 1 220px;
-            min-width: 200px;
+        .filters-container h5 {
+            color: #495057;
+            font-weight: 600;
+        }
+
+        .form-label {
+            font-weight: 500;
+            color: #495057;
             margin-bottom: 0.5rem;
         }
 
-        .search-filter {
-            flex: 1 1 220px;
-            min-width: 200px;
-            margin-bottom: 0.5rem;
+        .form-select,
+        .form-control {
+            border-radius: 0.375rem;
+            border: 1px solid #ced4da;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+        }
+
+        .form-select:focus,
+        .form-control:focus {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+
+        .input-group-text {
+            background-color: #f8f9fa;
+            border: 1px solid #ced4da;
+            border-right: none;
+        }
+
+        .input-group .form-control {
+            border-left: none;
+        }
+
+        .input-group .form-control:focus {
+            border-left: none;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .btn i {
+            margin-right: 0.5rem;
         }
 
         .action-buttons {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            margin-top: 1rem;
-            width: 100%;
-        }
-
-        /* Button containers in filters */
-        .filters-container .col-6 {
-            flex: 0 0 auto;
-            width: auto;
-            min-width: 120px;
-            margin-bottom: 1.2rem;
-        }
-
-        @media (max-width: 767.98px) {
-            .filters-container {
-                flex-direction: column;
-            }
-
-            .filter-container, 
-            .search-filter, 
-            .filters-container .col-6 {
-                width: 100%;
-                flex: 0 0 100%;
-            }
-        }
-
-        /* Filter button states */
-        .btn-filtering {
-            background-color: #6c757d !important; 
-            opacity: 0.8;
-            pointer-events: none;
-        }
-        
-        /* Center pagination on mobile */
-        @media (max-width: 767.98px) {
-            .pagination {
-                justify-content: center;
-                margin: 0.5rem 0;
-            }
+            border-top: 1px solid #dee2e6;
+            padding-top: 1rem;
         }
     </style>
 </head>
@@ -423,63 +422,69 @@ $userRoleDepartments = array_values($userRoleMap);
         </header>
 
         <div class="filters-container">
-            <?php if ($canCreate): ?>
-                <button type="button" id="create-btn" class="btn btn-dark">
-                <i class="bi bi-plus-lg"></i> Add User/s to role</button>
-            <?php endif; ?>
+            <form id="filter-form" method="get" class="w-100">
+                <div class="d-flex gap-3 align-items-end">
 
-            <form id="filter-form" method="get" class="row g-3 align-items-end w-100">
-                <?php 
+                    <?php if ($canCreate): ?>
+                        <div class="form-group">
+                            <label class="form-label">&nbsp;</label>
+                            <button type="button" id="create-btn" class="btn btn-dark">
+                                <i class="bi bi-plus-lg"></i> Add User/s to role
+                            </button>
+                        </div>
+                    <?php endif; ?>
+                    <div class="form-group flex-grow-1">
+                        <label for="role-filter" class="form-label">Filter by Role</label>
+                        <select id="role-filter" name="role" class="form-select">
+                            <option value="">All Roles</option>
+                            <?php foreach ($rolesData as $role): ?>
+                                <option value="<?php echo $role['id']; ?>" <?= $roleFilter == $role['id'] ? 'selected' : '' ?>>
+                                    <?php echo htmlspecialchars($role['role_name']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div class="form-group flex-grow-1">
+                        <label for="search-users" class="form-label">Search</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <input type="text" id="search-users" name="search" class="form-control"
+                                placeholder="Search users, departments, roles..."
+                                value="<?= htmlspecialchars($searchFilter) ?>">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-flex gap-2">
+                            <button type="submit" id="filter-btn" class="btn btn-dark">
+                                <i class="bi bi-funnel"></i> Filter
+                            </button>
+                            <button type="button" id="clear-btn" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> Clear
+                            </button>
+                        </div>
+                    </div>
+
+                    <?php if ($rbac->hasPrivilege('User Management', 'Modify')): ?>
+                        <div class="form-group">
+                            <label class="form-label">&nbsp;</label>
+                            <a href="user_management.php" class="btn btn-primary">
+                                <i class="bi bi-person-gear"></i> Manage User Accounts
+                            </a>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+                <?php
                 // Preserve sort parameters if they exist
-                if (isset($_GET['sort_by']) && isset($_GET['sort_order'])): 
+                if (isset($_GET['sort_by']) && isset($_GET['sort_order'])):
                 ?>
-                <input type="hidden" name="sort_by" value="<?= htmlspecialchars($_GET['sort_by']) ?>">
-                <input type="hidden" name="sort_order" value="<?= htmlspecialchars($_GET['sort_order']) ?>">
+                    <input type="hidden" name="sort_by" value="<?= htmlspecialchars($_GET['sort_by']) ?>">
+                    <input type="hidden" name="sort_order" value="<?= htmlspecialchars($_GET['sort_order']) ?>">
                 <?php endif; ?>
-
-                <div class="filter-container">
-                    <label for="role-filter">FILTER BY ROLE</label>
-                    <select id="role-filter" name="role">
-                        <option value="">All Roles</option>
-                        <?php foreach ($rolesData as $role): ?>
-                            <option value="<?php echo $role['id']; ?>" <?= $roleFilter == $role['id'] ? 'selected' : '' ?>>
-                                <?php echo htmlspecialchars($role['role_name']); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="filter-container">
-                    <label for="dept-filter">FILTER BY DEPARTMENT</label>
-                    <select id="dept-filter" name="department">
-                        <option value="" selected>All Departments</option>
-                        <?php foreach ($departmentsData as $dept): ?>
-                            <?php $deptName = htmlspecialchars($dept['department_name']); ?>
-                            <option value="<?php echo $deptName; ?>" <?= $deptFilter == $deptName ? 'selected' : '' ?>>
-                                <?php echo '(' . htmlspecialchars($dept['abbreviation']) . ') ' . $deptName; ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="search-filter">
-                    <label for="search-users">SEARCH</label>
-                    <input type="text" id="search-users" name="search" placeholder="Search users, departments, roles..." value="<?= htmlspecialchars($searchFilter) ?>">
-                </div>
-
-                <!-- Buttons -->
-                <div class="col-6 col-md-2 d-grid">
-                    <button type="submit" id="filter-btn" class="btn btn-dark"><i class="bi bi-funnel"></i> Filter</button>
-                </div>
-
-                <div class="col-6 col-md-2 d-grid">
-                    <button type="button" id="clear-btn" class="btn btn-secondary shadow-sm"><i class="bi bi-x-circle"></i> Clear</button>
-                </div>
             </form>
-
-            <div class="action-buttons">
-                <?php if ($rbac->hasPrivilege('User Management', 'Modify')): ?>
-                    <a href="user_management.php" class="btn btn-primary"> Manage User Accounts</a>
-                <?php endif; ?>
-            </div>
         </div>
 
         <div class="table-responsive" id="table">
@@ -489,19 +494,19 @@ $userRoleDepartments = array_values($userRoleMap);
                         <th><?php if ($canRemove): ?><input type="checkbox" id="select-all"><?php endif; ?></th>
                         <th>
                             <a href="#" class="sort-header <?php echo $sortBy === 'username' ? 'active-sort' : ''; ?>" data-sort="username">
-                                User 
+                                User
                                 <i class="bi <?php echo $sortBy === 'username' ? ($sortDir === 'asc' ? 'bi-caret-up-fill' : 'bi-caret-down-fill') : 'bi-caret-up-fill'; ?> sort-icon"></i>
                             </a>
                         </th>
                         <th>
                             <a href="#" class="sort-header <?php echo $sortBy === 'departments' ? 'active-sort' : ''; ?>" data-sort="departments">
-                                Departments 
+                                Departments
                                 <i class="bi <?php echo $sortBy === 'departments' ? ($sortDir === 'asc' ? 'bi-caret-up-fill' : 'bi-caret-down-fill') : 'bi-caret-up-fill'; ?> sort-icon"></i>
                             </a>
                         </th>
                         <th>
                             <a href="#" class="sort-header <?php echo $sortBy === 'roles' ? 'active-sort' : ''; ?>" data-sort="roles">
-                                Roles 
+                                Roles
                                 <i class="bi <?php echo $sortBy === 'roles' ? ($sortDir === 'asc' ? 'bi-caret-up-fill' : 'bi-caret-down-fill') : 'bi-caret-up-fill'; ?> sort-icon"></i>
                             </a>
                         </th>
@@ -522,7 +527,7 @@ $userRoleDepartments = array_values($userRoleMap);
                                 <td><?= htmlspecialchars($user['roles_concat'] ?? 'No roles assigned'); ?></td>
                                 <td>
                                     <?php if ($canModify): ?>
-                                        <button class="btn-outline-primary edit-btn" 
+                                        <button class="btn-outline-primary edit-btn"
                                             data-user-id="<?= htmlspecialchars($user['id']); ?>"
                                             data-username="<?= htmlspecialchars($user['username']); ?>">
                                             <i class="bi bi-pencil-square"></i>
@@ -582,7 +587,7 @@ $userRoleDepartments = array_values($userRoleMap);
                                         <i class="bi bi-chevron-left"></i>
                                     </a>
                                 </li>
-                                
+
                                 <?php
                                 // First page
                                 if ($currentPage > 3) {
@@ -590,7 +595,7 @@ $userRoleDepartments = array_values($userRoleMap);
                                     if (isset($_GET['sort_by']) && isset($_GET['sort_order'])) {
                                         $firstUrl .= '&sort_by=' . urlencode($_GET['sort_by']) . '&sort_order=' . urlencode($_GET['sort_order']);
                                     }
-                                    ?>
+                                ?>
                                     <li class="page-item">
                                         <a class="page-link" href="<?= $firstUrl ?>">1</a>
                                     </li>
@@ -599,11 +604,11 @@ $userRoleDepartments = array_values($userRoleMap);
                                         echo '<li class="page-item disabled"><span class="page-link">...</span></li>';
                                     }
                                 }
-                                
+
                                 // Page numbers
                                 $startPage = max(1, $currentPage - 1);
                                 $endPage = min($totalPages, $currentPage + 1);
-                                
+
                                 for ($i = $startPage; $i <= $endPage; $i++) {
                                     $isActive = ($i == $currentPage) ? ' active' : '';
                                     $pageUrl = '?page=' . $i;
@@ -614,9 +619,9 @@ $userRoleDepartments = array_values($userRoleMap);
                                     <li class="page-item<?= $isActive ?>">
                                         <a class="page-link" href="<?= $pageUrl ?>"><?= $i ?></a>
                                     </li>
-                                    <?php
+                                <?php
                                 }
-                                
+
                                 // Last page
                                 if ($currentPage < $totalPages - 2) {
                                     if ($currentPage < $totalPages - 3) {
@@ -626,13 +631,13 @@ $userRoleDepartments = array_values($userRoleMap);
                                     if (isset($_GET['sort_by']) && isset($_GET['sort_order'])) {
                                         $lastUrl .= '&sort_by=' . urlencode($_GET['sort_by']) . '&sort_order=' . urlencode($_GET['sort_order']);
                                     }
-                                    ?>
+                                ?>
                                     <li class="page-item">
                                         <a class="page-link" href="<?= $lastUrl ?>"><?= $totalPages ?></a>
                                     </li>
-                                    <?php
+                                <?php
                                 }
-                                
+
                                 // Next button
                                 $nextDisabled = ($currentPage >= $totalPages) ? ' disabled' : '';
                                 $nextPage = min($totalPages, $currentPage + 1);
@@ -837,7 +842,7 @@ $userRoleDepartments = array_values($userRoleMap);
                     }
                 }
             });
-            
+
             $('#nextPage').on('click', function(e) {
                 e.preventDefault();
                 if (!$(this).prop('disabled')) {
@@ -848,12 +853,12 @@ $userRoleDepartments = array_values($userRoleMap);
                     }
                 }
             });
-            
+
             // Function to navigate to a specific page while preserving sort parameters
             function navigateToPage(page) {
                 const urlParams = new URLSearchParams(window.location.search);
                 urlParams.set('page', page);
-                
+
                 // Preserve sort parameters
                 const sortBy = urlParams.get('sort_by');
                 const sortOrder = urlParams.get('sort_order');
@@ -861,60 +866,55 @@ $userRoleDepartments = array_values($userRoleMap);
                     urlParams.set('sort_by', sortBy);
                     urlParams.set('sort_order', sortOrder);
                 }
-                
+
                 // Preserve rows per page if set
                 const rowsPerPage = $('#rowsPerPageSelect').val();
                 if (rowsPerPage) {
                     urlParams.set('rows_per_page', rowsPerPage);
                 }
-                
+
                 // Preserve filter parameters
                 const searchValue = urlParams.get('search');
                 if (searchValue) {
                     urlParams.set('search', searchValue);
                 }
-                
+
                 const roleValue = urlParams.get('role');
                 if (roleValue) {
                     urlParams.set('role', roleValue);
                 }
-                
-                const deptValue = urlParams.get('department');
-                if (deptValue) {
-                    urlParams.set('department', deptValue);
-                }
-                
+
                 // Navigate to the new URL
                 window.location.href = window.location.pathname + '?' + urlParams.toString();
             }
-            
+
             // Handle clear button click
             $('#clear-btn').on('click', function() {
                 // Get current sort parameters to preserve them
                 const urlParams = new URLSearchParams(window.location.search);
                 const sortBy = urlParams.get('sort_by');
                 const sortOrder = urlParams.get('sort_order');
-                
+
                 // Create a new URL with only sort parameters if they exist
                 let newUrl = window.location.pathname;
                 if (sortBy && sortOrder) {
                     newUrl += `?sort_by=${sortBy}&sort_order=${sortOrder}`;
                 }
-                
+
                 // Navigate to the new URL
                 window.location.href = newUrl;
             });
-            
+
             // Update the active sort header based on URL parameters
             function updateActiveSortHeader() {
                 const urlParams = new URLSearchParams(window.location.search);
                 const sortBy = urlParams.get('sort_by') || 'username';
                 const sortOrder = urlParams.get('sort_order') || 'asc';
-                
+
                 // Remove active class and reset icons
                 $('.sort-header').removeClass('active-sort');
                 $('.sort-icon').removeClass('bi-caret-up-fill bi-caret-down-fill').addClass('bi-caret-up-fill');
-                
+
                 // Find the active header and update it
                 const activeHeader = $(`.sort-header[data-sort="${sortBy}"]`);
                 if (activeHeader.length) {
@@ -927,24 +927,24 @@ $userRoleDepartments = array_values($userRoleMap);
                     }
                 }
             }
-            
+
             // Call the function on page load
             updateActiveSortHeader();
-            
+
             // Disable client-side pagination since we're using server-side pagination
             if (typeof window.updatePagination === 'function') {
                 // Store the original function
                 const originalUpdatePagination = window.updatePagination;
-                
+
                 // Override with a version that doesn't modify the DOM
                 window.updatePagination = function() {
                     console.log('Client-side pagination disabled - using server-side pagination');
                     return;
                 };
             }
-            
+
             // Initialize Select2 for filter dropdowns
-            $('#role-filter, #dept-filter').select2({
+            $('#role-filter').select2({
                 placeholder: 'Select...',
                 allowClear: true,
                 width: '100%'
@@ -952,4 +952,5 @@ $userRoleDepartments = array_values($userRoleMap);
         });
     </script>
 </body>
+
 </html>

@@ -670,25 +670,27 @@ try {
         </header>
  
             <!-- Enhanced Filter Section -->
-            <form method="GET" class="row g-3 mb-4" id="userFilterForm">
+                        <!-- Enhanced Filter Section -->
+                        <form method="GET" class="row g-3 mb-4" id="userFilterForm">
                 <div class="card-body">
                     <div class="container-fluid px-0">
                         <div class="row g-3">
-                            <div class="col-auto">
+                            <!-- Create button column -->
+                            <div class="col">
+                                <label class="form-label d-none d-md-block">&nbsp;</label>
                                 <?php if ($canCreate): ?>
-                                <button type="button" id="create-btn" class="btn btn-dark">
-                                    <i class="bi bi-plus-lg"></i> Create New User
-                                </button>
+                                    <button type="button" id="create-btn" class="btn btn-dark w-100">
+                                        <i class="bi bi-plus-lg"></i> Create New User
+                                    </button>
                                 <?php endif; ?>
                             </div>
-                            <div class="col-md-3">
+                            <!-- Department filter -->
+                            <div class="col">
                                 <label for="department-filter" class="form-label">Department</label>
                                 <select class="form-select" name="department" id="department-filter" autocomplete="off">
                                     <option value="all">All Departments</option>
                                     <?php
-                                    // Fetch all departments directly for the filter dropdown, show ALL regardless of is_disabled
                                     try {
-                                        // Fetch both acronym and department_name
                                         $deptStmt = $pdo->query("SELECT department_name, abbreviation FROM departments WHERE is_disabled = 0 ORDER BY department_name");
                                         $allDepartments = $deptStmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -696,7 +698,8 @@ try {
                                             $name = htmlspecialchars($dept['department_name']);
                                             $abbreviation = htmlspecialchars($dept['abbreviation']);
                                             $label = "($abbreviation) $name";
-                                            echo '<option value="' . $name . '">' . $label . '</option>';
+                                            $selected = (isset($_GET['department']) && $_GET['department'] === $name) ? 'selected' : '';
+                                            echo '<option value="' . $name . '" ' . $selected . '>' . $label . '</option>';
                                         }
                                     } catch (PDOException $e) {
                                         // fallback: empty
@@ -706,7 +709,7 @@ try {
                             </div>
 
                             <!-- Date Filter Type -->
-                            <div class="col-md-3">
+                            <div class="col">
                                 <label class="form-label fw-semibold">Date Filter Type</label>
                                 <select id="dateFilterType" name="date_filter_type" class="form-select shadow-sm">
                                     <option value="">-- Select Type --</option>
@@ -717,7 +720,7 @@ try {
                             </div>
 
                             <!-- Search bar -->
-                            <div class="col-md-3">
+                            <div class="col">
                                 <label class="form-label fw-semibold">Search</label>
                                 <div class="input-group">
                                     <input type="text" name="search" id="search-filters" class="form-control" placeholder="Search keyword..." value="<?= htmlspecialchars($_GET['search'] ?? '') ?>">
@@ -725,15 +728,40 @@ try {
                                 </div>
                             </div>
 
-                            <!-- Buttons -->
-                            <div class="col-6 col-md-2 d-grid">
-                                <label class="form-label d-none d-md-block">&nbsp;</label>
-                                <button type="submit" id="apply-filters" name="apply-filters" class="btn btn-dark"><i class="bi bi-funnel"></i> Filter</button>
+                            <!-- Filter and Clear buttons -->
+                            <div class="col">
+                                <div class="d-flex gap-2">
+                                    <div class="flex-grow-1">
+                                        <label class="form-label d-none d-md-block">&nbsp;</label>
+                                        <button type="submit" id="apply-filters" name="apply-filters" class="btn btn-dark w-100">
+                                            <i class="bi bi-funnel"></i> Filter
+                                        </button>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <label class="form-label d-none d-md-block">&nbsp;</label>
+                                        <a href="<?= $_SERVER['PHP_SELF'] ?>" id="clear-filters-btn" class="btn btn-secondary w-100">
+                                            <i class="bi bi-x-circle"></i> Clear
+                                        </a>
+                                    </div>
+                                </div>
                             </div>
-
-                            <div class="col-6 col-md-2 d-grid">
+                            <!-- Manage Roles button -->
+                            <div class="col">
+ <?php if ($rbac->hasPrivilege('User Management', 'Modify')): ?>
                                 <label class="form-label d-none d-md-block">&nbsp;</label>
-                                <a href="<?= $_SERVER['PHP_SELF'] ?>" id="clear-filters-btn" class="btn btn-secondary"><i class="bi bi-x-circle"></i> Clear</a>
+                                <a href="user_roles_management.php" class="btn btn-primary w-100">
+                                    <i class="bi bi-person-gear"></i>  Manage User Roles
+                                </a>
+                <?php endif; ?>
+                <?php if ($canDelete): ?>
+     <!-- Bulk remove button, hidden until >=2 checked -->
+                    <button type="button" id="delete-selected"
+                        class="btn btn-danger"
+                        style="display:none;"
+                        disabled>
+                        Remove Selected
+                    </button>
+                <?php endif; ?>
                             </div>
                         </div>
 
@@ -795,24 +823,10 @@ try {
                                 </div>
                             </div>
                         </div>
+
                     </div>
                 </div>
             </form>
-
-            <div class="action-buttons mb-3">
-                <?php if ($rbac->hasPrivilege('User Management', 'Modify')): ?>
-                    <a href="user_roles_management.php" class="btn btn-primary"> Manage Role Assignments</a>
-                <?php endif; ?>
-                <?php if ($canDelete): ?>
-                    <!-- Bulk remove button, hidden until >=2 checked -->
-                    <button type="button" id="delete-selected"
-                        class="btn btn-danger"
-                        style="display:none;"
-                        disabled>
-                        Remove Selected
-                    </button>
-                <?php endif; ?>
-            </div>
 
         <div class="table-responsive" id="table">
             <table class="table table-striped table-hover" id="umTable">
