@@ -555,7 +555,7 @@ function formatChanges($oldJsonStr)
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <a id="confirmRestoreButton" href="#" class="btn btn-primary">Restore</a>
+                    <button type="button" id="confirmRestoreBtn" class="btn btn-success">Restore</button>
                 </div>
             </div>
         </div>
@@ -829,78 +829,47 @@ function formatChanges($oldJsonStr)
                 }
             });
 
-            // --- Individual Restore AJAX Call ---
-            useJQuery(function($) {
-                $(document).on('click', '#confirmRestoreBtn', function () {
-                    if (!userPrivileges.canRestore || !restoreId) return;
-                    
-                    $.ajax({
-                        url: '../../rolesandprivilege_manager/role_manager/restore_role.php',
-                        method: 'POST',
-                        data: { 
-                            id: restoreId,
-                            action: 'restore',
-                            module: 'Roles and Privileges' 
-                        },
-                        dataType: 'json',
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                        success: function(response) {
-                            // Hide restore modal immediately
-                            var modalInstance = bootstrap.Modal.getInstance(document.getElementById('restoreArchiveModal'));
-                            modalInstance.hide();
+            // Add these variables at the top of your script
+            let restoreId = null;
+            let restoreName = null;
 
-                            if (response.status && response.status.toLowerCase() === 'success') {
-                                showToast(response.message, 'success');
-                                // Reload the page after a short delay
-                                setTimeout(function() {
-                                    window.location.reload();
-                                }, 500);
-                            } else {
-                                showToast(response.message || 'Unknown error occurred', 'error');
-                            }
-                        },
-                        error: function(xhr, status, error) {
-                            handleAjaxError(xhr, status, error, 'restore');
-                        }
-                    });
-                });
+            // Add click handler for restore buttons
+            $(document).on('click', '.restore-btn', function() {
+                restoreId = $(this).data('role-id');
+                restoreName = $(this).data('role-name');
+                $('#restoreRoleNamePlaceholder').text(restoreName);
             });
 
-            // --- Individual Permanent Delete AJAX Call ---
-            useJQuery(function($) {
-                $(document).on('click', '#confirmDeleteBtn', function () {
-                    if (!userPrivileges.canDelete || !deleteId) return;
-                    
-                    $.ajax({
-                        url: '../../rolesandprivilege_manager/role_manager/permanent_delete_role.php',
-                        method: 'POST',
-                        data: { 
-                            id: deleteId, 
-                            permanent: 1,
-                            action: 'delete',
-                            module: 'Roles and Privileges' 
-                        },
-                        dataType: 'json',
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                        success: function(response) {
-                            // Hide delete modal immediately
-                            var modalInstance = bootstrap.Modal.getInstance(document.getElementById('deleteArchiveModal'));
-                            modalInstance.hide();
-
-                            if (response.status && response.status.toLowerCase() === 'success') {
-                                showToast(response.message, 'success');
-                                // Reload the page after a short delay
-                                setTimeout(function() {
-                                    window.location.reload();
-                                }, 500);
-                            } else {
-                                showToast(response.message || 'Unknown error occurred', 'error');
-                            }
-                        },
-                        error: function(xhr, status, error) {
-                            handleAjaxError(xhr, status, error, 'delete');
+            // Update the restore confirmation handler
+            $('#confirmRestoreBtn').on('click', function() {
+                if (!userPrivileges.canRestore || !restoreId) return;
+                
+                $.ajax({
+                    url: '../../rolesandprivilege_manager/role_manager/restore_role.php',
+                    method: 'POST',
+                    data: { 
+                        id: restoreId,
+                        action: 'restore',
+                        module: 'Roles and Privileges' 
+                    },
+                    dataType: 'json',
+                    success: function(response) {
+                        // Hide restore modal
+                        $('#confirmRestoreModal').modal('hide');
+                        
+                        if (response.success) {
+                            showToast(response.message || 'Role restored successfully', 'success');
+                            // Reload the page after a short delay
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 500);
+                        } else {
+                            showToast(response.message || 'Failed to restore role', 'error');
                         }
-                    });
+                    },
+                    error: function(xhr, status, error) {
+                        showToast('Error restoring role: ' + error, 'error');
+                    }
                 });
             });
         });
