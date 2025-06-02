@@ -522,6 +522,21 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
     }
 }
 
+// Add this new endpoint handler near the top of the file, after session_start() but before HTML output
+if (isset($_GET['action']) && $_GET['action'] === 'get_data_json') {
+    ob_clean(); // Clear any output buffering
+    header('Content-Type: application/json');
+    
+    try {
+        $stmt = $pdo->query("SELECT * FROM receive_report WHERE is_disabled = 0 ORDER BY id DESC");
+        $receivingReports = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode(['status' => 'success', 'data' => $receivingReports]);
+    } catch (PDOException $e) {
+        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+    }
+    exit;
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -1041,6 +1056,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
             // Confirm delete
             $('#confirmDeleteBtn').on('click', function() {
                 if (!deleteId) return;
+                
+                // Store current pagination state
+                const currentPage = window.paginationConfig ? window.paginationConfig.currentPage : 1;
+                const rowsPerPage = $('#rowsPerPageSelect').val();
+                
                 $.ajax({
                     url: 'receiving_report.php',
                     method: 'GET',
@@ -1051,9 +1071,35 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                     dataType: 'json',
                     success(response) {
                         deleteModal.hide();
-                        $('#rrTable').load(location.href + ' #rrTable', function() {
-                            showToast(response.message, response.status);
-                        });
+                        
+                        if (response.status === 'success') {
+                            // Reload only the table content
+                            $('#rrTable').load(location.href + ' #rrTable', function() {
+                                showToast(response.message, 'success');
+                                
+                                // Reset pagination with fresh DOM elements
+                                window.allRows = Array.from(document.querySelectorAll('#rrTableBody tr'));
+                                window.filteredRows = [...window.allRows];
+                                
+                                // Initialize pagination with the previous page
+                                initPagination({
+                                    tableId: 'rrTableBody',
+                                    currentPage: currentPage,
+                                    rowsPerPageSelectId: 'rowsPerPageSelect',
+                                    currentPageId: 'currentPage',
+                                    rowsPerPageId: 'rowsPerPage',
+                                    totalRowsId: 'totalRows',
+                                    prevPageId: 'prevPage',
+                                    nextPageId: 'nextPage',
+                                    paginationId: 'pagination'
+                                });
+                                
+                                // Ensure pagination updates to show the proper rows
+                                updatePagination();
+                            });
+                        } else {
+                            showToast(response.message, 'error');
+                        }
                     },
                     error() {
                         showToast('Error processing request.', 'error');
@@ -1069,6 +1115,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                     showToast('RR must be numbers only', 'error');
                     return;
                 }
+                
+                // Store current pagination state
+                const currentPage = window.paginationConfig ? window.paginationConfig.currentPage : 1;
+                const rowsPerPage = $('#rowsPerPageSelect').val();
+                
                 const data = {
                     action: 'add',
                     rr_no: 'RR' + rr,
@@ -1085,8 +1136,34 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                     success(res) {
                         if (res.status === 'success') {
                             addModal.hide();
-                            $('#rrTable').load(location.href + ' #rrTable', () => showToast(res.message, 'success'));
-                        } else showToast(res.message, 'error');
+                            
+                            // Reload only the table content
+                            $('#rrTable').load(location.href + ' #rrTable', function() {
+                                showToast(res.message, 'success');
+                                
+                                // Reset pagination with fresh DOM elements
+                                window.allRows = Array.from(document.querySelectorAll('#rrTableBody tr'));
+                                window.filteredRows = [...window.allRows];
+                                
+                                // Initialize pagination with the previous page
+                                initPagination({
+                                    tableId: 'rrTableBody',
+                                    currentPage: currentPage,
+                                    rowsPerPageSelectId: 'rowsPerPageSelect',
+                                    currentPageId: 'currentPage',
+                                    rowsPerPageId: 'rowsPerPage',
+                                    totalRowsId: 'totalRows',
+                                    prevPageId: 'prevPage',
+                                    nextPageId: 'nextPage',
+                                    paginationId: 'pagination'
+                                });
+                                
+                                // Set rows per page to previous value
+                                $('#rowsPerPageSelect').val(rowsPerPage).trigger('change');
+                            });
+                        } else {
+                            showToast(res.message, 'error');
+                        }
                     },
                     error() {
                         showToast('Error processing request.', 'error');
@@ -1095,7 +1172,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
             });
 
             // Edit form
-            // Client-side validation and prefix for Edit form
             $('#editReportForm').on('submit', function(e) {
                 let rrNo = $('#edit_rr_no').val();
                 let valid = true;
@@ -1107,6 +1183,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                     e.preventDefault();
                     return false;
                 }
+                
+                // Store current pagination state
+                const currentPage = window.paginationConfig ? window.paginationConfig.currentPage : 1;
+                const rowsPerPage = $('#rowsPerPageSelect').val();
+                
                 // Build data with prefixed RR number
                 const formData = $(this).serializeArray();
                 let dataObj = {};
@@ -1127,8 +1208,30 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                     success(response) {
                         if (response.status === 'success') {
                             editModal.hide();
-                            $('#rrTable').load(location.href + ' #rrTable', () => {
+                            
+                            // Reload only the table content
+                            $('#rrTable').load(location.href + ' #rrTable', function() {
                                 showToast(response.message, 'success');
+                                
+                                // Reset pagination with fresh DOM elements
+                                window.allRows = Array.from(document.querySelectorAll('#rrTableBody tr'));
+                                window.filteredRows = [...window.allRows];
+                                
+                                // Initialize pagination with the previous page
+                                initPagination({
+                                    tableId: 'rrTableBody',
+                                    currentPage: currentPage,
+                                    rowsPerPageSelectId: 'rowsPerPageSelect',
+                                    currentPageId: 'currentPage',
+                                    rowsPerPageId: 'rowsPerPage',
+                                    totalRowsId: 'totalRows',
+                                    prevPageId: 'prevPage',
+                                    nextPageId: 'nextPage',
+                                    paginationId: 'pagination'
+                                });
+                                
+                                // Set rows per page to previous value
+                                $('#rowsPerPageSelect').val(rowsPerPage).trigger('change');
                             });
                         } else {
                             showToast(response.message, 'error');
@@ -1139,215 +1242,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                     }
                 });
             });
-
-            // Restrict PO Number input to numbers only for Select2 tags (robust)
-            function restrictSelect2ToNumbersOnly(selector) {
-                function enforceNumericInput(input) {
-                    input.addEventListener('input', function() {
-                        this.value = this.value.replace(/[^0-9]/g, '');
-                    });
-                }
-                // When Select2 opens, enforce numeric input
-                $(document).on('select2:open', function(e) {
-                    if (e.target && e.target.id === selector.replace('#', '')) {
-                        // Find the search field
-                        var searchField = document.querySelector('.select2-container--open .select2-search__field');
-                        if (searchField) {
-                            enforceNumericInput(searchField);
-                        }
-                    }
-                });
-                // Also enforce on dynamically created search fields
-                const observer = new MutationObserver(function(mutations) {
-                    mutations.forEach(function(mutation) {
-                        mutation.addedNodes.forEach(function(node) {
-                            if (node.nodeType === 1 && node.classList.contains('select2-search__field')) {
-                                enforceNumericInput(node);
-                            }
-                        });
-                    });
-                });
-                observer.observe(document.body, {
-                    childList: true,
-                    subtree: true
-                });
-            }
-            $('#addReportModal').on('shown.bs.modal', function() {
-                restrictSelect2ToNumbersOnly('#add_po_no');
-            });
-            $('#editReportModal').on('shown.bs.modal', function() {
-                restrictSelect2ToNumbersOnly('#edit_po_no');
-            });
-        });
-
-        // Block non-numeric input for RR and PO fields
-        function blockNonNumericInput(selector) {
-            $(document).on('keydown', selector, function(e) {
-                // Allow: backspace, delete, tab, escape, enter, arrows, home, end
-                if ($.inArray(e.keyCode, [46, 8, 9, 27, 13, 110, 190]) !== -1 ||
-                    // Allow: Ctrl/cmd+A
-                    (e.keyCode === 65 && (e.ctrlKey === true || e.metaKey === true)) ||
-                    // Allow: Ctrl/cmd+C
-                    (e.keyCode === 67 && (e.ctrlKey === true || e.metaKey === true)) ||
-                    // Allow: Ctrl/cmd+X
-                    (e.keyCode === 88 && (e.ctrlKey === true || e.metaKey === true)) ||
-                    // Allow: home, end, left, right
-                    (e.keyCode >= 35 && e.keyCode <= 39)) {
-                    return;
-                }
-                // Ensure that it is a number and stop the keypress
-                if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
-                    e.preventDefault();
-                }
-            });
-        }
-
-        blockNonNumericInput('#add_rr_no');
-        blockNonNumericInput('#add_po_no');
-        blockNonNumericInput('#edit_rr_no');
-        blockNonNumericInput('#edit_po_no');
-
-        $(document).ready(function() {
-            // Date filter UI handling (show/hide label+input pairs for advanced types)
-            $('#dateFilter').on('change', function() {
-                const filterType = $(this).val();
-                const container = $('#dateInputsContainer');
-                container.show();
-                // Hide all groups first
-                container.find('.date-group').addClass('d-none');
-                if (!filterType || filterType === 'desc' || filterType === 'asc') {
-                    container.hide();
-                    return;
-                }
-                if (filterType === 'mdy') {
-                    $('#mdy-group').removeClass('d-none');
-                } else if (filterType === 'month') {
-                    $('#month-group').removeClass('d-none');
-                } else if (filterType === 'year') {
-                    $('#year-group').removeClass('d-none');
-                } else if (filterType === 'month_year') {
-                    $('#monthyear-group').removeClass('d-none');
-                }
-            });
-
-            $('#applyFilters').off('click').on('click', function() {
-                const filterType = $('#dateFilter').val();
-                if (!filterType) {
-                    showToast('Please select a filter type.', 'error');
-                    return;
-                }
-                let params = {};
-                if (filterType === 'mdy') {
-                    params.dateFrom = $('#dateFrom').val();
-                    params.dateTo = $('#dateTo').val();
-                    if (!params.dateFrom || !params.dateTo) {
-                        showToast('Please select both Date From and Date To.', 'error');
-                        return;
-                    }
-                } else if (filterType === 'month') {
-                    params.monthFrom = $('#monthFrom').val();
-                    params.monthTo = $('#monthTo').val();
-                    if (!params.monthFrom || !params.monthTo) {
-                        showToast('Please select both Month From and Month To.', 'error');
-                        return;
-                    }
-                } else if (filterType === 'year') {
-                    params.yearFrom = $('#yearFrom').val();
-                    params.yearTo = $('#yearTo').val();
-                    if (!params.yearFrom || !params.yearTo) {
-                        showToast('Please select both Year From and Year To.', 'error');
-                        return;
-                    }
-                } else if (filterType === 'month_year') {
-                    params.monthYearFrom = $('#monthYearFrom').val();
-                    params.monthYearTo = $('#monthYearTo').val();
-                    if (!params.monthYearFrom || !params.monthYearTo) {
-                        showToast('Please select both From and To (MM-YYYY).', 'error');
-                        return;
-                    }
-                }
-                applyFilter(filterType, params);
-            });
-
-            $('#clearFilters').off('click').on('click', function() {
-                $('#dateFilter').val('');
-                $('#dateInputsContainer input').val('');
-                $('#dateInputsContainer .date-group').addClass('d-none');
-                $('#dateInputsContainer').hide();
-                window.location.reload();
-            });
-
-            function applyFilter(type, params = {}) {
-                let filterData = {
-                    action: 'filter',
-                    type: type
-                };
-                if (type === 'mdy') {
-                    filterData.dateFrom = params.dateFrom;
-                    filterData.dateTo = params.dateTo;
-                } else if (type === 'month') {
-                    filterData.monthFrom = params.monthFrom;
-                    filterData.monthTo = params.monthTo;
-                } else if (type === 'year') {
-                    filterData.yearFrom = params.yearFrom;
-                    filterData.yearTo = params.yearTo;
-                } else if (type === 'month_year') {
-                    filterData.monthYearFrom = params.monthYearFrom;
-                    filterData.monthYearTo = params.monthYearTo;
-                }
-                $.ajax({
-                    url: 'receiving_report.php',
-                    method: 'GET',
-                    data: filterData,
-                    success: function(response) {
-                        try {
-                            const data = JSON.parse(response);
-                            if (data.status === 'success') {
-                                let tableBody = '';
-                                data.reports.forEach(report => {
-                                    tableBody += `
-                                <tr>
-                                    <td>${report.id}</td>
-                                    <td>${report.rr_no}</td>
-                                    <td>${report.accountable_individual}</td>
-                                    <td>${report.po_no}</td>
-                                    <td>${report.ai_loc}</td>
-                                    <td>${(() => { const d = new Date(report.date_created); return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}-${d.getDate().toString().padStart(2,'0')} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}` })()}</td>
-                                    <td class="text-center">
-                                        <div class="btn-group" role="group">
-                                            <button class="btn btn-sm btn-outline-primary edit-report"
-                                                    data-id="${report.id}"
-                                                    data-rr="${report.rr_no}"
-                                                    data-individual="${report.accountable_individual}"
-                                                    data-po="${report.po_no}"
-                                                    data-location="${report.ai_loc}"
-                                                    data-date_created="${report.date_created}">
-                                                <i class="bi bi-pencil-square"></i> <span>Edit</span>
-                                            </button>
-                                            <button class="btn btn-sm btn-outline-danger delete-report"
-                                                    data-id="${report.id}">
-                                                <i class="bi bi-trash"></i> <span>Remove</span>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            `;
-                                });
-                                $('#rrTable tbody').html(tableBody || '<tr><td colspan="8">No Receiving Reports found.</td></tr>');
-                            } else {
-                                showToast('Error filtering data: ' + data.message, 'error');
-                            }
-                        } catch (e) {
-                            console.error('Error parsing response:', e);
-                            showToast('Error processing response', 'error');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('AJAX Error:', error);
-                        showToast('Error filtering data', 'error');
-                    }
-                });
-            }
         });
     </script>
 
@@ -1367,6 +1261,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                 nextPageId: 'nextPage',
                 paginationId: 'pagination'
             });
+
+            // After initialization, update pagination to apply page numbers
+            updatePagination();
 
             // Create search functionality for the table
             const searchInput = document.getElementById('searchReport');

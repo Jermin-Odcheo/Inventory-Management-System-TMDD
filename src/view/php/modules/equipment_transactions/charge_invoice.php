@@ -470,8 +470,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
   }
 </style>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<!-- Ensure toast.js is loaded for showToast -->
-<script src="/src/control/js/toast.js"></script>
 <script>
 var canModify = <?php echo json_encode($canModify); ?>;
 var canDelete = <?php echo json_encode($canDelete); ?>;
@@ -507,6 +505,168 @@ $(document).ready(function() {
         placeholder: 'Type or select PO…',
         allowClear: true
     });
+
+    // SIMPLE PAGINATION IMPLEMENTATION
+    // Store all table rows for filtering and pagination
+    var allRows = $('#invoiceTable tbody tr').toArray();
+    var currentPage = 1;
+    var rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
+    var searchText = '';
+
+    // Function to display the correct rows for the current page
+    function showCurrentPageRows() {
+        // Hide all rows first
+        $('#invoiceTable tbody tr').hide();
+
+        // Calculate which rows to show
+        var startIndex = (currentPage - 1) * rowsPerPage;
+        var endIndex = Math.min(startIndex + rowsPerPage, allRows.length);
+        
+        console.log('Showing rows:', startIndex, 'to', endIndex-1, 'of', allRows.length);
+
+        // Show only the rows for current page
+        for (var i = startIndex; i < endIndex; i++) {
+            $(allRows[i]).show();
+        }
+        
+        // Update pagination info text
+        $('#currentPage').text(startIndex + 1);
+        $('#rowsPerPage').text(endIndex);
+        $('#totalRows').text(allRows.length);
+        
+        // Update button states
+        $('#prevPage').prop('disabled', currentPage === 1);
+        $('#nextPage').prop('disabled', endIndex >= allRows.length);
+
+        // Update pagination buttons
+        updatePaginationButtons();
+    }
+
+    // Function to reinitialize pagination after AJAX updates
+    function reinitializePagination() {
+        // Store the search text before reinitializing
+        searchText = $('#searchInvoice').val().toLowerCase();
+        
+        // Get fresh rows
+        var freshRows = $('#invoiceTable tbody tr').toArray();
+        
+        // If we have a search filter active, apply it
+        if (searchText) {
+            allRows = $(freshRows).filter(function() {
+                return $(this).text().toLowerCase().indexOf(searchText) > -1;
+            }).toArray();
+        } else {
+            allRows = freshRows;
+        }
+        
+        // Ensure current page is valid
+        var totalPages = Math.ceil(allRows.length / rowsPerPage);
+        if (currentPage > totalPages) {
+            currentPage = Math.max(1, totalPages);
+        }
+        
+        // Update display
+        showCurrentPageRows();
+    }
+
+    // Function to update pagination buttons
+    function updatePaginationButtons() {
+        var totalPages = Math.ceil(allRows.length / rowsPerPage);
+        var $pagination = $('#pagination');
+        $pagination.empty();
+
+        // Always show first page
+        if (totalPages > 1) {
+            // Show first page
+            var $firstItem = $('<li class="page-item' + (currentPage === 1 ? ' active' : '') + '">');
+            var $firstLink = $('<a class="page-link" href="#" data-page="1">1</a>');
+            $firstItem.append($firstLink);
+            $pagination.append($firstItem);
+            
+            var startPage = Math.max(2, currentPage - 1);
+            var endPage = Math.min(totalPages - 1, currentPage + 1);
+            
+            // Show ellipsis before middle pages if needed
+            if (startPage > 2) {
+                var $ellipsis = $('<li class="page-item disabled"><span class="page-link">...</span></li>');
+                $pagination.append($ellipsis);
+            }
+            
+            // Show middle pages
+            for (var i = startPage; i <= endPage; i++) {
+                var $item = $('<li class="page-item' + (currentPage === i ? ' active' : '') + '">');
+                var $link = $('<a class="page-link" href="#" data-page="' + i + '">' + i + '</a>');
+                $item.append($link);
+                $pagination.append($item);
+            }
+            
+            // Show ellipsis after middle pages if needed
+            if (endPage < totalPages - 1) {
+                var $ellipsis = $('<li class="page-item disabled"><span class="page-link">...</span></li>');
+                $pagination.append($ellipsis);
+            }
+            
+            // Show last page if there are multiple pages
+            if (totalPages > 1 && currentPage !== totalPages) {
+                var $lastItem = $('<li class="page-item' + (currentPage === totalPages ? ' active' : '') + '">');
+                var $lastLink = $('<a class="page-link" href="#" data-page="' + totalPages + '">' + totalPages + '</a>');
+                $lastItem.append($lastLink);
+                $pagination.append($lastItem);
+            }
+        }
+
+        // Add click handlers for pagination buttons
+        $('#pagination a.page-link').on('click', function(e) {
+            e.preventDefault();
+            currentPage = parseInt($(this).data('page'));
+            showCurrentPageRows();
+        });
+    }
+
+    // Handle previous button click
+    $('#prevPage').on('click', function(e) {
+        e.preventDefault();
+        if (currentPage > 1) {
+            currentPage--;
+            showCurrentPageRows();
+        }
+    });
+
+    // Handle next button click
+    $('#nextPage').on('click', function(e) {
+        e.preventDefault();
+        var totalPages = Math.ceil(allRows.length / rowsPerPage);
+        if (currentPage < totalPages) {
+            currentPage++;
+            showCurrentPageRows();
+        }
+    });
+
+    // Handle rows per page change
+    $('#rowsPerPageSelect').on('change', function() {
+        rowsPerPage = parseInt($(this).val());
+        currentPage = 1;
+        showCurrentPageRows();
+    });
+
+    // Handle search filtering
+    $('#searchInvoice').on('input', function() {
+        var searchText = $(this).val().toLowerCase();
+        
+        // Filter rows based on search text
+        allRows = $('#invoiceTable tbody tr').filter(function() {
+            var rowText = $(this).text().toLowerCase();
+            var matches = rowText.indexOf(searchText) > -1;
+            return matches;
+        }).toArray();
+        
+        // Reset to first page and update display
+        currentPage = 1;
+        showCurrentPageRows();
+    });
+
+    // Initialize pagination
+    showCurrentPageRows();
 
     // Always clean up modal backdrop and body class after modal is hidden
     $('#addInvoiceModal').on('hidden.bs.modal', function() {
@@ -578,6 +738,25 @@ $(document).ready(function() {
     // Confirm Delete Invoice via AJAX
     $('#confirmDeleteInvoiceBtn').on('click', function() {
         if (deleteInvoiceId) {
+            // Store current pagination state
+            var storeCurrentPage = currentPage;
+            var storeRowsPerPage = rowsPerPage;
+            var storeSearchText = $('#searchInvoice').val();
+            
+            // Hide modal first before AJAX to prevent backdrop issues
+            var deleteModalEl = document.getElementById('deleteInvoiceModal');
+            var deleteModalInstance = bootstrap.Modal.getInstance(deleteModalEl);
+            if (deleteModalInstance) {
+                deleteModalInstance.hide();
+            }
+            
+            // Clean up any lingering backdrop
+            setTimeout(function() {
+                $('.modal-backdrop').remove();
+                $('body').removeClass('modal-open').css('overflow', '');
+                $('body').css('padding-right', '');
+            }, 100);
+            
             $.ajax({
                 url: 'charge_invoice.php',
                 method: 'GET',
@@ -590,17 +769,35 @@ $(document).ready(function() {
                     if (response.status === 'success') {
                         $('#invoiceTable').load(location.href + ' #invoiceTable', function() {
                             showToast(response.message, 'success');
-                            reinitInvoiceTableJS();
+                            
+                            // Restore pagination state
+                            currentPage = storeCurrentPage;
+                            rowsPerPage = storeRowsPerPage;
+                            $('#rowsPerPageSelect').val(storeRowsPerPage);
+                            $('#searchInvoice').val(storeSearchText);
+                            
+                            // Reinitialize pagination
+                            reinitializePagination();
+                            
+                            // Reattach event handlers for rows
+                            attachRowEventHandlers();
                         });
                     } else {
                         showToast(response.message, 'error');
                     }
-                    var deleteModalEl = document.getElementById('deleteInvoiceModal');
-                    var deleteModalInstance = bootstrap.Modal.getInstance(deleteModalEl);
-                    deleteModalInstance.hide();
+                    
+                    // Ensure backdrop is removed
+                    $('.modal-backdrop').remove();
+                    $('body').removeClass('modal-open').css('overflow', '');
+                    $('body').css('padding-right', '');
                 },
                 error: function() {
                     showToast('Error processing request.', 'error');
+                    
+                    // Ensure backdrop is removed even on error
+                    $('.modal-backdrop').remove();
+                    $('body').removeClass('modal-open').css('overflow', '');
+                    $('body').css('padding-right', '');
                 }
             });
         }
@@ -618,6 +815,12 @@ $(document).ready(function() {
             e.preventDefault();
             return false;
         }
+        
+        // Store current pagination state
+        var storeCurrentPage = currentPage;
+        var storeRowsPerPage = rowsPerPage;
+        var storeSearchText = $('#searchInvoice').val();
+        
         // Build data with prefixed invoice number
         const formData = $(this).serializeArray();
         let dataObj = {};
@@ -638,8 +841,20 @@ $(document).ready(function() {
                 if (response.status === 'success') {
                     $('#invoiceTable').load(location.href + ' #invoiceTable', function() {
                         showToast(response.message, 'success');
-                        reinitInvoiceTableJS();
+                        
+                        // Restore pagination state - go to first page for add
+                        currentPage = 1; // Show first page to see the new item
+                        rowsPerPage = storeRowsPerPage;
+                        $('#rowsPerPageSelect').val(storeRowsPerPage);
+                        $('#searchInvoice').val(storeSearchText);
+                        
+                        // Reinitialize pagination
+                        reinitializePagination();
+                        
+                        // Reattach event handlers for rows
+                        attachRowEventHandlers();
                     });
+                    
                     // Close the modal after successful submission
                     var addModalEl = document.getElementById('addInvoiceModal');
                     var addModal = bootstrap.Modal.getInstance(addModalEl);
@@ -674,6 +889,12 @@ $(document).ready(function() {
             e.preventDefault();
             return false;
         }
+        
+        // Store current pagination state
+        var storeCurrentPage = currentPage;
+        var storeRowsPerPage = rowsPerPage;
+        var storeSearchText = $('#searchInvoice').val();
+        
         // Build data with prefixed invoice number
         const formData = $(this).serializeArray();
         let dataObj = {};
@@ -697,7 +918,18 @@ $(document).ready(function() {
                 if (response.status === 'success') {
                     $('#invoiceTable').load(location.href + ' #invoiceTable', function() {
                         showToast(response.message, 'success');
-                        reinitInvoiceTableJS();
+                        
+                        // Restore pagination state
+                        currentPage = storeCurrentPage;
+                        rowsPerPage = storeRowsPerPage;
+                        $('#rowsPerPageSelect').val(storeRowsPerPage);
+                        $('#searchInvoice').val(storeSearchText);
+                        
+                        // Reinitialize pagination
+                        reinitializePagination();
+                        
+                        // Reattach event handlers for rows
+                        attachRowEventHandlers();
                     });
 
                     var editModalEl = document.getElementById('editInvoiceModal');
@@ -727,35 +959,37 @@ $(document).ready(function() {
         });
     });
 
-    // Create search functionality for the table
-    const searchInput = document.getElementById('searchInvoice');
-    if (searchInput) {
-        searchInput.addEventListener('input', function() {
-            const searchText = this.value.toLowerCase();
-            
-            // Filter the rows based on the search text
-            window.filteredRows = window.allRows.filter(row => {
-                return row.textContent.toLowerCase().includes(searchText);
-            });
-            
-            // Reset to first page and update pagination
-            if (window.paginationConfig) {
-                window.paginationConfig.currentPage = 1;
-            }
-            updatePagination();
+    // Function to attach event handlers to row buttons
+    function attachRowEventHandlers() {
+        // Attach edit button handlers
+        $('.edit-invoice').off('click').on('click', function() {
+            const id = $(this).data('id');
+            const invoice = $(this).data('invoice') || '';
+            const date = $(this).data('date') || '';
+            const po = $(this).data('po') || '';
+    
+            // Fill hidden and inputs
+            $('#edit_invoice_id').val(id);
+            $('#edit_invoice_no').val(invoice.replace(/^CI/, '')); // strip CI so input=number stays numeric
+            $('#edit_date_of_purchase').val(date);
+            $('#edit_po_no').val(po).trigger('change'); // set the dropdown and trigger Select2 update
+    
+            // Show the edit modal
+            const modalEl = document.getElementById('editInvoiceModal');
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        });
+        
+        // Attach delete button handlers
+        $('.delete-invoice').off('click').on('click', function(e) {
+            e.preventDefault();
+            deleteInvoiceId = $(this).data('id');
+            var deleteModal = new bootstrap.Modal(document.getElementById('deleteInvoiceModal'));
+            deleteModal.show();
         });
     }
 
-    // Handle rows per page change
-    const rowsPerPageSelect = document.getElementById('rowsPerPageSelect');
-    if (rowsPerPageSelect) {
-        rowsPerPageSelect.addEventListener('change', function() {
-            if (window.paginationConfig) {
-                window.paginationConfig.currentPage = 1;
-            }
-            updatePagination();
-        });
-    }
+    // Initialize event handlers for row buttons
+    attachRowEventHandlers();
 
     // Date filter UI handling (show/hide label+input pairs for advanced types)
     $('#dateFilter').on('change', function() {
@@ -778,19 +1012,6 @@ $(document).ready(function() {
             $('#monthyear-group').removeClass('d-none');
         }
     });
-
-    // Initialize allRows and filteredRows for client-side filtering/pagination
-    function initInvoiceRows() {
-        window.allRows = Array.from(document.querySelectorAll('#invoiceTable tbody tr'));
-        window.filteredRows = [...window.allRows];
-    }
-    initInvoiceRows();
-
-    // After AJAX reloads, reinitialize allRows/filteredRows and rebind events
-    function reinitInvoiceTableJS() {
-        initInvoiceRows();
-        if (typeof updatePagination === 'function') updatePagination();
-    }
 
     // Fix clear button: reset filters, search, and show all rows by reloading all data via AJAX
     $('#clearFilters').off('click').on('click', function(e) {

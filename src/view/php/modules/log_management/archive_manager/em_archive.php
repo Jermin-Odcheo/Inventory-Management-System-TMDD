@@ -415,7 +415,7 @@ function formatChanges($oldJsonStr, $extraDate = null)
                     <div class="table-responsive" id="table">
                         <table id="archiveTable" class="table table-hover">
                             <colgroup>
-                                <col class="checkbox">
+                                <!-- <col class="checkbox"> -->
                                 <col class="track">
                                 <col class="user">
                                 <col class="module">
@@ -428,7 +428,7 @@ function formatChanges($oldJsonStr, $extraDate = null)
                             </colgroup>
                             <thead class="table-light">
                                 <tr>
-                                    <th><input type="checkbox" id="select-all"></th>
+                                    <!-- <th><input type="checkbox" id="select-all"></th> -->
                                     <th class="sortable" data-sort-by="track_id"># <i class="fas fa-sort"></i></th>
                                     <th class="sortable" data-sort-by="operator_name">User <i class="fas fa-sort"></i></th>
                                     <th class="sortable" data-sort-by="module">Module <i class="fas fa-sort"></i></th>
@@ -444,9 +444,9 @@ function formatChanges($oldJsonStr, $extraDate = null)
                                 <?php if (!empty($logs)): ?>
                                     <?php foreach ($logs as $log): ?>
                                         <tr>
-                                            <td data-label="Select">
+                                            <!-- <td data-label="Select">
                                                 <input type="checkbox" class="select-row" value="<?php echo $log['deleted_entity_id']; ?>">
-                                            </td>
+                                            </td> -->
                                             <td data-label="Track ID">
                                                 <span class="badge bg-secondary"><?php echo htmlspecialchars($log['track_id']); ?></span>
                                             </td>

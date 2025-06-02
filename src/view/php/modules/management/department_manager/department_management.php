@@ -84,17 +84,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         try {
-            // Check if an active department with the same name & acronym exists
+            // Check if an active department with the same name or acronym exists
             $checkStmt = $pdo->prepare("
                 SELECT COUNT(*) 
                   FROM departments 
-                 WHERE department_name = ?
-                   AND abbreviation    = ?
-                   AND is_disabled     = 0
+                 WHERE (department_name = ? OR abbreviation = ?)
+                   AND is_disabled = 0
             ");
             $checkStmt->execute([$DepartmentName, $DepartmentAcronym]);
             if ($checkStmt->fetchColumn() > 0) {
-                throw new Exception('Department "' . $DepartmentName . ' (' . $DepartmentAcronym . ')" already exists.');
+                // Check which one caused the conflict
+                $nameCheck = $pdo->prepare("SELECT COUNT(*) FROM departments WHERE department_name = ? AND is_disabled = 0");
+                $nameCheck->execute([$DepartmentName]);
+                $acronymCheck = $pdo->prepare("SELECT COUNT(*) FROM departments WHERE abbreviation = ? AND is_disabled = 0");
+                $acronymCheck->execute([$DepartmentAcronym]);
+                
+                if ($nameCheck->fetchColumn() > 0) {
+                    throw new Exception('Department name "' . $DepartmentName . '" already exists.');
+                } else {
+                    throw new Exception('Department acronym "' . $DepartmentAcronym . '" already exists.');
+                }
             }
 
             $pdo->beginTransaction();
@@ -880,19 +889,22 @@ if (isset($_GET["q"])) {
                     data: $(this).serialize(),
                     dataType: 'json',
                     success: function(response) {
-                        $('#addDepartmentModal').modal('hide');
+                        if (response.status === 'success') {
+                            $('#addDepartmentModal').modal('hide');
 
-                        setTimeout(function() {
-                            $('#table').load(location.href + ' #table > *', function() {
-                                // Now use the captured currentPage instead of 1
-                                window.initDepartmentPagination(currentPageBeforeAction, currentRowsPerPageBeforeAction);
-                                attachTableEventListeners(); // Re-attach listeners after table reload
-                                showToast(response.message, 'success', 5000);
-                            });
+                            setTimeout(function() {
+                                $('#table').load(location.href + ' #table > *', function() {
+                                    // Now use the captured currentPage instead of 1
+                                    window.initDepartmentPagination(currentPageBeforeAction, currentRowsPerPageBeforeAction);
+                                    attachTableEventListeners(); // Re-attach listeners after table reload
+                                    showToast(response.message, 'success', 5000);
+                                });
 
-                            $('#addDepartmentForm')[0].reset();
-                        }, 300);
-
+                                $('#addDepartmentForm')[0].reset();
+                            }, 300);
+                        } else {
+                            showToast(response.message, 'error', 5000);
+                        }
                     },
                     error: function(xhr, status, error) {
                         console.error('AJAX Error:', xhr.responseText);
@@ -1058,13 +1070,11 @@ if (isset($_GET["q"])) {
             attachTableEventListeners(); // Attach listeners on initial page load
 
             // Set initial sort state to newest first (by ID)
-            const initialSortHeader = $('.sortable[data-sort="acronym"]');
-            initialSortHeader.addClass('desc');
             const rows = allTableRows;
             rows.sort(function(a, b) {
-                const A = $(a).children('td').eq(0).text().toUpperCase();
-                const B = $(b).children('td').eq(0).text().toUpperCase();
-                return A < B ? 1 : A > B ? -1 : 0;
+                const idA = parseInt($(a).find('.edit-btn').data('id'));
+                const idB = parseInt($(b).find('.edit-btn').data('id'));
+                return idB - idA; // Sort by ID descending (newest first)
             });
             allTableRows = rows;
             renderTableRows();
