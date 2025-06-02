@@ -1075,9 +1075,18 @@ function safeHtml($value)
             });
 
             // Filter event handlers
-            $('#eqSearch').on('input', filterTable);
-
-            // Date filter UI handling (show/hide label+input pairs for advanced types)
+            // Search filtering now only happens when the Filter button is clicked
+            
+            // Prevent Enter key from submitting the form when typing in search
+            $('#eqSearch').on('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    $('#applyFilters').click(); // Trigger the Filter button click instead
+                    return false;
+                }
+            });
+            
+            // Date filter UI handling
             $('#dateFilter').on('change', function() {
                 const filterType = $(this).val();
                 const container = $('#dateInputsContainer');
