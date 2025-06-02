@@ -153,7 +153,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             if ($affectedEquipment > 0) {
                 logAudit(
                     $pdo,
-                    'cascade-update',
+                    'Update',
                     "Updated {$affectedEquipment} equipment_details records to remove reference to deleted RR: {$rrNo}",
                     'Successful',
                     json_encode(['rr_no' => $rrNo, 'affected_records' => $affectedEquipment]),
