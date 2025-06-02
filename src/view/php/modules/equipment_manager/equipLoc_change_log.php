@@ -224,7 +224,7 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             </div>
 
                             <div class="col-6 col-md-2 d-grid">
-                                <a href="javascript:void(0)" class="btn btn-secondary shadow-sm" onclick="document.getElementById('filterForm').reset(); document.getElementById('dateFilterType').value = ''; updateDateFields(); window.filterTable();"><i class="bi bi-x-circle"></i> Clear</a>
+                                <a href="javascript:void(0)" class="btn btn-secondary shadow-sm" onclick="document.getElementById('filterForm').reset(); document.getElementById('dateFilterType').value = ''; updateDateFields();"><i class="bi bi-x-circle"></i> Clear</a>
                             </div>
 
                             <div class="col-12 col-md-3 d-grid">
@@ -307,19 +307,22 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
 <script>
+    // Define updateDateFields in global scope so it can be accessed by other functions
+    function updateDateFields() {
+        const allDateFilters = document.querySelectorAll('.date-filter');
+        const filterType = document.getElementById('dateFilterType');
+        
+        allDateFilters.forEach(field => field.classList.add('d-none'));
+        if (!filterType.value) return;
+
+        const selected = document.querySelectorAll('.date-' + filterType.value);
+        selected.forEach(field => field.classList.remove('d-none'));
+    }
+
     // date-time filter script (existing function)
     document.addEventListener('DOMContentLoaded', function() {
         const filterType = document.getElementById('dateFilterType');
-        const allDateFilters = document.querySelectorAll('.date-filter');
-
-        function updateDateFields() {
-            allDateFilters.forEach(field => field.classList.add('d-none'));
-            if (!filterType.value) return;
-
-            const selected = document.querySelectorAll('.date-' + filterType.value);
-            selected.forEach(field => field.classList.remove('d-none'));
-        }
-
+        
         filterType.addEventListener('change', updateDateFields);
         updateDateFields(); // initial load
     });
@@ -331,13 +334,26 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
         window.allRows = Array.from(document.querySelectorAll('#auditLogTbody tr')).filter(row => row.id !== 'noResultsMessage');
         window.pageSpecificTableId = 'auditLogTbody'; // Important for pagination.js to use this specific table's rows
 
+        // Prevent pagination.js from adding auto-filter to search input
+        // This must be done BEFORE pagination.js sets up its event listeners
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            // Mark the search input as already having a listener
+            // This prevents pagination.js from attaching its auto-filter
+            searchInput.dataset.listenerAttached_auditLogTbody = 'true';
+            
+            // Clone and replace the search input to remove any existing event listeners
+            const newSearchInput = searchInput.cloneNode(true);
+            searchInput.parentNode.replaceChild(newSearchInput, searchInput);
+        }
+
         // Initialize pagination with the correct table ID
         initPagination({
             tableId: 'auditLogTbody', // Use the actual ID of your table tbody
             currentPage: 1
         });
 
-        // Define a global filterTable function for pagination.js to use
+        // Define global filterTable function
         window.filterTable = function() {
             const buildingLocFilter = document.querySelector('select[name="building_loc"]').value;
             const floorNFilter = document.querySelector('select[name="floor_n"]').value;
@@ -424,16 +440,29 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
             updatePagination();
         };
 
-        // Attach event listeners to filter inputs to trigger filterTable
-        document.querySelectorAll('.filter-container select, .filter-container input[type="text"], .filter-container input[type="date"], .filter-container input[type="month"], .filter-container input[type="number"]').forEach(input => {
-            input.addEventListener('change', window.filterTable); // Use 'change' for selects and date inputs
-            if (input.type === 'text') {
-                input.addEventListener('input', window.filterTable); // Use 'input' for text search
+        // Set flag to indicate this is a page-specific filterTable function
+        // This prevents pagination.js from using its generic filter
+        window.filterTable.isPageSpecific = true;
+
+        // Update clear button to also trigger filter function after clearing
+        document.querySelector('.btn-secondary').addEventListener('click', function() {
+            document.getElementById('filterForm').reset();
+            document.getElementById('dateFilterType').value = '';
+            updateDateFields();
+            
+            // Reset table to show all data
+            window.filteredRows = [...window.allRows];
+            
+            // Reset to page 1 and update pagination
+            if (typeof paginationConfig !== 'undefined') {
+                paginationConfig.currentPage = 1;
             }
+            updatePagination();
         });
 
-        // Initial filter to display paginated data on load
-        window.filterTable();
+        // Initial filter to display all data on load without any filtering
+        window.filteredRows = [...window.allRows];
+        updatePagination();
     });
 
     // Sorting logic adapted for client-side pagination
