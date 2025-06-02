@@ -361,6 +361,11 @@ function safeHtml($value)
     <!-- Select2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
     <style>
+        /* Lower modal position for all modals */
+        .modal-dialog {
+            margin-top: 8vh !important;
+            margin-bottom: 2vh !important;
+        }
         .filtered-out {
             display: none !important;
         }
@@ -1433,14 +1438,15 @@ function safeHtml($value)
                         $('#editLocationModal').modal('hide');
                         setTimeout(function() {
                             // Remove lingering modal-backdrop and modal-open
-                            if ($('.modal-backdrop').length > 1) {
-                                $('.modal-backdrop').not(':last').remove();
+                            if ($('.modal-backdrop').length) {
+                                $('.modal-backdrop').remove();
                             }
                             if ($('body').hasClass('modal-open') && $('.modal.show').length === 0) {
                                 $('body').removeClass('modal-open');
                                 $('body').css('padding-right', '');
                             }
-                            // Do NOT reset the form or Select2 fields here
+                            // Always restore scrolling after modal closes
+                            $('body').css('overflow', '');
                         }, 500);
                         $('#elTable').load(location.href + ' #elTable', function() {
                             showToast(result.message, 'success');
@@ -1449,6 +1455,8 @@ function safeHtml($value)
                             window.allRows = Array.from(document.querySelectorAll('#locationTbody tr'));
                             window.filteredRows = [...window.allRows];
                             filterTable();
+                            // Always restore scrolling after table reload
+                            $('body').css('overflow', '');
                         });
                     } else {
                         showToast(result.message, 'error');
@@ -1498,14 +1506,6 @@ function safeHtml($value)
             });
         });
         $('#editLocationModal').on('hidden.bs.modal', function() {
-            // Remove any lingering modal-backdrop and modal-open after hiding
-            if ($('.modal-backdrop').length) {
-                $('.modal-backdrop').remove();
-            }
-            if ($('body').hasClass('modal-open') && $('.modal.show').length === 0) {
-                $('body').removeClass('modal-open');
-                $('body').css('padding-right', '');
-            }
             // Do NOT reset form or destroy Select2 here
         });
 
