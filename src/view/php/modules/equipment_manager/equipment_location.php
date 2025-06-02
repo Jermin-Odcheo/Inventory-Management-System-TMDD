@@ -862,58 +862,236 @@ function safeHtml($value)
             </div>
         </div>
     </div>
+    <!-- Initialize our own pagination config before loading the generic pagination script -->
+    <script>
+        // Override default pagination settings to use our table's ID
+        window.paginationConfig = {
+            tableId: 'locationTbody',      // Our table's tbody ID
+            currentPage: 1,
+            rowsPerPageSelectId: 'rowsPerPageSelect',
+            currentPageId: 'currentPage',
+            rowsPerPageId: 'rowsPerPage',
+            totalRowsId: 'totalRows',
+            prevPageId: 'prevPage',
+            nextPageId: 'nextPage',
+            paginationId: 'pagination',
+            isInitialized: false
+        };
+        
+        // Initialize our data source for pagination
+        window.allRows = [];
+        window.filteredRows = [];
+    </script>
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
-        // Function to directly update equipment details after successful form submission
-        function directUpdateEquipmentDetails(assetTag, buildingLoc, specificArea, personResponsible) {
-            console.log('Directly updating equipment details with:', {
-                assetTag,
-                buildingLoc,
-                specificArea,
-                personResponsible
-            });
+        // Define pagination functions globally
+        
+        // Helper function to create ellipsis
+        function locationCreateEllipsis() {
+            const $li = $('<li>').addClass('page-item disabled');
+            const $a = $('<a>')
+                .addClass('page-link')
+                .attr('href', '#')
+                .text('...');
+            $li.append($a);
+            $('#pagination').append($li);
+        }
+        
+        // Function to generate page number buttons
+        function locationCreatePageNumbers(currentPage, totalPages) {
+            const $pagination = $('#pagination');
+            $pagination.empty();
 
-            // Format location as "Building, Area" if both are available
-            let location = '';
-            if (buildingLoc && specificArea) {
-                location = buildingLoc + ', ' + specificArea;
-            } else if (buildingLoc) {
-                location = buildingLoc;
-            } else if (specificArea) {
-                location = specificArea;
+            // Don't show pagination if there's only one page
+            if (totalPages <= 1) {
+                return;
             }
 
-            // Make AJAX request to update equipment details
-            $.ajax({
-                url: window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/')) + '/equipment_details_update.php',
-                method: 'POST',
-                data: {
-                    action: 'update_from_location',
-                    asset_tag: assetTag,
-                    location: location,
-                    accountable_individual: personResponsible
-                },
-                dataType: 'json',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                success: function(response) {
-                    console.log('Direct equipment details update response:', response);
-                    if (response.status === 'success') {
-                        showToast('Equipment details updated successfully', 'success');
-                    } else if (response.status === 'warning') {
-                        console.warn(response.message);
-                    } else {
-                        console.error('Failed to update equipment details:', response.message);
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('Error updating equipment details:', error);
-                }
-            });
+            // Create a simple function to add page buttons
+            function createPageLink(pageNum, isActive = false) {
+                const $li = $('<li>').addClass('page-item' + (isActive ? ' active' : ''));
+                const $a = $('<a>')
+                    .addClass('page-link')
+                    .attr('href', '#')
+                    .text(pageNum)
+                    .click(function(e) {
+                        e.preventDefault();
+                        window.currentPage = pageNum;
+                        locationUpdatePagination();
+                    });
+
+                $li.append($a);
+                $pagination.append($li);
+            }
+
+            // First page
+            createPageLink(1, currentPage === 1);
+
+            // Ellipsis after first page if needed
+            if (currentPage > 3) {
+                locationCreateEllipsis();
+            }
+
+            // Pages around current page
+            for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+                // Skip if it's the first or last page (already shown)
+                if (i === 1 || i === totalPages) continue;
+                createPageLink(i, i === currentPage);
+            }
+
+            // Ellipsis before last page if needed
+            if (currentPage < totalPages - 2) {
+                locationCreateEllipsis();
+            }
+
+            // Last page if more than one page
+            if (totalPages > 1) {
+                createPageLink(totalPages, currentPage === totalPages);
+            }
         }
 
+        // Function to update the pagination display
+        function locationUpdatePagination() {
+            const totalRows = window.filteredRows.length;
+            const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
+            const totalPages = Math.ceil(totalRows / rowsPerPage);
+
+            // Clamp currentPage to valid range
+            window.currentPage = Math.max(1, Math.min(window.currentPage, totalPages || 1));
+
+            // Update info text
+            $('#totalRows').text(totalRows);
+            $('#currentPage').text(window.currentPage);
+            $('#rowsPerPage').text(Math.min(rowsPerPage, totalRows));
+
+            // Hide all rows first
+            $('#locationTbody tr').hide();
+
+            // Calculate range of rows to show
+            const start = (window.currentPage - 1) * rowsPerPage;
+            const end = Math.min(start + rowsPerPage, totalRows);
+
+            // Show only rows for current page
+            for (let i = start; i < end; i++) {
+                $(window.filteredRows[i]).show();
+            }
+
+            // Enable/disable prev/next buttons
+            $('#prevPage').prop('disabled', window.currentPage <= 1);
+            $('#nextPage').prop('disabled', window.currentPage >= totalPages || totalPages === 0);
+
+            // Generate page numbers
+            locationCreatePageNumbers(window.currentPage, totalPages);
+
+            // Hide pagination controls if not needed
+            if (totalPages <= 1) {
+                $('#prevPage, #nextPage').hide();
+                $('#pagination').hide();
+            } else {
+                $('#prevPage, #nextPage').show();
+                $('#pagination').show();
+            }
+        }
+
+        // Update filterTable to support new date filter types
+        function locationFilterTable() {
+            var building = $('#filterBuilding').val().toLowerCase();
+            var dateFilter = $('#dateFilter').val();
+            var search = $('#eqSearch').val().toLowerCase();
+            var dateFrom = $('#dateFrom').val();
+            var dateTo = $('#dateTo').val();
+            var monthFrom = $('#monthFrom').val();
+            var monthTo = $('#monthTo').val();
+            var yearFrom = $('#yearFrom').val();
+            var yearTo = $('#yearTo').val();
+            var monthYearFrom = $('#monthYearFrom').val();
+            var monthYearTo = $('#monthYearTo').val();
+
+            var rows = $('#locationTbody tr').get();
+
+            // Sort rows by Date Created if needed
+            if (dateFilter === 'desc' || dateFilter === 'asc') {
+                rows.sort(function(a, b) {
+                    var dateA = $(a).find('td').eq(9).text();
+                    var dateB = $(b).find('td').eq(9).text();
+                    var dA = new Date(dateA);
+                    var dB = new Date(dateB);
+                    if (dateFilter === 'desc') {
+                        return dB - dA;
+                    } else {
+                        return dA - dB;
+                    }
+                });
+                // Re-append sorted rows
+                $.each(rows, function(idx, row) {
+                    $('#locationTbody').append(row);
+                });
+            }
+
+            // Reset the filtered rows array
+            window.filteredRows = [];
+
+            // Now filter rows
+            $('#locationTbody tr').each(function() {
+                var row = $(this);
+                var show = true;
+
+                // Building filter
+                if (building && building !== 'all') {
+                    var buildingText = row.find('td').eq(2).text().toLowerCase();
+                    if (buildingText !== building) show = false;
+                }
+                // Date filter (advanced types)
+                var dateText = row.find('td').eq(9).text().substring(0, 10); // 'YYYY-MM-DD'
+                if (dateFilter === 'mdy') {
+                    if (dateFrom && dateTo) {
+                        if (dateText < dateFrom || dateText > dateTo) show = false;
+                    }
+                } else if (dateFilter === 'month') {
+                    if (monthFrom && monthTo) {
+                        var dateMonth = dateText.substring(0, 7); // 'YYYY-MM'
+                        var fromMonth = monthFrom;
+                        var toMonth = monthTo;
+                        if (dateMonth < fromMonth || dateMonth > toMonth) show = false;
+                    }
+                } else if (dateFilter === 'year') {
+                    if (yearFrom && yearTo) {
+                        var dateYear = dateText.substring(0, 4); // 'YYYY'
+                        if (dateYear < yearFrom || dateYear > yearTo) show = false;
+                    }
+                } else if (dateFilter === 'month_year') {
+                    if (monthYearFrom && monthYearTo) {
+                        var dateMonth = dateText.substring(0, 7); // 'YYYY-MM'
+                        if (dateMonth < monthYearFrom || dateMonth > monthYearTo) show = false;
+                    }
+                }
+                // Search filter (always applied)
+                if (search) {
+                    var rowText = row.text().toLowerCase();
+                    if (!rowText.includes(search)) show = false;
+                }
+                
+                // Add to filtered rows if it should be shown
+                if (show) {
+                    window.filteredRows.push(row[0]);
+                }
+                
+                // Hide all rows initially - updatePagination will show the correct ones
+                row.hide();
+            });
+            
+            // Update pagination after filtering
+            locationUpdatePagination();
+        }
+        
+        // Make functions globally available through window object
+        window.locationFilterTable = locationFilterTable;
+        window.locationUpdatePagination = locationUpdatePagination;
+        window.locationCreatePageNumbers = locationCreatePageNumbers;
+        window.locationCreateEllipsis = locationCreateEllipsis;
+    </script>
+    <script>
         $(document).ready(function() {
             // Store all table rows for pagination
             const locationRows = Array.from(document.querySelectorAll('#locationTbody tr'));
@@ -953,125 +1131,7 @@ function safeHtml($value)
 
             // Apply Filters button event
             $(document).on('click', '#applyFilters', function() {
-                filterTable();
-            });
-
-            // Function to update the pagination display
-            function updatePagination() {
-                const totalRows = window.filteredRows.length;
-                rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
-                const totalPages = Math.ceil(totalRows / rowsPerPage);
-
-                // Clamp currentPage to valid range
-                window.currentPage = Math.max(1, Math.min(window.currentPage, totalPages || 1));
-
-                // Update info text
-                $('#totalRows').text(totalRows);
-                $('#currentPage').text(window.currentPage);
-                $('#rowsPerPage').text(Math.min(rowsPerPage, totalRows));
-
-                // Hide all rows first
-                $('#locationTbody tr').hide();
-
-                // Calculate range of rows to show
-                const start = (window.currentPage - 1) * rowsPerPage;
-                const end = Math.min(start + rowsPerPage, totalRows);
-
-                // Show only rows for current page
-                for (let i = start; i < end; i++) {
-                    $(window.filteredRows[i]).show();
-                }
-
-                // Enable/disable prev/next buttons
-                $('#prevPage').prop('disabled', window.currentPage <= 1);
-                $('#nextPage').prop('disabled', window.currentPage >= totalPages || totalPages === 0);
-
-                // Generate page numbers
-                createPageNumbers(window.currentPage, totalPages);
-
-                // Hide pagination controls if not needed
-                if (totalPages <= 1) {
-                    $('#prevPage, #nextPage').hide();
-                    $('#pagination').hide();
-                } else {
-                    $('#prevPage, #nextPage').show();
-                    $('#pagination').show();
-                }
-            }
-
-            // Function to generate page number buttons
-            function createPageNumbers(currentPage, totalPages) {
-                const $pagination = $('#pagination');
-                $pagination.empty();
-
-                // Don't show pagination if there's only one page
-                if (totalPages <= 1) {
-                    return;
-                }
-
-                // Create a simple function to add page buttons
-                function createPageLink(pageNum, isActive = false) {
-                    const $li = $('<li>').addClass('page-item' + (isActive ? ' active' : ''));
-                    const $a = $('<a>')
-                        .addClass('page-link')
-                        .attr('href', '#')
-                        .text(pageNum)
-                        .click(function(e) {
-                            e.preventDefault();
-                            window.currentPage = pageNum;
-                            updatePagination();
-                        });
-
-                    $li.append($a);
-                    $pagination.append($li);
-                }
-
-                // First page
-                createPageLink(1, currentPage === 1);
-
-                // Ellipsis after first page if needed
-                if (currentPage > 3) {
-                    createEllipsis();
-                }
-
-                // Pages around current page
-                for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
-                    // Skip if it's the first or last page (already shown)
-                    if (i === 1 || i === totalPages) continue;
-                    createPageLink(i, i === currentPage);
-                }
-
-                // Ellipsis before last page if needed
-                if (currentPage < totalPages - 2) {
-                    createEllipsis();
-                }
-
-                // Last page if more than one page
-                if (totalPages > 1) {
-                    createPageLink(totalPages, currentPage === totalPages);
-                }
-            }
-
-            // Event handlers for pagination controls
-            $('#prevPage').on('click', function() {
-                if (window.currentPage > 1) {
-                    window.currentPage--;
-                    updatePagination();
-                }
-            });
-
-            $('#nextPage').on('click', function() {
-                const totalPages = Math.ceil(window.filteredRows.length / rowsPerPage);
-                if (window.currentPage < totalPages) {
-                    window.currentPage++;
-                    updatePagination();
-                }
-            });
-
-            $('#rowsPerPageSelect').on('change', function() {
-                rowsPerPage = parseInt($(this).val());
-                window.currentPage = 1; // Reset to first page
-                updatePagination();
+                locationFilterTable();
             });
 
             // Filter event handlers
@@ -1109,7 +1169,7 @@ function safeHtml($value)
             });
 
             $('#applyFilters').on('click', function() {
-                filterTable();
+                locationFilterTable();
             });
 
             $('#clearFilters').on('click', function() {
@@ -1134,95 +1194,87 @@ function safeHtml($value)
                 // Reset filteredRows to allRows so all data is shown
                 window.filteredRows = window.allRows;
                 window.currentPage = 1;
-                // Show all rows
-                $('#locationTbody tr').show();
-                // Refresh table and pagination
-                filterTable();
-                if (typeof updatePagination === 'function') updatePagination();
+                // Update pagination which will show the correct rows
+                locationUpdatePagination();
             });
-
-            // Update filterTable to support new date filter types
-            function filterTable() {
-                var building = $('#filterBuilding').val().toLowerCase();
-                var dateFilter = $('#dateFilter').val();
-                var search = $('#eqSearch').val().toLowerCase();
-                var dateFrom = $('#dateFrom').val();
-                var dateTo = $('#dateTo').val();
-                var monthFrom = $('#monthFrom').val();
-                var monthTo = $('#monthTo').val();
-                var yearFrom = $('#yearFrom').val();
-                var yearTo = $('#yearTo').val();
-                var monthYearFrom = $('#monthYearFrom').val();
-                var monthYearTo = $('#monthYearTo').val();
-
-                var rows = $('#locationTbody tr').get();
-
-                // Sort rows by Date Created if needed
-                if (dateFilter === 'desc' || dateFilter === 'asc') {
-                    rows.sort(function(a, b) {
-                        var dateA = $(a).find('td').eq(9).text();
-                        var dateB = $(b).find('td').eq(9).text();
-                        var dA = new Date(dateA);
-                        var dB = new Date(dateB);
-                        if (dateFilter === 'desc') {
-                            return dB - dA;
-                        } else {
-                            return dA - dB;
-                        }
-                    });
-                    // Re-append sorted rows
-                    $.each(rows, function(idx, row) {
-                        $('#locationTbody').append(row);
-                    });
-                }
-
-                // Now filter rows
-                $('#locationTbody tr').each(function() {
-                    var row = $(this);
-                    var show = true;
-
-                    // Building filter
-                    if (building && building !== 'all') {
-                        var buildingText = row.find('td').eq(2).text().toLowerCase();
-                        if (buildingText !== building) show = false;
-                    }
-                    // Date filter (advanced types)
-                    var dateText = row.find('td').eq(9).text().substring(0, 10); // 'YYYY-MM-DD'
-                    if (dateFilter === 'mdy') {
-                        if (dateFrom && dateTo) {
-                            if (dateText < dateFrom || dateText > dateTo) show = false;
-                        }
-                    } else if (dateFilter === 'month') {
-                        if (monthFrom && monthTo) {
-                            var dateMonth = dateText.substring(0, 7); // 'YYYY-MM'
-                            var fromMonth = monthFrom;
-                            var toMonth = monthTo;
-                            if (dateMonth < fromMonth || dateMonth > toMonth) show = false;
-                        }
-                    } else if (dateFilter === 'year') {
-                        if (yearFrom && yearTo) {
-                            var dateYear = dateText.substring(0, 4); // 'YYYY'
-                            if (dateYear < yearFrom || dateYear > yearTo) show = false;
-                        }
-                    } else if (dateFilter === 'month_year') {
-                        if (monthYearFrom && monthYearTo) {
-                            var dateMonth = dateText.substring(0, 7); // 'YYYY-MM'
-                            if (dateMonth < monthYearFrom || dateMonth > monthYearTo) show = false;
-                        }
-                    }
-                    // Search filter (always applied)
-                    if (search) {
-                        var rowText = row.text().toLowerCase();
-                        if (!rowText.includes(search)) show = false;
-                    }
-                    row.toggle(show);
-                });
-            }
 
             // Initialize pagination on page load
             setTimeout(function() {
-                filterTable();
+                // Make sure filteredRows is populated correctly on initialization
+                window.filteredRows = window.allRows;
+                locationFilterTable();
+                locationUpdatePagination();
             }, 100);
+
+            // Add pagination control event handlers
+            $('#prevPage').on('click', function() {
+                if (window.currentPage > 1) {
+                    window.currentPage--;
+                    locationUpdatePagination();
+                }
+            });
+
+            $('#nextPage').on('click', function() {
+                const totalPages = Math.ceil(window.filteredRows.length / parseInt($('#rowsPerPageSelect').val() || 10));
+                if (window.currentPage < totalPages) {
+                    window.currentPage++;
+                    locationUpdatePagination();
+                }
+            });
+
+            $('#rowsPerPageSelect').on('change', function() {
+                window.currentPage = 1; // Reset to first page
+                locationUpdatePagination();
+            });
+            
+            // Add back the direct update function
+            window.directUpdateEquipmentDetails = function(assetTag, buildingLoc, specificArea, personResponsible) {
+                console.log('Directly updating equipment details with:', {
+                    assetTag,
+                    buildingLoc,
+                    specificArea,
+                    personResponsible
+                });
+
+                // Format location as "Building, Area" if both are available
+                let location = '';
+                if (buildingLoc && specificArea) {
+                    location = buildingLoc + ', ' + specificArea;
+                } else if (buildingLoc) {
+                    location = buildingLoc;
+                } else if (specificArea) {
+                    location = specificArea;
+                }
+
+                // Make AJAX request to update equipment details
+                $.ajax({
+                    url: window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/')) + '/equipment_details_update.php',
+                    method: 'POST',
+                    data: {
+                        action: 'update_from_location',
+                        asset_tag: assetTag,
+                        location: location,
+                        accountable_individual: personResponsible
+                    },
+                    dataType: 'json',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    success: function(response) {
+                        console.log('Direct equipment details update response:', response);
+                        if (response.status === 'success') {
+                            showToast('Equipment details updated successfully', 'success');
+                        } else if (response.status === 'warning') {
+                            console.warn(response.message);
+                        } else {
+                            console.error('Failed to update equipment details:', response.message);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error updating equipment details:', error);
+                    }
+                });
+            };
         });
 
         // Delegate event for editing location
@@ -1319,7 +1371,9 @@ function safeHtml($value)
                                 // Reinitialize pagination after reload
                                 window.allRows = Array.from(document.querySelectorAll('#locationTbody tr'));
                                 window.filteredRows = [...window.allRows];
-                                filterTable();
+                                locationFilterTable();
+                                // Explicitly update pagination
+                                locationUpdatePagination();
                             });
                         } else {
                             showToast(response.message, 'error');
@@ -1388,7 +1442,9 @@ function safeHtml($value)
                             // Reinitialize pagination after reload
                             window.allRows = Array.from(document.querySelectorAll('#locationTbody tr'));
                             window.filteredRows = [...window.allRows];
-                            filterTable();
+                            locationFilterTable();
+                            // Explicitly update pagination
+                            locationUpdatePagination();
                         });
                     } else {
                         showToast(result.message, 'error');
@@ -1463,7 +1519,9 @@ function safeHtml($value)
                             // Reinitialize pagination after reload
                             window.allRows = Array.from(document.querySelectorAll('#locationTbody tr'));
                             window.filteredRows = [...window.allRows];
-                            filterTable();
+                            locationFilterTable();
+                            // Explicitly update pagination
+                            locationUpdatePagination();
                             // Always restore scrolling after table reload
                             $('body').css('overflow', '');
                         });
