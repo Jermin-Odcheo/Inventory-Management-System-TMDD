@@ -90,15 +90,24 @@ function formatNewValue($jsonStr)
         return '<em class="text-muted">N/A</em>';
     }
 
-    $data = json_decode($jsonStr, true);
+    // If the input is already an array, use it directly
+    $data = is_array($jsonStr) ? $jsonStr : json_decode($jsonStr, true);
+    
     if (!is_array($data)) {
-        return '<span>' . htmlspecialchars((string)$jsonStr) . '</span>';
+        // If json_decode failed and input is not an array, return the original string
+        return '<span>' . htmlspecialchars(is_string($jsonStr) ? $jsonStr : json_encode($jsonStr)) . '</span>';
     }
 
     $html = '<ul class="list-group">';
     foreach ($data as $key => $value) {
         // Convert null to a display string
-        $displayValue = is_null($value) ? '<em>null</em>' : htmlspecialchars($value);
+        if (is_null($value)) {
+            $displayValue = '<em>null</em>';
+        } elseif (is_array($value)) {
+            $displayValue = htmlspecialchars(json_encode($value));
+        } else {
+            $displayValue = htmlspecialchars((string)$value);
+        }
         $friendlyKey = ucwords(str_replace('_', ' ', $key));
         $html .= '<li class="list-group-item d-flex justify-content-between align-items-center">
                     <strong>' . $friendlyKey . ':</strong> <span>' . $displayValue . '</span>
