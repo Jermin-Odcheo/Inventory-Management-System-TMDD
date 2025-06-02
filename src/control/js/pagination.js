@@ -217,10 +217,29 @@ function updatePagination() {
     console.log(`pagination.js: updatePagination for ${paginationConfig.tableId}. Current Page: ${paginationConfig.currentPage}`);
     const tbody = document.getElementById(paginationConfig.tableId);
     if (!tbody) {
-        console.error(`updatePagination: Could not find tbody with ID ${paginationConfig.tableId}`);
-        return;
+        // Try to find the table using a more flexible selector for cases where tbody is not directly used
+        const tableSelector = `#${paginationConfig.tableId}`;
+        const table = document.querySelector(tableSelector);
+        if (!table) {
+            console.error(`updatePagination: Could not find element with ID ${paginationConfig.tableId}`);
+            return;
+        }
+        
+        // Find the tbody within the table if not directly specified
+        const tbodyElement = table.tagName === 'TBODY' ? table : table.querySelector('tbody');
+        if (!tbodyElement) {
+            console.error(`updatePagination: Could not find tbody within ${paginationConfig.tableId}`);
+            return;
+        }
+        
+        // Update the rows directly
+        handlePagination(tbodyElement);
+    } else {
+        handlePagination(tbody);
     }
-    
+}
+
+function handlePagination(tbody) {
     const rowsToPaginate = window.filteredRows || [];
     const totalRows = rowsToPaginate.length;
     const rowsPerPageSelect = document.getElementById(paginationConfig.rowsPerPageSelectId);
@@ -238,11 +257,17 @@ function updatePagination() {
     const start = paginationConfig.currentPage > 0 ? (paginationConfig.currentPage - 1) * rowsPerPage : 0;
     const end = paginationConfig.currentPage > 0 ? paginationConfig.currentPage * rowsPerPage : 0;
     
-    tbody.innerHTML = ''; 
+    // Don't clear the table, instead hide/show rows based on the current page
+    const allRowsInTable = Array.from(tbody.querySelectorAll('tr'));
+    
+    // First hide all rows
+    allRowsInTable.forEach(row => {
+        row.style.display = 'none';
+    });
     
     if (totalRows === 0) {
         const noResultsRow = document.createElement('tr');
-        noResultsRow.id = 'noResultsMessage'; // Ensure it has this ID if your CSS/JS targets it
+        noResultsRow.id = 'noResultsMessage';
         const cell = noResultsRow.insertCell();
         const table = tbody.closest('table');
         let colspan = 10; 
@@ -250,85 +275,45 @@ function updatePagination() {
             colspan = table.tHead.rows[0].cells.length;
         }
         cell.colSpan = colspan;
-        cell.className = 'text-center';
-        cell.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-state-icon">🔍</div>
-                <div class="empty-state-message">No matching records found</div>
-            </div>
-        `;
+        cell.textContent = 'No results found.';
+        cell.className = 'text-center'; 
+        
         tbody.appendChild(noResultsRow);
     } else {
-        // Slice the visible rows for the current page
-        const visibleRows = rowsToPaginate.slice(start, end);
-        visibleRows.forEach(row => {
-            tbody.appendChild(row.cloneNode(true));
+        // Show only the rows for the current page
+        const rowsToShow = rowsToPaginate.slice(start, end);
+        
+        // Map the filtered rows to the actual DOM rows
+        rowsToShow.forEach(row => {
+            // Make this row visible
+            row.style.display = '';
         });
     }
 
-    // Update pagination info
-    updatePaginationInfo(totalRows, rowsPerPage, start, end);
-    
-    // Update pagination controls
+    // Update pagination controls and info
     renderPaginationControls(totalPages);
-    
-    // Update prev/next button states
+    updatePaginationInfo(totalRows, rowsPerPage, start, Math.min(end, totalRows));
     updateNavigationButtons(totalPages);
-    
-    // Preserve sort parameters when navigating between pages
-    preserveSortParameters();
 }
 
 // New function to preserve sort parameters when navigating between pages
 function preserveSortParameters() {
     // Get current sort parameters from URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const sortBy = urlParams.get('sort_by');
-    const sortOrder = urlParams.get('sort_order');
-    
-    // If sort parameters exist, make sure they're preserved in pagination links
-    if (sortBy && sortOrder) {
-        // Update pagination links to include sort parameters
-        const paginationLinks = document.querySelectorAll('.pagination .page-link');
-        paginationLinks.forEach(link => {
-            // Skip links that don't have an href attribute
-            if (!link.hasAttribute('href')) return;
-            
-            // Parse the current href
-            const linkUrl = new URL(link.getAttribute('href'), window.location.href);
-            const linkParams = new URLSearchParams(linkUrl.search);
-            
-            // Add or update sort parameters
-            linkParams.set('sort_by', sortBy);
-            linkParams.set('sort_order', sortOrder);
-            
-            // Update the href with the new parameters
-            linkUrl.search = linkParams.toString();
-            link.setAttribute('href', linkUrl.toString());
-        });
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const sortBy = urlParams.get('sort_by');
+        const sortOrder = urlParams.get('sort_order');
         
-        // Also update next/prev buttons if they use href
-        const prevButton = document.getElementById(paginationConfig.prevPageId);
-        const nextButton = document.getElementById(paginationConfig.nextPageId);
-        
-        if (prevButton && prevButton.hasAttribute('href')) {
-            const prevUrl = new URL(prevButton.getAttribute('href'), window.location.href);
-            const prevParams = new URLSearchParams(prevUrl.search);
-            prevParams.set('sort_by', sortBy);
-            prevParams.set('sort_order', sortOrder);
-            prevUrl.search = prevParams.toString();
-            prevButton.setAttribute('href', prevUrl.toString());
+        // Return sort parameters if they exist
+        if (sortBy && sortOrder) {
+            return { sort_by: sortBy, sort_order: sortOrder };
         }
-        
-        if (nextButton && nextButton.hasAttribute('href')) {
-            const nextUrl = new URL(nextButton.getAttribute('href'), window.location.href);
-            const nextParams = new URLSearchParams(nextUrl.search);
-            nextParams.set('sort_by', sortBy);
-            nextParams.set('sort_order', sortOrder);
-            nextUrl.search = nextParams.toString();
-            nextButton.setAttribute('href', nextUrl.toString());
-        }
+    } catch (e) {
+        console.error('Error parsing sort parameters:', e);
     }
+    
+    // Return null if no sort parameters found
+    return null;
 }
 
 function getTotalPages() {
@@ -345,104 +330,134 @@ function getTotalPages() {
 
 function renderPaginationControls(totalPages) {
     const paginationContainer = document.getElementById(paginationConfig.paginationId);
-    if (!paginationContainer) return;
+    if (!paginationContainer) {
+        console.error(`renderPaginationControls: Pagination container with ID ${paginationConfig.paginationId} not found.`);
+        return;
+    }
     
+    // Clear existing pagination elements
     paginationContainer.innerHTML = '';
     
-    if (totalPages <= 1) return; // Don't show pagination if only one page
+    if (totalPages <= 1) {
+        // Don't show pagination for a single page or no results
+        return;
+    }
+
+    // Parameters to preserve any existing sort
+    const sortParams = preserveSortParameters();
     
-    // Get current sort parameters from URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const sortBy = urlParams.get('sort_by');
-    const sortOrder = urlParams.get('sort_order');
-    
-    // Previous button
+    // << First page
+    addPaginationItem(
+        paginationContainer, 
+        '&laquo;', 
+        false,
+        paginationConfig.currentPage === 1,
+        () => {
+            paginationConfig.currentPage = 1;
+            updatePagination();
+        },
+        sortParams
+    );
+        
+    // Previous page
     addPaginationItem(
         paginationContainer,
-        '<i class="bi bi-chevron-left"></i>',
+        '&lsaquo;',
         false,
-        paginationConfig.currentPage <= 1,
+        paginationConfig.currentPage === 1,
         () => {
             if (paginationConfig.currentPage > 1) {
                 paginationConfig.currentPage--;
                 updatePagination();
             }
         },
-        // Add sort parameters to the URL if they exist
-        sortBy && sortOrder ? { sort_by: sortBy, sort_order: sortOrder } : null
+        sortParams
     );
     
-    // First page
-    if (paginationConfig.currentPage > 3) {
+    // Calculate page range to show
+    let startPage = Math.max(1, paginationConfig.currentPage - 2);
+    let endPage = Math.min(totalPages, startPage + 4);
+    startPage = Math.max(1, endPage - 4);
+    
+    // First page if needed
+    if (startPage > 1) {
         addPaginationItem(
             paginationContainer,
             '1',
-            false,
+            paginationConfig.currentPage === 1,
             false,
             () => {
                 paginationConfig.currentPage = 1;
                 updatePagination();
             },
-            sortBy && sortOrder ? { sort_by: sortBy, sort_order: sortOrder } : null
+            sortParams
         );
         
-        // Ellipsis if needed
-        if (paginationConfig.currentPage > 4) {
-            addPaginationItem(paginationContainer, '...', false, true);
+        if (startPage > 2) {
+            addPaginationItem(paginationContainer, '...', false, true, null, sortParams);
         }
     }
     
-    // Page numbers around current page
-    const startPage = Math.max(1, paginationConfig.currentPage - 1);
-    const endPage = Math.min(totalPages, paginationConfig.currentPage + 1);
-    
+    // Page numbers
     for (let i = startPage; i <= endPage; i++) {
         addPaginationItem(
             paginationContainer,
             i.toString(),
-            i === paginationConfig.currentPage,
+            paginationConfig.currentPage === i,
             false,
             () => {
                 paginationConfig.currentPage = i;
                 updatePagination();
             },
-            sortBy && sortOrder ? { sort_by: sortBy, sort_order: sortOrder } : null
+            sortParams
         );
     }
     
-    // Last page
-    if (paginationConfig.currentPage < totalPages - 2) {
-        // Ellipsis if needed
-        if (paginationConfig.currentPage < totalPages - 3) {
-            addPaginationItem(paginationContainer, '...', false, true);
+    // Last page if needed
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            addPaginationItem(paginationContainer, '...', false, true, null, sortParams);
         }
         
         addPaginationItem(
             paginationContainer,
             totalPages.toString(),
-            false,
+            paginationConfig.currentPage === totalPages,
             false,
             () => {
                 paginationConfig.currentPage = totalPages;
                 updatePagination();
             },
-            sortBy && sortOrder ? { sort_by: sortBy, sort_order: sortOrder } : null
+            sortParams
         );
     }
     
-    // Next button
+    // Next page
     addPaginationItem(
         paginationContainer,
-        '<i class="bi bi-chevron-right"></i>',
+        '&rsaquo;',
         false,
-        paginationConfig.currentPage >= totalPages,
+        paginationConfig.currentPage === totalPages,
         () => {
             if (paginationConfig.currentPage < totalPages) {
                 paginationConfig.currentPage++;
                 updatePagination();
             }
         },
-        sortBy && sortOrder ? { sort_by: sortBy, sort_order: sortOrder } : null
+        sortParams
+    );
+    
+    // >> Last page
+    addPaginationItem(
+        paginationContainer,
+        '&raquo;',
+        false,
+        paginationConfig.currentPage === totalPages,
+        () => {
+            paginationConfig.currentPage = totalPages;
+            updatePagination();
+        },
+        sortParams
     );
 }
 
@@ -451,45 +466,20 @@ function addPaginationItem(container, pageContent, isActive = false, isDisabled 
     li.className = 'page-item';
     if (isActive) li.classList.add('active');
     if (isDisabled) li.classList.add('disabled');
-
-    const a = document.createElement('a');
-    a.className = 'page-link';
-    a.innerHTML = pageContent;
-
-    if (clickHandler && !isActive && !isDisabled) {
-        a.href = '#';
-        a.addEventListener('click', function(e) {
-            e.preventDefault();
+    
+    const pageLink = document.createElement('a');
+    pageLink.className = 'page-link';
+    pageLink.innerHTML = pageContent; // Use innerHTML to support symbols like &laquo;
+    
+    if (!isDisabled && clickHandler) {
+        pageLink.addEventListener('click', (event) => {
+            event.preventDefault();
             clickHandler();
         });
-    } else if (isDisabled) {
-        a.style.pointerEvents = 'none'; 
+        pageLink.style.cursor = 'pointer';
     }
-
-    if (sortParams) {
-        // If this is a page number (not an ellipsis), add page parameter
-        if (!isNaN(pageContent) && pageContent !== '...') {
-            const linkParams = new URLSearchParams();
-            linkParams.set('page', pageContent);
-            
-            // Add sort parameters
-            Object.entries(sortParams).forEach(([key, value]) => {
-                linkParams.set(key, value);
-            });
-            
-            // Add any other existing parameters except page
-            const currentParams = new URLSearchParams(window.location.search);
-            for (const [key, value] of currentParams.entries()) {
-                if (key !== 'page' && key !== 'sort_by' && key !== 'sort_order') {
-                    linkParams.set(key, value);
-                }
-            }
-            
-            a.href = `?${linkParams.toString()}`;
-        }
-    }
-
-    li.appendChild(a);
+    
+    li.appendChild(pageLink);
     container.appendChild(li);
 }
 

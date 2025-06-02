@@ -1130,8 +1130,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_data_json') {
                                     paginationId: 'pagination'
                                 });
                                 
-                                // Set rows per page to previous value
-                                $('#rowsPerPageSelect').val(rowsPerPage).trigger('change');
+                                // Ensure pagination updates to show the proper rows
+                                updatePagination();
                             });
                         } else {
                             showToast(response.message, 'error');
@@ -1297,6 +1297,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_data_json') {
                 nextPageId: 'nextPage',
                 paginationId: 'pagination'
             });
+
+            // After initialization, update pagination to apply page numbers
+            updatePagination();
 
             // Create search functionality for the table
             const searchInput = document.getElementById('searchReport');

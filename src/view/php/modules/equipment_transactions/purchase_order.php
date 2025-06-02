@@ -699,10 +699,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
     <?php endif; ?>
 
     <script>
-
-
-        // Function to reinitialize purchase table pagination after AJAX operations
-        function reinitPurchaseTableJS() {
+        // Initialize pagination when document is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize with all rows
+            window.allRows = Array.from(document.querySelectorAll('#poTable tr'));
+            window.filteredRows = [...window.allRows];
+            
             // Initialize pagination with the purchase table ID
             initPagination({
                 tableId: 'poTable',
@@ -715,6 +717,62 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                 nextPageId: 'nextPage',
                 paginationId: 'pagination'
             });
+            
+            // Force pagination update after initialization
+            updatePagination();
+            
+            // Create search functionality for the table
+            const searchInput = document.getElementById('searchPO');
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    const searchText = this.value.toLowerCase();
+                    
+                    // Filter the rows based on the search text
+                    window.filteredRows = window.allRows.filter(row => {
+                        return row.textContent.toLowerCase().includes(searchText);
+                    });
+                    
+                    // Reset to first page and update pagination
+                    if (window.paginationConfig) {
+                        window.paginationConfig.currentPage = 1;
+                    }
+                    updatePagination();
+                });
+            }
+
+            // Handle rows per page change
+            const rowsPerPageSelect = document.getElementById('rowsPerPageSelect');
+            if (rowsPerPageSelect) {
+                rowsPerPageSelect.addEventListener('change', function() {
+                    if (window.paginationConfig) {
+                        window.paginationConfig.currentPage = 1;
+                    }
+                    updatePagination();
+                });
+            }
+        });
+        
+        // Function to reinitialize purchase table pagination after AJAX operations
+        function reinitPurchaseTableJS() {
+            // Initialize with fresh rows
+            window.allRows = Array.from(document.querySelectorAll('#poTable tr'));
+            window.filteredRows = [...window.allRows];
+            
+            // Initialize pagination with the purchase table ID
+            initPagination({
+                tableId: 'poTable',
+                currentPage: 1,
+                rowsPerPageSelectId: 'rowsPerPageSelect',
+                currentPageId: 'currentPage',
+                rowsPerPageId: 'rowsPerPage',
+                totalRowsId: 'totalRows',
+                prevPageId: 'prevPage',
+                nextPageId: 'nextPage',
+                paginationId: 'pagination'
+            });
+            
+            // Force pagination update
+            updatePagination();
         }
 
         // Function to ensure modal backdrop is removed
@@ -856,25 +914,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                         $('#purchaseTable').load(location.href + ' #purchaseTable', function() {
                             showToast(response.message, 'success');
                             
-                            // Reset pagination with fresh DOM elements
-                            window.allRows = Array.from(document.querySelectorAll('#poTable tr'));
-                            window.filteredRows = [...window.allRows];
-                            
-                            // Initialize pagination with the previous page
-                            initPagination({
-                                tableId: 'poTable',
-                                currentPage: currentPage,
-                                rowsPerPageSelectId: 'rowsPerPageSelect',
-                                currentPageId: 'currentPage',
-                                rowsPerPageId: 'rowsPerPage',
-                                totalRowsId: 'totalRows',
-                                prevPageId: 'prevPage',
-                                nextPageId: 'nextPage',
-                                paginationId: 'pagination'
-                            });
-                            
-                            // Set rows per page to previous value
-                            $('#rowsPerPageSelect').val(rowsPerPage).trigger('change');
+                            // Reinitialize pagination with fresh DOM elements
+                            reinitPurchaseTableJS();
                             
                             // Reattach event handlers
                             reattachEventHandlers();
@@ -919,38 +960,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                         $('#purchaseTable').load(location.href + ' #purchaseTable', function() {
                             showToast(response.message, 'success');
                             
-                            // Reset pagination with fresh DOM elements
-                            window.allRows = Array.from(document.querySelectorAll('#poTable tr'));
-                            window.filteredRows = [...window.allRows];
-                            
-                            // Initialize pagination with the previous page
-                            initPagination({
-                                tableId: 'poTable',
-                                currentPage: currentPage,
-                                rowsPerPageSelectId: 'rowsPerPageSelect',
-                                currentPageId: 'currentPage',
-                                rowsPerPageId: 'rowsPerPage',
-                                totalRowsId: 'totalRows',
-                                prevPageId: 'prevPage',
-                                nextPageId: 'nextPage',
-                                paginationId: 'pagination'
-                            });
-                            
-                            // Set rows per page to previous value
-                            $('#rowsPerPageSelect').val(rowsPerPage).trigger('change');
+                            // Reinitialize pagination with fresh DOM elements
+                            reinitPurchaseTableJS();
                             
                             // Reattach event handlers
                             reattachEventHandlers();
-                            
-                            // Hide edit modal
-                            var editModalEl = document.getElementById('editPOModal');
-                            var editModal = bootstrap.Modal.getInstance(editModalEl);
-                            if (editModal) {
-                                editModal.hide();
-                            }
-                            
-                            // Clean up modal
-                            removeModalBackdrop();
                         });
                     } else {
                         showToast(response.message, 'error');
@@ -983,25 +997,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                             $('#purchaseTable').load(location.href + ' #purchaseTable', function() {
                                 showToast(response.message, 'success');
                                 
-                                // Reset pagination with fresh DOM elements
-                                window.allRows = Array.from(document.querySelectorAll('#poTable tr'));
-                                window.filteredRows = [...window.allRows];
-                                
-                                // Initialize pagination with the previous page
-                                initPagination({
-                                    tableId: 'poTable',
-                                    currentPage: currentPage,
-                                    rowsPerPageSelectId: 'rowsPerPageSelect',
-                                    currentPageId: 'currentPage',
-                                    rowsPerPageId: 'rowsPerPage',
-                                    totalRowsId: 'totalRows',
-                                    prevPageId: 'prevPage',
-                                    nextPageId: 'nextPage',
-                                    paginationId: 'pagination'
-                                });
-                                
-                                // Set rows per page to previous value
-                                $('#rowsPerPageSelect').val(rowsPerPage).trigger('change');
+                                // Reinitialize pagination with fresh DOM elements
+                                reinitPurchaseTableJS();
                                 
                                 // Reattach event handlers
                                 reattachEventHandlers();
@@ -1075,25 +1072,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
             $('#purchaseTable').load(location.href + ' #purchaseTable', function() {
                 showToast('Filters cleared.', 'success');
                 
-                // Reset pagination with fresh DOM elements
-                window.allRows = Array.from(document.querySelectorAll('#poTable tr'));
-                window.filteredRows = [...window.allRows];
-                
-                // Initialize pagination with the previous page
-                initPagination({
-                    tableId: 'poTable',
-                    currentPage: currentPage,
-                    rowsPerPageSelectId: 'rowsPerPageSelect',
-                    currentPageId: 'currentPage',
-                    rowsPerPageId: 'rowsPerPage',
-                    totalRowsId: 'totalRows',
-                    prevPageId: 'prevPage',
-                    nextPageId: 'nextPage',
-                    paginationId: 'pagination'
-                });
-                
-                // Set rows per page to previous value
-                $('#rowsPerPageSelect').val(rowsPerPage).trigger('change');
+                // Reinitialize pagination with fresh DOM elements
+                reinitPurchaseTableJS();
                 
                 // Reattach event handlers
                 reattachEventHandlers();
@@ -1230,6 +1210,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
     <script>
         // Initialize pagination when document is ready
         document.addEventListener('DOMContentLoaded', function() {
+            // Initialize with all rows
+            window.allRows = Array.from(document.querySelectorAll('#poTable tr'));
+            window.filteredRows = [...window.allRows];
+            
             // Initialize pagination with the purchase table ID
             initPagination({
                 tableId: 'poTable',
@@ -1242,6 +1226,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                 nextPageId: 'nextPage',
                 paginationId: 'pagination'
             });
+            
+            // Force pagination update after initialization
+            updatePagination();
             
             // Create search functionality for the table
             const searchInput = document.getElementById('searchPO');
