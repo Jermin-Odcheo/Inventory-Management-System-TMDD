@@ -698,17 +698,23 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
         </div>
     <?php endif; ?>
 
-    <!-- Toast notification system -->
-    <link rel="stylesheet" href="/src/view/styles/css/toast.css">
-    <script src="/src/control/js/toast.js"></script>
     <script>
-        // Use the global showToast from toast.js, with durations matching Receiving Report
-        function showToast(message, type) {
-            // Match durations: 3500ms for success, 5000ms for error
-            let duration = 3500;
-            if (type === 'success') duration = 3500;
-            else if (type === 'error') duration = 5000;
-            window.showToast(message, type, duration);
+
+
+        // Function to reinitialize purchase table pagination after AJAX operations
+        function reinitPurchaseTableJS() {
+            // Initialize pagination with the purchase table ID
+            initPagination({
+                tableId: 'poTable',
+                currentPage: 1,
+                rowsPerPageSelectId: 'rowsPerPageSelect',
+                currentPageId: 'currentPage',
+                rowsPerPageId: 'rowsPerPage',
+                totalRowsId: 'totalRows',
+                prevPageId: 'prevPage',
+                nextPageId: 'nextPage',
+                paginationId: 'pagination'
+            });
         }
 
         // Function to ensure modal backdrop is removed
@@ -726,9 +732,26 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
         // Use event delegation so new elements get bound events
         $(document).on('input', '#searchPO', function() {
             var searchText = $(this).val().toLowerCase();
-            $("#table tbody tr").filter(function() {
-                $(this).toggle($(this).text().toLowerCase().indexOf(searchText) > -1);
-            });
+            // Use the pagination's search functionality if it exists
+            if (typeof window.filteredRows !== 'undefined' && typeof window.allRows !== 'undefined') {
+                // Reset to first page when searching
+                if (window.paginationConfig) {
+                    window.paginationConfig.currentPage = 1;
+                }
+                
+                // Filter the rows based on the search text
+                window.filteredRows = window.allRows.filter(row => {
+                    return row.textContent.toLowerCase().includes(searchText);
+                });
+                
+                // Update pagination with filtered rows
+                updatePagination();
+            } else {
+                // Fallback to simple toggle if pagination isn't initialized yet
+                $("#table tbody tr").filter(function() {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(searchText) > -1);
+                });
+            }
         });
 
         $(document).ready(function() {
@@ -772,37 +795,26 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
             removeModal.show();
         });
 
-        // Confirm Remove button in the Remove Modal
-        $(document).on('click', '#confirmRemoveBtn', function() {
-            if (removeId) {
-                $.ajax({
-                    url: 'purchase_order.php',
-                    method: 'GET',
-                    data: {
-                        action: 'remove',
-                        id: removeId
-                    },
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.status === 'success') {
-                            // Instantly remove the row visually
-                            $("tr[data-id='" + removeId + "']").remove();
-                            $('#purchaseTable').load(location.href + ' #purchaseTable', function() {
-                                showToast(response.message, 'success');
-                                if (typeof reinitPurchaseTableJS === 'function') reinitPurchaseTableJS();
-                            });
-                        } else {
-                            showToast(response.message, 'error');
-                        }
-                        // Hide the remove modal after processing
-                        var removeModalEl = document.getElementById('removePOModal');
-                        var modalInstance = bootstrap.Modal.getInstance(removeModalEl);
-                        modalInstance.hide();
-                    },
-                    error: function() {
-                        showToast('Error processing request.', 'error');
-                    }
-                });
+        // Function to store a toast message that persists through page refresh
+        function storeToastMessage(message, type) {
+            // Store the message in sessionStorage
+            sessionStorage.setItem('toastMessage', message);
+            sessionStorage.setItem('toastType', type);
+        }
+
+        // Check for stored toast messages on page load
+        $(document).ready(function() {
+            // Check if we have a stored toast message
+            const storedMessage = sessionStorage.getItem('toastMessage');
+            const storedType = sessionStorage.getItem('toastType');
+            
+            if (storedMessage) {
+                // Display the toast
+                showToast(storedMessage, storedType);
+                
+                // Clear the stored message so it doesn't show again on future page loads
+                sessionStorage.removeItem('toastMessage');
+                sessionStorage.removeItem('toastType');
             }
         });
 
@@ -835,16 +847,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                 dataType: 'json',
                 success: function(response) {
                     if (response.status === 'success') {
-                        // Close the modal
-                        var addModalEl = document.getElementById('addPOModal');
-                        var addModal = bootstrap.Modal.getInstance(addModalEl);
-                        if (addModal) {
-                            addModal.hide();
-                        }
-                        $('#purchaseTable').load(location.href + ' #purchaseTable', function() {
-                            showToast(response.message, 'success');
-                            if (typeof reinitPurchaseTableJS === 'function') reinitPurchaseTableJS();
-                        });
+                        // Store toast message then reload page
+                        storeToastMessage(response.message, 'success');
+                        window.location.href = 'purchase_order.php?' + new Date().getTime();
                     } else {
                         showToast(response.message, 'error');
                     }
@@ -876,22 +881,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                 dataType: 'json',
                 success: function(response) {
                     if (response.status === 'success') {
-                        $('#purchaseTable').load(location.href + ' #purchaseTable', function() {
-                            showToast(response.message, 'success');
-                        });
-                        var editModalEl = document.getElementById('editPOModal');
-                        var editModal = bootstrap.Modal.getInstance(editModalEl);
-                        if (editModal) {
-                            editModal.hide();
-                            // Listen for the hidden event to ensure backdrop is gone
-                            $(editModalEl).on('hidden.bs.modal', function () {
-                                removeModalBackdrop(); // Call this to clean up
-                                $(this).off('hidden.bs.modal'); // Remove listener to prevent multiple calls
-                            });
-                        } else {
-                            // If modal instance wasn't found, force backdrop removal anyway
-                            removeModalBackdrop();
-                        }
+                        // Store toast message then reload page
+                        storeToastMessage(response.message, 'success');
+                        window.location.href = 'purchase_order.php?' + new Date().getTime();
                     } else {
                         showToast(response.message, 'error');
                     }
@@ -902,6 +894,51 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
             });
         });
 
+        // Confirm Remove button in the Remove Modal
+        $(document).on('click', '#confirmRemoveBtn', function() {
+            if (removeId) {
+                $.ajax({
+                    url: 'purchase_order.php',
+                    method: 'GET',
+                    data: {
+                        action: 'remove',
+                        id: removeId
+                    },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            // Store toast message then reload page
+                            storeToastMessage(response.message, 'success');
+                            window.location.href = 'purchase_order.php?' + new Date().getTime();
+                        } else {
+                            showToast(response.message, 'error');
+                        }
+                        // Hide the remove modal after processing
+                        var removeModalEl = document.getElementById('removePOModal');
+                        var modalInstance = bootstrap.Modal.getInstance(removeModalEl);
+                        modalInstance.hide();
+                    },
+                    error: function() {
+                        showToast('Error processing request.', 'error');
+                    }
+                });
+            }
+        });
+
+        // Clear filters and reload table
+        $('#clearFilters').on('click', function() {
+            $('#dateFilter').val('');
+            $('#dateInputsContainer input').val('');
+            $('#dateInputsContainer .date-group').addClass('d-none');
+            $('#dateInputsContainer').hide();
+            // Clear search input
+            $('#searchPO').val('');
+            
+            // Store toast message then reload page
+            storeToastMessage('Filters cleared.', 'success');
+            window.location.href = 'purchase_order.php?' + new Date().getTime();
+        });
+        
         $('#addPOModal').on('hidden.bs.modal', function() {
             $('#addPOForm')[0].reset();
             removeModalBackdrop();
@@ -985,15 +1022,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
             applyFilter(filterType, params);
         });
 
-        // Clear filters and reload table
-        $('#clearFilters').on('click', function() {
-            $('#dateFilter').val('');
-            $('#dateInputsContainer input').val('');
-            $('#dateInputsContainer .date-group').addClass('d-none');
-            $('#dateInputsContainer').hide();
-            window.location.reload();
-        });
-
         // Function to apply the filter
         function applyFilter(type, params = {}) {
             let filterData = {
@@ -1015,63 +1043,22 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                 filterData.monthYearFrom = params.monthYearFrom;
                 filterData.monthYearTo = params.monthYearTo;
             }
-            $.ajax({
-                url: 'purchase_order.php',
-                method: 'GET',
-                data: filterData,
-                success: function(response) {
-                    try {
-                        const data = JSON.parse(response);
-                        if (data.status === 'success') {
-                            // Update table body with filtered results
-                            let tableBody = '';
-                            data.orders.forEach(po => {
-                                let formattedDate = '';
-                                if (po.date_created) {
-                                    formattedDate = formatDateAMPM(po.date_created);
-                                }
-                                tableBody += `
-                                <tr>
-                                    <td>${po.id}</td>
-                                    <td>${po.po_no}</td>
-                                    <td>${po.date_of_order}</td>
-                                    <td>${po.no_of_units}</td>
-                                    <td>${po.item_specifications}</td>
-                                    <td>${formattedDate}</td>
-                                    <td class="text-center">
-                                        <div class="btn-group" role="group">
-                                            <a class="btn btn-sm btn-outline-primary edit-po"
-                                               data-id="${po.id}"
-                                               data-po="${po.po_no}"
-                                               data-date="${po.date_of_order}"
-                                               data-units="${po.no_of_units}"
-                                               data-item="${po.item_specifications}">
-                                                <i class="bi bi-pencil-square"></i> Edit
-                                            </a>
-                                            <a class="btn btn-sm btn-outline-danger delete-po"
-                                               data-id="${po.id}"
-                                               href="#">
-                                                <i class="bi bi-trash"></i> Delete
-                                            </a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            `;
-                            });
-                            $('#purchaseTable tbody').html(tableBody || '<tr><td colspan="7">No Purchase Orders found.</td></tr>');
-                        } else {
-                            showToast('Error filtering data: ' + data.message, 'error');
-                        }
-                    } catch (e) {
-                        console.error('Error parsing response:', e);
-                        showToast('Error processing response', 'error');
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('AJAX Error:', error);
-                    showToast('Error filtering data', 'error');
+            
+            // Store message for filters
+            storeToastMessage('Applying filters...', 'info');
+            
+            // Store the filter settings in sessionStorage so they persist through page reload
+            sessionStorage.setItem('filterType', type);
+            sessionStorage.setItem('filterParams', JSON.stringify(params));
+            
+            // Reload page with the filter parameters in the URL
+            let url = 'purchase_order.php?action=filter&type=' + type;
+            for (const key in params) {
+                if (params[key]) {
+                    url += '&' + key + '=' + encodeURIComponent(params[key]);
                 }
-            });
+            }
+            window.location.href = url + '&t=' + new Date().getTime();
         }
 
         // Reset filter when empty option is selected
