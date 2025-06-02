@@ -1099,11 +1099,32 @@ function safeHtml($value)
             });
 
             $('#clearFilters').on('click', function() {
-                $('#dateFilter').val('');
-                $('#dateInputsContainer input').val('');
+                // Reset building filter to 'all'
+                $('#filterBuilding').val('all').trigger('change');
+                // Reset date filter to default (empty)
+                $('#dateFilter').val('').trigger('change');
+                // Explicitly clear all advanced date inputs
+                $('#dateFrom').val('');
+                $('#dateTo').val('');
+                $('#monthFrom').val('');
+                $('#monthTo').val('');
+                $('#yearFrom').val('');
+                $('#yearTo').val('');
+                $('#monthYearFrom').val('');
+                $('#monthYearTo').val('');
+                // Hide all date input containers
                 $('#dateInputsContainer .date-group').addClass('d-none');
                 $('#dateInputsContainer').hide();
+                // Clear search bar
+                $('#eqSearch').val('');
+                // Reset filteredRows to allRows so all data is shown
+                window.filteredRows = window.allRows;
+                window.currentPage = 1;
+                // Show all rows
+                $('#locationTbody tr').show();
+                // Refresh table and pagination
                 filterTable();
+                if (typeof updatePagination === 'function') updatePagination();
             });
 
             // Update filterTable to support new date filter types
