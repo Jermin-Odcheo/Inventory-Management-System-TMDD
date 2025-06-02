@@ -39,14 +39,35 @@ $filterValues = [
     'device_state' => []
 ];
 
+// Arrays to track lowercase values to avoid duplicates with different cases
+$caseInsensitiveTracker = [
+    'building_loc' => [],
+    'floor_n' => [],
+    'specific_area' => [],
+    'device_state' => []
+];
+
 $filterQuery = "SELECT NewVal FROM audit_log WHERE Module = 'Equipment Location' AND Status = 'Successful' AND Action IN ('modified', 'create')";
 $filterStmt = $pdo->prepare($filterQuery);
 $filterStmt->execute();
 while ($row = $filterStmt->fetch(PDO::FETCH_ASSOC)) {
     $values = json_decode($row['NewVal'], true);
     foreach ($filterValues as $key => &$arr) {
-        if (!empty($values[$key]) && !in_array($values[$key], $arr)) {
-            $arr[] = $values[$key];
+        if (!empty($values[$key])) {
+            // For device_state, use case-insensitive comparison
+            $lowerCaseValue = strtolower($values[$key]);
+            
+            // Check if we've already seen this value (case-insensitive)
+            if (!in_array($lowerCaseValue, $caseInsensitiveTracker[$key])) {
+                // Capitalize first letter for device_state
+                if ($key === 'device_state') {
+                    $formattedValue = ucfirst(strtolower($values[$key]));
+                    $arr[] = $formattedValue;
+                } else {
+                    $arr[] = $values[$key];
+                }
+                $caseInsensitiveTracker[$key][] = $lowerCaseValue;
+            }
         }
     }
 }
@@ -382,7 +403,8 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 if (buildingLocFilter && newValuesJson.building_loc !== buildingLocFilter) match = false;
                 if (floorNFilter && newValuesJson.floor_n !== floorNFilter) match = false;
                 if (specificAreaFilter && newValuesJson.specific_area !== specificAreaFilter) match = false;
-                if (deviceStateFilter && newValuesJson.device_state !== deviceStateFilter) match = false;
+                if (deviceStateFilter && (newValuesJson.device_state !== deviceStateFilter && 
+                                         newValuesJson.device_state?.toLowerCase() !== deviceStateFilter.toLowerCase())) match = false;
 
                 // Apply search filter across all relevant fields
                 if (searchFilter && match) {
