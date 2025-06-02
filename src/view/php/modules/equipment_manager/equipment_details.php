@@ -2461,6 +2461,9 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                             submitBtn.prop('disabled', false).text(originalBtnText);
                             if (result.status === 'success') {
                                 $('#editEquipmentModal').modal('hide');
+                                // Remove any lingering backdrop
+                                $('.modal-backdrop').remove();
+                                $('body').removeClass('modal-open').css('padding-right', '');
                                 showToast(result.message || 'Equipment updated successfully', 'success');
                                 // Reload the table section only
                                 $('#edTable').load(location.href + ' #edTable > *', function() {
@@ -2479,6 +2482,60 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                     error: function(xhr, status, error) {
                         submitBtn.prop('disabled', false).text(originalBtnText);
                         showToast('Error updating equipment.', 'error');
+                    }
+                });
+            });
+            
+            // Add Equipment AJAX submit with toast
+            $('#addEquipmentForm').on('submit', function(e) {
+                e.preventDefault();
+                var $form = $(this);
+                var submitBtn = $form.find('button[type="submit"]');
+                var originalBtnText = submitBtn.text();
+                submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Creating...');
+                
+                $.ajax({
+                    url: '../../modules/equipment_manager/equipment_details.php',
+                    method: 'POST',
+                    data: $form.serialize(),
+                    dataType: 'json',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    success: function(response) {
+                        try {
+                            submitBtn.prop('disabled', false).text(originalBtnText);
+                            if (response.status === 'success') {
+                                $('#addEquipmentModal').modal('hide');
+                                // Remove any lingering backdrop
+                                $('.modal-backdrop').remove();
+                                $('body').removeClass('modal-open').css('padding-right', '');
+                                
+                                $form[0].reset();
+                                $('#add_equipment_asset_tag').val(null).trigger('change');
+                                $('#add_rr_no').val(null).trigger('change');
+                                
+                                showToast(response.message || 'Equipment created successfully', 'success');
+                                
+                                // Reload the table section only
+                                $('#edTable').load(location.href + ' #edTable > *', function() {
+                                    window.allRows = $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').toArray();
+                                    window.filteredRows = [...window.allRows];
+                                    if (typeof filterEquipmentTable === 'function') filterEquipmentTable();
+                                });
+                            } else {
+                                showToast(response.message || 'Failed to create equipment.', 'error');
+                            }
+                        } catch (e) {
+                            console.error('Error processing response:', e);
+                            submitBtn.prop('disabled', false).text(originalBtnText);
+                            showToast('Error processing the request', 'error');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('AJAX Error:', xhr.responseText);
+                        submitBtn.prop('disabled', false).text(originalBtnText);
+                        showToast('Error creating equipment.', 'error');
                     }
                 });
             });
@@ -2506,6 +2563,10 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                     success: function(response) {
                         if (response.status === 'success') {
                             $('#deleteEDModal').modal('hide');
+                            // Remove any lingering backdrop
+                            $('.modal-backdrop').remove();
+                            $('body').removeClass('modal-open').css('padding-right', '');
+                            
                             showToast(response.message || 'Equipment removed successfully', 'success');
                             // Reload the table section only
                             $('#edTable').load(location.href + ' #edTable > *', function() {
