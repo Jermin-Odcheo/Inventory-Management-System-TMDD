@@ -648,6 +648,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -661,11 +662,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 
     <style>
         th.sortable.asc::after {
-            content: " \2191"; /* Unicode up arrow */
+            content: " \2191";
+            /* Unicode up arrow */
         }
 
         th.sortable.desc::after {
-            content: " \2193"; /* Unicode down arrow */
+            content: " \2193";
+            /* Unicode down arrow */
         }
 
 
@@ -760,39 +763,39 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
         .select2-container--open .select2-dropdown {
             z-index: 9999 !important;
         }
-        
+
         /* Make Select2 match Bootstrap form-control height */
         .select2-container .select2-selection {
             min-height: 38px !important;
         }
-        
+
         /* Fix padding for the select2 input */
         .select2-container--default .select2-selection--single .select2-selection__rendered {
             padding-top: 2px;
         }
-        
+
         /* Adjust the clear button position */
         .select2-container--default .select2-selection--single .select2-selection__clear {
             margin-right: 20px;
         }
-        
+
         /* Make the dropdown match Bootstrap styling */
         .select2-dropdown {
             border-color: #ced4da;
             border-radius: 0.375rem;
         }
-        
+
         /* Make the search field match Bootstrap input */
         .select2-container--default .select2-search--dropdown .select2-search__field {
             border: 1px solid #ced4da;
             border-radius: 0.25rem;
             padding: 0.375rem 0.75rem;
         }
-        
+
         .filtered-out {
             display: none !important;
         }
-        
+
         /* Style for highlighting updated rows */
         .updated-row {
             animation: highlight-row 3s ease-in-out;
@@ -811,12 +814,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                 background-color: transparent;
             }
         }
-        
+
         /* Filter form styles */
         #equipmentFilterForm .row {
             margin-bottom: 10px;
         }
-        
+
         #dateInputsContainer {
             padding-top: 10px;
             padding-bottom: 10px;
@@ -951,7 +954,7 @@ align-items-center">
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <!-- Year Range Selector -->
                             <div class="col-md-6 date-filter date-year_range d-none">
                                 <div class="row">
@@ -979,7 +982,7 @@ align-items-center">
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <!-- Date Range Picker -->
                             <div class="col-md-6 date-filter date-range d-none">
                                 <div class="row">
@@ -993,7 +996,7 @@ align-items-center">
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <!-- MDY Picker -->
                             <div class="col-md-6 date-filter date-mdy d-none">
                                 <div class="row">
@@ -1070,8 +1073,10 @@ align-items-center">
                                         <td><?= safeHtml($equipment['brand']); ?></td>
                                         <td><?= safeHtml($equipment['model']); ?></td>
                                         <td><?= safeHtml($equipment['serial_number']); ?></td>
-                                        <td><?= !empty($equipment['date_acquired']) ? date('Y-m-d', 
-strtotime($equipment['date_acquired'])) : ''; ?></td>
+                                        <td><?= !empty($equipment['date_acquired']) ? date(
+                                                'Y-m-d',
+                                                strtotime($equipment['date_acquired'])
+                                            ) : ''; ?></td>
                                         <td><?= !empty($equipment['date_created']) ? date('Y-m-d 
 H:i', strtotime($equipment['date_created'])) : ''; ?></td>
                                         <td><?= !empty($equipment['date_modified']) ? date('Y-m-d 
@@ -1102,7 +1107,7 @@ edit-equipment"
                                                         data-serial="<?=
                                                                         safeHtml($equipment['serial_number']); ?>"
                                                         data-date-acquired="<?=
-                                                                        safeHtml($equipment['date_acquired']); ?>"
+                                                                            safeHtml($equipment['date_acquired']); ?>"
                                                         data-location="<?=
                                                                         safeHtml($equipment['location']); ?>"
                                                         data-accountable="<?=
@@ -1452,7 +1457,9 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                             <textarea class="form-control" name="remarks" id="edit_remarks"
                                 rows="3"></textarea>
                         </div>
-                        <div class="mb-3">
+                        <div class="mb-3 text-end">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                                style="margin-right: 4px;">Cancel</button>
                             <button type="submit" class="btn btn-primary">Save Changes</button>
                         </div>
                     </form>
@@ -1518,7 +1525,7 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
             }).on('select2:select', function(e) {
                 var rrNo = e.params.data.id;
                 var isNewOption = e.params.data.newOption;
-                
+
                 // If this is a newly created option (doesn't exist in the database)
                 if (isNewOption || !e.params.data.element) {
                     // Create a new RR entry in the database
@@ -1553,7 +1560,7 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                     fetchRRInfo(rrNo, 'add', true);
                 }
             });
-            
+
             $('#edit_rr_no').select2({
                 placeholder: 'Select or search RR Number',
                 allowClear: true,
@@ -1581,7 +1588,7 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
             }).on('select2:select', function(e) {
                 var rrNo = e.params.data.id;
                 var isNewOption = e.params.data.newOption;
-                
+
                 // If this is a newly created option (doesn't exist in the database)
                 if (isNewOption || !e.params.data.element) {
                     // Create a new RR entry in the database
@@ -1616,19 +1623,19 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                     fetchRRInfo(rrNo, 'edit', true);
                 }
             });
-            
+
             // Initialize Select2 for asset tag dropdowns
             $('#add_equipment_asset_tag').select2({
                 placeholder: 'Select or type Asset Tag',
                 allowClear: true,
                 width: '100%',
-                tags: true,  // This allows adding new tags/values
+                tags: true, // This allows adding new tags/values
                 dropdownParent: $('#addEquipmentModal'),
                 minimumResultsForSearch: 0,
                 createTag: function(params) {
                     var term = $.trim(params.term);
                     if (term === '') return null;
-                    
+
                     // Check if this tag already exists
                     var exists = false;
                     $('#add_equipment_asset_tag option').each(function() {
@@ -1636,7 +1643,7 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                             exists = true;
                         }
                     });
-                    
+
                     // If it doesn't exist, allow creating it
                     return exists ? null : {
                         id: term,
@@ -1646,24 +1653,24 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                 }
             }).on('select2:select', function(e) {
                 var assetTag = e.params.data.id;
-                
+
                 // If this is a valid asset tag, try to fetch related info
                 if (assetTag) {
                     console.log('Asset tag selected in add modal:', assetTag);
-                    
+
                     // Reset fields before fetching new asset tag info
                     const $accountableField = $('input[name="accountable_individual"]');
                     const $locationField = $('input[name="location"]');
-                    
+
                     // If fields were previously autofilled, reset them first
                     if ($accountableField.attr('data-autofill') === 'true') {
                         $accountableField.val('').prop('readonly', false).attr('data-autofill', 'false').removeClass('bg-light');
                     }
-                    
+
                     if ($locationField.attr('data-autofill') === 'true') {
                         $locationField.val('').prop('readonly', false).attr('data-autofill', 'false').removeClass('bg-light');
                     }
-                    
+
                     // Only fetch info if this is a pre-existing tag
                     if (!e.params.data.newTag) {
                         // Fetch and autofill data based on asset tag
@@ -1671,7 +1678,7 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                     }
                 }
             });
-            
+
             $('#edit_equipment_asset_tag').select2({
                 placeholder: 'Select or type Asset Tag',
                 allowClear: true,
@@ -1682,7 +1689,7 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                 createTag: function(params) {
                     var term = $.trim(params.term);
                     if (term === '') return null;
-                    
+
                     // Check if this tag already exists
                     var exists = false;
                     $('#edit_equipment_asset_tag option').each(function() {
@@ -1690,7 +1697,7 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                             exists = true;
                         }
                     });
-                    
+
                     // If it doesn't exist, allow creating it
                     return exists ? null : {
                         id: term,
@@ -1700,24 +1707,24 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                 }
             }).on('select2:select', function(e) {
                 var assetTag = e.params.data.id;
-                
+
                 // If this is a valid asset tag, try to fetch related info
                 if (assetTag) {
                     console.log('Asset tag selected in edit modal:', assetTag);
-                    
+
                     // Reset fields before fetching new asset tag info
                     const $accountableField = $('#edit_accountable_individual');
                     const $locationField = $('#edit_location');
-                    
+
                     // If fields were previously autofilled, reset them first
                     if ($accountableField.attr('data-autofill') === 'true') {
                         $accountableField.val('').attr('data-autofill', 'false');
                     }
-                    
+
                     if ($locationField.attr('data-autofill') === 'true') {
                         $locationField.val('').attr('data-autofill', 'false');
                     }
-                    
+
                     // Only fetch info if this is a pre-existing tag
                     if (!e.params.data.newTag) {
                         // Fetch and autofill data based on asset tag
@@ -1731,24 +1738,24 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
         // Custom filterTable function for equipment details
         function filterEquipmentTable() {
             console.log('----------- CUSTOM FILTER FUNCTION CALLED -----------');
-            
+
             // Get filter values
             const searchText = $('#searchEquipment').val() || '';
             const filterEquipment = $('#filterEquipment').val() || '';
             const dateFilterType = $('#dateFilter').val() || '';
-            
+
             // Month-Year filter values
             const selectedMonth = $('#monthSelect').val() || '';
             const selectedYear = $('#yearSelect').val() || '';
-            
+
             // Date Range filter values
             const dateFrom = $('#dateFrom').val() || '';
             const dateTo = $('#dateTo').val() || '';
-            
+
             // Year Range filter values
             const yearFrom = $('#yearFrom').val() || '';
             const yearTo = $('#yearTo').val() || '';
-            
+
             // MDY filter values
             const mdyMonth = $('#mdyMonth').val() || '';
             const mdyDay = $('#mdyDay').val() || '';
@@ -1773,65 +1780,65 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
             // Get all table rows directly
             const tableRows = $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').toArray();
             console.log(`Total rows in table: ${tableRows.length}`);
-            
+
             // If no rows, show message and exit
             if (tableRows.length === 0) {
                 console.log('No rows found in table');
                 return;
             }
-            
+
             // Create filtered array
             const filteredRows = [];
-            
+
             // Apply filters to each row
             tableRows.forEach((row, index) => {
                 // Skip non-data rows (like messages)
                 if (row.id === 'noResultsMessage' || row.id === 'initialFilterMessage') {
                     return;
                 }
-                
+
                 try {
                     // Get all cells in the row
                     const cells = Array.from(row.cells || []);
-                    
+
                     if (cells.length === 0) {
                         console.log(`Row ${index} has no cells`);
                         return;
                     }
-                    
+
                     // Extract text content from all cells for easier access
                     const cellTexts = [];
                     let equipmentTypeText = '';
                     let dateText = '';
-                    
+
                     // Process each cell
                     cells.forEach((cell, cellIndex) => {
                         const text = (cell.textContent || '').trim();
                         cellTexts.push(text.toLowerCase());
-                        
+
                         // Store important column values
                         if (cellIndex === 2) equipmentTypeText = text.toLowerCase(); // Equipment Type (Col 3)
                         if (cellIndex === 9) dateText = text; // Created Date (Col 10)
                     });
-                    
+
                     // Full row text for search
                     const rowText = cellTexts.join(' ');
-                    
+
                     // 1. SEARCH FILTER - Check if search text is in any cell
                     const searchMatch = !searchText || rowText.includes(searchText.toLowerCase());
-                    
+
                     // 2. EQUIPMENT TYPE FILTER - Check equipment type
                     let equipmentMatch = true;
                     if (filterEquipment && filterEquipment !== '') {
                         const filterValue = filterEquipment.toLowerCase();
                         equipmentMatch = equipmentTypeText === filterValue;
-                        
+
                         // Debug for first few rows
                         if (index < 5) {
                             console.log(`Row ${index} equipment: "${equipmentTypeText}" vs filter: "${filterValue}" = ${equipmentMatch}`);
                         }
                     }
-                    
+
                     // 3. DATE FILTER - Apply date filter if selected
                     let dateMatch = true;
                     if (dateFilterType && dateText) {
@@ -1866,40 +1873,40 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                                 const month = date.getMonth() + 1;
                                 const day = date.getDate();
                                 const year = date.getFullYear();
-                                dateMatch = (month === parseInt(mdyMonth)) && 
-                                           (day === parseInt(mdyDay)) && 
-                                           (year === parseInt(mdyYear));
+                                dateMatch = (month === parseInt(mdyMonth)) &&
+                                    (day === parseInt(mdyDay)) &&
+                                    (year === parseInt(mdyYear));
                                 if (index < 5) {
                                     console.log(`Row ${index} MDY filter: ${month}/${day}/${year} vs ${mdyMonth}/${mdyDay}/${mdyYear} = ${dateMatch}`);
                                 }
                             }
                         }
                     }
-                    
+
                     // Final decision - row should be shown if it matches all filters
                     const shouldShow = searchMatch && equipmentMatch && dateMatch;
-                    
+
                     if (shouldShow) {
                         filteredRows.push(row);
                         $(row).show();
                     } else {
                         $(row).hide();
                     }
-                    
+
                 } catch (error) {
                     console.error(`Error processing row ${index}:`, error);
                 }
             });
-            
+
             console.log(`Filtered rows: ${filteredRows.length} of ${tableRows.length}`);
-            
+
             // Hide all rows first
             $(tableRows).hide();
-            
+
             // Store filtered rows in global variable for pagination
             window.allRows = tableRows;
             window.filteredRows = filteredRows;
-            
+
             // Sort if needed (date ascending/descending)
             if (dateFilterType === 'asc' || dateFilterType === 'desc') {
                 filteredRows.sort((a, b) => {
@@ -1907,39 +1914,39 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                     const dateB = b.cells && b.cells[9] ? new Date(b.cells[9].textContent || '') : new Date(0);
                     return dateFilterType === 'asc' ? dateA - dateB : dateB - dateA;
                 });
-                
+
                 // Re-order the DOM elements based on sort
                 const tbody = document.getElementById('equipmentTable');
                 filteredRows.forEach(row => {
                     tbody.appendChild(row); // Move to the end in sorted order
                 });
             }
-            
+
             // Reset to page 1 after filtering
             window.currentPage = 1;
-            
+
             // Initialize or reset pagination with the filtered rows
             const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
             const totalRows = window.filteredRows.length;
             const totalPages = Math.ceil(totalRows / rowsPerPage);
-            
+
             // Update display counts
             $('#currentPage').text(window.currentPage);
             $('#rowsPerPage').text(rowsPerPage);
             $('#totalRows').text(totalRows);
-            
+
             // Rebuild pagination UI
             buildPaginationButtons(totalPages);
             updatePaginationButtons();
-            
+
             // Show only the rows for the current page
             showCurrentPageRows();
-            
+
             // Show "no results" message if no matches found
             if (filteredRows.length === 0) {
                 // Remove any existing no results message
                 $('#noResultsMessage').remove();
-                
+
                 // Create and insert a "no results" message
                 const tbody = document.getElementById('equipmentTable');
                 const noResultsRow = document.createElement('tr');
@@ -1957,75 +1964,75 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                 // Remove any "no results" message if we have matches
                 $('#noResultsMessage').remove();
             }
-            
+
             console.log('----------- CUSTOM FILTER FUNCTION COMPLETED -----------');
-            
+
             return filteredRows;
         }
-        
+
         // Initialize pagination
         function initPagination() {
             // Get pagination configuration
             const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
             const totalRows = window.filteredRows ? window.filteredRows.length : 0;
             const totalPages = Math.ceil(totalRows / rowsPerPage);
-            
+
             // Set current page to 1 when initializing (if not already set)
             window.currentPage = window.currentPage || 1;
-            
+
             // If current page is beyond total pages, reset to page 1
             if (window.currentPage > totalPages && totalPages > 0) {
                 window.currentPage = 1;
             }
-            
+
             // Update display counts
             $('#currentPage').text(window.currentPage);
             $('#rowsPerPage').text(rowsPerPage);
             $('#totalRows').text(totalRows);
-            
+
             // Update pagination buttons
             updatePaginationButtons();
-            
+
             // Build page number buttons
             buildPaginationButtons(totalPages);
-            
+
             // Show only the rows for the current page
             showCurrentPageRows();
-            
+
             console.log(`Pagination initialized: ${totalRows} rows, ${rowsPerPage} per page, ${totalPages} total pages, current page: ${window.currentPage}`);
         }
-        
+
         // Update the Previous/Next button states
         function updatePaginationButtons() {
             const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
             const totalPages = Math.ceil(window.filteredRows.length / rowsPerPage);
-            
+
             // Disable/enable Previous button
             $('#prevPage').prop('disabled', window.currentPage <= 1);
-            
+
             // Disable/enable Next button
             $('#nextPage').prop('disabled', window.currentPage >= totalPages);
         }
-        
+
         // Build the pagination number buttons
         function buildPaginationButtons(totalPages) {
             const $pagination = $('#pagination');
             $pagination.empty();
-            
+
             // No need for pagination if only one page
             if (totalPages <= 1) {
                 return;
             }
-            
+
             // Calculate range of pages to show
             let startPage = Math.max(1, window.currentPage - 2);
             let endPage = Math.min(totalPages, startPage + 4);
-            
+
             // Adjust start if end is maxed out
             if (endPage === totalPages) {
                 startPage = Math.max(1, endPage - 4);
             }
-            
+
             // Add "First" button if not on first page
             if (window.currentPage > 1) {
                 $pagination.append(`
@@ -2034,7 +2041,7 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                     </li>
                 `);
             }
-            
+
             // Add "Previous" page button
             if (window.currentPage > 1) {
                 $pagination.append(`
@@ -2043,12 +2050,12 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                     </li>
                 `);
             }
-            
+
             // Add ellipsis if needed at start
             if (startPage > 1) {
                 $pagination.append('<li class="page-item disabled"><span class="page-link">...</span></li>');
             }
-            
+
             // Add page numbers
             for (let i = startPage; i <= endPage; i++) {
                 $pagination.append(`
@@ -2057,12 +2064,12 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                     </li>
                 `);
             }
-            
+
             // Add ellipsis if needed at end
             if (endPage < totalPages) {
                 $pagination.append('<li class="page-item disabled"><span class="page-link">...</span></li>');
             }
-            
+
             // Add "Next" page button
             if (window.currentPage < totalPages) {
                 $pagination.append(`
@@ -2071,7 +2078,7 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                     </li>
                 `);
             }
-            
+
             // Add "Last" button if not on last page
             if (window.currentPage < totalPages) {
                 $pagination.append(`
@@ -2080,7 +2087,7 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                     </li>
                 `);
             }
-            
+
             // Add click handlers to page number buttons
             $('.page-link[data-page]').on('click', function(e) {
                 e.preventDefault();
@@ -2088,37 +2095,37 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                 goToPage(page);
             });
         }
-        
+
         // Go to a specific page
         function goToPage(page) {
             const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
             const totalPages = Math.ceil(window.filteredRows.length / rowsPerPage);
-            
+
             // Validate page number
             if (page < 1 || page > totalPages) {
                 return;
             }
-            
+
             // Update current page
             window.currentPage = page;
-            
+
             // Update display
             $('#currentPage').text(window.currentPage);
-            
+
             // Update buttons
             updatePaginationButtons();
             buildPaginationButtons(totalPages);
-            
+
             // Show rows for the current page
             showCurrentPageRows();
         }
-        
+
         // Show only the rows for the current page
         function showCurrentPageRows() {
             const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
             const startIndex = (window.currentPage - 1) * rowsPerPage;
             const endIndex = startIndex + rowsPerPage;
-            
+
             // Ensure filteredRows exists
             if (!window.filteredRows || window.filteredRows.length === 0) {
                 console.log('No filtered rows to display');
@@ -2126,17 +2133,17 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                 $('#noResultsMessage').show();
                 return;
             }
-            
+
             console.log(`Showing rows ${startIndex+1} to ${Math.min(endIndex, window.filteredRows.length)} of ${window.filteredRows.length} (Page ${window.currentPage})`);
-            
+
             // Hide all rows first
             $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').hide();
-            
+
             // Show only the rows for the current page
             window.filteredRows.slice(startIndex, endIndex).forEach(row => {
                 $(row).show();
             });
-            
+
             // Make sure "no results" message is visible if present
             $('#noResultsMessage').show();
         }
@@ -2144,29 +2151,29 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
         // Setup events when document is ready
         $(document).ready(function() {
             console.log('Document ready - initializing equipment filters');
-            
+
             // Initialize with all rows visible
             window.allRows = $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').toArray();
             window.filteredRows = [...window.allRows];
             window.currentPage = 1;
-            
+
             // Initialize pagination
             initPagination();
-            
+
             // Ensure pagination shows only first page on initial load and builds pagination buttons
             setTimeout(function() {
                 const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
                 const totalRows = window.filteredRows.length;
                 const totalPages = Math.ceil(totalRows / rowsPerPage);
-                
+
                 // Force rebuild pagination buttons
                 buildPaginationButtons(totalPages);
                 showCurrentPageRows();
                 updatePaginationButtons();
-                
+
                 console.log('Enforced pagination on initial load - Total pages:', totalPages);
             }, 300);
-            
+
             // Apply Filter button click handler
             $('#applyFilters').off('click').on('click', function(e) {
                 e.preventDefault();
@@ -2178,72 +2185,72 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
             $('#clearFilters').off('click').on('click', function(e) {
                 e.preventDefault();
                 console.log('Clear button clicked - resetting filters');
-                
+
                 // Reset all filter inputs
                 $('#searchEquipment').val('');
-                
+
                 // Reset select2 dropdown
                 if ($('#filterEquipment').data('select2')) {
                     $('#filterEquipment').val(null).trigger('change');
                 } else {
                     $('#filterEquipment').val('');
                 }
-                
+
                 // Reset Date Filter
                 $('#dateFilter').val('');
-                
+
                 // Reset Month-Year values
                 $('#monthSelect').val('');
                 $('#yearSelect').val('');
-                
+
                 // Reset Date Range values
                 $('#dateFrom').val('');
                 $('#dateTo').val('');
-                
+
                 // Reset Year Range values
                 $('#yearFrom').val('');
                 $('#yearTo').val('');
-                
+
                 // Reset MDY values
                 $('#mdyMonth').val('');
                 $('#mdyDay').val('');
                 $('#mdyYear').val('');
-                
+
                 // Hide date inputs container
                 $('#dateInputsContainer').addClass('d-none');
                 $('.date-filter').addClass('d-none');
-                
+
                 // Reset to show all rows (unfiltered state)
                 $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').show();
-                
+
                 // Remove any "no results" message
                 $('#noResultsMessage').remove();
-                
+
                 // Reset the filtered rows to include all rows
                 window.allRows = $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').toArray();
                 window.filteredRows = [...window.allRows];
-                
+
                 // Reset to page 1
                 window.currentPage = 1;
-                
+
                 // Update display counts
                 const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
                 const totalRows = window.filteredRows.length;
                 $('#currentPage').text(window.currentPage);
                 $('#rowsPerPage').text(rowsPerPage);
                 $('#totalRows').text(totalRows);
-                
+
                 // Rebuild pagination with all rows
                 const totalPages = Math.ceil(totalRows / rowsPerPage);
                 buildPaginationButtons(totalPages);
                 updatePaginationButtons();
-                
+
                 // Show only the first page of rows
                 showCurrentPageRows();
-                
+
                 console.log('Filters cleared, showing all rows');
             });
-            
+
             // Previous page button
             $('#prevPage').on('click', function(e) {
                 e.preventDefault();
@@ -2251,7 +2258,7 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                     goToPage(window.currentPage - 1);
                 }
             });
-            
+
             // Next page button
             $('#nextPage').on('click', function(e) {
                 e.preventDefault();
@@ -2261,7 +2268,7 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                     goToPage(window.currentPage + 1);
                 }
             });
-            
+
             // Rows per page select
             $('#rowsPerPageSelect').on('change', function() {
                 // Reset to page 1 when changing rows per page
@@ -2281,7 +2288,7 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                 // Show appropriate containers based on selection
                 if (filterType) {
                     $('#dateInputsContainer').removeClass('d-none');
-                    
+
                     // Show specific date input based on filter type
                     if (filterType === 'month_year') {
                         $('.date-month_year').removeClass('d-none');
@@ -2294,7 +2301,7 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                     }
                 }
             });
-            
+
             // Initialize Select2 for equipment type filter
             try {
                 if ($.fn.select2) {
@@ -2309,19 +2316,19 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                     }).on('select2:unselect', function() {
                         console.log('Equipment type filter cleared');
                     });
-                    
+
                     console.log('Select2 initialized for equipment filter');
                 }
             } catch (e) {
                 console.error('Error initializing Select2:', e);
             }
-            
+
             // Set up column sorting
             $('.sortable').on('click', function() {
                 const columnIndex = parseInt($(this).data('column'));
                 const currentSortState = $(this).hasClass('asc') ? 'asc' : ($(this).hasClass('desc') ? 'desc' : '');
                 let newSortState = '';
-                
+
                 // Toggle sort direction or start with ascending
                 if (currentSortState === '') {
                     newSortState = 'asc';
@@ -2330,30 +2337,30 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                 } else {
                     newSortState = 'asc'; // Toggle back to ascending
                 }
-                
+
                 // Update sort indicators (remove from all columns, add to current column)
                 $('.sortable').removeClass('asc desc');
                 $(this).addClass(newSortState);
-                
+
                 console.log(`Sorting column ${columnIndex} in ${newSortState} order`);
-                
+
                 // Sort the filtered rows
                 window.filteredRows.sort(function(a, b) {
                     const aText = a.cells[columnIndex] ? (a.cells[columnIndex].textContent || '').trim() : '';
                     const bText = b.cells[columnIndex] ? (b.cells[columnIndex].textContent || '').trim() : '';
-                    
+
                     // Check if this is a date column (date formats like YYYY-MM-DD or YYYY-MM-DD HH:MM)
                     const isDate = /^\d{4}-\d{2}-\d{2}/.test(aText) || /^\d{4}-\d{2}-\d{2}/.test(bText);
-                    
+
                     // Check if this is a numeric column
                     const aNum = parseFloat(aText.replace(/[^\d.-]/g, ''));
                     const bNum = parseFloat(bText.replace(/[^\d.-]/g, ''));
-                    const isNumeric = !isNaN(aNum) && !isNaN(bNum) && 
-                                      aText.replace(/[^\d.-]/g, '') !== '' && 
-                                      bText.replace(/[^\d.-]/g, '') !== '';
-                    
+                    const isNumeric = !isNaN(aNum) && !isNaN(bNum) &&
+                        aText.replace(/[^\d.-]/g, '') !== '' &&
+                        bText.replace(/[^\d.-]/g, '') !== '';
+
                     let comparison = 0;
-                    
+
                     if (isDate) {
                         // Handle dates - convert to timestamps for comparison
                         const dateA = new Date(aText);
@@ -2366,95 +2373,140 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                         // Handle strings (case-insensitive)
                         comparison = aText.toLowerCase().localeCompare(bText.toLowerCase());
                     }
-                    
+
                     // Apply sort direction
                     return newSortState === 'asc' ? comparison : -comparison;
                 });
-                
+
                 // Re-order the table rows in the DOM based on the new sort order
                 const tbody = document.getElementById('equipmentTable');
                 window.filteredRows.forEach(row => {
                     tbody.appendChild(row);
                 });
-                
+
                 // Reset to page 1 after sorting
                 window.currentPage = 1;
-                
+
                 // Update UI to reflect changes
                 $('#currentPage').text(window.currentPage);
-                
+
                 // Rebuild pagination
                 const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
                 const totalPages = Math.ceil(window.filteredRows.length / rowsPerPage);
                 buildPaginationButtons(totalPages);
                 updatePaginationButtons();
-                
+
                 // Show only the rows for current page
                 showCurrentPageRows();
             });
-            
+
             console.log('Equipment filters initialization complete');
         });
     </script>
     <script>
-    $(document).ready(function() {
-        // Edit Equipment
-        $(document).on('click', '.edit-equipment', function() {
-            var id = $(this).data('id');
-            var asset = $(this).data('asset');
-            var desc1 = $(this).data('desc1');
-            var desc2 = $(this).data('desc2');
-            var spec = $(this).data('spec');
-            var brand = $(this).data('brand');
-            var model = $(this).data('model');
-            var serial = $(this).data('serial');
-            var dateAcquired = $(this).data('date-acquired');
-            var location = $(this).data('location');
-            var accountable = $(this).data('accountable');
-            var rr = $(this).data('rr');
-            var remarks = $(this).data('remarks');
+        $(document).ready(function() {
+            // Edit Equipment
+            $(document).on('click', '.edit-equipment', function() {
+                var id = $(this).data('id');
+                var asset = $(this).data('asset');
+                var desc1 = $(this).data('desc1');
+                var desc2 = $(this).data('desc2');
+                var spec = $(this).data('spec');
+                var brand = $(this).data('brand');
+                var model = $(this).data('model');
+                var serial = $(this).data('serial');
+                var dateAcquired = $(this).data('date-acquired');
+                var location = $(this).data('location');
+                var accountable = $(this).data('accountable');
+                var rr = $(this).data('rr');
+                var remarks = $(this).data('remarks');
 
-            // Ensure asset tag is present in the dropdown
-            var $assetTagSelect = $('#edit_equipment_asset_tag');
-            if ($assetTagSelect.find('option[value="' + asset + '"]').length === 0) {
-                $assetTagSelect.append('<option value="' + $('<div>').text(asset).html() + '">' + $('<div>').text(asset).html() + '</option>');
-            }
-            $assetTagSelect.val(asset).trigger('change');
+                // Ensure asset tag is present in the dropdown
+                var $assetTagSelect = $('#edit_equipment_asset_tag');
+                if ($assetTagSelect.find('option[value="' + asset + '"]').length === 0) {
+                    $assetTagSelect.append('<option value="' + $('<div>').text(asset).html() + '">' + $('<div>').text(asset).html() + '</option>');
+                }
+                $assetTagSelect.val(asset).trigger('change');
 
-            $('#edit_equipment_id').val(id);
-            $('#edit_asset_description_1').val(desc1);
-            $('#edit_asset_description_2').val(desc2);
-            $('#edit_specifications').val(spec);
-            $('#edit_brand').val(brand);
-            $('#edit_model').val(model);
-            $('#edit_serial_number').val(serial);
-            $('#edit_date_acquired').val(dateAcquired);
-            $('#edit_location').val(location);
-            $('#edit_accountable_individual').val(accountable);
-            $('#edit_rr_no').val(rr).trigger('change');
-            $('#edit_remarks').val(remarks);
+                $('#edit_equipment_id').val(id);
+                $('#edit_asset_description_1').val(desc1);
+                $('#edit_asset_description_2').val(desc2);
+                $('#edit_specifications').val(spec);
+                $('#edit_brand').val(brand);
+                $('#edit_model').val(model);
+                $('#edit_serial_number').val(serial);
+                $('#edit_date_acquired').val(dateAcquired);
+                $('#edit_location').val(location);
+                $('#edit_accountable_individual').val(accountable);
+                $('#edit_rr_no').val(rr).trigger('change');
+                $('#edit_remarks').val(remarks);
 
-            $('#editEquipmentModal').modal('show');
-        });
+                $('#editEquipmentModal').modal('show');
+            });
 
-        // Edit Equipment AJAX submit with toast
-        $('#editEquipmentForm').on('submit', function(e) {
-            e.preventDefault();
-            var $form = $(this);
-            var submitBtn = $form.find('button[type="submit"]');
-            var originalBtnText = submitBtn.text();
-            submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...');
-            $.ajax({
-                url: '../../modules/equipment_manager/equipment_details.php',
-                method: 'POST',
-                data: $form.serialize(),
-                success: function(response) {
-                    try {
-                        var result = typeof response === 'object' ? response : JSON.parse(response);
+            // Edit Equipment AJAX submit with toast
+            $('#editEquipmentForm').on('submit', function(e) {
+                e.preventDefault();
+                var $form = $(this);
+                var submitBtn = $form.find('button[type="submit"]');
+                var originalBtnText = submitBtn.text();
+                submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...');
+                $.ajax({
+                    url: '../../modules/equipment_manager/equipment_details.php',
+                    method: 'POST',
+                    data: $form.serialize(),
+                    success: function(response) {
+                        try {
+                            var result = typeof response === 'object' ? response : JSON.parse(response);
+                            submitBtn.prop('disabled', false).text(originalBtnText);
+                            if (result.status === 'success') {
+                                $('#editEquipmentModal').modal('hide');
+                                showToast(result.message || 'Equipment updated successfully', 'success');
+                                // Reload the table section only
+                                $('#edTable').load(location.href + ' #edTable > *', function() {
+                                    window.allRows = $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').toArray();
+                                    window.filteredRows = [...window.allRows];
+                                    if (typeof filterEquipmentTable === 'function') filterEquipmentTable();
+                                });
+                            } else {
+                                showToast(result.message || 'Failed to update equipment.', 'error');
+                            }
+                        } catch (e) {
+                            submitBtn.prop('disabled', false).text(originalBtnText);
+                            showToast('Error processing the request', 'error');
+                        }
+                    },
+                    error: function(xhr, status, error) {
                         submitBtn.prop('disabled', false).text(originalBtnText);
-                        if (result.status === 'success') {
-                            $('#editEquipmentModal').modal('hide');
-                            showToast(result.message || 'Equipment updated successfully', 'success');
+                        showToast('Error updating equipment.', 'error');
+                    }
+                });
+            });
+
+            // Delete Equipment
+            let deleteEquipmentId = null;
+            $(document).on('click', '.remove-equipment', function() {
+                deleteEquipmentId = $(this).data('id');
+                $('#deleteEDModal').modal('show');
+            });
+
+            $('#confirmDeleteBtn').on('click', function() {
+                if (!deleteEquipmentId) return;
+                $.ajax({
+                    url: '../../modules/equipment_manager/equipment_details.php',
+                    method: 'POST',
+                    data: {
+                        action: 'remove',
+                        details_id: deleteEquipmentId
+                    },
+                    dataType: 'json',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            $('#deleteEDModal').modal('hide');
+                            showToast(response.message || 'Equipment removed successfully', 'success');
                             // Reload the table section only
                             $('#edTable').load(location.href + ' #edTable > *', function() {
                                 window.allRows = $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').toArray();
@@ -2462,60 +2514,15 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                                 if (typeof filterEquipmentTable === 'function') filterEquipmentTable();
                             });
                         } else {
-                            showToast(result.message || 'Failed to update equipment.', 'error');
+                            showToast(response.message || 'Failed to remove equipment.', 'error');
                         }
-                    } catch (e) {
-                        submitBtn.prop('disabled', false).text(originalBtnText);
-                        showToast('Error processing the request', 'error');
+                    },
+                    error: function(xhr, status, error) {
+                        showToast('Error removing equipment.', 'error');
                     }
-                },
-                error: function(xhr, status, error) {
-                    submitBtn.prop('disabled', false).text(originalBtnText);
-                    showToast('Error updating equipment.', 'error');
-                }
+                });
             });
         });
-
-        // Delete Equipment
-        let deleteEquipmentId = null;
-        $(document).on('click', '.remove-equipment', function() {
-            deleteEquipmentId = $(this).data('id');
-            $('#deleteEDModal').modal('show');
-        });
-
-        $('#confirmDeleteBtn').on('click', function() {
-            if (!deleteEquipmentId) return;
-            $.ajax({
-                url: '../../modules/equipment_manager/equipment_details.php',
-                method: 'POST',
-                data: {
-                    action: 'remove',
-                    details_id: deleteEquipmentId
-                },
-                dataType: 'json',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                success: function(response) {
-                    if (response.status === 'success') {
-                        $('#deleteEDModal').modal('hide');
-                        showToast(response.message || 'Equipment removed successfully', 'success');
-                        // Reload the table section only
-                        $('#edTable').load(location.href + ' #edTable > *', function() {
-                            window.allRows = $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').toArray();
-                            window.filteredRows = [...window.allRows];
-                            if (typeof filterEquipmentTable === 'function') filterEquipmentTable();
-                        });
-                    } else {
-                        showToast(response.message || 'Failed to remove equipment.', 'error');
-                    }
-                },
-                error: function(xhr, status, error) {
-                    showToast('Error removing equipment.', 'error');
-                }
-            });
-        });
-    });
     </script>
 </body>
 
