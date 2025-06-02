@@ -451,7 +451,7 @@ try {
                 Module,
                 `Status`,
                 Date_Time
-            ) VALUES (?, ?, 'modified', ?, ?, ?, 'User Management', 'Success', NOW())
+            ) VALUES (?, ?, 'modified', ?, ?, ?, 'User Management', 'Successful', NOW())
         ");
         $auditStmt->execute([
             $_SESSION['user_id'],
