@@ -273,11 +273,13 @@ function formatChanges($oldJsonStr)
             max-height: 500px;
             overflow-y: auto;
         }
+
         /* Styles for sortable headers */
         th.sortable {
             cursor: pointer;
             position: relative;
-            padding-right: 25px; /* Make space for the icon */
+            padding-right: 25px;
+            /* Make space for the icon */
         }
 
         th.sortable .fas {
@@ -285,22 +287,26 @@ function formatChanges($oldJsonStr)
             right: 8px;
             top: 50%;
             transform: translateY(-50%);
-            color: #ccc; /* Default icon color */
+            color: #ccc;
+            /* Default icon color */
             transition: color 0.2s ease;
         }
 
         th.sortable:hover .fas {
-            color: #888; /* Hover color */
+            color: #888;
+            /* Hover color */
         }
 
         th.sortable.asc .fas.fa-sort-up,
         th.sortable.desc .fas.fa-sort-down {
-            color: #333; /* Active icon color */
+            color: #333;
+            /* Active icon color */
         }
 
         th.sortable.asc .fas.fa-sort,
         th.sortable.desc .fas.fa-sort {
-            display: none; /* Hide generic sort icon when specific order is applied */
+            display: none;
+            /* Hide generic sort icon when specific order is applied */
         }
     </style>
 </head>
@@ -335,7 +341,7 @@ function formatChanges($oldJsonStr)
 
                     <!-- Filter Section -->
                     <form method="GET" class="row g-3 mb-4" id="archiveFilterForm" action="">
-                        
+
                         <!-- Date Range selector -->
                         <div class="col-12 col-md-3">
                             <label class="form-label fw-semibold">Date Filter Type</label>
@@ -346,7 +352,7 @@ function formatChanges($oldJsonStr)
                                 <option value="mdy" <?= (($_GET['date_filter_type'] ?? '') === 'mdy') ? 'selected' : '' ?>>Month-Date-Year Range</option>
                             </select>
                         </div>
-                        
+
                         <!-- MDY Range -->
                         <div class="col-12 col-md-3 date-filter date-mdy d-none">
                             <label class="form-label fw-semibold">Date From</label>
@@ -360,7 +366,7 @@ function formatChanges($oldJsonStr)
                                 value="<?= htmlspecialchars($_GET['date_to'] ?? '') ?>"
                                 placeholder="End Date (YYYY-MM-DD)">
                         </div>
-                        
+
                         <!-- Year Range -->
                         <div class="col-12 col-md-3 date-filter date-year d-none">
                             <label class="form-label fw-semibold">Year From</label>
@@ -376,7 +382,7 @@ function formatChanges($oldJsonStr)
                                 placeholder="e.g., 2025"
                                 value="<?= htmlspecialchars($_GET['year_to'] ?? '') ?>">
                         </div>
-                        
+
                         <!-- Month-Year Range -->
                         <div class="col-12 col-md-3 date-filter date-month_year d-none">
                             <label class="form-label fw-semibold">From (MM-YYYY)</label>
@@ -390,24 +396,24 @@ function formatChanges($oldJsonStr)
                                 value="<?= htmlspecialchars($_GET['month_year_to'] ?? '') ?>"
                                 placeholder="e.g., 2023-12">
                         </div>
-                        
+
                         <!-- Search bar -->
                         <div class="col-12 col-sm-6 col-md-3">
                             <label class="form-label fw-semibold">Search</label>
                             <div class="input-group shadow-sm">
                                 <span class="input-group-text"><i class="fas fa-search"></i></span>
-                                <input type="text" name="search" id="searchInput" class="form-control" 
-                                    placeholder="Search role archives..." 
+                                <input type="text" name="search" id="searchInput" class="form-control"
+                                    placeholder="Search role archives..."
                                     value="<?= htmlspecialchars($_GET['search'] ?? '') ?>">
                             </div>
                         </div>
-                        
+
                         <div class="col-6 col-md-2 d-grid">
                             <button type="submit" id="applyFilters" class="btn btn-dark">
                                 <i class="fas fa-filter"></i> Filter
                             </button>
                         </div>
-                        
+
                         <div class="col-6 col-md-2 d-grid">
                             <button type="button" id="clearFilters" class="btn btn-secondary shadow-sm">
                                 <i class="fas fa-times-circle"></i> Clear
@@ -419,7 +425,7 @@ function formatChanges($oldJsonStr)
                         <table id="archivedRolesTable" class="table table-striped table-hover align-middle">
                             <thead class="table-light">
                                 <tr>
-                                    <th><input type="checkbox" id="select-all"></th>
+                                    <!-- <th><input type="checkbox" id="select-all"></th> -->
                                     <th class="sortable" data-sort-by="role_id" style="width: 25px;">ID <i class="fas fa-sort"></i></th>
                                     <th class="sortable" data-sort-by="operator_name">User<i class="fas fa-sort"></i></th>
                                     <th>Action</th>
@@ -433,9 +439,9 @@ function formatChanges($oldJsonStr)
                                 <?php if (!empty($roleData)): ?>
                                     <?php foreach ($roleData as $role): ?>
                                         <tr data-role-id="<?php echo $role['role_id']; ?>">
-                                            <td>
+                                            <!-- <td>
                                                 <input type="checkbox" class="select-row" value="<?php echo $role['role_id']; ?>">
-                                            </td>
+                                            </td> -->
                                             <td><?php echo htmlspecialchars($role['role_id']); ?></td>
                                             <td class="user">
                                                 <div class="d-flex align-items-center">
@@ -498,6 +504,9 @@ function formatChanges($oldJsonStr)
                                 <?php endif; ?>
                             </tbody>
                         </table>
+
+
+                    
                         <div class="container-fluid">
                             <div class="row align-items-center g-3">
                                 <div class="col-12 col-sm-auto">
@@ -699,10 +708,10 @@ function formatChanges($oldJsonStr)
                             // Close modal and clean up
                             $('#bulkRestoreModal').modal('hide');
                             cleanupModalElements();
-                            
+
                             // Show success message
                             showToast(response.message, 'success', 5000);
-                            
+
                             // Reload the page after a short delay
                             setTimeout(function() {
                                 window.location.reload();
@@ -756,10 +765,10 @@ function formatChanges($oldJsonStr)
                             // Close modal and clean up
                             $('#bulkDeleteModal').modal('hide');
                             cleanupModalElements();
-                            
+
                             // Show success message
                             showToast(response.message, 'success', 5000);
-                            
+
                             // Reload the page after a short delay
                             setTimeout(function() {
                                 window.location.reload();
@@ -790,20 +799,20 @@ function formatChanges($oldJsonStr)
                     clearFiltersBtn.addEventListener('click', function() {
                         const form = document.getElementById('archiveFilterForm');
                         form.reset();
-                        
+
                         // Clear date filter type and hide all date filter fields
                         const filterType = document.getElementById('dateFilterType');
                         if (filterType) {
                             filterType.value = '';
                             document.querySelectorAll('.date-filter').forEach(field => field.classList.add('d-none'));
                         }
-                        
+
                         // Clear search input
                         const searchInput = document.getElementById('searchInput');
                         if (searchInput) {
                             searchInput.value = '';
                         }
-                        
+
                         // Submit the form to reset the data
                         form.submit();
                     });
@@ -815,13 +824,13 @@ function formatChanges($oldJsonStr)
                     filterType.addEventListener('change', function() {
                         // Hide all date filter fields first
                         document.querySelectorAll('.date-filter').forEach(field => field.classList.add('d-none'));
-                        
+
                         // Show relevant date filter fields based on selection
                         if (this.value) {
                             document.querySelectorAll('.date-' + this.value).forEach(field => field.classList.remove('d-none'));
                         }
                     });
-                    
+
                     // Initialize date filter fields visibility
                     if (filterType.value) {
                         document.querySelectorAll('.date-' + filterType.value).forEach(field => field.classList.remove('d-none'));
@@ -843,20 +852,20 @@ function formatChanges($oldJsonStr)
             // Update the restore confirmation handler
             $('#confirmRestoreBtn').on('click', function() {
                 if (!userPrivileges.canRestore || !restoreId) return;
-                
+
                 $.ajax({
                     url: '../../rolesandprivilege_manager/role_manager/restore_role.php',
                     method: 'POST',
-                    data: { 
+                    data: {
                         id: restoreId,
                         action: 'restore',
-                        module: 'Roles and Privileges' 
+                        module: 'Roles and Privileges'
                     },
                     dataType: 'json',
                     success: function(response) {
                         // Hide restore modal
                         $('#confirmRestoreModal').modal('hide');
-                        
+
                         if (response.success) {
                             showToast(response.message || 'Role restored successfully', 'success');
                             // Reload the page after a short delay
