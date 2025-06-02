@@ -578,6 +578,10 @@ $(document).ready(function() {
     // Confirm Delete Invoice via AJAX
     $('#confirmDeleteInvoiceBtn').on('click', function() {
         if (deleteInvoiceId) {
+            // Store current pagination state
+            const currentPage = window.paginationConfig ? window.paginationConfig.currentPage : 1;
+            const rowsPerPage = $('#rowsPerPageSelect').val();
+            
             $.ajax({
                 url: 'charge_invoice.php',
                 method: 'GET',
@@ -590,7 +594,51 @@ $(document).ready(function() {
                     if (response.status === 'success') {
                         $('#invoiceTable').load(location.href + ' #invoiceTable', function() {
                             showToast(response.message, 'success');
-                            reinitInvoiceTableJS();
+                            
+                            // Reset pagination with fresh DOM elements
+                            window.allRows = Array.from(document.querySelectorAll('#invoiceTable tbody tr'));
+                            window.filteredRows = [...window.allRows];
+                            
+                            // Initialize pagination with the previous page
+                            initPagination({
+                                tableId: 'invoiceTable tbody',
+                                currentPage: currentPage,
+                                rowsPerPageSelectId: 'rowsPerPageSelect',
+                                currentPageId: 'currentPage',
+                                rowsPerPageId: 'rowsPerPage',
+                                totalRowsId: 'totalRows',
+                                prevPageId: 'prevPage',
+                                nextPageId: 'nextPage',
+                                paginationId: 'pagination'
+                            });
+                            
+                            // Set rows per page to previous value
+                            $('#rowsPerPageSelect').val(rowsPerPage).trigger('change');
+                            
+                            // Reattach event handlers
+                            $('.edit-invoice').off('click').on('click', function() {
+                                const id = $(this).data('id');
+                                const invoice = $(this).data('invoice') || '';
+                                const date = $(this).data('date') || '';
+                                const po = $(this).data('po') || '';
+                        
+                                // Fill hidden and inputs
+                                $('#edit_invoice_id').val(id);
+                                $('#edit_invoice_no').val(invoice.replace(/^CI/, '')); // strip CI so input=number stays numeric
+                                $('#edit_date_of_purchase').val(date);
+                                $('#edit_po_no').val(po).trigger('change'); // set the dropdown and trigger Select2 update
+                        
+                                // Show the edit modal
+                                const modalEl = document.getElementById('editInvoiceModal');
+                                bootstrap.Modal.getOrCreateInstance(modalEl).show();
+                            });
+                            
+                            $('.delete-invoice').off('click').on('click', function(e) {
+                                e.preventDefault();
+                                deleteInvoiceId = $(this).data('id');
+                                var deleteModal = new bootstrap.Modal(document.getElementById('deleteInvoiceModal'));
+                                deleteModal.show();
+                            });
                         });
                     } else {
                         showToast(response.message, 'error');
@@ -618,6 +666,11 @@ $(document).ready(function() {
             e.preventDefault();
             return false;
         }
+        
+        // Store current pagination state
+        const currentPage = window.paginationConfig ? window.paginationConfig.currentPage : 1;
+        const rowsPerPage = $('#rowsPerPageSelect').val();
+        
         // Build data with prefixed invoice number
         const formData = $(this).serializeArray();
         let dataObj = {};
@@ -638,8 +691,53 @@ $(document).ready(function() {
                 if (response.status === 'success') {
                     $('#invoiceTable').load(location.href + ' #invoiceTable', function() {
                         showToast(response.message, 'success');
-                        reinitInvoiceTableJS();
+                        
+                        // Reset pagination with fresh DOM elements
+                        window.allRows = Array.from(document.querySelectorAll('#invoiceTable tbody tr'));
+                        window.filteredRows = [...window.allRows];
+                        
+                        // Initialize pagination with the previous page
+                        initPagination({
+                            tableId: 'invoiceTable tbody',
+                            currentPage: currentPage,
+                            rowsPerPageSelectId: 'rowsPerPageSelect',
+                            currentPageId: 'currentPage',
+                            rowsPerPageId: 'rowsPerPage',
+                            totalRowsId: 'totalRows',
+                            prevPageId: 'prevPage',
+                            nextPageId: 'nextPage',
+                            paginationId: 'pagination'
+                        });
+                        
+                        // Set rows per page to previous value
+                        $('#rowsPerPageSelect').val(rowsPerPage).trigger('change');
+                        
+                        // Reattach event handlers
+                        $('.edit-invoice').off('click').on('click', function() {
+                            const id = $(this).data('id');
+                            const invoice = $(this).data('invoice') || '';
+                            const date = $(this).data('date') || '';
+                            const po = $(this).data('po') || '';
+                        
+                            // Fill hidden and inputs
+                            $('#edit_invoice_id').val(id);
+                            $('#edit_invoice_no').val(invoice.replace(/^CI/, '')); // strip CI so input=number stays numeric
+                            $('#edit_date_of_purchase').val(date);
+                            $('#edit_po_no').val(po).trigger('change'); // set the dropdown and trigger Select2 update
+                        
+                            // Show the edit modal
+                            const modalEl = document.getElementById('editInvoiceModal');
+                            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+                        });
+                        
+                        $('.delete-invoice').off('click').on('click', function(e) {
+                            e.preventDefault();
+                            deleteInvoiceId = $(this).data('id');
+                            var deleteModal = new bootstrap.Modal(document.getElementById('deleteInvoiceModal'));
+                            deleteModal.show();
+                        });
                     });
+                    
                     // Close the modal after successful submission
                     var addModalEl = document.getElementById('addInvoiceModal');
                     var addModal = bootstrap.Modal.getInstance(addModalEl);
@@ -674,6 +772,11 @@ $(document).ready(function() {
             e.preventDefault();
             return false;
         }
+        
+        // Store current pagination state
+        const currentPage = window.paginationConfig ? window.paginationConfig.currentPage : 1;
+        const rowsPerPage = $('#rowsPerPageSelect').val();
+        
         // Build data with prefixed invoice number
         const formData = $(this).serializeArray();
         let dataObj = {};
@@ -697,7 +800,51 @@ $(document).ready(function() {
                 if (response.status === 'success') {
                     $('#invoiceTable').load(location.href + ' #invoiceTable', function() {
                         showToast(response.message, 'success');
-                        reinitInvoiceTableJS();
+                        
+                        // Reset pagination with fresh DOM elements
+                        window.allRows = Array.from(document.querySelectorAll('#invoiceTable tbody tr'));
+                        window.filteredRows = [...window.allRows];
+                        
+                        // Initialize pagination with the previous page
+                        initPagination({
+                            tableId: 'invoiceTable tbody',
+                            currentPage: currentPage,
+                            rowsPerPageSelectId: 'rowsPerPageSelect',
+                            currentPageId: 'currentPage',
+                            rowsPerPageId: 'rowsPerPage',
+                            totalRowsId: 'totalRows',
+                            prevPageId: 'prevPage',
+                            nextPageId: 'nextPage',
+                            paginationId: 'pagination'
+                        });
+                        
+                        // Set rows per page to previous value
+                        $('#rowsPerPageSelect').val(rowsPerPage).trigger('change');
+                        
+                        // Reattach event handlers
+                        $('.edit-invoice').off('click').on('click', function() {
+                            const id = $(this).data('id');
+                            const invoice = $(this).data('invoice') || '';
+                            const date = $(this).data('date') || '';
+                            const po = $(this).data('po') || '';
+                        
+                            // Fill hidden and inputs
+                            $('#edit_invoice_id').val(id);
+                            $('#edit_invoice_no').val(invoice.replace(/^CI/, '')); // strip CI so input=number stays numeric
+                            $('#edit_date_of_purchase').val(date);
+                            $('#edit_po_no').val(po).trigger('change'); // set the dropdown and trigger Select2 update
+                        
+                            // Show the edit modal
+                            const modalEl = document.getElementById('editInvoiceModal');
+                            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+                        });
+                        
+                        $('.delete-invoice').off('click').on('click', function(e) {
+                            e.preventDefault();
+                            deleteInvoiceId = $(this).data('id');
+                            var deleteModal = new bootstrap.Modal(document.getElementById('deleteInvoiceModal'));
+                            deleteModal.show();
+                        });
                     });
 
                     var editModalEl = document.getElementById('editInvoiceModal');

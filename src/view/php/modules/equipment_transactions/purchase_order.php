@@ -829,6 +829,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
             }
             // Remove any lingering modal backdrop and restore scrolling
             removeModalBackdrop();
+            
+            // Store current pagination state
+            const currentPage = window.paginationConfig ? window.paginationConfig.currentPage : 1;
+            const rowsPerPage = $('#rowsPerPageSelect').val();
+            
             // Add PO prefix before sending
             let poNo = $('input[name="po_no"]', this).val();
             let formData = $(this).serializeArray();
@@ -847,9 +852,33 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                 dataType: 'json',
                 success: function(response) {
                     if (response.status === 'success') {
-                        // Store toast message then reload page
-                        storeToastMessage(response.message, 'success');
-                        window.location.href = 'purchase_order.php?' + new Date().getTime();
+                        // Update table without page reload
+                        $('#purchaseTable').load(location.href + ' #purchaseTable', function() {
+                            showToast(response.message, 'success');
+                            
+                            // Reset pagination with fresh DOM elements
+                            window.allRows = Array.from(document.querySelectorAll('#poTable tr'));
+                            window.filteredRows = [...window.allRows];
+                            
+                            // Initialize pagination with the previous page
+                            initPagination({
+                                tableId: 'poTable',
+                                currentPage: currentPage,
+                                rowsPerPageSelectId: 'rowsPerPageSelect',
+                                currentPageId: 'currentPage',
+                                rowsPerPageId: 'rowsPerPage',
+                                totalRowsId: 'totalRows',
+                                prevPageId: 'prevPage',
+                                nextPageId: 'nextPage',
+                                paginationId: 'pagination'
+                            });
+                            
+                            // Set rows per page to previous value
+                            $('#rowsPerPageSelect').val(rowsPerPage).trigger('change');
+                            
+                            // Reattach event handlers
+                            reattachEventHandlers();
+                        });
                     } else {
                         showToast(response.message, 'error');
                     }
@@ -863,6 +892,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
         // Edit Purchase Order AJAX submission
         $('#editPOForm').on('submit', function(e) {
             e.preventDefault();
+            
+            // Store current pagination state
+            const currentPage = window.paginationConfig ? window.paginationConfig.currentPage : 1;
+            const rowsPerPage = $('#rowsPerPageSelect').val();
+            
             // Add PO prefix before sending
             let poNo = $('#edit_po_no').val();
             let formData = $(this).serializeArray();
@@ -881,9 +915,43 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                 dataType: 'json',
                 success: function(response) {
                     if (response.status === 'success') {
-                        // Store toast message then reload page
-                        storeToastMessage(response.message, 'success');
-                        window.location.href = 'purchase_order.php?' + new Date().getTime();
+                        // Update table without page reload
+                        $('#purchaseTable').load(location.href + ' #purchaseTable', function() {
+                            showToast(response.message, 'success');
+                            
+                            // Reset pagination with fresh DOM elements
+                            window.allRows = Array.from(document.querySelectorAll('#poTable tr'));
+                            window.filteredRows = [...window.allRows];
+                            
+                            // Initialize pagination with the previous page
+                            initPagination({
+                                tableId: 'poTable',
+                                currentPage: currentPage,
+                                rowsPerPageSelectId: 'rowsPerPageSelect',
+                                currentPageId: 'currentPage',
+                                rowsPerPageId: 'rowsPerPage',
+                                totalRowsId: 'totalRows',
+                                prevPageId: 'prevPage',
+                                nextPageId: 'nextPage',
+                                paginationId: 'pagination'
+                            });
+                            
+                            // Set rows per page to previous value
+                            $('#rowsPerPageSelect').val(rowsPerPage).trigger('change');
+                            
+                            // Reattach event handlers
+                            reattachEventHandlers();
+                            
+                            // Hide edit modal
+                            var editModalEl = document.getElementById('editPOModal');
+                            var editModal = bootstrap.Modal.getInstance(editModalEl);
+                            if (editModal) {
+                                editModal.hide();
+                            }
+                            
+                            // Clean up modal
+                            removeModalBackdrop();
+                        });
                     } else {
                         showToast(response.message, 'error');
                     }
@@ -897,6 +965,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
         // Confirm Remove button in the Remove Modal
         $(document).on('click', '#confirmRemoveBtn', function() {
             if (removeId) {
+                // Store current pagination state
+                const currentPage = window.paginationConfig ? window.paginationConfig.currentPage : 1;
+                const rowsPerPage = $('#rowsPerPageSelect').val();
+                
                 $.ajax({
                     url: 'purchase_order.php',
                     method: 'GET',
@@ -907,9 +979,33 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                     dataType: 'json',
                     success: function(response) {
                         if (response.status === 'success') {
-                            // Store toast message then reload page
-                            storeToastMessage(response.message, 'success');
-                            window.location.href = 'purchase_order.php?' + new Date().getTime();
+                            // Update table without page reload
+                            $('#purchaseTable').load(location.href + ' #purchaseTable', function() {
+                                showToast(response.message, 'success');
+                                
+                                // Reset pagination with fresh DOM elements
+                                window.allRows = Array.from(document.querySelectorAll('#poTable tr'));
+                                window.filteredRows = [...window.allRows];
+                                
+                                // Initialize pagination with the previous page
+                                initPagination({
+                                    tableId: 'poTable',
+                                    currentPage: currentPage,
+                                    rowsPerPageSelectId: 'rowsPerPageSelect',
+                                    currentPageId: 'currentPage',
+                                    rowsPerPageId: 'rowsPerPage',
+                                    totalRowsId: 'totalRows',
+                                    prevPageId: 'prevPage',
+                                    nextPageId: 'nextPage',
+                                    paginationId: 'pagination'
+                                });
+                                
+                                // Set rows per page to previous value
+                                $('#rowsPerPageSelect').val(rowsPerPage).trigger('change');
+                                
+                                // Reattach event handlers
+                                reattachEventHandlers();
+                            });
                         } else {
                             showToast(response.message, 'error');
                         }
@@ -924,7 +1020,45 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                 });
             }
         });
+        
+        // Function to reattach event handlers to the newly loaded table elements
+        function reattachEventHandlers() {
+            // Edit button handler
+            $('.edit-po').off('click').on('click', function(e) {
+                e.preventDefault();
+               
+                // Extract all data- attributes
+                const id = $(this).data('id');
+                const rawPo = $(this).data('po') || ''; // e.g. "PO123"
+                const date = $(this).data('date') || '';
+                const units = $(this).data('units') || '';
+                const item = $(this).data('item') || '';
 
+                // Strip off the "PO" prefix so the <input> only gets allowed chars
+                const numericPo = rawPo.replace(/^PO/, '');
+
+                // Fill the Edit form
+                $('#edit_po_id').val(id);
+                $('#edit_po_no').val(numericPo);
+                $('#edit_date_of_order').val(date);
+                $('#edit_no_of_units').val(units);
+                $('#edit_item_specifications').val(item);
+
+                // Show the modal (using getOrCreateInstance is a bit safer)
+                const modalEl = document.getElementById('editPOModal');
+                const editModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                editModal.show();
+            });
+            
+            // Remove button handler
+            $('.remove-po').off('click').on('click', function(e) {
+                e.preventDefault();
+                removeId = $(this).data('id');
+                var removeModal = new bootstrap.Modal(document.getElementById('removePOModal'));
+                removeModal.show();
+            });
+        }
+        
         // Clear filters and reload table
         $('#clearFilters').on('click', function() {
             $('#dateFilter').val('');
@@ -934,30 +1068,36 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
             // Clear search input
             $('#searchPO').val('');
             
-            // Store toast message then reload page
-            storeToastMessage('Filters cleared.', 'success');
-            window.location.href = 'purchase_order.php?' + new Date().getTime();
-        });
-        
-        $('#addPOModal').on('hidden.bs.modal', function() {
-            $('#addPOForm')[0].reset();
-            removeModalBackdrop();
-            $('.modal-backdrop').remove();
-            $('body').removeClass('modal-open').css({overflow: '', paddingRight: ''});
-        });
-
-        // Extra safety: Always reset modal state before showing
-        $('#addPOModal').on('show.bs.modal', function () {
-            // Dispose of any existing Bootstrap modal instance to avoid stuck state
-            var addModalEl = document.getElementById('addPOModal');
-            var existingModal = bootstrap.Modal.getInstance(addModalEl);
-            if (existingModal) {
-                existingModal.dispose();
-            }
-            removeModalBackdrop();
-            $('.modal-backdrop').remove();
-            $('body').removeClass('modal-open').css({overflow: '', paddingRight: ''});
-            $('#addPOForm')[0].reset();
+            // Fetch fresh data without filters
+            const currentPage = window.paginationConfig ? window.paginationConfig.currentPage : 1;
+            const rowsPerPage = $('#rowsPerPageSelect').val();
+            
+            $('#purchaseTable').load(location.href + ' #purchaseTable', function() {
+                showToast('Filters cleared.', 'success');
+                
+                // Reset pagination with fresh DOM elements
+                window.allRows = Array.from(document.querySelectorAll('#poTable tr'));
+                window.filteredRows = [...window.allRows];
+                
+                // Initialize pagination with the previous page
+                initPagination({
+                    tableId: 'poTable',
+                    currentPage: currentPage,
+                    rowsPerPageSelectId: 'rowsPerPageSelect',
+                    currentPageId: 'currentPage',
+                    rowsPerPageId: 'rowsPerPage',
+                    totalRowsId: 'totalRows',
+                    prevPageId: 'prevPage',
+                    nextPageId: 'nextPage',
+                    paginationId: 'pagination'
+                });
+                
+                // Set rows per page to previous value
+                $('#rowsPerPageSelect').val(rowsPerPage).trigger('change');
+                
+                // Reattach event handlers
+                reattachEventHandlers();
+            });
         });
 
         // Date filter UI handling (show/hide label+input pairs for advanced types)
