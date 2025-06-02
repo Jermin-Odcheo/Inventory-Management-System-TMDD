@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 date_default_timezone_set('Asia/Manila');
 ob_start();
@@ -1404,7 +1404,7 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                                 </div>
                                 <div class="mb-3 col-md-6">
                                     <label for="edit_rr_no" class="form-label">RR#</label>
-                                    <select class="form-select" name="rr_no" id="edit_rr_no" required>
+                                    <select class="form-select" name="rr_no" id="edit_rr_no">
                                         <option value="">Select RR Number</option>
                                         <?php
                                         // Fetch active RR numbers for dropdown (reuse $rrList if already set, else fetch)
