@@ -779,6 +779,56 @@ $(document).ready(function() {
         }
     });
 
+    // Initialize allRows and filteredRows for client-side filtering/pagination
+    function initInvoiceRows() {
+        window.allRows = Array.from(document.querySelectorAll('#invoiceTable tbody tr'));
+        window.filteredRows = [...window.allRows];
+    }
+    initInvoiceRows();
+
+    // After AJAX reloads, reinitialize allRows/filteredRows and rebind events
+    function reinitInvoiceTableJS() {
+        initInvoiceRows();
+        if (typeof updatePagination === 'function') updatePagination();
+    }
+
+    // Fix clear button: reset filters, search, and show all rows by reloading all data via AJAX
+    $('#clearFilters').off('click').on('click', function(e) {
+        e.preventDefault();
+        // Reset filter dropdowns
+        $('#dateFilter').val('');
+        // Hide and clear all date input containers/fields
+        $('#dateInputsContainer').hide().find('input').val('');
+        $('#dateInputsContainer .date-group').addClass('d-none');
+        // Clear search input
+        $('#searchInvoice').val('');
+        // AJAX: fetch all data (no filter)
+        $.ajax({
+            url: 'charge_invoice.php',
+            method: 'GET',
+            data: {},
+            success: function(response) {
+                // Parse the full HTML page, extract the table body
+                var tempDiv = document.createElement('div');
+                tempDiv.innerHTML = response;
+                var newTbody = $(tempDiv).find('#invoiceTable tbody').html();
+                if (newTbody) {
+                    $('#invoiceTable tbody').html(newTbody);
+                }
+                // Reinitialize allRows, filteredRows, and pagination
+                if (typeof reinitInvoiceTableJS === 'function') reinitInvoiceTableJS();
+                $('#invoiceTable tbody tr').show();
+                showToast('Filters cleared.', 'success');
+            },
+            error: function() {
+                showToast('Error clearing filters.', 'error');
+            }
+        });
+    });
+
+    // After AJAX reloads (add/edit/delete/filter), call reinitInvoiceTableJS
+    // Example: $('#invoiceTable').load(..., function() { reinitInvoiceTableJS(); });
+
     $('#applyFilters').off('click').on('click', function() {
         const filterType = $('#dateFilter').val();
         if (!filterType) {
@@ -816,14 +866,6 @@ $(document).ready(function() {
             }
         }
         applyInvoiceFilter(filterType, params);
-    });
-
-    $('#clearFilters').off('click').on('click', function() {
-        $('#dateFilter').val('');
-        $('#dateInputsContainer input').val('');
-        $('#dateInputsContainer .date-group').addClass('d-none');
-        $('#dateInputsContainer').hide();
-        window.location.reload();
     });
 
     function applyInvoiceFilter(type, params = {}) {
