@@ -639,10 +639,11 @@ error_log("Number of results: " . count($auditLogs));
                                 <?php
                                 if (!empty($actionTypes)) {
                                     foreach ($actionTypes as $action) {
-                                        $selected = ($_GET['action_type'] ?? '') === $action ? 'selected' : '';
-                                        echo '<option value="' . htmlspecialchars($action) . '" ' . $selected . '>' .
-                                            htmlspecialchars($action) . '</option>';
-                                    }
+    $displayAction = ucfirst(strtolower($action));
+    $selected = ($_GET['action_type'] ?? '') === $action ? 'selected' : '';
+    echo '<option value="' . htmlspecialchars($action) . '" ' . $selected . '>' .
+        htmlspecialchars($displayAction) . '</option>';
+}
                                 } else {
                                     // Fallback options if database query fails
                                     $defaultActions = ['Create', 'Modified', 'Remove', 'Restore', 'Delete'];

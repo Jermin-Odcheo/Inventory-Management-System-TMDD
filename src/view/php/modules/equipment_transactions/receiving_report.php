@@ -137,72 +137,36 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             // 2. Mark the receive_report as disabled
             $stmt = $pdo->prepare("UPDATE receive_report SET is_disabled = 1 WHERE id = ?");
             $stmt->execute([$id]);
-            
-            // Main audit log for RR deletion
+
+            // Log audit entry for deletion
             logAudit(
                 $pdo,
-                'Remove',
-                'Receiving Report has been deleted',
+                'delete',
+                'Receiving Report archived (soft delete)',
                 'Successful',
                 json_encode($oldData),
-                null,
+                json_encode(['is_disabled' => 1]),
                 $id
             );
-            
-            // Additional audit log for affected equipment_details
-            if ($affectedEquipment > 0) {
-                logAudit(
-                    $pdo,
-                    'Update',
-                    "Updated {$affectedEquipment} equipment_details records to remove reference to deleted RR: {$rrNo}",
-                    'Successful',
-                    json_encode(['rr_no' => $rrNo, 'affected_records' => $affectedEquipment]),
-                    null,
-                    $id
-                );
-            }
-            
+
             $pdo->commit();
-            $_SESSION['success'] = "Receiving Report deleted successfully. {$affectedEquipment} equipment records updated.";
+            $_SESSION['success'] = "Receiving Report archived successfully. {$affectedEquipment} equipment records updated.";
         } else {
-            $_SESSION['errors'] = ["Receiving Report not found for deletion."];
-            logAudit(
-                $pdo,
-                'Remove',
-                'Receiving Report has been deleted',
-                null,
-                null,
-                $id
-            );
+            $_SESSION['errors'] = ["Receiving Report not found for archiving."];
+            // No audit log here
         }
     } catch (PDOException $e) {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
-        $_SESSION['errors'] = ["Error deleting Receiving Report: " . $e->getMessage()];
-        logAudit(
-            $pdo,
-            'Remove',
-            'Receiving Report has been deleted',
-            'Failed',
-            json_encode($oldData),
-            null,
-            $id
-        );
+        $_SESSION['errors'] = ["Error archiving Receiving Report: " . $e->getMessage()];
+        // No audit log here
     } catch (Exception $e) {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
         $_SESSION['errors'] = [$e->getMessage()];
-        logAudit(
-            $pdo,
-            'Remove',
-            'Receiving Report has been deleted',
-            'Failed',
-            json_encode($oldData),
-            null,
-            $id
-        );
+        // No audit log here
     }
 
     if (is_ajax_request()) {
