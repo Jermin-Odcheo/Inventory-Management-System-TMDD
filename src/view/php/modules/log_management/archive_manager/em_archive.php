@@ -125,7 +125,9 @@ SELECT
     a.NewVal AS new_val,
     a.Status AS status,
     a.Date_Time AS date_time,
-    a.EntityID AS deleted_entity_id
+    a.EntityID AS deleted_entity_id,
+    el.date_created AS location_date_created,
+    es.date_created AS status_date_created
 FROM audit_log a
 JOIN users op ON a.UserID = op.id
 LEFT JOIN equipment_location el ON a.Module = 'Equipment Location' AND a.EntityID = el.equipment_location_id
@@ -197,7 +199,7 @@ function getStatusIcon($status)
 /**
  * Format JSON data to display old values only.
  */
-function formatChanges($oldJsonStr)
+function formatChanges($oldJsonStr, $extraDate = null)
 {
     $oldData = json_decode($oldJsonStr, true);
 
@@ -215,6 +217,13 @@ function formatChanges($oldJsonStr)
         $html .= '<li class="list-group-item d-flex justify-content-between align-items-center">
                     <strong>' . $friendlyKey . ':</strong>
                     <span class="old-value text-danger"><i class="fas fa-history me-1"></i> ' . $displayValue . '</span>
+                  </li>';
+    }
+    // Add Created Date if provided
+    if (!empty($extraDate)) {
+        $html .= '<li class="list-group-item d-flex justify-content-between align-items-center">
+                    <strong>Created Date:</strong>
+                    <span class="old-value text-danger"><i class="fas fa-calendar-plus me-1"></i> ' . htmlspecialchars(date('Y-m-d H:i', strtotime($extraDate))) . '</span>
                   </li>';
     }
     $html .= '</ul>';
@@ -462,7 +471,16 @@ function formatChanges($oldJsonStr)
                                                 <?php echo nl2br(htmlspecialchars($log['details'])); ?>
                                             </td>
                                             <td data-label="Changes">
-                                                <?php echo formatChanges($log['old_val']); ?>
+                                                <?php
+                                                // Show Created Date for Equipment Location or Equipment Status
+                                                if ($log['module'] === 'Equipment Location' && !empty($log['location_date_created'])) {
+                                                    echo formatChanges($log['old_val'], $log['location_date_created']);
+                                                } elseif ($log['module'] === 'Equipment Status' && !empty($log['status_date_created'])) {
+                                                    echo formatChanges($log['old_val'], $log['status_date_created']);
+                                                } else {
+                                                    echo formatChanges($log['old_val']);
+                                                }
+                                                ?>
                                             </td>
                                             <td data-label="Status">
                                                 <span class="badge <?php echo (strtolower($log['status']) === 'successful') ? 'bg-success' : 'bg-danger'; ?>">
