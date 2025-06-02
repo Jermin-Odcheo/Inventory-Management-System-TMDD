@@ -468,8 +468,180 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
   #invoiceTable thead.table-dark {
     background-color: #212529 !important;
   }
+  
+  /* Style for buttons to make them obvious when highlighted to help debug */
+  #prevPage:hover, #nextPage:hover {
+      background-color: #0d6efd;
+      color: white;
+  }
+  
+  /* Add pointer cursor to pagination controls for clarity */
+  .pagination .page-link {
+      cursor: pointer;
+  }
+  
+  .pagination .page-item.active .page-link {
+      background-color: #0d6efd;
+      border-color: #0d6efd;
+  }
 </style>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Bootstrap 5 JS Bundle with Popper -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<!-- Add pagination.js script reference BEFORE our main script -->
+<script src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js"></script>
+<!-- Ensure toast.js is loaded for showToast -->
+<script src="/src/control/js/toast.js"></script>
+
+<script>
+// Define our local pagination functions ONLY if they don't exist already
+// This way we're only providing a fallback if pagination.js didn't load properly
+if (typeof initPagination !== 'function') {
+    console.warn("Pagination.js not loaded - using local implementation");
+    
+    // Define window.paginationConfig holder
+    window.paginationConfig = null;
+    
+    function initPagination(config) {
+        console.log("Using local initPagination");
+        window.paginationConfig = {
+            tableId: config.tableId || 'table tbody',
+            currentPage: config.currentPage || 1,
+            rowsPerPageSelectId: config.rowsPerPageSelectId || 'rowsPerPageSelect',
+            currentPageId: config.currentPageId || 'currentPage',
+            rowsPerPageId: config.rowsPerPageId || 'rowsPerPage',
+            totalRowsId: config.totalRowsId || 'totalRows',
+            prevPageId: config.prevPageId || 'prevPage',
+            nextPageId: config.nextPageId || 'nextPage',
+            paginationId: config.paginationId || 'pagination'
+        };
+    }
+
+    function updatePagination() {
+        console.log("Using local updatePagination");
+        if (!window.paginationConfig) return;
+        if (!window.filteredRows) window.filteredRows = window.allRows || [];
+        
+        const config = window.paginationConfig;
+        const tbody = document.querySelector(config.tableId);
+        if (!tbody) return;
+        
+        const rowsPerPageSelect = document.getElementById(config.rowsPerPageSelectId);
+        const rowsPerPage = parseInt(rowsPerPageSelect ? rowsPerPageSelect.value : 10);
+        const totalRows = window.filteredRows.length;
+        const maxPage = Math.max(1, Math.ceil(totalRows / rowsPerPage));
+        
+        // Ensure current page is valid
+        if (config.currentPage > maxPage) {
+            config.currentPage = maxPage || 1;
+        }
+        
+        // Update page info elements
+        const start = totalRows > 0 ? ((config.currentPage - 1) * rowsPerPage + 1) : 0;
+        const end = Math.min(config.currentPage * rowsPerPage, totalRows);
+        
+        $('#' + config.currentPageId).text(start);
+        $('#' + config.rowsPerPageId).text(end);
+        $('#' + config.totalRowsId).text(totalRows);
+        
+        // Hide all rows first
+        $(window.allRows).hide();
+        
+        // Display rows for current page
+        const startIndex = (config.currentPage - 1) * rowsPerPage;
+        const endIndex = Math.min(startIndex + rowsPerPage, totalRows);
+        
+        for (let i = startIndex; i < endIndex; i++) {
+            if (window.filteredRows[i]) {
+                $(window.filteredRows[i]).show();
+            }
+        }
+        
+        // Update button states
+        $('#' + config.prevPageId).prop('disabled', config.currentPage <= 1);
+        $('#' + config.nextPageId).prop('disabled', config.currentPage >= maxPage);
+        
+        // Create page number buttons
+        updatePaginationPageNumbers(maxPage);
+    }
+    
+    function updatePaginationPageNumbers(maxPage) {
+        if (!window.paginationConfig) return;
+        const config = window.paginationConfig;
+        const $pagination = $('#' + config.paginationId);
+        $pagination.empty();
+        
+        // Calculate which page numbers to show
+        let startPage = Math.max(1, config.currentPage - 2);
+        let endPage = Math.min(maxPage, startPage + 4);
+        
+        if (endPage - startPage < 4 && endPage < maxPage) {
+            endPage = Math.min(maxPage, startPage + 4);
+        }
+        
+        if (endPage - startPage < 4 && startPage > 1) {
+            startPage = Math.max(1, endPage - 4);
+        }
+        
+        // First page
+        if (startPage > 1) {
+            addPageButton($pagination, 1, config);
+            if (startPage > 2) {
+                addEllipsis($pagination);
+            }
+        }
+        
+        // Page numbers
+        for (let i = startPage; i <= endPage; i++) {
+            addPageButton($pagination, i, config);
+        }
+        
+        // Last page
+        if (endPage < maxPage) {
+            if (endPage < maxPage - 1) {
+                addEllipsis($pagination);
+            }
+            addPageButton($pagination, maxPage, config);
+        }
+    }
+    
+    function addPageButton($parent, pageNum, config) {
+        const $li = $('<li>', {
+            class: 'page-item' + (pageNum === config.currentPage ? ' active' : '')
+        });
+        
+        const $a = $('<a>', {
+            class: 'page-link',
+            href: '#',
+            text: pageNum
+        }).on('click', function(e) {
+            e.preventDefault();
+            config.currentPage = pageNum;
+            updatePagination();
+            return false;
+        });
+        
+        $li.append($a);
+        $parent.append($li);
+    }
+    
+    function addEllipsis($parent) {
+        const $li = $('<li>', {
+            class: 'page-item disabled'
+        });
+        
+        const $span = $('<span>', {
+            class: 'page-link'
+        }).html('&hellip;');
+        
+        $li.append($span);
+        $parent.append($li);
+    }
+}
+</script>
+
 <script>
 var canModify = <?php echo json_encode($canModify); ?>;
 var canDelete = <?php echo json_encode($canDelete); ?>;
@@ -492,6 +664,8 @@ function formatDateAMPM(dateString) {
 }
 
 $(document).ready(function() {
+    console.log("Document ready, setting up page...");
+    
     $('#add_po_no').select2({
         dropdownParent: $('#addInvoiceModal'),
         width: '100%',
@@ -505,168 +679,6 @@ $(document).ready(function() {
         placeholder: 'Type or select PO…',
         allowClear: true
     });
-
-    // SIMPLE PAGINATION IMPLEMENTATION
-    // Store all table rows for filtering and pagination
-    var allRows = $('#invoiceTable tbody tr').toArray();
-    var currentPage = 1;
-    var rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
-    var searchText = '';
-
-    // Function to display the correct rows for the current page
-    function showCurrentPageRows() {
-        // Hide all rows first
-        $('#invoiceTable tbody tr').hide();
-
-        // Calculate which rows to show
-        var startIndex = (currentPage - 1) * rowsPerPage;
-        var endIndex = Math.min(startIndex + rowsPerPage, allRows.length);
-        
-        console.log('Showing rows:', startIndex, 'to', endIndex-1, 'of', allRows.length);
-
-        // Show only the rows for current page
-        for (var i = startIndex; i < endIndex; i++) {
-            $(allRows[i]).show();
-        }
-        
-        // Update pagination info text
-        $('#currentPage').text(startIndex + 1);
-        $('#rowsPerPage').text(endIndex);
-        $('#totalRows').text(allRows.length);
-        
-        // Update button states
-        $('#prevPage').prop('disabled', currentPage === 1);
-        $('#nextPage').prop('disabled', endIndex >= allRows.length);
-
-        // Update pagination buttons
-        updatePaginationButtons();
-    }
-
-    // Function to reinitialize pagination after AJAX updates
-    function reinitializePagination() {
-        // Store the search text before reinitializing
-        searchText = $('#searchInvoice').val().toLowerCase();
-        
-        // Get fresh rows
-        var freshRows = $('#invoiceTable tbody tr').toArray();
-        
-        // If we have a search filter active, apply it
-        if (searchText) {
-            allRows = $(freshRows).filter(function() {
-                return $(this).text().toLowerCase().indexOf(searchText) > -1;
-            }).toArray();
-        } else {
-            allRows = freshRows;
-        }
-        
-        // Ensure current page is valid
-        var totalPages = Math.ceil(allRows.length / rowsPerPage);
-        if (currentPage > totalPages) {
-            currentPage = Math.max(1, totalPages);
-        }
-        
-        // Update display
-        showCurrentPageRows();
-    }
-
-    // Function to update pagination buttons
-    function updatePaginationButtons() {
-        var totalPages = Math.ceil(allRows.length / rowsPerPage);
-        var $pagination = $('#pagination');
-        $pagination.empty();
-
-        // Always show first page
-        if (totalPages > 1) {
-            // Show first page
-            var $firstItem = $('<li class="page-item' + (currentPage === 1 ? ' active' : '') + '">');
-            var $firstLink = $('<a class="page-link" href="#" data-page="1">1</a>');
-            $firstItem.append($firstLink);
-            $pagination.append($firstItem);
-            
-            var startPage = Math.max(2, currentPage - 1);
-            var endPage = Math.min(totalPages - 1, currentPage + 1);
-            
-            // Show ellipsis before middle pages if needed
-            if (startPage > 2) {
-                var $ellipsis = $('<li class="page-item disabled"><span class="page-link">...</span></li>');
-                $pagination.append($ellipsis);
-            }
-            
-            // Show middle pages
-            for (var i = startPage; i <= endPage; i++) {
-                var $item = $('<li class="page-item' + (currentPage === i ? ' active' : '') + '">');
-                var $link = $('<a class="page-link" href="#" data-page="' + i + '">' + i + '</a>');
-                $item.append($link);
-                $pagination.append($item);
-            }
-            
-            // Show ellipsis after middle pages if needed
-            if (endPage < totalPages - 1) {
-                var $ellipsis = $('<li class="page-item disabled"><span class="page-link">...</span></li>');
-                $pagination.append($ellipsis);
-            }
-            
-            // Show last page if there are multiple pages
-            if (totalPages > 1 && currentPage !== totalPages) {
-                var $lastItem = $('<li class="page-item' + (currentPage === totalPages ? ' active' : '') + '">');
-                var $lastLink = $('<a class="page-link" href="#" data-page="' + totalPages + '">' + totalPages + '</a>');
-                $lastItem.append($lastLink);
-                $pagination.append($lastItem);
-            }
-        }
-
-        // Add click handlers for pagination buttons
-        $('#pagination a.page-link').on('click', function(e) {
-            e.preventDefault();
-            currentPage = parseInt($(this).data('page'));
-            showCurrentPageRows();
-        });
-    }
-
-    // Handle previous button click
-    $('#prevPage').on('click', function(e) {
-        e.preventDefault();
-        if (currentPage > 1) {
-            currentPage--;
-            showCurrentPageRows();
-        }
-    });
-
-    // Handle next button click
-    $('#nextPage').on('click', function(e) {
-        e.preventDefault();
-        var totalPages = Math.ceil(allRows.length / rowsPerPage);
-        if (currentPage < totalPages) {
-            currentPage++;
-            showCurrentPageRows();
-        }
-    });
-
-    // Handle rows per page change
-    $('#rowsPerPageSelect').on('change', function() {
-        rowsPerPage = parseInt($(this).val());
-        currentPage = 1;
-        showCurrentPageRows();
-    });
-
-    // Handle search filtering
-    $('#searchInvoice').on('input', function() {
-        var searchText = $(this).val().toLowerCase();
-        
-        // Filter rows based on search text
-        allRows = $('#invoiceTable tbody tr').filter(function() {
-            var rowText = $(this).text().toLowerCase();
-            var matches = rowText.indexOf(searchText) > -1;
-            return matches;
-        }).toArray();
-        
-        // Reset to first page and update display
-        currentPage = 1;
-        showCurrentPageRows();
-    });
-
-    // Initialize pagination
-    showCurrentPageRows();
 
     // Always clean up modal backdrop and body class after modal is hidden
     $('#addInvoiceModal').on('hidden.bs.modal', function() {
@@ -700,13 +712,273 @@ $(document).ready(function() {
             e.preventDefault();
         }
     });
+    
+    console.log("Setting up pagination...");
+    
     // Search filter for invoices
     $('#searchInvoice').on('input', function() {
         var searchText = $(this).val().toLowerCase();
-        $("#table tbody tr").filter(function() {
-            $(this).toggle($(this).text().toLowerCase().indexOf(searchText) > -1);
+        
+        // Filter rows based on search text and update pagination
+        window.filteredRows = window.allRows.filter(row => {
+            return row.textContent.toLowerCase().indexOf(searchText) > -1;
         });
+        
+        // Reset to first page and update pagination
+        if (window.paginationConfig) {
+            window.paginationConfig.currentPage = 1;
+        }
+        updatePagination();
     });
+
+    // Initialize pagination
+    console.log("Initializing pagination");
+    
+    // Store all table rows in a global variable for filtering
+    window.allRows = Array.from(document.querySelectorAll('#invoiceTable tbody tr'));
+    window.filteredRows = [...window.allRows];
+    
+    // Log number of rows for debugging
+    console.log("Found " + window.allRows.length + " table rows");
+    
+    try {
+        // Initialize pagination with this table's ID
+        initPagination({
+            tableId: 'invoiceTable tbody',
+            currentPage: 1,
+            rowsPerPageSelectId: 'rowsPerPageSelect',
+            currentPageId: 'currentPage',
+            rowsPerPageId: 'rowsPerPage',
+            totalRowsId: 'totalRows',
+            prevPageId: 'prevPage',
+            nextPageId: 'nextPage',
+            paginationId: 'pagination'
+        });
+        
+        // After initialization, force pagination update
+        console.log("Initial pagination update");
+        updatePagination();
+    } catch (e) {
+        console.error("Error initializing pagination:", e);
+        // Just in case pagination.js failed to load, use direct implementation
+        manualInitPagination();
+    }
+    
+    // Always ensure the prev/next buttons work directly
+    // Double-check that the buttons exist
+    const prevPageBtn = document.getElementById('prevPage');
+    const nextPageBtn = document.getElementById('nextPage');
+    
+    if (prevPageBtn && nextPageBtn) {
+        console.log("Found pagination buttons - setting up direct handlers");
+        
+        // IMPORTANT: First remove any existing click handlers to avoid duplicates
+        $('#prevPage').off('click');
+        $('#nextPage').off('click');
+        
+        // Add direct event handlers for pagination buttons
+        $('#prevPage').on('click', function(e) {
+            console.log("Previous page clicked");
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Manual fallback approach if pagination.js isn't working
+            if (!window.paginationConfig) {
+                console.log("Using manual approach for Previous");
+                directPrevPage();
+                return false;
+            }
+            
+            if (window.paginationConfig.currentPage > 1) {
+                window.paginationConfig.currentPage--;
+                console.log("Moving to page", window.paginationConfig.currentPage);
+                updatePagination();
+            }
+            return false;
+        });
+        
+        $('#nextPage').on('click', function(e) {
+            console.log("Next page clicked");
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Manual fallback approach if pagination.js isn't working
+            if (!window.paginationConfig) {
+                console.log("Using manual approach for Next");
+                directNextPage();
+                return false;
+            }
+            
+            const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
+            const maxPage = Math.ceil(window.filteredRows.length / rowsPerPage);
+            
+            console.log("Current page:", window.paginationConfig?.currentPage, "Max page:", maxPage);
+            
+            if (window.paginationConfig.currentPage < maxPage) {
+                window.paginationConfig.currentPage++;
+                console.log("Moving to page", window.paginationConfig.currentPage);
+                updatePagination();
+            }
+            return false;
+        });
+    } else {
+        console.error("Could not find pagination buttons!");
+    }
+    
+    // Handle page number clicks
+    $(document).on('click', '.page-link', function(e) {
+        e.preventDefault();
+        const pageNumber = $(this).text();
+        
+        // Skip if it's an ellipsis or already on the active page
+        if (pageNumber === '…' || $(this).parent().hasClass('active')) {
+            return false;
+        }
+        
+        console.log("Page number clicked:", pageNumber);
+        if (window.paginationConfig) {
+            window.paginationConfig.currentPage = parseInt(pageNumber);
+            updatePagination();
+        }
+        return false;
+    });
+    
+    // Handle rows per page change
+    $('#rowsPerPageSelect').on('change', function() {
+        console.log("Rows per page changed");
+        if (window.paginationConfig) {
+            window.paginationConfig.currentPage = 1;
+        }
+        updatePagination();
+    });
+    
+    // Function to reinitialize pagination after AJAX operations
+    function reinitializePagination() {
+        console.log("Reinitializing pagination");
+        
+        // Get fresh rows
+        window.allRows = Array.from(document.querySelectorAll('#invoiceTable tbody tr'));
+        
+        // Apply any active search filter
+        const searchText = $('#searchInvoice').val().toLowerCase();
+        if (searchText) {
+            window.filteredRows = window.allRows.filter(row => {
+                return row.textContent.toLowerCase().indexOf(searchText) > -1;
+            });
+        } else {
+            window.filteredRows = [...window.allRows];
+        }
+        
+        // Update pagination with current configuration
+        updatePagination();
+    }
+    
+    // Direct implementation of pagination functionality for fallback
+    function directPrevPage() {
+        const allRows = $('#invoiceTable tbody tr').toArray();
+        const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
+        
+        let visibleRows = allRows.filter(row => $(row).is(':visible'));
+        let hiddenRows = allRows.filter(row => !$(row).is(':visible'));
+        
+        if (hiddenRows.length > 0) {
+            // If we have hidden rows before the current visible ones, show previous page
+            const startIndex = Math.max(0, allRows.indexOf(visibleRows[0]) - rowsPerPage);
+            
+            // Hide all rows first
+            $(allRows).hide();
+            
+            // Show rows for previous page
+            for (let i = startIndex; i < startIndex + rowsPerPage && i < allRows.length; i++) {
+                $(allRows[i]).show();
+            }
+            
+            // Update info text
+            const total = allRows.length;
+            $('#currentPage').text(startIndex + 1);
+            $('#rowsPerPage').text(Math.min(startIndex + rowsPerPage, total));
+            $('#totalRows').text(total);
+            
+            // Update button states
+            $('#prevPage').prop('disabled', startIndex <= 0);
+            $('#nextPage').prop('disabled', startIndex + rowsPerPage >= total);
+        }
+    }
+    
+    function directNextPage() {
+        const allRows = $('#invoiceTable tbody tr').toArray();
+        const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
+        
+        let visibleRows = allRows.filter(row => $(row).is(':visible'));
+        let lastVisibleIndex = allRows.indexOf(visibleRows[visibleRows.length - 1]);
+        
+        if (lastVisibleIndex < allRows.length - 1) {
+            // If we have more rows after the current visible ones, show next page
+            const startIndex = lastVisibleIndex + 1;
+            
+            // Hide all rows first
+            $(allRows).hide();
+            
+            // Show rows for next page
+            for (let i = startIndex; i < startIndex + rowsPerPage && i < allRows.length; i++) {
+                $(allRows[i]).show();
+            }
+            
+            // Update info text
+            const total = allRows.length;
+            $('#currentPage').text(startIndex + 1);
+            $('#rowsPerPage').text(Math.min(startIndex + rowsPerPage, total));
+            $('#totalRows').text(total);
+            
+            // Update button states
+            $('#prevPage').prop('disabled', startIndex <= 0);
+            $('#nextPage').prop('disabled', startIndex + rowsPerPage >= total);
+        }
+    }
+    
+    // Manual initialization function if pagination.js isn't working
+    function manualInitPagination() {
+        console.warn("Using manual pagination implementation");
+        
+        const allRows = $('#invoiceTable tbody tr').toArray();
+        const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
+        const total = allRows.length;
+        
+        // Initialize: show only the first page
+        $(allRows).hide();
+        for (let i = 0; i < Math.min(rowsPerPage, allRows.length); i++) {
+            $(allRows[i]).show();
+        }
+        
+        // Update info text
+        $('#currentPage').text(1);
+        $('#rowsPerPage').text(Math.min(rowsPerPage, total));
+        $('#totalRows').text(total);
+        
+        // Update button states
+        $('#prevPage').prop('disabled', true);
+        $('#nextPage').prop('disabled', rowsPerPage >= total);
+        
+        // Handle rows per page change manually
+        $('#rowsPerPageSelect').on('change', function() {
+            const newRowsPerPage = parseInt($(this).val());
+            
+            // Reset to first page
+            $(allRows).hide();
+            for (let i = 0; i < Math.min(newRowsPerPage, allRows.length); i++) {
+                $(allRows[i]).show();
+            }
+            
+            // Update info text
+            $('#currentPage').text(1);
+            $('#rowsPerPage').text(Math.min(newRowsPerPage, total));
+            $('#totalRows').text(total);
+            
+            // Update button states
+            $('#prevPage').prop('disabled', true);
+            $('#nextPage').prop('disabled', newRowsPerPage >= total);
+        });
+    }
 
     // Trigger Edit Invoice Modal using Bootstrap 5 Modal API
     $(document).on('click', '.edit-invoice', function() {
@@ -738,10 +1010,8 @@ $(document).ready(function() {
     // Confirm Delete Invoice via AJAX
     $('#confirmDeleteInvoiceBtn').on('click', function() {
         if (deleteInvoiceId) {
-            // Store current pagination state
-            var storeCurrentPage = currentPage;
-            var storeRowsPerPage = rowsPerPage;
-            var storeSearchText = $('#searchInvoice').val();
+            // Store current pagination state - we'll need the current page
+            const currentPageBeforeDelete = window.paginationConfig ? window.paginationConfig.currentPage : 1;
             
             // Hide modal first before AJAX to prevent backdrop issues
             var deleteModalEl = document.getElementById('deleteInvoiceModal');
@@ -770,13 +1040,13 @@ $(document).ready(function() {
                         $('#invoiceTable').load(location.href + ' #invoiceTable', function() {
                             showToast(response.message, 'success');
                             
-                            // Restore pagination state
-                            currentPage = storeCurrentPage;
-                            rowsPerPage = storeRowsPerPage;
-                            $('#rowsPerPageSelect').val(storeRowsPerPage);
-                            $('#searchInvoice').val(storeSearchText);
+                            // Try to preserve current page if possible
+                            // but only if it's valid after the deletion
+                            if (window.paginationConfig) {
+                                window.paginationConfig.currentPage = currentPageBeforeDelete;
+                            }
                             
-                            // Reinitialize pagination
+                            // Update pagination with the new data
                             reinitializePagination();
                             
                             // Reattach event handlers for rows
@@ -816,11 +1086,6 @@ $(document).ready(function() {
             return false;
         }
         
-        // Store current pagination state
-        var storeCurrentPage = currentPage;
-        var storeRowsPerPage = rowsPerPage;
-        var storeSearchText = $('#searchInvoice').val();
-        
         // Build data with prefixed invoice number
         const formData = $(this).serializeArray();
         let dataObj = {};
@@ -842,13 +1107,8 @@ $(document).ready(function() {
                     $('#invoiceTable').load(location.href + ' #invoiceTable', function() {
                         showToast(response.message, 'success');
                         
-                        // Restore pagination state - go to first page for add
-                        currentPage = 1; // Show first page to see the new item
-                        rowsPerPage = storeRowsPerPage;
-                        $('#rowsPerPageSelect').val(storeRowsPerPage);
-                        $('#searchInvoice').val(storeSearchText);
-                        
-                        // Reinitialize pagination
+                        // Reinitialize pagination - go to first page to see new item
+                        window.paginationConfig.currentPage = 1;
                         reinitializePagination();
                         
                         // Reattach event handlers for rows
@@ -890,11 +1150,6 @@ $(document).ready(function() {
             return false;
         }
         
-        // Store current pagination state
-        var storeCurrentPage = currentPage;
-        var storeRowsPerPage = rowsPerPage;
-        var storeSearchText = $('#searchInvoice').val();
-        
         // Build data with prefixed invoice number
         const formData = $(this).serializeArray();
         let dataObj = {};
@@ -919,13 +1174,7 @@ $(document).ready(function() {
                     $('#invoiceTable').load(location.href + ' #invoiceTable', function() {
                         showToast(response.message, 'success');
                         
-                        // Restore pagination state
-                        currentPage = storeCurrentPage;
-                        rowsPerPage = storeRowsPerPage;
-                        $('#rowsPerPageSelect').val(storeRowsPerPage);
-                        $('#searchInvoice').val(storeSearchText);
-                        
-                        // Reinitialize pagination
+                        // Preserve the current page if possible
                         reinitializePagination();
                         
                         // Reattach event handlers for rows
@@ -1013,7 +1262,7 @@ $(document).ready(function() {
         }
     });
 
-    // Fix clear button: reset filters, search, and show all rows by reloading all data via AJAX
+    // Fix clear button handler to use reinitializePagination
     $('#clearFilters').off('click').on('click', function(e) {
         e.preventDefault();
         // Reset filter dropdowns
@@ -1036,9 +1285,15 @@ $(document).ready(function() {
                 if (newTbody) {
                     $('#invoiceTable tbody').html(newTbody);
                 }
-                // Reinitialize allRows, filteredRows, and pagination
-                if (typeof reinitInvoiceTableJS === 'function') reinitInvoiceTableJS();
-                $('#invoiceTable tbody tr').show();
+                // Go to first page and reinitialize pagination
+                if (window.paginationConfig) {
+                    window.paginationConfig.currentPage = 1;
+                }
+                reinitializePagination();
+                
+                // Reattach event handlers
+                attachRowEventHandlers();
+                
                 showToast('Filters cleared.', 'success');
             },
             error: function() {
@@ -1047,9 +1302,7 @@ $(document).ready(function() {
         });
     });
 
-    // After AJAX reloads (add/edit/delete/filter), call reinitInvoiceTableJS
-    // Example: $('#invoiceTable').load(..., function() { reinitInvoiceTableJS(); });
-
+    // Apply Filters button handler
     $('#applyFilters').off('click').on('click', function() {
         const filterType = $('#dateFilter').val();
         if (!filterType) {
@@ -1086,34 +1339,24 @@ $(document).ready(function() {
                 return;
             }
         }
-        applyInvoiceFilter(filterType, params);
-    });
-
-    function applyInvoiceFilter(type, params = {}) {
+        
         let filterData = {
             action: 'filter',
-            type: type
+            type: filterType
         };
-        if (type === 'mdy') {
-            filterData.dateFrom = params.dateFrom;
-            filterData.dateTo = params.dateTo;
-        } else if (type === 'month') {
-            filterData.monthFrom = params.monthFrom;
-            filterData.monthTo = params.monthTo;
-        } else if (type === 'year') {
-            filterData.yearFrom = params.yearFrom;
-            filterData.yearTo = params.yearTo;
-        } else if (type === 'month_year') {
-            filterData.monthYearFrom = params.monthYearFrom;
-            filterData.monthYearTo = params.monthYearTo;
-        }
+        
+        // Add filter parameters
+        Object.keys(params).forEach(key => {
+            filterData[key] = params[key];
+        });
+        
         $.ajax({
             url: 'charge_invoice.php',
             method: 'GET',
             data: filterData,
             success: function(response) {
                 try {
-                    const data = JSON.parse(response);
+                    const data = typeof response === 'string' ? JSON.parse(response) : response;
                     if (data.status === 'success') {
                         let tableBody = '';
                         data.invoices.forEach(invoice => {
@@ -1150,6 +1393,12 @@ $(document).ready(function() {
                             `;
                         });
                         $('#invoiceTable tbody').html(tableBody || '<tr><td colspan="6">No Charge Invoices found.</td></tr>');
+                        
+                        // Reinitialize pagination with filtered data
+                        reinitializePagination();
+                        
+                        // Reattach event handlers for row actions
+                        attachRowEventHandlers();
                     } else {
                         showToast('Error filtering data: ' + data.message, 'error');
                     }
@@ -1163,7 +1412,7 @@ $(document).ready(function() {
                 showToast('Error filtering data', 'error');
             }
         });
-    }
+    });
 });
 </script>
 </head>
