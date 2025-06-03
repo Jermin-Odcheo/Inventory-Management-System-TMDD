@@ -593,8 +593,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                 <div class="d-flex align-items-center gap-2">
                     <select class="form-select form-select-sm" id="dateFilter" style="width: auto;">
                         <option value="">Filter by Date</option>
-                        <option value="desc">Newest to Oldest</option>
-                        <option value="asc">Oldest to Newest</option>
+                        
                         <option value="mdy">Month-Day-Year Range</option>
                         <option value="month">Month Range</option>
                         <option value="year">Year Range</option>
@@ -1695,8 +1694,6 @@ function reattachInvoiceEventHandlers() {
                     <?php endif; ?>
                     <div class="d-flex align-items-center gap-2 flex-wrap">
     <select class="form-select form-select-sm" id="dateFilter" style="width: auto; min-width: 140px;">
-        <option value="">Filter by Date</option>
-        
         <option value="mdy">Month-Day-Year Range</option>
         <option value="month">Month Range</option>
         <option value="year">Year Range</option>
