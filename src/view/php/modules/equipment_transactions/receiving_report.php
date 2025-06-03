@@ -152,7 +152,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             logAudit(
                 $pdo,
                 'delete',
-                'Receiving Report archived (soft delete)',
+                'Receiving Report ' . $rrNo . ' deleted',
                 'Successful',
                 json_encode($oldData),
                 json_encode(['is_disabled' => 1]),
