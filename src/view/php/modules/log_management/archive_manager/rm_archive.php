@@ -136,6 +136,30 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $roleData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Enhanced Debug information
+error_log("=== Debug Information ===");
+error_log("SQL Query: " . $sql);
+error_log("Parameters: " . print_r($params, true));
+error_log("Number of rows fetched: " . count($roleData));
+error_log("PDO Error Info: " . print_r($stmt->errorInfo(), true));
+
+if (empty($roleData)) {
+    error_log("No data was fetched from the database");
+} else {
+    error_log("First row of data: " . print_r($roleData[0], true));
+    error_log("Total rows: " . count($roleData));
+}
+
+// Debug the table structure
+error_log("Table Structure:");
+error_log("Table ID: auditTable");
+error_log("Session user_id: " . ($_SESSION['user_id'] ?? 'not set'));
+error_log("RBAC privileges: " . print_r([
+    'canRestore' => $canRestore,
+    'canRemove' => $canRemove,
+    'canPermanentDelete' => $canPermanentDelete
+], true));
+
 /**
  * Format JSON data into a list (for the 'Changes' column).
  */
@@ -270,8 +294,36 @@ function formatChanges($oldJsonStr)
         }
 
         #tableContainer {
-            max-height: 500px;
-            overflow-y: auto;
+            width: 100%;
+        }
+
+        /* Action badges */
+        .action-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .action-badge i {
+            margin-right: 0.5rem;
+        }
+
+        .action-modified {
+            background-color: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .action-add {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .action-delete, .action-remove {
+            background-color: #ffebee;
+            color: #c62828;
         }
 
         /* Styles for sortable headers */
@@ -279,7 +331,6 @@ function formatChanges($oldJsonStr)
             cursor: pointer;
             position: relative;
             padding-right: 25px;
-            /* Make space for the icon */
         }
 
         th.sortable .fas {
@@ -288,25 +339,68 @@ function formatChanges($oldJsonStr)
             top: 50%;
             transform: translateY(-50%);
             color: #ccc;
-            /* Default icon color */
             transition: color 0.2s ease;
         }
 
         th.sortable:hover .fas {
             color: #888;
-            /* Hover color */
         }
 
         th.sortable.asc .fas.fa-sort-up,
         th.sortable.desc .fas.fa-sort-down {
             color: #333;
-            /* Active icon color */
         }
 
         th.sortable.asc .fas.fa-sort,
         th.sortable.desc .fas.fa-sort {
             display: none;
-            /* Hide generic sort icon when specific order is applied */
+        }
+
+        /* Pagination styles */
+        .pagination {
+            margin-bottom: 0;
+        }
+
+        .pagination .page-link {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+            color: #6c757d;
+            background-color: #fff;
+            border: 1px solid #dee2e6;
+        }
+
+        .pagination .page-link:hover {
+            color: #0056b3;
+            background-color: #e9ecef;
+            border-color: #dee2e6;
+        }
+
+        .pagination .page-item.disabled .page-link {
+            color: #6c757d;
+            pointer-events: none;
+            background-color: #fff;
+            border-color: #dee2e6;
+        }
+
+        .pagination .page-item.active .page-link {
+            color: #fff;
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+        }
+
+        #rowsPerPage {
+            width: auto;
+            min-width: 80px;
+        }
+
+        .form-select-sm {
+            padding: 0.25rem 2rem 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        #tableInfo {
+            font-size: 0.875rem;
+            color: #6c757d;
         }
     </style>
 </head>
@@ -421,7 +515,7 @@ function formatChanges($oldJsonStr)
                         </div>
                     </form>
 
-                    <div class="table-responsive" id="table">
+                    <div class="table-responsive" id="tableContainer">
                         <table id="archivedRolesTable" class="table table-striped table-hover align-middle">
                             <thead class="table-light">
                                 <tr>
@@ -437,7 +531,12 @@ function formatChanges($oldJsonStr)
                             </thead>
                             <tbody id="auditTable">
                                 <?php if (!empty($roleData)): ?>
-                                    <?php foreach ($roleData as $role): ?>
+                                    <?php 
+                                    // Debug output of first row keys
+                                    if (isset($roleData[0])) {
+                                        error_log("Available columns in data: " . implode(", ", array_keys($roleData[0])));
+                                    }
+                                    foreach ($roleData as $role): ?>
                                         <tr data-role-id="<?php echo $role['role_id']; ?>">
                                             <!-- <td>
                                                 <input type="checkbox" class="select-row" value="<?php echo $role['role_id']; ?>">
@@ -452,7 +551,7 @@ function formatChanges($oldJsonStr)
                                             <td class="action">
                                                 <?php
                                                 $actionText = !empty($role['action']) ? $role['action'] : 'Unknown';
-                                                echo '<span class="action-badge action-' . strtolower(str_replace(' ', '.', $actionText)) . '">';
+                                                echo '<span class="action-badge action-' . strtolower($actionText) . '">';
                                                 echo getActionIcon($actionText) . ' ' . htmlspecialchars($actionText);
                                                 echo '</span>';
                                                 ?>
@@ -504,40 +603,35 @@ function formatChanges($oldJsonStr)
                                 <?php endif; ?>
                             </tbody>
                         </table>
-
-
-                    
-                        <div class="container-fluid">
-                            <div class="row align-items-center g-3">
-                                <div class="col-12 col-sm-auto">
-                                    <div class="text-muted">
-                                        <?php $totalRoles = count($roleData); ?>
-                                        <input type="hidden" id="total-users" value="<?= $totalRoles ?>">
-                                        Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span
-                                            id="totalRows"><?= $totalRoles ?></span> entries
-                                    </div>
-                                </div>
-                                <div class="col-12 col-sm-auto ms-sm-auto">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                            <i class="bi bi-chevron-left"></i> Previous
-                                        </button>
-                                        <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
-                                            <option value="10" selected>10</option>
-                                            <option value="20">20</option>
-                                            <option value="30">30</option>
-                                            <option value="50">50</option>
-                                        </select>
-                                        <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                            Next <i class="bi bi-chevron-right"></i>
-                                        </button>
-                                    </div>
-                                </div>
+                        
+                        <!-- Pagination Controls -->
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <div class="d-flex align-items-center">
+                                <label for="rowsPerPage" class="me-2">Show entries:</label>
+                                <select id="rowsPerPage" class="form-select form-select-sm" style="width: auto;">
+                                    <option value="10">10</option>
+                                    <option value="20">20</option>
+                                    <option value="30">30</option>
+                                    <option value="40">40</option>
+                                    <option value="50">50</option>
+                                </select>
                             </div>
-                            <div class="row mt-3">
-                                <div class="col-12">
-                                    <ul class="pagination justify-content-center" id="pagination"></ul>
-                                </div>
+                            <div class="d-flex align-items-center">
+                                <span id="tableInfo" class="me-3"></span>
+                                <nav aria-label="Page navigation">
+                                    <ul class="pagination pagination-sm mb-0">
+                                        <li class="page-item" id="prevPage">
+                                            <a class="page-link" href="#" aria-label="Previous">
+                                                <span aria-hidden="true">&laquo;</span>
+                                            </a>
+                                        </li>
+                                        <li class="page-item" id="nextPage">
+                                            <a class="page-link" href="#" aria-label="Next">
+                                                <span aria-hidden="true">&raquo;</span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </nav>
                             </div>
                         </div>
                     </div>
@@ -546,7 +640,6 @@ function formatChanges($oldJsonStr)
         </div>
     </div>
 
-    <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/logs.js" defer></script>
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/archive_filters.js" defer></script>
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/sort_archives.js" defer></script>
@@ -629,258 +722,80 @@ function formatChanges($oldJsonStr)
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Set the correct table ID for both pagination.js and logs.js
-            window.paginationConfig = window.paginationConfig || {};
-            window.paginationConfig.tableId = 'auditTable';
-
-            // Store original rows for filtering
-            window.allRows = Array.from(document.querySelectorAll('#auditTable tr'));
-
-            // Initialize Pagination
-            initPagination({
-                tableId: 'auditTable',
-                currentPage: 1
-            });
-
-            // Event listeners for modals
-            // Pass RBAC privileges to JavaScript
-            const userPrivileges = {
-                canRestore: <?php echo json_encode($canRestore); ?>,
-                canRemove: <?php echo json_encode($canRemove); ?>
-            };
-
-            // Handle select all checkbox
-            $(document).on('change', '#select-all', function() {
-                $('.select-row').prop('checked', $(this).prop('checked'));
-                updateBulkButtons();
-            });
-
-            $(document).on('change', '.select-row', updateBulkButtons);
-
-            function updateBulkButtons() {
-                var count = $('.select-row:checked').length;
-                if (count > 0) {
-                    $('#bulk-restore, #bulk-delete').show();
-                } else {
-                    $('#bulk-restore, #bulk-delete').hide();
-                }
+            const table = document.getElementById('archivedRolesTable');
+            const tbody = document.getElementById('auditTable');
+            const rowsPerPageSelect = document.getElementById('rowsPerPage');
+            const prevPageBtn = document.getElementById('prevPage');
+            const nextPageBtn = document.getElementById('nextPage');
+            const tableInfo = document.getElementById('tableInfo');
+            
+            let currentPage = 1;
+            let rowsPerPage = parseInt(rowsPerPageSelect.value);
+            let allRows = Array.from(tbody.getElementsByTagName('tr'));
+            let filteredRows = [...allRows];
+            
+            function updateTable() {
+                const start = (currentPage - 1) * rowsPerPage;
+                const end = start + rowsPerPage;
+                const paginatedRows = filteredRows.slice(start, end);
+                
+                // Clear current table content
+                tbody.innerHTML = '';
+                
+                // Add paginated rows
+                paginatedRows.forEach(row => tbody.appendChild(row.cloneNode(true)));
+                
+                // Update table info
+                const totalRows = filteredRows.length;
+                const startRow = totalRows === 0 ? 0 : start + 1;
+                const endRow = Math.min(end, totalRows);
+                tableInfo.textContent = `Showing ${startRow} to ${endRow} of ${totalRows} entries`;
+                
+                // Update button states
+                prevPageBtn.classList.toggle('disabled', currentPage === 1);
+                nextPageBtn.classList.toggle('disabled', end >= totalRows);
             }
-
-            // Bulk Restore
-            $('#bulk-restore').on('click', function() {
-                if (!userPrivileges.canRestore) return;
-
-                const selectedIds = [];
-                $('.select-row:checked').each(function() {
-                    selectedIds.push($(this).val());
-                });
-
-                if (selectedIds.length > 0) {
-                    $('#bulkRestoreModal').modal('show');
+            
+            // Event listeners
+            rowsPerPageSelect.addEventListener('change', function() {
+                rowsPerPage = parseInt(this.value);
+                currentPage = 1;
+                updateTable();
+            });
+            
+            prevPageBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (currentPage > 1) {
+                    currentPage--;
+                    updateTable();
                 }
             });
-
-            // Confirm bulk restore
-            $('#confirmBulkRestoreBtn').on('click', function() {
-                if (!userPrivileges.canRestore) return;
-
-                const selectedIds = [];
-                $('.select-row:checked').each(function() {
-                    selectedIds.push($(this).val());
-                });
-
-                if (selectedIds.length === 0) {
-                    showToast('No roles selected for restore', 'error', 5000);
-                    return;
-                }
-
-                $.ajax({
-                    type: 'POST',
-                    url: '../../rolesandprivilege_manager/role_manager/restore_role.php',
-                    data: {
-                        ids: selectedIds,
-                        action: 'bulk_restore',
-                        module: 'Roles and Privileges'
-                    },
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.success) {
-                            // Close modal and clean up
-                            $('#bulkRestoreModal').modal('hide');
-                            cleanupModalElements();
-
-                            // Show success message
-                            showToast(response.message, 'success', 5000);
-
-                            // Reload the page after a short delay
-                            setTimeout(function() {
-                                window.location.reload();
-                            }, 500);
-                        } else {
-                            showToast(response.message || 'An error occurred', 'error', 5000);
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        showToast('Error restoring roles: ' + error, 'error', 5000);
-                    }
-                });
-            });
-
-            // Bulk Delete
-            $('#bulk-delete').on('click', function() {
-                if (!userPrivileges.canRemove) return;
-
-                const selectedIds = [];
-                $('.select-row:checked').each(function() {
-                    selectedIds.push($(this).val());
-                });
-
-                if (selectedIds.length > 0) {
-                    $('#bulkDeleteModal').modal('show');
+            
+            nextPageBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const maxPage = Math.ceil(filteredRows.length / rowsPerPage);
+                if (currentPage < maxPage) {
+                    currentPage++;
+                    updateTable();
                 }
             });
-
-            // Confirm bulk delete
-            $('#confirmBulkDeleteBtn').on('click', function() {
-                if (!userPrivileges.canRemove) return;
-
-                const selectedIds = [];
-                $('.select-row:checked').each(function() {
-                    selectedIds.push($(this).val());
+            
+            // Search functionality
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    const searchTerm = this.value.toLowerCase();
+                    filteredRows = allRows.filter(row => {
+                        const text = row.textContent.toLowerCase();
+                        return text.includes(searchTerm);
+                    });
+                    currentPage = 1;
+                    updateTable();
                 });
-
-                if (selectedIds.length === 0) return;
-
-                $.ajax({
-                    type: 'POST',
-                    url: '../../rolesandprivilege_manager/role_manager/permanent_delete_role.php',
-                    data: {
-                        ids: selectedIds,
-                        action: 'bulk_delete',
-                        module: 'Roles and Privileges'
-                    },
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.success) {
-                            // Close modal and clean up
-                            $('#bulkDeleteModal').modal('hide');
-                            cleanupModalElements();
-
-                            // Show success message
-                            showToast(response.message, 'success', 5000);
-
-                            // Reload the page after a short delay
-                            setTimeout(function() {
-                                window.location.reload();
-                            }, 500);
-                        } else {
-                            showToast(response.message || 'An error occurred', 'error', 5000);
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        showToast('Error deleting roles: ' + error, 'error', 5000);
-                    }
-                });
-            });
-
-            // Function to clean up modal elements
-            function cleanupModalElements() {
-                $('.modal-backdrop').remove();
-                $('body').removeClass('modal-open');
-                $('body').css('overflow', '');
-                $('body').css('padding-right', '');
             }
-
-            // Custom script to ensure filtering only happens on button click
-            document.addEventListener('DOMContentLoaded', function() {
-                // Clear filters button
-                const clearFiltersBtn = document.getElementById('clearFilters');
-                if (clearFiltersBtn) {
-                    clearFiltersBtn.addEventListener('click', function() {
-                        const form = document.getElementById('archiveFilterForm');
-                        form.reset();
-
-                        // Clear date filter type and hide all date filter fields
-                        const filterType = document.getElementById('dateFilterType');
-                        if (filterType) {
-                            filterType.value = '';
-                            document.querySelectorAll('.date-filter').forEach(field => field.classList.add('d-none'));
-                        }
-
-                        // Clear search input
-                        const searchInput = document.getElementById('searchInput');
-                        if (searchInput) {
-                            searchInput.value = '';
-                        }
-
-                        // Submit the form to reset the data
-                        form.submit();
-                    });
-                }
-
-                // Date filter type change handler
-                const filterType = document.getElementById('dateFilterType');
-                if (filterType) {
-                    filterType.addEventListener('change', function() {
-                        // Hide all date filter fields first
-                        document.querySelectorAll('.date-filter').forEach(field => field.classList.add('d-none'));
-
-                        // Show relevant date filter fields based on selection
-                        if (this.value) {
-                            document.querySelectorAll('.date-' + this.value).forEach(field => field.classList.remove('d-none'));
-                        }
-                    });
-
-                    // Initialize date filter fields visibility
-                    if (filterType.value) {
-                        document.querySelectorAll('.date-' + filterType.value).forEach(field => field.classList.remove('d-none'));
-                    }
-                }
-            });
-
-            // Add these variables at the top of your script
-            let restoreId = null;
-            let restoreName = null;
-
-            // Add click handler for restore buttons
-            $(document).on('click', '.restore-btn', function() {
-                restoreId = $(this).data('role-id');
-                restoreName = $(this).data('role-name');
-                $('#restoreRoleNamePlaceholder').text(restoreName);
-            });
-
-            // Update the restore confirmation handler
-            $('#confirmRestoreBtn').on('click', function() {
-                if (!userPrivileges.canRestore || !restoreId) return;
-
-                $.ajax({
-                    url: '../../rolesandprivilege_manager/role_manager/restore_role.php',
-                    method: 'POST',
-                    data: {
-                        id: restoreId,
-                        action: 'restore',
-                        module: 'Roles and Privileges'
-                    },
-                    dataType: 'json',
-                    success: function(response) {
-                        // Hide restore modal
-                        $('#confirmRestoreModal').modal('hide');
-
-                        if (response.success) {
-                            showToast(response.message || 'Role restored successfully', 'success');
-                            // Reload the page after a short delay
-                            setTimeout(function() {
-                                window.location.reload();
-                            }, 500);
-                        } else {
-                            showToast(response.message || 'Failed to restore role', 'error');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        showToast('Error restoring role: ' + error, 'error');
-                    }
-                });
-            });
+            
+            // Initial table update
+            updateTable();
         });
     </script>
 </body>
