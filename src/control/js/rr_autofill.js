@@ -78,7 +78,25 @@ $(document).ready(function() {
         $('#edit_rr_no').on('select2:select', function(e) {
             const rrNo = e.params.data.id;
             if (rrNo) {
+                // Save current values of location and accountable individual
+                const location = $('#edit_location').val();
+                const accountable = $('#edit_accountable_individual').val();
+                
+                // Fetch RR info
                 fetchRRInfo(rrNo, 'edit', true);
+                
+                // Make sure we don't lose location and accountable values
+                if (location) {
+                    setTimeout(function() {
+                        $('#edit_location').val(location);
+                    }, 50);
+                }
+                
+                if (accountable) {
+                    setTimeout(function() {
+                        $('#edit_accountable_individual').val(accountable);
+                    }, 50);
+                }
             }
         });
         
@@ -94,9 +112,26 @@ $(document).ready(function() {
         // Check if RR# is already selected when edit modal opens
         $('#editEquipmentModal').on('shown.bs.modal', function() {
             const rrNoValue = $('#edit_rr_no').val();
+            // Save current values of location and accountable individual
+            const location = $('#edit_location').val();
+            const accountable = $('#edit_accountable_individual').val();
+            
             if (rrNoValue) {
                 console.log('Edit modal opened with RR# already selected:', rrNoValue);
                 fetchRRInfo(rrNoValue, 'edit', false);
+                
+                // Make sure we don't lose location and accountable values
+                if (location) {
+                    setTimeout(function() {
+                        $('#edit_location').val(location);
+                    }, 50);
+                }
+                
+                if (accountable) {
+                    setTimeout(function() {
+                        $('#edit_accountable_individual').val(accountable);
+                    }, 50);
+                }
             }
         });
     }

@@ -29,6 +29,19 @@ function fetchAssetTagInfo(assetTag, formType, showNotification = true) {
         console.error('Location or accountable field not found in the DOM');
         return;
     }
+
+    // For edit form, check if fields already have values (set from data attributes)
+    // If so, don't override them with values from the server
+    if (formType === 'edit') {
+        const locationValue = locationField.value.trim();
+        const accountableValue = accountableField.value.trim();
+        
+        // If both fields already have values, don't fetch from server
+        if (locationValue && accountableValue) {
+            console.log('Edit form fields already have values, skipping autofill from server');
+            return;
+        }
+    }
     
     // Make AJAX request to get asset tag information
     $.ajax({
@@ -44,16 +57,31 @@ function fetchAssetTagInfo(assetTag, formType, showNotification = true) {
         },
         success: function(response) {
             if (response.status === 'success' && response.data) {
-                // Autofill location if available
-                if (response.data.location) {
-                    locationField.value = response.data.location;
-                    locationField.setAttribute('data-autofill', 'true');
-                }
-                
-                // Autofill accountable individual if available
-                if (response.data.accountable_individual) {
-                    accountableField.value = response.data.accountable_individual;
-                    accountableField.setAttribute('data-autofill', 'true');
+                // For edit form, only autofill fields that are empty
+                if (formType === 'edit') {
+                    // Autofill location if available and current value is empty
+                    if (response.data.location && !locationField.value.trim()) {
+                        locationField.value = response.data.location;
+                        locationField.setAttribute('data-autofill', 'true');
+                    }
+                    
+                    // Autofill accountable individual if available and current value is empty
+                    if (response.data.accountable_individual && !accountableField.value.trim()) {
+                        accountableField.value = response.data.accountable_individual;
+                        accountableField.setAttribute('data-autofill', 'true');
+                    }
+                } else {
+                    // For add form, always autofill if data is available
+                    if (response.data.location) {
+                        locationField.value = response.data.location;
+                        locationField.setAttribute('data-autofill', 'true');
+                    }
+                    
+                    // Autofill accountable individual if available
+                    if (response.data.accountable_individual) {
+                        accountableField.value = response.data.accountable_individual;
+                        accountableField.setAttribute('data-autofill', 'true');
+                    }
                 }
                 
                 // Show notification if requested and data was found
