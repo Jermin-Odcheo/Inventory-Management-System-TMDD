@@ -47,6 +47,16 @@ foreach ($modules as $module => $paths) {
     }
 }
 
+//This generates an acronym out of a given string, so when I collapse the sidebar the
+//acronym will be displayed instead of the full module name
+function getAcronym($string) {
+    $words = preg_split("/[\s_]+/", $string);
+    $acronym = '';
+    foreach ($words as $word) {
+        $acronym .= strtoupper($word[0]);
+    }
+    return $acronym;
+}
 
 ?>
 
@@ -68,141 +78,183 @@ foreach ($modules as $module => $paths) {
             </li>
 
             <?php if (!empty($auditModules)): ?>
-            <li class="dropdown-item">
-                <button class="dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('show')">
-                    <i class="fas fa-history"></i><span class="menu-text">Audit Logs</span>
-                    <i class="fas fa-chevron-down dropdown-icon"></i>
-                </button>
-                <ul class="dropdown tree">
-                    <?php foreach ($auditModules as $module => $file): ?>
-                        <li class="nav-item">
-                            <a href="<?= BASE_URL ?>src/view/php/modules/log_management/audit_manager/<?= $file ?>">
-                                <?= $module ?> Audit Logs
-                            </a>
-                        </li>
-                    <?php endforeach; ?>
-                </ul>
-            </li>
+                <li class="dropdown-item">
+                    <button class="dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('show')">
+                        <i class="fas fa-history"></i><span class="menu-text">Audit Logs</span>
+                        <i class="fas fa-chevron-down dropdown-icon"></i>
+                    </button>
+                    <ul class="dropdown tree">
+                        <?php foreach ($auditModules as $module => $file): ?>
+                            <i class="bi bi-file-earmark-check">
+                                <a href="<?= BASE_URL ?>src/view/php/modules/log_management/audit_manager/<?= $file ?>">
+                                    <span class="short-label"><?= getAcronym($module) ?>AL</span>
+                                </a>
+                            </i>
+                            <li class="nav-item">
+                                <a href="<?= BASE_URL ?>src/view/php/modules/log_management/audit_manager/<?= $file ?>">
+                                    <?= $module ?> Audit Logs
+                                </a>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </li>
             <?php endif; ?>
 
             <?php if (!empty($archiveModules)): ?>
-            <li class="dropdown-item">
-                <button class="dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('show')">
-                    <i class="fas fa-trash"></i><span class="menu-text">Archives</span> 
-                    <i class="fas fa-chevron-down dropdown-icon"></i>
-                </button>
-                <ul class="dropdown tree">
-                    <?php foreach ($archiveModules as $module => $file): ?>
-                        <li class="nav-item">
-                            <a href="<?= BASE_URL ?>src/view/php/modules/log_management/archive_manager/<?= $file ?>">
-                                <?= $module ?> Archives
-                            </a>
-                        </li>
-                    <?php endforeach; ?>
-                </ul>
-            </li>
+                <li class="dropdown-item">
+                    <button class="dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('show')">
+                        <i class="fas fa-trash"></i><span class="menu-text">Archives</span>
+                        <i class="fas fa-chevron-down dropdown-icon"></i>
+                    </button>
+                    <ul class="dropdown tree">
+                        <?php foreach ($archiveModules as $module => $file): ?>
+                            <i class="bi bi-file-earmark-check">
+                                <a href="<?= BASE_URL ?>src/view/php/modules/log_management/archive_manager/<?= $file ?>">
+                                    <span class="short-label"><?= getAcronym($module) ?>A</span>
+                                </a>
+                            </i>
+                            <li class="nav-item">
+                                <a href="<?= BASE_URL ?>src/view/php/modules/log_management/archive_manager/<?= $file ?>">
+                                    <?= $module ?> Archives
+                                </a>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </li>
             <?php endif; ?>
 
             <?php if ($rbac->hasPrivilege('Management', 'View')): ?>
-            <li class="dropdown-item">
-            <button class="dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('show')">
-            <i class="fas fa-university"></i><span class="menu-text">Management</span>
-                    <i class="fas fa-chevron-down dropdown-icon"></i>
-                </button>
-                <ul class="dropdown tree">
-                <li class="nav-item">
-                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/management/department_manager/department_management.php" class="nav-link">
-                            <span class="submenu-text">Department Management</span>
-                        </a>
-                    </li>
-                </ul>
-            </li>
+                <li class="dropdown-item">
+                    <button class="dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('show')">
+                        <i class="fas fa-university"></i><span class="menu-text">Management</span>
+                        <i class="fas fa-chevron-down dropdown-icon"></i>
+                    </button>
+                    <ul class="dropdown tree">
+                        <i class="bi bi-file-earmark-check"></i>
+                        <li class="nav-item">
+                            <a href="<?php echo BASE_URL; ?>src/view/php/modules/management/department_manager/department_management.php"
+                                class="nav-link">
+                                <span class="submenu-text">Department Management</span>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
             <?php endif; ?>
 
             <?php if ($rbac->hasPrivilege('User Management', 'View')): ?>
-            <li class="dropdown-item">
-            <button class="dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('show')">                    
-                <i class="fa-solid fa-user"></i>
-                    <span class="menu-text">User Management</span>
-                    <i class="fas fa-chevron-down dropdown-icon"></i>
-                </button>
-                <ul class="dropdown tree">
-                    <li class="nav-item">
-                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/user_manager/user_management.php" class="nav-link">
-                            <span class="submenu-text">Manage Accounts</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/user_manager/user_roles_management.php" class="nav-link">
-                            <span class="submenu-text">User Roles Management</span>
-                        </a>
-                    </li>
-                </ul>
-            </li>
+                <li class="dropdown-item">
+                    <button class="dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('show')">
+                        <i class="fa-solid fa-user"></i>
+                        <span class="menu-text">User Management</span>
+                        <i class="fas fa-chevron-down dropdown-icon"></i>
+                    </button>
+                    <ul class="dropdown tree">
+                        <i class="bi bi-file-earmark-check">
+                            <a href="<?= BASE_URL ?>src/view/php/modules/user_manager/user_management.php<?= $file ?>">
+                                <span class="short-label">MA</span>
+                            </a>
+                        </i>
+                        <li class="nav-item">
+                            <a href="<?php echo BASE_URL; ?>src/view/php/modules/user_manager/user_management.php"
+                                class="nav-link">
+                                <span class="submenu-text">Manage Accounts</span>
+                            </a>
+                        </li>
+                        <i class="bi bi-file-earmark-check">
+                            <a href="<?= BASE_URL ?>src/view/php/modules/user_manager/user_roles_management.php<?= $file ?>">
+                                <span class="short-label">URM</span>
+                            </a>
+                        </i>
+                        <li class="nav-item">
+                            <a href="<?php echo BASE_URL; ?>src/view/php/modules/user_manager/user_roles_management.php"
+                                class="nav-link">
+                                <span class="submenu-text">User Roles Management</span>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
             <?php endif; ?>
 
             <?php if ($rbac->hasPrivilege('Roles and Privileges', 'View')): ?>
-            <li class="dropdown-item">
-            <button class="dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('show')">                    
-                <i class="fa-solid fa-th-list"></i>
-                    <span class="menu-text">Roles and Privileges</span>
-                    <i class="fas fa-chevron-down dropdown-icon"></i>
-                </button>
-                <ul class="dropdown tree">
-                    <li class="nav-item">
-                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/rolesandprivilege_manager/role_manager/manage_roles.php" class="nav-link">
-                            <span class="submenu-text">Roles and Privileges Management</span>
-                        </a>
-                    </li>
-                    <!-- <li class="nav-item">
+                <li class="dropdown-item">
+                    <button class="dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('show')">
+                        <i class="fa-solid fa-th-list"></i>
+                        <span class="menu-text">Roles and Privileges</span>
+                        <i class="fas fa-chevron-down dropdown-icon"></i>
+                    </button>
+                    <ul class="dropdown tree">
+                        <i class="bi bi-file-earmark-check">
+                            <a href="<?= BASE_URL ?>src/view/php/modules/rolesandprivilege_manager/role_manager/manage_roles.php<?= $file ?>">
+                                <span class="short-label">RPM</span>
+                            </a>
+                        </i>
+                        <li class="nav-item">
+                            <a href="<?php echo BASE_URL; ?>src/view/php/modules/rolesandprivilege_manager/role_manager/manage_roles.php"
+                                class="nav-link">
+                                <span class="submenu-text">Roles and Privileges Management</span>
+                            </a>
+                        </li>
+                        <!-- <li class="nav-item">
                         <a href="<?php echo BASE_URL; ?>src/view/php/modules/rolesandprivilege_manager/privilege_manager/manage_privileges.php" class="nav-link">
                             <span class="submenu-text">Privilege Management <br> 🆕💻 (Prototype)</span>
                         </a>
                     </li> -->
-                </ul>
-            </li>
+                    </ul>
+                </li>
             <?php endif; ?>
 
             <?php if ($rbac->hasPrivilege('Equipment Management', 'View')): ?>
-            <li class="dropdown-item">
-            <button class="dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('show')">                    
-                <i class="fa-solid fa-wrench"></i>
-                <span class="menu-text">Equipment Management</span>
-            <i class="fas fa-chevron-down dropdown-icon"></i>
-                </button>
-                <ul class="dropdown tree">
-                    <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_manager/equipment_details.php">Equipment Details</a></li>
-                    <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_manager/equipment_location.php">Equipment Location</a></li>
-                    <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_manager/equipment_status.php">Equipment Status for PMS</a></li>
-                </ul>
-            </li>
+                <li class="dropdown-item">
+                    <button class="dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('show')">
+                        <i class="fa-solid fa-wrench"></i>
+                        <span class="menu-text">Equipment Management</span>
+                        <i class="fas fa-chevron-down dropdown-icon"></i>
+                    </button>
+                    <ul class="dropdown tree">
+                        <i class="bi bi-file-earmark-check"></i>
+                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_manager/equipment_details.php">Equipment
+                                Details</a></li>
+                        <i class="bi bi-file-earmark-check"></i>
+                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_manager/equipment_location.php">Equipment
+                                Location</a></li>
+                        <i class="bi bi-file-earmark-check"></i>
+                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_manager/equipment_status.php">Equipment
+                                Status for PMS</a></li>
+                    </ul>
+                </li>
             <?php endif; ?>
 
             <?php if ($rbac->hasPrivilege('Equipment Transactions', 'View')): ?>
-            <li class="dropdown-item">
-            <button class="dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('show')">                    
-                <i class="fa-solid fa-arrow-right-arrow-left"></i> <span class="menu-text">Equipment Transaction</span>
-                    <i class="fas fa-chevron-down dropdown-icon"></i>
-                </button>
-                <ul class="dropdown tree">
-                    <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_transactions/purchase_order.php">Purchase Order</a></li>
-                    <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_transactions/charge_invoice.php">Charge Invoice</a></li>
-                    <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_transactions/receiving_report.php">Receiving Report</a></li>
-                </ul>
-            </li>
+                <li class="dropdown-item">
+                    <button class="dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('show')">
+                        <i class="fa-solid fa-arrow-right-arrow-left"></i> <span class="menu-text">Equipment
+                            Transaction</span>
+                        <i class="fas fa-chevron-down dropdown-icon"></i>
+                    </button>
+                    <ul class="dropdown tree">
+                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_transactions/purchase_order.php">Purchase
+                                Order</a></li>
+                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_transactions/charge_invoice.php">Charge
+                                Invoice</a></li>
+                        <li><a
+                                href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_transactions/receiving_report.php">Receiving
+                                Report</a></li>
+                    </ul>
+                </li>
             <?php endif; ?>
 
             <?php if ($rbac->hasPrivilege('Reports', 'View')): ?>
-            <li class="dropdown-item">
-            <button class="dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('show')">        
-                <i class="fas fa-flag"></i> <span class="menu-text">Reports</span>
-                    <i class="fas fa-chevron-down dropdown-icon"></i>
-                </button>
-                <ul class="dropdown tree">
-                    <!-- <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/reports/userman_reports/usrep.php">User Management Reports 🔜 (Under Development)</a></li> -->
-                    <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/reports/equipman_reports/eqrep.php">Equipment Management Report </a></li>
-                </ul>
-            </li>
+                <li class="dropdown-item">
+                    <button class="dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('show')">
+                        <i class="fas fa-flag"></i> <span class="menu-text">Reports</span>
+                        <i class="fas fa-chevron-down dropdown-icon"></i>
+                    </button>
+                    <ul class="dropdown tree">
+                        <!-- <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/reports/userman_reports/usrep.php">User Management Reports 🔜 (Under Development)</a></li> -->
+                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/reports/equipman_reports/eqrep.php">Equipment
+                                Management Report </a></li>
+                    </ul>
+                </li>
             <?php endif; ?>
 
         </ul>
@@ -215,15 +267,19 @@ foreach ($modules as $module => $paths) {
     const sidebarToggle = document.getElementById('sidebarToggle');
     const header = document.querySelector('.header');
     const mainContent = document.querySelector('.main-content');
-    
+
     // Function to update all collapsed states
     function updateCollapsedState(isCollapsed) {
         sidebar.classList.toggle('collapsed', isCollapsed);
         header?.classList.toggle('sidebar-collapsed', isCollapsed);
-        mainContent?.classList.toggle('sidebar-collapsed', isCollapsed);
+        if (mainContent) {
+            mainContent.classList.toggle('sidebar-collapsed', isCollapsed);
+            // Update margin directly if needed
+            mainContent.style.marginLeft = isCollapsed ? '60px' : '300px';
+        }
         localStorage.setItem('sidebarCollapsed', isCollapsed);
     }
-    
+
     // Check if there's a saved state in localStorage
     const isSidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
     if (isSidebarCollapsed) {

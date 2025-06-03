@@ -303,9 +303,12 @@ unset($role, $privileges);
         }
 
         .main-content {
-            flex: 1;
+            margin-left: var(--sidebar-width);
+            transition: margin-left 0.3s ease;
+        }
 
-            margin-left: 300px;
+        .main-content.sidebar-collapsed {
+            margin-left: 60px;
         }
 
         #tableContainer {

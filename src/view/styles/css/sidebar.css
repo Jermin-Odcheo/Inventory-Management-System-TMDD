@@ -22,6 +22,21 @@
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+.sidebar a {
+    text-overflow: ellipsis;
+}
+
+.short-label {
+    display: inline-block;      /* Ensure it respects width and wrapping */
+    max-width: 100%;            /* Prevent overflow */
+    white-space: normal;        /* Allow wrapping */
+    word-break: break-word;     /* Break long words if needed */
+    overflow-wrap: break-word;  /* Break overflow content */
+    line-height: 1.2;           /* Tighter lines if necessary */
+    font-size: 0.9rem;          /* Optional: smaller size to help fit */
+}
+
+
 .sidebar.collapsed {
     width: var(--sidebar-collapsed-width);
     padding: 80px 10px;
@@ -30,7 +45,17 @@
 .sidebar.collapsed .menu-text,
 .sidebar.collapsed .submenu-text,
 .sidebar.collapsed h3,
-.sidebar.collapsed .dropdown.tree {
+.sidebar.collapsed .dropdown.tree li a {
+    display: none;
+}
+
+.sidebar.collapsed .dropdown-toggle i.fas.fa-history {
+    display: inline-block;
+    cursor: pointer;
+}
+
+.sidebar.collapsed nav ul.tree[aria-expanded='true'] li::before,
+.sidebar.collapsed nav ul.tree[aria-expanded='true'] li::after {
     display: none;
 }
 
@@ -389,4 +414,52 @@
         width: 220px;
         padding: 20px 15px;
     }
+}
+
+/* Hide the file-earmark-check icon by default (when sidebar is not collapsed) */
+.sidebar .bi.bi-file-earmark-check {
+    display: none;
+}
+
+/* Show the file-earmark-check icon only when sidebar is collapsed */
+.sidebar.collapsed .bi.bi-file-earmark-check {
+    display: inline-block;
+    margin-right: 10px;
+    font-size: 1.1em;
+}
+
+/* Hide dropdown icon when sidebar is collapsed */
+.sidebar.collapsed .dropdown-toggle .dropdown-icon {
+    display: none !important;
+}
+
+/* Style for dropdown items with icons */
+.sidebar .dropdown.tree .nav-item .nav-link {
+    display: flex;
+    align-items: center;
+    padding: 8px 15px;
+    color: var(--sidebar-text);
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.sidebar .dropdown.tree .nav-item .nav-link i {
+    margin-right: 10px;
+    font-size: 1.1em;
+    flex-shrink: 0;
+}
+
+.sidebar .dropdown.tree .nav-item .nav-link:hover {
+    background: rgba(255, 255, 255, 0.1);
+    padding-left: 20px;
+}
+
+/* When sidebar is collapsed */
+.sidebar.collapsed .dropdown.tree .nav-item .nav-link {
+    padding: 8px;
+    justify-content: center;
+}
+
+.sidebar.collapsed .dropdown.tree .nav-item .nav-link i {
+    margin-right: 0;
 }
