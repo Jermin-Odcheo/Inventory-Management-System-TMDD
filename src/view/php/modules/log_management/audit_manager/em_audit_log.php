@@ -297,17 +297,24 @@ function formatDetailsAndChanges($log)
                     $displayVal = htmlspecialchars($newVal);
                 }
                 $addFields[] = $label;
-                $addChanges[] = "The {$label} '" . $displayVal . "' is added.";
+                $addChanges[] = "The {$label} was changed from '<em>N/A</em>' to '<strong>{$displayVal}</strong>'.";
             }
         }
         if (!empty($addFields)) {
-            // Show as Add action
-            $details = 'Added Fields: ' . htmlspecialchars(implode(', ', $addFields));
+            // Show as Modified action with consistent format
+            $details = "Asset Tag: <strong>{$targetEntityName}</strong> has been modified<br>Modified fields: <strong><em>" . implode(', ', $addFields) . "</em></strong>";
             $changes = '<ul class="list-unstyled mb-0">';
-            foreach ($addChanges as $msg) {
-                $changes .= '<li>' . $msg . '</li>';
+            $count = count($addChanges);
+            $index = 0;
+            foreach ($addChanges as $change) {
+                $changes .= "<li>{$change}";
+                $index++;
+                if ($index < $count) {
+                    $changes .= "<hr class='my-1'>";
+                }
+                $changes .= "</li>";
             }
-            $changes .= '</ul>';
+            $changes .= "</ul>";
             return [$details, $changes];
         }
     }
@@ -315,32 +322,33 @@ function formatDetailsAndChanges($log)
 
     switch ($action) {
         case 'create':
-            $details = htmlspecialchars("$targetEntityName has been created");
+            $details = "Asset Tag: <strong>{$targetEntityName}</strong> has been created";
             $changes = formatNewValue($log['NewVal']);
             break;
         case 'modified':
             $changedFields = getChangedFieldNames($filteredOldData, $filteredNewData);
             if (!empty($changedFields)) {
-                $details = "Modified Fields: " . htmlspecialchars(implode(', ', $changedFields));
+                $details = "Asset Tag: <strong>{$targetEntityName}</strong> has been modified<br>Modified fields: <strong><em>" . implode(', ', $changedFields) . "</em></strong>";
+                $changes = formatAuditDiff(json_encode($filteredOldData), json_encode($filteredNewData));
             } else {
-                $details = "Modified Fields: None";
+                $details = "Asset Tag: <strong>{$targetEntityName}</strong> has been modified<br>Modified fields: <strong><em>None</em></strong>";
+                $changes = "";
             }
-            $changes = formatAuditDiff(json_encode($filteredOldData), json_encode($filteredNewData));
             break;
         case 'restored':
-            $details = htmlspecialchars("$targetEntityName has been restored");
+            $details = "Asset Tag: <strong>{$targetEntityName}</strong> has been restored";
             $changes = formatNewValue($log['OldVal']);
             break;
         case 'remove':
-            $details = htmlspecialchars("$targetEntityName has been removed");
+            $details = "Asset Tag: <strong>{$targetEntityName}</strong> has been removed";
             $changes = formatNewValue($log['NewVal']);
             break;
         case 'delete':
-            $details = htmlspecialchars("$targetEntityName has been deleted from the database");
+            $details = "Asset Tag: <strong>{$targetEntityName}</strong> has been deleted from the database";
             $changes = formatNewValue($log['OldVal']);
             break;
         default:
-            $details = htmlspecialchars($log['Details'] ?? '');
+            $details = "Asset Tag: <strong>{$targetEntityName}</strong><br>" . htmlspecialchars($log['Details'] ?? '');
             $changes = formatNewValue($log['OldVal']);
             break;
     }
@@ -546,7 +554,7 @@ error_log("Number of results: " . count($auditLogs));
                                     endforeach;
                                 else:
                                     // Fallback options if database query fails
-                                    $defaultActions = ['Create', 'Modified', 'Remove', 'Restore', 'Delete'];
+                                    $defaultActions = ['Create', 'Modified', 'Remove', 'Restored', 'Delete'];
                                     foreach ($defaultActions as $action):
                                         $selected = ($_GET['action_type'] ?? '') === $action ? 'selected' : '';
                                         echo '<option value="' . htmlspecialchars($action) . '" ' . $selected . '>' .
@@ -735,7 +743,7 @@ error_log("Number of results: " . count($auditLogs));
                                                 // --- Sync Action badge with Details: if Details starts with 'Added Fields:', show Add ---
                                                 list($detailsHTML, $changesHTML) = formatDetailsAndChanges($log);
                                                 if (strtolower($log['Action'] ?? '') === 'modified' && strpos($detailsHTML, 'Added Fields:') === 0) {
-                                                    $actionText = 'Add';
+                                                    $actionText = 'Modified';
                                                 }
                                                 // --- End Sync ---
                                                 echo getActionIcon($actionText);

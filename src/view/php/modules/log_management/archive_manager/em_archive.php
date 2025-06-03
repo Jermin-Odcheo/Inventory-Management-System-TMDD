@@ -16,7 +16,7 @@ $rbac = new RBACService($pdo, $_SESSION['user_id']);
 $rbac->requirePrivilege('Equipment Management', 'View');
 
 // Check for additional privileges
-$canRestore = $rbac->hasPrivilege('Equipment Management', 'Restore');
+$canRestore = $rbac->hasPrivilege('Equipment Management', 'Restored');
 $canRemove = $rbac->hasPrivilege('Equipment Management', 'Remove');
 $canDelete = $rbac->hasPrivilege('Equipment Management', 'Permanently Delete');
 
