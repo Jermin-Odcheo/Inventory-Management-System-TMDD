@@ -1093,6 +1093,54 @@ function safeHtml($value)
     </script>
     <script>
         $(document).ready(function() {
+    // --- SORTABLE COLUMN HEADERS ---
+    $('#elTable th.sortable').css('cursor', 'pointer');
+    $('#elTable th.sortable').off('click').on('click', function() {
+        var th = $(this);
+        var table = th.closest('table');
+        var tbody = table.find('tbody');
+        var rows = window.filteredRows.length ? window.filteredRows.slice() : tbody.find('tr').get();
+        var index = th.index();
+        var type = th.data('sort') || 'string';
+        var asc = !th.hasClass('asc');
+
+        // Remove sort classes from all headers
+        th.siblings('.sortable').removeClass('asc desc');
+        th.removeClass('asc desc');
+        th.addClass(asc ? 'asc' : 'desc');
+
+        rows.sort(function(a, b) {
+            var x = $(a).find('td').eq(index).text().trim();
+            var y = $(b).find('td').eq(index).text().trim();
+            if (type === 'number') {
+                x = parseFloat(x) || 0;
+                y = parseFloat(y) || 0;
+                return asc ? x - y : y - x;
+            } else if (type === 'date') {
+                x = new Date(x);
+                y = new Date(y);
+                var tx = isNaN(x.getTime()) ? (asc ? Infinity : -Infinity) : x.getTime();
+                var ty = isNaN(y.getTime()) ? (asc ? Infinity : -Infinity) : y.getTime();
+                return asc ? tx - ty : ty - tx;
+            } else {
+                x = x.toLowerCase();
+                y = y.toLowerCase();
+                if (x < y) return asc ? -1 : 1;
+                if (x > y) return asc ? 1 : -1;
+                return 0;
+            }
+        });
+
+        // Update filteredRows and table
+        window.filteredRows = rows;
+        tbody.empty();
+        $.each(rows, function(i, row) {
+            tbody.append(row);
+        });
+        window.currentPage = 1;
+        locationUpdatePagination();
+    });
+
             // Store all table rows for pagination
             const locationRows = Array.from(document.querySelectorAll('#locationTbody tr'));
             window.allRows = locationRows;

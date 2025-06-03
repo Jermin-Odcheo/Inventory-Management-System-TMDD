@@ -1052,8 +1052,8 @@ align-items-center">
                                 <th class="sortable" data-column="6">Model</th>
                                 <th class="sortable" data-column="7">Serial #</th>
                                 <th class="sortable" data-column="8">Acquired Date</th>
-                                <th class="sortable" data-column="9">Created Date</th>
-                                <th class="sortable" data-column="10">Modified Date</th>
+                                <th class="sortable d-none" data-column="9">Created Date</th>
+                                <th class="sortable d-none" data-column="10">Modified Date</th>
                                 <th class="sortable" data-column="11">RR #</th>
                                 <th class="sortable" data-column="12">Location</th>
                                 <th class="sortable" data-column="13">Accountable Individual</th>
@@ -1073,13 +1073,17 @@ align-items-center">
                                         <td><?= safeHtml($equipment['brand']); ?></td>
                                         <td><?= safeHtml($equipment['model']); ?></td>
                                         <td><?= safeHtml($equipment['serial_number']); ?></td>
-                                        <td><?= !empty($equipment['date_acquired']) ? date(
-                                                'Y-m-d',
-                                                strtotime($equipment['date_acquired'])
-                                            ) : ''; ?></td>
-                                        <td><?= !empty($equipment['date_created']) ? date('Y-m-d 
+                                        <td><?php
+    $acq = $equipment['date_acquired'] ?? '';
+    if (empty($acq) || $acq === '0000-00-00' || !strtotime($acq)) {
+        echo '';
+    } else {
+        echo date('Y-m-d', strtotime($acq));
+    }
+?></td>
+                                        <td class="d-none"><?= !empty($equipment['date_created']) ? date('Y-m-d 
 H:i', strtotime($equipment['date_created'])) : ''; ?></td>
-                                        <td><?= !empty($equipment['date_modified']) ? date('Y-m-d 
+                                        <td class="d-none"><?= !empty($equipment['date_modified']) ? date('Y-m-d 
 H:i', strtotime($equipment['date_modified'])) : ''; ?></td>
                                         <td><?= safeHtml((strpos($equipment['rr_no'] ?? '', 'RR') ===
                                                 0 ? $equipment['rr_no'] : ('RR' . $equipment['rr_no']))); ?></td>
@@ -1286,156 +1290,44 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                                         ?>
                                     </select>
                                     <small class="text-muted">Selecting an RR# will auto-fill the acquired date from Charge Invoice</small>
-                                </div>
                             </div>
                         </div>
-                        <div class="mb-3">
-                            <div class="row">
-                                <div class="mb-3 col-md-6">
-                                    <label for="date_acquired" class="form-label">Date Acquired</label>
-                                    <input type="date" class="form-control" name="date_acquired" data-autofill="false">
-                                    <small class="text-muted">This field will be auto-filled when an RR# is selected</small>
-                                </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="row">
+                            <div class="mb-3 col-md-6">
+                                <label for="edit_date_acquired" class="form-label">Date Acquired</label>
+                                <input type="date" class="form-control" name="date_acquired" id="edit_date_acquired" data-autofill="false">
+                                <small class="text-muted">This field will be auto-filled when an RR# is selected</small>
+                            </div>
+                            <div class="mb-3 col-md-6">
+                                <label for="edit_location" class="form-label">Location</label>
+                                <input type="text" class="form-control" name="location"
+                                    id="edit_location" data-autofill="false">
+                                <small class="text-muted">This field will be autofilled when an
+                                    Asset Tag is selected</small>
+                            </div>
+                            <div class="mb-3 col-md-6">
+                                <label for="edit_accountable_individual"
+                                    class="form-label">Accountable Individual</label>
+                                <input type="text" class="form-control"
+                                    name="accountable_individual" id="edit_accountable_individual" data-autofill="false">
+                                <small class="text-muted">This field will be autofilled when an
+                                    Asset Tag is selected</small>
                             </div>
                         </div>
-                        <div class="mb-3">
-                            <div class="row">
-                                <div class="mb-3 col-md-6">
-                                    <label for="location" class="form-label">Location</label>
-                                    <input type="text" class="form-control" name="location"
-                                        data-autofill="false">
-                                    <small class="text-muted">This field will be autofilled when an Asset Tag
-                                        is selected</small>
-                                </div>
-                                <div class="mb-3 col-md-6">
-                                    <label for="accountable_individual" class="form-label">Accountable
-                                        Individual</label>
-                                    <input type="text" class="form-control" name="accountable_individual"
-                                        data-autofill="false">
-                                    <small class="text-muted">This field will be autofilled when an Asset Tag
-                                        is selected</small>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="remarks" class="form-label">Remarks</label>
-                            <textarea class="form-control" name="remarks" rows="3"></textarea>
-                        </div>
-                        <div class="mb-3 text-end">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
-                                style="margin-right: 4px;">Cancel</button>
-                            <button type="submit" class="btn btn-primary">Create Equipment</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="editEquipmentModal" tabindex="-1" data-bs-backdrop="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header p-4">
-                    <h5 class="modal-title">Edit Equipment</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"
-                        aria-label="Close"></button>
-                </div>
-                <div class="modal-body p-4">
-                    <form id="editEquipmentForm">
-                        <input type="hidden" name="action" value="update">
-                        <input type="hidden" name="equipment_id" id="edit_equipment_id">
-                        <div class="mb-3">
-                            <label for="edit_asset_tag" class="form-label">Asset Tag <span
-                                    style="color: red;">*</span></label>
-                            <select class="form-select" name="asset_tag"
-                                id="edit_equipment_asset_tag" required style="width: 100%;">
-                                <option value="">Select or type Asset Tag</option>
-                                <?php
-                                // Use the same $assetTags as above
-                                foreach ($assetTags as $tag) {
-                                    echo '<option value="' . htmlspecialchars($tag) . '">' .
-                                        htmlspecialchars($tag) . '</option>';
-                                }
-                                ?>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <div class="row">
-                                <div class="mb-3 col-md-6">
-                                    <label for="edit_asset_description_1"
-                                        class="form-label">Description 1</label>
-                                    <input type="text" class="form-control"
-                                        name="asset_description_1" id="edit_asset_description_1">
-                                </div>
-                                <div class="mb-3 col-md-6">
-                                    <label for="edit_asset_description_2"
-                                        class="form-label">Description 2</label>
-                                    <input type="text" class="form-control"
-                                        name="asset_description_2" id="edit_asset_description_2">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="edit_specifications" class="form-label">Specification</label>
-                            <textarea class="form-control" name="specifications"
-                                id="edit_specifications" rows="3"></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <div class="row">
-                                <div class="mb-3 col-md-6">
-                                    <label for="edit_brand" class="form-label">Brand</label>
-                                    <input type="text" class="form-control" name="brand"
-                                        id="edit_brand">
-                                </div>
-                                <div class="mb-3 col-md-6">
-                                    <label for="edit_model" class="form-label">Model</label>
-                                    <input type="text" class="form-control" name="model"
-                                        id="edit_model">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <div class="row">
-                                <div class="mb-3 col-md-6">
-                                    <label for="edit_serial_number" class="form-label">Serial
-                                        Number</label>
-                                    <input type="text" class="form-control" name="serial_number"
-                                        id="edit_serial_number">
-                                </div>
-                                <div class="mb-3 col-md-6">
-                                    <label for="edit_rr_no" class="form-label">RR#</label>
-                                    <select class="form-select" name="rr_no" id="edit_rr_no">
-                                        <option value="">Select RR Number</option>
-                                        <?php
-                                        // Fetch active RR numbers for dropdown (reuse $rrList if already set, else fetch)
-                                        if (!isset($rrList)) {
-                                            $stmtRR = $pdo->prepare("SELECT rr_no FROM receive_report 
-WHERE is_disabled = 0 ORDER BY rr_no DESC");
-                                            $stmtRR->execute();
-                                            $rrList = $stmtRR->fetchAll(PDO::FETCH_COLUMN);
-                                        }
-                                        foreach ($rrList as $rrNo) {
-                                            echo '<option value="' . htmlspecialchars($rrNo) . '">' .
-                                                htmlspecialchars($rrNo) . '</option>';
-                                        }
-                                        ?>
-                                    </select>
-                                    <small class="text-muted">Selecting an RR# will auto-fill the acquired date from Charge Invoice</small>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <div class="row">
-                                <div class="mb-3 col-md-6">
-                                    <label for="edit_date_acquired" class="form-label">Date Acquired</label>
-                                    <input type="date" class="form-control" name="date_acquired" id="edit_date_acquired" data-autofill="false">
-                                    <small class="text-muted">This field will be auto-filled when an RR# is selected</small>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <div class="row">
-                                <div class="mb-3 col-md-6">
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_remarks" class="form-label">Remarks</label>
+                        <textarea class="form-control" name="remarks" id="edit_remarks"
+                            rows="3"></textarea>
+                    </div>
+                    <div class="mb-3 text-end">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                            style="margin-right: 4px;">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
                                     <label for="edit_location" class="form-label">Location</label>
                                     <input type="text" class="form-control" name="location"
                                         id="edit_location" data-autofill="false">

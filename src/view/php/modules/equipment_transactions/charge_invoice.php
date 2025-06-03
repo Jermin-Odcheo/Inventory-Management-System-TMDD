@@ -1415,6 +1415,96 @@ $(document).ready(function() {
     });
 });
 </script>
+<style>
+    th.sortable { cursor: pointer; user-select: none; }
+    th.sortable .sort-indicator { margin-left: 4px; font-size: 0.9em; }
+    th.sortable.asc .sort-indicator { content: "▲"; }
+    th.sortable.desc .sort-indicator { content: "▼"; }
+</style>
+<script>
+function initInvoiceSortableHeaders() {
+    const table = document.getElementById('invoiceTable');
+    if (!table) return;
+    const thead = table.querySelector('thead');
+    if (!thead) return;
+    let currentSort = { col: null, dir: 'asc' };
+
+    thead.querySelectorAll('th.sortable').forEach(th => {
+        th.style.cursor = 'pointer';
+    });
+
+    function getCellValue(row, idx) {
+        return row.children[idx]?.innerText.trim();
+    }
+    function parseValue(val, col) {
+        if (["#", "Invoice Number"].includes(col)) return parseFloat(val.replace(/[^\d]/g, '')) || 0;
+        if (["Purchase Date", "Created Date"].includes(col)) return new Date(val);
+        return val ? val.toLowerCase() : '';
+    }
+    function getColIdx(sortKey) {
+        const headers = Array.from(thead.querySelectorAll('th.sortable'));
+        return headers.findIndex(th => th.dataset.sort === sortKey);
+    }
+    function sortRows(sortKey, dir) {
+        const idx = getColIdx(sortKey);
+        if (idx === -1) return;
+        const colName = thead.querySelectorAll('th.sortable')[idx]?.innerText.split(' ')[0];
+        window.filteredInvoiceRows.sort((a, b) => {
+            let vA = getCellValue(a, idx);
+            let vB = getCellValue(b, idx);
+            vA = parseValue(vA, colName);
+            vB = parseValue(vB, colName);
+            if (vA < vB) return dir === 'asc' ? -1 : 1;
+            if (vA > vB) return dir === 'asc' ? 1 : -1;
+            return 0;
+        });
+        const tbody = table.querySelector('tbody');
+        if (tbody) {
+            while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+            window.filteredInvoiceRows.forEach(row => tbody.appendChild(row));
+        }
+    }
+    function updateIndicators(activeTh, dir) {
+        thead.querySelectorAll('th.sortable').forEach(th => {
+            th.classList.remove('asc', 'desc');
+            const indicator = th.querySelector('.sort-indicator');
+            if (indicator) indicator.textContent = '';
+        });
+        if (activeTh) {
+            activeTh.classList.add(dir);
+            const indicator = activeTh.querySelector('.sort-indicator');
+            if (indicator) indicator.textContent = dir === 'asc' ? '▲' : '▼';
+        }
+    }
+    thead.querySelectorAll('th.sortable').forEach(th => {
+        th.addEventListener('click', function() {
+            const sortKey = th.dataset.sort;
+            let dir = 'asc';
+            if (currentSort.col === sortKey && currentSort.dir === 'asc') dir = 'desc';
+            currentSort = { col: sortKey, dir };
+            sortRows(sortKey, dir);
+            updateIndicators(th, dir);
+            if (window.invoicePaginationConfig) window.invoicePaginationConfig.currentPage = 1;
+            if (typeof updateInvoicePagination === 'function') updateInvoicePagination();
+        });
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Setup global row arrays for sorting/filtering/pagination
+    const table = document.getElementById('invoiceTable');
+    if (table) {
+        window.allInvoiceRows = Array.from(table.querySelectorAll('tbody tr'));
+        window.filteredInvoiceRows = [...window.allInvoiceRows];
+        initInvoiceSortableHeaders();
+    }
+});
+// If you reload the table with AJAX, call initInvoiceSortableHeaders() after DOM update.
+function reattachInvoiceEventHandlers() {
+    // ...existing handlers...
+    initInvoiceSortableHeaders();
+}
+</script>
 </head>
 
 <body>
@@ -1438,8 +1528,8 @@ $(document).ready(function() {
                     <?php else: ?>
                         <div></div>
                     <?php endif; ?>
-                    <div class="d-flex align-items-center gap-2">
-                        <select class="form-select form-select-sm" id="dateFilter" style="width: auto;">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <select class="form-select form-select-sm" id="dateFilter" style="width: auto; min-width: 140px;">
                             <option value="">Filter by Date</option>
                             <option value="desc">Newest to Oldest</option>
                             <option value="asc">Oldest to Newest</option>
@@ -1448,7 +1538,13 @@ $(document).ready(function() {
                             <option value="year">Year Range</option>
                             <option value="month_year">Month-Year Range</option>
                         </select>
-                        <div id="dateInputsContainer" class="d-flex align-items-center gap-3" style="display: none;">
+                        <div class="input-group w-auto" style="min-width:220px;">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <input type="text" id="searchInvoice" class="form-control form-control-sm" placeholder="Search invoice...">
+                        </div>
+                        <button type="button" id="applyFilters" class="btn btn-dark btn-sm"><i class="bi bi-funnel"></i> Filter</button>
+                        <button type="button" id="clearFilters" class="btn btn-secondary btn-sm"><i class="bi bi-x-circle"></i> Clear</button>
+                        <div id="dateInputsContainer" class="d-flex align-items-center gap-3 ms-2" style="display: none;">
                             <div class="date-group d-none flex-row" id="mdy-group">
                                 <div class="d-flex flex-column me-2">
                                     <label for="dateFrom" class="form-label mb-0" style="font-size: 0.9em;">Date From</label>
@@ -1490,12 +1586,6 @@ $(document).ready(function() {
                                 </div>
                             </div>
                         </div>
-                        <button type="button" id="applyFilters" class="btn btn-dark btn-sm ms-2"><i class="bi bi-funnel"></i> Filter</button>
-                        <button type="button" id="clearFilters" class="btn btn-secondary btn-sm ms-1"><i class="bi bi-x-circle"></i> Clear</button>
-                    </div>
-                    <div class="input-group w-auto">
-                        <span class="input-group-text"><i class="bi bi-search"></i></span>
-                        <input type="text" id="searchInvoice" class="form-control" placeholder="Search invoice...">
                     </div>
                 </div>
 
@@ -1503,11 +1593,11 @@ $(document).ready(function() {
                     <table id="invoiceTable" class="table table-striped table-bordered table-hover">
                         <thead class="table-dark">
                             <tr>
-                                <th>#</th>
-                                <th>Invoice Number</th>
-                                <th>Purchase Date</th>
-                                <th>PO Number</th>
-                                <th>Created Date</th>
+                                <th class="sortable" data-sort="id"># <span class="sort-indicator"></span></th>
+                                <th class="sortable" data-sort="invoice_no">Invoice Number <span class="sort-indicator"></span></th>
+                                <th class="sortable" data-sort="date_of_purchase">Purchase Date <span class="sort-indicator"></span></th>
+                                <th class="sortable" data-sort="po_no">PO Number <span class="sort-indicator"></span></th>
+                                <th class="sortable" data-sort="date_created">Created Date <span class="sort-indicator"></span></th>
                                 <th class="text-center">Actions</th>
                             </tr>
                         </thead>
