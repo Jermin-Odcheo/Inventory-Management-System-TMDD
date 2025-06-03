@@ -43,21 +43,50 @@ if (isset($_POST['id']) && isset($_POST['permanent']) && $_POST['permanent'] == 
             exit();
         }
         
-        // Permanently delete the purchase order
-        $stmt = $pdo->prepare("DELETE FROM purchase_order WHERE id = ? AND is_disabled = 1");
-        $stmt->execute([$poId]);
-        
-        // Log the permanent delete action
-        logAudit(
-            $pdo,
-            'Remove',
-            'Purchase Order "' . ($oldData['po_no'] ?? 'ID: '.$poId) . '" has been permanently deleted',
-            'Successful',
-            json_encode($oldData),
-            $poId
-        );
-        
-        echo json_encode(['status' => 'success', 'message' => 'Purchase order permanently deleted']);
+        // Begin transaction
+        $pdo->beginTransaction();
+        try {
+            // Clear po_no in charge_invoice for this PO
+            if (!empty($oldData['po_no'])) {
+                $poNo = $oldData['po_no'];
+                // Find affected invoices
+                $affectedInvoices = $pdo->prepare("SELECT * FROM charge_invoice WHERE po_no = ?");
+                $affectedInvoices->execute([$poNo]);
+                $affected = $affectedInvoices->fetchAll(PDO::FETCH_ASSOC);
+                // Update po_no to NULL
+                $upd = $pdo->prepare("UPDATE charge_invoice SET po_no = NULL WHERE po_no = ?");
+                $upd->execute([$poNo]);
+                // Audit each affected invoice
+                foreach ($affected as $ci) {
+                    logAudit(
+                        $pdo,
+                        'Modified',
+                        json_encode($ci),
+                        json_encode(array_merge($ci, ['po_no' => null])),
+                        $ci['id'],
+                        'PO reference cleared due to PO deletion',
+                        'Successful'
+                    );
+                }
+            }
+            // Permanently delete the purchase order
+            $stmt = $pdo->prepare("DELETE FROM purchase_order WHERE id = ? AND is_disabled = 1");
+            $stmt->execute([$poId]);
+            // Log the permanent delete action
+            logAudit(
+                $pdo,
+                'Remove',
+                'Purchase Order "' . ($oldData['po_no'] ?? 'ID: '.$poId) . '" has been permanently deleted',
+                'Successful',
+                json_encode($oldData),
+                $poId
+            );
+            $pdo->commit();
+            echo json_encode(['status' => 'success', 'message' => 'Purchase order permanently deleted']);
+        } catch (PDOException $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
     } catch (PDOException $e) {
         // Log the error
         logAudit(
@@ -93,23 +122,54 @@ if (isset($_POST['id']) && isset($_POST['permanent']) && $_POST['permanent'] == 
             exit();
         }
         
-        // Permanently delete the purchase orders
-        $stmt = $pdo->prepare("DELETE FROM purchase_order WHERE id IN ($placeholders) AND is_disabled = 1");
-        $stmt->execute($poIds);
-        
-        // Log each deletion separately for proper auditing
-        foreach ($oldDataRecords as $oldData) {
-            logAudit(
-                $pdo,
-                'Remove',
-                'Purchase Order "' . ($oldData['po_no'] ?? 'ID: '.$oldData['id']) . '" has been permanently deleted',
-                'Successful',
-                json_encode($oldData),
-                $oldData['id']
-            );
+        // Begin transaction
+        $pdo->beginTransaction();
+        try {
+            // Clear po_no in charge_invoice for each PO
+            foreach ($oldDataRecords as $oldData) {
+                if (!empty($oldData['po_no'])) {
+                    $poNo = $oldData['po_no'];
+                    // Find affected invoices
+                    $affectedInvoices = $pdo->prepare("SELECT * FROM charge_invoice WHERE po_no = ?");
+                    $affectedInvoices->execute([$poNo]);
+                    $affected = $affectedInvoices->fetchAll(PDO::FETCH_ASSOC);
+                    // Update po_no to NULL
+                    $upd = $pdo->prepare("UPDATE charge_invoice SET po_no = NULL WHERE po_no = ?");
+                    $upd->execute([$poNo]);
+                    // Audit each affected invoice
+                    foreach ($affected as $ci) {
+                        logAudit(
+                            $pdo,
+                            'Modified',
+                            json_encode($ci),
+                            json_encode(array_merge($ci, ['po_no' => null])),
+                            $ci['id'],
+                            'PO reference cleared due to PO deletion',
+                            'Successful'
+                        );
+                    }
+                }
+            }
+            // Permanently delete the purchase orders
+            $stmt = $pdo->prepare("DELETE FROM purchase_order WHERE id IN ($placeholders) AND is_disabled = 1");
+            $stmt->execute($poIds);
+            // Log each deletion separately for proper auditing
+            foreach ($oldDataRecords as $oldData) {
+                logAudit(
+                    $pdo,
+                    'Remove',
+                    'Purchase Order "' . ($oldData['po_no'] ?? 'ID: '.$oldData['id']) . '" has been permanently deleted',
+                    'Successful',
+                    json_encode($oldData),
+                    $oldData['id']
+                );
+            }
+            $pdo->commit();
+            echo json_encode(['status' => 'success', 'message' => 'Selected purchase orders permanently deleted']);
+        } catch (PDOException $e) {
+            $pdo->rollBack();
+            throw $e;
         }
-        
-        echo json_encode(['status' => 'success', 'message' => 'Selected purchase orders permanently deleted']);
     } catch (PDOException $e) {
         // Log the error
         logAudit(

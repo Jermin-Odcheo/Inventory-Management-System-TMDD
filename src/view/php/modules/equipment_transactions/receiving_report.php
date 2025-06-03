@@ -696,65 +696,63 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_data_json') {
                                 <i class="bi bi-plus-circle"></i> Create Receiving Report
                             </button>
                         <?php endif; ?>
-                        <div class="d-flex align-items-center gap-2">
-                            <select class="form-select form-select-sm" id="dateFilter" style="width: auto;">
-                                <option value="">Filter by Date</option>
-                                <option value="desc">Newest to Oldest</option>
-                                <option value="asc">Oldest to Newest</option>
-                                <option value="mdy">Month-Day-Year Range</option>
-                                <option value="month">Month Range</option>
-                                <option value="year">Year Range</option>
-                                <option value="month_year">Month-Year Range</option>
-                            </select>
-                            <div id="dateInputsContainer" class="d-flex align-items-center gap-3" style="display: none;">
-                                <div class="date-group d-none flex-row" id="mdy-group">
-                                    <div class="d-flex flex-column me-2">
-                                        <label for="dateFrom" class="form-label mb-0" style="font-size: 0.9em;">Date From</label>
-                                        <input type="date" id="dateFrom" class="form-control form-control-sm" style="width: 140px;">
-                                    </div>
-                                    <div class="d-flex flex-column">
-                                        <label for="dateTo" class="form-label mb-0" style="font-size: 0.9em;">Date To</label>
-                                        <input type="date" id="dateTo" class="form-control form-control-sm" style="width: 140px;">
-                                    </div>
-                                </div>
-                                <div class="date-group d-none flex-row" id="month-group">
-                                    <div class="d-flex flex-column me-2">
-                                        <label for="monthFrom" class="form-label mb-0" style="font-size: 0.9em;">Month From</label>
-                                        <input type="month" id="monthFrom" class="form-control form-control-sm" style="width: 120px;">
-                                    </div>
-                                    <div class="d-flex flex-column">
-                                        <label for="monthTo" class="form-label mb-0" style="font-size: 0.9em;">Month To</label>
-                                        <input type="month" id="monthTo" class="form-control form-control-sm" style="width: 120px;">
-                                    </div>
-                                </div>
-                                <div class="date-group d-none flex-row" id="year-group">
-                                    <div class="d-flex flex-column me-2">
-                                        <label for="yearFrom" class="form-label mb-0" style="font-size: 0.9em;">Year From</label>
-                                        <input type="number" id="yearFrom" class="form-control form-control-sm" style="width: 90px;" min="1900" max="2100">
-                                    </div>
-                                    <div class="d-flex flex-column">
-                                        <label for="yearTo" class="form-label mb-0" style="font-size: 0.9em;">Year To</label>
-                                        <input type="number" id="yearTo" class="form-control form-control-sm" style="width: 90px;" min="1900" max="2100">
-                                    </div>
-                                </div>
-                                <div class="date-group d-none flex-row" id="monthyear-group">
-                                    <div class="d-flex flex-column me-2">
-                                        <label for="monthYearFrom" class="form-label mb-0" style="font-size: 0.9em;">From (MM-YYYY)</label>
-                                        <input type="month" id="monthYearFrom" class="form-control form-control-sm" style="width: 120px;">
-                                    </div>
-                                    <div class="d-flex flex-column">
-                                        <label for="monthYearTo" class="form-label mb-0" style="font-size: 0.9em;">To (MM-YYYY)</label>
-                                        <input type="month" id="monthYearTo" class="form-control form-control-sm" style="width: 120px;">
-                                    </div>
-                                </div>
-                            </div>
-                            <button type="button" id="applyFilters" class="btn btn-dark btn-sm ms-2"><i class="bi bi-funnel"></i> Filter</button>
-                            <button type="button" id="clearFilters" class="btn btn-secondary btn-sm ms-1"><i class="bi bi-x-circle"></i> Clear</button>
-                        </div>
-                        <div class="input-group w-auto">
-                            <span class="input-group-text"><i class="bi bi-search"></i></span>
-                            <input type="text" id="searchReport" class="form-control" placeholder="Search report...">
-                        </div>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+    <select class="form-select form-select-sm" id="dateFilter" style="width: auto; min-width: 140px;">
+        <option value="">Filter by Date</option>
+        <option value="mdy">Month-Day-Year Range</option>
+        <option value="month">Month Range</option>
+        <option value="year">Year Range</option>
+        <option value="month_year">Month-Year Range</option>
+    </select>
+    <div id="dateInputsContainer" class="d-flex align-items-center gap-3 ms-2" style="display: none;">
+        <div class="date-group d-none flex-row" id="mdy-group">
+            <div class="d-flex flex-column me-2">
+                <label for="dateFrom" class="form-label mb-0" style="font-size: 0.9em;">Date From</label>
+                <input type="date" id="dateFrom" class="form-control form-control-sm" style="width: 140px;">
+            </div>
+            <div class="d-flex flex-column">
+                <label for="dateTo" class="form-label mb-0" style="font-size: 0.9em;">Date To</label>
+                <input type="date" id="dateTo" class="form-control form-control-sm" style="width: 140px;">
+            </div>
+        </div>
+        <div class="date-group d-none flex-row" id="month-group">
+            <div class="d-flex flex-column me-2">
+                <label for="monthFrom" class="form-label mb-0" style="font-size: 0.9em;">Month From</label>
+                <input type="month" id="monthFrom" class="form-control form-control-sm" style="width: 120px;">
+            </div>
+            <div class="d-flex flex-column">
+                <label for="monthTo" class="form-label mb-0" style="font-size: 0.9em;">Month To</label>
+                <input type="month" id="monthTo" class="form-control form-control-sm" style="width: 120px;">
+            </div>
+        </div>
+        <div class="date-group d-none flex-row" id="year-group">
+            <div class="d-flex flex-column me-2">
+                <label for="yearFrom" class="form-label mb-0" style="font-size: 0.9em;">Year From</label>
+                <input type="number" id="yearFrom" class="form-control form-control-sm" style="width: 90px;" min="1900" max="2100">
+            </div>
+            <div class="d-flex flex-column">
+                <label for="yearTo" class="form-label mb-0" style="font-size: 0.9em;">Year To</label>
+                <input type="number" id="yearTo" class="form-control form-control-sm" style="width: 90px;" min="1900" max="2100">
+            </div>
+        </div>
+        <div class="date-group d-none flex-row" id="monthyear-group">
+            <div class="d-flex flex-column me-2">
+                <label for="monthYearFrom" class="form-label mb-0" style="font-size: 0.9em;">From (MM-YYYY)</label>
+                <input type="month" id="monthYearFrom" class="form-control form-control-sm" style="width: 120px;">
+            </div>
+            <div class="d-flex flex-column">
+                <label for="monthYearTo" class="form-label mb-0" style="font-size: 0.9em;">To (MM-YYYY)</label>
+                <input type="month" id="monthYearTo" class="form-control form-control-sm" style="width: 120px;">
+            </div>
+        </div>
+    </div>
+    <div class="input-group w-auto" style="min-width:220px;">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input type="text" id="searchReport" class="form-control form-control-sm" placeholder="Search report...">
+    </div>
+    <button type="button" id="applyFilters" class="btn btn-dark btn-sm"><i class="bi bi-funnel"></i> Filter</button>
+    <button type="button" id="clearFilters" class="btn btn-secondary btn-sm"><i class="bi bi-x-circle"></i> Clear</button>
+</div>
                     </div>
 
                     <div class="table-responsive" id="table">
@@ -766,7 +764,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_data_json') {
                                     <th class="sortable" data-sort="accountable_individual">Accountable Individual<span class="sort-icon"></span></th>
                                     <th class="sortable" data-sort="po_no">PO Number<span class="sort-icon"></span></th>
                                     <th class="sortable" data-sort="ai_loc">Location<span class="sort-icon"></span></th>
-                                    <th class="sortable" data-sort="date_created">Created Date<span class="sort-icon"></span></th>
+                                    
                                     <th class="text-center">Actions</th>
                                 </tr>
                             </thead>
@@ -779,35 +777,34 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_data_json') {
                                             <td><?= htmlspecialchars($rr['accountable_individual']) ?></td>
                                             <td><?= htmlspecialchars($rr['po_no']) ?></td>
                                             <td><?= htmlspecialchars($rr['ai_loc']) ?></td>
-                                            <td><?= date('Y-m-d h:i A', strtotime($rr['date_created'])) ?></td>
+                                            
                                             <td class="text-center">
-                                                <div class="btn-group" role="group">
-                                                    <?php if ($canModify): ?>
-                                                        <button
-                                                            class="btn btn-sm btn-outline-primary edit-report"
-                                                            data-id="<?= htmlspecialchars($rr['id']) ?>"
-                                                            data-rr="<?= htmlspecialchars($rr['rr_no']) ?>"
-                                                            data-individual="<?= htmlspecialchars($rr['accountable_individual']) ?>"
-                                                            data-po="<?= htmlspecialchars($rr['po_no']) ?>"
-                                                            data-location="<?= htmlspecialchars($rr['ai_loc']) ?>"
-                                                            data-date_created="<?= htmlspecialchars($rr['date_created']) ?>">
-                                                            <i class="bi bi-pencil-square"></i> <span>Edit</span>
-                                                        </button>
-                                                    <?php endif; ?>
-                                                    <?php if ($canDelete): ?>
-                                                        <button
-                                                            class="btn btn-sm btn-outline-danger delete-report"
-                                                            data-id="<?= htmlspecialchars($rr['id']) ?>">
-                                                            <i class="bi bi-trash"></i> <span>Remove</span>
-                                                        </button>
-                                                    <?php endif; ?>
-                                                </div>
-                                            </td>
+    <div class="btn-group" role="group">
+        <?php if ($canModify): ?>
+            <button
+                class="btn btn-sm btn-outline-primary edit-report"
+                data-id="<?= htmlspecialchars($rr['id']) ?>"
+                data-rr="<?= htmlspecialchars($rr['rr_no']) ?>"
+                data-individual="<?= htmlspecialchars($rr['accountable_individual']) ?>"
+                data-po="<?= htmlspecialchars($rr['po_no']) ?>"
+                data-location="<?= htmlspecialchars($rr['ai_loc']) ?>">
+                <i class="bi bi-pencil-square"></i> <span>Edit</span>
+            </button>
+        <?php endif; ?>
+        <?php if ($canDelete): ?>
+            <button
+                class="btn btn-sm btn-outline-danger delete-report"
+                data-id="<?= htmlspecialchars($rr['id']) ?>">
+                <i class="bi bi-trash"></i> <span>Remove</span>
+            </button>
+        <?php endif; ?>
+    </div>
+</td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="8">No Receiving Reports found.</td>
+                                        <td colspan="6">No Receiving Reports found.</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
@@ -1187,7 +1184,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_data_json') {
                                         </tr>`;
                                     });
                                 }
-                                $('#rrTableBody').html(tableBody || '<tr><td colspan="8">No Receiving Reports found.</td></tr>');
+                                $('#rrTableBody').html(tableBody || '<tr><td colspan="6">No Receiving Reports found.</td></tr>');
                             } else {
                                 showToast('Error filtering data: ' + data.message, 'error');
                             }
@@ -1211,18 +1208,27 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_data_json') {
                 window.location.reload();
             });
 
-            // Show/hide date input containers based on filter type (but do not filter automatically)
+            // Show/hide date input containers based on filter type (to match Charge Invoice/Purchase Order)
             $('#dateFilter').on('change', function() {
                 const filterType = $(this).val();
-                $('#dateInputsContainer').hide();
-                $('#monthPickerContainer').hide();
-                $('#dateRangePickers').hide();
-                if (filterType === 'month') {
-                    $('#dateInputsContainer').show();
-                    $('#monthPickerContainer').show();
-                } else if (filterType === 'range') {
-                    $('#dateInputsContainer').show();
-                    $('#dateRangePickers').show();
+                const container = $('#dateInputsContainer');
+                container.show();
+                // Hide all groups first
+                container.find('.date-group').addClass('d-none');
+                if (!filterType) {
+                    container.hide();
+                    return;
+                }
+                if (filterType === 'mdy') {
+                    $('#mdy-group').removeClass('d-none');
+                } else if (filterType === 'month') {
+                    $('#month-group').removeClass('d-none');
+                } else if (filterType === 'year') {
+                    $('#year-group').removeClass('d-none');
+                } else if (filterType === 'month_year') {
+                    $('#monthyear-group').removeClass('d-none');
+                } else {
+                    container.hide();
                 }
             });
 
