@@ -3,7 +3,6 @@ session_start();
 date_default_timezone_set('Asia/Manila');
 ob_start();
 require_once('../../../../../config/ims-tmdd.php'); // Adjust path as needed
-include '../../general/header.php';
 // -------------------------
 // Auth and RBAC Setup
 // -------------------------
@@ -675,9 +674,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
         /* Pagination styling */
         .pagination {
             display: flex;
-            padding-left: 0;
-            list-style: none;
-            border-radius: 0.25rem;
+            justify-content: center;
+            margin-top: 20px;
         }
 
         .page-item:first-child .page-link {
@@ -825,12 +823,55 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             padding-bottom: 10px;
             border-top: 1px solid #e9ecef;
         }
+
+        /* Fix header and modal z-index issues */
+        .main-header {
+            z-index: 1030 !important;
+        }
+
+        .modal {
+            z-index: 9999 !important;
+        }
+
+        .modal-backdrop {
+            z-index: 9998 !important;
+        }
+
+        .modal-dialog {
+            z-index: 10000 !important;
+            margin-top: 50px;
+            /* Add some space from the top */
+        }
+
+        .select2-container--open {
+            z-index: 10001 !important;
+        }
+
+        .select2-dropdown {
+            z-index: 10001 !important;
+        }
+
+        /* Ensure modal content is above everything */
+        .modal-content {
+            z-index: 10000 !important;
+        }
+
+        /* Fix for fixed header */
+        body.modal-open {
+            padding-right: 0 !important;
+        }
+
+        .modal-open .main-header,
+        .modal-open .header {
+            z-index: 1029 !important;
+            opacity: 0.5 !important;
+            pointer-events: none !important;
+        }
     </style>
 </head>
 
 <body>
     <?php
-    include '../../general/header.php';
     include '../../general/sidebar.php';
     include '../../general/footer.php';
     ?>
@@ -1074,13 +1115,13 @@ align-items-center">
                                         <td><?= safeHtml($equipment['model']); ?></td>
                                         <td><?= safeHtml($equipment['serial_number']); ?></td>
                                         <td><?php
-    $acq = $equipment['date_acquired'] ?? '';
-    if (empty($acq) || $acq === '0000-00-00' || !strtotime($acq)) {
-        echo '';
-    } else {
-        echo date('Y-m-d', strtotime($acq));
-    }
-?></td>
+                                            $acq = $equipment['date_acquired'] ?? '';
+                                            if (empty($acq) || $acq === '0000-00-00' || !strtotime($acq)) {
+                                                echo '';
+                                            } else {
+                                                echo date('Y-m-d', strtotime($acq));
+                                            }
+                                            ?></td>
                                         <td class="d-none"><?= !empty($equipment['date_created']) ? date('Y-m-d 
 H:i', strtotime($equipment['date_created'])) : ''; ?></td>
                                         <td class="d-none"><?= !empty($equipment['date_modified']) ? date('Y-m-d 
@@ -1191,23 +1232,20 @@ align-items-center gap-1">
         </section>
     </div>
 
-    <div class="modal fade" id="addEquipmentModal" tabindex="-1" aria-labelledby="addEquipmentLabel"
-        aria-hidden="true">
+    <!-- Add Equipment Modal -->
+    <div class="modal fade" id="addEquipmentModal" tabindex="-1" aria-labelledby="addEquipmentLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header p-4">
                     <h5 class="modal-title">Add New Equipment</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"
-                        aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
                     <form id="addEquipmentForm">
                         <input type="hidden" name="action" value="create">
                         <div class="mb-3">
-                            <label for="asset_tag" class="form-label">Asset Tag <span style="color: 
-red;">*</span></label>
-                            <select class="form-select" name="asset_tag" id="add_equipment_asset_tag"
-                                required style="width: 100%;">
+                            <label for="asset_tag" class="form-label">Asset Tag <span style="color: red;">*</span></label>
+                            <select class="form-select" name="asset_tag" id="add_equipment_asset_tag" required style="width: 100%;">
                                 <option value="">Select or type Asset Tag</option>
                                 <?php
                                 // Fetch unique asset tags from equipment_location and equipment_status
@@ -1227,8 +1265,7 @@ WHERE is_disabled = 0");
                                 $assetTags = array_unique(array_filter($assetTags));
                                 sort($assetTags);
                                 foreach ($assetTags as $tag) {
-                                    echo '<option value="' . htmlspecialchars($tag) . '">' .
-                                        htmlspecialchars($tag) . '</option>';
+                                    echo '<option value="' . htmlspecialchars($tag) . '">' . htmlspecialchars($tag) . '</option>';
                                 }
                                 ?>
                             </select>
@@ -1236,16 +1273,12 @@ WHERE is_disabled = 0");
                         <div class="mb-3">
                             <div class="row">
                                 <div class="mb-3 col-md-6">
-                                    <label for="asset_description_1" class="form-label">Asset
-                                        Description 1</label>
-                                    <input type="text" class="form-control"
-                                        name="asset_description_1">
+                                    <label for="asset_description_1" class="form-label">Asset Description 1</label>
+                                    <input type="text" class="form-control" name="asset_description_1">
                                 </div>
                                 <div class="mb-3 col-md-6">
-                                    <label for="asset_description_2" class="form-label">Asset
-                                        Description 2</label>
-                                    <input type="text" class="form-control"
-                                        name="asset_description_2">
+                                    <label for="asset_description_2" class="form-label">Asset Description 2</label>
+                                    <input type="text" class="form-control" name="asset_description_2">
                                 </div>
                             </div>
                         </div>
@@ -1268,14 +1301,12 @@ WHERE is_disabled = 0");
                         <div class="mb-3">
                             <div class="row">
                                 <div class="mb-3 col-md-6">
-                                    <label for="serial_number" class="form-label">Serial Number
-                                    </label>
+                                    <label for="serial_number" class="form-label">Serial Number</label>
                                     <input type="text" class="form-control" name="serial_number">
                                 </div>
                                 <div class="mb-3 col-md-6">
                                     <label for="add_rr_no" class="form-label">RR#</label>
-                                    <select class="form-select rr-select2" name="rr_no"
-                                        id="add_rr_no" style="width: 100%;">
+                                    <select class="form-select rr-select2" name="rr_no" id="add_rr_no" style="width: 100%;">
                                         <option value="">Select or search RR Number</option>
                                         <?php
                                         // Fetch active RR numbers for dropdown
@@ -1284,74 +1315,40 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                                         $stmtRR->execute();
                                         $rrList = $stmtRR->fetchAll(PDO::FETCH_COLUMN);
                                         foreach ($rrList as $rrNo) {
-                                            echo '<option value="' . htmlspecialchars($rrNo) . '">' .
-                                                htmlspecialchars($rrNo) . '</option>';
+                                            echo '<option value="' . htmlspecialchars($rrNo) . '">' . htmlspecialchars($rrNo) . '</option>';
                                         }
                                         ?>
                                     </select>
                                     <small class="text-muted">Selecting an RR# will auto-fill the acquired date from Charge Invoice</small>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="mb-3">
-                        <div class="row">
-                            <div class="mb-3 col-md-6">
-                                <label for="edit_date_acquired" class="form-label">Date Acquired</label>
-                                <input type="date" class="form-control" name="date_acquired" id="edit_date_acquired" data-autofill="false">
-                                <small class="text-muted">This field will be auto-filled when an RR# is selected</small>
-                            </div>
-                            <div class="mb-3 col-md-6">
-                                <label for="edit_location" class="form-label">Location</label>
-                                <input type="text" class="form-control" name="location"
-                                    id="edit_location" data-autofill="false">
-                                <small class="text-muted">This field will be autofilled when an
-                                    Asset Tag is selected</small>
-                            </div>
-                            <div class="mb-3 col-md-6">
-                                <label for="edit_accountable_individual"
-                                    class="form-label">Accountable Individual</label>
-                                <input type="text" class="form-control"
-                                    name="accountable_individual" id="edit_accountable_individual" data-autofill="false">
-                                <small class="text-muted">This field will be autofilled when an
-                                    Asset Tag is selected</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="edit_remarks" class="form-label">Remarks</label>
-                        <textarea class="form-control" name="remarks" id="edit_remarks"
-                            rows="3"></textarea>
-                    </div>
-                    <div class="mb-3 text-end">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
-                            style="margin-right: 4px;">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Save Changes</button>
-                    </div>
-                </form>
-                                    <label for="edit_location" class="form-label">Location</label>
-                                    <input type="text" class="form-control" name="location"
-                                        id="edit_location" data-autofill="false">
-                                    <small class="text-muted">This field will be autofilled when an
-                                        Asset Tag is selected</small>
+
+                        <div class="mb-3">
+                            <div class="row">
+                                <div class="mb-3 col-md-6">
+                                    <label for="edit_date_acquired" class="form-label">Date Acquired</label>
+                                    <input type="date" class="form-control" name="date_acquired" id="edit_date_acquired" data-autofill="false">
+                                    <small class="text-muted">This field will be auto-filled when an RR# is selected</small>
                                 </div>
                                 <div class="mb-3 col-md-6">
-                                    <label for="edit_accountable_individual"
-                                        class="form-label">Accountable Individual</label>
-                                    <input type="text" class="form-control"
-                                        name="accountable_individual" id="edit_accountable_individual" data-autofill="false">
-                                    <small class="text-muted">This field will be autofilled when an
-                                        Asset Tag is selected</small>
+                                    <label for="edit_location" class="form-label">Location</label>
+                                    <input type="text" class="form-control" name="location" id="edit_location" data-autofill="false">
+                                    <small class="text-muted">This field will be autofilled when an Asset Tag is selected</small>
+                                </div>
+                                <div class="mb-3 col-md-6">
+                                    <label for="edit_accountable_individual" class="form-label">Accountable Individual</label>
+                                    <input type="text" class="form-control" name="accountable_individual" id="edit_accountable_individual" data-autofill="false">
+                                    <small class="text-muted">This field will be autofilled when an Asset Tag is selected</small>
                                 </div>
                             </div>
                         </div>
                         <div class="mb-3">
                             <label for="edit_remarks" class="form-label">Remarks</label>
-                            <textarea class="form-control" name="remarks" id="edit_remarks"
-                                rows="3"></textarea>
+                            <textarea class="form-control" name="remarks" id="edit_remarks" rows="3"></textarea>
                         </div>
                         <div class="mb-3 text-end">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
-                                style="margin-right: 4px;">Cancel</button>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="margin-right: 4px;">Cancel</button>
                             <button type="submit" class="btn btn-primary">Save Changes</button>
                         </div>
                     </form>
@@ -1360,20 +1357,118 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
         </div>
     </div>
 
+    <!-- Edit Equipment Modal -->
+    <div class="modal fade" id="editEquipmentModal" tabindex="-1" aria-labelledby="editEquipmentLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header p-4">
+                    <h5 class="modal-title">Edit Equipment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form id="editEquipmentForm">
+                        <input type="hidden" name="action" value="update">
+                        <input type="hidden" name="equipment_id" id="edit_equipment_id">
+                        <div class="mb-3">
+                            <label for="edit_equipment_asset_tag" class="form-label">Asset Tag <span style="color: red;">*</span></label>
+                            <select class="form-select" name="asset_tag" id="edit_equipment_asset_tag" required>
+                                <option value="">Select or type Asset Tag</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <div class="row">
+                                <div class="mb-3 col-md-6">
+                                    <label for="edit_asset_description_1" class="form-label">Asset Description 1</label>
+                                    <input type="text" class="form-control" name="asset_description_1" id="edit_asset_description_1">
+                                </div>
+                                <div class="mb-3 col-md-6">
+                                    <label for="edit_asset_description_2" class="form-label">Asset Description 2</label>
+                                    <input type="text" class="form-control" name="asset_description_2" id="edit_asset_description_2">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_specifications" class="form-label">Specification</label>
+                            <textarea class="form-control" name="specifications" id="edit_specifications" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <div class="row">
+                                <div class="mb-3 col-md-6">
+                                    <label for="edit_brand" class="form-label">Brand</label>
+                                    <input type="text" class="form-control" name="brand" id="edit_brand">
+                                </div>
+                                <div class="mb-3 col-md-6">
+                                    <label for="edit_model" class="form-label">Model</label>
+                                    <input type="text" class="form-control" name="model" id="edit_model">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="row">
+                                <div class="mb-3 col-md-6">
+                                    <label for="edit_serial_number" class="form-label">Serial Number</label>
+                                    <input type="text" class="form-control" name="serial_number" id="edit_serial_number">
+                                </div>
+                                <div class="mb-3 col-md-6">
+                                    <label for="edit_rr_no" class="form-label">RR#</label>
+                                    <select class="form-select rr-select2" name="rr_no" id="edit_rr_no" style="width: 100%;">
+                                        <option value="">Select or search RR Number</option>
+                                        <?php
+                                        foreach ($rrList as $rrNo) {
+                                            echo '<option value="' . htmlspecialchars($rrNo) . '">' . htmlspecialchars($rrNo) . '</option>';
+                                        }
+                                        ?>
+                                    </select>
+                                    <small class="text-muted">Selecting an RR# will auto-fill the acquired date from Charge Invoice</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="row">
+                                <div class="mb-3 col-md-6">
+                                    <label for="edit_date_acquired" class="form-label">Date Acquired</label>
+                                    <input type="date" class="form-control" name="date_acquired" id="edit_date_acquired">
+                                    <small class="text-muted">This field will be auto-filled when an RR# is selected</small>
+                                </div>
+                                <div class="mb-3 col-md-6">
+                                    <label for="edit_location" class="form-label">Location</label>
+                                    <input type="text" class="form-control" name="location" id="edit_location" data-autofill="false">
+                                    <small class="text-muted">This field will be autofilled when an Asset Tag is selected</small>
+                                </div>
+                                <div class="mb-3 col-md-6">
+                                    <label for="edit_accountable_individual" class="form-label">Accountable Individual</label>
+                                    <input type="text" class="form-control" name="accountable_individual" id="edit_accountable_individual" data-autofill="false">
+                                    <small class="text-muted">This field will be autofilled when an Asset Tag is selected</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_remarks" class="form-label">Remarks</label>
+                            <textarea class="form-control" name="remarks" id="edit_remarks" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3 text-end">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="margin-right: 4px;">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Equipment Modal -->
     <div class="modal fade" id="deleteEDModal" tabindex="-1" data-bs-backdrop="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header p-4">
                     <h5 class="modal-title">Confirm Removal</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"
-                        aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
                     Are you sure you want to remove this Equipment Detail?
                 </div>
                 <div class="modal-footer p-4">
-                    <button type="button" class="btn btn-secondary"
-                        data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" id="confirmDeleteBtn" class="btn btn-danger">Remove</button>
                 </div>
             </div>
@@ -1624,9 +1719,25 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                     }
                 }
             });
+
+            // Handle modal events
+            $('.modal').on('show.bs.modal', function() {
+                $('.main-header, .header').css({
+                    'z-index': '1029',
+                    'opacity': '0.5',
+                    'pointer-events': 'none'
+                });
+            });
+
+            $('.modal').on('hidden.bs.modal', function() {
+                $('.main-header, .header').css({
+                    'z-index': '1030',
+                    'opacity': '1',
+                    'pointer-events': 'auto'
+                });
+            });
         });
-    </script>
-    <script>
+
         // Custom filterTable function for equipment details
         function filterEquipmentTable() {
             console.log('----------- CUSTOM FILTER FUNCTION CALLED -----------');
@@ -2377,7 +2488,7 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                     }
                 });
             });
-            
+
             // Add Equipment AJAX submit with toast
             $('#addEquipmentForm').on('submit', function(e) {
                 e.preventDefault();
@@ -2385,7 +2496,7 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                 var submitBtn = $form.find('button[type="submit"]');
                 var originalBtnText = submitBtn.text();
                 submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Creating...');
-                
+
                 $.ajax({
                     url: '../../modules/equipment_manager/equipment_details.php',
                     method: 'POST',
@@ -2402,13 +2513,13 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                                 // Remove any lingering backdrop
                                 $('.modal-backdrop').remove();
                                 $('body').removeClass('modal-open').css('padding-right', '');
-                                
+
                                 $form[0].reset();
                                 $('#add_equipment_asset_tag').val(null).trigger('change');
                                 $('#add_rr_no').val(null).trigger('change');
-                                
+
                                 showToast(response.message || 'Equipment created successfully', 'success');
-                                
+
                                 // Reload the table section only
                                 $('#edTable').load(location.href + ' #edTable > *', function() {
                                     window.allRows = $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').toArray();
@@ -2458,7 +2569,7 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                             // Remove any lingering backdrop
                             $('.modal-backdrop').remove();
                             $('body').removeClass('modal-open').css('padding-right', '');
-                            
+
                             showToast(response.message || 'Equipment removed successfully', 'success');
                             // Reload the table section only
                             $('#edTable').load(location.href + ' #edTable > *', function() {
