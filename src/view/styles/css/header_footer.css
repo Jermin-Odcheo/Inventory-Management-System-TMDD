@@ -19,7 +19,7 @@ body {
     top: 0;
     left: var(--sidebar-width, 300px); /* Use CSS variable to match sidebar width */
     right: 0; /* Extend to the right edge */
-    z-index: 10000; /* Lower than sidebar's z-index */
+    z-index: 1000;
     transition: all 0.3s ease; /* Match sidebar transition */
 }
 
@@ -329,4 +329,78 @@ body {
     .main-content {
         margin-left: 220px; /* Match responsive sidebar width */
     }
+}
+
+/* Modal and backdrop z-index hierarchy */
+.modal-backdrop {
+    z-index: 9999 !important;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal {
+    z-index: 10000 !important;
+}
+
+.modal-dialog {
+    z-index: 10001 !important;
+    margin-top: 50px;
+}
+
+.modal-content {
+    z-index: 10002 !important;
+}
+
+/* Select2 dropdown z-index */
+.select2-container--open {
+    z-index: 10003 !important;
+}
+
+.select2-dropdown {
+    z-index: 10003 !important;
+}
+
+/* Modal open state fixes */
+body.modal-open {
+    padding-right: 0 !important;
+    overflow: hidden;
+}
+
+body.modal-open .header {
+    z-index: 999 !important;
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* Ensure modal backdrop covers everything */
+.modal-backdrop.show {
+    opacity: 0.5;
+    z-index: 9999 !important;
+}
+
+/* Ensure modals are centered and visible */
+.modal.show {
+    display: block;
+    z-index: 10000 !important;
+}
+
+/* Additional fixes for modal stacking context */
+.modal-open .modal {
+    display: block;
+    z-index: 10000 !important;
+}
+
+.modal-open .modal-dialog {
+    z-index: 10001 !important;
+}
+
+.modal-open .modal-content {
+    z-index: 10002 !important;
+}
+
+/* Ensure header stays below modal backdrop */
+.modal-open .header,
+.modal-open .main-header {
+    z-index: 999 !important;
+    opacity: 0.5;
+    pointer-events: none;
 }
