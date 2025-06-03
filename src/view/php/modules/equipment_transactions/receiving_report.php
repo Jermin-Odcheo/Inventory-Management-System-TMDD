@@ -52,8 +52,18 @@ if (isset($_SESSION['success'])) {
 // Handler for AJAX RR existence check
 if (isset($_POST['action']) && $_POST['action'] === 'check_rr_exists' && isset($_POST['rr_no'])) {
     $rr_no = trim($_POST['rr_no']);
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM receive_report WHERE rr_no = ?");
-    $stmt->execute([$rr_no]);
+    $current_id = isset($_POST['current_id']) ? (int)$_POST['current_id'] : null;
+    
+    if ($current_id) {
+        // For edit form, exclude the current record
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM receive_report WHERE rr_no = ? AND id != ? AND is_disabled = 0");
+        $stmt->execute([$rr_no, $current_id]);
+    } else {
+        // For add form, check all active records
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM receive_report WHERE rr_no = ? AND is_disabled = 0");
+        $stmt->execute([$rr_no]);
+    }
+    
     $exists = $stmt->fetchColumn() > 0;
     header('Content-Type: application/json');
     echo json_encode(['status' => $exists ? 'exists' : 'not_exists']);
@@ -240,6 +250,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new Exception('You do not have permission to add receiving reports');
             }
 
+            // Check for duplicate RR number before attempting insert
+            $dupCheck = $pdo->prepare("SELECT COUNT(*) FROM receive_report WHERE rr_no = ? AND is_disabled = 0");
+            $dupCheck->execute([$rr_no]);
+            if ($dupCheck->fetchColumn() > 0) {
+                throw new Exception("Receiving Report number '{$rr_no}' already exists in the system.");
+            }
+
             $stmt = $pdo->prepare("
                 INSERT INTO receive_report
                     (rr_no, accountable_individual, po_no, ai_loc, date_created, is_disabled)
@@ -272,7 +289,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             );
         } catch (PDOException $e) {
             $response['status'] = 'error';
-            $response['message'] = "Error adding Receiving Report: " . $e->getMessage();
+            
+            // Check if it's a duplicate entry error
+            if ($e->getCode() == '23000' && strpos($e->getMessage(), 'Duplicate entry') !== false) {
+                $response['message'] = "Receiving Report number '{$rr_no}' already exists in the system.";
+            } else {
+                $response['message'] = "Error adding Receiving Report: " . $e->getMessage();
+            }
 
             // Log audit for failed attempt
             logAudit(
@@ -329,6 +352,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $oldData = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($oldData) {
+                // Check for duplicate RR number if it's being changed
+                if ($oldData['rr_no'] !== $rr_no) {
+                    $dupCheck = $pdo->prepare("SELECT COUNT(*) FROM receive_report WHERE rr_no = ? AND id != ? AND is_disabled = 0");
+                    $dupCheck->execute([$rr_no, $id]);
+                    if ($dupCheck->fetchColumn() > 0) {
+                        throw new Exception("Receiving Report number '{$rr_no}' already exists in the system.");
+                    }
+                }
+                
                 $oldPoNo = $oldData['po_no'] ?? null;
                 $newPoNo = $po_no;
                 $logAdd = false;
@@ -402,7 +434,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         } catch (PDOException $e) {
             $response['status'] = 'error';
-            $response['message'] = "Error updating Receiving Report: " . $e->getMessage();
+            
+            // Check if it's a duplicate entry error
+            if ($e->getCode() == '23000' && strpos($e->getMessage(), 'Duplicate entry') !== false) {
+                $response['message'] = "Receiving Report number '{$rr_no}' already exists in the system.";
+            } else {
+                $response['message'] = "Error updating Receiving Report: " . $e->getMessage();
+            }
+            
             logAudit(
                 $pdo,
                 'modified',
@@ -588,6 +627,53 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_data_json') {
         #rrTable th:nth-child(6) { width: 20%; } /* Created Date */
         #rrTable th:nth-child(7) { width: 16%; } /* Actions */
     </style>
+    <script>
+        // Function to display toast messages
+        function showToast(message, type = 'info', duration = 3000) {
+            // Remove any existing toasts
+            $('.toast-container').remove();
+            
+            // Create toast container if it doesn't exist
+            let toastContainer = $('<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>');
+            
+            // Set the appropriate background color based on type
+            let bgClass = 'bg-info';
+            if (type === 'success') bgClass = 'bg-success';
+            if (type === 'error') bgClass = 'bg-danger';
+            if (type === 'warning') bgClass = 'bg-warning';
+            
+            // Create the toast element
+            let toast = $(`
+                <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="toast-header ${bgClass} text-white">
+                        <strong class="me-auto">${type.charAt(0).toUpperCase() + type.slice(1)}</strong>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                </div>
+            `);
+            
+            // Add the toast to the container and the container to the body
+            toastContainer.append(toast);
+            $('body').append(toastContainer);
+            
+            // Auto-hide the toast after the specified duration
+            setTimeout(function() {
+                toast.fadeOut('slow', function() {
+                    toastContainer.remove();
+                });
+            }, duration);
+            
+            // Add click handler to close button
+            toast.find('.btn-close').on('click', function() {
+                toast.fadeOut('slow', function() {
+                    toastContainer.remove();
+                });
+            });
+        }
+    </script>
 </head>
 
 <body>
@@ -906,6 +992,79 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_data_json') {
         const editModal = new bootstrap.Modal(document.getElementById('editReportModal'));
         const deleteModal = new bootstrap.Modal(document.getElementById('deleteRRModal'));
 
+        // Check if RR number exists (for real-time validation)
+        function checkRRExists(rrNo, currentId = null) {
+            return new Promise((resolve, reject) => {
+                // Don't check empty values
+                if (!rrNo) {
+                    resolve(false);
+                    return;
+                }
+                
+                // Ensure RR prefix
+                if (!rrNo.startsWith('RR')) {
+                    rrNo = 'RR' + rrNo;
+                }
+                
+                $.ajax({
+                    url: 'receiving_report.php',
+                    method: 'POST',
+                    data: {
+                        action: 'check_rr_exists',
+                        rr_no: rrNo,
+                        current_id: currentId
+                    },
+                    dataType: 'json',
+                    success: function(response) {
+                        resolve(response.status === 'exists');
+                    },
+                    error: function() {
+                        reject(new Error('Failed to check RR number'));
+                    }
+                });
+            });
+        }
+
+        // Add real-time validation for RR number fields
+        $(document).ready(function() {
+            // For add form
+            $('#add_rr_no').on('blur', async function() {
+                const rrNo = $(this).val();
+                if (!rrNo) return;
+                
+                try {
+                    const exists = await checkRRExists(rrNo);
+                    if (exists) {
+                        showToast(`Receiving Report number 'RR${rrNo}' already exists in the system.`, 'warning');
+                        $(this).addClass('is-invalid');
+                    } else {
+                        $(this).removeClass('is-invalid');
+                    }
+                } catch (err) {
+                    console.error('Error checking RR number:', err);
+                }
+            });
+            
+            // For edit form
+            $('#edit_rr_no').on('blur', async function() {
+                const rrNo = $(this).val();
+                const currentId = $('#edit_report_id').val();
+                if (!rrNo) return;
+                
+                try {
+                    const exists = await checkRRExists(rrNo, currentId);
+                    if (exists) {
+                        showToast(`Receiving Report number 'RR${rrNo}' already exists in the system.`, 'warning');
+                        $(this).addClass('is-invalid');
+                    } else {
+                        $(this).removeClass('is-invalid');
+                    }
+                } catch (err) {
+                    console.error('Error checking RR number:', err);
+                }
+            });
+        });
+
         // Prefill Add Report Modal if opened from equipment creation
         $(document).ready(function() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -1199,7 +1358,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_data_json') {
                                 $('#rowsPerPageSelect').val(rowsPerPage).trigger('change');
                             });
                         } else {
-                            showToast(res.message, 'error');
+                            // If there's a duplicate entry error, show it but keep the modal open
+                            if (res.message && res.message.includes('already exists')) {
+                                showToast(res.message, 'error');
+                                // Keep the add modal open so user can fix the RR number
+                            } else {
+                                showToast(res.message, 'error');
+                                // Hide the modal for other errors
+                                addModal.hide();
+                            }
                         }
                     },
                     error() {
@@ -1271,7 +1438,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_data_json') {
                                 $('#rowsPerPageSelect').val(rowsPerPage).trigger('change');
                             });
                         } else {
-                            showToast(response.message, 'error');
+                            // If there's a duplicate entry error, show it but keep the modal open
+                            if (response.message && response.message.includes('already exists')) {
+                                showToast(response.message, 'error');
+                                // Keep the edit modal open so user can fix the RR number
+                            } else {
+                                showToast(response.message, 'error');
+                                // Hide the modal for other errors
+                                editModal.hide();
+                            }
                         }
                     },
                     error() {
