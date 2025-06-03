@@ -971,8 +971,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                 <label for="dateFilter" class="form-label">Date Filter</label>
                                 <select class="form-select" id="dateFilter" name="dateFilter">
                                     <option value="">No Date Filter</option>
-                                    <option value="month_year">Month-Year</option>
-                                    <option value="year_range">Year Range</option>
                                     <option value="mdy">Month-Day-Year</option>
                                 </select>
                             </div>
@@ -999,34 +997,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                         </div>
 
                         <div id="dateInputsContainer" class="row g-3 mt-2 d-none">
-                            <!-- Month-Year Selector -->
-                            <div class="col-md-6 date-filter date-month_year d-none">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <label for="monthYearFrom" class="form-label">From Month-Year</label>
-                                        <input type="month" class="form-control" id="monthYearFrom" name="monthYearFrom">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label for="monthYearTo" class="form-label">To Month-Year</label>
-                                        <input type="month" class="form-control" id="monthYearTo" name="monthYearTo">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Year Range Selector -->
-                            <div class="col-md-6 date-filter date-year_range d-none">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <label for="yearFrom" class="form-label">From Year</label>
-                                        <input type="number" class="form-control" id="yearFrom" name="yearFrom" min="2000" max="2100" placeholder="YYYY">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label for="yearTo" class="form-label">To Year</label>
-                                        <input type="number" class="form-control" id="yearTo" name="yearTo" min="2000" max="2100" placeholder="YYYY">
-                                    </div>
-                                </div>
-                            </div>
-
                             <!-- MDY Picker -->
                             <div class="col-md-6 date-filter date-mdy d-none">
                                 <div class="row">
@@ -1054,14 +1024,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                 <th class="sortable" data-column="4">Specification</th>
                                 <th class="sortable" data-column="5">Brand</th>
                                 <th class="sortable" data-column="6">Model</th>
-                                <th class="sortable" data-column="7">Serial #</th>
+                                <th class="sortable" data-column="6">Serial #</th>
                                 <th class="sortable" data-column="8">Acquired Date</th>
                                 <th class="sortable d-none" data-column="9">Created Date</th>
                                 <th class="sortable d-none" data-column="10">Modified Date</th>
                                 <th class="sortable" data-column="11">RR #</th>
                                 <th class="sortable" data-column="12">Location</th>
                                 <th class="sortable" data-column="13">Accountable Individual</th>
-                                <th class="sortable" data-column="14">Remarks</th>
+                                <th>Remarks</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -1149,21 +1119,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                         </div>
                         <div class="col-12 col-sm-auto ms-sm-auto">
                             <div class="d-flex align-items-center gap-2">
-                                <button id="prevPage" class="btn btn-outline-primary d-flex 
-align-items-center gap-1">
-                                    <i class="bi bi-chevron-left"></i> Previous
-                                </button>
-                                <select id="rowsPerPageSelect" class="form-select" style="width: 
-auto;">
+                                <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
                                     <option value="10" selected>10</option>
                                     <option value="20">20</option>
                                     <option value="30">30</option>
                                     <option value="50">50</option>
                                 </select>
-                                <button id="nextPage" class="btn btn-outline-primary d-flex 
-align-items-center gap-1">
-                                    Next <i class="bi bi-chevron-right"></i>
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -1817,22 +1778,43 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                     // 5. DATE FILTER
                     let dateMatch = true;
                     if (dateFilterType && dateText) {
-                        const date = new Date(dateText);
-                        if (!isNaN(date.getTime())) {
-                            if (dateFilterType === 'month_year' && (monthYearFrom || monthYearTo)) {
-                                const rowMonthYear = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
-                                dateMatch = (!monthYearFrom || rowMonthYear >= monthYearFrom) &&
-                                    (!monthYearTo || rowMonthYear <= monthYearTo);
-                            } else if (dateFilterType === 'year_range' && (yearFrom || yearTo)) {
-                                const year = date.getFullYear();
-                                dateMatch = (!yearFrom || year >= parseInt(yearFrom)) &&
-                                    (!yearTo || year <= parseInt(yearTo));
-                            } else if (dateFilterType === 'mdy' && (mdyFrom || mdyTo)) {
-                                const fromDate = mdyFrom ? new Date(mdyFrom) : new Date(0);
-                                const toDate = mdyTo ? new Date(mdyTo) : new Date(8640000000000000);
-                                toDate.setHours(23, 59, 59);
-                                dateMatch = date >= fromDate && date <= toDate;
+                        try {
+                            console.log('Processing date filter:', {
+                                dateFilterType,
+                                dateText,
+                                mdyFrom,
+                                mdyTo
+                            });
+
+                            // Parse the date from the table cell
+                            const date = new Date(dateText);
+                            
+                            if (!isNaN(date.getTime())) {
+                                if (dateFilterType === 'mdy' && (mdyFrom || mdyTo)) {
+                                    const fromDate = mdyFrom ? new Date(mdyFrom) : new Date(0);
+                                    const toDate = mdyTo ? new Date(mdyTo) : new Date(8640000000000000);
+                                    
+                                    // Set time to end of day for toDate
+                                    toDate.setHours(23, 59, 59, 999);
+                                    
+                                    dateMatch = date >= fromDate && date <= toDate;
+
+                                    console.log('MDY Filter Details:', {
+                                        rowDate: date.toISOString(),
+                                        fromDate: fromDate.toISOString(),
+                                        toDate: toDate.toISOString(),
+                                        dateMatch,
+                                        mdyFrom,
+                                        mdyTo
+                                    });
+                                }
+                            } else {
+                                console.log('Invalid date in table:', dateText);
+                                dateMatch = false;
                             }
+                        } catch (error) {
+                            console.error('Error processing date:', error);
+                            dateMatch = false;
                         }
                     }
 
@@ -1845,6 +1827,17 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                     } else {
                         $(row).hide();
                     }
+
+                    // Log the filter results for this row
+                    console.log('Row filter results:', {
+                        rowDate: dateText,
+                        searchMatch,
+                        equipmentMatch,
+                        brandMatch,
+                        locationMatch,
+                        dateMatch,
+                        shouldShow
+                    });
 
                 } catch (error) {
                     console.error(`Error processing row ${index}:`, error);
@@ -1918,9 +1911,6 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
             $('#rowsPerPage').text(rowsPerPage);
             $('#totalRows').text(totalRows);
 
-            // Update pagination buttons
-            updatePaginationButtons();
-
             // Build page number buttons
             buildPaginationButtons(totalPages);
 
@@ -1928,18 +1918,6 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
             showCurrentPageRows();
 
             console.log(`Pagination initialized: ${totalRows} rows, ${rowsPerPage} per page, ${totalPages} total pages, current page: ${window.currentPage}`);
-        }
-
-        // Update the Previous/Next button states
-        function updatePaginationButtons() {
-            const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
-            const totalPages = Math.ceil(window.filteredRows.length / rowsPerPage);
-
-            // Disable/enable Previous button
-            $('#prevPage').prop('disabled', window.currentPage <= 1);
-
-            // Disable/enable Next button
-            $('#nextPage').prop('disabled', window.currentPage >= totalPages);
         }
 
         // Build the pagination number buttons
@@ -1961,57 +1939,11 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                 startPage = Math.max(1, endPage - 4);
             }
 
-            // Add "First" button if not on first page
-            if (window.currentPage > 1) {
-                $pagination.append(`
-                    <li class="page-item">
-                        <a class="page-link" href="#" data-page="1"><i class="bi bi-chevron-double-left"></i></a>
-                    </li>
-                `);
-            }
-
-            // Add "Previous" page button
-            if (window.currentPage > 1) {
-                $pagination.append(`
-                    <li class="page-item">
-                        <a class="page-link" href="#" data-page="${window.currentPage - 1}"><i class="bi bi-chevron-left"></i></a>
-                    </li>
-                `);
-            }
-
-            // Add ellipsis if needed at start
-            if (startPage > 1) {
-                $pagination.append('<li class="page-item disabled"><span class="page-link">...</span></li>');
-            }
-
             // Add page numbers
             for (let i = startPage; i <= endPage; i++) {
                 $pagination.append(`
                     <li class="page-item ${window.currentPage === i ? 'active' : ''}">
                         <a class="page-link" href="#" data-page="${i}">${i}</a>
-                    </li>
-                `);
-            }
-
-            // Add ellipsis if needed at end
-            if (endPage < totalPages) {
-                $pagination.append('<li class="page-item disabled"><span class="page-link">...</span></li>');
-            }
-
-            // Add "Next" page button
-            if (window.currentPage < totalPages) {
-                $pagination.append(`
-                    <li class="page-item">
-                        <a class="page-link" href="#" data-page="${window.currentPage + 1}"><i class="bi bi-chevron-right"></i></a>
-                    </li>
-                `);
-            }
-
-            // Add "Last" button if not on last page
-            if (window.currentPage < totalPages) {
-                $pagination.append(`
-                    <li class="page-item">
-                        <a class="page-link" href="#" data-page="${totalPages}"><i class="bi bi-chevron-double-right"></i></a>
                     </li>
                 `);
             }
@@ -2040,8 +1972,7 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
             // Update display
             $('#currentPage').text(window.currentPage);
 
-            // Update buttons
-            updatePaginationButtons();
+            // Build pagination
             buildPaginationButtons(totalPages);
 
             // Show rows for the current page
@@ -2097,108 +2028,38 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                 // Force rebuild pagination buttons
                 buildPaginationButtons(totalPages);
                 showCurrentPageRows();
-                updatePaginationButtons();
 
                 console.log('Enforced pagination on initial load - Total pages:', totalPages);
             }, 300);
 
-            // Apply Filter button click handler
-            $('#applyFilters').off('click').on('click', function(e) {
-                e.preventDefault();
-                console.log('Filter button clicked - applying filters');
-                filterEquipmentTable();
-            });
-
-            // Clear filters button handler
-            $('#clearFilters').off('click').on('click', function(e) {
-                e.preventDefault();
-                console.log('Clear button clicked - resetting filters');
-
-                // Reset all filter inputs
-                $('#searchEquipment').val('');
-
-                // Reset Select2 dropdowns
-                $('#filterEquipment').val(null).trigger('change');
-                $('#filterBrand').val(null).trigger('change');
-                $('#filterLocation').val(null).trigger('change');
-
-                // Reset Date Filter
-                $('#dateFilter').val('');
-
-                // Reset Month-Year values
-                $('#monthYearFrom').val('');
-                $('#monthYearTo').val('');
-
-                // Reset Date Range values
-                $('#dateFrom').val('');
-                $('#dateTo').val('');
-
-                // Reset Year Range values
-                $('#yearFrom').val('');
-                $('#yearTo').val('');
-
-                // Reset MDY values
-                $('#mdyFrom').val('');
-                $('#mdyTo').val('');
-
-                // Hide date inputs container
-                $('#dateInputsContainer').addClass('d-none');
-                $('.date-filter').addClass('d-none');
-
-                // Reset to show all rows (unfiltered state)
-                $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').show();
-
-                // Remove any "no results" message
-                $('#noResultsMessage').remove();
-
-                // Reset the filtered rows to include all rows
-                window.allRows = $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').toArray();
-                window.filteredRows = [...window.allRows];
-
-                // Reset to page 1
-                window.currentPage = 1;
-
-                // Update display counts
-                const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
-                const totalRows = window.filteredRows.length;
-                $('#currentPage').text(window.currentPage);
-                $('#rowsPerPage').text(rowsPerPage);
-                $('#totalRows').text(totalRows);
-
-                // Rebuild pagination with all rows
-                const totalPages = Math.ceil(totalRows / rowsPerPage);
-                buildPaginationButtons(totalPages);
-                updatePaginationButtons();
-
-                // Show only the first page of rows
-                showCurrentPageRows();
-
-                console.log('Filters cleared, showing all rows');
-            });
-
-            // Previous page button
-            $('#prevPage').on('click', function(e) {
-                e.preventDefault();
-                if (window.currentPage > 1) {
-                    goToPage(window.currentPage - 1);
-                }
-            });
-
-            // Next page button
-            $('#nextPage').on('click', function(e) {
-                e.preventDefault();
-                const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
-                const totalPages = Math.ceil(window.filteredRows.length / rowsPerPage);
-                if (window.currentPage < totalPages) {
-                    goToPage(window.currentPage + 1);
-                }
-            });
-
             // Rows per page select
             $('#rowsPerPageSelect').on('change', function() {
+                const newRowsPerPage = parseInt($(this).val());
+                console.log('Rows per page changed to:', newRowsPerPage);
+                
                 // Reset to page 1 when changing rows per page
                 window.currentPage = 1;
-                initPagination();
+                
+                // Update the display counts
+                $('#rowsPerPage').text(newRowsPerPage);
+                $('#currentPage').text(window.currentPage);
+                
+                // Calculate total pages
+                const totalRows = window.filteredRows.length;
+                const totalPages = Math.ceil(totalRows / newRowsPerPage);
+                
+                // Rebuild pagination
+                buildPaginationButtons(totalPages);
+                
+                // Show rows for the current page
+                showCurrentPageRows();
+                
+                console.log('Updated display:', {
+                    rowsPerPage: newRowsPerPage,
+                    currentPage: window.currentPage,
+                    totalRows: totalRows,
+                    totalPages: totalPages
+                });
             });
 
             // Date filter type change handler
