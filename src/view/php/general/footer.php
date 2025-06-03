@@ -6,10 +6,10 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : '/'; ?>src/control/js/pagination.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="<?php echo defined('BASE_URL') ? BASE_URL : '/'; ?>src/control/js/toast.js"></script>
+<script src="<?php echo defined('BASE_URL') ? BASE_URL : '/'; ?>src/control/js/pagination.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="<?php echo defined('BASE_URL') ? BASE_URL : '/'; ?>src/control/js/toast.js"></script>
+<script src="<?php echo defined('BASE_URL') ? BASE_URL : '/'; ?>src/control/js/sidebar.js"></script>
 <style>
     /* Base styles for the footer */
     .footer {

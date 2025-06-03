@@ -515,8 +515,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                             <div class="d-flex align-items-center gap-2 flex-wrap">
     <select class="form-select form-select-sm" id="dateFilter" style="width: auto; min-width: 140px;">
         <option value="">Filter by Date</option>
-        <option value="desc">Newest to Oldest</option>
-        <option value="asc">Oldest to Newest</option>
         <option value="mdy">Month-Day-Year Range</option>
         <option value="month">Month Range</option>
         <option value="year">Year Range</option>
@@ -583,7 +581,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                                         <th class="sortable" data-sort="date_of_order">Date of Order <span class="sort-indicator"></span></th>
                                         <th class="sortable" data-sort="no_of_units">No. of Units <span class="sort-indicator"></span></th>
                                         <th class="sortable" data-sort="item_specifications">Item Specifications <span class="sort-indicator"></span></th>
-                                        <th class="sortable" data-sort="date_created">Created Date <span class="sort-indicator"></span></th>
+                                        <th class="sortable d-none" data-sort="date_created">Created Date <span class="sort-indicator"></span></th>
                                         <th class="text-center">Actions</th>
                                     </tr>
                                 </thead>
@@ -596,7 +594,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                                                 <td><?php echo htmlspecialchars($po['date_of_order']); ?></td>
                                                 <td><?php echo htmlspecialchars($po['no_of_units']); ?></td>
                                                 <td><?php echo htmlspecialchars($po['item_specifications']); ?></td>
-                                                <td><?php echo date('Y-m-d h:i A', strtotime($po['date_created'])); ?></td>
+                                                <td class="d-none"><?php echo date('Y-m-d h:i A', strtotime($po['date_created'])); ?></td>
                                                 <td class="text-center">
                                                     <div class="btn-group" role="group">
                                                         <?php if ($canModify): ?>
@@ -1412,11 +1410,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
         function getCellValue(row, idx) {
             return row.children[idx]?.innerText.trim();
         }
-        function parseValue(val, col) {
-            if (["#", "No. of Units"].includes(col)) return parseFloat(val) || 0;
-            if (["Date of Order", "Created Date"].includes(col)) return new Date(val);
-            return val ? val.toLowerCase() : '';
-        }
+        function parseValue(val, sortKey) {
+    if (["id", "no_of_units"].includes(sortKey)) return parseFloat(val) || 0;
+    if (["date_of_order", "date_created"].includes(sortKey)) return new Date(val);
+    return val ? val.toLowerCase() : '';
+}
         function getColIdx(sortKey) {
             const headers = Array.from(thead.querySelectorAll('th.sortable'));
             return headers.findIndex(th => th.dataset.sort === sortKey);
@@ -1428,8 +1426,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
             window.filteredRows.sort((a, b) => {
                 let vA = getCellValue(a, idx);
                 let vB = getCellValue(b, idx);
-                vA = parseValue(vA, colName);
-                vB = parseValue(vB, colName);
+                vA = parseValue(vA, sortKey);
+                vB = parseValue(vB, sortKey);
                 if (vA < vB) return dir === 'asc' ? -1 : 1;
                 if (vA > vB) return dir === 'asc' ? 1 : -1;
                 return 0;
