@@ -146,92 +146,6 @@ criteria.</div></td></tr>';
                 $e->getMessage()]);
         }
         exit;
-    } else if ($_POST['action'] === 'sync') {
-        // Handle sync request
-        header('Content-Type: application/json');
-        try {
-            if (!isset($_POST['asset_tag']) || empty($_POST['asset_tag'])) {
-                throw new Exception('Asset tag is required');
-            }
-
-            // Get the values
-            $assetTag = $_POST['asset_tag'];
-            $location = $_POST['location'] ?? null;
-            $accountable = $_POST['accountable_individual'] ?? null;
-            $remarks = $_POST['remarks'] ?? null;
-
-            // Update equipment_location table
-            $stmt = $pdo->prepare("UPDATE equipment_location SET 
-                location = ?,
-                accountable_individual = ?,
-                remarks = ?,
-                date_modified = NOW()
-                WHERE asset_tag = ? AND is_disabled = 0");
-
-            $stmt->execute([$location, $accountable, $remarks, $assetTag]);
-
-            // Log the sync action
-            $auditStmt = $pdo->prepare("INSERT INTO audit_log (
-                UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status, Date_Time
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())");
-
-            $auditStmt->execute([
-                $_SESSION['user_id'],
-                $assetTag,
-                'Equipment Location',
-                'Sync',
-                'Synced changes from Equipment Details',
-                null,
-                json_encode([
-                    'asset_tag' => $assetTag,
-                    'location' => $location,
-                    'accountable_individual' => $accountable,
-                    'remarks' => $remarks
-                ]),
-                'Successful'
-            ]);
-
-            echo json_encode(['status' => 'success', 'message' => 'Successfully synced with Equipment Location']);
-        } catch (Exception $e) {
-            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
-        }
-        exit;
-    } else if ($_POST['action'] === 'get_ci_date') {
-        // Handle Charge Invoice date request
-        header('Content-Type: application/json');
-        try {
-            if (!isset($_POST['rr_no']) || empty($_POST['rr_no'])) {
-                throw new Exception('RR number is required');
-            }
-
-            // Get the RR number
-            $rrNo = $_POST['rr_no'];
-
-            // Format RR number if needed
-            if (strpos($rrNo, 'RR') !== 0) {
-                $rrNo = 'RR' . $rrNo;
-            }
-
-            // Query the charge_invoice table for the date_acquired
-            $stmt = $pdo->prepare("SELECT date_acquired FROM charge_invoice WHERE rr_no = ? AND is_disabled = 0 ORDER BY id DESC LIMIT 1");
-            $stmt->execute([$rrNo]);
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if ($result && $result['date_acquired']) {
-                echo json_encode([
-                    'status' => 'success',
-                    'date_acquired' => $result['date_acquired']
-                ]);
-            } else {
-                echo json_encode([
-                    'status' => 'error',
-                    'message' => 'No Charge Invoice date found for this RR number'
-                ]);
-            }
-        } catch (Exception $e) {
-            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
-        }
-        exit;
     }
     header('Content-Type: application/json');
     $response = ['status' => '', 'message' => ''];
@@ -747,64 +661,18 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
     <style>
-        /* Update sorting styles to match Audit logs */
-        th.sortable {
-            cursor: pointer;
-            position: relative;
-            padding-right: 20px;
-        }
-
-        th.sortable::after {
-            content: "⇅";
-            position: absolute;
-            right: 8px;
-            color: #999;
-            font-size: 0.8em;
-        }
-
         th.sortable.asc::after {
-            content: "↑";
-            color: #000;
+            content: " \2191";
+            /* Unicode up arrow */
         }
 
         th.sortable.desc::after {
-            content: "↓";
-            color: #000;
+            content: " \2193";
+            /* Unicode down arrow */
         }
 
-        /* Fix header and modal z-index issues */
-        .main-header {
-            z-index: 1030 !important;
-        }
-        .modal {
-            z-index: 1050 !important;
-        }
-        .modal-backdrop {
-            z-index: 1040 !important;
-        }
-        .modal-dialog {
-            z-index: 1060 !important;
-            margin-top: 50px; /* Add some space from the top */
-        }
-        .select2-container--open {
-            z-index: 1070 !important;
-        }
-        .select2-dropdown {
-            z-index: 1070 !important;
-        }
-        /* Ensure modal content is above everything */
-        .modal-content {
-            z-index: 1065 !important;
-        }
-        /* Fix for fixed header */
-        body.modal-open {
-            padding-right: 0 !important;
-        }
-        .modal-open .main-header {
-            z-index: 1030 !important;
-        }
 
-        /* Rest of existing styles */
+        /* Pagination styling */
         .pagination {
             display: flex;
             padding-left: 0;
@@ -892,6 +760,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             right: 10px;
         }
 
+        .select2-container--open .select2-dropdown {
+            z-index: 9999 !important;
+        }
+
         /* Make Select2 match Bootstrap form-control height */
         .select2-container .select2-selection {
             min-height: 38px !important;
@@ -953,13 +825,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             padding-bottom: 10px;
             border-top: 1px solid #e9ecef;
         }
-
-        .modal-open .header,
-        .modal-open .main-header {
-            z-index: 999 !important;
-            opacity: 0.5;
-            pointer-events: none;
-        }
     </style>
 </head>
 
@@ -1011,46 +876,13 @@ align-items-center">
                                     ?>
                                 </select>
                             </div>
-                            <div class="col-md-3">
-                                <label for="filterBrand" class="form-label">Brand</label>
-                                <select class="form-select" id="filterBrand" name="filterBrand">
-                                    <option value="">All Brands</option>
-                                    <?php
-                                    $brands = array_unique(array_column(
-                                        $equipmentDetails,
-                                        'brand'
-                                    ));
-                                    foreach ($brands as $brand) {
-                                        if (!empty($brand)) {
-                                            echo "<option value='" . safeHtml($brand) . "'>" .
-                                                safeHtml($brand) . "</option>";
-                                        }
-                                    }
-                                    ?>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label for="filterLocation" class="form-label">Location</label>
-                                <select class="form-select" id="filterLocation" name="filterLocation">
-                                    <option value="">All Locations</option>
-                                    <?php
-                                    $locations = array_unique(array_column(
-                                        $equipmentDetails,
-                                        'location'
-                                    ));
-                                    foreach ($locations as $location) {
-                                        if (!empty($location)) {
-                                            echo "<option value='" . safeHtml($location) . "'>" .
-                                                safeHtml($location) . "</option>";
-                                        }
-                                    }
-                                    ?>
-                                </select>
-                            </div>
+
                             <div class="col-md-3">
                                 <label for="dateFilter" class="form-label">Date Filter</label>
                                 <select class="form-select" id="dateFilter" name="dateFilter">
                                     <option value="">No Date Filter</option>
+                                    <option value="desc">Newest to Oldest</option>
+                                    <option value="asc">Oldest to Newest</option>
                                     <option value="month_year">Month-Year</option>
                                     <option value="year_range">Year Range</option>
                                     <option value="mdy">Month-Day-Year</option>
@@ -1083,12 +915,42 @@ align-items-center">
                             <div class="col-md-6 date-filter date-month_year d-none">
                                 <div class="row">
                                     <div class="col-md-6">
-                                        <label for="monthYearFrom" class="form-label">From Month-Year</label>
-                                        <input type="month" class="form-control" id="monthYearFrom" name="monthYearFrom">
+                                        <label for="monthSelect" class="form-label">Month</label>
+                                        <select class="form-select" id="monthSelect" name="monthSelect">
+                                            <option value="">Select Month</option>
+                                            <?php
+                                            $months = [
+                                                'January',
+                                                'February',
+                                                'March',
+                                                'April',
+                                                'May',
+                                                'June',
+                                                'July',
+                                                'August',
+                                                'September',
+                                                'October',
+                                                'November',
+                                                'December'
+                                            ];
+                                            foreach ($months as $index => $month) {
+                                                echo "<option value='" . ($index + 1) . "'>" . $month .
+                                                    "</option>";
+                                            }
+                                            ?>
+                                        </select>
                                     </div>
                                     <div class="col-md-6">
-                                        <label for="monthYearTo" class="form-label">To Month-Year</label>
-                                        <input type="month" class="form-control" id="monthYearTo" name="monthYearTo">
+                                        <label for="yearSelect" class="form-label">Year</label>
+                                        <select class="form-select" id="yearSelect" name="yearSelect">
+                                            <option value="">Select Year</option>
+                                            <?php
+                                            $currentYear = date('Y');
+                                            for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
+                                                echo "<option value='" . $year . "'>" . $year . "</option>";
+                                            }
+                                            ?>
+                                        </select>
                                     </div>
                                 </div>
                             </div>
@@ -1098,11 +960,25 @@ align-items-center">
                                 <div class="row">
                                     <div class="col-md-6">
                                         <label for="yearFrom" class="form-label">From Year</label>
-                                        <input type="number" class="form-control" id="yearFrom" name="yearFrom" min="2000" max="2100" placeholder="YYYY">
+                                        <select class="form-select" id="yearFrom" name="yearFrom">
+                                            <option value="">Select Year</option>
+                                            <?php
+                                            for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
+                                                echo "<option value='" . $year . "'>" . $year . "</option>";
+                                            }
+                                            ?>
+                                        </select>
                                     </div>
                                     <div class="col-md-6">
                                         <label for="yearTo" class="form-label">To Year</label>
-                                        <input type="number" class="form-control" id="yearTo" name="yearTo" min="2000" max="2100" placeholder="YYYY">
+                                        <select class="form-select" id="yearTo" name="yearTo">
+                                            <option value="">Select Year</option>
+                                            <?php
+                                            for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
+                                                echo "<option value='" . $year . "'>" . $year . "</option>";
+                                            }
+                                            ?>
+                                        </select>
                                     </div>
                                 </div>
                             </div>
@@ -1124,13 +1000,39 @@ align-items-center">
                             <!-- MDY Picker -->
                             <div class="col-md-6 date-filter date-mdy d-none">
                                 <div class="row">
-                                    <div class="col-12 col-md-6">
-                                        <label class="form-label fw-semibold">From (MM-DD-YYYY)</label>
-                                        <input type="date" class="form-control shadow-sm" id="mdyFrom" name="mdyFrom" placeholder="e.g., 2023-01-01">
+                                    <div class="col-md-4">
+                                        <label for="mdyMonth" class="form-label">Month</label>
+                                        <select class="form-select" id="mdyMonth" name="mdyMonth">
+                                            <option value="">Month</option>
+                                            <?php
+                                            foreach ($months as $index => $month) {
+                                                echo "<option value='" . ($index + 1) . "'>" . $month .
+                                                    "</option>";
+                                            }
+                                            ?>
+                                        </select>
                                     </div>
-                                    <div class="col-12 col-md-6">
-                                        <label class="form-label fw-semibold">To (MM-DD-YYYY)</label>
-                                        <input type="date" class="form-control shadow-sm" id="mdyTo" name="mdyTo" placeholder="e.g., 2023-12-31">
+                                    <div class="col-md-4">
+                                        <label for="mdyDay" class="form-label">Day</label>
+                                        <select class="form-select" id="mdyDay" name="mdyDay">
+                                            <option value="">Day</option>
+                                            <?php
+                                            for ($day = 1; $day <= 31; $day++) {
+                                                echo "<option value='" . $day . "'>" . $day . "</option>";
+                                            }
+                                            ?>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="mdyYear" class="form-label">Year</label>
+                                        <select class="form-select" id="mdyYear" name="mdyYear">
+                                            <option value="">Year</option>
+                                            <?php
+                                            for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
+                                                echo "<option value='" . $year . "'>" . $year . "</option>";
+                                            }
+                                            ?>
+                                        </select>
                                     </div>
                                 </div>
                             </div>
@@ -1150,10 +1052,12 @@ align-items-center">
                                 <th class="sortable" data-column="6">Model</th>
                                 <th class="sortable" data-column="7">Serial #</th>
                                 <th class="sortable" data-column="8">Acquired Date</th>
-                                <th class="sortable" data-column="9">RR #</th>
-                                <th class="sortable" data-column="10">Location</th>
-                                <th class="sortable" data-column="11">Accountable Individual</th>
-                                <th class="sortable" data-column="12">Remarks</th>
+                                <th class="sortable d-none" data-column="9">Created Date</th>
+                                <th class="sortable d-none" data-column="10">Modified Date</th>
+                                <th class="sortable" data-column="11">RR #</th>
+                                <th class="sortable" data-column="12">Location</th>
+                                <th class="sortable" data-column="13">Accountable Individual</th>
+                                <th class="sortable" data-column="14">Remarks</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -1170,13 +1074,17 @@ align-items-center">
                                         <td><?= safeHtml($equipment['model']); ?></td>
                                         <td><?= safeHtml($equipment['serial_number']); ?></td>
                                         <td><?php
-                                            $acq = $equipment['date_acquired'] ?? '';
-                                            if (empty($acq) || $acq === '0000-00-00' || !strtotime($acq)) {
-                                                echo '';
-                                            } else {
-                                                echo date('Y-m-d', strtotime($acq));
-                                            }
-                                            ?></td>
+    $acq = $equipment['date_acquired'] ?? '';
+    if (empty($acq) || $acq === '0000-00-00' || !strtotime($acq)) {
+        echo '';
+    } else {
+        echo date('Y-m-d', strtotime($acq));
+    }
+?></td>
+                                        <td class="d-none"><?= !empty($equipment['date_created']) ? date('Y-m-d 
+H:i', strtotime($equipment['date_created'])) : ''; ?></td>
+                                        <td class="d-none"><?= !empty($equipment['date_modified']) ? date('Y-m-d 
+H:i', strtotime($equipment['date_modified'])) : ''; ?></td>
                                         <td><?= safeHtml((strpos($equipment['rr_no'] ?? '', 'RR') ===
                                                 0 ? $equipment['rr_no'] : ('RR' . $equipment['rr_no']))); ?></td>
                                         <td><?= safeHtml($equipment['location']); ?></td>
@@ -1255,12 +1163,21 @@ remove-equipment"
                         </div>
                         <div class="col-12 col-sm-auto ms-sm-auto">
                             <div class="d-flex align-items-center gap-2">
-                                <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                <button id="prevPage" class="btn btn-outline-primary d-flex 
+align-items-center gap-1">
+                                    <i class="bi bi-chevron-left"></i> Previous
+                                </button>
+                                <select id="rowsPerPageSelect" class="form-select" style="width: 
+auto;">
                                     <option value="10" selected>10</option>
                                     <option value="20">20</option>
                                     <option value="30">30</option>
                                     <option value="50">50</option>
                                 </select>
+                                <button id="nextPage" class="btn btn-outline-primary d-flex 
+align-items-center gap-1">
+                                    Next <i class="bi bi-chevron-right"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -1287,8 +1204,34 @@ remove-equipment"
                     <form id="addEquipmentForm">
                         <input type="hidden" name="action" value="create">
                         <div class="mb-3">
-                            <label for="asset_tag" class="form-label">Asset Tag <span style="color: red;">*</span></label>
-                            <input type="text" class="form-control" name="asset_tag" id="add_equipment_asset_tag" required>
+                            <label for="asset_tag" class="form-label">Asset Tag <span style="color: 
+red;">*</span></label>
+                            <select class="form-select" name="asset_tag" id="add_equipment_asset_tag"
+                                required style="width: 100%;">
+                                <option value="">Select or type Asset Tag</option>
+                                <?php
+                                // Fetch unique asset tags from equipment_location and equipment_status
+                                $assetTags = [];
+                                $stmt1 = $pdo->query("SELECT DISTINCT asset_tag FROM 
+equipment_location WHERE is_disabled = 0");
+                                $assetTags = array_merge(
+                                    $assetTags,
+                                    $stmt1->fetchAll(PDO::FETCH_COLUMN)
+                                );
+                                $stmt2 = $pdo->query("SELECT DISTINCT asset_tag FROM equipment_status 
+WHERE is_disabled = 0");
+                                $assetTags = array_merge(
+                                    $assetTags,
+                                    $stmt2->fetchAll(PDO::FETCH_COLUMN)
+                                );
+                                $assetTags = array_unique(array_filter($assetTags));
+                                sort($assetTags);
+                                foreach ($assetTags as $tag) {
+                                    echo '<option value="' . htmlspecialchars($tag) . '">' .
+                                        htmlspecialchars($tag) . '</option>';
+                                }
+                                ?>
+                            </select>
                         </div>
                         <div class="mb-3">
                             <div class="row">
@@ -1347,17 +1290,44 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                                         ?>
                                     </select>
                                     <small class="text-muted">Selecting an RR# will auto-fill the acquired date from Charge Invoice</small>
-                                </div>
                             </div>
                         </div>
-                        <div class="mb-3">
-                            <div class="row">
-                                <div class="mb-3 col-md-6">
-                                    <label for="edit_date_acquired" class="form-label">Date Acquired</label>
-                                    <input type="date" class="form-control" name="date_acquired" id="edit_date_acquired" data-autofill="false">
-                                    <small class="text-muted">This field will be auto-filled when an RR# is selected</small>
-                                </div>
-                                <div class="mb-3 col-md-6">
+                    </div>
+                    <div class="mb-3">
+                        <div class="row">
+                            <div class="mb-3 col-md-6">
+                                <label for="edit_date_acquired" class="form-label">Date Acquired</label>
+                                <input type="date" class="form-control" name="date_acquired" id="edit_date_acquired" data-autofill="false">
+                                <small class="text-muted">This field will be auto-filled when an RR# is selected</small>
+                            </div>
+                            <div class="mb-3 col-md-6">
+                                <label for="edit_location" class="form-label">Location</label>
+                                <input type="text" class="form-control" name="location"
+                                    id="edit_location" data-autofill="false">
+                                <small class="text-muted">This field will be autofilled when an
+                                    Asset Tag is selected</small>
+                            </div>
+                            <div class="mb-3 col-md-6">
+                                <label for="edit_accountable_individual"
+                                    class="form-label">Accountable Individual</label>
+                                <input type="text" class="form-control"
+                                    name="accountable_individual" id="edit_accountable_individual" data-autofill="false">
+                                <small class="text-muted">This field will be autofilled when an
+                                    Asset Tag is selected</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_remarks" class="form-label">Remarks</label>
+                        <textarea class="form-control" name="remarks" id="edit_remarks"
+                            rows="3"></textarea>
+                    </div>
+                    <div class="mb-3 text-end">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                            style="margin-right: 4px;">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
                                     <label for="edit_location" class="form-label">Location</label>
                                     <input type="text" class="form-control" name="location"
                                         id="edit_location" data-autofill="false">
@@ -1410,103 +1380,6 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
         </div>
     </div>
 
-    <!-- Edit Equipment Modal -->
-    <div class="modal fade" id="editEquipmentModal" tabindex="-1" aria-labelledby="editEquipmentLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header p-4">
-                    <h5 class="modal-title">Edit Equipment</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body p-4">
-                    <form id="editEquipmentForm">
-                        <input type="hidden" name="action" value="update">
-                        <input type="hidden" name="equipment_id" id="edit_equipment_id">
-                        <div class="mb-3">
-                            <label for="edit_equipment_asset_tag" class="form-label">Asset Tag <span style="color: red;">*</span></label>
-                            <input type="text" class="form-control" name="asset_tag" id="edit_equipment_asset_tag" required>
-                        </div>
-                        <div class="mb-3">
-                            <div class="row">
-                                <div class="mb-3 col-md-6">
-                                    <label for="edit_asset_description_1" class="form-label">Asset Description 1</label>
-                                    <input type="text" class="form-control" name="asset_description_1" id="edit_asset_description_1">
-                                </div>
-                                <div class="mb-3 col-md-6">
-                                    <label for="edit_asset_description_2" class="form-label">Asset Description 2</label>
-                                    <input type="text" class="form-control" name="asset_description_2" id="edit_asset_description_2">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="edit_specifications" class="form-label">Specification</label>
-                            <textarea class="form-control" name="specifications" id="edit_specifications" rows="3"></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <div class="row">
-                                <div class="mb-3 col-md-6">
-                                    <label for="edit_brand" class="form-label">Brand</label>
-                                    <input type="text" class="form-control" name="brand" id="edit_brand">
-                                </div>
-                                <div class="mb-3 col-md-6">
-                                    <label for="edit_model" class="form-label">Model</label>
-                                    <input type="text" class="form-control" name="model" id="edit_model">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <div class="row">
-                                <div class="mb-3 col-md-6">
-                                    <label for="edit_serial_number" class="form-label">Serial Number</label>
-                                    <input type="text" class="form-control" name="serial_number" id="edit_serial_number">
-                                </div>
-                                <div class="mb-3 col-md-6">
-                                    <label for="edit_rr_no" class="form-label">RR#</label>
-                                    <select class="form-select rr-select2" name="rr_no" id="edit_rr_no" style="width: 100%;">
-                                        <option value="">Select or search RR Number</option>
-                                        <?php
-                                        foreach ($rrList as $rrNo) {
-                                            echo '<option value="' . htmlspecialchars($rrNo) . '">' . htmlspecialchars($rrNo) . '</option>';
-                                        }
-                                        ?>
-                                    </select>
-                                    <small class="text-muted">Selecting an RR# will auto-fill the acquired date from Charge Invoice</small>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <div class="row">
-                                <div class="mb-3 col-md-6">
-                                    <label for="edit_date_acquired" class="form-label">Date Acquired</label>
-                                    <input type="date" class="form-control" name="date_acquired" id="edit_date_acquired">
-                                    <small class="text-muted">This field will be auto-filled when an RR# is selected</small>
-                                </div>
-                                <div class="mb-3 col-md-6">
-                                    <label for="edit_location" class="form-label">Location</label>
-                                    <input type="text" class="form-control" name="location" id="edit_location">
-                                    <small class="text-muted">This field will be autofilled when an Asset Tag is selected</small>
-                                </div>
-                                <div class="mb-3 col-md-6">
-                                    <label for="edit_accountable_individual" class="form-label">Accountable Individual</label>
-                                    <input type="text" class="form-control" name="accountable_individual" id="edit_accountable_individual">
-                                    <small class="text-muted">This field will be autofilled when an Asset Tag is selected</small>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="edit_remarks" class="form-label">Remarks</label>
-                            <textarea class="form-control" name="remarks" id="edit_remarks" rows="3"></textarea>
-                        </div>
-                        <div class="mb-3 text-end">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="margin-right: 4px;">Cancel</button>
-                            <button type="submit" class="btn btn-primary">Save Changes</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js"
         defer></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
@@ -1520,17 +1393,19 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                 placeholder: 'Select or search RR Number',
                 allowClear: true,
                 width: '100%',
-                tags: true,
-                dropdownParent: $('#addEquipmentModal'),
+                tags: true, // Allow new entries
+                dropdownParent: $('#addEquipmentModal'), // Attach to modal for proper positioning
                 minimumResultsForSearch: 0,
-                dropdownPosition: 'below',
+                dropdownPosition: 'below', // Always show dropdown below input
                 createTag: function(params) {
+                    // Only allow non-empty, non-duplicate RR numbers (numbers only)
                     var term = $.trim(params.term);
                     if (term === '') return null;
                     var exists = false;
                     $('#add_rr_no option').each(function() {
                         if ($(this).text().toLowerCase() === term.toLowerCase()) exists = true;
                     });
+                    // Only allow numbers for new tags
                     if (!/^[0-9]+$/.test(term)) {
                         return null;
                     }
@@ -1538,6 +1413,43 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                         id: term,
                         text: term
                     };
+                }
+            }).on('select2:select', function(e) {
+                var rrNo = e.params.data.id;
+                var isNewOption = e.params.data.newOption;
+
+                // If this is a newly created option (doesn't exist in the database)
+                if (isNewOption || !e.params.data.element) {
+                    // Create a new RR entry in the database
+                    $.ajax({
+                        url: window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1) + 'create_rr.php',
+                        method: 'POST',
+                        data: {
+                            action: 'create_rr',
+                            rr_no: rrNo,
+                            date_created: new Date().toISOString().slice(0, 19).replace('T', ' ')
+                        },
+                        dataType: 'json',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        success: function(response) {
+                            if (response.status === 'success') {
+                                showToast('New RR# created successfully', 'success');
+                                // Now try to get any related charge invoice data
+                                fetchRRInfo(rrNo, 'add', false);
+                            } else {
+                                showToast(response.message || 'Failed to create RR#', 'warning');
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('Error creating RR:', error);
+                            showToast('Error creating RR entry', 'error');
+                        }
+                    });
+                } else {
+                    // For existing RR numbers, just fetch the data
+                    fetchRRInfo(rrNo, 'add', true);
                 }
             });
 
@@ -1549,12 +1461,14 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                 dropdownParent: $('#editEquipmentModal'),
                 minimumResultsForSearch: 0,
                 createTag: function(params) {
+                    // Only allow non-empty, non-duplicate RR numbers (numbers only)
                     var term = $.trim(params.term);
                     if (term === '') return null;
                     var exists = false;
                     $('#edit_rr_no option').each(function() {
                         if ($(this).text().toLowerCase() === term.toLowerCase()) exists = true;
                     });
+                    // Only allow numbers for new tags
                     if (!/^[0-9]+$/.test(term)) {
                         return null;
                     }
@@ -1563,22 +1477,42 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                         text: term
                     };
                 }
-            });
+            }).on('select2:select', function(e) {
+                var rrNo = e.params.data.id;
+                var isNewOption = e.params.data.newOption;
 
-            // Simple input field event listeners for asset tags
-            $('#add_equipment_asset_tag').on('change', function() {
-                var assetTag = $(this).val();
-                if (assetTag) {
-                    console.log('Asset tag entered in add modal:', assetTag);
-                    fetchAssetTagInfo(assetTag, 'add', true);
-                }
-            });
-
-            $('#edit_equipment_asset_tag').on('change', function() {
-                var assetTag = $(this).val();
-                if (assetTag) {
-                    console.log('Asset tag entered in edit modal:', assetTag);
-                    fetchAssetTagInfo(assetTag, 'edit', true);
+                // If this is a newly created option (doesn't exist in the database)
+                if (isNewOption || !e.params.data.element) {
+                    // Create a new RR entry in the database
+                    $.ajax({
+                        url: window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1) + 'create_rr.php',
+                        method: 'POST',
+                        data: {
+                            action: 'create_rr',
+                            rr_no: rrNo,
+                            date_created: new Date().toISOString().slice(0, 19).replace('T', ' ')
+                        },
+                        dataType: 'json',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        success: function(response) {
+                            if (response.status === 'success') {
+                                showToast('New RR# created successfully', 'success');
+                                // Now try to get any related charge invoice data
+                                fetchRRInfo(rrNo, 'edit', false);
+                            } else {
+                                showToast(response.message || 'Failed to create RR#', 'warning');
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('Error creating RR:', error);
+                            showToast('Error creating RR entry', 'error');
+                        }
+                    });
+                } else {
+                    // For existing RR numbers, just fetch the data
+                    fetchRRInfo(rrNo, 'edit', true);
                 }
             });
 
@@ -1700,20 +1634,42 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
             // Get filter values
             const searchText = $('#searchEquipment').val() || '';
             const filterEquipment = $('#filterEquipment').val() || '';
-            const filterBrand = $('#filterBrand').val() || '';
-            const filterLocation = $('#filterLocation').val() || '';
             const dateFilterType = $('#dateFilter').val() || '';
+
+            // Month-Year filter values
+            const selectedMonth = $('#monthSelect').val() || '';
+            const selectedYear = $('#yearSelect').val() || '';
+
+            // Date Range filter values
+            const dateFrom = $('#dateFrom').val() || '';
+            const dateTo = $('#dateTo').val() || '';
+
+            // Year Range filter values
+            const yearFrom = $('#yearFrom').val() || '';
+            const yearTo = $('#yearTo').val() || '';
+
+            // MDY filter values
+            const mdyMonth = $('#mdyMonth').val() || '';
+            const mdyDay = $('#mdyDay').val() || '';
+            const mdyYear = $('#mdyYear').val() || '';
 
             // Debug output filter values
             console.log('FILTER VALUES:', {
                 searchText,
                 filterEquipment,
-                filterBrand,
-                filterLocation,
-                dateFilterType
+                dateFilterType,
+                selectedMonth,
+                selectedYear,
+                dateFrom,
+                dateTo,
+                yearFrom,
+                yearTo,
+                mdyMonth,
+                mdyDay,
+                mdyYear
             });
 
-            // Get all table rows
+            // Get all table rows directly
             const tableRows = $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').toArray();
             console.log(`Total rows in table: ${tableRows.length}`);
 
@@ -1728,7 +1684,7 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
 
             // Apply filters to each row
             tableRows.forEach((row, index) => {
-                // Skip non-data rows
+                // Skip non-data rows (like messages)
                 if (row.id === 'noResultsMessage' || row.id === 'initialFilterMessage') {
                     return;
                 }
@@ -1745,11 +1701,7 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                     // Extract text content from all cells for easier access
                     const cellTexts = [];
                     let equipmentTypeText = '';
-                    let brandText = '';
-                    let locationText = '';
                     let dateText = '';
-                    let desc1Text = '';
-                    let desc2Text = '';
 
                     // Process each cell
                     cells.forEach((cell, cellIndex) => {
@@ -1757,95 +1709,74 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                         cellTexts.push(text.toLowerCase());
 
                         // Store important column values
-                        if (cellIndex === 2) desc1Text = text.toLowerCase(); // Desc1
-                        if (cellIndex === 3) desc2Text = text.toLowerCase(); // Desc2
-                        if (cellIndex === 5) brandText = text.toLowerCase();
-                        if (cellIndex === 10) locationText = text.toLowerCase();
-                        if (cellIndex === 8) dateText = text; // Acquired Date column
+                        if (cellIndex === 2) equipmentTypeText = text.toLowerCase(); // Equipment Type (Col 3)
+                        if (cellIndex === 9) dateText = text; // Created Date (Col 10)
                     });
 
                     // Full row text for search
                     const rowText = cellTexts.join(' ');
 
                     // 1. SEARCH FILTER - Check if search text is in any cell
-                    const searchMatch = !searchText ||
-                        desc1Text.includes(searchText.toLowerCase()) ||
-                        desc2Text.includes(searchText.toLowerCase()) ||
-                        cellTexts.join(' ').includes(searchText.toLowerCase());
+                    const searchMatch = !searchText || rowText.includes(searchText.toLowerCase());
 
-                    // 2. EQUIPMENT TYPE FILTER - Check Desc1 column
-                    const equipmentMatch = !filterEquipment || desc1Text === filterEquipment.toLowerCase();
+                    // 2. EQUIPMENT TYPE FILTER - Check equipment type
+                    let equipmentMatch = true;
+                    if (filterEquipment && filterEquipment !== '') {
+                        const filterValue = filterEquipment.toLowerCase();
+                        equipmentMatch = equipmentTypeText === filterValue;
 
-                    // 3. BRAND FILTER
-                    const brandMatch = !filterBrand || brandText === filterBrand.toLowerCase();
+                        // Debug for first few rows
+                        if (index < 5) {
+                            console.log(`Row ${index} equipment: "${equipmentTypeText}" vs filter: "${filterValue}" = ${equipmentMatch}`);
+                        }
+                    }
 
-                    // 4. LOCATION FILTER
-                    const locationMatch = !filterLocation || locationText === filterLocation.toLowerCase();
-
-                    // 5. DATE FILTER - Now specifically for Acquired Date
+                    // 3. DATE FILTER - Apply date filter if selected
                     let dateMatch = true;
                     if (dateFilterType && dateText) {
-                        // Parse the acquired date
-                        const acquiredDate = new Date(dateText);
-
-                        if (!isNaN(acquiredDate.getTime())) {
-                            if (dateFilterType === 'month_year' && (monthYearFrom || monthYearTo)) {
-                                const rowDate = new Date(acquiredDate.getFullYear(), acquiredDate.getMonth(), 1);
-
-                                if (monthYearFrom) {
-                                    const [fromYear, fromMonth] = monthYearFrom.split('-');
-                                    const fromDate = new Date(fromYear, fromMonth - 1, 1);
-                                    if (rowDate < fromDate) dateMatch = false;
+                        const date = new Date(dateText);
+                        if (!isNaN(date.getTime())) { // Valid date
+                            if (dateFilterType === 'month_year' && selectedMonth && selectedYear) {
+                                // Month-Year filter
+                                const month = date.getMonth() + 1; // getMonth is 0-indexed
+                                const year = date.getFullYear();
+                                dateMatch = (month === parseInt(selectedMonth)) && (year === parseInt(selectedYear));
+                                if (index < 5) {
+                                    console.log(`Row ${index} month-year filter: ${month}/${year} vs ${selectedMonth}/${selectedYear} = ${dateMatch}`);
                                 }
-
-                                if (monthYearTo) {
-                                    const [toYear, toMonth] = monthYearTo.split('-');
-                                    const toDate = new Date(toYear, toMonth, 0); // Last day of the month
-                                    if (rowDate > toDate) dateMatch = false;
+                            } else if (dateFilterType === 'range' && dateFrom && dateTo) {
+                                // Date Range filter
+                                const fromDate = new Date(dateFrom);
+                                const toDate = new Date(dateTo);
+                                toDate.setHours(23, 59, 59); // End of day
+                                dateMatch = date >= fromDate && date <= toDate;
+                                if (index < 5) {
+                                    console.log(`Row ${index} date range filter: ${date} between ${fromDate} and ${toDate} = ${dateMatch}`);
                                 }
-                            } else if (dateFilterType === 'range' && (dateFrom || dateTo)) {
-                                const rowDate = new Date(acquiredDate.getFullYear(), acquiredDate.getMonth(), acquiredDate.getDate());
-
-                                if (dateFrom) {
-                                    const fromDate = new Date(dateFrom);
-                                    if (rowDate < fromDate) dateMatch = false;
+                            } else if (dateFilterType === 'year_range' && yearFrom && yearTo) {
+                                // Year Range filter
+                                const year = date.getFullYear();
+                                dateMatch = (year >= parseInt(yearFrom)) && (year <= parseInt(yearTo));
+                                if (index < 5) {
+                                    console.log(`Row ${index} year range filter: ${year} between ${yearFrom} and ${yearTo} = ${dateMatch}`);
                                 }
-
-                                if (dateTo) {
-                                    const toDate = new Date(dateTo);
-                                    toDate.setHours(23, 59, 59);
-                                    if (rowDate > toDate) dateMatch = false;
-                                }
-                            } else if (dateFilterType === 'year_range' && (yearFrom || yearTo)) {
-                                const year = acquiredDate.getFullYear();
-
-                                if (yearFrom && year < parseInt(yearFrom)) {
-                                    dateMatch = false;
-                                }
-
-                                if (yearTo && year > parseInt(yearTo)) {
-                                    dateMatch = false;
-                                }
-                            } else if (dateFilterType === 'mdy' && (mdyFrom || mdyTo)) {
-                                const rowDate = new Date(acquiredDate.getFullYear(), acquiredDate.getMonth(), acquiredDate.getDate());
-
-                                if (mdyFrom) {
-                                    const fromDate = new Date(mdyFrom);
-                                    if (rowDate < fromDate) dateMatch = false;
-                                }
-
-                                if (mdyTo) {
-                                    const toDate = new Date(mdyTo);
-                                    toDate.setHours(23, 59, 59);
-                                    if (rowDate > toDate) dateMatch = false;
+                            } else if (dateFilterType === 'mdy' && mdyMonth && mdyDay && mdyYear) {
+                                // MDY filter (exact date match)
+                                const month = date.getMonth() + 1;
+                                const day = date.getDate();
+                                const year = date.getFullYear();
+                                dateMatch = (month === parseInt(mdyMonth)) &&
+                                    (day === parseInt(mdyDay)) &&
+                                    (year === parseInt(mdyYear));
+                                if (index < 5) {
+                                    console.log(`Row ${index} MDY filter: ${month}/${day}/${year} vs ${mdyMonth}/${mdyDay}/${mdyYear} = ${dateMatch}`);
                                 }
                             }
                         }
                     }
 
                     // Final decision - row should be shown if it matches all filters
-                    const shouldShow = searchMatch && equipmentMatch && brandMatch &&
-                        locationMatch && dateMatch;
+                    const shouldShow = searchMatch && equipmentMatch && dateMatch;
 
                     if (shouldShow) {
                         filteredRows.push(row);
@@ -1861,9 +1792,27 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
 
             console.log(`Filtered rows: ${filteredRows.length} of ${tableRows.length}`);
 
+            // Hide all rows first
+            $(tableRows).hide();
+
             // Store filtered rows in global variable for pagination
             window.allRows = tableRows;
             window.filteredRows = filteredRows;
+
+            // Sort if needed (date ascending/descending)
+            if (dateFilterType === 'asc' || dateFilterType === 'desc') {
+                filteredRows.sort((a, b) => {
+                    const dateA = a.cells && a.cells[9] ? new Date(a.cells[9].textContent || '') : new Date(0);
+                    const dateB = b.cells && b.cells[9] ? new Date(b.cells[9].textContent || '') : new Date(0);
+                    return dateFilterType === 'asc' ? dateA - dateB : dateB - dateA;
+                });
+
+                // Re-order the DOM elements based on sort
+                const tbody = document.getElementById('equipmentTable');
+                filteredRows.forEach(row => {
+                    tbody.appendChild(row); // Move to the end in sorted order
+                });
+            }
 
             // Reset to page 1 after filtering
             window.currentPage = 1;
@@ -1912,108 +1861,6 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
 
             return filteredRows;
         }
-
-        // Initialize Select2 for equipment type filter
-        $('#filterEquipment').select2({
-            placeholder: 'Filter Equipment Type',
-            allowClear: true,
-            width: '100%',
-            dropdownAutoWidth: true,
-            minimumResultsForSearch: Infinity // This disables the search box
-        }).on('select2:select', function(e) {
-            console.log('Equipment type selected:', e.params.data);
-            filterEquipmentTable();
-        }).on('select2:unselect', function() {
-            console.log('Equipment type filter cleared');
-            filterEquipmentTable();
-        });
-
-        // Update the clear filters function
-        $('#clearFilters').off('click').on('click', function(e) {
-            e.preventDefault();
-            console.log('Clear button clicked - resetting filters');
-
-            // Reset all filter inputs
-            $('#searchEquipment').val('');
-
-            // Reset all Select2 dropdowns
-            $('#filterEquipment').val('').trigger('change');
-            $('#filterBrand').val('').trigger('change');
-            $('#filterLocation').val('').trigger('change');
-            $('#dateFilter').val('').trigger('change');
-
-            // Reset date inputs
-            $('#monthYearFrom').val('');
-            $('#monthYearTo').val('');
-            $('#dateFrom').val('');
-            $('#dateTo').val('');
-            $('#yearFrom').val('');
-            $('#yearTo').val('');
-
-            // Reset MDY inputs
-            $('#mdyFrom').val('');
-            $('#mdyTo').val('');
-
-            // Hide date inputs container
-            $('#dateInputsContainer').addClass('d-none');
-            $('.date-filter').addClass('d-none');
-
-            // Reset to show all rows
-            $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').show();
-            $('#noResultsMessage').remove();
-
-            // Reset filtered rows
-            window.allRows = $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').toArray();
-            window.filteredRows = [...window.allRows];
-
-            // Reset to page 1
-            window.currentPage = 1;
-
-            // Update display counts
-            const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
-            const totalRows = window.filteredRows.length;
-            $('#currentPage').text(window.currentPage);
-            $('#rowsPerPage').text(rowsPerPage);
-            $('#totalRows').text(totalRows);
-
-            // Rebuild pagination
-            const totalPages = Math.ceil(totalRows / rowsPerPage);
-            buildPaginationButtons(totalPages);
-            updatePaginationButtons();
-
-            // Show only the first page of rows
-            showCurrentPageRows();
-
-            console.log('Filters cleared, showing all rows');
-        });
-
-        // Initialize Select2 for all filter dropdowns
-        $(document).ready(function() {
-            // Initialize Select2 for all filter dropdowns
-            $('.form-select').select2({
-                placeholder: 'Select an option',
-                allowClear: true,
-                width: '100%',
-                dropdownAutoWidth: true,
-                minimumResultsForSearch: 0
-            });
-
-            // Initialize Select2 for date filter dropdown without search
-            $('#dateFilter').select2({
-                minimumResultsForSearch: Infinity, // This disables the search box
-                width: '100%',
-                dropdownAutoWidth: true
-            });
-
-            // Initialize Select2 for pagination dropdown without search
-            $('#rowsPerPageSelect').select2({
-                minimumResultsForSearch: Infinity,
-                width: 'auto',
-                dropdownAutoWidth: true
-            });
-
-            // ... rest of the existing document.ready code ...
-        });
 
         // Initialize pagination
         function initPagination() {
@@ -2083,6 +1930,15 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                 $pagination.append(`
                     <li class="page-item">
                         <a class="page-link" href="#" data-page="1"><i class="bi bi-chevron-double-left"></i></a>
+                    </li>
+                `);
+            }
+
+            // Add "Previous" page button
+            if (window.currentPage > 1) {
+                $pagination.append(`
+                    <li class="page-item">
+                        <a class="page-link" href="#" data-page="${window.currentPage - 1}"><i class="bi bi-chevron-left"></i></a>
                     </li>
                 `);
             }
@@ -2196,8 +2052,19 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
             // Initialize pagination
             initPagination();
 
-            // Remove live search functionality
-            $('#searchEquipment').off('input');
+            // Ensure pagination shows only first page on initial load and builds pagination buttons
+            setTimeout(function() {
+                const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
+                const totalRows = window.filteredRows.length;
+                const totalPages = Math.ceil(totalRows / rowsPerPage);
+
+                // Force rebuild pagination buttons
+                buildPaginationButtons(totalPages);
+                showCurrentPageRows();
+                updatePaginationButtons();
+
+                console.log('Enforced pagination on initial load - Total pages:', totalPages);
+            }, 300);
 
             // Apply Filter button click handler
             $('#applyFilters').off('click').on('click', function(e) {
@@ -2225,16 +2092,21 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                 $('#dateFilter').val('');
 
                 // Reset Month-Year values
-                $('#monthYearFrom').val('');
-                $('#monthYearTo').val('');
+                $('#monthSelect').val('');
+                $('#yearSelect').val('');
 
                 // Reset Date Range values
                 $('#dateFrom').val('');
                 $('#dateTo').val('');
 
+                // Reset Year Range values
+                $('#yearFrom').val('');
+                $('#yearTo').val('');
+
                 // Reset MDY values
-                $('#mdyFrom').val('');
-                $('#mdyTo').val('');
+                $('#mdyMonth').val('');
+                $('#mdyDay').val('');
+                $('#mdyYear').val('');
 
                 // Hide date inputs container
                 $('#dateInputsContainer').addClass('d-none');
@@ -2271,20 +2143,6 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                 console.log('Filters cleared, showing all rows');
             });
 
-            // Ensure pagination shows only first page on initial load and builds pagination buttons
-            setTimeout(function() {
-                const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
-                const totalRows = window.filteredRows.length;
-                const totalPages = Math.ceil(totalRows / rowsPerPage);
-
-                // Force rebuild pagination buttons
-                buildPaginationButtons(totalPages);
-                showCurrentPageRows();
-                updatePaginationButtons();
-
-                console.log('Enforced pagination on initial load - Total pages:', totalPages);
-            }, 300);
-
             // Previous page button
             $('#prevPage').on('click', function(e) {
                 e.preventDefault();
@@ -2305,341 +2163,140 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
 
             // Rows per page select
             $('#rowsPerPageSelect').on('change', function() {
-                const newRowsPerPage = parseInt($(this).val());
-                console.log('Rows per page changed to:', newRowsPerPage);
-
                 // Reset to page 1 when changing rows per page
                 window.currentPage = 1;
+                initPagination();
+            });
 
-                // Update the display count
-                $('#rowsPerPage').text(newRowsPerPage);
+            // Date filter type change handler
+            $('#dateFilter').on('change', function() {
+                const filterType = $(this).val();
+                console.log('Date filter changed to:', filterType);
 
-                // Calculate total pages with new rows per page
-                const totalRows = window.filteredRows.length;
-                const totalPages = Math.ceil(totalRows / newRowsPerPage);
+                // Hide all date containers first
+                $('#dateInputsContainer').addClass('d-none');
+                $('.date-filter').addClass('d-none');
 
-                // Update pagination
+                // Show appropriate containers based on selection
+                if (filterType) {
+                    $('#dateInputsContainer').removeClass('d-none');
+
+                    // Show specific date input based on filter type
+                    if (filterType === 'month_year') {
+                        $('.date-month_year').removeClass('d-none');
+                    } else if (filterType === 'year_range') {
+                        $('.date-year_range').removeClass('d-none');
+                    } else if (filterType === 'range') {
+                        $('.date-range').removeClass('d-none');
+                    } else if (filterType === 'mdy') {
+                        $('.date-mdy').removeClass('d-none');
+                    }
+                }
+            });
+
+            // Initialize Select2 for equipment type filter
+            try {
+                if ($.fn.select2) {
+                    $('#filterEquipment').select2({
+                        placeholder: 'Filter Equipment Type',
+                        allowClear: true,
+                        width: '100%',
+                        dropdownAutoWidth: true,
+                        minimumResultsForSearch: 0
+                    }).on('select2:select', function(e) {
+                        console.log('Equipment type selected:', e.params.data);
+                    }).on('select2:unselect', function() {
+                        console.log('Equipment type filter cleared');
+                    });
+
+                    console.log('Select2 initialized for equipment filter');
+                }
+            } catch (e) {
+                console.error('Error initializing Select2:', e);
+            }
+
+            // Set up column sorting
+            $('.sortable').on('click', function() {
+                const columnIndex = parseInt($(this).data('column'));
+                const currentSortState = $(this).hasClass('asc') ? 'asc' : ($(this).hasClass('desc') ? 'desc' : '');
+                let newSortState = '';
+
+                // Toggle sort direction or start with ascending
+                if (currentSortState === '') {
+                    newSortState = 'asc';
+                } else if (currentSortState === 'asc') {
+                    newSortState = 'desc';
+                } else {
+                    newSortState = 'asc'; // Toggle back to ascending
+                }
+
+                // Update sort indicators (remove from all columns, add to current column)
+                $('.sortable').removeClass('asc desc');
+                $(this).addClass(newSortState);
+
+                console.log(`Sorting column ${columnIndex} in ${newSortState} order`);
+
+                // Sort the filtered rows
+                window.filteredRows.sort(function(a, b) {
+                    const aText = a.cells[columnIndex] ? (a.cells[columnIndex].textContent || '').trim() : '';
+                    const bText = b.cells[columnIndex] ? (b.cells[columnIndex].textContent || '').trim() : '';
+
+                    // Check if this is a date column (date formats like YYYY-MM-DD or YYYY-MM-DD HH:MM)
+                    const isDate = /^\d{4}-\d{2}-\d{2}/.test(aText) || /^\d{4}-\d{2}-\d{2}/.test(bText);
+
+                    // Check if this is a numeric column
+                    const aNum = parseFloat(aText.replace(/[^\d.-]/g, ''));
+                    const bNum = parseFloat(bText.replace(/[^\d.-]/g, ''));
+                    const isNumeric = !isNaN(aNum) && !isNaN(bNum) &&
+                        aText.replace(/[^\d.-]/g, '') !== '' &&
+                        bText.replace(/[^\d.-]/g, '') !== '';
+
+                    let comparison = 0;
+
+                    if (isDate) {
+                        // Handle dates - convert to timestamps for comparison
+                        const dateA = new Date(aText);
+                        const dateB = new Date(bText);
+                        comparison = dateA - dateB;
+                    } else if (isNumeric) {
+                        // Handle numbers
+                        comparison = aNum - bNum;
+                    } else {
+                        // Handle strings (case-insensitive)
+                        comparison = aText.toLowerCase().localeCompare(bText.toLowerCase());
+                    }
+
+                    // Apply sort direction
+                    return newSortState === 'asc' ? comparison : -comparison;
+                });
+
+                // Re-order the table rows in the DOM based on the new sort order
+                const tbody = document.getElementById('equipmentTable');
+                window.filteredRows.forEach(row => {
+                    tbody.appendChild(row);
+                });
+
+                // Reset to page 1 after sorting
+                window.currentPage = 1;
+
+                // Update UI to reflect changes
+                $('#currentPage').text(window.currentPage);
+
+                // Rebuild pagination
+                const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
+                const totalPages = Math.ceil(window.filteredRows.length / rowsPerPage);
                 buildPaginationButtons(totalPages);
                 updatePaginationButtons();
 
-                // Show the first page of rows
+                // Show only the rows for current page
                 showCurrentPageRows();
-
-                // Update the display counts
-                $('#currentPage').text(window.currentPage);
-                $('#totalRows').text(totalRows);
             });
 
-            // Initialize Select2 for pagination dropdown without search
-            $('#rowsPerPageSelect').select2({
-                minimumResultsForSearch: Infinity,
-                width: 'auto',
-                dropdownAutoWidth: true
-            }).on('select2:select', function(e) {
-                // Trigger the change event after Select2 selection
-                $(this).trigger('change');
-            });
-
-            // ... rest of existing ready code ...
+            console.log('Equipment filters initialization complete');
         });
-
-        // Date filter type change handler
-        $('#dateFilter').on('change', function() {
-            const filterType = $(this).val();
-            console.log('Date filter changed to:', filterType);
-
-            // Hide all date containers first
-            $('#dateInputsContainer').addClass('d-none');
-            $('.date-filter').addClass('d-none');
-
-            // Show appropriate containers based on selection
-            if (filterType) {
-                $('#dateInputsContainer').removeClass('d-none');
-
-                // Show specific date input based on filter type
-                if (filterType === 'month_year') {
-                    $('.date-month_year').removeClass('d-none');
-                } else if (filterType === 'year_range') {
-                    $('.date-year_range').removeClass('d-none');
-                } else if (filterType === 'range') {
-                    $('.date-range').removeClass('d-none');
-                } else if (filterType === 'mdy') {
-                    $('.date-mdy').removeClass('d-none');
-                }
-            }
-        });
-
-        // Set up column sorting
-        $('.sortable').on('click', function() {
-            const columnIndex = parseInt($(this).data('column'));
-            const currentSortState = $(this).hasClass('asc') ? 'asc' : ($(this).hasClass('desc') ? 'desc' : '');
-            let newSortState = '';
-
-            // Toggle sort direction or start with ascending
-            if (currentSortState === '') {
-                newSortState = 'asc';
-            } else if (currentSortState === 'asc') {
-                newSortState = 'desc';
-            } else {
-                newSortState = 'asc'; // Toggle back to ascending
-            }
-
-            // Update sort indicators (remove from all columns, add to current column)
-            $('.sortable').removeClass('asc desc');
-            $(this).addClass(newSortState);
-
-            console.log(`Sorting column ${columnIndex} in ${newSortState} order`);
-
-            // Sort the filtered rows
-            window.filteredRows.sort(function(a, b) {
-                const aText = a.cells[columnIndex] ? (a.cells[columnIndex].textContent || '').trim() : '';
-                const bText = b.cells[columnIndex] ? (b.cells[columnIndex].textContent || '').trim() : '';
-
-                // Check if this is a date column (date formats like YYYY-MM-DD or YYYY-MM-DD HH:MM)
-                const isDate = /^\d{4}-\d{2}-\d{2}/.test(aText) || /^\d{4}-\d{2}-\d{2}/.test(bText);
-
-                // Check if this is a numeric column
-                const aNum = parseFloat(aText.replace(/[^\d.-]/g, ''));
-                const bNum = parseFloat(bText.replace(/[^\d.-]/g, ''));
-                const isNumeric = !isNaN(aNum) && !isNaN(bNum) &&
-                    aText.replace(/[^\d.-]/g, '') !== '' &&
-                    bText.replace(/[^\d.-]/g, '') !== '';
-
-                let comparison = 0;
-
-                if (isDate) {
-                    // Handle dates - convert to timestamps for comparison
-                    const dateA = new Date(aText);
-                    const dateB = new Date(bText);
-                    comparison = dateA - dateB;
-                } else if (isNumeric) {
-                    // Handle numbers
-                    comparison = aNum - bNum;
-                } else {
-                    // Handle strings (case-insensitive)
-                    comparison = aText.toLowerCase().localeCompare(bText.toLowerCase());
-                }
-
-                // Apply sort direction
-                return newSortState === 'asc' ? comparison : -comparison;
-            });
-
-            // Re-order the table rows in the DOM based on the new sort order
-            const tbody = document.getElementById('equipmentTable');
-            window.filteredRows.forEach(row => {
-                tbody.appendChild(row);
-            });
-
-            // Reset to page 1 after sorting
-            window.currentPage = 1;
-
-            // Update UI to reflect changes
-            $('#currentPage').text(window.currentPage);
-
-            // Rebuild pagination
-            const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
-            const totalPages = Math.ceil(window.filteredRows.length / rowsPerPage);
-            buildPaginationButtons(totalPages);
-            updatePaginationButtons();
-
-            // Show only the rows for current page
-            showCurrentPageRows();
-        });
-
-        console.log('Equipment filters initialization complete');
     </script>
     <script>
         $(document).ready(function() {
-            // Function to sync changes between Equipment Details and Equipment Location
-            function syncEquipmentLocation(assetTag, location, accountable, remarks) {
-                $.ajax({
-                    url: window.location.pathname,
-                    method: 'POST',
-                    data: {
-                        action: 'sync',
-                        asset_tag: assetTag,
-                        location: location,
-                        accountable_individual: accountable,
-                        remarks: remarks
-                    },
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.status === 'success') {
-                            console.log('Successfully synced with Equipment Location');
-                        } else {
-                            console.error('Failed to sync with Equipment Location:', response.message);
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('Error syncing with Equipment Location:', error);
-                    }
-                });
-            }
-
-            // Function to handle RR number changes
-            function handleRRChange(rrNo, callback) {
-                if (!rrNo) {
-                    callback(null);
-                    return;
-                }
-
-                $.ajax({
-                    url: window.location.pathname,
-                    method: 'POST',
-                    data: {
-                        action: 'get_ci_date',
-                        rr_no: rrNo
-                    },
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.status === 'success' && response.date_acquired) {
-                            callback(response.date_acquired);
-                        } else {
-                            callback(null);
-                            if (rrNo) {
-                                showToast('No Charge Invoice date found for this RR number', 'warning');
-                            }
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('Error fetching Charge Invoice date:', error);
-                        callback(null);
-                    }
-                });
-            }
-
-            // Update the RR number change handler
-            $('#add_rr_no, #edit_rr_no').on('change', function() {
-                const rrNo = $(this).val();
-                const isAdd = $(this).attr('id') === 'add_rr_no';
-                const dateField = isAdd ? '#edit_date_acquired' : '#edit_date_acquired';
-
-                handleRRChange(rrNo, function(dateAcquired) {
-                    if (dateAcquired) {
-                        $(dateField).val(dateAcquired);
-                    } else {
-                        $(dateField).val('');
-                    }
-                });
-            });
-
-            // Update the edit form submit handler
-            $('#editEquipmentForm').on('submit', function(e) {
-                e.preventDefault();
-                const $form = $(this);
-                const submitBtn = $form.find('button[type="submit"]');
-                const originalBtnText = submitBtn.text();
-
-                submitBtn.prop('disabled', true)
-                    .html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...');
-
-                $.ajax({
-                    url: '../../modules/equipment_manager/equipment_details.php',
-                    method: 'POST',
-                    data: $form.serialize(),
-                    success: function(response) {
-                        try {
-                            const result = typeof response === 'object' ? response : JSON.parse(response);
-                            submitBtn.prop('disabled', false).text(originalBtnText);
-
-                            if (result.status === 'success') {
-                                // Sync changes with Equipment Location
-                                const assetTag = $('#edit_equipment_asset_tag').val();
-                                const location = $('#edit_location').val();
-                                const accountable = $('#edit_accountable_individual').val();
-                                const remarks = $('#edit_remarks').val();
-
-                                syncEquipmentLocation(assetTag, location, accountable, remarks);
-
-                                $('#editEquipmentModal').modal('hide');
-                                $('.modal-backdrop').remove();
-                                $('body').removeClass('modal-open').css('padding-right', '');
-
-                                showToast(result.message || 'Equipment updated successfully', 'success');
-
-                                $('#edTable').load(location.href + ' #edTable > *', function() {
-                                    window.allRows = $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').toArray();
-                                    window.filteredRows = [...window.allRows];
-                                    if (typeof filterEquipmentTable === 'function') filterEquipmentTable();
-                                });
-                            } else {
-                                showToast(result.message || 'Failed to update equipment.', 'error');
-                            }
-                        } catch (e) {
-                            submitBtn.prop('disabled', false).text(originalBtnText);
-                            showToast('Error processing the request', 'error');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        submitBtn.prop('disabled', false).text(originalBtnText);
-                        showToast('Error updating equipment.', 'error');
-                    }
-                });
-            });
-
-            // Update the add form submit handler
-            $('#addEquipmentForm').on('submit', function(e) {
-                e.preventDefault();
-                const $form = $(this);
-                const submitBtn = $form.find('button[type="submit"]');
-                const originalBtnText = submitBtn.text();
-
-                submitBtn.prop('disabled', true)
-                    .html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Creating...');
-
-                $.ajax({
-                    url: '../../modules/equipment_manager/equipment_details.php',
-                    method: 'POST',
-                    data: $form.serialize(),
-                    dataType: 'json',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    success: function(response) {
-                        try {
-                            submitBtn.prop('disabled', false).text(originalBtnText);
-
-                            if (response.status === 'success') {
-                                // Sync changes with Equipment Location
-                                const assetTag = $('#add_equipment_asset_tag').val();
-                                const location = $('input[name="location"]').val();
-                                const accountable = $('input[name="accountable_individual"]').val();
-                                const remarks = $('textarea[name="remarks"]').val();
-
-                                syncEquipmentLocation(assetTag, location, accountable, remarks);
-
-                                $('#addEquipmentModal').modal('hide');
-                                $('.modal-backdrop').remove();
-                                $('body').removeClass('modal-open').css('padding-right', '');
-
-                                $form[0].reset();
-                                $('#add_equipment_asset_tag').val(null).trigger('change');
-                                $('#add_rr_no').val(null).trigger('change');
-
-                                showToast(response.message || 'Equipment created successfully', 'success');
-
-                                $('#edTable').load(location.href + ' #edTable > *', function() {
-                                    window.allRows = $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').toArray();
-                                    window.filteredRows = [...window.allRows];
-                                    if (typeof filterEquipmentTable === 'function') filterEquipmentTable();
-                                });
-                            } else {
-                                showToast(response.message || 'Failed to create equipment.', 'error');
-                            }
-                        } catch (e) {
-                            console.error('Error processing response:', e);
-                            submitBtn.prop('disabled', false).text(originalBtnText);
-                            showToast('Error processing the request', 'error');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('AJAX Error:', xhr.responseText);
-                        submitBtn.prop('disabled', false).text(originalBtnText);
-                        showToast('Error creating equipment.', 'error');
-                    }
-                });
-            });
-
             // Edit Equipment
             $(document).on('click', '.edit-equipment', function() {
                 var id = $(this).data('id');
@@ -2679,6 +2336,102 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                 $('#editEquipmentModal').modal('show');
             });
 
+            // Edit Equipment AJAX submit with toast
+            $('#editEquipmentForm').on('submit', function(e) {
+                e.preventDefault();
+                var $form = $(this);
+                var submitBtn = $form.find('button[type="submit"]');
+                var originalBtnText = submitBtn.text();
+                submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...');
+                $.ajax({
+                    url: '../../modules/equipment_manager/equipment_details.php',
+                    method: 'POST',
+                    data: $form.serialize(),
+                    success: function(response) {
+                        try {
+                            var result = typeof response === 'object' ? response : JSON.parse(response);
+                            submitBtn.prop('disabled', false).text(originalBtnText);
+                            if (result.status === 'success') {
+                                $('#editEquipmentModal').modal('hide');
+                                // Remove any lingering backdrop
+                                $('.modal-backdrop').remove();
+                                $('body').removeClass('modal-open').css('padding-right', '');
+                                showToast(result.message || 'Equipment updated successfully', 'success');
+                                // Reload the table section only
+                                $('#edTable').load(location.href + ' #edTable > *', function() {
+                                    window.allRows = $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').toArray();
+                                    window.filteredRows = [...window.allRows];
+                                    if (typeof filterEquipmentTable === 'function') filterEquipmentTable();
+                                });
+                            } else {
+                                showToast(result.message || 'Failed to update equipment.', 'error');
+                            }
+                        } catch (e) {
+                            submitBtn.prop('disabled', false).text(originalBtnText);
+                            showToast('Error processing the request', 'error');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        submitBtn.prop('disabled', false).text(originalBtnText);
+                        showToast('Error updating equipment.', 'error');
+                    }
+                });
+            });
+            
+            // Add Equipment AJAX submit with toast
+            $('#addEquipmentForm').on('submit', function(e) {
+                e.preventDefault();
+                var $form = $(this);
+                var submitBtn = $form.find('button[type="submit"]');
+                var originalBtnText = submitBtn.text();
+                submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Creating...');
+                
+                $.ajax({
+                    url: '../../modules/equipment_manager/equipment_details.php',
+                    method: 'POST',
+                    data: $form.serialize(),
+                    dataType: 'json',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    success: function(response) {
+                        try {
+                            submitBtn.prop('disabled', false).text(originalBtnText);
+                            if (response.status === 'success') {
+                                $('#addEquipmentModal').modal('hide');
+                                // Remove any lingering backdrop
+                                $('.modal-backdrop').remove();
+                                $('body').removeClass('modal-open').css('padding-right', '');
+                                
+                                $form[0].reset();
+                                $('#add_equipment_asset_tag').val(null).trigger('change');
+                                $('#add_rr_no').val(null).trigger('change');
+                                
+                                showToast(response.message || 'Equipment created successfully', 'success');
+                                
+                                // Reload the table section only
+                                $('#edTable').load(location.href + ' #edTable > *', function() {
+                                    window.allRows = $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').toArray();
+                                    window.filteredRows = [...window.allRows];
+                                    if (typeof filterEquipmentTable === 'function') filterEquipmentTable();
+                                });
+                            } else {
+                                showToast(response.message || 'Failed to create equipment.', 'error');
+                            }
+                        } catch (e) {
+                            console.error('Error processing response:', e);
+                            submitBtn.prop('disabled', false).text(originalBtnText);
+                            showToast('Error processing the request', 'error');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('AJAX Error:', xhr.responseText);
+                        submitBtn.prop('disabled', false).text(originalBtnText);
+                        showToast('Error creating equipment.', 'error');
+                    }
+                });
+            });
+
             // Delete Equipment
             let deleteEquipmentId = null;
             $(document).on('click', '.remove-equipment', function() {
@@ -2705,7 +2458,7 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                             // Remove any lingering backdrop
                             $('.modal-backdrop').remove();
                             $('body').removeClass('modal-open').css('padding-right', '');
-
+                            
                             showToast(response.message || 'Equipment removed successfully', 'success');
                             // Reload the table section only
                             $('#edTable').load(location.href + ' #edTable > *', function() {
