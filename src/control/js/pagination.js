@@ -1,11 +1,11 @@
 // Global variable to store the original table rows.
 // This will be populated by page-specific scripts (e.g., logs.js or inline scripts)
 // and used as the source for filtering.
-window.allRows = window.allRows || [];
+let allRows = window.allRows || [];
 
 // Global variable to store the currently filtered rows.
 // This will be updated by filterTable and used by updatePagination.
-window.filteredRows = window.filteredRows || [];
+window.filteredRows = [];
 
 // Configuration object with default values
 // Page-specific scripts can override these by passing a config object to initPagination

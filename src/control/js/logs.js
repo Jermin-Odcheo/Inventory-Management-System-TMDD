@@ -5,14 +5,16 @@ if (typeof window.allRows === 'undefined') {
 }
 
 // On DOMContentLoaded, capture all original table rows
-// and set up filter event listeners
+// and set up filter event listeners only
+// (Pagination is handled by pagination.js)
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOMContentLoaded event fired');
-    const tableId = 'auditTable';
+    // Use tableId from pagination.js if available, otherwise default to 'auditTable'
+    const tableId = window.paginationConfig?.tableId || 'auditTable';
     
-    // Store all rows for filtering
-    window.allRows = Array.from(document.querySelectorAll(`#${tableId} tr`));
-    console.log('Initial rows found:', window.allRows.length);
+    // Store all rows for filtering if not already populated
+    if (!window.allRows.length) {
+        window.allRows = Array.from(document.querySelectorAll(`#${tableId} tr`));
+    }
     
     // Set up module filter if it exists
     const moduleFilter = document.getElementById('filterModule');
@@ -36,26 +38,31 @@ document.addEventListener('DOMContentLoaded', () => {
         statusFilter.addEventListener('change', filterTable);
     }
     
-    // Initial filter
-    console.log('Calling initial filterTable');
+    // Initial filter (pagination will be updated by pagination.js)
     setTimeout(filterTable, 100); // Slight delay to ensure DOM is ready
 });
 
-// Filter table rows based on search and filter criteria
+// Rebuild table body with only the rows that match the filters
 function filterTable() {
-    console.log('filterTable function called');
+    
     const searchFilter = document.getElementById('searchInput')?.value.toLowerCase() || '';
     const actionFilter = document.getElementById('filterAction')?.value.toLowerCase() || '';
     const statusFilter = document.getElementById('filterStatus')?.value.toLowerCase() || '';
     const moduleFilter = document.getElementById('filterModule')?.value.toLowerCase() || '';
     
-    const tableId = 'auditTable';
+    
+    // Get tableId from pagination.js if available, otherwise default to 'auditTable'
+    const tableId = window.paginationConfig?.tableId || 'auditTable';
+    
+    // Use window.allRows for filtering
     const rowsToFilter = window.allRows || [];
-    console.log('Rows to filter:', rowsToFilter.length);
 
     // Filter rows from the original set
     const filteredRows = rowsToFilter.filter(row => {
+        // For debugging purposes
         if (!row) return false;
+        
+        // Skip header row
         if (row.querySelector('th')) return false;
         
         let matchesSearch = true;
@@ -72,11 +79,15 @@ function filterTable() {
         if (actionFilter) {
             const actionCell = row.querySelector('[data-label="Action"]');
             if (actionCell) {
+                // Get text from the action badge, which contains the action name
                 const actionBadge = actionCell.querySelector('.action-badge');
                 const actionText = actionBadge ? 
                     actionBadge.textContent.toLowerCase().trim() : 
                     actionCell.textContent.toLowerCase().trim();
+                
+                // Convert both to lowercase and trim for comparison
                 matchesAction = actionText.includes(actionFilter);
+                
             } else {
                 matchesAction = false;
             }
@@ -86,11 +97,13 @@ function filterTable() {
         if (statusFilter) {
             const statusCell = row.querySelector('[data-label="Status"]');
             if (statusCell) {
+                // Get text from the status badge
                 const statusBadge = statusCell.querySelector('.badge');
                 const statusText = statusBadge ? 
                     statusBadge.textContent.toLowerCase().trim() : 
                     statusCell.textContent.toLowerCase().trim();
                 
+                // Handle status cases
                 if (statusFilter === 'successful') {
                     matchesStatus = statusText.includes('successful');
                 } else if (statusFilter === 'failed') {
@@ -98,6 +111,7 @@ function filterTable() {
                 } else {
                     matchesStatus = statusText.includes(statusFilter);
                 }
+                
             } else {
                 matchesStatus = false;
             }
@@ -117,21 +131,22 @@ function filterTable() {
         return matchesSearch && matchesAction && matchesStatus && matchesModule;
     });
     
-    console.log('Filtered rows:', filteredRows.length);
-    
+
     // Get the tbody element
     const tbody = document.getElementById(tableId);
     if (!tbody) {
-        console.error(`Could not find tbody with ID ${tableId}`);
+        console.error(`Could not find tbody with ID ${tableId}`); // Debug
         return;
     }
+    
+    // Store filtered rows in window for pagination
+    window.filteredRows = filteredRows;
     
     // Clear the tbody
     tbody.innerHTML = '';
     
     // If no filtered rows, show a message
     if (filteredRows.length === 0) {
-        console.log('No matching records found');
         const noResultsRow = document.createElement('tr');
         noResultsRow.innerHTML = `
             <td colspan="10">
@@ -144,10 +159,14 @@ function filterTable() {
         `;
         tbody.appendChild(noResultsRow);
     } else {
-        console.log('Adding filtered rows to table');
         // Add filtered rows back to the table
         filteredRows.forEach(row => {
             tbody.appendChild(row.cloneNode(true));
         });
+    }
+    
+    // After filtering, let pagination.js update the pagination
+    if (typeof updatePagination === 'function') {
+        updatePagination();
     }
 }

@@ -6,10 +6,7 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
-<!-- Only include pagination.js if explicitly requested -->
-<?php if (isset($include_pagination) && $include_pagination): ?>
 <script src="<?php echo defined('BASE_URL') ? BASE_URL : '/'; ?>src/control/js/pagination.js" defer></script>
-<?php endif; ?>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script src="<?php echo defined('BASE_URL') ? BASE_URL : '/'; ?>src/control/js/toast.js"></script>
 <script src="<?php echo defined('BASE_URL') ? BASE_URL : '/'; ?>src/control/js/sidebar.js"></script>
