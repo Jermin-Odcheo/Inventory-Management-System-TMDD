@@ -782,14 +782,16 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_data_json') {
     <div class="btn-group" role="group">
         <?php if ($canModify): ?>
             <button
-                class="btn btn-sm btn-outline-primary edit-report"
-                data-id="<?= htmlspecialchars($rr['id']) ?>"
-                data-rr="<?= htmlspecialchars($rr['rr_no']) ?>"
-                data-individual="<?= htmlspecialchars($rr['accountable_individual']) ?>"
-                data-po="<?= htmlspecialchars($rr['po_no']) ?>"
-                data-location="<?= htmlspecialchars($rr['ai_loc']) ?>">
-                <i class="bi bi-pencil-square"></i> <span>Edit</span>
-            </button>
+    class="btn btn-sm btn-outline-primary edit-report"
+    data-id="<?= htmlspecialchars($rr['id']) ?>"
+    data-rr="<?= htmlspecialchars($rr['rr_no']) ?>"
+    data-individual="<?= htmlspecialchars($rr['accountable_individual']) ?>"
+    data-po="<?= htmlspecialchars($rr['po_no']) ?>"
+    data-location="<?= htmlspecialchars($rr['ai_loc']) ?>"
+    data-date-created="<?= htmlspecialchars($rr['date_created']) ?>">
+    <i class="bi bi-pencil-square"></i> <span>Edit</span>
+</button>
+
         <?php endif; ?>
         <?php if ($canDelete): ?>
             <button
@@ -1234,19 +1236,29 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_data_json') {
 
             // Edit button
             $(document).on('click', '.edit-report', function() {
-                const btnData = $(this).data();
-                $('#edit_report_id').val(btnData.id);
-                // Remove RR/PO prefix when showing in modal (for editing)
-                let rrVal = btnData.rr ? btnData.rr.replace(/^RR/, '') : '';
-                let poVal = btnData.po || '';
-                $('#edit_rr_no').val(rrVal);
-                $('#edit_accountable_individual').val(btnData.individual);
-                // Set select2 dropdown value and trigger change to update the UI
-                $('#edit_po_no').val(poVal).trigger('change');
-                $('#edit_ai_loc').val(btnData.location);
-                $('#edit_date_created').val(btnData.date_created.replace(' ', 'T').substring(0, 16));
-                editModal.show();
-            });
+  const btnData = $(this).data();
+  $('#edit_report_id').val(btnData.id);
+
+  // Strip “RR” prefix if needed:
+  const rrVal = btnData.rr ? btnData.rr.replace(/^RR/, '') : '';
+  $('#edit_rr_no').val(rrVal);
+
+  $('#edit_accountable_individual').val(btnData.individual);
+  $('#edit_po_no').val(btnData.po || '').trigger('change');
+  $('#edit_ai_loc').val(btnData.location);
+
+  // Now use btnData.dateCreated (camelCase). Only call .replace() if it exists:
+  if (btnData.dateCreated) {
+    // Convert "YYYY-MM-DD HH:MM:SS" → "YYYY-MM-DDTHH:MM"
+    const isoStr = btnData.dateCreated.replace(' ', 'T').substring(0, 16);
+    $('#edit_date_created').val(isoStr);
+  } else {
+    $('#edit_date_created').val('');
+  }
+
+  editModal.show();
+});
+
 
             // Delete button
             let deleteId = null;
