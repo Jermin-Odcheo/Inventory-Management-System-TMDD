@@ -522,12 +522,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
         <option value="year">Year Range</option>
         <option value="month_year">Month-Year Range</option>
     </select>
-    <div class="input-group w-auto" style="min-width:220px;">
-        <span class="input-group-text"><i class="bi bi-search"></i></span>
-        <input type="text" id="searchPO" class="form-control form-control-sm" placeholder="Search purchase order...">
-    </div>
-    <button type="button" id="applyFilters" class="btn btn-dark btn-sm"><i class="bi bi-funnel"></i> Filter</button>
-    <button type="button" id="clearFilters" class="btn btn-secondary btn-sm"><i class="bi bi-x-circle"></i> Clear</button>
     <div id="dateInputsContainer" class="d-flex align-items-center gap-3 ms-2" style="display: none;">
         <div class="date-group d-none flex-row" id="mdy-group">
             <div class="d-flex flex-column me-2">
@@ -570,7 +564,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
             </div>
         </div>
     </div>
+    <div class="input-group w-auto" style="min-width:220px;">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input type="text" id="searchPO" class="form-control form-control-sm" placeholder="Search purchase order...">
+    </div>
+    <button type="button" id="applyFilters" class="btn btn-dark btn-sm"><i class="bi bi-funnel"></i> Filter</button>
+    <button type="button" id="clearFilters" class="btn btn-secondary btn-sm"><i class="bi bi-x-circle"></i> Clear</button>
 </div>
+
                         </div>
 
                         <div class="table-responsive" id="table">
