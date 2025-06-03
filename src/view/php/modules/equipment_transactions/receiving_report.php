@@ -551,6 +551,43 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_data_json') {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
     <!-- Custom Styles -->
     <link href="../../../styles/css/equipment-transactions.css" rel="stylesheet">
+    <style>
+        .sortable {
+            cursor: pointer;
+            position: relative;
+            user-select: none;
+            width: auto;
+        }
+        .sort-icon {
+            margin-left: 5px;
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            position: relative;
+        }
+        .sortable[data-sort-direction="asc"] .sort-icon::after {
+            content: "▲";
+            position: absolute;
+            font-size: 10px;
+            opacity: 0.8;
+            top: -5px;
+        }
+        .sortable[data-sort-direction="desc"] .sort-icon::after {
+            content: "▼";
+            position: absolute;
+            font-size: 10px;
+            opacity: 0.8;
+            top: -5px;
+        }
+        /* Fixed width for table columns */
+        #rrTable th:nth-child(1) { width: 5%; }  /* # column */
+        #rrTable th:nth-child(2) { width: 12%; } /* RR Number */
+        #rrTable th:nth-child(3) { width: 20%; } /* Accountable Individual */
+        #rrTable th:nth-child(4) { width: 12%; } /* PO Number */
+        #rrTable th:nth-child(5) { width: 15%; } /* Location */
+        #rrTable th:nth-child(6) { width: 20%; } /* Created Date */
+        #rrTable th:nth-child(7) { width: 16%; } /* Actions */
+    </style>
 </head>
 
 <body>
@@ -638,12 +675,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_data_json') {
                         <table id="rrTable" class="table table-striped table-bordered table-sm mb-0">
                             <thead class="table-dark">
                                 <tr>
-                                    <th>#</th>
-                                    <th>RR Number</th>
-                                    <th>Accountable Individual</th>
-                                    <th>PO Number</th>
-                                    <th>Location</th>
-                                    <th>Created Date</th>
+                                    <th class="sortable" data-sort="id">#<span class="sort-icon"></span></th>
+                                    <th class="sortable" data-sort="rr_no">RR Number<span class="sort-icon"></span></th>
+                                    <th class="sortable" data-sort="accountable_individual">Accountable Individual<span class="sort-icon"></span></th>
+                                    <th class="sortable" data-sort="po_no">PO Number<span class="sort-icon"></span></th>
+                                    <th class="sortable" data-sort="ai_loc">Location<span class="sort-icon"></span></th>
+                                    <th class="sortable" data-sort="date_created">Created Date<span class="sort-icon"></span></th>
                                     <th class="text-center">Actions</th>
                                 </tr>
                             </thead>
@@ -1294,6 +1331,86 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_data_json') {
                     updatePagination();
                 });
             }
+
+            // Table sorting functionality
+            const sortableHeaders = document.querySelectorAll('.sortable');
+            let currentSortColumn = null;
+            let currentSortDirection = null;
+
+            sortableHeaders.forEach(header => {
+                header.addEventListener('click', function() {
+                    const column = this.getAttribute('data-sort');
+                    const index = [...this.parentElement.children].indexOf(this);
+
+                    // Toggle sort direction or set to 'asc' if this is a new column
+                    let direction;
+                    if (currentSortColumn === column) {
+                        direction = currentSortDirection === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        direction = 'asc';
+                    }
+
+                    // Reset all other headers
+                    sortableHeaders.forEach(h => {
+                        h.removeAttribute('data-sort-direction');
+                    });
+
+                    // Set active sort on this header
+                    this.setAttribute('data-sort-direction', direction);
+                    currentSortColumn = column;
+                    currentSortDirection = direction;
+
+                    // Sort the rows
+                    const tbody = document.getElementById('rrTableBody');
+                    const rows = Array.from(tbody.querySelectorAll('tr'));
+
+                    // Sort based on the content of the cells
+                    const sortedRows = rows.sort((a, b) => {
+                        // Skip if columns don't exist
+                        if (!a.cells[index] || !b.cells[index]) return 0;
+
+                        let aValue = a.cells[index].textContent.trim();
+                        let bValue = b.cells[index].textContent.trim();
+
+                        // Special handling for dates
+                        if (column === 'date_created') {
+                            aValue = new Date(aValue).getTime();
+                            bValue = new Date(bValue).getTime();
+                            // Handle invalid dates
+                            if (isNaN(aValue)) aValue = 0;
+                            if (isNaN(bValue)) bValue = 0;
+                        }
+                        // Special handling for numbers
+                        else if (column === 'id') {
+                            aValue = parseInt(aValue) || 0;
+                            bValue = parseInt(bValue) || 0;
+                        }
+                        // For regular string comparison
+                        else {
+                            aValue = aValue.toLowerCase();
+                            bValue = bValue.toLowerCase();
+                        }
+
+                        if (direction === 'asc') {
+                            return aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
+                        } else {
+                            return aValue < bValue ? 1 : aValue > bValue ? -1 : 0;
+                        }
+                    });
+
+                    // Update the DOM
+                    sortedRows.forEach(row => tbody.appendChild(row));
+
+                    // Update pagination with the new order
+                    window.allRows = Array.from(document.querySelectorAll('#rrTableBody tr'));
+                    window.filteredRows = [...window.allRows];
+
+                    if (window.paginationConfig) {
+                        window.paginationConfig.currentPage = 1;
+                    }
+                    updatePagination();
+                });
+            });
         });
     </script>
 </body>
