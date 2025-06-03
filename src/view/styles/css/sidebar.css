@@ -3,10 +3,12 @@
     --sidebar-bg-end: #34495e;
     --sidebar-text: #ecf0f1;
     --hover-bg: rgba(255, 255, 255, 0.1);
+    --sidebar-width: 300px;
+    --sidebar-collapsed-width: 70px;
 }
 
 .sidebar {
-    width: 300px;
+    width: var(--sidebar-width);
     height: 100vh;
     background: #1B1F3B;
     color: var(--sidebar-text);
@@ -16,8 +18,54 @@
     padding: 80px 20px;
     box-shadow: 4px 0 15px rgba(0, 0, 0, 0.3);
     overflow-y: auto;
-    transition: width 0.3s;
+    transition: all 0.3s ease;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.sidebar.collapsed {
+    width: var(--sidebar-collapsed-width);
+    padding: 80px 10px;
+}
+
+.sidebar.collapsed .menu-text,
+.sidebar.collapsed .submenu-text,
+.sidebar.collapsed h3,
+.sidebar.collapsed .dropdown.tree {
+    display: none;
+}
+
+.sidebar.collapsed nav ul li a,
+.sidebar.collapsed nav ul li button.dropdown-toggle {
+    justify-content: center;
+    padding: 12px 5px;
+}
+
+.sidebar.collapsed nav ul li a i,
+.sidebar.collapsed nav ul li button.dropdown-toggle i {
+    margin-right: 0;
+    font-size: 1.2em;
+}
+
+.sidebar-toggle {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 1000;
+    background: transparent;
+    border: none;
+    color: var(--sidebar-text);
+    font-size: 24px;
+    cursor: pointer;
+    padding: 5px;
+    transition: all 0.3s ease;
+}
+
+.sidebar-toggle:hover {
+    transform: scale(1.1);
+}
+
+.sidebar.collapsed .sidebar-toggle {
+    left: calc(var(--sidebar-collapsed-width) - 40px);
 }
 
 /* Hide scrollbar for Chrome, Safari and Opera */

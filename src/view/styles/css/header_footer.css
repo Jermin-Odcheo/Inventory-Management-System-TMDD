@@ -17,14 +17,25 @@ body {
     box-shadow: 0 4px 30px rgba(11, 25, 51, 0.15);
     position: fixed;
     top: 0;
-    left: 300px; /* Match the sidebar width */
+    left: var(--sidebar-width, 300px); /* Use CSS variable to match sidebar width */
     right: 0; /* Extend to the right edge */
     z-index: 10000; /* Lower than sidebar's z-index */
+    transition: all 0.3s ease; /* Match sidebar transition */
+}
+
+/* Add this new class for when sidebar is collapsed */
+.header.sidebar-collapsed {
+    left: var(--sidebar-collapsed-width, 70px);
 }
 
 .main-content {
-    margin-left: 300px; /* Match sidebar width */
+    margin-left: var(--sidebar-width, 300px); /* Use CSS variable */
     padding-top: 70px; /* Match header height + some padding */
+    transition: margin-left 0.3s ease; /* Match sidebar transition */
+}
+
+.main-content.sidebar-collapsed {
+    margin-left: var(--sidebar-collapsed-width, 70px);
 }
 
 .logo-container {

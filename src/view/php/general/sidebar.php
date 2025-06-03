@@ -50,7 +50,11 @@ foreach ($modules as $module => $paths) {
 
 ?>
 
-<div class="sidebar">
+<button class="sidebar-toggle" id="sidebarToggle">
+    <i class="fas fa-bars"></i>
+</button>
+
+<div class="sidebar" id="sidebar">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/sidebar.css">
 
@@ -206,6 +210,32 @@ foreach ($modules as $module => $paths) {
 </div>
 
 <script>
+    // Sidebar toggle functionality
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const header = document.querySelector('.header');
+    const mainContent = document.querySelector('.main-content');
+    
+    // Function to update all collapsed states
+    function updateCollapsedState(isCollapsed) {
+        sidebar.classList.toggle('collapsed', isCollapsed);
+        header?.classList.toggle('sidebar-collapsed', isCollapsed);
+        mainContent?.classList.toggle('sidebar-collapsed', isCollapsed);
+        localStorage.setItem('sidebarCollapsed', isCollapsed);
+    }
+    
+    // Check if there's a saved state in localStorage
+    const isSidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+    if (isSidebarCollapsed) {
+        updateCollapsedState(true);
+    }
+
+    sidebarToggle.addEventListener('click', () => {
+        const willBeCollapsed = !sidebar.classList.contains('collapsed');
+        updateCollapsedState(willBeCollapsed);
+    });
+
+    // Existing dropdown functionality
     document.querySelectorAll('.dropdown-toggle').forEach(btn => {
         btn.addEventListener('click', () => {
             const expanded = btn.getAttribute('aria-expanded') === 'true';
