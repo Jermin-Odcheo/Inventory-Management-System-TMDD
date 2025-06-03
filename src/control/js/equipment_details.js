@@ -195,7 +195,6 @@ $(document).ready(function() {
     $('#addEquipmentForm').on('submit', function(e) {
         e.preventDefault();
     
-
         $.ajax({
             url: '../../modules/equipment_manager/equipment_details.php',
             method: 'POST',
@@ -216,6 +215,10 @@ $(document).ready(function() {
             },
             error: function(xhr, status, error) {
                 console.error('Ajax error:', error); // Debug line
+                alert('Error processing the request');
+            }
+        });
+    });
 
     // Edit Equipment (delegated)
     $(document).on('click', '.edit-equipment', function() {
@@ -277,3 +280,4 @@ $(document).ready(function() {
             }
         });
     });
+});
