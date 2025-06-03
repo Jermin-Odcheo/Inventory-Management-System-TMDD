@@ -660,16 +660,31 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
     <style>
+        /* Update sortable header styles */
+        th.sortable {
+            cursor: pointer;
+            position: relative;
+            padding-right: 20px !important;
+        }
+
+        th.sortable::after {
+            content: "\f0dc";
+            font-family: "Font Awesome 5 Free";
+            font-weight: 900;
+            position: absolute;
+            right: 8px;
+            color: #999;
+        }
+
         th.sortable.asc::after {
-            content: " \2191";
-            /* Unicode up arrow */
+            content: "\f0de";
+            color: #0d6efd;
         }
 
         th.sortable.desc::after {
-            content: " \2193";
-            /* Unicode down arrow */
+            content: "\f0dd";
+            color: #0d6efd;
         }
-
 
         /* Pagination styling */
         .pagination {
@@ -882,8 +897,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
         </header>
 
         <section class="card">
-            <div class="card-header bg-dark text-white d-flex justify-content-between 
-align-items-center">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
                 <h2><i class="bi bi-list-task"></i> List of Equipment Details</h2>
             </div>
             <div class="card-body">
@@ -1013,20 +1027,6 @@ align-items-center">
                                 </div>
                             </div>
 
-                            <!-- Date Range Picker -->
-                            <div class="col-md-6 date-filter date-range d-none">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <label for="dateFrom" class="form-label">From Date</label>
-                                        <input type="date" class="form-control" id="dateFrom" name="dateFrom">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label for="dateTo" class="form-label">To Date</label>
-                                        <input type="date" class="form-control" id="dateTo" name="dateTo">
-                                    </div>
-                                </div>
-                            </div>
-
                             <!-- MDY Picker -->
                             <div class="col-md-6 date-filter date-mdy d-none">
                                 <div class="row">
@@ -1085,54 +1085,36 @@ align-items-center">
                                                 echo date('Y-m-d', strtotime($acq));
                                             }
                                             ?></td>
-                                        <td class="d-none"><?= !empty($equipment['date_created']) ? date('Y-m-d 
-H:i', strtotime($equipment['date_created'])) : ''; ?></td>
-                                        <td class="d-none"><?= !empty($equipment['date_modified']) ? date('Y-m-d 
-H:i', strtotime($equipment['date_modified'])) : ''; ?></td>
-                                        <td><?= safeHtml((strpos($equipment['rr_no'] ?? '', 'RR') ===
-                                                0 ? $equipment['rr_no'] : ('RR' . $equipment['rr_no']))); ?></td>
+                                        <td class="d-none"><?= !empty($equipment['date_created']) ? date('Y-m-d H:i', strtotime($equipment['date_created'])) : ''; ?></td>
+                                        <td class="d-none"><?= !empty($equipment['date_modified']) ? date('Y-m-d H:i', strtotime($equipment['date_modified'])) : ''; ?></td>
+                                        <td><?= safeHtml((strpos($equipment['rr_no'] ?? '', 'RR') === 0 ? $equipment['rr_no'] : ('RR' . $equipment['rr_no']))); ?></td>
                                         <td><?= safeHtml($equipment['location']); ?></td>
                                         <td><?= safeHtml($equipment['accountable_individual']); ?></td>
                                         <td><?= safeHtml($equipment['remarks']); ?></td>
                                         <td>
                                             <div class="btn-group">
                                                 <?php if ($canModify): ?>
-                                                    <button class="btn btn-outline-info btn-sm 
-edit-equipment"
+                                                    <button class="btn btn-outline-info btn-sm edit-equipment"
                                                         data-id="<?= safeHtml($equipment['id']); ?>"
-                                                        data-asset="<?=
-                                                                    safeHtml($equipment['asset_tag']); ?>"
-                                                        data-desc1="<?=
-                                                                    safeHtml($equipment['asset_description_1']); ?>"
-                                                        data-desc2="<?=
-                                                                    safeHtml($equipment['asset_description_2']); ?>"
-                                                        data-spec="<?=
-                                                                    safeHtml($equipment['specifications']); ?>"
-                                                        data-brand="<?=
-                                                                    safeHtml($equipment['brand']); ?>"
-                                                        data-model="<?=
-                                                                    safeHtml($equipment['model']); ?>"
-                                                        data-serial="<?=
-                                                                        safeHtml($equipment['serial_number']); ?>"
-                                                        data-date-acquired="<?=
-                                                                            safeHtml($equipment['date_acquired']); ?>"
-                                                        data-location="<?=
-                                                                        safeHtml($equipment['location']); ?>"
-                                                        data-accountable="<?=
-                                                                            safeHtml($equipment['accountable_individual']); ?>"
-                                                        data-rr="<?= safeHtml($equipment['rr_no']);
-                                                                    ?>"
-                                                        data-date="<?=
-                                                                    safeHtml($equipment['date_created']); ?>"
-                                                        data-remarks="<?=
-                                                                        safeHtml($equipment['remarks']); ?>">
+                                                        data-asset="<?= safeHtml($equipment['asset_tag']); ?>"
+                                                        data-desc1="<?= safeHtml($equipment['asset_description_1']); ?>"
+                                                        data-desc2="<?= safeHtml($equipment['asset_description_2']); ?>"
+                                                        data-spec="<?= safeHtml($equipment['specifications']); ?>"
+                                                        data-brand="<?= safeHtml($equipment['brand']); ?>"
+                                                        data-model="<?= safeHtml($equipment['model']); ?>"
+                                                        data-serial="<?= safeHtml($equipment['serial_number']); ?>"
+                                                        data-date-acquired="<?= safeHtml($equipment['date_acquired']); ?>"
+                                                        data-location="<?= safeHtml($equipment['location']); ?>"
+                                                        data-accountable="<?= safeHtml($equipment['accountable_individual']); ?>"
+                                                        data-rr="<?= safeHtml($equipment['rr_no']); ?>"
+                                                        data-date="<?= safeHtml($equipment['date_created']); ?>"
+                                                        data-remarks="<?= safeHtml($equipment['remarks']); ?>">
                                                         <i class="bi bi-pencil-square"></i>
                                                     </button>
                                                 <?php endif; ?>
 
                                                 <?php if ($canDelete): ?>
-                                                    <button class="btn btn-outline-danger btn-sm 
-remove-equipment"
+                                                    <button class="btn btn-outline-danger btn-sm remove-equipment"
                                                         data-id="<?= safeHtml($equipment['id']); ?>">
                                                         <i class="bi bi-trash"></i>
                                                     </button>
