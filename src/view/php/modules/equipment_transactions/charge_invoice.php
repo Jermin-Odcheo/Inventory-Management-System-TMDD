@@ -226,6 +226,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $newPoNo = $po_no;
                 $logAdd = false;
                 $logModified = false;
+                $updatedEquipmentCount = 0;
 
                 if ((empty($oldPoNo) || $oldPoNo === null) && !empty($newPoNo)) {
                     // PO Number is being added
@@ -240,6 +241,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ) {
                     // Other fields changed (or PO number changed)
                     $logModified = true;
+                }
+
+                // If date_of_purchase was changed, update related equipment_details
+                if ($old['date_of_purchase'] !== $date_of_purchase) {
+                    try {
+                        // First, get all RR numbers associated with this purchase order
+                        $rrStmt = $pdo->prepare("
+                            SELECT rr_no 
+                            FROM receive_report 
+                            WHERE po_no = ? 
+                            AND is_disabled = 0
+                        ");
+                        $rrStmt->execute([$po_no]);
+                        $relatedRRs = $rrStmt->fetchAll(PDO::FETCH_COLUMN);
+                        
+                        // If we found related RRs, update equipment_details
+                        if (!empty($relatedRRs)) {
+                            $placeholders = str_repeat('?,', count($relatedRRs) - 1) . '?';
+                            
+                            // Update all equipment_details records that reference these RR numbers
+                            $updateStmt = $pdo->prepare("
+                                UPDATE equipment_details 
+                                SET date_acquired = ?, date_modified = NOW() 
+                                WHERE rr_no IN ($placeholders) 
+                                AND is_disabled = 0
+                            ");
+                            
+                            // First parameter is the new date_of_purchase, followed by all RR numbers
+                            $params = array_merge([$date_of_purchase], $relatedRRs);
+                            $updateStmt->execute($params);
+                            
+                            $updatedRows = $updateStmt->rowCount();
+                            if ($updatedRows > 0) {
+                                // Store the number of updated equipment records to include in the response
+                                $updatedEquipmentCount = $updatedRows;
+                                
+                                // Log the cascade update in the audit_log
+                                logAudit(
+                                    $pdo,
+                                    'Modified',
+                                    json_encode([
+                                        'action' => 'cascade_update',
+                                        'from_charge_invoice_id' => $id,
+                                        'old_date' => $old['date_of_purchase']
+                                    ]),
+                                    json_encode([
+                                        'action' => 'cascade_update',
+                                        'from_charge_invoice_id' => $id,
+                                        'new_date' => $date_of_purchase,
+                                        'updated_equipment_count' => $updatedRows
+                                    ]),
+                                    $id,
+                                    "Cascaded date update to $updatedRows equipment records",
+                                    'Successful'
+                                );
+                            }
+                        }
+                    } catch (Exception $e) {
+                        // Log error but don't stop the main transaction
+                        error_log("Error updating equipment_details dates: " . $e->getMessage());
+                    }
                 }
 
                 if ($logAdd) {
@@ -269,7 +331,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 header('Content-Type: application/json');
-                echo json_encode(['status' => 'success', 'message' => 'Charge Invoice updated successfully.']);
+                echo json_encode(['status' => 'success', 'message' => 'Charge Invoice updated successfully.', 'updated_equipment_count' => $updatedEquipmentCount]);
                 exit;
             }
             throw new Exception('No changes made or record not found.');
@@ -1403,6 +1465,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                         $('.modal-backdrop').remove();
                         $('body').removeClass('modal-open').css('overflow', '');
                         $('body').css('padding-right', '');
+                        
+                        // If equipment records were updated, show an additional notification
+                        if (response.updated_equipment_count && response.updated_equipment_count > 0) {
+                            setTimeout(function() {
+                                showToast(`Updated date_acquired for ${response.updated_equipment_count} equipment record(s)`, 'info');
+                            }, 500); // Small delay for better UX
+                        }
                     } else {
                         showToast(response.message || 'Error updating invoice', 'error');
                     }

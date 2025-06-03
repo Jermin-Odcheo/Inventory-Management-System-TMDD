@@ -251,8 +251,72 @@ WHERE ed.is_disabled = 0 AND (
                     'Successful'
                 ]);
 
+                // If date_acquired is provided and there's an RR number, update related charge_invoice
+                $dateAcquired = $_POST['date_acquired'] ?? null;
+                $updatedInvoiceCount = 0;
+                
+                if (!empty($dateAcquired)) {
+                    try {
+                        // Only proceed if we have an RR number
+                        $rrNo = $_POST['rr_no'] ?? null;
+                        if (!empty($rrNo)) {
+                            // Ensure RR number has the RR prefix
+                            if (strpos($rrNo, 'RR') !== 0) {
+                                $rrNo = 'RR' . $rrNo;
+                            }
+                            
+                            // 1. Get the PO number from the receive_report table
+                            $rrStmt = $pdo->prepare("SELECT po_no FROM receive_report WHERE rr_no = ? AND is_disabled = 0");
+                            $rrStmt->execute([$rrNo]);
+                            $rrData = $rrStmt->fetch(PDO::FETCH_ASSOC);
+                            
+                            if ($rrData && !empty($rrData['po_no'])) {
+                                $poNo = $rrData['po_no'];
+                                
+                                // 2. Update the charge_invoice connected to this PO
+                                $ciStmt = $pdo->prepare("
+                                    UPDATE charge_invoice 
+                                    SET date_of_purchase = ? 
+                                    WHERE po_no = ? AND is_disabled = 0
+                                ");
+                                $ciStmt->execute([$dateAcquired, $poNo]);
+                                
+                                $updatedInvoices = $ciStmt->rowCount();
+                                if ($updatedInvoices > 0) {
+                                    // Track the total number of updated invoices
+                                    $updatedInvoiceCount = $updatedInvoices;
+                                    
+                                    // 3. Log the changes to audit_log
+                                    $auditStmt = $pdo->prepare("INSERT INTO audit_log (
+                                        UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status, Date_Time
+                                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+                                    
+                                    $auditStmt->execute([
+                                        $_SESSION['user_id'],
+                                        $newEquipmentId,
+                                        'Charge Invoice',
+                                        'Modified',
+                                        'Charge invoice date updated from new equipment details',
+                                        null,
+                                        json_encode(['new_date' => $dateAcquired, 'po_no' => $poNo, 'updated_invoices' => $updatedInvoices]),
+                                        'Successful'
+                                    ]);
+                                }
+                            }
+                        }
+                    } catch (Exception $e) {
+                        // Log error but don't stop the main transaction
+                        error_log("Error updating charge invoice date during equipment creation: " . $e->getMessage());
+                    }
+                }
+
                 $pdo->commit();
-                echo json_encode(['status' => 'success', 'message' => 'Equipment Details has been added successfully.']);
+                echo json_encode([
+                    'status' => 'success', 
+                    'message' => 'Equipment Details has been added successfully' . 
+                        ($updatedInvoiceCount > 0 ? " (also updated {$updatedInvoiceCount} charge invoice(s))" : ""),
+                    'updated_invoice_count' => $updatedInvoiceCount
+                ]);
             } catch (Exception $e) {
                 if ($pdo->inTransaction()) {
                     $pdo->rollBack();
@@ -338,8 +402,74 @@ WHERE ed.is_disabled = 0 AND (
                     $newValues,
                     'Successful'
                 ]);
+                
+                // If date_acquired was changed, update related charge_invoice
+                $oldDateAcquired = $oldEquipment['date_acquired'] ?? null;
+                $newDateAcquired = $_POST['date_acquired'] ?? null;
+                $updatedInvoiceCount = 0;
+                
+                if ($oldDateAcquired !== $newDateAcquired && !empty($newDateAcquired)) {
+                    try {
+                        // Only proceed if we have an RR number
+                        $rrNo = $_POST['rr_no'] ?? null;
+                        if (!empty($rrNo)) {
+                            // Ensure RR number has the RR prefix
+                            if (strpos($rrNo, 'RR') !== 0) {
+                                $rrNo = 'RR' . $rrNo;
+                            }
+                            
+                            // 1. Get the PO number from the receive_report table
+                            $rrStmt = $pdo->prepare("SELECT po_no FROM receive_report WHERE rr_no = ? AND is_disabled = 0");
+                            $rrStmt->execute([$rrNo]);
+                            $rrData = $rrStmt->fetch(PDO::FETCH_ASSOC);
+                            
+                            if ($rrData && !empty($rrData['po_no'])) {
+                                $poNo = $rrData['po_no'];
+                                
+                                // 2. Update the charge_invoice connected to this PO
+                                $ciStmt = $pdo->prepare("
+                                    UPDATE charge_invoice 
+                                    SET date_of_purchase = ? 
+                                    WHERE po_no = ? AND is_disabled = 0
+                                ");
+                                $ciStmt->execute([$newDateAcquired, $poNo]);
+                                
+                                $updatedInvoices = $ciStmt->rowCount();
+                                if ($updatedInvoices > 0) {
+                                    // Track the total number of updated invoices
+                                    $updatedInvoiceCount = $updatedInvoices;
+                                    
+                                    // 3. Log the changes to audit_log
+                                    $auditStmt = $pdo->prepare("INSERT INTO audit_log (
+                                        UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status, Date_Time
+                                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+                                    
+                                    $auditStmt->execute([
+                                        $_SESSION['user_id'],
+                                        $_POST['equipment_id'],
+                                        'Charge Invoice',
+                                        'Modified',
+                                        'Charge invoice date updated from equipment details',
+                                        json_encode(['old_date' => $oldDateAcquired, 'po_no' => $poNo]),
+                                        json_encode(['new_date' => $newDateAcquired, 'po_no' => $poNo, 'updated_invoices' => $updatedInvoices]),
+                                        'Successful'
+                                    ]);
+                                }
+                            }
+                        }
+                    } catch (Exception $e) {
+                        // Log error but don't stop the main transaction
+                        error_log("Error updating charge invoice date: " . $e->getMessage());
+                    }
+                }
+                
                 $pdo->commit();
-                echo json_encode(['status' => 'success', 'message' => 'Equipment updated successfully']);
+                echo json_encode([
+                    'status' => 'success', 
+                    'message' => 'Equipment updated successfully' . 
+                        ($updatedInvoiceCount > 0 ? " (also updated {$updatedInvoiceCount} charge invoice(s))" : ""),
+                    'updated_invoice_count' => $updatedInvoiceCount
+                ]);
             } catch (Exception $e) {
                 if ($pdo->inTransaction()) {
                     $pdo->rollBack();
@@ -1712,6 +1842,13 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
                                     window.allRows = $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').toArray();
                                     window.filteredRows = [...window.allRows];
                                     if (typeof filterEquipmentTable === 'function') filterEquipmentTable();
+                                    
+                                    // Show additional notification if invoices were updated
+                                    if (result.updated_invoice_count && result.updated_invoice_count > 0) {
+                                        setTimeout(function() {
+                                            showToast(`Updated date in ${result.updated_invoice_count} charge invoice(s)`, 'info');
+                                        }, 800); // Small delay for better UX
+                                    }
                                 });
                             } else {
                                 showToast(result.message || 'Failed to update equipment.', 'error');

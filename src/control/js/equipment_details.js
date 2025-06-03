@@ -194,6 +194,11 @@ $(document).ready(function() {
     // Add Equipment
     $('#addEquipmentForm').on('submit', function(e) {
         e.preventDefault();
+        
+        var $form = $(this);
+        var submitBtn = $form.find('button[type="submit"]');
+        var originalBtnText = submitBtn.text();
+        submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...');
     
         $.ajax({
             url: '../../modules/equipment_manager/equipment_details.php',
@@ -204,18 +209,32 @@ $(document).ready(function() {
                     const result = JSON.parse(response);
                     if (result.status === 'success') {
                         $('#addEquipmentModal').modal('hide');
-                        location.reload();
+                        showToast(result.message, 'success');
+                        
+                        // Check if any charge invoices were updated
+                        if (result.updated_invoice_count && result.updated_invoice_count > 0) {
+                            setTimeout(function() {
+                                showToast(`Updated date in ${result.updated_invoice_count} charge invoice(s)`, 'info');
+                            }, 800); // Small delay for better UX
+                        }
+                        
+                        setTimeout(function() {
+                            location.reload();
+                        }, 1500);
                     } else {
-                        alert(result.message);
+                        showToast(result.message, 'error');
+                        submitBtn.prop('disabled', false).text(originalBtnText);
                     }
                 } catch (e) {
                     console.error('Parse error:', e); // Debug line
-                    alert('Error processing the request');
+                    showToast('Error processing the request', 'error');
+                    submitBtn.prop('disabled', false).text(originalBtnText);
                 }
             },
             error: function(xhr, status, error) {
                 console.error('Ajax error:', error); // Debug line
-                alert('Error processing the request');
+                showToast('Error processing the request', 'error');
+                submitBtn.prop('disabled', false).text(originalBtnText);
             }
         });
     });
