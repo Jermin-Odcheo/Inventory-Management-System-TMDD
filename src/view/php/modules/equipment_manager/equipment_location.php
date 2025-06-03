@@ -112,6 +112,109 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAjax) {
 
         $pdo->commit();
 
+        // After successfully updating the location, also update the equipment details
+        // Format location as "Building, Area" if both are available
+        $combinedLocation = '';
+        if (!empty($buildingLoc) && !empty($specificArea)) {
+            $combinedLocation = $buildingLoc . ', ' . $specificArea;
+        } elseif (!empty($buildingLoc)) {
+            $combinedLocation = $buildingLoc;
+        } elseif (!empty($specificArea)) {
+            $combinedLocation = $specificArea;
+        }
+        
+        // Instead of using CURL, directly update the equipment details
+        try {
+            $pdo->beginTransaction();
+            
+            // Check if the equipment details record exists
+            $checkStmt = $pdo->prepare("SELECT id, location, accountable_individual 
+                                  FROM equipment_details 
+                                  WHERE asset_tag = ? AND is_disabled = 0
+                                  ORDER BY date_created DESC LIMIT 1");
+            $checkStmt->execute([$assetTag]);
+            $detailsData = $checkStmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($detailsData) {
+                // Record exists, update it
+                $oldLocation = $detailsData['location'];
+                $oldAccountable = $detailsData['accountable_individual'];
+                $detailsId = $detailsData['id'];
+                
+                // Check if there are actual changes to make
+                $locationChanged = (!empty($combinedLocation) && $combinedLocation !== $oldLocation);
+                $accountableChanged = (!empty($personResponsible) && $personResponsible !== $oldAccountable);
+                
+                if ($locationChanged || $accountableChanged) {
+                    // Build the update query based on what needs to be updated
+                    $updateFields = [];
+                    $params = [];
+                    
+                    if ($locationChanged) {
+                        $updateFields[] = "location = ?";
+                        $params[] = $combinedLocation;
+                    }
+                    
+                    if ($accountableChanged) {
+                        $updateFields[] = "accountable_individual = ?";
+                        $params[] = $personResponsible;
+                    }
+                    
+                    // Always update date_modified when saving
+                    $updateFields[] = "date_modified = NOW()";
+                    
+                    // Add equipment details ID
+                    $params[] = $detailsId;
+                    
+                    // Execute the update
+                    $updateSql = "UPDATE equipment_details SET " . implode(", ", $updateFields) . " WHERE id = ?";
+                    $updateStmt = $pdo->prepare($updateSql);
+                    $updateStmt->execute($params);
+                    
+                    // Add audit log entry if changes were made
+                    if ($updateStmt->rowCount() > 0) {
+                        $oldValue = json_encode([
+                            'location' => $oldLocation,
+                            'accountable_individual' => $oldAccountable
+                        ]);
+                        
+                        $newValue = json_encode([
+                            'location' => $locationChanged ? $combinedLocation : $oldLocation,
+                            'accountable_individual' => $accountableChanged ? $personResponsible : $oldAccountable
+                        ]);
+                        
+                        $auditStmt = $pdo->prepare("INSERT INTO audit_log 
+                            (UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status, Date_Time)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+                        
+                        $auditStmt->execute([
+                            $_SESSION['user_id'],
+                            $detailsId,
+                            'Equipment Details',
+                            'Modified',
+                            'Equipment details updated from location change',
+                            $oldValue,
+                            $newValue,
+                            'Successful'
+                        ]);
+                        
+                        // Set a session flag to indicate that equipment details have been updated
+                        $_SESSION['equipment_details_updated'] = true;
+                        $_SESSION['updated_asset_tag'] = $assetTag;
+                    }
+                }
+            }
+            
+            $pdo->commit();
+            
+        } catch (Exception $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            // Log the error but don't stop the process
+            error_log('Error updating equipment details: ' . $e->getMessage());
+        }
+
         $message = $updateStmt->rowCount() > 0
             ? 'Location updated successfully'
             : 'No changes were made';
@@ -188,6 +291,110 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAjax) {
                     'Successful'
                 ]);
                 $pdo->commit();
+                
+                // After successfully adding the location, also update the equipment details
+                // Format location as "Building, Area" if both are available
+                $combinedLocation = '';
+                if (!empty($buildingLoc) && !empty($specificArea)) {
+                    $combinedLocation = $buildingLoc . ', ' . $specificArea;
+                } elseif (!empty($buildingLoc)) {
+                    $combinedLocation = $buildingLoc;
+                } elseif (!empty($specificArea)) {
+                    $combinedLocation = $specificArea;
+                }
+                
+                // Instead of using CURL, directly update the equipment details
+                try {
+                    $pdo->beginTransaction();
+                    
+                    // Check if the equipment details record exists
+                    $checkStmt = $pdo->prepare("SELECT id, location, accountable_individual 
+                                          FROM equipment_details 
+                                          WHERE asset_tag = ? AND is_disabled = 0
+                                          ORDER BY date_created DESC LIMIT 1");
+                    $checkStmt->execute([$assetTag]);
+                    $detailsData = $checkStmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if ($detailsData) {
+                        // Record exists, update it
+                        $oldLocation = $detailsData['location'];
+                        $oldAccountable = $detailsData['accountable_individual'];
+                        $detailsId = $detailsData['id'];
+                        
+                        // Check if there are actual changes to make
+                        $locationChanged = (!empty($combinedLocation) && $combinedLocation !== $oldLocation);
+                        $accountableChanged = (!empty($personResponsible) && $personResponsible !== $oldAccountable);
+                        
+                        if ($locationChanged || $accountableChanged) {
+                            // Build the update query based on what needs to be updated
+                            $updateFields = [];
+                            $params = [];
+                            
+                            if ($locationChanged) {
+                                $updateFields[] = "location = ?";
+                                $params[] = $combinedLocation;
+                            }
+                            
+                            if ($accountableChanged) {
+                                $updateFields[] = "accountable_individual = ?";
+                                $params[] = $personResponsible;
+                            }
+                            
+                            // Always update date_modified when saving
+                            $updateFields[] = "date_modified = NOW()";
+                            
+                            // Add equipment details ID
+                            $params[] = $detailsId;
+                            
+                            // Execute the update
+                            $updateSql = "UPDATE equipment_details SET " . implode(", ", $updateFields) . " WHERE id = ?";
+                            $updateStmt = $pdo->prepare($updateSql);
+                            $updateStmt->execute($params);
+                            
+                            // Add audit log entry if changes were made
+                            if ($updateStmt->rowCount() > 0) {
+                                $oldValue = json_encode([
+                                    'location' => $oldLocation,
+                                    'accountable_individual' => $oldAccountable
+                                ]);
+                                
+                                $newValue = json_encode([
+                                    'location' => $locationChanged ? $combinedLocation : $oldLocation,
+                                    'accountable_individual' => $accountableChanged ? $personResponsible : $oldAccountable
+                                ]);
+                                
+                                $auditStmt = $pdo->prepare("INSERT INTO audit_log 
+                                    (UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status, Date_Time)
+                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+                                
+                                $auditStmt->execute([
+                                    $_SESSION['user_id'],
+                                    $detailsId,
+                                    'Equipment Details',
+                                    'Modified',
+                                    'Equipment details updated from location change',
+                                    $oldValue,
+                                    $newValue,
+                                    'Successful'
+                                ]);
+                                
+                                // Set a session flag to indicate that equipment details have been updated
+                                $_SESSION['equipment_details_updated'] = true;
+                                $_SESSION['updated_asset_tag'] = $assetTag;
+                            }
+                        }
+                    }
+                    
+                    $pdo->commit();
+                    
+                } catch (Exception $e) {
+                    if ($pdo->inTransaction()) {
+                        $pdo->rollBack();
+                    }
+                    // Log the error but don't stop the process
+                    error_log('Error updating equipment details: ' . $e->getMessage());
+                }
+                
                 echo json_encode(['status' => 'success', 'message' => 'Equipment Location added successfully']);
             } else {
                 throw new Exception('No rows affected, check your input data.');
@@ -258,6 +465,63 @@ if (
                 null,
                 'Successful'
             ]);
+            
+            // When location is deleted, clear the location and accountable person in equipment details
+            $buildingLoc = $locationData['building_loc'] ?? '';
+            $specificArea = $locationData['specific_area'] ?? '';
+            
+            // Build the location string as it would appear in equipment_details
+            $existingLocation = '';
+            if (!empty($buildingLoc) && !empty($specificArea)) {
+                $existingLocation = $buildingLoc . ', ' . $specificArea;
+            } elseif (!empty($buildingLoc)) {
+                $existingLocation = $buildingLoc;
+            } elseif (!empty($specificArea)) {
+                $existingLocation = $specificArea;
+            }
+            
+            // Find and clear equipment details records that match this location
+            if (!empty($existingLocation)) {
+                $detailsStmt = $pdo->prepare("
+                    UPDATE equipment_details 
+                    SET location = '', accountable_individual = '', date_modified = NOW() 
+                    WHERE asset_tag = ? 
+                    AND is_disabled = 0 
+                    AND location = ?
+                ");
+                $detailsStmt->execute([$assetTag, $existingLocation]);
+                
+                if ($detailsStmt->rowCount() > 0) {
+                    // Log this change too
+                    $auditStmt = $pdo->prepare("
+                        INSERT INTO audit_log
+                        (UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status, Date_Time)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                    ");
+                    
+                    // We don't know the equipment_details ID, so query for it
+                    $idStmt = $pdo->prepare("
+                        SELECT id FROM equipment_details 
+                        WHERE asset_tag = ? AND is_disabled = 0
+                        ORDER BY id DESC LIMIT 1
+                    ");
+                    $idStmt->execute([$assetTag]);
+                    $detailsId = $idStmt->fetchColumn();
+                    
+                    if ($detailsId) {
+                        $auditStmt->execute([
+                            $_SESSION['user_id'],
+                            $detailsId,
+                            'Equipment Details',
+                            'Modified',
+                            'Equipment details updated due to location deletion',
+                            json_encode(['location' => $existingLocation, 'accountable_individual' => $locationData['person_responsible']]),
+                            json_encode(['location' => '', 'accountable_individual' => '']),
+                            'Successful'
+                        ]);
+                    }
+                }
+            }
 
             // Since equipment_location is the parent of Asset Tag, we don't cascade the deletion
             // to equipment_details or equipment_status
@@ -1448,9 +1712,9 @@ function safeHtml($value)
 
             // Capture form values before submission
             const assetTag = $('#add_location_asset_tag').val();
-            const buildingLoc = $('#addLocationForm input[name="building_loc"]').val();
-            const specificArea = $('#addLocationForm input[name="specific_area"]').val();
-            const personResponsible = $('#addLocationForm input[name="person_responsible"]').val();
+            const buildingLoc = $('input[name="building_loc"]', this).val();
+            const specificArea = $('input[name="specific_area"]', this).val();
+            const personResponsible = $('input[name="person_responsible"]', this).val();
 
             $.ajax({
                 url: window.location.href,
@@ -1486,6 +1750,14 @@ function safeHtml($value)
                         }, 500);
                         $('#elTable').load(location.href + ' #elTable', function() {
                             showToast(result.message, 'success');
+                            
+                            // After the table is reloaded, check if equipment details were updated
+                            if (assetTag && (buildingLoc || specificArea || personResponsible)) {
+                                // Show a message that equipment details were also updated
+                                setTimeout(function() {
+                                    showToast(`Equipment Details for Asset Tag "${assetTag}" also updated with new location/responsible person information`, 'info');
+                                }, 1500); // Show this message after a slight delay
+                            }
 
                             // Reinitialize pagination after reload
                             window.allRows = Array.from(document.querySelectorAll('#locationTbody tr'));
@@ -1562,7 +1834,31 @@ function safeHtml($value)
                             $('body').css('overflow', '');
                         }, 500);
                         $('#elTable').load(location.href + ' #elTable', function() {
+                            // Capture the values for equipment details update
+                            const assetTag = $('#edit_location_asset_tag').val();
+                            const buildingLoc = $('#edit_building_loc').val();
+                            const specificArea = $('#edit_specific_area').val();
+                            const personResponsible = $('#edit_person_responsible').val();
+
                             showToast(result.message, 'success');
+                            
+                            // After the table is reloaded, check if equipment details were updated
+                            if (assetTag && (buildingLoc || specificArea || personResponsible)) {
+                                // Create a combined location string
+                                let combinedLocation = '';
+                                if (buildingLoc && specificArea) {
+                                    combinedLocation = buildingLoc + ', ' + specificArea;
+                                } else if (buildingLoc) {
+                                    combinedLocation = buildingLoc;
+                                } else if (specificArea) {
+                                    combinedLocation = specificArea;
+                                }
+                                
+                                // Show a message that equipment details were also updated
+                                setTimeout(function() {
+                                    showToast(`Equipment Details for Asset Tag "${assetTag}" also updated with new location/responsible person information`, 'info');
+                                }, 1500); // Show this message after a slight delay
+                            }
 
                             // Reinitialize pagination after reload
                             window.allRows = Array.from(document.querySelectorAll('#locationTbody tr'));
