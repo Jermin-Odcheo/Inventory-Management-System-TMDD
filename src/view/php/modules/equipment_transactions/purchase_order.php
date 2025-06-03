@@ -95,6 +95,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     throw new Exception('You do not have permission to add purchase orders');
                 }
 
+                // Check for duplicate PO number before attempting insert
+                $dupCheck = $pdo->prepare("SELECT COUNT(*) FROM purchase_order WHERE po_no = ? AND is_disabled = 0");
+                $dupCheck->execute([$po_no]);
+                if ($dupCheck->fetchColumn() > 0) {
+                    throw new Exception("Purchase Order number '{$po_no}' already exists in the system.");
+                }
+
                 $stmt = $pdo->prepare("INSERT INTO purchase_order 
                     (po_no, date_of_order, no_of_units, item_specifications, date_created, is_disabled)
                     VALUES (?, ?, ?, ?, NOW(), 0)");
@@ -117,7 +124,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $success = "Purchase Order has been added successfully.";
             } catch (PDOException $e) {
-                $errors[] = "Error adding Purchase Order: " . $e->getMessage();
+                // Check if it's a duplicate entry error
+                if ($e->getCode() == '23000' && strpos($e->getMessage(), 'Duplicate entry') !== false) {
+                    $errors[] = "Purchase Order number '{$po_no}' already exists in the system.";
+                } else {
+                    $errors[] = "Error adding Purchase Order: " . $e->getMessage();
+                }
             } catch (Exception $e) {
                 $errors[] = $e->getMessage();
             }
@@ -140,6 +152,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (!$oldData) {
                         $errors[] = "Purchase Order not found.";
                     } else {
+                        // Check for duplicate PO number if it's being changed
+                        if ($oldData['po_no'] !== $po_no) {
+                            $dupCheck = $pdo->prepare("SELECT COUNT(*) FROM purchase_order WHERE po_no = ? AND id != ? AND is_disabled = 0");
+                            $dupCheck->execute([$po_no, $id]);
+                            if ($dupCheck->fetchColumn() > 0) {
+                                throw new Exception("Purchase Order number '{$po_no}' already exists in the system.");
+                            }
+                        }
+
                         // 3) prepare new values
                         $newData = [
                             'po_no'               => $po_no,
@@ -218,7 +239,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     }
                 } catch (PDOException $e) {
-                    $errors[] = "Error updating Purchase Order: " . $e->getMessage();
+                    // Check if it's a duplicate entry error
+                    if ($e->getCode() == '23000' && strpos($e->getMessage(), 'Duplicate entry') !== false) {
+                        $errors[] = "Purchase Order number '{$po_no}' already exists in the system.";
+                    } else {
+                        $errors[] = "Error updating Purchase Order: " . $e->getMessage();
+                    }
                 } catch (Exception $e) {
                     $errors[] = $e->getMessage();
                 }
@@ -232,6 +258,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $response = empty($errors)
             ? ['status' => 'success', 'message' => $success ?: 'Operation completed successfully']
             : ['status' => 'error', 'message' => $errors[0]];
+        header('Content-Type: application/json');
         echo json_encode($response);
         exit;
     } else {
@@ -406,6 +433,53 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
     <link href="../../../styles/css/equipment-transactions.css" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        // Function to display toast messages
+        function showToast(message, type = 'info', duration = 3000) {
+            // Remove any existing toasts
+            $('.toast-container').remove();
+            
+            // Create toast container if it doesn't exist
+            let toastContainer = $('<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>');
+            
+            // Set the appropriate background color based on type
+            let bgClass = 'bg-info';
+            if (type === 'success') bgClass = 'bg-success';
+            if (type === 'error') bgClass = 'bg-danger';
+            if (type === 'warning') bgClass = 'bg-warning';
+            
+            // Create the toast element
+            let toast = $(`
+                <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="toast-header ${bgClass} text-white">
+                        <strong class="me-auto">${type.charAt(0).toUpperCase() + type.slice(1)}</strong>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                </div>
+            `);
+            
+            // Add the toast to the container and the container to the body
+            toastContainer.append(toast);
+            $('body').append(toastContainer);
+            
+            // Auto-hide the toast after the specified duration
+            setTimeout(function() {
+                toast.fadeOut('slow', function() {
+                    toastContainer.remove();
+                });
+            }, duration);
+            
+            // Add click handler to close button
+            toast.find('.btn-close').on('click', function() {
+                toast.fadeOut('slow', function() {
+                    toastContainer.remove();
+                });
+            });
+        }
+    </script>
 </head>
 
 <body>
@@ -921,7 +995,17 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                             reattachEventHandlers();
                         });
                     } else {
-                        showToast(response.message, 'error');
+                        // If there's a duplicate entry error, show it and reopen the modal
+                        if (response.message && response.message.includes('already exists')) {
+                            showToast(response.message, 'error');
+                            // Reopen the modal so user can fix the PO number
+                            setTimeout(function() {
+                                var addModal = new bootstrap.Modal(document.getElementById('addPOModal'));
+                                addModal.show();
+                            }, 500);
+                        } else {
+                            showToast(response.message, 'error');
+                        }
                     }
                 },
                 error: function() {
@@ -966,8 +1050,27 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                             // Reattach event handlers
                             reattachEventHandlers();
                         });
+                        
+                        // Hide the edit modal
+                        var editModalEl = document.getElementById('editPOModal');
+                        var editModal = bootstrap.Modal.getInstance(editModalEl);
+                        if (editModal) {
+                            editModal.hide();
+                        }
                     } else {
-                        showToast(response.message, 'error');
+                        // If there's a duplicate entry error, show it but keep the modal open
+                        if (response.message && response.message.includes('already exists')) {
+                            showToast(response.message, 'error');
+                            // Keep the edit modal open so user can fix the PO number
+                        } else {
+                            showToast(response.message, 'error');
+                            // Hide the modal for other errors
+                            var editModalEl = document.getElementById('editPOModal');
+                            var editModal = bootstrap.Modal.getInstance(editModalEl);
+                            if (editModal) {
+                                editModal.hide();
+                            }
+                        }
                     }
                 },
                 error: function() {
