@@ -660,16 +660,31 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
     <style>
+        /* Update sortable header styles */
+        th.sortable {
+            cursor: pointer;
+            position: relative;
+            padding-right: 20px !important;
+        }
+
+        th.sortable::after {
+            content: "\f0dc";
+            font-family: "Font Awesome 5 Free";
+            font-weight: 900;
+            position: absolute;
+            right: 8px;
+            color: #999;
+        }
+
         th.sortable.asc::after {
-            content: " \2191";
-            /* Unicode up arrow */
+            content: "\f0de";
+            color: #0d6efd;
         }
 
         th.sortable.desc::after {
-            content: " \2193";
-            /* Unicode down arrow */
+            content: "\f0dd";
+            color: #0d6efd;
         }
-
 
         /* Pagination styling */
         .pagination {
@@ -882,8 +897,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
         </header>
 
         <section class="card">
-            <div class="card-header bg-dark text-white d-flex justify-content-between 
-align-items-center">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
                 <h2><i class="bi bi-list-task"></i> List of Equipment Details</h2>
             </div>
             <div class="card-body">
@@ -917,13 +931,46 @@ align-items-center">
                                     ?>
                                 </select>
                             </div>
-
+                            <div class="col-md-3">
+                                <label for="filterBrand" class="form-label">Brand</label>
+                                <select class="form-select select2-filter" id="filterBrand" name="filterBrand">
+                                    <option value="">All Brands</option>
+                                    <?php
+                                    $brands = array_unique(array_column(
+                                        $equipmentDetails,
+                                        'brand'
+                                    ));
+                                    foreach ($brands as $brand) {
+                                        if (!empty($brand)) {
+                                            echo "<option value='" . safeHtml($brand) . "'>" .
+                                                safeHtml($brand) . "</option>";
+                                        }
+                                    }
+                                    ?>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="filterLocation" class="form-label">Location</label>
+                                <select class="form-select select2-filter" id="filterLocation" name="filterLocation">
+                                    <option value="">All Locations</option>
+                                    <?php
+                                    $locations = array_unique(array_column(
+                                        $equipmentDetails,
+                                        'location'
+                                    ));
+                                    foreach ($locations as $location) {
+                                        if (!empty($location)) {
+                                            echo "<option value='" . safeHtml($location) . "'>" .
+                                                safeHtml($location) . "</option>";
+                                        }
+                                    }
+                                    ?>
+                                </select>
+                            </div>
                             <div class="col-md-3">
                                 <label for="dateFilter" class="form-label">Date Filter</label>
                                 <select class="form-select" id="dateFilter" name="dateFilter">
                                     <option value="">No Date Filter</option>
-                                    <option value="desc">Newest to Oldest</option>
-                                    <option value="asc">Oldest to Newest</option>
                                     <option value="month_year">Month-Year</option>
                                     <option value="year_range">Year Range</option>
                                     <option value="mdy">Month-Day-Year</option>
@@ -956,42 +1003,12 @@ align-items-center">
                             <div class="col-md-6 date-filter date-month_year d-none">
                                 <div class="row">
                                     <div class="col-md-6">
-                                        <label for="monthSelect" class="form-label">Month</label>
-                                        <select class="form-select" id="monthSelect" name="monthSelect">
-                                            <option value="">Select Month</option>
-                                            <?php
-                                            $months = [
-                                                'January',
-                                                'February',
-                                                'March',
-                                                'April',
-                                                'May',
-                                                'June',
-                                                'July',
-                                                'August',
-                                                'September',
-                                                'October',
-                                                'November',
-                                                'December'
-                                            ];
-                                            foreach ($months as $index => $month) {
-                                                echo "<option value='" . ($index + 1) . "'>" . $month .
-                                                    "</option>";
-                                            }
-                                            ?>
-                                        </select>
+                                        <label for="monthYearFrom" class="form-label">From Month-Year</label>
+                                        <input type="month" class="form-control" id="monthYearFrom" name="monthYearFrom">
                                     </div>
                                     <div class="col-md-6">
-                                        <label for="yearSelect" class="form-label">Year</label>
-                                        <select class="form-select" id="yearSelect" name="yearSelect">
-                                            <option value="">Select Year</option>
-                                            <?php
-                                            $currentYear = date('Y');
-                                            for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
-                                                echo "<option value='" . $year . "'>" . $year . "</option>";
-                                            }
-                                            ?>
-                                        </select>
+                                        <label for="monthYearTo" class="form-label">To Month-Year</label>
+                                        <input type="month" class="form-control" id="monthYearTo" name="monthYearTo">
                                     </div>
                                 </div>
                             </div>
@@ -1001,39 +1018,11 @@ align-items-center">
                                 <div class="row">
                                     <div class="col-md-6">
                                         <label for="yearFrom" class="form-label">From Year</label>
-                                        <select class="form-select" id="yearFrom" name="yearFrom">
-                                            <option value="">Select Year</option>
-                                            <?php
-                                            for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
-                                                echo "<option value='" . $year . "'>" . $year . "</option>";
-                                            }
-                                            ?>
-                                        </select>
+                                        <input type="number" class="form-control" id="yearFrom" name="yearFrom" min="2000" max="2100" placeholder="YYYY">
                                     </div>
                                     <div class="col-md-6">
                                         <label for="yearTo" class="form-label">To Year</label>
-                                        <select class="form-select" id="yearTo" name="yearTo">
-                                            <option value="">Select Year</option>
-                                            <?php
-                                            for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
-                                                echo "<option value='" . $year . "'>" . $year . "</option>";
-                                            }
-                                            ?>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Date Range Picker -->
-                            <div class="col-md-6 date-filter date-range d-none">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <label for="dateFrom" class="form-label">From Date</label>
-                                        <input type="date" class="form-control" id="dateFrom" name="dateFrom">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label for="dateTo" class="form-label">To Date</label>
-                                        <input type="date" class="form-control" id="dateTo" name="dateTo">
+                                        <input type="number" class="form-control" id="yearTo" name="yearTo" min="2000" max="2100" placeholder="YYYY">
                                     </div>
                                 </div>
                             </div>
@@ -1041,39 +1030,13 @@ align-items-center">
                             <!-- MDY Picker -->
                             <div class="col-md-6 date-filter date-mdy d-none">
                                 <div class="row">
-                                    <div class="col-md-4">
-                                        <label for="mdyMonth" class="form-label">Month</label>
-                                        <select class="form-select" id="mdyMonth" name="mdyMonth">
-                                            <option value="">Month</option>
-                                            <?php
-                                            foreach ($months as $index => $month) {
-                                                echo "<option value='" . ($index + 1) . "'>" . $month .
-                                                    "</option>";
-                                            }
-                                            ?>
-                                        </select>
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label fw-semibold">From (MM-DD-YYYY)</label>
+                                        <input type="date" class="form-control shadow-sm" id="mdyFrom" name="mdyFrom" placeholder="e.g., 2023-01-01">
                                     </div>
-                                    <div class="col-md-4">
-                                        <label for="mdyDay" class="form-label">Day</label>
-                                        <select class="form-select" id="mdyDay" name="mdyDay">
-                                            <option value="">Day</option>
-                                            <?php
-                                            for ($day = 1; $day <= 31; $day++) {
-                                                echo "<option value='" . $day . "'>" . $day . "</option>";
-                                            }
-                                            ?>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label for="mdyYear" class="form-label">Year</label>
-                                        <select class="form-select" id="mdyYear" name="mdyYear">
-                                            <option value="">Year</option>
-                                            <?php
-                                            for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
-                                                echo "<option value='" . $year . "'>" . $year . "</option>";
-                                            }
-                                            ?>
-                                        </select>
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label fw-semibold">To (MM-DD-YYYY)</label>
+                                        <input type="date" class="form-control shadow-sm" id="mdyTo" name="mdyTo" placeholder="e.g., 2023-12-31">
                                     </div>
                                 </div>
                             </div>
@@ -1122,54 +1085,36 @@ align-items-center">
                                                 echo date('Y-m-d', strtotime($acq));
                                             }
                                             ?></td>
-                                        <td class="d-none"><?= !empty($equipment['date_created']) ? date('Y-m-d 
-H:i', strtotime($equipment['date_created'])) : ''; ?></td>
-                                        <td class="d-none"><?= !empty($equipment['date_modified']) ? date('Y-m-d 
-H:i', strtotime($equipment['date_modified'])) : ''; ?></td>
-                                        <td><?= safeHtml((strpos($equipment['rr_no'] ?? '', 'RR') ===
-                                                0 ? $equipment['rr_no'] : ('RR' . $equipment['rr_no']))); ?></td>
+                                        <td class="d-none"><?= !empty($equipment['date_created']) ? date('Y-m-d H:i', strtotime($equipment['date_created'])) : ''; ?></td>
+                                        <td class="d-none"><?= !empty($equipment['date_modified']) ? date('Y-m-d H:i', strtotime($equipment['date_modified'])) : ''; ?></td>
+                                        <td><?= safeHtml((strpos($equipment['rr_no'] ?? '', 'RR') === 0 ? $equipment['rr_no'] : ('RR' . $equipment['rr_no']))); ?></td>
                                         <td><?= safeHtml($equipment['location']); ?></td>
                                         <td><?= safeHtml($equipment['accountable_individual']); ?></td>
                                         <td><?= safeHtml($equipment['remarks']); ?></td>
                                         <td>
                                             <div class="btn-group">
                                                 <?php if ($canModify): ?>
-                                                    <button class="btn btn-outline-info btn-sm 
-edit-equipment"
+                                                    <button class="btn btn-outline-info btn-sm edit-equipment"
                                                         data-id="<?= safeHtml($equipment['id']); ?>"
-                                                        data-asset="<?=
-                                                                    safeHtml($equipment['asset_tag']); ?>"
-                                                        data-desc1="<?=
-                                                                    safeHtml($equipment['asset_description_1']); ?>"
-                                                        data-desc2="<?=
-                                                                    safeHtml($equipment['asset_description_2']); ?>"
-                                                        data-spec="<?=
-                                                                    safeHtml($equipment['specifications']); ?>"
-                                                        data-brand="<?=
-                                                                    safeHtml($equipment['brand']); ?>"
-                                                        data-model="<?=
-                                                                    safeHtml($equipment['model']); ?>"
-                                                        data-serial="<?=
-                                                                        safeHtml($equipment['serial_number']); ?>"
-                                                        data-date-acquired="<?=
-                                                                            safeHtml($equipment['date_acquired']); ?>"
-                                                        data-location="<?=
-                                                                        safeHtml($equipment['location']); ?>"
-                                                        data-accountable="<?=
-                                                                            safeHtml($equipment['accountable_individual']); ?>"
-                                                        data-rr="<?= safeHtml($equipment['rr_no']);
-                                                                    ?>"
-                                                        data-date="<?=
-                                                                    safeHtml($equipment['date_created']); ?>"
-                                                        data-remarks="<?=
-                                                                        safeHtml($equipment['remarks']); ?>">
+                                                        data-asset="<?= safeHtml($equipment['asset_tag']); ?>"
+                                                        data-desc1="<?= safeHtml($equipment['asset_description_1']); ?>"
+                                                        data-desc2="<?= safeHtml($equipment['asset_description_2']); ?>"
+                                                        data-spec="<?= safeHtml($equipment['specifications']); ?>"
+                                                        data-brand="<?= safeHtml($equipment['brand']); ?>"
+                                                        data-model="<?= safeHtml($equipment['model']); ?>"
+                                                        data-serial="<?= safeHtml($equipment['serial_number']); ?>"
+                                                        data-date-acquired="<?= safeHtml($equipment['date_acquired']); ?>"
+                                                        data-location="<?= safeHtml($equipment['location']); ?>"
+                                                        data-accountable="<?= safeHtml($equipment['accountable_individual']); ?>"
+                                                        data-rr="<?= safeHtml($equipment['rr_no']); ?>"
+                                                        data-date="<?= safeHtml($equipment['date_created']); ?>"
+                                                        data-remarks="<?= safeHtml($equipment['remarks']); ?>">
                                                         <i class="bi bi-pencil-square"></i>
                                                     </button>
                                                 <?php endif; ?>
 
                                                 <?php if ($canDelete): ?>
-                                                    <button class="btn btn-outline-danger btn-sm 
-remove-equipment"
+                                                    <button class="btn btn-outline-danger btn-sm remove-equipment"
                                                         data-id="<?= safeHtml($equipment['id']); ?>">
                                                         <i class="bi bi-trash"></i>
                                                     </button>
@@ -1736,6 +1681,42 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                     'pointer-events': 'auto'
                 });
             });
+
+            // Initialize Select2 for brand and location filters
+            $('.select2-filter').select2({
+                placeholder: function() {
+                    return $(this).data('placeholder') || 'Select...';
+                },
+                allowClear: true,
+                width: '100%',
+                dropdownAutoWidth: true,
+                minimumResultsForSearch: 0
+            });
+
+            // Set specific placeholders
+            $('#filterBrand').data('placeholder', 'Search Brand...');
+            $('#filterLocation').data('placeholder', 'Search Location...');
+
+            // Initialize Select2 for equipment type filter
+            try {
+                if ($.fn.select2) {
+                    $('#filterEquipment').select2({
+                        placeholder: 'Filter Equipment Type',
+                        allowClear: true,
+                        width: '100%',
+                        dropdownAutoWidth: true,
+                        minimumResultsForSearch: 0
+                    }).on('select2:select', function(e) {
+                        console.log('Equipment type selected:', e.params.data);
+                    }).on('select2:unselect', function() {
+                        console.log('Equipment type filter cleared');
+                    });
+
+                    console.log('Select2 initialized for equipment filter');
+                }
+            } catch (e) {
+                console.error('Error initializing Select2:', e);
+            }
         });
 
         // Custom filterTable function for equipment details
@@ -1745,46 +1726,41 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
             // Get filter values
             const searchText = $('#searchEquipment').val() || '';
             const filterEquipment = $('#filterEquipment').val() || '';
+            const filterBrand = $('#filterBrand').val() || '';
+            const filterLocation = $('#filterLocation').val() || '';
             const dateFilterType = $('#dateFilter').val() || '';
 
-            // Month-Year filter values
-            const selectedMonth = $('#monthSelect').val() || '';
-            const selectedYear = $('#yearSelect').val() || '';
-
-            // Date Range filter values
+            // Date filter values
+            const monthYearFrom = $('#monthYearFrom').val() || '';
+            const monthYearTo = $('#monthYearTo').val() || '';
             const dateFrom = $('#dateFrom').val() || '';
             const dateTo = $('#dateTo').val() || '';
-
-            // Year Range filter values
             const yearFrom = $('#yearFrom').val() || '';
             const yearTo = $('#yearTo').val() || '';
-
-            // MDY filter values
-            const mdyMonth = $('#mdyMonth').val() || '';
-            const mdyDay = $('#mdyDay').val() || '';
-            const mdyYear = $('#mdyYear').val() || '';
+            const mdyFrom = $('#mdyFrom').val() || '';
+            const mdyTo = $('#mdyTo').val() || '';
 
             // Debug output filter values
             console.log('FILTER VALUES:', {
                 searchText,
                 filterEquipment,
+                filterBrand,
+                filterLocation,
                 dateFilterType,
-                selectedMonth,
-                selectedYear,
+                monthYearFrom,
+                monthYearTo,
                 dateFrom,
                 dateTo,
                 yearFrom,
                 yearTo,
-                mdyMonth,
-                mdyDay,
-                mdyYear
+                mdyFrom,
+                mdyTo
             });
 
-            // Get all table rows directly
+            // Get all table rows
             const tableRows = $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').toArray();
             console.log(`Total rows in table: ${tableRows.length}`);
 
-            // If no rows, show message and exit
             if (tableRows.length === 0) {
                 console.log('No rows found in table');
                 return;
@@ -1795,99 +1771,73 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
 
             // Apply filters to each row
             tableRows.forEach((row, index) => {
-                // Skip non-data rows (like messages)
                 if (row.id === 'noResultsMessage' || row.id === 'initialFilterMessage') {
                     return;
                 }
 
                 try {
-                    // Get all cells in the row
                     const cells = Array.from(row.cells || []);
-
                     if (cells.length === 0) {
                         console.log(`Row ${index} has no cells`);
                         return;
                     }
 
-                    // Extract text content from all cells for easier access
+                    // Extract text content from cells
                     const cellTexts = [];
                     let equipmentTypeText = '';
+                    let brandText = '';
+                    let locationText = '';
                     let dateText = '';
 
-                    // Process each cell
                     cells.forEach((cell, cellIndex) => {
                         const text = (cell.textContent || '').trim();
                         cellTexts.push(text.toLowerCase());
 
                         // Store important column values
-                        if (cellIndex === 2) equipmentTypeText = text.toLowerCase(); // Equipment Type (Col 3)
-                        if (cellIndex === 9) dateText = text; // Created Date (Col 10)
+                        if (cellIndex === 2) equipmentTypeText = text.toLowerCase(); // Equipment Type
+                        if (cellIndex === 5) brandText = text.toLowerCase(); // Brand
+                        if (cellIndex === 12) locationText = text.toLowerCase(); // Location
+                        if (cellIndex === 8) dateText = text; // Acquired Date
                     });
 
-                    // Full row text for search
                     const rowText = cellTexts.join(' ');
 
-                    // 1. SEARCH FILTER - Check if search text is in any cell
+                    // 1. SEARCH FILTER
                     const searchMatch = !searchText || rowText.includes(searchText.toLowerCase());
 
-                    // 2. EQUIPMENT TYPE FILTER - Check equipment type
-                    let equipmentMatch = true;
-                    if (filterEquipment && filterEquipment !== '') {
-                        const filterValue = filterEquipment.toLowerCase();
-                        equipmentMatch = equipmentTypeText === filterValue;
+                    // 2. EQUIPMENT TYPE FILTER
+                    const equipmentMatch = !filterEquipment || equipmentTypeText === filterEquipment.toLowerCase();
 
-                        // Debug for first few rows
-                        if (index < 5) {
-                            console.log(`Row ${index} equipment: "${equipmentTypeText}" vs filter: "${filterValue}" = ${equipmentMatch}`);
-                        }
-                    }
+                    // 3. BRAND FILTER
+                    const brandMatch = !filterBrand || brandText === filterBrand.toLowerCase();
 
-                    // 3. DATE FILTER - Apply date filter if selected
+                    // 4. LOCATION FILTER
+                    const locationMatch = !filterLocation || locationText === filterLocation.toLowerCase();
+
+                    // 5. DATE FILTER
                     let dateMatch = true;
                     if (dateFilterType && dateText) {
                         const date = new Date(dateText);
-                        if (!isNaN(date.getTime())) { // Valid date
-                            if (dateFilterType === 'month_year' && selectedMonth && selectedYear) {
-                                // Month-Year filter
-                                const month = date.getMonth() + 1; // getMonth is 0-indexed
+                        if (!isNaN(date.getTime())) {
+                            if (dateFilterType === 'month_year' && (monthYearFrom || monthYearTo)) {
+                                const rowMonthYear = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
+                                dateMatch = (!monthYearFrom || rowMonthYear >= monthYearFrom) &&
+                                    (!monthYearTo || rowMonthYear <= monthYearTo);
+                            } else if (dateFilterType === 'year_range' && (yearFrom || yearTo)) {
                                 const year = date.getFullYear();
-                                dateMatch = (month === parseInt(selectedMonth)) && (year === parseInt(selectedYear));
-                                if (index < 5) {
-                                    console.log(`Row ${index} month-year filter: ${month}/${year} vs ${selectedMonth}/${selectedYear} = ${dateMatch}`);
-                                }
-                            } else if (dateFilterType === 'range' && dateFrom && dateTo) {
-                                // Date Range filter
-                                const fromDate = new Date(dateFrom);
-                                const toDate = new Date(dateTo);
-                                toDate.setHours(23, 59, 59); // End of day
+                                dateMatch = (!yearFrom || year >= parseInt(yearFrom)) &&
+                                    (!yearTo || year <= parseInt(yearTo));
+                            } else if (dateFilterType === 'mdy' && (mdyFrom || mdyTo)) {
+                                const fromDate = mdyFrom ? new Date(mdyFrom) : new Date(0);
+                                const toDate = mdyTo ? new Date(mdyTo) : new Date(8640000000000000);
+                                toDate.setHours(23, 59, 59);
                                 dateMatch = date >= fromDate && date <= toDate;
-                                if (index < 5) {
-                                    console.log(`Row ${index} date range filter: ${date} between ${fromDate} and ${toDate} = ${dateMatch}`);
-                                }
-                            } else if (dateFilterType === 'year_range' && yearFrom && yearTo) {
-                                // Year Range filter
-                                const year = date.getFullYear();
-                                dateMatch = (year >= parseInt(yearFrom)) && (year <= parseInt(yearTo));
-                                if (index < 5) {
-                                    console.log(`Row ${index} year range filter: ${year} between ${yearFrom} and ${yearTo} = ${dateMatch}`);
-                                }
-                            } else if (dateFilterType === 'mdy' && mdyMonth && mdyDay && mdyYear) {
-                                // MDY filter (exact date match)
-                                const month = date.getMonth() + 1;
-                                const day = date.getDate();
-                                const year = date.getFullYear();
-                                dateMatch = (month === parseInt(mdyMonth)) &&
-                                    (day === parseInt(mdyDay)) &&
-                                    (year === parseInt(mdyYear));
-                                if (index < 5) {
-                                    console.log(`Row ${index} MDY filter: ${month}/${day}/${year} vs ${mdyMonth}/${mdyDay}/${mdyYear} = ${dateMatch}`);
-                                }
                             }
                         }
                     }
 
-                    // Final decision - row should be shown if it matches all filters
-                    const shouldShow = searchMatch && equipmentMatch && dateMatch;
+                    // Final decision - show row if it matches all filters
+                    const shouldShow = searchMatch && equipmentMatch && brandMatch && locationMatch && dateMatch;
 
                     if (shouldShow) {
                         filteredRows.push(row);
@@ -1903,34 +1853,16 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
 
             console.log(`Filtered rows: ${filteredRows.length} of ${tableRows.length}`);
 
-            // Hide all rows first
-            $(tableRows).hide();
-
-            // Store filtered rows in global variable for pagination
+            // Store filtered rows for pagination
             window.allRows = tableRows;
             window.filteredRows = filteredRows;
 
-            // Sort if needed (date ascending/descending)
-            if (dateFilterType === 'asc' || dateFilterType === 'desc') {
-                filteredRows.sort((a, b) => {
-                    const dateA = a.cells && a.cells[9] ? new Date(a.cells[9].textContent || '') : new Date(0);
-                    const dateB = b.cells && b.cells[9] ? new Date(b.cells[9].textContent || '') : new Date(0);
-                    return dateFilterType === 'asc' ? dateA - dateB : dateB - dateA;
-                });
-
-                // Re-order the DOM elements based on sort
-                const tbody = document.getElementById('equipmentTable');
-                filteredRows.forEach(row => {
-                    tbody.appendChild(row); // Move to the end in sorted order
-                });
-            }
-
-            // Reset to page 1 after filtering
+            // Reset to page 1
             window.currentPage = 1;
 
-            // Initialize or reset pagination with the filtered rows
+            // Update pagination
             const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
-            const totalRows = window.filteredRows.length;
+            const totalRows = filteredRows.length;
             const totalPages = Math.ceil(totalRows / rowsPerPage);
 
             // Update display counts
@@ -1938,19 +1870,14 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
             $('#rowsPerPage').text(rowsPerPage);
             $('#totalRows').text(totalRows);
 
-            // Rebuild pagination UI
+            // Rebuild pagination
             buildPaginationButtons(totalPages);
             updatePaginationButtons();
-
-            // Show only the rows for the current page
             showCurrentPageRows();
 
-            // Show "no results" message if no matches found
+            // Show/hide no results message
             if (filteredRows.length === 0) {
-                // Remove any existing no results message
                 $('#noResultsMessage').remove();
-
-                // Create and insert a "no results" message
                 const tbody = document.getElementById('equipmentTable');
                 const noResultsRow = document.createElement('tr');
                 noResultsRow.id = 'noResultsMessage';
@@ -1964,12 +1891,10 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                 tbody.appendChild(noResultsRow);
                 $(noResultsRow).show();
             } else {
-                // Remove any "no results" message if we have matches
                 $('#noResultsMessage').remove();
             }
 
             console.log('----------- CUSTOM FILTER FUNCTION COMPLETED -----------');
-
             return filteredRows;
         }
 
@@ -2192,19 +2117,17 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                 // Reset all filter inputs
                 $('#searchEquipment').val('');
 
-                // Reset select2 dropdown
-                if ($('#filterEquipment').data('select2')) {
-                    $('#filterEquipment').val(null).trigger('change');
-                } else {
-                    $('#filterEquipment').val('');
-                }
+                // Reset Select2 dropdowns
+                $('#filterEquipment').val(null).trigger('change');
+                $('#filterBrand').val(null).trigger('change');
+                $('#filterLocation').val(null).trigger('change');
 
                 // Reset Date Filter
                 $('#dateFilter').val('');
 
                 // Reset Month-Year values
-                $('#monthSelect').val('');
-                $('#yearSelect').val('');
+                $('#monthYearFrom').val('');
+                $('#monthYearTo').val('');
 
                 // Reset Date Range values
                 $('#dateFrom').val('');
@@ -2215,9 +2138,8 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                 $('#yearTo').val('');
 
                 // Reset MDY values
-                $('#mdyMonth').val('');
-                $('#mdyDay').val('');
-                $('#mdyYear').val('');
+                $('#mdyFrom').val('');
+                $('#mdyTo').val('');
 
                 // Hide date inputs container
                 $('#dateInputsContainer').addClass('d-none');
@@ -2297,34 +2219,11 @@ WHERE is_disabled = 0 ORDER BY rr_no DESC");
                         $('.date-month_year').removeClass('d-none');
                     } else if (filterType === 'year_range') {
                         $('.date-year_range').removeClass('d-none');
-                    } else if (filterType === 'range') {
-                        $('.date-range').removeClass('d-none');
                     } else if (filterType === 'mdy') {
                         $('.date-mdy').removeClass('d-none');
                     }
                 }
             });
-
-            // Initialize Select2 for equipment type filter
-            try {
-                if ($.fn.select2) {
-                    $('#filterEquipment').select2({
-                        placeholder: 'Filter Equipment Type',
-                        allowClear: true,
-                        width: '100%',
-                        dropdownAutoWidth: true,
-                        minimumResultsForSearch: 0
-                    }).on('select2:select', function(e) {
-                        console.log('Equipment type selected:', e.params.data);
-                    }).on('select2:unselect', function() {
-                        console.log('Equipment type filter cleared');
-                    });
-
-                    console.log('Select2 initialized for equipment filter');
-                }
-            } catch (e) {
-                console.error('Error initializing Select2:', e);
-            }
 
             // Set up column sorting
             $('.sortable').on('click', function() {
