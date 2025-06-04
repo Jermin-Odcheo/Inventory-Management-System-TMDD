@@ -1,9 +1,23 @@
 <?php
+/**
+ * Roles and Modules Management Script
+ *
+ * This script manages the display and assignment of modules to roles within the system.
+ * It fetches roles and their associated modules from the database, displays them in a table,
+ * and provides a modal interface for assigning or removing modules from specific roles.
+ * The script handles database operations for fetching roles and modules, as well as processing
+ * form submissions for module assignments and removals.
+ *
+ */
 session_start();
 require_once('../../../../../../config/ims-tmdd.php'); // Database connection
 
-
-//fetch roles and their associated modules
+/**
+ * Fetch Roles and Associated Modules
+ *
+ * Retrieves all roles from the database along with their associated modules.
+ * The data is grouped by role ID and name, with modules concatenated into a single string.
+ */
 try {
     $stmt = $pdo->prepare("
         SELECT 
@@ -23,7 +37,12 @@ try {
     die("Database error: " . $e->getMessage());
 }
 
-//Fetch modules for modal
+/**
+ * Fetch Modules and Privileges
+ *
+ * Retrieves all modules from the database along with their associated privileges.
+ * The data is grouped by module ID and name, with privileges concatenated into a single string.
+ */
 try {
     $moduleStmt = $pdo->prepare("
         SELECT 
@@ -41,7 +60,12 @@ try {
     die("Database error: " . $e->getMessage());
 }
 
-//handle role selection for the modal
+/**
+ * Handle Role Selection for Modal
+ *
+ * Processes form submission to select a role for editing its module assignments.
+ * Sets the selected role's name and ID for use in the modal.
+ */
 $selectedRoleName = "";
 $selectedRoleId = "";
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['open_modal'])) {
@@ -49,7 +73,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['open_modal'])) {
     $selectedRoleId = $_POST['selected_role_id'];
 }
 
-//add module to role
+/**
+ * Assign Module to Role
+ *
+ * Handles the assignment of a module to a selected role.
+ * Checks if the module is already assigned to avoid duplicates, then inserts the relationship.
+ */
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['assign_module'])) {
     $roleId = $_POST['role_id'];
     $moduleId = $_POST['module_id'];
@@ -75,7 +104,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['assign_module'])) {
     }
 }
 
-//remove module from a role
+/**
+ * Remove Module from Role
+ *
+ * Handles the removal of a module from a selected role.
+ * Deletes the relationship between the role and the module's privileges.
+ */
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['remove_module'])) {
     $roleId = $_POST['role_id'];
     $moduleId = $_POST['module_id'];

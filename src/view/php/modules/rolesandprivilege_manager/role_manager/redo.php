@@ -1,12 +1,31 @@
 <?php
+/**
+ * Redo Role Changes Script
+ *
+ * This script handles the redoing of the last undone role change action performed by a logged-in user.
+ * It supports reapplying actions such as adding, modifying, or deleting roles in the system.
+ * The script checks for the last undone action and performs the necessary database operations
+ * to reapply it. The action is then marked as not undone in the database.
+ */
 session_start();
 require_once('../../../../../../config/ims-tmdd.php');
 
+/**
+ * Check User Authentication
+ *
+ * Ensures that the user is logged in by checking for the presence of a user ID in the session.
+ */
 if (!isset($_SESSION['user_id'])) {
     echo json_encode(['success' => false, 'message' => 'Unauthorized access.']);
     exit();
 }
 
+/**
+ * Handle Redo Operation
+ *
+ * Fetches the last undone action for the current user and reapplies it based on the action type.
+ * Updates the database to mark the action as not undone after successful reapplication.
+ */
 try {
     // Fetch the last undone action from the role_changes table
     $stmt = $pdo->prepare("SELECT * FROM role_changes WHERE UserID = ? AND IsUndone = 1 ORDER BY ChangeID DESC LIMIT 1");

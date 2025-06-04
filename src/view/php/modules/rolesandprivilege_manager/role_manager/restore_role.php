@@ -1,22 +1,42 @@
 <?php
+/**
+ * Role Restoration Script
+ *
+ * This script handles the restoration of roles that have been previously disabled or archived.
+ * It supports both single role restoration and bulk restoration of multiple roles.
+ * The script verifies the existence and disabled status of roles before restoration,
+ * logs the actions in audit logs, and handles database transactions to ensure data integrity.
+ */
 session_start();
 require_once('../../../../../../config/ims-tmdd.php');
 
-// Ensure the request method is POST.
+/**
+ * Validate Request Method
+ *
+ * Ensures that the request method is POST to prevent unauthorized or incorrect access.
+ */
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'message' => 'Invalid request method.']);
     exit();
 }
 
-// Check if either single id or array of ids is provided
+/**
+ * Check for Role ID(s)
+ *
+ * Verifies that either a single role ID or an array of role IDs is provided in the request.
+ */
 if (!isset($_POST['id']) && !isset($_POST['ids'])) {
     echo json_encode(['success' => false, 'message' => 'No role ID(s) specified.']);
     exit();
 }
 
+/**
+ * Set User ID for Audit
+ *
+ * Retrieves the user ID from the session for audit purposes and sets it in the database context.
+ */
 $userId = $_SESSION['user_id'] ?? null;
 
-// Set the user ID for audit purposes
 if ($userId) {
     $pdo->exec("SET @current_user_id = " . (int)$userId);
 } else {
@@ -25,6 +45,12 @@ if ($userId) {
     exit();
 }
 
+/**
+ * Handle Role Restoration
+ *
+ * Manages the restoration process for roles, including both single and bulk restorations.
+ * It handles database transactions, verifies role status, logs actions, and formats privilege data.
+ */
 try {
     // Start transaction
     $pdo->beginTransaction();

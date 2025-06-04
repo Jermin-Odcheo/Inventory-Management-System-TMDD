@@ -1,11 +1,25 @@
 <?php
+/**
+ * Edit Role Script
+ *
+ * This script handles the editing of an existing role within the system. It fetches role details,
+ * associated privileges, and available modules and privileges for display in an edit form.
+ * Upon form submission, it updates the role's name and privileges, logs the changes, and returns
+ * the updated information via AJAX.
+ */
 session_start();
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 require_once('../../../../../../config/ims-tmdd.php');
 
-$userId = $_SESSION['user_id'] ?? null;
+/**
+ * Authentication Check
+ *
+ * Ensures that the user is authenticated by checking for a valid user ID in the session.
+ * Sets the user ID for database context or returns an error if not authenticated.
+ */
+$userId = $_SESSION['user_id'] ?? null; // User ID from session for authentication check
 if (!$userId) {
     $pdo->exec("SET @current_user_id = NULL");
     die(json_encode(['success' => false, 'message' => 'Unauthorized access.']));
@@ -13,22 +27,35 @@ if (!$userId) {
     $pdo->exec("SET @current_user_id = " . (int)$userId);
 }
 
+/**
+ * Validate Role ID
+ *
+ * Checks if a role ID is provided in the request. Returns an error if not provided.
+ */
 if (!isset($_GET['id'])) {
     die(json_encode(['success' => false, 'message' => 'Role ID not provided.']));
 }
-$roleID = $_GET['id'];
-$ipAddress = $_SERVER['REMOTE_ADDR'];
+$roleID = $_GET['id']; // Role ID from GET request to identify the role to edit
+$ipAddress = $_SERVER['REMOTE_ADDR']; // Client IP address for logging purposes
 $pdo->exec("SET @current_ip = '" . $ipAddress . "'");
 
-// Fetch role details
+/**
+ * Fetch Role Details
+ *
+ * Retrieves the details of the specified role from the database. Returns an error if the role is not found or is disabled.
+ */
 $stmt = $pdo->prepare("SELECT * FROM roles WHERE id = ? AND is_disabled = 0");
 $stmt->execute([$roleID]);
-$role = $stmt->fetch();
+$role = $stmt->fetch(); // Role details fetched from database
 if (!$role) {
     die(json_encode(['success' => false, 'message' => 'Role not found or has been deleted.']));
 }
 
-// Fetch all privileges assigned to this role
+/**
+ * Fetch Current Privileges
+ *
+ * Retrieves all privileges currently assigned to the role, including module and privilege details.
+ */
 $stmtCurrent = $pdo->prepare("
     SELECT rp.module_id, rp.privilege_id, p.priv_name, m.module_name
     FROM role_module_privileges rp
@@ -37,24 +64,41 @@ $stmtCurrent = $pdo->prepare("
     WHERE rp.role_id = ?
 ");
 $stmtCurrent->execute([$roleID]);
-$currentPrivileges = $stmtCurrent->fetchAll(PDO::FETCH_ASSOC);
+$currentPrivileges = $stmtCurrent->fetchAll(PDO::FETCH_ASSOC); // Array of current privileges assigned to the role
 
-// Create a simple array of module|privilege combinations for checking
+/**
+ * Create Privilege Combinations
+ *
+ * Creates a simple array of module|privilege combinations for easy checking of assigned privileges.
+ */
 $currentPrivilegeCombos = array_map(function($item) {
     return $item['module_id'] . '|' . $item['privilege_id'];
-}, $currentPrivileges);
+}, $currentPrivileges); // Array of module|privilege strings for quick lookup
 
-// Fetch all modules
+/**
+ * Fetch All Modules
+ *
+ * Retrieves all available modules from the database for display in the edit form.
+ */
 $stmtModules = $pdo->query("SELECT * FROM modules ORDER BY id");
-$modules = $stmtModules->fetchAll(PDO::FETCH_ASSOC);
+$modules = $stmtModules->fetchAll(PDO::FETCH_ASSOC); // Array of all modules available in the system
 
-// Fetch all privileges
+/**
+ * Fetch All Privileges
+ *
+ * Retrieves all non-disabled privileges from the database for display in the edit form.
+ */
 $stmtPrivileges = $pdo->query("SELECT * FROM privileges WHERE is_disabled = 0 ORDER BY priv_name");
-$allPrivileges = $stmtPrivileges->fetchAll(PDO::FETCH_ASSOC);
+$allPrivileges = $stmtPrivileges->fetchAll(PDO::FETCH_ASSOC); // Array of all non-disabled privileges
 
-// Get Audit module ID and Track privilege ID for validation
-$auditModuleId = null;
-$trackPrivilegeId = null;
+/**
+ * Identify Specific Module and Privilege IDs
+ *
+ * Identifies specific module and privilege IDs for validation purposes (e.g., Audit module with Track privilege,
+ * Reports module with View and Export privileges).
+ */
+$auditModuleId = null; // ID of the Audit module
+$trackPrivilegeId = null; // ID of the Track privilege
 foreach ($modules as $mod) {
     if (strtolower($mod['module_name']) === 'audit') {
         $auditModuleId = $mod['id'];
@@ -68,10 +112,9 @@ foreach ($allPrivileges as $priv) {
     }
 }
 
-// Get Reports module ID and Track privilege ID for validation
-$reportModuleId = null;
-$exportPrivilegeId = null;
-$viewPrivilegeId = null;
+$reportModuleId = null; // ID of the Reports module
+$exportPrivilegeId = null; // ID of the Export privilege
+$viewPrivilegeId = null; // ID of the View privilege
 
 foreach ($modules as $mod) {
     if (strtolower($mod['module_name']) === 'reports') {
@@ -92,11 +135,15 @@ foreach ($allPrivileges as $priv) {
     }
 }
 
-
-// Handle POST updates
+/**
+ * Handle Role Update
+ *
+ * Processes the form submission for updating the role's name and privileges. Validates input,
+ * checks for duplicates, updates the database, and logs changes for audit purposes.
+ */
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $roleName = trim($_POST['role_name']);
-    $selected = $_POST['privileges'] ?? [];
+    $roleName = trim($_POST['role_name']); // Trimmed role name from form submission
+    $selected = $_POST['privileges'] ?? []; // Array of selected privileges from form submission
 
     if (empty($roleName)) {
         echo json_encode(['success' => false, 'message' => 'Role name cannot be empty.']);
@@ -112,31 +159,31 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 
     // Filter privileges for Audit and Reports modules accordingly
-$filteredSelected = [];
-foreach ($selected as $value) {
-    list($moduleID, $privilegeID) = explode('|', $value);
+    $filteredSelected = []; // Array to store filtered privileges based on module rules
+    foreach ($selected as $value) {
+        list($moduleID, $privilegeID) = explode('|', $value); // Split value into module and privilege IDs
 
-    // For Audit module, only allow Track privilege
-    if ($auditModuleId && $moduleID == $auditModuleId) {
-        if ($privilegeID == $trackPrivilegeId) {
-            $filteredSelected[] = $value;
+        // For Audit module, only allow Track privilege
+        if ($auditModuleId && $moduleID == $auditModuleId) {
+            if ($privilegeID == $trackPrivilegeId) {
+                $filteredSelected[] = $value;
+            }
+            continue;
         }
-        continue;
-    }
 
-    // For Reports module, only allow View and Export privileges
-    if ($reportModuleId && $moduleID == $reportModuleId) {
-        if ($privilegeID == $viewPrivilegeId || $privilegeID == $exportPrivilegeId) {
-            $filteredSelected[] = $value;
+        // For Reports module, only allow View and Export privileges
+        if ($reportModuleId && $moduleID == $reportModuleId) {
+            if ($privilegeID == $viewPrivilegeId || $privilegeID == $exportPrivilegeId) {
+                $filteredSelected[] = $value;
+            }
+            // skip other privileges for report module
+            continue;
         }
-        // skip other privileges for report module
-        continue;
-    }
 
-    // For all other modules, allow all privileges
-    $filteredSelected[] = $value;
-}
-$selected = $filteredSelected;
+        // For all other modules, allow all privileges
+        $filteredSelected[] = $value;
+    }
+    $selected = $filteredSelected; // Update selected privileges with filtered list
 
 
 
@@ -146,10 +193,10 @@ $selected = $filteredSelected;
         // Store original role data for audit
         $stmtOldRole = $pdo->prepare("SELECT id, role_name FROM roles WHERE id = ?");
         $stmtOldRole->execute([$roleID]);
-        $oldRole = $stmtOldRole->fetch(PDO::FETCH_ASSOC);
+        $oldRole = $stmtOldRole->fetch(PDO::FETCH_ASSOC); // Original role data before update
         
         // Format old privileges for audit log
-        $formattedOldPrivileges = [];
+        $formattedOldPrivileges = []; // Array to store formatted old privileges by module
         foreach ($currentPrivileges as $priv) {
             if (!isset($formattedOldPrivileges[$priv['module_name']])) {
                 $formattedOldPrivileges[$priv['module_name']] = [];
@@ -161,8 +208,8 @@ $selected = $filteredSelected;
             'role_id' => $oldRole['id'],
             'role_name' => $oldRole['role_name'],
             'privileges' => $formattedOldPrivileges
-        ];
-        $oldValue = json_encode($oldRoleData, JSON_PRETTY_PRINT);
+        ]; // Structured old role data for audit
+        $oldValue = json_encode($oldRoleData, JSON_PRETTY_PRINT); // JSON encoded old role data
 
         // Update role name
         $stmtUpdate = $pdo->prepare("UPDATE roles SET role_name = ? WHERE id = ?");
@@ -185,7 +232,7 @@ $selected = $filteredSelected;
         // Get updated role data for audit log
         $stmtNewRole = $pdo->prepare("SELECT id, role_name FROM roles WHERE id = ?");
         $stmtNewRole->execute([$roleID]);
-        $newRole = $stmtNewRole->fetch(PDO::FETCH_ASSOC);
+        $newRole = $stmtNewRole->fetch(PDO::FETCH_ASSOC); // Updated role data after changes
         
         // Fetch new privileges for audit log
         $stmtNewPrivs = $pdo->prepare("
@@ -197,10 +244,10 @@ $selected = $filteredSelected;
             ORDER BY m.module_name, p.priv_name
         ");
         $stmtNewPrivs->execute([$roleID]);
-        $newPrivilegesData = $stmtNewPrivs->fetchAll(PDO::FETCH_ASSOC);
+        $newPrivilegesData = $stmtNewPrivs->fetchAll(PDO::FETCH_ASSOC); // Updated privileges after changes
         
         // Format new privileges for audit log
-        $formattedNewPrivileges = [];
+        $formattedNewPrivileges = []; // Array to store formatted new privileges by module
         foreach ($newPrivilegesData as $priv) {
             if (!isset($formattedNewPrivileges[$priv['module_name']])) {
                 $formattedNewPrivileges[$priv['module_name']] = [];
@@ -209,7 +256,7 @@ $selected = $filteredSelected;
         }
         
         // Create a list of modified fields for the details
-        $modifiedFields = [];
+        $modifiedFields = []; // Array to store names of modified fields for audit details
         
         // Check if role name was changed
         if ($oldRole['role_name'] !== $newRole['role_name']) {
@@ -217,15 +264,15 @@ $selected = $filteredSelected;
         }
         
         // Check for changed privileges
-        $privilegeChanges = [];
-        $allModules = array_unique(array_merge(array_keys($formattedOldPrivileges), array_keys($formattedNewPrivileges)));
+        $privilegeChanges = []; // Array to store changes in privileges by module
+        $allModules = array_unique(array_merge(array_keys($formattedOldPrivileges), array_keys($formattedNewPrivileges))); // All unique module names
         
         foreach ($allModules as $module) {
-            $oldModulePrivs = $formattedOldPrivileges[$module] ?? [];
-            $newModulePrivs = $formattedNewPrivileges[$module] ?? [];
+            $oldModulePrivs = $formattedOldPrivileges[$module] ?? []; // Old privileges for this module
+            $newModulePrivs = $formattedNewPrivileges[$module] ?? []; // New privileges for this module
             
-            $added = array_diff($newModulePrivs, $oldModulePrivs);
-            $removed = array_diff($oldModulePrivs, $newModulePrivs);
+            $added = array_diff($newModulePrivs, $oldModulePrivs); // Privileges added
+            $removed = array_diff($oldModulePrivs, $newModulePrivs); // Privileges removed
             
             if (!empty($added) || !empty($removed)) {
                 $privilegeChanges[$module] = [
@@ -246,14 +293,14 @@ $selected = $filteredSelected;
         }
         
         // Generate a clear, concise details message
-        $details = "Modified Fields: " . implode(", ", $modifiedFields);
+        $details = "Modified Fields: " . implode(", ", $modifiedFields); // Detailed message of changes for audit
         
         // Create new value data for audit log
         $newValue = json_encode([
             'role_id' => $newRole['id'],
             'role_name' => $newRole['role_name'],
             'privileges' => $formattedNewPrivileges
-        ], JSON_PRETTY_PRINT);
+        ], JSON_PRETTY_PRINT); // JSON encoded new role data
 
         // Log to audit_log table
         $stmtAuditLog = $pdo->prepare("INSERT INTO audit_log 
@@ -292,7 +339,7 @@ $selected = $filteredSelected;
             WHERE rp.role_id = ?
         ");
         $stmtUpdated->execute([$roleID]);
-        $updatedPrivileges = $stmtUpdated->fetchAll(PDO::FETCH_ASSOC);
+        $updatedPrivileges = $stmtUpdated->fetchAll(PDO::FETCH_ASSOC); // Updated privileges for UI display
 
         echo json_encode([
             'success' => true,

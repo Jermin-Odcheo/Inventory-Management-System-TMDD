@@ -1,4 +1,13 @@
 <?php
+/**
+ * Undo Role Changes Script
+ *
+ * This script handles the undoing of the last role change action performed by a logged-in user.
+ * It supports reversing actions such as adding, modifying, or deleting roles in the system.
+ * The script checks for the last action that hasn't been undone and performs the necessary
+ * database operations to revert it. The action is then marked as undone in the database.
+ *
+ */
 session_start();
 header('Content-Type: application/json');
 require_once('../../../../../config/ims-tmdd.php');

@@ -1,11 +1,25 @@
 <?php
+/**
+ * Role Management Script
+ *
+ * This script handles the management of roles within the system, including viewing, creating, modifying,
+ * and deleting roles. It implements Role-Based Access Control (RBAC) to enforce user privileges,
+ * provides filtering and pagination for role data, and manages the display of roles and their associated
+ * modules and privileges.
+ */
 ob_start();
 require_once('../../../../../../config/ims-tmdd.php');
 session_start();
 include '../../../general/header.php';
 include '../../../general/sidebar.php';
 include '../../../general/footer.php';
-// 1) Auth guard
+
+/**
+ * Authentication Guard
+ *
+ * Ensures that the user is authenticated by checking for a valid user ID in the session.
+ * Redirects to the login page if the user is not authenticated.
+ */
 $userId = $_SESSION['user_id'] ?? null;
 if (!is_int($userId) && !ctype_digit((string)$userId)) {
     header("Location: " . BASE_URL . "index.php");
@@ -13,11 +27,21 @@ if (!is_int($userId) && !ctype_digit((string)$userId)) {
 }
 $userId = (int)$userId;
 
-// 2) Init RBAC & enforce "View"
+/**
+ * Initialize RBAC and Enforce View Privilege
+ *
+ * Sets up Role-Based Access Control (RBAC) for the current user and ensures they have the necessary
+ * 'View' privilege to access role management functionality.
+ */
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
 $rbac->requirePrivilege('Roles and Privileges', 'View');
 
-// 3) Button flagsStatus
+/**
+ * Set Button Privilege Flags
+ *
+ * Determines the user's privileges for various actions (Create, Modify, Remove, Undo, Redo, View Archive)
+ * to control the visibility and functionality of UI elements.
+ */
 $canCreate = $rbac->hasPrivilege('Roles and Privileges', 'Create');
 $canModify = $rbac->hasPrivilege('Roles and Privileges', 'Modify');
 $canRemove = $rbac->hasPrivilege('Roles and Privileges', 'Remove');
@@ -25,38 +49,59 @@ $canUndo = $rbac->hasPrivilege('Roles and Privileges', 'Undo');
 $canRedo = $rbac->hasPrivilege('Roles and Privileges', 'Redo');
 $canViewArchive = $rbac->hasPrivilege('Roles and Privileges', 'View');
 
-// Get all modules for filter dropdown
+/**
+ * Fetch Modules for Filter Dropdown
+ *
+ * Retrieves a list of distinct modules from the database to populate the module filter dropdown.
+ */
 $moduleQuery = "SELECT DISTINCT id, module_name FROM modules ORDER BY module_name";
 $moduleStmt = $pdo->prepare($moduleQuery);
 $moduleStmt->execute();
 $moduleOptions = $moduleStmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Get all privileges for filter dropdown
+/**
+ * Fetch Privileges for Filter Dropdown
+ *
+ * Retrieves a list of distinct, non-disabled privileges from the database to populate the privilege filter dropdown.
+ */
 $privilegeQuery = "SELECT DISTINCT id, priv_name FROM privileges WHERE is_disabled = 0 ORDER BY priv_name";
 $privilegeStmt = $pdo->prepare($privilegeQuery);
 $privilegeStmt->execute();
 $privilegeOptions = $privilegeStmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Check if filter is applied
+/**
+ * Check if Filter is Applied
+ *
+ * Determines whether a filter has been applied based on the presence of a specific GET parameter.
+ */
 $isFiltered = isset($_GET['filter_applied']) && $_GET['filter_applied'] === '1';
 
-// Get current page from URL parameter (default to 1)
+/**
+ * Pagination Setup
+ *
+ * Sets up pagination parameters including the current page, rows per page, and calculates the offset
+ * for database queries to display the correct set of data.
+ */
 $currentPage = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-
-// Default rows per page
 $rowsPerPage = isset($_GET['rows_per_page']) ? max(5, intval($_GET['rows_per_page'])) : 10;
-
-// Calculate offset for pagination
 $offset = ($currentPage - 1) * $rowsPerPage;
 
-// First, let's get the total count of distinct roles that match our filters
+/**
+ * Count Total Roles with Filters
+ *
+ * Calculates the total number of distinct roles that match the applied filters to determine pagination.
+ */
 $countSql = "
 SELECT COUNT(DISTINCT r.id) as total_count
 FROM roles r
 WHERE r.is_disabled = 0
 ";
 
-// Build the SQL query with optional filters
+/**
+ * Build Main SQL Query for Role Data
+ *
+ * Constructs the main SQL query to fetch role data along with associated modules and privileges.
+ */
 $sql = "
 SELECT 
     r.id AS Role_ID,
@@ -75,7 +120,11 @@ CROSS JOIN modules m
 WHERE r.is_disabled = 0
 ";
 
-// Apply filters if the filter button was clicked
+/**
+ * Apply Filters to Query
+ *
+ * Applies filters to the SQL query based on module, privilege, and search criteria provided by the user.
+ */
 $params = [];
 $whereConditions = [];
 $havingConditions = [];
@@ -196,28 +245,43 @@ if ($isFiltered) {
     }
 }
 
-// Add where conditions to the SQL query and count query
+/**
+ * Add Conditions to SQL Queries
+ *
+ * Adds the constructed WHERE conditions to both the main SQL query and the count query.
+ */
 if (!empty($whereConditions)) {
     $whereClause = " AND " . implode(" AND ", $whereConditions);
     $sql .= $whereClause;
     $countSql .= $whereClause;
 }
 
-// Execute the count query to get total roles
+/**
+ * Execute Count Query
+ *
+ * Executes the count query to determine the total number of roles matching the filters for pagination.
+ */
 $countStmt = $pdo->prepare($countSql);
 $countStmt->execute($params);
 $totalCount = $countStmt->fetchColumn();
 
-// Calculate total pages
+/**
+ * Calculate Pagination
+ *
+ * Calculates the total number of pages based on the total count of roles and rows per page.
+ * Adjusts the current page if it exceeds the total pages.
+ */
 $totalPages = ceil($totalCount / $rowsPerPage);
-
-// Ensure current page is not beyond the last page
 if ($totalPages > 0 && $currentPage > $totalPages) {
     $currentPage = $totalPages;
     $offset = ($currentPage - 1) * $rowsPerPage;
 }
 
-// Get distinct role IDs for the current page
+/**
+ * Fetch Role IDs for Current Page
+ *
+ * Retrieves the distinct role IDs for the current page based on the pagination offset and limit.
+ */
 $roleIdSql = "
 SELECT DISTINCT r.id
 FROM roles r
@@ -239,18 +303,31 @@ foreach ($params as $key => $value) {
 $roleIdStmt->execute();
 $pageRoleIds = $roleIdStmt->fetchAll(PDO::FETCH_COLUMN);
 
-// If we have role IDs for this page, add them to the main query
+/**
+ * Refine Main Query with Role IDs
+ *
+ * Refines the main SQL query to include only the role IDs for the current page.
+ */
 if (!empty($pageRoleIds)) {
     $sql .= " AND r.id IN (" . implode(',', $pageRoleIds) . ")";
 }
 
 $sql .= " ORDER BY r.id DESC, m.id";
 
+/**
+ * Execute Main Query and Fetch Role Data
+ *
+ * Executes the main SQL query to fetch detailed role data for display.
+ */
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $roleData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Group data by role and module with improved uniqueness handling
+/**
+ * Group Role Data
+ *
+ * Groups the fetched data by role and module, ensuring unique privileges per module for display.
+ */
 $roles = [];
 foreach ($roleData as $row) {
     $roleID = $row['Role_ID'];
