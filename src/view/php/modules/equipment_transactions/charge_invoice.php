@@ -713,6 +713,36 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
         }
     }
 }
+
+// ------------------------
+// FETCH FRESH PO LIST (AJAX)
+// ------------------------
+if (isset($_GET['action']) && $_GET['action'] === 'fetch_po_list') {
+    ob_clean();
+    try {
+        $stmtPO = $pdo->prepare("
+          SELECT po_no
+            FROM purchase_order
+           WHERE is_disabled = 0
+           ORDER BY po_no
+        ");
+        $stmtPO->execute();
+        $freshPoList = $stmtPO->fetchAll(PDO::FETCH_COLUMN);
+        
+        header('Content-Type: application/json');
+        echo json_encode([
+            'status' => 'success',
+            'po_list' => $freshPoList
+        ]);
+    } catch (Exception $e) {
+        header('Content-Type: application/json');
+        echo json_encode([
+            'status' => 'error',
+            'message' => $e->getMessage()
+        ]);
+    }
+    exit;
+}
 ?>
 
 <!DOCTYPE html>
@@ -1814,7 +1844,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                         window.paginationConfig.currentPage = 1;
                     }
                     reinitializePagination();
-                    showToast('Filters cleared.', 'success');
+                     
                 },
                 error: function() {
                     showToast('Error clearing filters.', 'error');
@@ -1927,6 +1957,53 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                 }
             });
         });
+    });
+
+    // Function to refresh PO dropdown options
+    function refreshPOOptions(selectElement) {
+        $.ajax({
+            url: 'charge_invoice.php',
+            type: 'GET',
+            data: { action: 'fetch_po_list' },
+            dataType: 'json',
+            success: function(response) {
+                if (response.status === 'success' && Array.isArray(response.po_list)) {
+                    // Clear existing options (keeping the first "None" option)
+                    $(selectElement).find('option:not(:first)').remove();
+                    
+                    // Add fresh PO options
+                    response.po_list.forEach(function(po) {
+                        $(selectElement).append($('<option>', {
+                            value: po,
+                            text: po
+                        }));
+                    });
+                    
+                    // Refresh Select2 if it's initialized
+                    if ($(selectElement).hasClass('select2-hidden-accessible')) {
+                        $(selectElement).select2('destroy').select2({
+                            dropdownParent: $(selectElement).closest('.modal'),
+                            width: '100%',
+                            placeholder: 'Type or select PO…',
+                            allowClear: true
+                        });
+                    }
+                }
+            },
+            error: function() {
+                console.error('Failed to fetch updated PO list');
+            }
+        });
+    }
+    
+    // Refresh PO options whenever the Add Invoice modal is shown
+    $('#addInvoiceModal').on('show.bs.modal', function() {
+        refreshPOOptions('#add_po_no');
+    });
+    
+    // Also refresh when Edit Invoice modal is shown
+    $('#editInvoiceModal').on('show.bs.modal', function() {
+        refreshPOOptions('#edit_po_no');
     });
 </script>
 </body>

@@ -946,6 +946,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
         });
 
         $(document).ready(function() {
+            // Reset create modal form when closed
+            $('#addPOModal').on('hidden.bs.modal', function () {
+                $('#addPOForm')[0].reset();
+            });
       
 
             $(document).on('click', '.edit-po', function(e) {
@@ -1227,19 +1231,17 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
             // Clear search input
             $('#searchPO').val('');
             
-            // Fetch fresh data without filters
-            const currentPage = window.paginationConfig ? window.paginationConfig.currentPage : 1;
-            const rowsPerPage = $('#rowsPerPageSelect').val();
+            // Reset the pagination and filters
+            if (typeof window.filteredRows !== 'undefined' && typeof window.allRows !== 'undefined') {
+                window.filteredRows = [...window.allRows];
+                if (window.paginationConfig) {
+                    window.paginationConfig.currentPage = 1;
+                }
+                updatePagination();
+            }
             
-            $('#purchaseTable').load(location.href + ' #purchaseTable', function() {
-                showToast('Filters cleared.', 'success');
-                
-                // Reinitialize pagination with fresh DOM elements
-                reinitPurchaseTableJS();
-                
-                // Reattach event handlers
-                reattachEventHandlers();
-            });
+            // Instead of reloading the whole table, just reload the page
+            window.location.href = 'purchase_order.php';
         });
 
         // Date filter UI handling (show/hide label+input pairs for advanced types)
@@ -1268,7 +1270,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
         $('#applyFilters').on('click', function() {
             const filterType = $('#dateFilter').val();
             if (!filterType) {
-                showToast('Please select a filter type.', 'error');
+              
                 return;
             }
             let params = {};
@@ -1325,9 +1327,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
                 filterData.monthYearFrom = params.monthYearFrom;
                 filterData.monthYearTo = params.monthYearTo;
             }
-            
-            // Store message for filters
-            storeToastMessage('Applying filters...', 'info');
+             
             
             // Store the filter settings in sessionStorage so they persist through page reload
             sessionStorage.setItem('filterType', type);
