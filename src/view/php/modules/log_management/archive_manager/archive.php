@@ -44,13 +44,7 @@ if (!in_array(strtolower($sort_order), ['asc', 'desc'])) {
 
 // --- Filter Logic ---
 $dateFilterType = $_GET['date_filter_type'] ?? '';
-$baseWhere = "LOWER(a.Action) = 'remove' AND a.TrackID IN (
-    SELECT MAX(a2.TrackID)
-    FROM audit_log a2
-    WHERE a2.EntityID = a.EntityID
-    AND LOWER(a2.Action) = 'remove'
-    GROUP BY a2.EntityID
-)";
+$baseWhere = "u.is_disabled = 1"; // Simplified WHERE clause
 $params = [];
 
 // Apply action filter
@@ -112,27 +106,9 @@ if ($dateFilterType === 'mdy') {
 
 $orderByClause = "ORDER BY " . $allowedSortColumns[$sort_by] . " " . strtoupper($sort_order);
 
-// --- Pagination Logic ---
-$rows_per_page = isset($_GET['rows_per_page']) ? (int)$_GET['rows_per_page'] : 10;
-$current_page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-$offset = ($current_page - 1) * $rows_per_page;
-
-// Count total records for pagination
-$count_query = "SELECT COUNT(DISTINCT a.TrackID) as total FROM audit_log a LEFT JOIN users u ON a.EntityID = u.id JOIN users op ON a.UserID = op.id WHERE $baseWhere";
-$count_stmt = $pdo->prepare($count_query);
-$count_stmt->execute($params);
-$total_records = $count_stmt->fetch(PDO::FETCH_ASSOC)['total'];
-$total_pages = ceil($total_records / $rows_per_page);
-
-// Adjust current page if it exceeds total pages
-if ($current_page > $total_pages) {
-    $current_page = $total_pages;
-    $offset = ($current_page - 1) * $rows_per_page;
-}
-
-// Modify main query to include LIMIT and OFFSET for pagination
+// Get the latest audit log entry for each disabled user
 $query = "
-SELECT DISTINCT
+SELECT 
     a.TrackID AS track_id,
     CONCAT(op.First_Name, ' ', op.Last_Name) AS operator_name,
     op.Email AS operator_email,
@@ -145,29 +121,29 @@ SELECT DISTINCT
     a.Date_Time AS date_time,
     a.EntityID AS deleted_user_id
 FROM audit_log a
-LEFT JOIN users u ON a.EntityID = u.id
-JOIN users op ON a.UserID = op.id
+INNER JOIN users u ON a.EntityID = u.id
+INNER JOIN users op ON a.UserID = op.id
+INNER JOIN (
+    SELECT EntityID, MAX(TrackID) AS MaxTrackID
+    FROM audit_log
+    GROUP BY EntityID
+) latest ON a.EntityID = latest.EntityID AND a.TrackID = latest.MaxTrackID
 WHERE $baseWhere
 {$orderByClause}
-LIMIT :offset, :rows_per_page
 ";
 
-$params[':offset'] = $offset;
-$params[':rows_per_page'] = $rows_per_page;
-
 try {
-    // Debug the query and parameters
-    echo "<!-- Debug Query: " . $query . " -->";
-    echo "<!-- Debug Params: " . print_r($params, true) . " -->";
-    
     $stmt = $pdo->prepare($query);
     $stmt->execute($params);
     $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Debug the results
-    echo "<!-- Debug Results Count: " . count($logs) . " -->";
-    if (!empty($logs)) {
-        echo "<!-- Debug First Row: " . print_r($logs[0], true) . " -->";
+    // Add debug information if needed
+    if (isset($_GET['debug']) && $_GET['debug'] == 1) {
+        echo "<div class='alert alert-info'>";
+        echo "SQL Query: " . str_replace(array("\r", "\n"), ' ', $query) . "<br>";
+        echo "Parameters: " . json_encode($params) . "<br>";
+        echo "Results found: " . count($logs);
+        echo "</div>";
     }
     
     if (!$logs) {
@@ -176,10 +152,6 @@ try {
 } catch (PDOException $e) {
     die("Database query error: " . $e->getMessage());
 }
-
-// Debug the table rendering
-echo "<!-- Debug: Starting table rendering -->";
-echo "<!-- Debug: Number of logs to render: " . count($logs) . " -->";
 
 /**
  * Format JSON data into a list (for the 'Changes' column).
@@ -231,33 +203,29 @@ function getStatusIcon($status)
 /**
  * Format JSON data to display old values only.
  */
-function formatChanges($oldJsonStr) {
-    // If the input is already an array, use it directly
-    if (is_array($oldJsonStr)) {
-        $oldData = $oldJsonStr;
-    } else {
-        // Try to decode JSON string
-        $oldData = json_decode($oldJsonStr, true);
+function formatChanges($oldJsonStr)
+{
+    $oldData = json_decode($oldJsonStr, true);
+
+    // If not an array, simply return the value
+    if (!is_array($oldData)) {
+        return '<span>' . htmlspecialchars($oldJsonStr) . '</span>';
     }
 
-    // If not an array or JSON decode failed, return the original string
-    if (!is_array($oldData)) {
-        return '<span>' . htmlspecialchars((string)$oldJsonStr) . '</span>';
+    // Remove the is_disabled field from the display
+    if (isset($oldData['is_disabled'])) {
+        unset($oldData['is_disabled']);
+    }
+    
+    // If no data left after removing is_disabled, return empty
+    if (empty($oldData)) {
+        return '<span class="text-muted">No changes to display</span>';
     }
 
     $html = '<ul class="list-group">';
     foreach ($oldData as $key => $value) {
         // Format the value
-        if (is_array($value)) {
-            $displayValue = '<em>Array</em>';
-        } else if (is_null($value)) {
-            $displayValue = '<em>null</em>';
-        } else if (is_bool($value)) {
-            $displayValue = $value ? 'true' : 'false';
-        } else {
-            $displayValue = htmlspecialchars((string)$value);
-        }
-        
+        $displayValue = is_null($value) ? '<em>null</em>' : htmlspecialchars($value);
         $friendlyKey = ucwords(str_replace('_', ' ', $key));
 
         $html .= '<li class="list-group-item d-flex justify-content-between align-items-center">
@@ -453,10 +421,8 @@ function formatChanges($oldJsonStr) {
                                 </tr>
                             </thead>
                             <tbody id="archiveTableBody">
-                                <?php 
-                                if (!empty($logs)): 
-                                    foreach ($logs as $log): 
-                                ?>
+                                <?php if (!empty($logs)): ?>
+                                    <?php foreach ($logs as $log): ?>
                                         <tr>
                                             <td data-label="Track ID">
                                                 <span class="badge bg-secondary"><?php echo htmlspecialchars($log['track_id']); ?></span>
@@ -464,7 +430,7 @@ function formatChanges($oldJsonStr) {
                                             <td data-label="User">
                                                 <div class="d-flex align-items-center">
                                                     <i class="fas fa-user-circle me-2"></i>
-                                                    <small><?php echo htmlspecialchars($log['operator_email']); ?></small>
+                                                    <small><?php echo htmlspecialchars($log['operator_email'] ?? 'Unknown'); ?></small>
                                                 </div>
                                             </td>
                                             <td data-label="Action">
@@ -476,15 +442,15 @@ function formatChanges($oldJsonStr) {
                                                 ?>
                                             </td>
                                             <td data-label="Details">
-                                                <?php echo nl2br(htmlspecialchars($log['details'])); ?>
+                                                <?php echo nl2br(htmlspecialchars($log['details'] ?? '')); ?>
                                             </td>
                                             <td data-label="Changes">
-                                                <?php echo formatChanges($log['old_val']); ?>
+                                                <?php echo formatChanges($log['old_val'] ?? '{}'); ?>
                                             </td>
                                             <td data-label="Date &amp; Time">
                                                 <div class="d-flex align-items-center">
                                                     <i class="far fa-clock me-2"></i>
-                                                    <?php echo htmlspecialchars($log['date_time']); ?>
+                                                    <?php echo htmlspecialchars($log['date_time'] ?? 'N/A'); ?>
                                                 </div>
                                             </td>
                                             <td data-label="Actions">
@@ -505,7 +471,7 @@ function formatChanges($oldJsonStr) {
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="10">
+                                        <td colspan="7">
                                             <div class="empty-state text-center py-4">
                                                 <i class="fas fa-inbox fa-3x mb-3"></i>
                                                 <h4>No Archived Users Found</h4>
@@ -518,290 +484,39 @@ function formatChanges($oldJsonStr) {
                         </table>
                     </div>
 
-                    <!-- Enhanced Pagination -->
-                    <div class="d-flex justify-content-between align-items-center mt-4">
-                        <div class="d-flex align-items-center gap-2">
-                            <span>Show</span>
-                            <select id="rowsPerPageSelect" class="form-select form-select-sm" style="width: auto;">
-                                <option value="10">10</option>
-                                <option value="20">20</option>
-                                <option value="30">30</option>
-                                <option value="40">40</option>
-                                <option value="50">50</option>
-                            </select>
-                            <span>entries</span>
+
+                    <div class="container-fluid">
+                        <div class="row align-items-center g-3">
+                            <div class="col-12 col-sm-auto">
+                                <div class="text-muted">
+                                    <?php $totalLogs = count($logs); ?>
+                                    <input type="hidden" id="total-users" value="<?= $totalLogs ?>">
+                                    Showing <span id="currentPage">1</span> to <span id="rowsPerPage">10</span> of <span id="totalRows"><?= $totalLogs ?></span> entries
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-auto ms-sm-auto">
+                                <div class="d-flex align-items-center gap-2">
+                                    <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                        <i class="bi bi-chevron-left"></i> Previous
+                                    </button>
+                                    <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
+                                        <option value="10" selected>10</option>
+                                        <option value="20">20</option>
+                                        <option value="30">30</option>
+                                        <option value="50">50</option>
+                                    </select>
+                                    <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1">
+                                        Next <i class="bi bi-chevron-right"></i>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                        <div class="d-flex align-items-center gap-3">
-                            <span>
-                                Showing <span id="startRecord">1</span> to <span id="endRecord">10</span> of <span id="totalRecords"><?php echo count($logs); ?></span> entries
-                            </span>
-                            <nav aria-label="Page navigation">
-                                <ul class="pagination pagination-sm mb-0">
-                                    <li class="page-item">
-                                        <button id="firstPage" class="page-link" aria-label="First">
-                                            <i class="fas fa-angle-double-left"></i>
-                                        </button>
-                                    </li>
-                                    <li class="page-item">
-                                        <button id="prevPage" class="page-link" aria-label="Previous">
-                                            <i class="fas fa-angle-left"></i>
-                                        </button>
-                                    </li>
-                                    <div id="paginationNumbers" class="d-flex"></div>
-                                    <li class="page-item">
-                                        <button id="nextPage" class="page-link" aria-label="Next">
-                                            <i class="fas fa-angle-right"></i>
-                                        </button>
-                                    </li>
-                                    <li class="page-item">
-                                        <button id="lastPage" class="page-link" aria-label="Last">
-                                            <i class="fas fa-angle-double-right"></i>
-                                        </button>
-                                    </li>
-                                </ul>
-                            </nav>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <ul class="pagination justify-content-center" id="pagination"></ul>
+                            </div>
                         </div>
                     </div>
-
-                    <style>
-                        .pagination {
-                            margin: 0;
-                            display: flex;
-                            align-items: center;
-                        }
-                        .pagination .page-link {
-                            padding: 0.25rem 0.5rem;
-                            font-size: 0.875rem;
-                            line-height: 1.5;
-                            border-radius: 0.2rem;
-                        }
-                        #paginationNumbers {
-                            display: flex;
-                            gap: 0.25rem;
-                        }
-                        #paginationNumbers button {
-                            min-width: 2rem;
-                            height: 2rem;
-                            padding: 0.25rem 0.5rem;
-                            font-size: 0.875rem;
-                            line-height: 1.5;
-                            border-radius: 0.2rem;
-                            border: 1px solid #dee2e6;
-                            background-color: #fff;
-                            color: #0d6efd;
-                            cursor: pointer;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                        }
-                        #paginationNumbers button.active {
-                            background-color: #0d6efd;
-                            color: #fff;
-                            border-color: #0d6efd;
-                        }
-                        #paginationNumbers button:hover:not(.active) {
-                            background-color: #e9ecef;
-                        }
-                        .page-item.disabled .page-link {
-                            color: #6c757d;
-                            pointer-events: none;
-                            background-color: #fff;
-                            border-color: #dee2e6;
-                        }
-                    </style>
-
-                    <script>
-                        // Pass RBAC permissions to JavaScript
-                        var userPrivileges = {
-                            canRestore: <?php echo json_encode($canRestore); ?>,
-                            canRemove: <?php echo json_encode($canRemove); ?>,
-                            canDelete: <?php echo json_encode($canDelete); ?>
-                        };
-
-                        // Pagination Configuration
-                        const paginationConfig = {
-                            currentPage: <?php echo $current_page; ?>,
-                            rowsPerPage: <?php echo $rows_per_page; ?>,
-                            totalRecords: <?php echo $total_records; ?>,
-                            totalPages: <?php echo $total_pages; ?>,
-                            maxPageButtons: 5
-                        };
-
-                        // Function to update pagination display
-                        function updatePaginationDisplay() {
-                            document.getElementById('startRecord').textContent = ((paginationConfig.currentPage - 1) * paginationConfig.rowsPerPage) + 1;
-                            document.getElementById('endRecord').textContent = Math.min(paginationConfig.currentPage * paginationConfig.rowsPerPage, paginationConfig.totalRecords);
-                            document.getElementById('totalRecords').textContent = paginationConfig.totalRecords;
-                            updatePaginationButtons();
-                            updatePageNumbers();
-                        }
-
-                        // Update Pagination Buttons
-                        function updatePaginationButtons() {
-                            document.getElementById('firstPage').parentElement.classList.toggle('disabled', paginationConfig.currentPage === 1);
-                            document.getElementById('prevPage').parentElement.classList.toggle('disabled', paginationConfig.currentPage === 1);
-                            document.getElementById('nextPage').parentElement.classList.toggle('disabled', paginationConfig.currentPage === paginationConfig.totalPages);
-                            document.getElementById('lastPage').parentElement.classList.toggle('disabled', paginationConfig.currentPage === paginationConfig.totalPages);
-                        }
-
-                        // Update Page Numbers
-                        function updatePageNumbers() {
-                            const paginationNumbers = document.getElementById('paginationNumbers');
-                            paginationNumbers.innerHTML = '';
-
-                            let startPage = Math.max(1, paginationConfig.currentPage - Math.floor(paginationConfig.maxPageButtons / 2));
-                            let endPage = Math.min(paginationConfig.totalPages, startPage + paginationConfig.maxPageButtons - 1);
-
-                            if (endPage - startPage + 1 < paginationConfig.maxPageButtons) {
-                                startPage = Math.max(1, endPage - paginationConfig.maxPageButtons + 1);
-                            }
-
-                            // Add page numbers
-                            for (let i = startPage; i <= endPage; i++) {
-                                const button = document.createElement('button');
-                                button.className = i === paginationConfig.currentPage ? 'active' : '';
-                                button.textContent = i;
-                                button.onclick = () => goToPage(i);
-                                paginationNumbers.appendChild(button);
-                            }
-                        }
-
-                        // Navigation Functions
-                        function goToPage(page) {
-                            paginationConfig.currentPage = page;
-                            window.location.href = updateQueryStringParameter(window.location.href, 'page', page);
-                        }
-
-                        function goToFirstPage() {
-                            goToPage(1);
-                        }
-
-                        function goToLastPage() {
-                            goToPage(paginationConfig.totalPages);
-                        }
-
-                        function goToPrevPage() {
-                            if (paginationConfig.currentPage > 1) {
-                                goToPage(paginationConfig.currentPage - 1);
-                            }
-                        }
-
-                        function goToNextPage() {
-                            if (paginationConfig.currentPage < paginationConfig.totalPages) {
-                                goToPage(paginationConfig.currentPage + 1);
-                            }
-                        }
-
-                        // Helper function to update query string parameters
-                        function updateQueryStringParameter(uri, key, value) {
-                            var re = new RegExp("([?&])" + key + "=.*?(&|$)", "i");
-                            var separator = uri.indexOf('?') !== -1 ? "&" : "?";
-                            if (uri.match(re)) {
-                                return uri.replace(re, '$1' + key + "=" + value + '$2');
-                            } else {
-                                return uri + separator + key + "=" + value;
-                            }
-                        }
-
-                        // Event Listeners
-                        document.addEventListener('DOMContentLoaded', function() {
-                            // Initialize pagination display
-                            updatePaginationDisplay();
-
-                            // Add event listeners for pagination controls
-                            document.getElementById('firstPage').addEventListener('click', goToFirstPage);
-                            document.getElementById('prevPage').addEventListener('click', goToPrevPage);
-                            document.getElementById('nextPage').addEventListener('click', goToNextPage);
-                            document.getElementById('lastPage').addEventListener('click', goToLastPage);
-
-                            // Handle rows per page change
-                            document.getElementById('rowsPerPageSelect').addEventListener('change', function(e) {
-                                paginationConfig.rowsPerPage = parseInt(e.target.value);
-                                paginationConfig.currentPage = 1; // Reset to first page
-                                window.location.href = updateQueryStringParameter(window.location.href, 'rows_per_page', paginationConfig.rowsPerPage) + '&page=1';
-                            });
-
-                            // Initialize filters
-                            const filterType = document.getElementById('dateFilterType');
-                            const allDateFilters = document.querySelectorAll('.date-filter');
-
-                            function updateDateFields() {
-                                allDateFilters.forEach(field => field.classList.add('d-none'));
-                                if (!filterType.value) return;
-                                document.querySelectorAll('.date-' + filterType.value).forEach(field => field.classList.remove('d-none'));
-                            }
-
-                            if (filterType) {
-                                filterType.addEventListener('change', updateDateFields);
-                                updateDateFields(); // Initialize on page load
-                            }
-
-                            // Clear filters button
-                            const clearFiltersBtn = document.getElementById('clearFilters');
-                            if (clearFiltersBtn) {
-                                clearFiltersBtn.addEventListener('click', function() {
-                                    const form = document.getElementById('archiveFilterForm');
-                                    form.reset();
-
-                                    // Clear date filter type and hide all date filter fields
-                                    const filterType = document.getElementById('dateFilterType');
-                                    if (filterType) {
-                                        filterType.value = '';
-                                        document.querySelectorAll('.date-filter').forEach(field => field.classList.add('d-none'));
-                                    }
-
-                                    // Clear search input
-                                    const searchInput = document.getElementById('searchInput');
-                                    if (searchInput) {
-                                        searchInput.value = '';
-                                    }
-
-                                    // Submit the form to reset the data
-                                    form.submit();
-                                });
-                            }
-
-                            // Modal functionality for Restore and Delete buttons
-                            const restoreButtons = document.querySelectorAll('.restore-btn');
-                            const deleteButtons = document.querySelectorAll('.delete-permanent-btn');
-                            const restoreModal = new bootstrap.Modal(document.getElementById('restoreArchiveModal'));
-                            const deleteModal = new bootstrap.Modal(document.getElementById('deleteArchiveModal'));
-                            let currentRestoreId = null;
-                            let currentDeleteId = null;
-
-                            restoreButtons.forEach(button => {
-                                button.addEventListener('click', function() {
-                                    currentRestoreId = this.getAttribute('data-id');
-                                    restoreModal.show();
-                                });
-                            });
-
-                            deleteButtons.forEach(button => {
-                                button.addEventListener('click', function() {
-                                    currentDeleteId = this.getAttribute('data-id');
-                                    deleteModal.show();
-                                });
-                            });
-
-                            document.getElementById('confirmRestoreBtn').addEventListener('click', function() {
-                                if (currentRestoreId) {
-                                    // Here you would typically send an AJAX request to restore the record
-                                    console.log('Restoring record with ID: ' + currentRestoreId);
-                                    // For now, just close the modal
-                                    restoreModal.hide();
-                                }
-                            });
-
-                            document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
-                                if (currentDeleteId) {
-                                    // Here you would typically send an AJAX request to delete the record
-                                    console.log('Deleting record with ID: ' + currentDeleteId);
-                                    // For now, just close the modal
-                                    deleteModal.hide();
-                                }
-                            });
-                        });
-                    </script>
                 </div>
             </div>
         </div>
@@ -880,8 +595,621 @@ function formatChanges($oldJsonStr) {
         </div>
     </div>
 
+    <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/pagination.js" defer></script>
+    <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/logs.js" defer></script>
+    <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/archive_filters.js" defer></script>
+    <script type="text/javascript" src="<?php echo defined('BASE_URL') ? BASE_URL : ''; ?>src/control/js/sort_archives.js" defer></script>
+
+    <script>
+        // Pass RBAC permissions to JavaScript
+        var userPrivileges = {
+            canRestore: <?php echo json_encode($canRestore); ?>,
+            canRemove: <?php echo json_encode($canRemove); ?>,
+            canDelete: <?php echo json_encode($canDelete); ?>
+        };
+
+        // Custom filtering for archive page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize filters
+            const actionFilter = document.getElementById('filterAction');
+            const statusFilter = document.getElementById('filterStatus');
+            const searchInput = document.getElementById('searchInput');
+
+            // Date filter handling
+            const filterType = document.getElementById('dateFilterType');
+            const allDateFilters = document.querySelectorAll('.date-filter');
+
+            function updateDateFields() {
+                allDateFilters.forEach(field => field.classList.add('d-none'));
+                if (!filterType.value) return;
+                document.querySelectorAll('.date-' + filterType.value).forEach(field => field.classList.remove('d-none'));
+            }
+
+            if (filterType) {
+                filterType.addEventListener('change', updateDateFields);
+                updateDateFields(); // Initialize on page load
+            }
+
+            // Clear filters button
+            const clearFiltersBtn = document.getElementById('clearFilters');
+            if (clearFiltersBtn) {
+                clearFiltersBtn.addEventListener('click', function() {
+                    const form = document.getElementById('archiveFilterForm');
+                    form.reset();
+
+                    // Clear date filter type and hide all date filter fields
+                    const filterType = document.getElementById('dateFilterType');
+                    if (filterType) {
+                        filterType.value = '';
+                        document.querySelectorAll('.date-filter').forEach(field => field.classList.add('d-none'));
+                    }
+
+                    // Clear search input
+                    const searchInput = document.getElementById('searchInput');
+                    if (searchInput) {
+                        searchInput.value = '';
+                    }
+
+                    // Submit the form to reset the data
+                    form.submit();
+                });
+            }
+        });
+
+        // Initialize pagination using jQuery for better compatibility
+        $(document).ready(function() {
+            console.log("Initializing jQuery pagination");
+            
+            // Store all rows
+            var $allRows = $('#archiveTableBody tr');
+            console.log("Total rows: " + $allRows.length);
+            
+            // Pagination variables
+            var currentPage = 1;
+            var rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
+            
+            function updatePagination() {
+                var totalRows = $allRows.length;
+                var totalPages = Math.ceil(totalRows / rowsPerPage);
+                
+                // Update info text
+                $('#totalRows').text(totalRows);
+                $('#rowsPerPage').text(Math.min(rowsPerPage, totalRows));
+                
+                var startIndex = (currentPage - 1) * rowsPerPage;
+                var endIndex = Math.min(startIndex + rowsPerPage, totalRows);
+                $('#currentPage').text(startIndex + 1);
+                
+                // Hide all rows
+                $allRows.hide();
+                
+                // Show only current page rows
+                $allRows.slice(startIndex, endIndex).show();
+                
+                // Update button states
+                $('#prevPage').prop('disabled', currentPage === 1);
+                $('#nextPage').prop('disabled', currentPage >= totalPages);
+                
+                // Generate pagination links
+                var $pagination = $('#pagination');
+                $pagination.empty();
+                
+                if (totalPages > 1) {
+                    // Previous button
+                    $pagination.append(
+                        $('<li class="page-item' + (currentPage === 1 ? ' disabled' : '') + '">')
+                            .append(
+                                $('<a class="page-link" href="#">')
+                                    .html('&laquo;')
+                                    .on('click', function(e) {
+                                        e.preventDefault();
+                                        if (currentPage > 1) {
+                                            currentPage--;
+                                            updatePagination();
+                                        }
+                                    })
+                            )
+                    );
+                    
+                    // Page numbers
+                    for (var i = 1; i <= totalPages; i++) {
+                        // Show first, last, and pages around current
+                        if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+                            $pagination.append(
+                                $('<li class="page-item' + (i === currentPage ? ' active' : '') + '">')
+                                    .append(
+                                        $('<a class="page-link" href="#">')
+                                            .text(i)
+                                            .on('click', function(e) {
+                                                e.preventDefault();
+                                                currentPage = parseInt($(this).text());
+                                                updatePagination();
+                                            })
+                                    )
+                            );
+                        } else if (i === currentPage - 3 || i === currentPage + 3) {
+                            $pagination.append(
+                                $('<li class="page-item disabled">')
+                                    .append(
+                                        $('<a class="page-link" href="#">')
+                                            .html('&hellip;')
+                                    )
+                            );
+                        }
+                    }
+                    
+                    // Next button
+                    $pagination.append(
+                        $('<li class="page-item' + (currentPage >= totalPages ? ' disabled' : '') + '">')
+                            .append(
+                                $('<a class="page-link" href="#">')
+                                    .html('&raquo;')
+                                    .on('click', function(e) {
+                                        e.preventDefault();
+                                        if (currentPage < totalPages) {
+                                            currentPage++;
+                                            updatePagination();
+                                        }
+                                    })
+                            )
+                    );
+                }
+                
+                console.log("Pagination updated. Current page: " + currentPage + ", Rows per page: " + rowsPerPage);
+            }
+            
+            // Handle row per page change
+            $('#rowsPerPageSelect').on('change', function() {
+                rowsPerPage = parseInt($(this).val());
+                currentPage = 1; // Reset to first page
+                updatePagination();
+            });
+            
+            // Handle prev/next buttons
+            $('#prevPage').on('click', function(e) {
+                e.preventDefault();
+                if (!$(this).prop('disabled')) {
+                    currentPage--;
+                    updatePagination();
+                }
+            });
+            
+            $('#nextPage').on('click', function(e) {
+                e.preventDefault();
+                if (!$(this).prop('disabled')) {
+                    currentPage++;
+                    updatePagination();
+                }
+            });
+            
+            // Initialize pagination
+            updatePagination();
+            
+            // Override any external pagination
+            window.initPagination = function() {
+                console.log("External pagination initialization intercepted");
+                updatePagination();
+            };
+        });
+
+        var deleteId = null;
+        var restoreId = null;
+        var bulkDeleteIds = [];
+
+        // Delegated events for checkboxes
+        $(document).on('change', '#select-all', function() {
+            $('.select-row').prop('checked', $(this).prop('checked'));
+            updateBulkButtons();
+        });
+        $(document).on('change', '.select-row', updateBulkButtons);
+
+        function updateBulkButtons() {
+            var count = $('.select-row:checked').length;
+            // Show bulk actions only if 2 or more are selected
+            if (count >= 2) {
+                if (userPrivileges.canRestore) {
+                    $('#restore-selected').prop('disabled', false).show();
+                }
+                if (userPrivileges.canDelete) {
+                    $('#delete-selected-permanently').prop('disabled', false).show();
+                }
+            } else {
+                $('#restore-selected, #delete-selected-permanently').prop('disabled', true).hide();
+            }
+        }
+
+        // --- Individual Restore (with modal) ---
+        $(document).on('click', '.restore-btn', function(e) {
+            if (!userPrivileges.canRestore) return;
+
+            e.preventDefault();
+            restoreId = $(this).data('id');
+            var restoreModal = new bootstrap.Modal(document.getElementById('restoreArchiveModal'));
+            restoreModal.show();
+        });
+
+        $(document).on('click', '#confirmRestoreBtn', function() {
+            if (!userPrivileges.canRestore || !restoreId) return;
+
+            $.ajax({
+                url: '../../user_manager/restore_user.php',
+                method: 'POST',
+                data: {
+                    id: restoreId
+                },
+                dataType: 'json',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                success: function(response) {
+                    // Hide restore modal immediately
+                    var modalInstance = bootstrap.Modal.getInstance(document.getElementById('restoreArchiveModal'));
+                    modalInstance.hide();
+
+                    // Check for success status in a case-insensitive manner
+                    if (response.status && response.status.toLowerCase() === 'success') {
+                        $('#archiveTable').load(location.href + ' #archiveTable', function() {
+                            updateBulkButtons();
+                            showToast(response.message, 'success', 5000, 'Success');
+                        });
+                    } else {
+                        showToast(response.message, 'error', 5000, 'Error');
+                    }
+                },
+                error: function() {
+                    showToast('Error processing restore request.', 'error');
+                }
+            });
+        });
+
+
+        // --- Individual Permanent Delete ---
+        $(document).on('click', '.delete-permanent-btn', function(e) {
+            if (!userPrivileges.canDelete) return;
+
+            e.preventDefault();
+            deleteId = $(this).data('id');
+            var deleteModal = new bootstrap.Modal(document.getElementById('deleteArchiveModal'));
+            deleteModal.show();
+        });
+
+        $(document).on('click', '#confirmDeleteBtn', function() {
+            if (!userPrivileges.canDelete || !deleteId) return;
+
+            $.ajax({
+                url: '../../user_manager/delete_user.php',
+                method: 'POST',
+                data: {
+                    user_id: deleteId,
+                    permanent: 1
+                },
+                dataType: 'json',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                success: function(response) {
+                    // Hide delete modal immediately
+                    var modalInstance = bootstrap.Modal.getInstance(document.getElementById('deleteArchiveModal'));
+                    modalInstance.hide();
+
+                    // Use case-insensitive check for "success"
+                    if (response.status && response.status.toLowerCase() === 'success') {
+                        $('#archiveTable').load(location.href + ' #archiveTable', function() {
+                            updateBulkButtons();
+                            showToast(response.message, 'success', 5000, 'Success');
+                        });
+                    } else {
+                        showToast(response.message, 'error', 5000, 'Error');
+                    }
+                },
+                error: function() {
+                    showToast('Error processing request.', 'error');
+                }
+            });
+        });
+
+
+        var bulkRestoreIds = [];
+
+        // When bulk restore button is clicked, gather selected IDs and show modal
+        $(document).on('click', '#restore-selected', function() {
+            if (!userPrivileges.canRestore) return;
+
+            var selected = $('.select-row:checked');
+            bulkRestoreIds = [];
+            selected.each(function() {
+                bulkRestoreIds.push($(this).val());
+            });
+            var bulkRestoreModal = new bootstrap.Modal(document.getElementById('bulkRestoreModal'));
+            bulkRestoreModal.show();
+        });
+
+        // When confirming bulk restore in the modal, perform the AJAX call
+        $(document).on('click', '#confirmBulkRestoreBtn', function() {
+            if (!userPrivileges.canRestore || bulkRestoreIds.length === 0) return;
+
+            $.ajax({
+                url: '../../user_manager/restore_user.php',
+                method: 'POST',
+                data: {
+                    user_ids: bulkRestoreIds
+                },
+                dataType: 'json',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                success: function(response) {
+                    // Hide the bulk restore modal
+                    var modalInstance = bootstrap.Modal.getInstance(document.getElementById('bulkRestoreModal'));
+                    modalInstance.hide();
+                    if (response.status && response.status.toLowerCase() === 'success') {
+                        $('#archiveTable').load(location.href + ' #archiveTable', function() {
+                            updateBulkButtons();
+                            showToast(response.message, 'success', 5000, 'Success');
+                        });
+                    } else {
+                        showToast(response.message, 'error', 5000, 'Error');
+                    }
+                },
+                error: function() {
+                    showToast('Error processing bulk restore.', 'error');
+                }
+            });
+        });
+
+
+        // --- Bulk Delete ---
+        $(document).on('click', '#delete-selected-permanently', function() {
+            if (!userPrivileges.canDelete) return;
+
+            var selected = $('.select-row:checked');
+            bulkDeleteIds = [];
+            selected.each(function() {
+                bulkDeleteIds.push($(this).val());
+            });
+            var bulkModal = new bootstrap.Modal(document.getElementById('bulkDeleteModal'));
+            bulkModal.show();
+        });
+        $(document).on('click', '#confirmBulkDeleteBtn', function() {
+            if (!userPrivileges.canDelete || bulkDeleteIds.length === 0) return;
+
+            $.ajax({
+                url: '../../user_manager/delete_user.php',
+                method: 'POST',
+                data: {
+                    user_ids: bulkDeleteIds,
+                    permanent: 1
+                },
+                dataType: 'json',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                success: function(response) {
+                    // Hide bulk delete modal immediately
+                    var bulkModalInstance = bootstrap.Modal.getInstance(document.getElementById('bulkDeleteModal'));
+                    bulkModalInstance.hide();
+
+                    if (response.status && response.status.toLowerCase() === 'success') {
+                        $('#archiveTable').load(location.href + ' #archiveTable', function() {
+                            updateBulkButtons();
+                            showToast(response.message, 'success', 5000, 'Success');
+                        });
+                    } else {
+                        showToast(response.message, 'error', 5000, 'Error');
+                    }
+                },
+                error: function() {
+                    showToast('Error processing bulk delete.', 'error');
+                }
+            });
+        });
+
+        $(document).ready(function() {
+
+            // Store original table rows on page load for restoring
+            var originalRows = [];
+
+            function initializeRows() {
+                // Get a fresh copy of all rows
+                originalRows = $('#archiveTableBody tr').toArray();
+            }
+
+            // Initialize once page loads
+            initializeRows();
+
+            // Function to filter rows
+            function filterTable() {
+                var actionFilter = $('#filterAction').val().toLowerCase();
+                var statusFilter = $('#filterStatus').val().toLowerCase();
+                var searchFilter = $('#searchInput').val().toLowerCase();
+
+                // Clone all original rows
+                var allRows = originalRows.slice();
+
+                // Filter rows
+                var filteredRows = $.grep(allRows, function(row) {
+                    var $row = $(row);
+                    var matches = true;
+
+                    // Filter by action
+                    if (actionFilter) {
+                        var $actionCell = $row.find('td[data-label="Action"]');
+                        var actionText = $actionCell.text().toLowerCase();
+
+                        if (!actionText.includes(actionFilter)) {
+                            matches = false;
+                        }
+                    }
+
+                    // Filter by status
+                    if (statusFilter && matches) {
+                        var $statusCell = $row.find('td[data-label="Status"]');
+                        var statusText = $statusCell.text().toLowerCase();
+
+                        if (!statusText.includes(statusFilter)) {
+                            matches = false;
+                        }
+                    }
+
+                    // Filter by search
+                    if (searchFilter && matches) {
+                        var rowText = $row.text().toLowerCase();
+                        if (!rowText.includes(searchFilter)) {
+                            matches = false;
+                        }
+                    }
+
+                    return matches;
+                });
+
+
+                // Clear table
+                $('#archiveTableBody').empty();
+
+                // Show filtered rows or no results message
+                if (filteredRows.length > 0) {
+                    // Add filtered rows back to table
+                    $.each(filteredRows, function(i, row) {
+                        $('#archiveTableBody').append(row);
+                    });
+                } else {
+                    // Show no results message
+                    var noResultsHtml = `
+                <tr id="no-results-row">
+                    <td colspan="10" class="text-center py-4">
+                        <div class="empty-state">
+                            <i class="fas fa-search fa-3x mb-3"></i>
+                            <h4>No matching records found</h4>
+                            <p class="text-muted">Try adjusting your filter criteria.</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+                    $('#archiveTableBody').html(noResultsHtml);
+                }
+
+                // Update pagination if needed
+                if (typeof updatePagination === 'function') {
+                    updatePagination();
+                }
+            }
+
+            // Attach filter handlers
+            $('#filterAction').on('change', function() {
+                filterTable();
+            });
+
+            $('#filterStatus').on('change', function() {
+                filterTable();
+            });
+
+            $('#searchInput').on('input', function() {
+                filterTable();
+            });
+
+            // In case table gets updated by pagination or AJAX
+            $(document).ajaxComplete(function() {
+                // Wait a moment for DOM to update
+                setTimeout(function() {
+                    initializeRows();
+                }, 100);
+            });
+
+            // Refresh table when rows per page changes
+            $('#rowsPerPageSelect').on('change', function() {
+                // Wait for pagination to update
+                setTimeout(function() {
+                    initializeRows();
+                    filterTable();
+                }, 100);
+            });
+
+            // Handle pagination button clicks
+            $('#prevPage, #nextPage, #pagination').on('click', function() {
+                // Wait for pagination to update
+                setTimeout(function() {
+                    initializeRows();
+                    filterTable();
+                }, 100);
+            });
+
+            // Function to help debug - check what text is in the rows
+            window.checkRowContents = function() {
+                $('#archiveTableBody tr').each(function(i, row) {
+                    var $row = $(row);
+
+                    var $actionCell = $row.find('td[data-label="Action"]');
+                    if ($actionCell.length) {}
+
+                    var $statusCell = $row.find('td[data-label="Status"]');
+                    if ($statusCell.length) {}
+                });
+            };
+
+            // Run initial check
+            window.checkRowContents();
+        });
+    </script>
+
     <?php include '../../../general/footer.php'; ?>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- jQuery pagination override for any external scripts -->
+    <script>
+        $(document).ready(function() {
+            // Disable any external pagination.js script if it exists
+            if (typeof window.originalInitPagination === 'undefined' && typeof initPagination !== 'undefined') {
+                window.originalInitPagination = initPagination;
+            }
+            
+            // Add direct click handlers to pagination elements that might be added dynamically
+            $(document).on('click', '#pagination .page-link', function(e) {
+                e.preventDefault();
+                var pageNum = $(this).text();
+                
+                // Handle prev/next arrows
+                if (pageNum === '«') {
+                    $('#prevPage').trigger('click');
+                    return;
+                }
+                if (pageNum === '»') {
+                    $('#nextPage').trigger('click');
+                    return;
+                }
+                
+                // Only handle numeric pages
+                if (!isNaN(pageNum)) {
+                    // Update active state
+                    $('#pagination .page-item').removeClass('active');
+                    $(this).parent('.page-item').addClass('active');
+                    
+                    // Manually trigger update if needed
+                    if (typeof updatePagination === 'function') {
+                        window.currentPage = parseInt(pageNum);
+                        updatePagination();
+                    }
+                }
+            });
+            
+            // Same for prev/next buttons
+            $(document).on('click', '#prevPage:not([disabled])', function(e) {
+                e.preventDefault();
+                if (typeof updatePagination === 'function' && window.currentPage > 1) {
+                    window.currentPage--;
+                    updatePagination();
+                }
+            });
+            
+            $(document).on('click', '#nextPage:not([disabled])', function(e) {
+                e.preventDefault();
+                var totalPages = Math.ceil($('#archiveTableBody tr').length / parseInt($('#rowsPerPageSelect').val()));
+                if (typeof updatePagination === 'function' && window.currentPage < totalPages) {
+                    window.currentPage++;
+                    updatePagination();
+                }
+            });
+        });
+    </script>
 </body>
 
 </html>
