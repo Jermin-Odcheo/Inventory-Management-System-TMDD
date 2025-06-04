@@ -179,7 +179,6 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <select id="dateFilterType" name="date_filter_type" class="form-select shadow-sm">
                                     <option value="" <?= empty($filters['date_filter_type']) ? 'selected' : '' ?>>-- Select Type --</option>
                                     <option value="mdy" <?= ($filters['date_filter_type'] ?? '') === 'mdy' ? 'selected' : '' ?>>Month-Day-Year Range</option>
-                                    <option value="month" <?= ($filters['date_filter_type'] ?? '') === 'month' ? 'selected' : '' ?>>Month Range</option>
                                     <option value="year" <?= ($filters['date_filter_type'] ?? '') === 'year' ? 'selected' : '' ?>>Year Range</option>
                                     <option value="month_year" <?= ($filters['date_filter_type'] ?? '') === 'month_year' ? 'selected' : '' ?>>Month-Year Range</option>
                                 </select>
@@ -192,24 +191,12 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     value="<?= htmlspecialchars($_GET['date_from'] ?? '') ?>"
                                     placeholder="Start Date (YYYY-MM-DD)">
                             </div>
+
                             <div class="col-12 col-md-3 date-filter date-mdy d-none">
                                 <label class="form-label fw-semibold">Date To</label>
                                 <input type="date" name="date_to" class="form-control shadow-sm"
                                     value="<?= htmlspecialchars($_GET['date_to'] ?? '') ?>"
                                     placeholder="End Date (YYYY-MM-DD)">
-                            </div>
-
-                            <div class="col-12 col-md-3 date-filter date-month d-none">
-                                <label class="form-label fw-semibold">Month From</label>
-                                <input type="month" name="month_from" class="form-control shadow-sm"
-                                    value="<?= htmlspecialchars($_GET['month_from'] ?? '') ?>"
-                                    placeholder="e.g., 2023-01">
-                            </div>
-                            <div class="col-12 col-md-3 date-filter date-month d-none">
-                                <label class="form-label fw-semibold">Month To</label>
-                                <input type="month" name="month_to" class="form-control shadow-sm"
-                                    value="<?= htmlspecialchars($_GET['month_to'] ?? '') ?>"
-                                    placeholder="e.g., 2023-12">
                             </div>
 
                             <div class="col-12 col-md-3 date-filter date-year d-none">

@@ -606,6 +606,49 @@ try {
     $errors[] = "Error retrieving Equipment Locations: " . $e->getMessage();
 }
 
+// Prepare filter values
+$filterValues = [
+    'building_loc' => [],
+    'floor_no' => [],
+    'specific_area' => [],
+    'device_state' => []
+];
+
+// Arrays to track lowercase values to avoid duplicates with different cases
+$caseInsensitiveTracker = [
+    'building_loc' => [],
+    'floor_no' => [],
+    'specific_area' => [],
+    'device_state' => []
+];
+
+// Populate filter values from equipment locations
+foreach ($equipmentLocations as $location) {
+    foreach ($filterValues as $key => &$arr) {
+        if (!empty($location[$key])) {
+            // For device_state, use case-insensitive comparison
+            $lowerCaseValue = strtolower($location[$key]);
+            
+            // Check if we've already seen this value (case-insensitive)
+            if (!in_array($lowerCaseValue, $caseInsensitiveTracker[$key])) {
+                // Capitalize first letter for device_state
+                if ($key === 'device_state') {
+                    $formattedValue = ucfirst(strtolower($location[$key]));
+                    $arr[] = $formattedValue;
+                } else {
+                    $arr[] = $location[$key];
+                }
+                $caseInsensitiveTracker[$key][] = $lowerCaseValue;
+            }
+        }
+    }
+}
+
+// Sort filter values
+foreach ($filterValues as &$arr) {
+    sort($arr);
+}
+
 function safeHtml($value)
 {
     return htmlspecialchars($value ?? 'N/A');
@@ -634,12 +677,33 @@ function safeHtml($value)
             display: none !important;
         }
 
-        th.sortable.asc::after {
-            content: " ▲";
+        /* Sortable header styles */
+        th.sortable {
+            cursor: pointer;
+            position: relative;
+            padding-right: 25px;
         }
 
-        th.sortable.desc::after {
-            content: " ▼";
+        th.sortable:hover {
+            background-color: #f8f9fa;
+        }
+
+        th.sortable i {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+            font-size: 0.8em;
+        }
+
+        th.sortable:hover i {
+            color: #495057;
+        }
+
+        th.sortable i.fa-sort-up,
+        th.sortable i.fa-sort-down {
+            color: #0d6efd;
         }
 
         /* Select2 custom styling to match other filter elements */
@@ -705,8 +769,8 @@ function safeHtml($value)
             <div class="card-body">
                 <div class="container-fluid px-0">
                     <div class="filter-container" id="filterContainer">
-                        <!-- Row 1: Create Location + Filters -->
-                        <div class="row mb-2 g-2 align-items-center flex-wrap">
+                        <!-- Single row for all controls -->
+                        <div class="row mb-2 g-2 align-items-center">
                             <div class="col-auto">
                                 <?php if ($canCreate): ?>
                                     <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#addLocationModal">
@@ -714,49 +778,67 @@ function safeHtml($value)
                                     </button>
                                 <?php endif; ?>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <select class="form-select" id="filterBuilding">
                                     <option value="">Filter by Building</option>
                                     <option value="all">All Buildings</option>
                                     <?php
-                                    if (!empty($equipmentLocations)) {
-                                        $buildings = array_unique(array_column($equipmentLocations, 'building_loc'));
-                                        foreach ($buildings as $building) {
-                                            echo "<option>" . htmlspecialchars($building) . "</option>";
-                                        }
+                                    foreach ($filterValues['building_loc'] as $building) {
+                                        echo "<option value='" . htmlspecialchars($building) . "'>" . htmlspecialchars($building) . "</option>";
                                     }
                                     ?>
                                 </select>
                             </div>
-                            <div class="col-md-3">
-                                <select class="form-select" id="dateFilter">
-                                    <option value="">Filter by Date</option>
-                                    <option value="desc">Newest to Oldest</option>
-                                    <option value="asc">Oldest to Newest</option>
-                                    <option value="mdy">Month-Day-Year Range</option>
-                                    <option value="month">Month Range</option>
-                                    <option value="year">Year Range</option>
-                                    <option value="month_year">Month-Year Range</option>
+                            <div class="col-md-2">
+                                <select class="form-select" id="filterFloor">
+                                    <option value="">Filter by Floor</option>
+                                    <option value="all">All Floors</option>
+                                    <?php
+                                    foreach ($filterValues['floor_no'] as $floor) {
+                                        echo "<option value='" . htmlspecialchars($floor) . "'>" . htmlspecialchars($floor) . "</option>";
+                                    }
+                                    ?>
                                 </select>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
+                                <select class="form-select" id="filterArea">
+                                    <option value="">Filter by Area</option>
+                                    <option value="all">All Areas</option>
+                                    <?php
+                                    foreach ($filterValues['specific_area'] as $area) {
+                                        echo "<option value='" . htmlspecialchars($area) . "'>" . htmlspecialchars($area) . "</option>";
+                                    }
+                                    ?>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <select class="form-select" id="filterDeviceState">
+                                    <option value="">Filter by Device State</option>
+                                    <option value="all">All States</option>
+                                    <?php
+                                    foreach ($filterValues['device_state'] as $state) {
+                                        echo "<option value='" . htmlspecialchars($state) . "'>" . htmlspecialchars($state) . "</option>";
+                                    }
+                                    ?>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="bi bi-search"></i></span>
                                     <input type="text" id="eqSearch" class="form-control" placeholder="Search Equipment...">
                                 </div>
                             </div>
-                        </div>
-                        <!-- Row 2: View Equipment Changes, Filter, Clear -->
-                        <div class="row mb-2 g-2 align-items-center">
-                            <div class="col-auto d-flex gap-2 align-items-center">
-                                <a href="equipLoc_change_log.php" class="btn btn-primary"><i class="bi bi-card-list"></i> View Equipment Changes</a>
+                            <div class="col-auto d-flex gap-2">
                                 <button type="button" id="applyFilters" class="btn btn-dark"><i class="bi bi-funnel"></i> Filter</button>
                                 <button type="button" id="clearFilters" class="btn btn-secondary shadow-sm"><i class="bi bi-x-circle"></i> Clear</button>
+                                <a href="equipLoc_change_log.php" class="btn btn-primary"><i class="bi bi-card-list"></i> View Equipment Changes</a>
                             </div>
                         </div>
+
                         <!-- Date Inputs Row -->
                         <div id="dateInputsContainer" class="d-flex align-items-center gap-3" style="display: none;">
-                            <div class="date-group d-none flex-row" id="mdy-group">
+                            
+                        <div class="date-group d-none flex-row" id="mdy-group">
                                 <div class="d-flex flex-column me-2">
                                     <label for="dateFrom" class="form-label mb-0" style="font-size: 0.9em;">Date From</label>
                                     <input type="date" id="dateFrom" class="form-control form-control-sm" style="width: 140px;">
@@ -766,16 +848,7 @@ function safeHtml($value)
                                     <input type="date" id="dateTo" class="form-control form-control-sm" style="width: 140px;">
                                 </div>
                             </div>
-                            <div class="date-group d-none flex-row" id="month-group">
-                                <div class="d-flex flex-column me-2">
-                                    <label for="monthFrom" class="form-label mb-0" style="font-size: 0.9em;">Month From</label>
-                                    <input type="month" id="monthFrom" class="form-control form-control-sm" style="width: 120px;">
-                                </div>
-                                <div class="d-flex flex-column">
-                                    <label for="monthTo" class="form-label mb-0" style="font-size: 0.9em;">Month To</label>
-                                    <input type="month" id="monthTo" class="form-control form-control-sm" style="width: 120px;">
-                                </div>
-                            </div>
+                           
                             <div class="date-group d-none flex-row" id="year-group">
                                 <div class="d-flex flex-column me-2">
                                     <label for="yearFrom" class="form-label mb-0" style="font-size: 0.9em;">Year From</label>
@@ -786,6 +859,7 @@ function safeHtml($value)
                                     <input type="number" id="yearTo" class="form-control form-control-sm" style="width: 90px;" min="1900" max="2100">
                                 </div>
                             </div>
+                            
                             <div class="date-group d-none flex-row" id="monthyear-group">
                                 <div class="d-flex flex-column me-2">
                                     <label for="monthYearFrom" class="form-label mb-0" style="font-size: 0.9em;">From (MM-YYYY)</label>
@@ -803,16 +877,16 @@ function safeHtml($value)
                         <table class="table" id="elTable">
                             <thead>
                                 <tr>
-                                    <th class="sortable" data-sort="number">#</th>
-                                    <th class="sortable" data-sort="string">Asset Tag</th>
-                                    <th class="sortable" data-sort="string">Building</th>
-                                    <th class="sortable" data-sort="string">Floor</th>
-                                    <th class="sortable" data-sort="string">Area</th>
-                                    <th class="sortable" data-sort="string">Person Responsible</th>
-                                    <th class="sortable" data-sort="string">Department</th>
-                                    <th class="sortable" data-sort="string">Device State</th>
-                                    <th class="sortable" data-sort="string">Remarks</th>
-                                    <th class="sortable" data-sort="date">Date Created</th>
+                                    <th class="sortable" data-sort="number"># <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-sort="string">Asset Tag <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-sort="string">Building <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-sort="string">Floor <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-sort="string">Area <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-sort="string">Person Responsible <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-sort="string">Department <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-sort="string">Device State <i class="fas fa-sort"></i></th>
+                                    <th>Remarks</th>
+                                    <th class="sortable" data-sort="date">Date Created <i class="fas fa-sort"></i></th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -979,10 +1053,13 @@ function safeHtml($value)
                                 <option value="">Select Department</option>
                                 <?php
                                 try {
-                                    $deptStmt = $pdo->query("SELECT id, department_name FROM departments ORDER BY department_name");
+                                    $deptStmt = $pdo->query("SELECT id, department_name, abbreviation FROM departments WHERE is_disabled = 0 ORDER BY department_name");
                                     $departments = $deptStmt->fetchAll();
                                     foreach ($departments as $department) {
-                                        echo "<option value='" . htmlspecialchars($department['id']) . "'>" . htmlspecialchars($department['department_name']) . "</option>";
+                                        echo "<option value='" . htmlspecialchars($department['id']) . "'>" . 
+                                             "(" . htmlspecialchars($department['abbreviation']) . ") " . 
+                                             htmlspecialchars($department['department_name']) . 
+                                             "</option>";
                                     }
                                 } catch (PDOException $e) {
                                     // Handle error if needed
@@ -1070,10 +1147,13 @@ function safeHtml($value)
                                 <option value="">Select Department</option>
                                 <?php
                                 try {
-                                    $deptStmt = $pdo->query("SELECT id, department_name FROM departments ORDER BY department_name");
+                                    $deptStmt = $pdo->query("SELECT id, department_name, abbreviation FROM departments WHERE is_disabled = 0 ORDER BY department_name");
                                     $departments = $deptStmt->fetchAll();
                                     foreach ($departments as $department) {
-                                        echo "<option value='" . htmlspecialchars($department['id']) . "'>" . htmlspecialchars($department['department_name']) . "</option>";
+                                        echo "<option value='" . htmlspecialchars($department['id']) . "'>" . 
+                                             "(" . htmlspecialchars($department['abbreviation']) . ") " . 
+                                             htmlspecialchars($department['department_name']) . 
+                                             "</option>";
                                     }
                                 } catch (PDOException $e) {
                                     // Handle error if needed
@@ -1261,37 +1341,12 @@ function safeHtml($value)
         // Update filterTable to support new date filter types
         function locationFilterTable() {
             var building = $('#filterBuilding').val().toLowerCase();
-            var dateFilter = $('#dateFilter').val();
+            var floor = $('#filterFloor').val().toLowerCase();
+            var area = $('#filterArea').val().toLowerCase();
+            var deviceState = $('#filterDeviceState').val().toLowerCase();
             var search = $('#eqSearch').val().toLowerCase();
-            var dateFrom = $('#dateFrom').val();
-            var dateTo = $('#dateTo').val();
-            var monthFrom = $('#monthFrom').val();
-            var monthTo = $('#monthTo').val();
-            var yearFrom = $('#yearFrom').val();
-            var yearTo = $('#yearTo').val();
-            var monthYearFrom = $('#monthYearFrom').val();
-            var monthYearTo = $('#monthYearTo').val();
 
             var rows = $('#locationTbody tr').get();
-
-            // Sort rows by Date Created if needed
-            if (dateFilter === 'desc' || dateFilter === 'asc') {
-                rows.sort(function(a, b) {
-                    var dateA = $(a).find('td').eq(9).text();
-                    var dateB = $(b).find('td').eq(9).text();
-                    var dA = new Date(dateA);
-                    var dB = new Date(dateB);
-                    if (dateFilter === 'desc') {
-                        return dB - dA;
-                    } else {
-                        return dA - dB;
-                    }
-                });
-                // Re-append sorted rows
-                $.each(rows, function(idx, row) {
-                    $('#locationTbody').append(row);
-                });
-            }
 
             // Reset the filtered rows array
             window.filteredRows = [];
@@ -1306,30 +1361,25 @@ function safeHtml($value)
                     var buildingText = row.find('td').eq(2).text().toLowerCase();
                     if (buildingText !== building) show = false;
                 }
-                // Date filter (advanced types)
-                var dateText = row.find('td').eq(9).text().substring(0, 10); // 'YYYY-MM-DD'
-                if (dateFilter === 'mdy') {
-                    if (dateFrom && dateTo) {
-                        if (dateText < dateFrom || dateText > dateTo) show = false;
-                    }
-                } else if (dateFilter === 'month') {
-                    if (monthFrom && monthTo) {
-                        var dateMonth = dateText.substring(0, 7); // 'YYYY-MM'
-                        var fromMonth = monthFrom;
-                        var toMonth = monthTo;
-                        if (dateMonth < fromMonth || dateMonth > toMonth) show = false;
-                    }
-                } else if (dateFilter === 'year') {
-                    if (yearFrom && yearTo) {
-                        var dateYear = dateText.substring(0, 4); // 'YYYY'
-                        if (dateYear < yearFrom || dateYear > yearTo) show = false;
-                    }
-                } else if (dateFilter === 'month_year') {
-                    if (monthYearFrom && monthYearTo) {
-                        var dateMonth = dateText.substring(0, 7); // 'YYYY-MM'
-                        if (dateMonth < monthYearFrom || dateMonth > monthYearTo) show = false;
-                    }
+
+                // Floor filter
+                if (floor && floor !== 'all') {
+                    var floorText = row.find('td').eq(3).text().toLowerCase();
+                    if (floorText !== floor) show = false;
                 }
+
+                // Area filter
+                if (area && area !== 'all') {
+                    var areaText = row.find('td').eq(4).text().toLowerCase();
+                    if (areaText !== area) show = false;
+                }
+
+                // Device State filter
+                if (deviceState && deviceState !== 'all') {
+                    var stateText = row.find('td').eq(7).text().toLowerCase();
+                    if (stateText !== deviceState) show = false;
+                }
+
                 // Search filter (always applied)
                 if (search) {
                     var rowText = row.text().toLowerCase();
@@ -1368,10 +1418,15 @@ function safeHtml($value)
         var type = th.data('sort') || 'string';
         var asc = !th.hasClass('asc');
 
-        // Remove sort classes from all headers
-        th.siblings('.sortable').removeClass('asc desc');
+        // Remove sort classes and reset icons from all headers
+        th.siblings('.sortable').removeClass('asc desc').find('i').removeClass('fa-sort-up fa-sort-down').addClass('fa-sort');
         th.removeClass('asc desc');
         th.addClass(asc ? 'asc' : 'desc');
+        
+        // Update the icon
+        var icon = th.find('i');
+        icon.removeClass('fa-sort fa-sort-up fa-sort-down')
+            .addClass(asc ? 'fa-sort-up' : 'fa-sort-down');
 
         rows.sort(function(a, b) {
             var x = $(a).find('td').eq(index).text().trim();
@@ -1485,27 +1540,19 @@ function safeHtml($value)
             });
 
             $('#clearFilters').on('click', function() {
-                // Reset building filter to 'all'
+                // Reset all filter dropdowns to 'all'
                 $('#filterBuilding').val('all').trigger('change');
-                // Reset date filter to default (empty)
-                $('#dateFilter').val('').trigger('change');
-                // Explicitly clear all advanced date inputs
-                $('#dateFrom').val('');
-                $('#dateTo').val('');
-                $('#monthFrom').val('');
-                $('#monthTo').val('');
-                $('#yearFrom').val('');
-                $('#yearTo').val('');
-                $('#monthYearFrom').val('');
-                $('#monthYearTo').val('');
-                // Hide all date input containers
-                $('#dateInputsContainer .date-group').addClass('d-none');
-                $('#dateInputsContainer').hide();
+                $('#filterFloor').val('all').trigger('change');
+                $('#filterArea').val('all').trigger('change');
+                $('#filterDeviceState').val('all').trigger('change');
+                
                 // Clear search bar
                 $('#eqSearch').val('');
+                
                 // Reset filteredRows to allRows so all data is shown
                 window.filteredRows = window.allRows;
                 window.currentPage = 1;
+                
                 // Update pagination which will show the correct rows
                 locationUpdatePagination();
             });
@@ -1783,7 +1830,30 @@ function safeHtml($value)
                 dropdownParent: $('#addLocationModal'),
                 width: '100%',
                 placeholder: 'Select Department',
-                allowClear: true
+                allowClear: true,
+                matcher: function(params, data) {
+                    // If there are no search terms, return all of the data
+                    if ($.trim(params.term) === '') {
+                        return data;
+                    }
+
+                    // Do not display the item if there is no 'text' property
+                    if (typeof data.text === 'undefined') {
+                        return null;
+                    }
+
+                    // Search in both department name and abbreviation
+                    var searchStr = data.text.toLowerCase();
+                    var searchTerm = params.term.toLowerCase();
+
+                    // Check if the search term matches either the department name or abbreviation
+                    if (searchStr.indexOf(searchTerm) > -1) {
+                        return data;
+                    }
+
+                    // Return `null` if the term should not be displayed
+                    return null;
+                }
             });
         });
         $('#addLocationModal').on('hidden.bs.modal', function() {
@@ -1914,6 +1984,37 @@ function safeHtml($value)
                 allowClear: true,
                 width: '100%',
                 dropdownParent: $('#editLocationModal')
+            });
+
+            // Initialize Select2 for department in edit modal
+            $('#edit_department_id').select2({
+                dropdownParent: $('#editLocationModal'),
+                width: '100%',
+                placeholder: 'Select Department',
+                allowClear: true,
+                matcher: function(params, data) {
+                    // If there are no search terms, return all of the data
+                    if ($.trim(params.term) === '') {
+                        return data;
+                    }
+
+                    // Do not display the item if there is no 'text' property
+                    if (typeof data.text === 'undefined') {
+                        return null;
+                    }
+
+                    // Search in both department name and abbreviation
+                    var searchStr = data.text.toLowerCase();
+                    var searchTerm = params.term.toLowerCase();
+
+                    // Check if the search term matches either the department name or abbreviation
+                    if (searchStr.indexOf(searchTerm) > -1) {
+                        return data;
+                    }
+
+                    // Return `null` if the term should not be displayed
+                    return null;
+                }
             });
         });
         $('#editLocationModal').on('hidden.bs.modal', function() {
