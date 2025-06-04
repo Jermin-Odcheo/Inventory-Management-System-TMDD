@@ -1,11 +1,26 @@
 <?php
 
+/**
+ * User management module.
+ *
+ * Provides functionality to view, filter, sort, and manage users,
+ * including department and role assignments. Handles creation of the
+ * `created_at` column if missing, and supports date-based filtering
+ * when the column is present.
+ *
+ * @package    IMS-TMDD
+ * @subpackage UserManagement
+ * @author     Jermin
+ * @license    MIT
+ */
 declare(strict_types=1);
 
 require_once '../../../../../config/ims-tmdd.php';
 session_start();
 
-// Maximum error reporting for debugging
+/**
+ * Enable full error reporting for debugging purposes.
+ */
 ini_set('display_errors', '1');
 error_reporting(E_ALL);
 
@@ -15,7 +30,13 @@ error_reporting(E_ALL);
     include '../../general/footer.php';
 
 
-// 1) Auth guard
+/**
+ * Ensure a valid user_id is present in the session.
+ *
+ * If no valid integer user_id is found, redirect to the login page.
+ *
+ * @var int|null $userId The current user ID from session, or null if not set.
+ */
 $userId = $_SESSION['user_id'] ?? null;
 if (!is_int($userId) && !ctype_digit((string)$userId)) {
     header("Location: " . BASE_URL . "index.php");
@@ -23,19 +44,41 @@ if (!is_int($userId) && !ctype_digit((string)$userId)) {
 }
 $userId = (int)$userId;
 
-// 2) Init RBAC & enforce "View"
+/**
+ * Initialize RBACService and require the "View" privilege for User Management.
+ *
+ * @var RBACService $rbac Instance to check user privileges.
+ */
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
 $rbac->requirePrivilege('User Management', 'View');
 
-// 3) Button flags
+/**
+ * Button flags based on the current user's privileges:
+ *  - $canCreate:   Can create new users.
+ *  - $canModify:   Can modify existing users.
+ *  - $canDelete:   Can delete users.
+ *  - $canTrack:    Can track user activity.
+ *
+ * @var bool $canCreate
+ * @var bool $canModify
+ * @var bool $canDelete
+ * @var bool $canTrack
+ */
 $canCreate = $rbac->hasPrivilege('User Management', 'Create');
 $canModify = $rbac->hasPrivilege('User Management', 'Modify');
 $canDelete = $rbac->hasPrivilege('User Management', 'Remove');
 $canTrack = $rbac->hasPrivilege('User Management', 'Track');
 
-// 4) Fetch departments
+/**
+ * Array to hold active departments keyed by their ID.
+ *
+ * @var array<int,array{ id:string, department_name:string, abbreviation:string }> $departments
+ */
 $departments = [];
 try {
+    /**
+     * Query to retrieve all active departments, ordered alphabetically.
+     */
     $stmt = $pdo->query("
         SELECT id, department_name, abbreviation
           FROM departments
@@ -49,7 +92,15 @@ try {
     error_log('Error fetching departments: ' . $e->getMessage());
 }
 
-// Helpers
+/**
+ * Retrieve all departments assigned to a given user.
+ *
+ * @param PDO $pdo    PDO instance connected to the database.
+ * @param int $userId The ID of the user whose departments will be fetched.
+ *
+ * @return array<int,array{ department_id:string, department_name:string, abbreviation:string }>
+ *         List of departments assigned to the user.
+ */
 function getUserDepartments(PDO $pdo, int $userId): array
 {
     $stmt = $pdo->prepare(
@@ -61,8 +112,12 @@ function getUserDepartments(PDO $pdo, int $userId): array
     $stmt->execute([$userId]);
     return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 }
-
-// 5) Build filters & sort
+/**
+ * Map of sortable fields to their corresponding SQL expressions or aliases.
+ * Keys correspond to GET parameters, values to database columns for ORDER BY.
+ *
+ * @var array<string,string> $sortMap
+ */
 $sortMap = [
     'id' => 'u.id',
     'Email' => 'u.email',
@@ -72,18 +127,38 @@ $sortMap = [
     'Status' => 'u.status',
 ];
 
-// Default sorting
+/**
+ * Default sort column and direction.
+ *
+ * @var string $sortBy  Column key from $sortMap; defaults to 'id'.
+ * @var string $sortDir Sorting direction; 'asc' or 'desc'. Defaults to 'asc'.
+ */
 $sortBy = 'id';
 $sortDir = 'asc';
 
-// Initialize date filter type from GET parameter
+/**
+ * Type of date filter selected by the user (e.g., 'mdy', 'month_year', 'year').
+ *
+ * Taken from GET parameter 'date_filter_type'.
+ *
+ * @var string $dateFilterType
+ */
 $dateFilterType = $_GET['date_filter_type'] ?? '';
 
-// Check if the filter form has been submitted
-// We only want to apply filters if the user has explicitly clicked the Filter button
+/**
+ * Flag indicating if the filter form has been submitted.
+ *
+ * @var bool $isFiltered
+ */
 $isFiltered = isset($_GET['apply-filters']);
 
-// Check if created_at column exists in the users table
+/**
+ * Check for existence of `created_at` column in the `users` table.
+ * If missing and the current database user has ALTER privileges,
+ * attempt to add the column and backfill existing records.
+ *
+ * @var bool $hasCreatedAt True if the column exists or was added successfully.
+ */
 try {
     $columnCheckStmt = $pdo->query("SHOW COLUMNS FROM users LIKE 'created_at'");
     $hasCreatedAt = $columnCheckStmt->rowCount() > 0;
@@ -126,7 +201,15 @@ try {
     $hasCreatedAt = false;
 }
 
-// Base SQL query - adjust based on column existence
+/**
+ * Construct the base SQL query to fetch user details, joined with
+ * departments and roles, applying `is_disabled = 0` and dynamic filters.
+ *
+ * Uses GROUP_CONCAT to aggregate multiple departments and roles per user in one row.
+ *
+ * @var string $sql     The SELECT portion of the query (filters appended later).
+ * @var array  $params  Parameters to bind for filtering (initially empty).
+ */
 $sql = "
 SELECT
   u.id,
@@ -151,8 +234,8 @@ LEFT JOIN roles r
 WHERE u.is_disabled = 0
 ";
 
-// Add filtering conditions
-$params = [];
+
+$params = []; // Holds bound parameters for filtering
 
 // Only apply filters if the filter button was clicked
 if ($isFiltered) {
@@ -238,25 +321,39 @@ if ($dateFilterType === 'year') {
 // Complete the query - Simplified GROUP BY to avoid SQL errors
 $groupByClause = "GROUP BY u.id";
 
-// Add the ORDER BY clause
+/**
+ * Use GROUP BY on user ID to avoid SQL errors when using GROUP_CONCAT.
+ * Sort by user ID descending by default.
+ */
 $sql .= "
 $groupByClause
 ORDER BY u.id DESC
 ";
 
 try {
-    // Debug SQL and params
+    /**
+     * Debug output of the final SQL and bound parameters.
+     */
     echo "<!-- DEBUG SQL: " . htmlspecialchars($sql) . " -->\n";
     echo "<!-- DEBUG PARAMS: " . htmlspecialchars(print_r($params, true)) . " -->\n";
     
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
+    /**
+     * Array of fetched user records; each element is an associative array
+     * containing user fields and concatenated department/role strings.
+     *
+     * @var array<int,array<string,mixed>> $users
+     */
     $users = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     
     // Debug user count
     echo "<!-- DEBUG USERS COUNT: " . count($users) . " -->\n";
 } catch (PDOException $e) {
-    // Display error instead of dying silently
+    /**
+     * If a database error occurs, display an alert with the SQL and error message,
+     * and log the error. Continue rendering the page with an empty user list.
+     */
     echo "<div class='alert alert-danger'>";
     echo "<h4>Database Error:</h4>";
     echo "<p>" . htmlspecialchars($e->getMessage()) . "</p>";
