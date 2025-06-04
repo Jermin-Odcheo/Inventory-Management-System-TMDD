@@ -210,7 +210,7 @@ function getActionIcon($action)
     } elseif ($action === 'create') {
         return '<span class="action-badge action-create"><i class="fas fa-plus-circle me-1"></i> Create</span>';
     } elseif ($action === 'remove') {
-        return '<span class="action-badge action-delete"><i class="fas fa-trash-alt me-1"></i> Remove</span>';
+        return '<span class="action-badge action-delete"><i class="fas fa-trash-alt me-1"></i> Removed</span>';
     } elseif ($action === 'delete') {
         return '<span class="action-badge action-delete"><i class="fas fa-trash-alt me-1"></i> Delete</span>';
     } elseif ($action === 'restored') {
@@ -393,10 +393,15 @@ function getChangedFieldNames(array $oldData, array $newData)
 $where = "WHERE audit_log.Module IN ('Equipment Details', 'Equipment Location', 'Equipment Status')";
 $params = [];
 
-// Filter by action type (Create, Modified, Remove, etc.)
+// Filter by action type (Create, Modified, Removed, etc.)
 if (!empty($_GET['action_type'])) {
+    $actionType = $_GET['action_type'];
+    // Map display value 'Removed' back to DB value 'remove'
+    if (strtolower($actionType) === 'removed') {
+        $actionType = 'remove';
+    }
     $where .= " AND audit_log.Action = :action_type";
-    $params[':action_type'] = $_GET['action_type'];
+    $params[':action_type'] = $actionType;
 }
 
 // Filter by status (Successful, Failed)
@@ -554,7 +559,7 @@ error_log("Number of results: " . count($auditLogs));
                                     endforeach;
                                 else:
                                     // Fallback options if database query fails
-                                    $defaultActions = ['Create', 'Modified', 'Remove', 'Restored', 'Delete'];
+                                    $defaultActions = ['Create', 'Modified', 'Removed', 'Restored', 'Delete'];
                                     foreach ($defaultActions as $action):
                                         $selected = ($_GET['action_type'] ?? '') === $action ? 'selected' : '';
                                         echo '<option value="' . htmlspecialchars($action) . '" ' . $selected . '>' .
