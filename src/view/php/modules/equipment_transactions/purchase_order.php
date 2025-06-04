@@ -631,11 +631,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
                             <table id="purchaseTable" class="table table-striped table-hover">
                                 <thead class="table-dark">
                                     <tr>
-                                        <th class="sortable" data-sort="id"># <span class="sort-indicator"></span></th>
-                                        <th class="sortable" data-sort="po_no">PO Number <span class="sort-indicator"></span></th>
-                                        <th class="sortable" data-sort="date_of_order">Date of Order <span class="sort-indicator"></span></th>
-                                        <th class="sortable" data-sort="no_of_units">No. of Units <span class="sort-indicator"></span></th>
-                                        <th class="sortable" data-sort="item_specifications">Item Specifications <span class="sort-indicator"></span></th>
+                                        <th class="sortable" data-sort="id"># <span class="sort-indicator"><span class="arrow-up">▲</span><span class="arrow-down">▼</span></span></th>
+                                        <th class="sortable" data-sort="po_no">PO Number <span class="sort-indicator"><span class="arrow-up">▲</span><span class="arrow-down">▼</span></span></th>
+                                        <th class="sortable" data-sort="date_of_order">Date of Order <span class="sort-indicator"><span class="arrow-up">▲</span><span class="arrow-down">▼</span></span></th>
+                                        <th class="sortable" data-sort="no_of_units">No. of Units <span class="sort-indicator"><span class="arrow-up">▲</span><span class="arrow-down">▼</span></span></th>
+                                        <th class="sortable" data-sort="item_specifications">Item Specifications <span class="sort-indicator"><span class="arrow-up">▲</span><span class="arrow-down">▼</span></span></th>
                                         <th class="sortable d-none" data-sort="date_created">Created Date <span class="sort-indicator"></span></th>
                                         <th class="text-center">Actions</th>
                                     </tr>
@@ -1442,6 +1442,34 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
     restrictPONumberInput('#edit_po_no');
     </script>
     <style>
+        th.sortable .sort-indicator {
+            margin-left: 4px;
+            font-size: 0.95em;
+            display: inline-flex;
+            flex-direction: column;
+            vertical-align: middle;
+        }
+        th.sortable .arrow-up,
+        th.sortable .arrow-down {
+            color: #999;
+            display: block;
+            line-height: 0.9;
+        }
+        th.sortable.asc .arrow-up {
+            color: #0d6efd;
+            display: block;
+        }
+        th.sortable.asc .arrow-down {
+            display: none;
+        }
+        th.sortable.desc .arrow-down {
+            color: #0d6efd;
+            display: block;
+        }
+        th.sortable.desc .arrow-up {
+            display: none;
+        }
+
         /* Fallback if add_po_modal.css is missing */
         th.sortable { cursor: pointer; user-select: none; }
         th.sortable .sort-indicator { margin-left: 4px; font-size: 0.9em; }
@@ -1497,6 +1525,33 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
             }
         }
         function updateIndicators(activeTh, dir) {
+    // Only update indicator arrows, do not touch any other logic
+    thead.querySelectorAll('th.sortable').forEach(th => {
+        th.classList.remove('asc', 'desc');
+        const indicator = th.querySelector('.sort-indicator');
+        if (indicator) {
+            const up = indicator.querySelector('.arrow-up');
+            const down = indicator.querySelector('.arrow-down');
+            if (up) { up.style.display = 'block'; up.style.color = '#999'; }
+            if (down) { down.style.display = 'block'; down.style.color = '#999'; }
+        }
+    });
+    if (activeTh) {
+        activeTh.classList.add(dir);
+        const indicator = activeTh.querySelector('.sort-indicator');
+        if (indicator) {
+            const up = indicator.querySelector('.arrow-up');
+            const down = indicator.querySelector('.arrow-down');
+            if (dir === 'asc') {
+                if (up) { up.style.display = 'block'; up.style.color = '#0d6efd'; }
+                if (down) { down.style.display = 'none'; }
+            } else if (dir === 'desc') {
+                if (up) { up.style.display = 'none'; }
+                if (down) { down.style.display = 'block'; down.style.color = '#0d6efd'; }
+            }
+        }
+    }
+
             thead.querySelectorAll('th.sortable').forEach(th => {
                 th.classList.remove('asc', 'desc');
                 const indicator = th.querySelector('.sort-indicator');
