@@ -1,11 +1,30 @@
 <?php
 
+/**
+ * @file RBACService.php
+ * @brief Role-Based Access Control (RBAC) Service class.
+ *
+ * This class manages user privileges and access control based on roles and modules.
+ * It loads user privileges from the database and provides methods to check and enforce access rights.
+ */
 declare(strict_types=1);
 
 final class RBACService
 {
+    /**
+     * @var array $privileges
+     * @brief Stores the privileges associated with modules for a user.
+     *
+     * This array holds the mapping of module names to their respective privileges
+     * loaded from the database for the current user.
+     */
     private array $privileges = [];
 
+    /**
+     * @brief Constructor for RBACService.
+     * @param \PDO $pdo Database connection object.
+     * @param int $userId The ID of the user whose privileges are to be loaded.
+     */
     public function __construct(
         private \PDO $pdo,
         int $userId
@@ -13,6 +32,11 @@ final class RBACService
         $this->loadUserPrivileges($userId);
     }
 
+    /**
+     * @brief Loads user privileges from the database.
+     * @param int $userId The ID of the user whose privileges are to be loaded.
+     * @return void
+     */
     private function loadUserPrivileges(int $userId): void
     {
         $sql = <<<'SQL'
@@ -42,12 +66,24 @@ final class RBACService
 
     }
 
+    /**
+     * @brief Checks if the user has a specific privilege for a module.
+     * @param string $module The name of the module to check.
+     * @param string $priv The name of the privilege to check for.
+     * @return bool Returns true if the user has the privilege, false otherwise.
+     */
     public function hasPrivilege(string $module, string $priv): bool
     {
         return isset($this->privileges[$module])
             && in_array($priv, $this->privileges[$module], true);
     }
 
+    /**
+     * @brief Enforces a privilege check, terminating the request if the user lacks the privilege.
+     * @param string $module The name of the module to check.
+     * @param string $priv The name of the privilege required.
+     * @return void
+     */
     public function requirePrivilege(string $module, string $priv): void
     {
         if (! $this->hasPrivilege($module, $priv)) {

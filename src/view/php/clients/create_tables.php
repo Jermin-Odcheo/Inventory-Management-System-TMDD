@@ -1,8 +1,21 @@
 <?php
+/**
+ * @file create_tables.php
+ * @brief Script for creating database tables.
+ *
+ * This script is responsible for creating necessary database tables for the application,
+ * ensuring the database structure is properly initialized.
+ */
 require '../../../../config/ims-tmdd.php';
 
 try {
     // Create activity_logs table
+    /**
+     * @var \PDOStatement $createActivityLogsTable
+     * @brief Prepared statement for creating the activity_logs table.
+     *
+     * This statement creates the activity_logs table if it does not already exist.
+     */
     $createActivityLogsTable = $pdo->prepare("
         CREATE TABLE IF NOT EXISTS activity_logs (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -19,6 +32,12 @@ try {
     echo "Activity logs table created successfully<br>";
 
     // Create notifications table
+    /**
+     * @var \PDOStatement $createNotificationsTable
+     * @brief Prepared statement for creating the notifications table.
+     *
+     * This statement creates the notifications table if it does not already exist.
+     */
     $createNotificationsTable = $pdo->prepare("
         CREATE TABLE IF NOT EXISTS notifications (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -34,6 +53,12 @@ try {
     echo "Notifications table created successfully<br>";
 
     // Insert some sample notifications
+    /**
+     * @var \PDOStatement $insertSampleNotifications
+     * @brief Prepared statement for inserting sample notifications.
+     *
+     * This statement inserts sample data into the notifications table.
+     */
     $insertSampleNotifications = $pdo->prepare("
         INSERT INTO notifications (module_id, title, message, priority) VALUES
         (1, 'System Update', 'The system has been updated to the latest version.', 'low'),

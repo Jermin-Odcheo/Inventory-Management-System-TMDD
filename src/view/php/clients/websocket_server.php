@@ -1,4 +1,11 @@
 <?php
+/**
+ * @file websocket_server.php
+ * @brief WebSocket server for real-time communication.
+ *
+ * This script sets up a WebSocket server to handle real-time communication
+ * between clients and the server, facilitating instant updates and notifications.
+ */
 require '../../../../config/ims-tmdd.php';
 require '../../../../config/vendor/autoload.php';
 
@@ -7,38 +14,93 @@ use Ratchet\Http\HttpServer;
 use Ratchet\WebSocket\WsServer;
 use React\EventLoop\Factory;
 
+/**
+ * @class ActivityStream
+ * @brief Manages WebSocket connections and activity broadcasting.
+ *
+ * This class implements the MessageComponentInterface to handle WebSocket connections,
+ * manage client connections, and broadcast activities to connected clients.
+ */
 class ActivityStream implements \Ratchet\MessageComponentInterface {
+    /**
+     * @var \SplObjectStorage $clients
+     * @brief Stores connected WebSocket clients.
+     *
+     * This object storage holds all active client connections for broadcasting messages.
+     */
     protected $clients;
+
+    /**
+     * @var \PDO $pdo
+     * @brief Database connection object.
+     *
+     * This variable holds the PDO instance for database operations.
+     */
     protected $pdo;
 
+    /**
+     * @brief Constructor for ActivityStream.
+     * @param \PDO $pdo Database connection object.
+     */
     public function __construct($pdo) {
         $this->clients = new \SplObjectStorage;
         $this->pdo = $pdo;
     }
 
+    /**
+     * @brief Retrieves the list of connected clients.
+     * @return \SplObjectStorage Returns the storage object containing all connected clients.
+     */
     public function getClients() {
         return $this->clients;
     }
 
+    /**
+     * @brief Handles new WebSocket connections.
+     * @param \Ratchet\ConnectionInterface $conn The new connection object.
+     * @return void
+     */
     public function onOpen(\Ratchet\ConnectionInterface $conn) {
         $this->clients->attach($conn);
         echo "New connection! ({$conn->resourceId})\n";
     }
 
+    /**
+     * @brief Handles incoming messages from clients.
+     * @param \Ratchet\ConnectionInterface $from The client sending the message.
+     * @param string $msg The received message.
+     * @return void
+     */
     public function onMessage(\Ratchet\ConnectionInterface $from, $msg) {
         // Handle any incoming messages if needed
     }
 
+    /**
+     * @brief Handles client disconnection.
+     * @param \Ratchet\ConnectionInterface $conn The disconnecting client connection.
+     * @return void
+     */
     public function onClose(\Ratchet\ConnectionInterface $conn) {
         $this->clients->detach($conn);
         echo "Connection {$conn->resourceId} has disconnected\n";
     }
 
+    /**
+     * @brief Handles errors during WebSocket communication.
+     * @param \Ratchet\ConnectionInterface $conn The connection where the error occurred.
+     * @param \Exception $e The exception object containing error details.
+     * @return void
+     */
     public function onError(\Ratchet\ConnectionInterface $conn, \Exception $e) {
         echo "An error has occurred: {$e->getMessage()}\n";
         $conn->close();
     }
 
+    /**
+     * @brief Broadcasts activity updates to all connected clients.
+     * @param mixed $activity The activity data to broadcast.
+     * @return void
+     */
     public function broadcastActivity($activity) {
         foreach ($this->clients as $client) {
             $client->send(json_encode($activity));

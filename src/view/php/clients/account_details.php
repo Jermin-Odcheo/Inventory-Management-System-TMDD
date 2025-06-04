@@ -1,4 +1,11 @@
 <?php
+/**
+ * @file account_details.php
+ * @brief Manages client account details.
+ *
+ * This script handles the display and management of client account information,
+ * including personal details, settings, and account-related actions.
+ */
 session_start();
 require '../../../../config/ims-tmdd.php'; // This defines $pdo (PDO connection)
 
@@ -10,101 +17,316 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 
 }
-print("Hello");
+/**
+ * @var int $user_id
+ * @brief Stores the ID of the currently logged-in user.
+ *
+ * This variable holds the user ID retrieved from the session.
+ */
 $user_id = $_SESSION['user_id'];
 
 if ($user_id !== null) {
+    /**
+     * @var \PDOStatement $stmt
+     * @brief Prepared statement for retrieving user profile picture path.
+     *
+     * This statement queries the database for the user's profile picture path.
+     */
     $stmt = $pdo->prepare("SELECT profile_pic_path FROM users WHERE id = ?");
     $stmt->execute([$user_id]);
+    /**
+     * @var array $user
+     * @brief Stores user data retrieved from the database.
+     *
+     * This array contains user information including the profile picture path.
+     */
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
     print("hello " . $user['profile_pic_path']);
 } else {
     die("User not logged in."); // or redirect
 }
 // Fetch user details and role
-$sql = "
-    SELECT u.email, u.username, u.first_name, u.last_name, r.role_name 
-    FROM users u 
-    LEFT JOIN user_department_roles ur ON u.id = ur.user_id 
-    LEFT JOIN roles r ON ur.role_id = r.id 
-    WHERE u.id = ?
+/**
+ * @var string $sql
+ * @brief SQL query for retrieving user details and role.
+ *
+ * This query fetches user information and associated role from the database.
+ */
+$sql = "\
+    SELECT u.email, u.username, u.first_name, u.last_name, r.role_name \
+    FROM users u \
+    LEFT JOIN user_department_roles ur ON u.id = ur.user_id \
+    LEFT JOIN roles r ON ur.role_id = r.id \
+    WHERE u.id = ?\
 ";
+/**
+ * @var \PDOStatement $stmt
+ * @brief Prepared statement for retrieving user details.
+ *
+ * This statement executes the SQL query to fetch user details.
+ */
 $stmt = $pdo->prepare($sql);
 $stmt->execute([$user_id]);
+/**
+ * @var array $user
+ * @brief Stores detailed user information.
+ *
+ * This array contains detailed user data including email, username, name, and role.
+ */
 $user = $stmt->fetch();
+/**
+ * @var string $email
+ * @brief Stores the user's email address.
+ *
+ * This variable holds the email address retrieved from the database.
+ */
 $email = $user['email'] ?? '';
+/**
+ * @var string $username
+ * @brief Stores the user's username.
+ *
+ * This variable holds the username retrieved from the database.
+ */
 $username = $user['username'] ?? '';
+/**
+ * @var string $full_name
+ * @brief Stores the user's full name.
+ *
+ * This variable concatenates the first and last names of the user.
+ */
 $full_name = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+/**
+ * @var string $role
+ * @brief Stores the user's role.
+ *
+ * This variable holds the role name, defaulting to 'User' if not found.
+ */
 $role = $user['role_name'] ?? 'User'; // Default to 'User' if no role is found
 
 // Handle email update
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_email'])) {
+    /**
+     * @var string $new_email
+     * @brief Stores the new email address provided by the user.
+     *
+     * This variable holds the trimmed email input from the form.
+     */
     $new_email = trim($_POST['email']);
     if (filter_var($new_email, FILTER_VALIDATE_EMAIL)) {
+        /**
+         * @var string $update_sql
+         * @brief SQL query for updating user email.
+         *
+         * This query updates the user's email in the database.
+         */
         $update_sql = "UPDATE users SET email = ? WHERE id = ?";
+        /**
+         * @var \PDOStatement $update_stmt
+         * @brief Prepared statement for updating email.
+         *
+         * This statement executes the update query for the user's email.
+         */
         $update_stmt = $pdo->prepare($update_sql);
         if ($update_stmt->execute([$new_email, $user_id])) {
             $email = $new_email;
+            /**
+             * @var string $success_message
+             * @brief Stores success message for email update.
+             *
+             * This variable holds the success message displayed to the user.
+             */
             $success_message = "Email updated successfully.";
         } else {
+            /**
+             * @var string $error_message
+             * @brief Stores error message for email update failure.
+             *
+             * This variable holds the error message displayed to the user.
+             */
             $error_message = "Failed to update email.";
         }
     } else {
+        /**
+         * @var string $error_message
+         * @brief Stores error message for invalid email format.
+         *
+         * This variable holds the error message for invalid email input.
+         */
         $error_message = "Invalid email format.";
     }
 }
 
 // Handle password update
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_password'])) {
+    /**
+     * @var string $current_password
+     * @brief Stores the current password provided by the user.
+     *
+     * This variable holds the current password input from the form.
+     */
     $current_password = $_POST['current_password'];
+    /**
+     * @var string $new_password
+     * @brief Stores the new password provided by the user.
+     *
+     * This variable holds the new password input from the form.
+     */
     $new_password = $_POST['new_password'];
+    /**
+     * @var string $confirm_password
+     * @brief Stores the confirmation of the new password.
+     *
+     * This variable holds the confirmation password input from the form.
+     */
     $confirm_password = $_POST['confirm_password'];
 
     // Verify current password
+    /**
+     * @var string $sql
+     * @brief SQL query for verifying current password.
+     *
+     * This query fetches the current password hash from the database.
+     */
     $sql = "SELECT password FROM users WHERE id = ?";
+    /**
+     * @var \PDOStatement $stmt
+     * @brief Prepared statement for password verification.
+     *
+     * This statement executes the query to fetch the password hash.
+     */
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$user_id]);
+    /**
+     * @var array $user
+     * @brief Stores user data for password verification.
+     *
+     * This array contains the user's password hash for verification.
+     */
     $user = $stmt->fetch();
 
     if (password_verify($current_password, $user['password'])) {
         if ($new_password === $confirm_password) {
             // Server-side password validation
             if (strlen($new_password) < 8) {
+                /**
+                 * @var string $error_message
+                 * @brief Stores error message for password length.
+                 *
+                 * This variable holds the error message for insufficient password length.
+                 */
                 $error_message = "Password must be at least 8 characters long.";
             } elseif (!preg_match('/[A-Z]/', $new_password)) {
+                /**
+                 * @var string $error_message
+                 * @brief Stores error message for missing uppercase letter.
+                 *
+                 * This variable holds the error message for missing uppercase letter in password.
+                 */
                 $error_message = "Password must contain at least one uppercase letter.";
             } elseif (!preg_match('/[a-z]/', $new_password)) {
+                /**
+                 * @var string $error_message
+                 * @brief Stores error message for missing lowercase letter.
+                 *
+                 * This variable holds the error message for missing lowercase letter in password.
+                 */
                 $error_message = "Password must contain at least one lowercase letter.";
             } elseif (!preg_match('/\d/', $new_password)) {
+                /**
+                 * @var string $error_message
+                 * @brief Stores error message for missing number.
+                 *
+                 * This variable holds the error message for missing number in password.
+                 */
                 $error_message = "Password must contain at least one number.";
             } elseif (!preg_match('/[@$!%*?&]/', $new_password)) {
+                /**
+                 * @var string $error_message
+                 * @brief Stores error message for missing special character.
+                 *
+                 * This variable holds the error message for missing special character in password.
+                 */
                 $error_message = "Password must contain at least one special character (@$!%*?&).";
             } else {
+                /**
+                 * @var string $hashed_password
+                 * @brief Stores the hashed new password.
+                 *
+                 * This variable holds the hashed version of the new password.
+                 */
                 $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
 
                 // Set the @current_user_id variable (e.g., for auditing in a trigger)
                 $pdo->exec("SET @current_user_id = $user_id;");
 
                 // Update the password
+                /**
+                 * @var string $update_sql
+                 * @brief SQL query for updating user password.
+                 *
+                 * This query updates the user's password in the database.
+                 */
                 $update_sql = "UPDATE users SET password = ? WHERE id = ?";
+                /**
+                 * @var \PDOStatement $update_stmt
+                 * @brief Prepared statement for updating password.
+                 *
+                 * This statement executes the update query for the user's password.
+                 */
                 $update_stmt = $pdo->prepare($update_sql);
                 if ($update_stmt->execute([$hashed_password, $user_id])) {
+                    /**
+                     * @var string $success_message
+                     * @brief Stores success message for password update.
+                     *
+                     * This variable holds the success message displayed to the user.
+                     */
                     $success_message = "Password updated successfully.";
                 } else {
+                    /**
+                     * @var string $error_message
+                     * @brief Stores error message for password update failure.
+                     *
+                     * This variable holds the error message displayed to the user.
+                     */
                     $error_message = "Failed to update password.";
                 }
             }
         } else {
+            /**
+             * @var string $error_message
+             * @brief Stores error message for password mismatch.
+             *
+             * This variable holds the error message for mismatched new passwords.
+             */
             $error_message = "New passwords do not match.";
         }
     } else {
+        /**
+         * @var string $error_message
+         * @brief Stores error message for incorrect current password.
+         *
+         * This variable holds the error message for incorrect current password.
+         */
         $error_message = "Current password is incorrect.";
     }
 }
 
 // Handle account deletion
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
+    /**
+     * @var string $delete_sql
+     * @brief SQL query for deleting user account.
+     *
+     * This query deletes the user's account from the database.
+     */
     $delete_sql = "DELETE FROM users WHERE id = ?";
+    /**
+     * @var \PDOStatement $delete_stmt
+     * @brief Prepared statement for deleting account.
+     *
+     * This statement executes the delete query for the user's account.
+     */
     $delete_stmt = $pdo->prepare($delete_sql);
     
     if ($delete_stmt->execute([$user_id])) {
@@ -114,17 +336,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
         header("Location: " . BASE_URL . "index.php?account_deleted=1");
         exit();
     } else {
+        /**
+         * @var string $error_message
+         * @brief Stores error message for account deletion failure.
+         *
+         * This variable holds the error message displayed to the user.
+         */
         $error_message = "Failed to delete account. Please try again later.";
     }
 }
 
 //for profile pic uploading
 if (isset($_POST['update_profile_pic']) && isset($_FILES['profile_picture'])) {
+    /**
+     * @var string $upload_dir
+     * @brief Stores the absolute path for uploading profile pictures.
+     *
+     * This variable holds the directory path where profile pictures are uploaded.
+     */
     $upload_dir = __DIR__ . '/../../../../public/assets/img/user_images/'; // adjust path as needed
+    /**
+     * @var string $relative_dir
+     * @brief Stores the relative path for profile pictures.
+     *
+     * This variable holds the relative directory path for storing profile pictures.
+     */
     $relative_dir = 'assets/img/user_images/';
+    /**
+     * @var array $uploaded_file
+     * @brief Stores the uploaded file information.
+     *
+     * This array contains details of the uploaded profile picture file.
+     */
     $uploaded_file = $_FILES['profile_picture'];
     
+    /**
+     * @var array $allowed_types
+     * @brief Stores allowed file types for profile pictures.
+     *
+     * This array lists the permitted file extensions for profile pictures.
+     */
     $allowed_types = ['jpg', 'jpeg', 'png', 'gif'];
+    /**
+     * @var string $file_ext
+     * @brief Stores the file extension of the uploaded file.
+     *
+     * This variable holds the lowercase extension of the uploaded file.
+     */
     $file_ext = strtolower(pathinfo($uploaded_file['name'], PATHINFO_EXTENSION));
 
     if (in_array($file_ext, $allowed_types) && getimagesize($uploaded_file['tmp_name'])) {
@@ -134,31 +392,85 @@ if (isset($_POST['update_profile_pic']) && isset($_FILES['profile_picture'])) {
         }
 
         // Create new filename (e.g., user_123.jpg)
+        /**
+         * @var string $new_filename
+         * @brief Stores the new filename for the uploaded profile picture.
+         *
+         * This variable creates a unique filename based on user ID and file extension.
+         */
         $new_filename = 'user_' . $user_id . '.' . $file_ext;
 
+        /**
+         * @var string $target_file
+         * @brief Stores the full path for the uploaded file.
+         *
+         * This variable holds the complete path where the file will be moved.
+         */
         $target_file = $upload_dir . $new_filename;
+        /**
+         * @var string $relative_path
+         * @brief Stores the relative path for database storage.
+         *
+         * This variable holds the relative path to be stored in the database.
+         */
         $relative_path = $relative_dir . $new_filename;
 
         if (move_uploaded_file($uploaded_file['tmp_name'], $target_file)) {
             // Update the user's profile_pic_path in DB
+            /**
+             * @var \PDOStatement $stmt
+             * @brief Prepared statement for updating profile picture path.
+             *
+             * This statement updates the profile picture path in the database.
+             */
             $stmt = $pdo->prepare("UPDATE users SET profile_pic_path = ? WHERE id = ?");
             print("the id is : " . $user_id);
             $stmt->execute([$relative_path, $user_id]);
 
             // Update in session or $user array if needed
             $user['profile_pic_path'] = $relative_path;
+            /**
+             * @var string $success_message
+             * @brief Stores success message for profile picture update.
+             *
+             * This variable holds the success message displayed to the user.
+             */
             $success_message = "Profile picture updated successfully.";
         } else {
+            /**
+             * @var string $error_message
+             * @brief Stores error message for profile picture upload failure.
+             *
+             * This variable holds the error message displayed to the user.
+             */
             $error_message = "Failed to upload the image.";
         }
     } else {
+        /**
+         * @var string $error_message
+         * @brief Stores error message for invalid image file.
+         *
+         * This variable holds the error message for invalid image file upload.
+         */
         $error_message = "Invalid image file.";
     }
 }
 
 if ($user_id !== null) {
+    /**
+     * @var \PDOStatement $stmt
+     * @brief Prepared statement for retrieving updated profile picture path.
+     *
+     * This statement queries the database for the updated profile picture path.
+     */
     $stmt = $pdo->prepare("SELECT profile_pic_path FROM users WHERE id = ?");
     $stmt->execute([$user_id]);
+    /**
+     * @var array $user
+     * @brief Stores updated user data.
+     *
+     * This array contains the updated user information including profile picture path.
+     */
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
     print($user['profile_pic_path']);
 } else {

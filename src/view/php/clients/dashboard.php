@@ -1,4 +1,11 @@
 <?php
+/**
+ * @file dashboard.php
+ * @brief Main dashboard for client interface.
+ *
+ * This script serves as the primary dashboard for clients, providing an overview
+ * of key metrics, recent activities, and access to various system functionalities.
+ */
 session_start();
 require '../../../../config/ims-tmdd.php';
 // If not logged in, redirect to the LOGIN PAGE
@@ -11,10 +18,29 @@ include '../general/header.php';
 include '../general/sidebar.php';
 
 
+/**
+ * @var string $role
+ * @brief Stores the user's role from the session.
+ *
+ * This variable holds the role of the currently logged-in user.
+ */
 $role = $_SESSION['role'];
+
+/**
+ * @var string $email
+ * @brief Stores the user's email from the session.
+ *
+ * This variable holds the email address of the currently logged-in user.
+ */
 $email = $_SESSION['email']; // Assuming you stored email in session
 
 // Define page title dynamically based on role
+/**
+ * @var string $dashboardTitle
+ * @brief Stores the title of the dashboard page.
+ *
+ * This variable sets the default title for the dashboard.
+ */
 $dashboardTitle = "Dashboard"; // Default title
 function getUserDetails($pdo, $userId)
 {
@@ -60,6 +86,12 @@ function getUserDetails($pdo, $userId)
     ];
 }
 
+/**
+ * @var string $selectedDeptId
+ * @brief Stores the selected department ID from POST data.
+ *
+ * This variable holds the department ID selected by the user, if any.
+ */
 $selectedDeptId = isset($_POST['DepartmentID']) ? $_POST['DepartmentID'] : '';
 
 try {
@@ -73,8 +105,20 @@ try {
         $placeholders = implode(',', array_fill(0, count($departmentIds), '?'));
         $stmt = $pdo->prepare("SELECT * FROM departments WHERE id IN ($placeholders)");
         $stmt->execute($departmentIds);
+        /**
+         * @var array $departments
+         * @brief Stores the list of departments associated with the user.
+         *
+         * This array contains full department information retrieved from the database.
+         */
         $departments = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } else {
+        /**
+         * @var array $departments
+         * @brief Stores an empty array if no departments are found.
+         *
+         * This array is empty if no departments are associated with the user.
+         */
         $departments = []; // No departments found
     }
 } catch (PDOException $e) {
@@ -82,6 +126,13 @@ try {
 }
 
 // Get recent activities based on user's access rights
+/**
+ * @brief Retrieves recent activities based on user's access rights.
+ * @param \PDO $pdo Database connection object.
+ * @param int $userId The ID of the user whose activities are to be retrieved.
+ * @param int $limit The maximum number of activities to retrieve (default is 5).
+ * @return array Returns an array of grouped activities by module.
+ */
 function getRecentActivities($pdo, $userId, $limit = 5) {
     try {
         // First, let's check if the user has any module permissions
@@ -140,6 +191,13 @@ function getRecentActivities($pdo, $userId, $limit = 5) {
 }
 
 // Get relevant notifications based on user's access rights
+/**
+ * @brief Retrieves notifications based on user's access rights.
+ * @param \PDO $pdo Database connection object.
+ * @param int $userId The ID of the user whose notifications are to be retrieved.
+ * @param int $limit The maximum number of notifications to retrieve (default is 5).
+ * @return array Returns an array of notifications.
+ */
 function getNotifications($pdo, $userId, $limit = 5) {
     try {
         $query = $pdo->prepare("
@@ -169,7 +227,20 @@ function getNotifications($pdo, $userId, $limit = 5) {
 }
 
 // Get the activities and notifications
+/**
+ * @var array $recentActivities
+ * @brief Stores recent activities for the user.
+ *
+ * This array contains the recent activities grouped by module for the logged-in user.
+ */
 $recentActivities = getRecentActivities($pdo, $_SESSION['user_id']);
+
+/**
+ * @var array $notifications
+ * @brief Stores notifications for the user.
+ *
+ * This array contains the notifications relevant to the logged-in user.
+ */
 $notifications = getNotifications($pdo, $_SESSION['user_id']);
 ?>
 <!DOCTYPE html>
