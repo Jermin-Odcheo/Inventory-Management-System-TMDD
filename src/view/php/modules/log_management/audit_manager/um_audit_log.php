@@ -1,4 +1,10 @@
 <?php
+/**
+ * User Management Audit Logs Script
+ *
+ * This script handles the display of audit logs for user management activities. It checks user permissions,
+ * fetches and filters audit log data based on various criteria, and formats the data for presentation in a user interface.
+ */
 session_start();
 require '../../../../../../config/ims-tmdd.php';
 
@@ -11,30 +17,67 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Initialize RBAC and check permissions
+/**
+ * Initialize RBAC and Check Permissions
+ *
+ * Initializes the Role-Based Access Control (RBAC) system and checks if the user has the necessary permissions
+ * to view audit logs for user management.
+ *
+ * @return void
+ */
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
 
 // Check for required privilege
 $hasAuditPermission = $rbac->hasPrivilege('Audit', 'Track');
 $hasUMPermission = $rbac->hasPrivilege('User Management', 'Track');
 
-// Initialize date filter type from GET parameter
+/**
+ * Initialize Date Filter Type
+ *
+ * Sets the date filter type based on user input for filtering audit logs.
+ *
+ * @return void
+ */
 $dateFilterType = $_GET['date_filter_type'] ?? '';
 
-// Initialize sorting parameters
+/**
+ * Initialize Sorting Parameters
+ *
+ * Sets up the sorting parameters for displaying audit logs based on user input or default values.
+ *
+ * @return void
+ */
 $sortColumn = $_GET['sort'] ?? 'TrackID';
 $sortOrder = $_GET['order'] ?? 'DESC';
 
-// Validate sort column to prevent SQL injection
+/**
+ * Validate Sort Column
+ *
+ * Ensures the sort column is one of the allowed values to prevent SQL injection.
+ *
+ * @return void
+ */
 $allowedColumns = ['TrackID', 'email', 'Module', 'Action', 'Details', 'Status', 'Date_Time'];
 if (!in_array($sortColumn, $allowedColumns)) {
     $sortColumn = 'TrackID';
 }
 
-// Validate sort order
+/**
+ * Validate Sort Order
+ *
+ * Ensures the sort order is either ASC or DESC.
+ *
+ * @return void
+ */
 $sortOrder = strtoupper($sortOrder) === 'ASC' ? 'ASC' : 'DESC';
 
-// If user doesn't have permission, show an inline "no permission" page
+/**
+ * Check User Permission
+ *
+ * Displays an access denied message if the user lacks the necessary permissions.
+ *
+ * @return void
+ */
 if (!$hasAuditPermission && !$hasUMPermission) {
     echo '
       <div class="container d-flex justify-content-center align-items-center" 
@@ -48,7 +91,13 @@ if (!$hasAuditPermission && !$hasUMPermission) {
     exit();
 }
 
-// Fetch all audit logs - only showing User Management logs
+/**
+ * Fetch Audit Logs
+ *
+ * Retrieves all audit logs related to user management from the database.
+ *
+ * @return void
+ */
 $query = "SELECT audit_log.*, users.email AS email 
           FROM audit_log 
           LEFT JOIN users ON audit_log.UserID = users.id
@@ -59,7 +108,13 @@ $stmt = $pdo->prepare($query);
 $stmt->execute();
 $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Fetch unique values for dropdowns
+/**
+ * Fetch Unique Values for Dropdowns
+ *
+ * Retrieves unique action and status types from the audit log for filtering purposes.
+ *
+ * @return void
+ */
 $actionTypesQuery = "SELECT DISTINCT Action FROM audit_log WHERE Module = 'User Management' ORDER BY Action";
 $statusTypesQuery = "SELECT DISTINCT Status FROM audit_log WHERE Module = 'User Management' ORDER BY Status";
 
@@ -70,7 +125,12 @@ $actionTypes = $actionTypesStmt->fetchAll(PDO::FETCH_COLUMN);
 $statusTypes = $statusTypesStmt->fetchAll(PDO::FETCH_COLUMN);
 
 /**
- * Formats a JSON string into an HTML list.
+ * Format New Value
+ *
+ * Formats a JSON string into an HTML list for display purposes.
+ *
+ * @param string|null $jsonStr The JSON string to format.
+ * @return string The formatted HTML string.
  */
 function formatNewValue($jsonStr)
 {
@@ -106,7 +166,14 @@ function formatNewValue($jsonStr)
 }
 
 /**
- * Compares two JSON strings and shows a diff of changes (ignoring is_deleted and password differences).
+ * Format Audit Diff
+ *
+ * Compares two JSON strings and shows a diff of changes, ignoring certain fields.
+ *
+ * @param string|null $oldJson The old JSON string.
+ * @param string|null $newJson The new JSON string.
+ * @param string|null $status The status of the log entry.
+ * @return string The formatted diff as HTML.
  */
 function formatAuditDiff($oldJson, $newJson, $status = null)
 {
@@ -183,7 +250,12 @@ function formatAuditDiff($oldJson, $newJson, $status = null)
 }
 
 /**
- * Returns an icon based on the given action.
+ * Get Action Icon
+ *
+ * Returns an icon based on the given action type.
+ *
+ * @param string $action The action type.
+ * @return string The HTML icon string.
  */
 function getActionIcon($action)
 {
@@ -199,7 +271,12 @@ function getActionIcon($action)
 }
 
 /**
+ * Get Status Icon
+ *
  * Returns a status icon based on the log status.
+ *
+ * @param string $status The status of the log entry.
+ * @return string The HTML icon string.
  */
 function getStatusIcon($status)
 {
@@ -209,8 +286,14 @@ function getStatusIcon($status)
 }
 
 /**
+ * Process Status Message
+ *
  * Processes error messages when the log status is failed.
- * Returns an array with [details, changes].
+ *
+ * @param string $defaultMessage The default message to display.
+ * @param array $log The log entry data.
+ * @param callable $changeCallback Callback to format changes if status is not failed.
+ * @return array An array with formatted details and changes.
  */
 function processStatusMessage($defaultMessage, $log, $changeCallback)
 {
@@ -225,7 +308,12 @@ function processStatusMessage($defaultMessage, $log, $changeCallback)
 }
 
 /**
- * Returns an array with formatted Details and Changes columns.
+ * Format Details and Changes
+ *
+ * Formats the details and changes columns based on the action type in the log entry.
+ *
+ * @param array $log The log entry data.
+ * @return array An array containing formatted details and changes HTML.
  */
 function formatDetailsAndChanges($log)
 {
@@ -399,7 +487,13 @@ function formatDetailsAndChanges($log)
 }
 
 /**
- * Returns a list of changed field names.
+ * Get Changed Field Names
+ *
+ * Returns a list of field names that have changed between old and new data.
+ *
+ * @param array $oldData The old data array.
+ * @param array $newData The new data array.
+ * @return array List of changed field names.
  */
 function getChangedFieldNames(array $oldData, array $newData)
 {
@@ -414,9 +508,12 @@ function getChangedFieldNames(array $oldData, array $newData)
 }
 
 /**
- * Normalizes the action for display.
- * If the JSON values indicate a restore, it returns 'restored'.
- * For role removals, ensures proper display.
+ * Get Normalized Action
+ *
+ * Normalizes the action for display, adjusting based on JSON values for specific cases like restore or role modifications.
+ *
+ * @param array $log The log entry data.
+ * @return string The normalized action type.
  */
 function getNormalizedAction($log)
 {
@@ -460,6 +557,13 @@ function getNormalizedAction($log)
     return $action;
 }
 
+/**
+ * Build Query Filters
+ *
+ * Constructs the WHERE clause and parameters for filtering audit logs based on user input.
+ *
+ * @return void
+ */
 //Filter code
 $where = "WHERE audit_log.Module = 'User Management'";
 $params = [];
@@ -519,6 +623,13 @@ if ($dateFilterType === 'year') {
     }
 }
 
+/**
+ * Fetch Filtered Audit Logs
+ *
+ * Retrieves audit logs based on the constructed filters and sorting parameters.
+ *
+ * @return void
+ */
 // Modify the query to include sorting
 $query = "
   SELECT audit_log.*, users.email AS email 

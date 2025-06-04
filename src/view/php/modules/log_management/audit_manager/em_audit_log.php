@@ -1,4 +1,10 @@
 <?php
+/**
+ * Equipment Management Audit Logs Script
+ *
+ * This script handles the display of audit logs for equipment management activities. It checks user permissions,
+ * fetches and filters audit log data based on various criteria, and formats the data for presentation in a user interface.
+ */
 session_start();
 require '../../../../../../config/ims-tmdd.php';
 
@@ -11,14 +17,27 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Initialize RBAC and check permissions
+/**
+ * Initialize RBAC and Check Permissions
+ *
+ * Initializes the Role-Based Access Control (RBAC) system and checks if the user has the necessary permissions
+ * to view audit logs for equipment management.
+ *
+ * @return void
+ */
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
 
 // Check for required privilege
 $hasAuditPermission = $rbac->hasPrivilege('Audit', 'Track');
 $hasEMPermission = $rbac->hasPrivilege('Equipment Management', 'Track');
 
-// If user doesn't have permission, show an inline "no permission" page
+/**
+ * Check User Permission
+ *
+ * Displays an access denied message if the user lacks the necessary permissions.
+ *
+ * @return void
+ */
 if (!$hasAuditPermission && !$hasEMPermission) {
     echo '
       <div class="container d-flex justify-content-center align-items-center" 
@@ -32,7 +51,13 @@ if (!$hasAuditPermission && !$hasEMPermission) {
     exit();
 }
 
-// Fetch all audit logs (including permanent deletes)
+/**
+ * Fetch Audit Logs
+ *
+ * Retrieves all audit logs related to equipment management from the database.
+ *
+ * @return void
+ */
 $query = "
     SELECT
         audit_log.*,
@@ -54,7 +79,13 @@ $stmt = $pdo->prepare($query);
 $stmt->execute();
 $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// --- Department ID to Name Map (for audit diff display) ---
+/**
+ * Department ID to Name Mapping
+ *
+ * Creates a mapping of department IDs to names for display purposes in audit logs.
+ *
+ * @return void
+ */
 $departmentIdNameMap = [];
 try {
     $deptStmt = $pdo->query("SELECT id, department_name FROM departments");
@@ -64,6 +95,14 @@ try {
 } catch (Exception $e) {
 }
 
+/**
+ * Get Department Name
+ *
+ * Retrieves the department name for a given ID from the mapping.
+ *
+ * @param int|string $id The department ID.
+ * @return string The department name or ID if not found.
+ */
 function getDepartmentName($id)
 {
     global $departmentIdNameMap;
@@ -71,7 +110,12 @@ function getDepartmentName($id)
 }
 
 /**
- * Helper function to display JSON data with <br> for new lines.
+ * Format JSON Data
+ *
+ * Formats a JSON string with line breaks for display purposes.
+ *
+ * @param string|null $jsonStr The JSON string to format.
+ * @return string The formatted string with HTML line breaks.
  */
 function formatJsonData($jsonStr)
 {
@@ -82,7 +126,12 @@ function formatJsonData($jsonStr)
 }
 
 /**
- * New helper function to format a JSON string into a visually appealing list.
+ * Format New Value
+ *
+ * Formats a JSON string or array into a visually appealing HTML list.
+ *
+ * @param string|array $jsonStr The JSON string or array to format.
+ * @return string The formatted HTML list.
  */
 function formatNewValue($jsonStr)
 {
@@ -118,8 +167,13 @@ function formatNewValue($jsonStr)
 }
 
 /**
- * Helper function to compare old/new JSON data for modifications.
- * Special handling for the "is_deleted" field is included.
+ * Format Audit Diff
+ *
+ * Compares old and new JSON data for modifications, with special handling for certain fields.
+ *
+ * @param string|null $oldJson The old JSON string.
+ * @param string|null $newJson The new JSON string.
+ * @return string The formatted diff as HTML.
  */
 function formatAuditDiff($oldJson, $newJson)
 {
@@ -197,9 +251,13 @@ function formatAuditDiff($oldJson, $newJson)
     return $html;
 }
 
-
 /**
- * Helper function to return an icon based on action.
+ * Get Action Icon
+ *
+ * Returns an HTML string with an icon based on the action type.
+ *
+ * @param string $action The action type.
+ * @return string The HTML string with the icon and action text.
  */
 function getActionIcon($action)
 {
@@ -221,7 +279,12 @@ function getActionIcon($action)
 }
 
 /**
- * Helper function to return a status icon.
+ * Get Status Icon
+ *
+ * Returns an HTML string with an icon based on the status.
+ *
+ * @param string $status The status of the log entry.
+ * @return string The HTML string with the icon.
  */
 function getStatusIcon($status)
 {
@@ -231,8 +294,12 @@ function getStatusIcon($status)
 }
 
 /**
- * Format the "Details" and "Changes" columns based on the action.
- * Returns an array: [ $detailsHTML, $changesHTML ]
+ * Format Details and Changes
+ *
+ * Formats the details and changes columns based on the action type in the log entry.
+ *
+ * @param array $log The log entry data.
+ * @return array An array containing formatted details and changes HTML.
  */
 function formatDetailsAndChanges($log)
 {
@@ -357,7 +424,13 @@ function formatDetailsAndChanges($log)
 }
 
 /**
- * Helper function to find which fields changed (just the field names).
+ * Get Changed Field Names
+ *
+ * Identifies field names that have changed between old and new data, excluding system fields.
+ *
+ * @param array $oldData The old data array.
+ * @param array $newData The new data array.
+ * @return array List of changed field names.
  */
 function getChangedFieldNames(array $oldData, array $newData)
 {
@@ -388,6 +461,13 @@ function getChangedFieldNames(array $oldData, array $newData)
     return $changed;
 }
 
+/**
+ * Build Query Filters
+ *
+ * Constructs the WHERE clause and parameters for filtering audit logs based on user input.
+ *
+ * @return void
+ */
 //Filter Section
 // Base WHERE clause to filter only Equipment Management related modules (and subcomponents)
 $where = "WHERE audit_log.Module IN ('Equipment Details', 'Equipment Location', 'Equipment Status')";
@@ -464,6 +544,13 @@ switch ($dateFilterType) {
         break;
 }
 
+/**
+ * Fetch Filtered Audit Logs
+ *
+ * Retrieves audit logs based on the constructed filters and orders them by date.
+ *
+ * @return void
+ */
 // Query to get audit logs with user emails
 $query = "SELECT audit_log.TrackID,
     audit_log.UserID,

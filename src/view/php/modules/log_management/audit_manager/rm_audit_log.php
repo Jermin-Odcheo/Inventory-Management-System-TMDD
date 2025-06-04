@@ -1,4 +1,10 @@
 <?php
+/**
+ * Role Management Audit Logs Script
+ *
+ * This script handles the display of audit logs for role management activities. It checks user permissions,
+ * fetches and filters audit log data based on various criteria, and formats the data for presentation in a user interface.
+ */
 session_start();
 require '../../../../../../config/ims-tmdd.php';
 
@@ -181,7 +187,12 @@ try {
 }
 
 /**
- * Formats a JSON string into an HTML list.
+ * Format New Value
+ *
+ * Formats a JSON string into an HTML list for display purposes.
+ *
+ * @param string|null $jsonStr The JSON string to format.
+ * @return string The formatted HTML string.
  */
 function formatNewValue($jsonStr)
 {
@@ -234,7 +245,14 @@ function formatNewValue($jsonStr)
 }
 
 /**
- * Compares two JSON strings and shows a diff of changes.
+ * Format Audit Diff
+ *
+ * Compares two JSON strings and shows a diff of changes, ignoring certain fields.
+ *
+ * @param string|null $oldJson The old JSON string.
+ * @param string|null $newJson The new JSON string.
+ * @param string|null $status The status of the log entry.
+ * @return string The formatted diff as HTML.
  */
 function formatAuditDiff($oldJson, $newJson, $status = null)
 {
@@ -311,9 +329,13 @@ function formatAuditDiff($oldJson, $newJson, $status = null)
     return $html;
 }
 
-
 /**
- * Returns an icon based on the given action.
+ * Get Action Icon
+ *
+ * Returns an icon based on the given action type.
+ *
+ * @param string $action The action type.
+ * @return string The HTML icon string.
  */
 function getActionIcon($action)
 {
@@ -329,7 +351,12 @@ function getActionIcon($action)
 }
 
 /**
+ * Get Status Icon
+ *
  * Returns a status icon based on the log status.
+ *
+ * @param string $status The status of the log entry.
+ * @return string The HTML icon string.
  */
 function getStatusIcon($status)
 {
@@ -339,8 +366,14 @@ function getStatusIcon($status)
 }
 
 /**
+ * Process Status Message
+ *
  * Processes error messages when the log status is failed.
- * Returns an array with [details, changes].
+ *
+ * @param string $defaultMessage The default message to display.
+ * @param array $log The log entry data.
+ * @param callable $changeCallback Callback to format changes if status is not failed.
+ * @return array An array with formatted details and changes.
  */
 function processStatusMessage($defaultMessage, $log, $changeCallback)
 {
@@ -355,7 +388,12 @@ function processStatusMessage($defaultMessage, $log, $changeCallback)
 }
 
 /**
- * Returns an array with formatted Details and Changes columns for roles.
+ * Format Details and Changes
+ *
+ * Formats the details and changes columns based on the action type in the log entry.
+ *
+ * @param array $log The log entry data.
+ * @return array An array containing formatted details and changes HTML.
  */
 function formatDetailsAndChanges($log)
 {
@@ -436,7 +474,12 @@ function formatDetailsAndChanges($log)
 }
 
 /**
- * Normalizes the action for display.
+ * Get Normalized Action
+ *
+ * Normalizes the action for display, adjusting based on JSON values for specific cases.
+ *
+ * @param array $log The log entry data.
+ * @return string The normalized action type.
  */
 function getNormalizedAction($log)
 {

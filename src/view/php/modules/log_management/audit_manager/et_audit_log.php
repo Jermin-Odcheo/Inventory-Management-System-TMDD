@@ -1,4 +1,10 @@
 <?php
+/**
+ * Equipment Tracking Audit Logs Script
+ *
+ * This script handles the display of audit logs for equipment tracking activities. It checks user permissions,
+ * fetches and filters audit log data based on various criteria, and formats the data for presentation in a user interface.
+ */
 session_start();
 require '../../../../../../config/ims-tmdd.php';
 
@@ -73,7 +79,12 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 // }
 
 /**
- * Helper function to display JSON data with <br> for new lines.
+ * Format JSON Data
+ *
+ * Formats a JSON string with line breaks for display purposes.
+ *
+ * @param string|null $jsonStr The JSON string to format.
+ * @return string The formatted string with HTML line breaks.
  */
 function formatJsonData($jsonStr)
 {
@@ -84,7 +95,12 @@ function formatJsonData($jsonStr)
 }
 
 /**
- * New helper function to format a JSON string into a visually appealing list.
+ * Format New Value
+ *
+ * Formats a JSON string into a visually appealing HTML list.
+ *
+ * @param string|null $jsonStr The JSON string to format.
+ * @return string The formatted HTML list.
  */
 function formatNewValue($jsonStr)
 {
@@ -111,8 +127,13 @@ function formatNewValue($jsonStr)
 }
 
 /**
- * Helper function to compare old/new JSON data for modifications.
- * Special handling for the "is_deleted" field is included.
+ * Format Audit Diff
+ *
+ * Compares old and new JSON data for modifications, with special handling for certain fields.
+ *
+ * @param string|null $oldJson The old JSON string.
+ * @param string|null $newJson The new JSON string.
+ * @return string The formatted diff as HTML.
  */
 function formatAuditDiff($oldJson, $newJson)
 {
@@ -175,9 +196,13 @@ function formatAuditDiff($oldJson, $newJson)
     return $html;
 }
 
-
 /**
- * Helper function to return an icon based on action.
+ * Get Action Icon
+ *
+ * Returns an HTML string with an icon based on the action type.
+ *
+ * @param string $action The action type.
+ * @return string The HTML string with the icon and action text.
  */
 function getActionIcon($action)
 {
@@ -199,7 +224,12 @@ function getActionIcon($action)
 }
 
 /**
- * Helper function to return a status icon.
+ * Get Status Icon
+ *
+ * Returns an HTML string with an icon based on the status.
+ *
+ * @param string $status The status of the log entry.
+ * @return string The HTML string with the icon.
  */
 function getStatusIcon($status)
 {
@@ -208,9 +238,16 @@ function getStatusIcon($status)
         ? '<i class="fas fa-check-circle"></i>'
         : '<i class="fas fa-times-circle"></i>';
 }
+
 /**
+ * Process Status Message
+ *
  * Processes error messages when the log status is failed.
- * Returns an array with [details, changes].
+ *
+ * @param string $defaultMessage The default message to display.
+ * @param array $log The log entry data.
+ * @param callable $changeCallback Callback to format changes if status is not failed.
+ * @return array An array with formatted details and changes.
  */
 function processStatusMessage($defaultMessage, $log, $changeCallback)
 {
@@ -224,9 +261,14 @@ function processStatusMessage($defaultMessage, $log, $changeCallback)
     }
     return [$defaultMessage, $changeCallback()];
 }
+
 /**
- * Format the "Details" and "Changes" columns based on the action.
- * Returns an array: [ $detailsHTML, $changesHTML ]
+ * Format Details and Changes
+ *
+ * Formats the details and changes columns based on the action type in the log entry.
+ *
+ * @param array $log The log entry data.
+ * @return array An array containing formatted details and changes HTML.
  */
 function formatDetailsAndChanges($log)
 {
@@ -346,7 +388,13 @@ function formatDetailsAndChanges($log)
 }
 
 /**
- * Helper function to find which fields changed (just the field names).
+ * Get Changed Field Names
+ *
+ * Identifies field names that have changed between old and new data, excluding system fields.
+ *
+ * @param array $oldData The old data array.
+ * @param array $newData The new data array.
+ * @return array List of changed field names.
  */
 function getChangedFieldNames(array $oldData, array $newData)
 {

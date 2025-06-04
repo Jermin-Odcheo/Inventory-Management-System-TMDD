@@ -1,4 +1,10 @@
 <?php
+/**
+ * Department Management Audit Logs Script
+ *
+ * This script handles the display of audit logs for department management activities. It checks user permissions,
+ * fetches and filters audit log data based on various criteria, and formats the data for presentation in a user interface.
+ */
 session_start();
 require '../../../../../../config/ims-tmdd.php';
 
@@ -11,18 +17,37 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Initialize RBAC and check permissions
+/**
+ * Initialize RBAC and Check Permissions
+ *
+ * Initializes the Role-Based Access Control (RBAC) system and checks if the user has the necessary permissions
+ * to view audit logs for department management.
+ *
+ * @return void
+ */
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
 
 // Check for required privilege
 $hasAuditPermission = $rbac->hasPrivilege('Audit', 'Track');
 $hasDeptPermission = $rbac->hasPrivilege('Management', 'Track');
 
-// Initialize sorting parameters
+/**
+ * Initialize Sorting Parameters
+ *
+ * Sets up the sorting parameters for displaying audit logs based on user input or default values.
+ *
+ * @return void
+ */
 $sortColumn = $_GET['sort'] ?? 'TrackID';
 $sortOrder = $_GET['order'] ?? 'DESC';
 
-// Fetch unique values for dropdowns
+/**
+ * Fetch Unique Values for Dropdowns
+ *
+ * Retrieves unique action and status types from the audit log for filtering purposes.
+ *
+ * @return void
+ */
 try {
     // Get unique action types
     $actionTypesQuery = "SELECT DISTINCT Action 
@@ -77,16 +102,34 @@ try {
     $statusTypes = [];
 }
 
-// Validate sort column to prevent SQL injection
+/**
+ * Validate Sort Column
+ *
+ * Ensures the sort column is one of the allowed values to prevent SQL injection.
+ *
+ * @return void
+ */
 $allowedColumns = ['TrackID', 'email', 'Module', 'Action', 'Details', 'Status', 'Date_Time'];
 if (!in_array($sortColumn, $allowedColumns)) {
     $sortColumn = 'TrackID';
 }
 
-// Validate sort order
+/**
+ * Validate Sort Order
+ *
+ * Ensures the sort order is either ASC or DESC.
+ *
+ * @return void
+ */
 $sortOrder = strtoupper($sortOrder) === 'ASC' ? 'ASC' : 'DESC';
 
-// If user doesn't have permission, show an inline "no permission" page
+/**
+ * Check User Permission
+ *
+ * Displays an access denied message if the user lacks the necessary permissions.
+ *
+ * @return void
+ */
 if (!$hasAuditPermission && !$hasDeptPermission) {
     echo '
       <div class="container d-flex justify-content-center align-items-center" 
@@ -100,6 +143,13 @@ if (!$hasAuditPermission && !$hasDeptPermission) {
     exit();
 }
 
+/**
+ * Build Query Filters
+ *
+ * Constructs the WHERE clause and parameters for filtering audit logs based on user input.
+ *
+ * @return void
+ */
 // Start with a base WHERE clause
 $where = "WHERE audit_log.Module = 'Department Management'";
 $params = [];
@@ -177,6 +227,13 @@ switch ($dateFilterType) {
 error_log("Query WHERE clause: " . $where);
 error_log("Query parameters: " . print_r($params, true));
 
+/**
+ * Fetch Audit Logs
+ *
+ * Retrieves audit logs from the database based on the constructed filters and sorting parameters.
+ *
+ * @return void
+ */
 // Modify the query to include sorting
 $query = "SELECT audit_log.*, users.email AS email 
           FROM audit_log 
@@ -185,9 +242,9 @@ $query = "SELECT audit_log.*, users.email AS email
           ORDER BY $sortColumn $sortOrder";
 
 try {
-$stmt = $pdo->prepare($query);
+    $stmt = $pdo->prepare($query);
     $stmt->execute($params);
-$auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     // Debug the results
     error_log("Number of records found: " . count($auditLogs));
@@ -197,7 +254,12 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
 /**
- * Formats a JSON string into an HTML list.
+ * Format New Value
+ *
+ * Formats a JSON string into an HTML list for display purposes.
+ *
+ * @param string|null $jsonStr The JSON string to format.
+ * @return string The formatted HTML string.
  */
 function formatNewValue($jsonStr)
 {
@@ -223,7 +285,14 @@ function formatNewValue($jsonStr)
 }
 
 /**
- * Compares two JSON strings and shows a diff of changes.
+ * Format Audit Diff
+ *
+ * Compares two JSON strings and shows a diff of changes, ignoring certain fields.
+ *
+ * @param string|null $oldJson The old JSON string.
+ * @param string|null $newJson The new JSON string.
+ * @param string|null $status The status of the log entry.
+ * @return string The formatted diff as HTML.
  */
 function formatAuditDiff($oldJson, $newJson, $status = null)
 {
