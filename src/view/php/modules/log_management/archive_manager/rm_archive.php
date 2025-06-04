@@ -546,8 +546,256 @@ function formatChanges($oldJsonStr)
         </div>
     </div>
 
-    <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
-    <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/logs.js" defer></script>
+    <script type="text/javascript">
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("DOM loaded - initializing direct pagination");
+            
+            // Basic pagination elements
+            const tableRows = document.querySelectorAll('#auditTable tr');
+            const prevBtn = document.getElementById('prevPage');
+            const nextBtn = document.getElementById('nextPage');
+            const rowsPerPageSelect = document.getElementById('rowsPerPageSelect');
+            const paginationUl = document.getElementById('pagination');
+            const currentPageDisplay = document.getElementById('currentPage');
+            const rowsPerPageDisplay = document.getElementById('rowsPerPage');
+            const totalRowsDisplay = document.getElementById('totalRows');
+            
+            // Pagination state
+            let currentPage = 1;
+            let rowsPerPage = parseInt(rowsPerPageSelect.value) || 10;
+            const totalRows = tableRows.length;
+            
+            console.log(`Pagination initialized with ${totalRows} rows, ${rowsPerPage} per page`);
+            
+            // Update displays
+            totalRowsDisplay.textContent = totalRows;
+            
+            // Function to show only rows for current page
+            function displayPage(page) {
+                currentPage = page;
+                const start = (page - 1) * rowsPerPage;
+                const end = start + rowsPerPage;
+                
+                console.log(`Displaying page ${page}, rows ${start}-${Math.min(end, totalRows)}`);
+                
+                // Hide all rows first
+                tableRows.forEach(row => row.style.display = 'none');
+                
+                // Show only rows for current page
+                for (let i = start; i < Math.min(end, totalRows); i++) {
+                    if (tableRows[i]) tableRows[i].style.display = '';
+                }
+                
+                // Update the "showing X to Y of Z entries" text
+                currentPageDisplay.textContent = page;
+                rowsPerPageDisplay.textContent = Math.min(rowsPerPage, totalRows - start);
+                
+                // Update page buttons
+                generatePagination();
+                
+                // Update prev/next button states
+                updateButtonStates();
+            }
+            
+            function generatePagination() {
+                // Clear existing pagination
+                paginationUl.innerHTML = '';
+                
+                // Calculate total pages
+                const totalPages = Math.max(1, Math.ceil(totalRows / rowsPerPage));
+                
+                // Don't show pagination if only one page
+                if (totalPages <= 1) {
+                    return;
+                }
+                
+                // Determine visible page range
+                const maxVisiblePages = 5;
+                let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+                let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+                
+                // Adjust if at the end
+                if (endPage === totalPages) {
+                    startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                }
+                
+                // Create first page button if needed
+                if (startPage > 1) {
+                    addPageButton(1);
+                    
+                    // Add ellipsis if needed
+                    if (startPage > 2) {
+                        addEllipsis();
+                    }
+                }
+                
+                // Add numbered page buttons
+                for (let i = startPage; i <= endPage; i++) {
+                    addPageButton(i, i === currentPage);
+                }
+                
+                // Add last page button if needed
+                if (endPage < totalPages) {
+                    // Add ellipsis if needed
+                    if (endPage < totalPages - 1) {
+                        addEllipsis();
+                    }
+                    
+                    addPageButton(totalPages);
+                }
+            }
+            
+            // Helper function to add a page button
+            function addPageButton(pageNum, isActive = false) {
+                const li = document.createElement('li');
+                li.className = 'page-item' + (isActive ? ' active' : '');
+                
+                const a = document.createElement('a');
+                a.className = 'page-link';
+                a.href = '#';
+                a.textContent = pageNum;
+                a.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    displayPage(pageNum);
+                });
+                
+                li.appendChild(a);
+                paginationUl.appendChild(li);
+            }
+            
+            // Helper function to add ellipsis
+            function addEllipsis() {
+                const li = document.createElement('li');
+                li.className = 'page-item disabled';
+                
+                const span = document.createElement('span');
+                span.className = 'page-link';
+                span.textContent = '...';
+                
+                li.appendChild(span);
+                paginationUl.appendChild(li);
+            }
+            
+            // Update prev/next button states
+            function updateButtonStates() {
+                const totalPages = Math.ceil(totalRows / rowsPerPage);
+                
+                // Update prev button
+                prevBtn.disabled = currentPage <= 1;
+                prevBtn.classList.toggle('disabled', currentPage <= 1);
+                
+                // Update next button
+                nextBtn.disabled = currentPage >= totalPages;
+                nextBtn.classList.toggle('disabled', currentPage >= totalPages);
+            }
+            
+            // Event handler for previous button - using multiple approaches for reliability
+            if (prevBtn) {
+                console.log("Setting up prev button click handlers");
+                
+                // Remove any existing click handlers by cloning and replacing
+                const newPrevBtn = prevBtn.cloneNode(true);
+                prevBtn.parentNode.replaceChild(newPrevBtn, prevBtn);
+                
+                // Re-assign prevBtn reference to the new element
+                prevBtn = newPrevBtn;
+                
+                // Using standard event listener
+                prevBtn.addEventListener('click', function(e) {
+                    console.log("Prev button clicked via DOM event");
+                    e.preventDefault();
+                    if (currentPage > 1) {
+                        currentPage--;
+                        displayPage(currentPage);
+                    }
+                });
+                
+                // Also add jQuery handler as a backup
+                if (typeof jQuery !== 'undefined') {
+                    jQuery(prevBtn).off('click').on('click', function(e) {
+                        console.log("Prev button clicked via jQuery");
+                        e.preventDefault();
+                        if (currentPage > 1) {
+                            currentPage--;
+                            displayPage(currentPage);
+                        }
+                    });
+                }
+                
+                // Direct onclick attribute as a fallback
+                prevBtn.onclick = function(e) {
+                    console.log("Prev button clicked via onclick");
+                    e.preventDefault();
+                    if (currentPage > 1) {
+                        currentPage--;
+                        displayPage(currentPage);
+                    }
+                    return false;
+                };
+            } else {
+                console.error("Previous button not found in the DOM!");
+            }
+            
+            // Event handler for next button
+            if (nextBtn) {
+                console.log("Setting up next button click handlers");
+                
+                // Remove any existing click handlers by cloning and replacing
+                const newNextBtn = nextBtn.cloneNode(true);
+                nextBtn.parentNode.replaceChild(newNextBtn, nextBtn);
+                
+                // Re-assign nextBtn reference to the new element
+                nextBtn = newNextBtn;
+                
+                // Using standard event listener
+                nextBtn.addEventListener('click', function(e) {
+                    console.log("Next button clicked via DOM event");
+                    e.preventDefault();
+                    const totalPages = Math.ceil(totalRows / rowsPerPage);
+                    if (currentPage < totalPages) {
+                        currentPage++;
+                        displayPage(currentPage);
+                    }
+                });
+                
+                // Also add jQuery handler as a backup
+                if (typeof jQuery !== 'undefined') {
+                    jQuery(nextBtn).off('click').on('click', function(e) {
+                        console.log("Next button clicked via jQuery");
+                        e.preventDefault();
+                        const totalPages = Math.ceil(totalRows / rowsPerPage);
+                        if (currentPage < totalPages) {
+                            currentPage++;
+                            displayPage(currentPage);
+                        }
+                    });
+                }
+                
+                // Direct onclick attribute as a fallback
+                nextBtn.onclick = function(e) {
+                    console.log("Next button clicked via onclick");
+                    e.preventDefault();
+                    const totalPages = Math.ceil(totalRows / rowsPerPage);
+                    if (currentPage < totalPages) {
+                        currentPage++;
+                        displayPage(currentPage);
+                    }
+                    return false;
+                };
+            }
+            
+            // Event handler for rows per page change
+            rowsPerPageSelect.addEventListener('change', function() {
+                rowsPerPage = parseInt(this.value);
+                currentPage = 1; // Reset to first page
+                displayPage(1);
+            });
+            
+            // Initialize display
+            displayPage(1);
+        });
+    </script>
+    
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/archive_filters.js" defer></script>
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/sort_archives.js" defer></script>
 
@@ -628,171 +876,87 @@ function formatChanges($oldJsonStr)
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Set the correct table ID for both pagination.js and logs.js
-            window.paginationConfig = window.paginationConfig || {};
-            window.paginationConfig.tableId = 'auditTable';
-
-            // Store original rows for filtering
-            window.allRows = Array.from(document.querySelectorAll('#auditTable tr'));
-
-            // Initialize Pagination
-            initPagination({
-                tableId: 'auditTable',
-                currentPage: 1
-            });
-
-            // Event listeners for modals
             // Pass RBAC privileges to JavaScript
-            const userPrivileges = {
+        var userPrivileges = {
                 canRestore: <?php echo json_encode($canRestore); ?>,
-                canRemove: <?php echo json_encode($canRemove); ?>
-            };
+            canRemove: <?php echo json_encode($canRemove); ?>,
+            canPermanentDelete: <?php echo json_encode($canPermanentDelete); ?>
+        };
 
-            // Handle select all checkbox
-            $(document).on('change', '#select-all', function() {
-                $('.select-row').prop('checked', $(this).prop('checked'));
-                updateBulkButtons();
-            });
+        // Add click handler for restore buttons
+        $(document).on('click', '.restore-btn', function() {
+            let restoreId = $(this).data('role-id');
+            let restoreName = $(this).data('role-name');
+            $('#restoreRoleNamePlaceholder').text(restoreName);
+            
+            // Store the ID to use in confirm button handler
+            $('#confirmRestoreBtn').data('role-id', restoreId);
+        });
 
-            $(document).on('change', '.select-row', updateBulkButtons);
-
-            function updateBulkButtons() {
-                var count = $('.select-row:checked').length;
-                if (count > 0) {
-                    $('#bulk-restore, #bulk-delete').show();
-                } else {
-                    $('#bulk-restore, #bulk-delete').hide();
-                }
-            }
-
-            // Bulk Restore
-            $('#bulk-restore').on('click', function() {
-                if (!userPrivileges.canRestore) return;
-
-                const selectedIds = [];
-                $('.select-row:checked').each(function() {
-                    selectedIds.push($(this).val());
-                });
-
-                if (selectedIds.length > 0) {
-                    $('#bulkRestoreModal').modal('show');
-                }
-            });
-
-            // Confirm bulk restore
-            $('#confirmBulkRestoreBtn').on('click', function() {
-                if (!userPrivileges.canRestore) return;
-
-                const selectedIds = [];
-                $('.select-row:checked').each(function() {
-                    selectedIds.push($(this).val());
-                });
-
-                if (selectedIds.length === 0) {
-                    showToast('No roles selected for restore', 'error', 5000);
-                    return;
-                }
+        // Update the restore confirmation handler
+        $('#confirmRestoreBtn').on('click', function() {
+            let restoreId = $(this).data('role-id');
+            
+            if (!userPrivileges.canRestore || !restoreId) return;
 
                 $.ajax({
-                    type: 'POST',
                     url: '../../rolesandprivilege_manager/role_manager/restore_role.php',
+                method: 'POST',
                     data: {
-                        ids: selectedIds,
-                        action: 'bulk_restore',
+                    id: restoreId,
+                    action: 'restore',
                         module: 'Roles and Privileges'
                     },
                     dataType: 'json',
                     success: function(response) {
-                        if (response.success) {
-                            // Close modal and clean up
-                            $('#bulkRestoreModal').modal('hide');
-                            cleanupModalElements();
+                    // Hide restore modal
+                    $('#confirmRestoreModal').modal('hide');
 
-                            // Show success message
-                            showToast(response.message, 'success', 5000);
-
+                    if (response.success) {
+                        showToast(response.message || 'Role restored successfully', 'success');
                             // Reload the page after a short delay
                             setTimeout(function() {
                                 window.location.reload();
                             }, 500);
                         } else {
-                            showToast(response.message || 'An error occurred', 'error', 5000);
+                        showToast(response.message || 'Failed to restore role', 'error');
                         }
                     },
                     error: function(xhr, status, error) {
-                        showToast('Error restoring roles: ' + error, 'error', 5000);
+                    showToast('Error restoring role: ' + error, 'error');
                     }
                 });
             });
 
-            // Bulk Delete
-            $('#bulk-delete').on('click', function() {
-                if (!userPrivileges.canRemove) return;
+        // Add click handler for delete buttons
+        $(document).on('click', '.delete-btn', function() {
+            let deleteId = $(this).data('role-id');
+            let deleteName = $(this).data('role-name');
+            $('#roleNamePlaceholder').text(deleteName);
+            
+            // Set the URL for the confirm button
+            $('#confirmDeleteButton').attr('href', '../../rolesandprivilege_manager/role_manager/permanent_delete_role.php?id=' + deleteId);
+        });
+        
+        // Date filter type change handler
+        const filterType = document.getElementById('dateFilterType');
+        if (filterType) {
+            filterType.addEventListener('change', function() {
+                // Hide all date filter fields first
+                document.querySelectorAll('.date-filter').forEach(field => field.classList.add('d-none'));
 
-                const selectedIds = [];
-                $('.select-row:checked').each(function() {
-                    selectedIds.push($(this).val());
-                });
-
-                if (selectedIds.length > 0) {
-                    $('#bulkDeleteModal').modal('show');
+                // Show relevant date filter fields based on selection
+                if (this.value) {
+                    document.querySelectorAll('.date-' + this.value).forEach(field => field.classList.remove('d-none'));
                 }
             });
 
-            // Confirm bulk delete
-            $('#confirmBulkDeleteBtn').on('click', function() {
-                if (!userPrivileges.canRemove) return;
-
-                const selectedIds = [];
-                $('.select-row:checked').each(function() {
-                    selectedIds.push($(this).val());
-                });
-
-                if (selectedIds.length === 0) return;
-
-                $.ajax({
-                    type: 'POST',
-                    url: '../../rolesandprivilege_manager/role_manager/permanent_delete_role.php',
-                    data: {
-                        ids: selectedIds,
-                        action: 'bulk_delete',
-                        module: 'Roles and Privileges'
-                    },
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.success) {
-                            // Close modal and clean up
-                            $('#bulkDeleteModal').modal('hide');
-                            cleanupModalElements();
-
-                            // Show success message
-                            showToast(response.message, 'success', 5000);
-
-                            // Reload the page after a short delay
-                            setTimeout(function() {
-                                window.location.reload();
-                            }, 500);
-                        } else {
-                            showToast(response.message || 'An error occurred', 'error', 5000);
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        showToast('Error deleting roles: ' + error, 'error', 5000);
-                    }
-                });
-            });
-
-            // Function to clean up modal elements
-            function cleanupModalElements() {
-                $('.modal-backdrop').remove();
-                $('body').removeClass('modal-open');
-                $('body').css('overflow', '');
-                $('body').css('padding-right', '');
+            // Initialize date filter fields visibility
+            if (filterType.value) {
+                document.querySelectorAll('.date-' + filterType.value).forEach(field => field.classList.remove('d-none'));
             }
-
-            // Custom script to ensure filtering only happens on button click
-            document.addEventListener('DOMContentLoaded', function() {
+        }
+        
                 // Clear filters button
                 const clearFiltersBtn = document.getElementById('clearFilters');
                 if (clearFiltersBtn) {
@@ -801,7 +965,6 @@ function formatChanges($oldJsonStr)
                         form.reset();
 
                         // Clear date filter type and hide all date filter fields
-                        const filterType = document.getElementById('dateFilterType');
                         if (filterType) {
                             filterType.value = '';
                             document.querySelectorAll('.date-filter').forEach(field => field.classList.add('d-none'));
@@ -817,71 +980,6 @@ function formatChanges($oldJsonStr)
                         form.submit();
                     });
                 }
-
-                // Date filter type change handler
-                const filterType = document.getElementById('dateFilterType');
-                if (filterType) {
-                    filterType.addEventListener('change', function() {
-                        // Hide all date filter fields first
-                        document.querySelectorAll('.date-filter').forEach(field => field.classList.add('d-none'));
-
-                        // Show relevant date filter fields based on selection
-                        if (this.value) {
-                            document.querySelectorAll('.date-' + this.value).forEach(field => field.classList.remove('d-none'));
-                        }
-                    });
-
-                    // Initialize date filter fields visibility
-                    if (filterType.value) {
-                        document.querySelectorAll('.date-' + filterType.value).forEach(field => field.classList.remove('d-none'));
-                    }
-                }
-            });
-
-            // Add these variables at the top of your script
-            let restoreId = null;
-            let restoreName = null;
-
-            // Add click handler for restore buttons
-            $(document).on('click', '.restore-btn', function() {
-                restoreId = $(this).data('role-id');
-                restoreName = $(this).data('role-name');
-                $('#restoreRoleNamePlaceholder').text(restoreName);
-            });
-
-            // Update the restore confirmation handler
-            $('#confirmRestoreBtn').on('click', function() {
-                if (!userPrivileges.canRestore || !restoreId) return;
-
-                $.ajax({
-                    url: '../../rolesandprivilege_manager/role_manager/restore_role.php',
-                    method: 'POST',
-                    data: {
-                        id: restoreId,
-                        action: 'restore',
-                        module: 'Roles and Privileges'
-                    },
-                    dataType: 'json',
-                    success: function(response) {
-                        // Hide restore modal
-                        $('#confirmRestoreModal').modal('hide');
-
-                        if (response.success) {
-                            showToast(response.message || 'Role restored successfully', 'success');
-                            // Reload the page after a short delay
-                            setTimeout(function() {
-                                window.location.reload();
-                            }, 500);
-                        } else {
-                            showToast(response.message || 'Failed to restore role', 'error');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        showToast('Error restoring role: ' + error, 'error');
-                    }
-                });
-            });
-        });
     </script>
 </body>
 

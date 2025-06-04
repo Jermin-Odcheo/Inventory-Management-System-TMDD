@@ -265,7 +265,6 @@ function formatChanges($oldJsonStr)
     </script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-    
     <style>
         .main-content {
             padding-top: 150px;
@@ -336,7 +335,6 @@ function formatChanges($oldJsonStr)
 
                     <!-- Filter Section -->
                     <form method="GET" class="row g-3 mb-4" id="archiveFilterForm" action="">
-
                         <!-- Date Range selector -->
                         <div class="col-12 col-md-3">
                             <label class="form-label fw-semibold">Date Filter Type</label>
@@ -375,7 +373,7 @@ function formatChanges($oldJsonStr)
                             <input type="number" name="year_to" class="form-control shadow-sm"
                                 min="1900" max="2100"
                                 placeholder="e.g., 2025"
-                                value="<?= htmlspecialchars($_GET['year_to'] ?? '') ?>">
+                                value="<?= htmlspecialchars($_GET['year_from'] ?? '') ?>">
                         </div>
 
                         <!-- Month-Year Range -->
@@ -522,29 +520,32 @@ function formatChanges($oldJsonStr)
                         <div class="row align-items-center g-3">
                             <div class="col-12 col-sm-auto">
                                 <div class="text-muted">
-                                    Showing <span id="currentPage"><?= $currentPage ?></span> to <span id="rowsPerPage"><?= min($rowsPerPage, $totalRows) ?></span> of <span id="totalRows"><?= $totalRows ?></span> entries
+                                    Showing <span id="currentPage"><?= $currentPage ?></span> of <span id="totalPages"><?= $totalPages ?></span> pages (<span id="totalRows"><?= $totalRows ?></span> entries)
                                 </div>
                             </div>
                             <div class="col-12 col-sm-auto ms-sm-auto">
                                 <div class="d-flex align-items-center gap-2">
-                                    <button id="prevPage" class="btn btn-outline-primary d-flex align-items-center gap-1" <?= $currentPage <= 1 ? 'disabled' : '' ?>>
-                                        <i class="bi bi-chevron-left"></i> Previous
-                                    </button>
                                     <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
                                         <option value="10" <?= $rowsPerPage == 10 ? 'selected' : '' ?>>10</option>
                                         <option value="20" <?= $rowsPerPage == 20 ? 'selected' : '' ?>>20</option>
                                         <option value="30" <?= $rowsPerPage == 30 ? 'selected' : '' ?>>30</option>
                                         <option value="50" <?= $rowsPerPage == 50 ? 'selected' : '' ?>>50</option>
                                     </select>
-                                    <button id="nextPage" class="btn btn-outline-primary d-flex align-items-center gap-1" <?= $currentPage >= $totalPages ? 'disabled' : '' ?>>
-                                        Next <i class="bi bi-chevron-right"></i>
-                                    </button>
                                 </div>
                             </div>
                         </div>
                         <div class="row mt-3">
                             <div class="col-12">
                                 <ul class="pagination justify-content-center" id="pagination">
+                                    <!-- First Page Button -->
+                                    <li class="page-item <?= $currentPage <= 1 ? 'disabled' : '' ?>">
+                                        <a class="page-link" href="?page=1&<?= http_build_query(array_diff_key($_GET, array_flip(['page']))) ?>" id="firstPage" <?= $currentPage <= 1 ? 'tabindex="-1" aria-disabled="true"' : '' ?>>«</a>
+                                    </li>
+                                    <!-- Previous Page Button -->
+                                    <li class="page-item <?= $currentPage <= 1 ? 'disabled' : '' ?>">
+                                        <a class="page-link" href="?page=<?= max(1, $currentPage - 1) ?>&<?= http_build_query(array_diff_key($_GET, array_flip(['page']))) ?>" id="prevPage" <?= $currentPage <= 1 ? 'tabindex="-1" aria-disabled="true"' : '' ?>>‹</a>
+                                    </li>
+                                    <!-- Page Numbers -->
                                     <?php
                                     $startPage = max(1, $currentPage - 2);
                                     $endPage = min($totalPages, $startPage + 4);
@@ -553,10 +554,7 @@ function formatChanges($oldJsonStr)
                                     }
 
                                     if ($startPage > 1) {
-                                        echo '<li class="page-item"><a class="page-link" href="?page=1&' . http_build_query(array_diff_key($_GET, array_flip(['page']))) . '">1</a></li>';
-                                        if ($startPage > 2) {
-                                            echo '<li class="page-item disabled"><span class="page-link">...</span></li>';
-                                        }
+                                        echo '<li class="page-item disabled"><span class="page-link">...</span></li>';
                                     }
 
                                     for ($i = $startPage; $i <= $endPage; $i++) {
@@ -564,12 +562,17 @@ function formatChanges($oldJsonStr)
                                     }
 
                                     if ($endPage < $totalPages) {
-                                        if ($endPage < $totalPages - 1) {
-                                            echo '<li class="page-item disabled"><span class="page-link">...</span></li>';
-                                        }
-                                        echo '<li class="page-item"><a class="page-link" href="?page=' . $totalPages . '&' . http_build_query(array_diff_key($_GET, array_flip(['page']))) . '">' . $totalPages . '</a></li>';
+                                        echo '<li class="page-item disabled"><span class="page-link">...</span></li>';
                                     }
                                     ?>
+                                    <!-- Next Page Button -->
+                                    <li class="page-item <?= $currentPage >= $totalPages ? 'disabled' : '' ?>">
+                                        <a class="page-link" href="?page=<?= min($totalPages, $currentPage + 1) ?>&<?= http_build_query(array_diff_key($_GET, array_flip(['page']))) ?>" id="nextPage" <?= $currentPage >= $totalPages ? 'tabindex="-1" aria-disabled="true"' : '' ?>>›</a>
+                                    </li>
+                                    <!-- Last Page Button -->
+                                    <li class="page-item <?= $currentPage >= $totalPages ? 'disabled' : '' ?>">
+                                        <a class="page-link" href="?page=<?= $totalPages ?>&<?= http_build_query(array_diff_key($_GET, array_flip(['page']))) ?>" id="lastPage" <?= $currentPage >= $totalPages ? 'tabindex="-1" aria-disabled="true"' : '' ?>>»</a>
+                                    </li>
                                 </ul>
                             </div>
                         </div>
@@ -696,7 +699,18 @@ function formatChanges($oldJsonStr)
                 window.location.href = window.location.pathname + '?' + currentParams.toString();
             }
 
-            // Previous button
+            // First page button
+            document.getElementById('firstPage').addEventListener('click', function(e) {
+                e.preventDefault();
+                const currentPage = parseInt(document.getElementById('currentPage').textContent);
+                if (currentPage > 1) {
+                    updateUrl({
+                        page: 1
+                    });
+                }
+            });
+
+            // Previous page button
             document.getElementById('prevPage').addEventListener('click', function(e) {
                 e.preventDefault();
                 const currentPage = parseInt(document.getElementById('currentPage').textContent);
@@ -707,7 +721,7 @@ function formatChanges($oldJsonStr)
                 }
             });
 
-            // Next button
+            // Next page button
             document.getElementById('nextPage').addEventListener('click', function(e) {
                 e.preventDefault();
                 const currentPage = parseInt(document.getElementById('currentPage').textContent);
@@ -715,6 +729,18 @@ function formatChanges($oldJsonStr)
                 if (currentPage < totalPages) {
                     updateUrl({
                         page: currentPage + 1
+                    });
+                }
+            });
+
+            // Last page button
+            document.getElementById('lastPage').addEventListener('click', function(e) {
+                e.preventDefault();
+                const currentPage = parseInt(document.getElementById('currentPage').textContent);
+                const totalPages = <?php echo json_encode($totalPages); ?>;
+                if (currentPage < totalPages) {
+                    updateUrl({
+                        page: totalPages
                     });
                 }
             });
@@ -824,9 +850,7 @@ function formatChanges($oldJsonStr)
                 });
             });
         });
-    </script>
 
-    <script>
         var deleteId = null;
         var restoreId = null;
         var bulkDeleteIds = [];
@@ -1095,7 +1119,6 @@ function formatChanges($oldJsonStr)
             });
         });
     </script>
-
 </body>
 
 </html>
