@@ -375,11 +375,6 @@ if (
                     ]);
 
                     // Perform the delete on equipment_status (soft delete)
-                    /**
-                     * Updates the `equipment_status` record to mark it as disabled.
-                     *
-                     * @var PDOStatement $stmt The prepared SQL statement object.
-                     */
                     $stmt = $pdo->prepare("UPDATE equipment_status SET is_disabled = 1 WHERE equipment_status_id = ?");
                     $stmt->execute([$_POST['status_id']]);
 
@@ -572,54 +567,139 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             cursor: not-allowed;
         }
 
-        .filter-btn-custom {
-            background: #181818 !important;
-            color: #fff !important;
-            border-radius: 10px !important;
-            margin-left: 8px !important;
-            display: flex !important;
-            align-items: center !important;
-            gap: 6px !important;
-            min-width: 180px !important;
-            width: 220px !important;
-            justify-content: flex-start !important;
-            transition: background 0.2s;
+        /* Filter container styles */
+        .filter-container {
+            background-color: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
         }
 
-        .filter-btn-custom:hover,
-        .filter-btn-custom:focus {
-            background: #3c3c3c !important;
-            color: #fff !important;
+        .filter-container .form-label {
+            margin-bottom: 0.5rem;
+            color: #495057;
+            font-size: 0.875rem;
         }
 
-        .filter-btn-custom:active {
-            background: #222 !important;
-            color: #fff !important;
+        .filter-container .form-select,
+        .filter-container .form-control {
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            height: 38px;
         }
 
-        .clear-btn-custom {
-            background: #757d84 !important;
-            color: #fff !important;
-            border-radius: 10px !important;
-            margin-left: 8px !important;
-            display: flex !important;
-            align-items: center !important;
-            gap: 6px !important;
-            min-width: 120px !important;
-            width: 180px !important;
-            justify-content: flex-start !important;
-            transition: background 0.2s;
+        .filter-container .input-group {
+            height: 38px;
         }
 
-        .clear-btn-custom:hover,
-        .clear-btn-custom:focus {
-            background: #6c757d !important;
-            color: #fff !important;
+        .filter-container .input-group-text {
+            height: 38px;
+            padding: 0.375rem 0.75rem;
         }
 
-        .clear-btn-custom:active {
-            background: #5a6268 !important;
-            color: #fff !important;
+        .filter-container .btn {
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            height: 38px;
+            padding: 0.375rem 0.75rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        /* Ensure consistent height for all form elements */
+        .filter-container .form-select,
+        .filter-container .form-control,
+        .filter-container .input-group,
+        .filter-container .btn {
+            min-height: 38px;
+        }
+
+        /* Ensure buttons maintain consistent height */
+        .filter-container .btn.h-100 {
+            height: 38px !important;
+        }
+
+        /* Specific styles for the View Equipment Changes button */
+        .filter-container .btn-primary {
+            height: 38px !important;
+            margin-top: 0;
+        }
+
+        /* Date inputs container styles */
+        .date-inputs-container {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .month-picker-container,
+        .date-range-container {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .month-picker-container select,
+        .date-range-container input {
+            flex: 1;
+            height: 38px;
+        }
+
+        /* Table styles */
+        .table-responsive {
+            margin-top: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+
+        .table {
+            margin-bottom: 0;
+        }
+
+        .table th {
+            background-color: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .table td {
+            vertical-align: middle;
+        }
+
+        /* Button styles */
+        .btn-dark {
+            background-color: #212529;
+            border-color: #212529;
+        }
+
+        .btn-dark:hover {
+            background-color: #1a1e21;
+            border-color: #1a1e21;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            border-color: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            background-color: #5c636a;
+            border-color: #5c636a;
+        }
+
+        /* Select2 customization */
+        .select2-container--default .select2-selection--single {
+            height: 38px;
+            border: 1px solid #ced4da;
+            border-radius: 0.375rem;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: 38px;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 36px;
         }
     </style>
 </head>
@@ -638,39 +718,32 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 
             <div class="card-body">
                 <div class="container-fluid px-0">
-                    <div class="filter-container">
-                        <div class="col-auto">
-                            <?php if ($canCreate): ?>
-                                <button class="btn btn-dark" id="openAddStatusModalBtn" data-bs-toggle="modal" data-bs-target="#addStatusModal">
-                                    <i class="bi bi-plus-lg"></i> Add New Status
-                                </button>
-                            <?php endif; ?>
-                        </div>
-                        <!-- Filter and Search controls -->
-                        <div class="row mb-2 g-2 align-items-center flex-wrap">
-                            <div class="col-md-3">
+                    <div class="filter-container" id="filterContainer">
+                        <!-- Single row for all controls -->
+                        <div class="row mb-2 g-2 align-items-end">
+                            <div class="col-md-2">
+                                <?php if ($canCreate): ?>
+                                    <button class="btn btn-dark w-100 h-100" id="openAddStatusModalBtn" data-bs-toggle="modal" data-bs-target="#addStatusModal">
+                                        <i class="bi bi-plus-lg"></i> Add New Status
+                                    </button>
+                                <?php endif; ?>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="filterStatus" class="form-label fw-semibold">Status</label>
                                 <select class="form-select" id="filterStatus">
-                                    <option value="">Filter by Status</option>
+                                    <option value="">All Statuses</option>
                                     <?php
                                     // Get unique status values from the database
                                     try {
-                                        // Now get the distinct values for the dropdown, excluding empty values
                                         $statusOptions = $pdo->query("SELECT DISTINCT status FROM equipment_status WHERE is_disabled = 0 AND status IS NOT NULL AND TRIM(status) != '' ORDER BY status")->fetchAll(PDO::FETCH_COLUMN);
-
                                         foreach ($statusOptions as $status) {
-                                            // Normalize the status value to remove any extra whitespace
                                             $normalizedStatus = trim(preg_replace('/\s+/', ' ', $status));
-
-                                            // Skip empty values
-                                            if (empty($normalizedStatus)) {
-                                                continue;
+                                            if (!empty($normalizedStatus)) {
+                                                echo "<option value=\"" . htmlspecialchars($normalizedStatus) . "\">" . htmlspecialchars($normalizedStatus) . "</option>";
                                             }
-
-                                            echo "<option value=\"" . htmlspecialchars($normalizedStatus) . "\">" . htmlspecialchars($normalizedStatus) . "</option>";
                                         }
                                     } catch (PDOException $e) {
                                         error_log("Error retrieving status options: " . $e->getMessage());
-                                        // If query fails, fallback to static options
                                         echo "<option value=\"Maintenance\">Maintenance</option>";
                                         echo "<option value=\"Working\">Working</option>";
                                         echo "<option value=\"For Repair\">For Repair</option>";
@@ -681,67 +754,102 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                     ?>
                                 </select>
                             </div>
-                            <div class="col-md-3 d-flex flex-column align-items-start" style="position:relative;">
-                                <select class="form-select mb-2" id="dateFilter">
-                                    <option value="">Filter by Date</option>
-                                    <option value="desc">Newest to Oldest</option>
-                                    <option value="asc">Oldest to Newest</option>
-                                    <option value="month">Specific Month</option>
-                                    <option value="range">Custom Date Range</option>
+                            <div class="col-md-2">
+                                <label for="filterAction" class="form-label fw-semibold">Action</label>
+                                <select class="form-select" id="filterAction">
+                                    <option value="">All Actions</option>
+                                    <?php
+                                    try {
+                                        $actionOptions = $pdo->query("SELECT DISTINCT action FROM equipment_status WHERE is_disabled = 0 AND action IS NOT NULL AND TRIM(action) != '' ORDER BY action")->fetchAll(PDO::FETCH_COLUMN);
+                                        foreach ($actionOptions as $action) {
+                                            $normalizedAction = trim(preg_replace('/\s+/', ' ', $action));
+                                            if (!empty($normalizedAction)) {
+                                                echo "<option value=\"" . htmlspecialchars($normalizedAction) . "\">" . htmlspecialchars($normalizedAction) . "</option>";
+                                            }
+                                        }
+                                    } catch (PDOException $e) {
+                                        error_log("Error retrieving action options: " . $e->getMessage());
+                                    }
+                                    ?>
                                 </select>
-                                <button id="filterBtn" type="button" class="btn filter-btn-custom mt-1" style="width:100%;">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="white" class="bi bi-funnel" viewBox="0 0 16 16">
-                                        <path d="M1.5 1.5A.5.5 0 0 1 2 1h12a.5.5 0 0 1 .39.812L10 7.21V13.5a.5.5 0 0 1-.684.474l-2-1A.5.5 0 0 1 7 12.5V7.21L1.61 1.812A.5.5 0 0 1 1.5 1.5zM2.437 2l5.36 5.812a.5.5 0 0 1 .123.329v5.54l1 0.5V8.14a.5.5 0 0 1 .123-.329L13.563 2H2.437z"/>
-                                    </svg>
-                                    <span style="color:#fff;">Filter</span>
-                                </button>
                             </div>
-                            <div class="col-md-3 d-flex flex-column align-items-end" style="position:relative;">
-                                <div class="input-group mb-2">
-                                    <input type="text" id="searchStatus" class="form-control" placeholder="Search status...">
+                            <div class="col-md-2">
+                                <label for="dateFilter" class="form-label fw-semibold">Date Filter</label>
+                                <select class="form-select" id="dateFilter">
+                                    <option value="">-- Select Type --</option>
+                                    <option value="mdy">Month-Day-Year Range</option>
+                                    <option value="month">Month Range</option>
+                                    <option value="year">Year Range</option>
+                                    <option value="month_year">Month-Year Range</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="searchStatus" class="form-label fw-semibold">Search</label>
+                                <div class="input-group">
                                     <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                    <input type="text" id="searchStatus" class="form-control" placeholder="Search status...">
                                 </div>
-                                <button id="clearBtn" type="button" class="btn clear-btn-custom" style="width:100%;">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="white" class="bi bi-x-circle" viewBox="0 0 16 16">
-                                        <path d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14zm0 1A8 8 0 1 1 8 0a8 8 0 0 1 0 16z"/>
-                                        <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
-                                    </svg>
-                                    <span style="color:#fff;">Clear</span>
-                                </button>
+                            </div>
+                            <div class="col-md-2 d-flex gap-2">
+                                <button type="button" id="filterBtn" class="btn btn-dark flex-grow-1 h-100"><i class="bi bi-funnel"></i> Filter</button>
+                                <button type="button" id="clearBtn" class="btn btn-secondary flex-grow-1 h-100"><i class="bi bi-x-circle"></i> Clear</button>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-12">
+                                <a href="equipStat_change_log.php" class="btn btn-primary w-100 h-100 d-inline-flex align-items-center justify-content-center"><i class="bi bi-card-list"></i> View Equipment Changes</a>
                             </div>
                         </div>
 
-                        <!--Date Inputs Row -->
+                        <!-- Date Inputs Container -->
                         <div id="dateInputsContainer" class="date-inputs-container" style="display: none;">
-                            <div class="month-picker-container" id="monthPickerContainer" style="display: none;">
-                                <select class="form-select" id="monthSelect">
-                                    <option value="">Select Month</option>
-                                    <?php
-                                    $months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-                                    foreach ($months as $index => $month) {
-                                        echo "<option value='" . ($index + 1) . "'>" . $month . "</option>";
-                                    }
-                                    ?>
-                                </select>
-                                <select class="form-select" id="yearSelect">
-                                    <option value="">Select Year</option>
-                                    <?php
-                                    $currentYear = date('Y');
-                                    for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
-                                        echo "<option value='" . $year . "'>" . $year . "</option>";
-                                    }
-                                    ?>
-                                </select>
+                            <!-- MDY Range -->
+                            <div class="date-group d-none flex-row" id="mdy-group">
+                                <div class="d-flex flex-column me-2">
+                                    <label for="dateFrom" class="form-label mb-0" style="font-size: 0.9em;">Date From</label>
+                                    <input type="date" id="dateFrom" class="form-control form-control-sm" style="width: 150px;">
+                                </div>
+                                <div class="d-flex flex-column">
+                                    <label for="dateTo" class="form-label mb-0" style="font-size: 0.9em;">Date To</label>
+                                    <input type="date" id="dateTo" class="form-control form-control-sm" style="width: 150px;">
+                                </div>
                             </div>
-                            <div class="date-range-container" id="dateRangePickers" style="display: none;">
-                                <input type="date" class="form-control" id="dateFrom" placeholder="From">
-                                <input type="date" class="form-control" id="dateTo" placeholder="To">
-                            </div>
-                        </div>
 
-                        <!-- Buttons (redundant, moved into filter-container) -->
-                        <div class="col-12 col-md-3 d-grid">
-                            <a href="equipStat_change_log.php" class="btn btn-primary"><i class="bi bi-card-list"></i> View Equipment Status Changes</a>
+                            <!-- Month Range -->
+                            <div class="date-group d-none flex-row" id="month-group">
+                                <div class="d-flex flex-column me-2">
+                                    <label for="monthFrom" class="form-label mb-0" style="font-size: 0.9em;">Month From</label>
+                                    <input type="month" id="monthFrom" class="form-control form-control-sm" style="width: 150px;">
+                                </div>
+                                <div class="d-flex flex-column">
+                                    <label for="monthTo" class="form-label mb-0" style="font-size: 0.9em;">Month To</label>
+                                    <input type="month" id="monthTo" class="form-control form-control-sm" style="width: 150px;">
+                                </div>
+                            </div>
+
+                            <!-- Year Range -->
+                            <div class="date-group d-none flex-row" id="year-group">
+                                <div class="d-flex flex-column me-2">
+                                    <label for="yearFrom" class="form-label mb-0" style="font-size: 0.9em;">Year From</label>
+                                    <input type="number" id="yearFrom" class="form-control form-control-sm" style="width: 90px;" min="1900" max="2100">
+                                </div>
+                                <div class="d-flex flex-column">
+                                    <label for="yearTo" class="form-label mb-0" style="font-size: 0.9em;">Year To</label>
+                                    <input type="number" id="yearTo" class="form-control form-control-sm" style="width: 90px;" min="1900" max="2100">
+                                </div>
+                            </div>
+
+                            <!-- Month-Year Range -->
+                            <div class="date-group d-none flex-row" id="monthyear-group">
+                                <div class="d-flex flex-column me-2">
+                                    <label for="monthYearFrom" class="form-label mb-0" style="font-size: 0.9em;">From (MM-YYYY)</label>
+                                    <input type="month" id="monthYearFrom" class="form-control form-control-sm" style="width: 120px;">
+                                </div>
+                                <div class="d-flex flex-column">
+                                    <label for="monthYearTo" class="form-label mb-0" style="font-size: 0.9em;">To (MM-YYYY)</label>
+                                    <input type="month" id="monthYearTo" class="form-control form-control-sm" style="width: 120px;">
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -826,20 +934,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                             </div>
                             <div class="col-12 col-sm-auto ms-sm-auto">
                                 <div class="d-flex align-items-center gap-2">
-                                    <button id="prevPage"
-                                        class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                        <i class="bi bi-chevron-left"></i> Previous
-                                    </button>
                                     <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
                                         <option value="10" selected>10</option>
                                         <option value="20">20</option>
                                         <option value="30">30</option>
                                         <option value="50">50</option>
                                     </select>
-                                    <button id="nextPage"
-                                        class="btn btn-outline-primary d-flex align-items-center gap-1">
-                                        Next <i class="bi bi-chevron-right"></i>
-                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -1055,11 +1155,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                 focus: true
             });
 
-            // Real-time search & filter
-            $('#searchStatus, #filterStatus').on('input change', function() {
-                filterStatusTable();
-            });
-
             // Table sorting
             $('.sortable').on('click', function(event) {
                 const sortField = $(this).data('sort');
@@ -1127,20 +1222,29 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                 const totalStatus = parseInt($('#total-users').val()) || 0;
                 const rowsPerPage = parseInt($('#rowsPerPageSelect').val()) || 10;
 
+                // Only hide pagination if total rows is less than or equal to rows per page
                 if (totalStatus <= rowsPerPage) {
-                    $('#prevPage, #nextPage').css('display', 'none !important').hide();
-                }
-
-                // Also check for visible rows (for when filtering is applied)
-                const visibleRows = $('#statusTable tbody tr:visible').length;
-                if (visibleRows <= rowsPerPage) {
-                    $('#prevPage, #nextPage').css('display', 'none !important').hide();
+                    $('#pagination').hide();
+                } else {
+                    $('#pagination').show();
                 }
             }
 
             // Run after rows per page changes
             $('#rowsPerPageSelect').on('change', function() {
-                setTimeout(checkAndHidePagination, 100);
+                const rowsPerPage = parseInt($(this).val()) || 10;
+                const totalRows = parseInt($('#total-users').val()) || 0;
+                
+                // Update the rows per page display
+                $('#rowsPerPage').text(rowsPerPage);
+                
+                // Show pagination if total rows is greater than rows per page
+                if (totalRows > rowsPerPage) {
+                    $('#pagination').show();
+                }
+                
+                // Update pagination
+                updatePagination();
             });
 
             // Date filter handling (only update UI, don't filter yet)
@@ -1189,6 +1293,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             function filterStatusTable() {
                 const searchText = $('#searchStatus').val().toLowerCase();
                 const filterStatus = $('#filterStatus').val();
+                const filterAction = $('#filterAction').val();
                 const dateFilterType = $('#dateFilter').val();
                 const selectedMonth = $('#monthSelect').val();
                 const selectedYear = $('#yearSelect').val();
@@ -1196,6 +1301,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                 const dateTo = $('#dateTo').val();
 
                 console.log("Filtering by status:", filterStatus, "Length:", filterStatus ? filterStatus.length : 0);
+                console.log("Filtering by action:", filterAction, "Length:", filterAction ? filterAction.length : 0);
 
                 // Filter the rows based on search text and status
                 window.filteredRows = window.allRows.filter(row => {
@@ -1204,8 +1310,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 
                     // Get status cell text - ensuring we normalize whitespace
                     const statusCell = row.querySelector('td:nth-child(3)');
-                    // Normalize whitespace by trimming and removing extra spaces
                     const statusText = statusCell ? statusCell.textContent.replace(/\s+/g, ' ').trim() : '';
+
+                    // Get action cell text
+                    const actionCell = row.querySelector('td:nth-child(4)');
+                    const actionText = actionCell ? actionCell.textContent.replace(/\s+/g, ' ').trim() : '';
 
                     // Get date info
                     const dateCell = row.querySelector('td:nth-child(5)').textContent;
@@ -1214,11 +1323,16 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                     // Text search match
                     const searchMatch = rowText.includes(searchText);
 
-                    // Status filtering - checking for selected value with flexible matching
+                    // Status filtering
                     let statusMatch = true;
-                    if (filterStatus && filterStatus.trim() !== '') {
-                        // Only do status filtering if we have a real value selected
+                    if (filterStatus && filterStatus !== 'all') {
                         statusMatch = statusText.toLowerCase() === filterStatus.toLowerCase();
+                    }
+
+                    // Action filtering
+                    let actionMatch = true;
+                    if (filterAction && filterAction !== 'all') {
+                        actionMatch = actionText.toLowerCase() === filterAction.toLowerCase();
                     }
 
                     // Date filtering
@@ -1233,7 +1347,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                         dateMatch = date >= from && date <= to;
                     }
 
-                    return searchMatch && statusMatch && dateMatch;
+                    return searchMatch && statusMatch && actionMatch && dateMatch;
                 });
 
                 // Handle sorting if needed
@@ -1472,14 +1586,19 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             // Clear button resets filters and triggers filter function
             $('#clearBtn').on('click', function() {
                 $('#filterStatus').val('').trigger('change');
+                $('#filterAction').val('').trigger('change');
                 $('#dateFilter').val('').trigger('change');
-                $('#monthSelect').val('').trigger('change');
-                $('#yearSelect').val('').trigger('change');
                 $('#dateFrom').val('');
                 $('#dateTo').val('');
-                if (typeof filterStatusTable === 'function') {
-                    filterStatusTable();
-                }
+                $('#monthFrom').val('');
+                $('#monthTo').val('');
+                $('#yearFrom').val('');
+                $('#yearTo').val('');
+                $('#monthYearFrom').val('');
+                $('#monthYearTo').val('');
+                $('#searchStatus').val('');
+                $('#dateInputsContainer').hide();
+                filterStatusTable();
             });
         });
     </script>
@@ -1517,12 +1636,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             function forcePaginationCheck() {
                 const totalRows = parseInt(document.getElementById('total-users')?.value || '0');
                 const rowsPerPage = parseInt(document.getElementById('rowsPerPageSelect')?.value || '10');
-                const prevBtn = document.getElementById('prevPage');
-                const nextBtn = document.getElementById('nextPage');
+                const pagination = document.getElementById('pagination');
 
+                // Only hide pagination if total rows is less than or equal to rows per page
                 if (totalRows <= rowsPerPage) {
-                    if (prevBtn) prevBtn.style.cssText = 'display: none !important';
-                    if (nextBtn) nextBtn.style.cssText = 'display: none !important';
+                    if (pagination) pagination.style.cssText = 'display: none !important';
+                } else {
+                    if (pagination) pagination.style.cssText = 'display: flex !important';
                 }
             }
 
