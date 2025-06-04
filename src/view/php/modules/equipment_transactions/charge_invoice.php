@@ -690,14 +690,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                 $params[] = $from;
                 $params[] = $to;
                 break;
-            case 'month_year':
-                $from = $_GET['monthYearFrom'] . '-01';
-                $toMonth = $_GET['monthYearTo'];
-                $to = date('Y-m-t', strtotime($toMonth . '-01'));
-                $query .= " AND ci.date_of_purchase BETWEEN ? AND ?";
-                $params[] = $from;
-                $params[] = $to;
-                break;
         }
         $stmt = $pdo->prepare($query);
         $stmt->execute($params);
@@ -845,7 +837,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                         <option value="mdy">Month-Day-Year Range</option>
                         <option value="month">Month Range</option>
                         <option value="year">Year Range</option>
-                        <option value="month_year">Month-Year Range</option>
+                        
                     </select>
                     <div id="dateInputsContainer" class="d-flex align-items-center gap-3 ms-2" style="display: none;">
                         <div class="date-group d-none flex-row" id="mdy-group">
@@ -1797,8 +1789,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                 $('#month-group').removeClass('d-none');
             } else if (filterType === 'year') {
                 $('#year-group').removeClass('d-none');
-            } else if (filterType === 'month_year') {
-                $('#monthyear-group').removeClass('d-none');
             }
         });
 
@@ -1859,13 +1849,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                 params.yearTo = $('#yearTo').val();
                 if (!params.yearFrom || !params.yearTo) {
                     showToast('Please select both Year From and Year To.', 'error');
-                    return;
-                }
-            } else if (filterType === 'month_year') {
-                params.monthYearFrom = $('#monthYearFrom').val();
-                params.monthYearTo = $('#monthYearTo').val();
-                if (!params.monthYearFrom || !params.monthYearTo) {
-                    showToast('Please select both From and To (MM-YYYY).', 'error');
                     return;
                 }
             }
