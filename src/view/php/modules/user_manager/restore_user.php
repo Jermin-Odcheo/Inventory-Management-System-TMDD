@@ -1,9 +1,20 @@
 <?php
+
+/**
+ * Restores archived users in the Inventory Management System.
+ * 
+ * This script handles the restoration of one or multiple archived users by setting their 'is_disabled' status
+ * to 0. It processes input data to identify the user(s) to restore, performs validation checks, logs the action
+ * via database triggers, and returns a JSON response indicating the success or failure of the operation.
+ * The script ensures proper authorization and handles potential conflicts with existing active users.
+ */
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
 // Removed header include to avoid extra HTML output
 
-// Set the audit log session variables for MySQL triggers.
+/**
+ * Sets up session variables and IP address for audit logging via MySQL triggers.
+ */
 if (isset($_SESSION['user_id'])) {
     $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
 } else {
@@ -17,6 +28,10 @@ $pdo->exec("SET @current_ip = '" . $ipAddress . "'");
 header('Content-Type: application/json');
 header('X-Content-Type-Options: nosniff');
 
+/**
+ * Handles the restoration of a single user based on the provided user ID.
+ * Validates the input and updates the user's status if they are archived.
+ */
 if (isset($_POST['id'])) {
     $userId = filter_var($_POST['id'], FILTER_VALIDATE_INT);
     if ($userId === false) {
@@ -43,6 +58,10 @@ if (isset($_POST['id'])) {
         }
     }
 } else if (isset($_POST['user_ids']) && is_array($_POST['user_ids'])) {
+    /**
+     * Handles the restoration of multiple users based on the provided array of user IDs.
+     * Validates the input and updates the status of archived users in bulk.
+     */
     $userIds = array_filter(array_map('intval', $_POST['user_ids']));
     if(empty($userIds)) {
         echo json_encode(['status' => 'error', 'message' => 'No valid user IDs provided']);

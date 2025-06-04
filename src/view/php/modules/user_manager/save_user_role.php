@@ -1,4 +1,12 @@
 <?php
+/**
+ * Saves user role assignments in the Inventory Management System.
+ * 
+ * This script handles the creation of user-department-role assignments. It processes JSON input data
+ * to add new role assignments for users within specific departments, logs changes in an audit log if
+ * tracking is enabled, and returns a JSON response with all current assignments for affected users.
+ * The script ensures proper authorization before making any changes.
+ */
 // save_user_role.php
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
@@ -11,8 +19,17 @@ if (!$userId) {
     exit;
 }
 
-// Insert a user–department–role triple if it doesn't already exist
-// Modified to handle null role IDs
+/**
+ * Inserts a user-department-role triple into the database if it doesn't already exist.
+ * 
+ * This function handles the addition of a role assignment for a user in a specific department.
+ * It supports null or zero role IDs to indicate no specific role.
+ * 
+ * @param int $userId The ID of the user to assign the role to.
+ * @param int $departmentId The ID of the department for the assignment.
+ * @param int|null $roleId The ID of the role to assign, or null/0 for no specific role.
+ * @return bool Returns true if the operation was successful or the assignment already exists.
+ */
 function addUserDepartmentRole(int $userId, int $departmentId, $roleId = null): bool {
     global $pdo;
     
@@ -53,7 +70,17 @@ function addUserDepartmentRole(int $userId, int $departmentId, $roleId = null): 
     return true;
 }
 
-// Add to audit log
+/**
+ * Adds an entry to the audit log for tracking changes to user role assignments.
+ * 
+ * This function logs the action performed on user role assignments, including details about the
+ * roles, departments, and users involved. It handles cases where the audit log table might not exist
+ * and ensures that the main operation is not interrupted by logging errors.
+ * 
+ * @param string $actionType The type of action performed (e.g., 'Add').
+ * @param array $details Additional details about the action, including assignments.
+ * @return bool Returns true to indicate the operation was attempted, even if logging failed.
+ */
 function addToAuditLog($actionType, $details) {
     global $pdo, $userId;
     
@@ -170,9 +197,15 @@ if (!is_array($assignments) || empty($assignments)) {
 }
 
 try {
+    /**
+     * Begins a database transaction to ensure data consistency during the creation of role assignments.
+     */
     $pdo->beginTransaction();
 
-    // Track the newly created triples (optional)
+    /**
+     * Tracks the newly created user-department-role assignments for potential audit logging.
+     * @var array $created Contains details of the newly created assignments.
+     */
     $created = [];
 
     foreach ($assignments as $assignment) {
@@ -194,7 +227,10 @@ try {
         }
     }
 
-    // Add to audit log if tracking is enabled
+    /**
+     * Adds an entry to the audit log if tracking changes is enabled.
+     * Retrieves user information to create a detailed log entry.
+     */
     if ($trackChanges) {
         // Get user information for the log
         $stmt = $pdo->prepare("SELECT username FROM users WHERE id = ?");
@@ -210,7 +246,12 @@ try {
 
     $pdo->commit();
 
-    // Now re-fetch **all** assignments for each affected user
+    /**
+     * Re-fetches all assignments for each affected user to build a comprehensive response.
+     * Groups department IDs by role ID for each user.
+     * @var array $uniqueUsers List of unique user IDs affected by the assignments.
+     * @var array $allAssignments Comprehensive list of all assignments for affected users.
+     */
     $uniqueUsers = array_unique(array_map(fn($a) => (int)$a['userId'], $assignments));
     $allAssignments = [];
 

@@ -1,4 +1,12 @@
 <?php
+/**
+ * Updates user department and role assignments in the Inventory Management System.
+ * 
+ * This script handles the assignment of roles to a user within a specific department. It processes
+ * JSON input data to update or remove role assignments, logs changes in an audit log if tracking is enabled,
+ * and returns a JSON response with the updated assignments. The script ensures proper authorization before
+ * making any changes.
+ */
 // update_user_department.php
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
@@ -40,7 +48,17 @@ $trackChanges = $data['trackChanges'] ?? false;
 
 error_log("Processed data: userId=$userId, oldRoleId=$oldRoleId, departmentId=$departmentId, roleIds=" . json_encode($roleIds));
 
-// Add to audit log
+/**
+ * Adds an entry to the audit log for tracking changes to user role assignments.
+ * 
+ * This function logs the action performed on a user's role within a department, including details
+ * about the old and new roles. It handles cases where the audit log table might not exist and ensures
+ * that the main operation is not interrupted by logging errors.
+ * 
+ * @param string $actionType The type of action performed (e.g., 'Modified', 'Remove').
+ * @param mixed $details Additional details about the action (can be an array or string).
+ * @return bool Returns true to indicate the operation was attempted, even if logging failed.
+ */
 function addToAuditLog($actionType, $details) {
     global $pdo, $currentUserId, $userId, $departmentId, $oldRoleId, $roleIds;
     
@@ -139,9 +157,15 @@ function addToAuditLog($actionType, $details) {
 }
 
 try {
+    /**
+     * Begins a database transaction to ensure data consistency during updates to role assignments.
+     */
     $pdo->beginTransaction();
 
-    // Track changes for audit log
+    /**
+     * Tracks changes to role assignments for audit logging purposes.
+     * @var array $changeDetails Contains details of the changes including user ID, department ID, old role ID, and new role IDs.
+     */
     $changeDetails = [
         'userId' => $userId,
         'departmentId' => $departmentId,
@@ -197,7 +221,10 @@ try {
         }
     }
 
-    // Add to audit log if tracking is enabled
+    /**
+     * Adds an entry to the audit log if tracking changes is enabled.
+     * Retrieves user, department, and role information to create a detailed log entry.
+     */
     if ($trackChanges) {
         // Get user information for the log
         $stmt = $pdo->prepare("SELECT username FROM users WHERE id = ?");
@@ -239,6 +266,10 @@ try {
         ]);
     }
 
+    /**
+     * Builds the response by fetching and organizing the user's current role and department assignments.
+     * Groups department IDs by role ID for a structured response.
+     */
     // 6) Build the response: group department_ids by role_id
     $stmtGetAll = $pdo->prepare("
         SELECT role_id, department_id

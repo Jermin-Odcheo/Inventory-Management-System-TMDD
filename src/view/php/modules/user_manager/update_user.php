@@ -1,4 +1,14 @@
 <?php
+
+/**
+ * Updates user information in the Inventory Management System.
+ * 
+ * This script handles the update of user details including email, username, password,
+ * first name, last name, and department/role assignments. It performs validation checks
+ * for input data, ensures uniqueness of email and username, and logs changes in an audit log.
+ * The script returns a JSON response indicating the success or failure of the update operation.
+ * 
+ */
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
 // RBACService.php is already required in config.php - no need to include it again
@@ -14,12 +24,28 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
+/**
+ * Validates and sanitizes input data received from the form submission.
+ * Ensures required fields are present and valid before proceeding with the update.
+ */
 try {
     // Validate inputs
     if (!isset($_POST['user_id'], $_POST['email'], $_POST['first_name'], $_POST['last_name'])) {
         throw new Exception('Missing required fields');
     }
 
+    /**
+     * Sanitized user input data.
+     * @var int $userId The ID of the user to update.
+     * @var string $email The email address of the user.
+     * @var string $username The username of the user.
+     * @var string $firstName The first name of the user.
+     * @var string $lastName The last name of the user.
+     * @var array $departments The list of department IDs associated with the user.
+     * @var array $roles The list of role IDs associated with the user.
+     * @var string $password The new password for the user, if provided.
+     * @var bool $useExistingDepartments Flag to determine if existing departments should be used.
+     */
     $userId    = filter_var($_POST['user_id'], FILTER_VALIDATE_INT);
     $email     = filter_var($_POST['email'], FILTER_VALIDATE_EMAIL);
     $username  = trim($_POST['username'] ?? '');
@@ -150,10 +176,9 @@ try {
     // Hash the password only if provided
     $hashedPassword = !empty($password) ? password_hash($password, PASSWORD_DEFAULT) : '';
 
-    /* AUDIT LOG - USER MANAGEMENT
-     * Check email uniqueness
-     * Check if the new email already exists (excluding the current user)
-     * Updating a user with existing email address will log and mark the status as 'Failed'
+    /**
+     * Checks for duplicate email addresses to ensure uniqueness.
+     * Logs an audit entry if a duplicate is found and throws an exception.
      */
     $dupStmt = $pdo->prepare("SELECT id, username FROM users WHERE email = ? AND id != ? AND is_disabled = 0");
     $dupStmt->execute([$email, $userId]);
@@ -201,9 +226,9 @@ try {
         throw new Exception("Email address already exists for user: " . $existingUsername);
     }
 
-    /* Check username uniqueness
-     * Check if the new username already exists (excluding the current user)
-     * Updating a user with existing username will log and mark the status as 'Failed'
+    /**
+     * Checks for duplicate usernames to ensure uniqueness.
+     * Logs an audit entry if a duplicate is found and throws an exception.
      */
     if (!empty($username)) {
         $dupUsernameStmt = $pdo->prepare("SELECT id, username FROM users WHERE username = ? AND id != ? AND is_disabled = 0");
@@ -251,7 +276,9 @@ try {
         }
     }
 
-    // Begin transaction
+    /**
+     * Begins a database transaction to ensure data consistency during updates.
+     */
     $pdo->beginTransaction();
 
     // Set user and module variables for audit (if needed by your stored procedure)
@@ -352,19 +379,11 @@ try {
         }
     }
     
-    // Create audit log entry for the update
-    $auditStmt = $pdo->prepare("
-        INSERT INTO audit_log (
-            UserID,
-            EntityID,
-            Action,
-            Details,
-            Module,
-            `Status`,
-            Date_Time
-        )
-        VALUES (?, ?, 'modified', ?, 'User Management', 'Successful', NOW())
-    ");
+    /**
+     * Creates an audit log entry to record the changes made to the user information.
+     * Logs detailed changes for email, username, names, password, and departments.
+     */
+    $auditStmt = $pdo->prepare("INSERT INTO audit_log (UserID, EntityID, Action, Details, Module, `Status`, Date_Time) VALUES (?, ?, 'modified', ?, 'User Management', 'Successful', NOW())");
     // … after inserting user_department_roles …
 
     // 1) Build list of changed fields
