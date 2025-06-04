@@ -578,47 +578,55 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
     <!-- ────────────────────────────────────────────────────────────────────────────── -->
     <!-- COPY-PASTE OF SORTABLE CSS FROM receiving_report.php:                                   -->
     <style>
-        /* …Exact same ".sortable" & ".sort-icon" rules from receiving_report.php… */
-
+        /* Sortable column indicators, matching purchase_order.php */
         .sortable {
             cursor: pointer;
             position: relative;
             user-select: none;
             width: auto;
         }
-        .sort-icon {
-            margin-left: 5px;
-            display: inline-block;
-            width: 8px;
-            height: 8px;
+        .sort-indicator {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 18px;
+            width: 16px;
+            margin-left: 6px;
             position: relative;
-        }
-        .sortable[data-sort-direction="asc"] .sort-icon::after {
-            content: "▲";
-            position: absolute;
-            font-size: 10px;
-            opacity: 0.8;
             top: -5px;
         }
-        .sortable[data-sort-direction="desc"] .sort-icon::after {
-            content: "▼";
-            position: absolute;
-            font-size: 10px;
-            opacity: 0.8;
-            top: -5px;
+        .arrow-up, .arrow-down {
+            display: block;
+            font-size: 11px;
+            line-height: 1;
+            color: #999;
+            margin: 0;
+            padding: 0;
+            height: 11px;
+            width: 100%;
+            text-align: center;
         }
-        
+        .arrow-up.active, .arrow-down.active {
+            color: #0d6efd;
+        }
+        .arrow-up.inactive, .arrow-down.inactive {
+            display: none;
+        }
         /* Custom darker modal backdrop */
         .modal-backdrop {
-            --bs-backdrop-opacity: 0.7 !important; /* Increase from default 0.5 */
+            --bs-backdrop-opacity: 0.7 !important;
             background-color: #000;
         }
-        
-        /* Optional: Add a subtle shadow to modal content for better visibility */
         .modal-content {
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
         }
-    </style>
+        /* Hide Created Date column (5th column) from user view, but keep in DOM */
+    #invoiceTable th:nth-child(5),
+    #invoiceTable td:nth-child(5) {
+        display: none !important;
+    }
+</style>
 
     <!-- jQuery (required for Select2 + AJAX, already used below) -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -716,10 +724,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                     <thead class="table-dark">
                     <tr>
                         <!-- Added class="sortable" and data-sort attributes, plus <span class="sort-icon"></span> -->
-                        <th class="sortable" data-sort="id">#<span class="sort-icon"></span></th>
-                        <th class="sortable" data-sort="invoice_no">Invoice Number<span class="sort-icon"></span></th>
-                        <th class="sortable" data-sort="date_of_purchase">Purchase Date<span class="sort-icon"></span></th>
-                        <th class="sortable" data-sort="po_no">PO Number<span class="sort-icon"></span></th>
+                        <th class="sortable" data-sort="id">#<span class="sort-indicator"><span class="arrow-up">▲</span><span class="arrow-down">▼</span></span></th>
+                        <th class="sortable" data-sort="invoice_no">Invoice Number<span class="sort-indicator"><span class="arrow-up">▲</span><span class="arrow-down">▼</span></span></th>
+                        <th class="sortable" data-sort="date_of_purchase">Purchase Date<span class="sort-indicator"><span class="arrow-up">▲</span><span class="arrow-down">▼</span></span></th>
+                        <th class="sortable" data-sort="po_no">PO Number<span class="sort-indicator"><span class="arrow-up">▲</span><span class="arrow-down">▼</span></span></th>
                         <th class="sortable" data-sort="date_created">Created Date<span class="sort-icon"></span></th>
                         <th class="text-center">Actions</th>
                     </tr>
@@ -938,78 +946,82 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
     var canDelete = <?php echo json_encode($canDelete); ?>;
 
     // ───────────── SORTING LOGIC ────────────────────────────────────────────────
+    function updateIndicators(activeTh, dir) {
+        // By default, show both arrows in gray for all sortable columns
+        document.querySelectorAll('th.sortable').forEach(th => {
+            const indicator = th.querySelector('.sort-indicator');
+            if (indicator) {
+                const up = indicator.querySelector('.arrow-up');
+                const down = indicator.querySelector('.arrow-down');
+                if (up) { up.classList.remove('active', 'inactive'); up.style.color = '#999'; up.style.display = 'inline'; }
+                if (down) { down.classList.remove('active', 'inactive'); down.style.color = '#999'; down.style.display = 'inline'; }
+            }
+        });
+        // If a header is active, set the correct arrow to blue and hide the other
+        if (activeTh) {
+            const indicator = activeTh.querySelector('.sort-indicator');
+            if (indicator) {
+                const up = indicator.querySelector('.arrow-up');
+                const down = indicator.querySelector('.arrow-down');
+                if (dir === 'asc') {
+                    if (up) { up.classList.add('active'); up.style.color = '#0d6efd'; up.style.display = 'inline'; }
+                    if (down) { down.classList.remove('active'); down.style.color = '#999'; down.style.display = 'none'; }
+                } else if (dir === 'desc') {
+                    if (up) { up.classList.remove('active'); up.style.color = '#999'; up.style.display = 'none'; }
+                    if (down) { down.classList.add('active'); down.style.color = '#0d6efd'; down.style.display = 'inline'; }
+                }
+            }
+        }
+    }
     function attachSortingHandlers() {
-        // 1) Remove any existing listeners by replacing each header
         document.querySelectorAll('.sortable').forEach(header => {
             header.replaceWith(header.cloneNode(true));
         });
-
-        // 2) Re-select the fresh headers and attach click listeners
         let currentSortColumn = null;
         let currentSortDirection = null;
         const freshHeaders = document.querySelectorAll('.sortable');
-
         freshHeaders.forEach(header => {
             header.addEventListener('click', function() {
                 const column = this.getAttribute('data-sort');
                 const index = Array.from(this.parentElement.children).indexOf(this);
-
-                // Toggle or default to ascending
                 let direction;
                 if (currentSortColumn === column) {
                     direction = (currentSortDirection === 'asc') ? 'desc' : 'asc';
                 } else {
                     direction = 'asc';
                 }
-
-                // Clear other headers' sort-direction
                 freshHeaders.forEach(h => h.removeAttribute('data-sort-direction'));
-
-                // Mark this header as active
                 this.setAttribute('data-sort-direction', direction);
                 currentSortColumn = column;
                 currentSortDirection = direction;
-
-                // Sort the rows
+                updateIndicators(this, direction);
                 const tbody = document.getElementById('invoiceTable').querySelector('tbody');
                 const rows = Array.from(tbody.querySelectorAll('tr'));
-
                 const sortedRows = rows.sort((a, b) => {
-                    // If cells don't exist, treat as equal
                     if (!a.cells[index] || !b.cells[index]) return 0;
-
                     let aValue = a.cells[index].textContent.trim();
                     let bValue = b.cells[index].textContent.trim();
-
-                    // Date column special handling
                     if (column === 'date_of_purchase' || column === 'date_created') {
                         let aDate = new Date(aValue.replace(' ', 'T'));
                         let bDate = new Date(bValue.replace(' ', 'T'));
                         aValue = isNaN(aDate.getTime()) ? 0 : aDate.getTime();
                         bValue = isNaN(bDate.getTime()) ? 0 : bDate.getTime();
                     }
-                    // ID column special handling
                     else if (column === 'id') {
                         aValue = parseInt(aValue) || 0;
                         bValue = parseInt(bValue) || 0;
                     }
-                    // Otherwise, string compare
                     else {
                         aValue = aValue.toLowerCase();
                         bValue = bValue.toLowerCase();
                     }
-
                     if (direction === 'asc') {
                         return aValue > bValue ? 1 : (aValue < bValue ? -1 : 0);
                     } else {
                         return aValue < bValue ? 1 : (aValue > bValue ? -1 : 0);
                     }
                 });
-
-                // Re-append sorted rows
                 sortedRows.forEach(row => tbody.appendChild(row));
-
-                // Reinitialize pagination arrays and go back to page 1
                 window.allRows = Array.from(document.querySelectorAll('#invoiceTable tbody tr'));
                 window.filteredRows = [...window.allRows];
                 if (window.paginationConfig) {
@@ -1018,6 +1030,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                 updatePagination();
             });
         });
+        // Initialize indicators to default state (all gray, both visible)
+        updateIndicators();
     }
 </script>
 
