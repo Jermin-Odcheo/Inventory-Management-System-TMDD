@@ -209,6 +209,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($po_no !== '' && strpos($po_no, 'PO') !== 0) {
         $po_no = 'PO' . $po_no;
     }
+    
+    // Check if specified PO exists and is not disabled
+    if (!empty($po_no)) {
+        $poCheckStmt = $pdo->prepare("SELECT COUNT(*) FROM purchase_order WHERE po_no = ? AND is_disabled = 0");
+        $poCheckStmt->execute([$po_no]);
+        if ($poCheckStmt->fetchColumn() == 0) {
+            // PO doesn't exist or is disabled, clear the field
+            $po_no = null;
+        }
+    }
+    
     $is_disabled = 0;
     $date_created = trim($_POST['date_created'] ?? '');
     if (empty($date_created)) {
@@ -671,6 +682,42 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_data_json') {
                 toast.fadeOut('slow', function() {
                     toastContainer.remove();
                 });
+            });
+        }
+        
+        // Function to check if a selected PO exists and is active
+        function checkPOExists(poNo, callback) {
+            if (!poNo || poNo === '') {
+                callback(true); // Empty PO is valid
+                return;
+            }
+            
+            // Make sure it has PO prefix
+            if (!poNo.startsWith('PO')) {
+                poNo = 'PO' + poNo;
+            }
+            
+            $.ajax({
+                url: 'purchase_order.php',
+                method: 'GET',
+                data: {
+                    action: 'check_po_exists',
+                    po_no: poNo
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'exists') {
+                        callback(true);
+                    } else {
+                        // Show warning that the PO doesn't exist or is removed
+                        showToast(`Warning: The PO "${poNo}" doesn't exist or has been removed. It will be cleared when saving.`, 'warning');
+                        callback(false);
+                    }
+                },
+                error: function() {
+                    // Allow saving even if check fails
+                    callback(true);
+                }
             });
         }
     </script>
@@ -1239,7 +1286,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_data_json') {
   const btnData = $(this).data();
   $('#edit_report_id').val(btnData.id);
 
-  // Strip “RR” prefix if needed:
+  // Strip "RR" prefix if needed:
   const rrVal = btnData.rr ? btnData.rr.replace(/^RR/, '') : '';
   $('#edit_rr_no').val(rrVal);
 
@@ -1342,54 +1389,63 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_data_json') {
                     ai_loc: $('[name=ai_loc]').val(),
                     date_created: $('[name=date_created]').val()
                 };
-                $.ajax({
-                    url: 'receiving_report.php',
-                    method: 'POST',
-                    dataType: 'json',
-                    data,
-                    success(res) {
-                        if (res.status === 'success') {
-                            addModal.hide();
-                            
-                            // Reload only the table content
-                            $('#rrTable').load(location.href + ' #rrTable', function() {
-                                showToast(res.message, 'success');
-                                
-                                // Reset pagination with fresh DOM elements
-                                window.allRows = Array.from(document.querySelectorAll('#rrTableBody tr'));
-                                window.filteredRows = [...window.allRows];
-                                
-                                // Initialize pagination with the previous page
-                                initPagination({
-                                    tableId: 'rrTableBody',
-                                    currentPage: currentPage,
-                                    rowsPerPageSelectId: 'rowsPerPageSelect',
-                                    currentPageId: 'currentPage',
-                                    rowsPerPageId: 'rowsPerPage',
-                                    totalRowsId: 'totalRows',
-                                    prevPageId: 'prevPage',
-                                    nextPageId: 'nextPage',
-                                    paginationId: 'pagination'
-                                });
-                                
-                                // Set rows per page to previous value
-                                $('#rowsPerPageSelect').val(rowsPerPage).trigger('change');
-                            });
-                        } else {
-                            // If there's a duplicate entry error, show it but keep the modal open
-                            if (res.message && res.message.includes('already exists')) {
-                                showToast(res.message, 'error');
-                                // Keep the add modal open so user can fix the RR number
-                            } else {
-                                showToast(res.message, 'error');
-                                // Hide the modal for other errors
-                                addModal.hide();
-                            }
-                        }
-                    },
-                    error() {
-                        showToast('Error processing request.', 'error');
+                
+                // Check if PO exists before submitting
+                checkPOExists(data.po_no, function(poValid) {
+                    // If PO doesn't exist or is disabled, set po_no to null
+                    if (!poValid) {
+                        data.po_no = '';
                     }
+                    
+                    $.ajax({
+                        url: 'receiving_report.php',
+                        method: 'POST',
+                        dataType: 'json',
+                        data,
+                        success(res) {
+                            if (res.status === 'success') {
+                                addModal.hide();
+                                
+                                // Reload only the table content
+                                $('#rrTable').load(location.href + ' #rrTable', function() {
+                                    showToast(res.message, 'success');
+                                    
+                                    // Reset pagination with fresh DOM elements
+                                    window.allRows = Array.from(document.querySelectorAll('#rrTableBody tr'));
+                                    window.filteredRows = [...window.allRows];
+                                    
+                                    // Initialize pagination with the previous page
+                                    initPagination({
+                                        tableId: 'rrTableBody',
+                                        currentPage: currentPage,
+                                        rowsPerPageSelectId: 'rowsPerPageSelect',
+                                        currentPageId: 'currentPage',
+                                        rowsPerPageId: 'rowsPerPage',
+                                        totalRowsId: 'totalRows',
+                                        prevPageId: 'prevPage',
+                                        nextPageId: 'nextPage',
+                                        paginationId: 'pagination'
+                                    });
+                                    
+                                    // Set rows per page to previous value
+                                    $('#rowsPerPageSelect').val(rowsPerPage).trigger('change');
+                                });
+                            } else {
+                                // If there's a duplicate entry error, show it but keep the modal open
+                                if (res.message && res.message.includes('already exists')) {
+                                    showToast(res.message, 'error');
+                                    // Keep the add modal open so user can fix the RR number
+                                } else {
+                                    showToast(res.message, 'error');
+                                    // Hide the modal for other errors
+                                    addModal.hide();
+                                }
+                            }
+                        },
+                        error() {
+                            showToast('Error processing request.', 'error');
+                        }
+                    });
                 });
             });
 
@@ -1422,54 +1478,63 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_data_json') {
                 });
 
                 e.preventDefault();
-                $.ajax({
-                    url: 'receiving_report.php',
-                    method: 'POST',
-                    data: dataObj,
-                    dataType: 'json',
-                    success(response) {
-                        if (response.status === 'success') {
-                            editModal.hide();
-                            
-                            // Reload only the table content
-                            $('#rrTable').load(location.href + ' #rrTable', function() {
-                                showToast(response.message, 'success');
-                                
-                                // Reset pagination with fresh DOM elements
-                                window.allRows = Array.from(document.querySelectorAll('#rrTableBody tr'));
-                                window.filteredRows = [...window.allRows];
-                                
-                                // Initialize pagination with the previous page
-                                initPagination({
-                                    tableId: 'rrTableBody',
-                                    currentPage: currentPage,
-                                    rowsPerPageSelectId: 'rowsPerPageSelect',
-                                    currentPageId: 'currentPage',
-                                    rowsPerPageId: 'rowsPerPage',
-                                    totalRowsId: 'totalRows',
-                                    prevPageId: 'prevPage',
-                                    nextPageId: 'nextPage',
-                                    paginationId: 'pagination'
-                                });
-                                
-                                // Set rows per page to previous value
-                                $('#rowsPerPageSelect').val(rowsPerPage).trigger('change');
-                            });
-                        } else {
-                            // If there's a duplicate entry error, show it but keep the modal open
-                            if (response.message && response.message.includes('already exists')) {
-                                showToast(response.message, 'error');
-                                // Keep the edit modal open so user can fix the RR number
-                            } else {
-                                showToast(response.message, 'error');
-                                // Hide the modal for other errors
-                                editModal.hide();
-                            }
-                        }
-                    },
-                    error() {
-                        showToast('Error processing request.', 'error');
+                
+                // Check if PO exists before submitting
+                checkPOExists(dataObj.po_no, function(poValid) {
+                    // If PO doesn't exist or is disabled, set po_no to null
+                    if (!poValid) {
+                        dataObj.po_no = '';
                     }
+                    
+                    $.ajax({
+                        url: 'receiving_report.php',
+                        method: 'POST',
+                        data: dataObj,
+                        dataType: 'json',
+                        success(response) {
+                            if (response.status === 'success') {
+                                editModal.hide();
+                                
+                                // Reload only the table content
+                                $('#rrTable').load(location.href + ' #rrTable', function() {
+                                    showToast(response.message, 'success');
+                                    
+                                    // Reset pagination with fresh DOM elements
+                                    window.allRows = Array.from(document.querySelectorAll('#rrTableBody tr'));
+                                    window.filteredRows = [...window.allRows];
+                                    
+                                    // Initialize pagination with the previous page
+                                    initPagination({
+                                        tableId: 'rrTableBody',
+                                        currentPage: currentPage,
+                                        rowsPerPageSelectId: 'rowsPerPageSelect',
+                                        currentPageId: 'currentPage',
+                                        rowsPerPageId: 'rowsPerPage',
+                                        totalRowsId: 'totalRows',
+                                        prevPageId: 'prevPage',
+                                        nextPageId: 'nextPage',
+                                        paginationId: 'pagination'
+                                    });
+                                    
+                                    // Set rows per page to previous value
+                                    $('#rowsPerPageSelect').val(rowsPerPage).trigger('change');
+                                });
+                            } else {
+                                // If there's a duplicate entry error, show it but keep the modal open
+                                if (response.message && response.message.includes('already exists')) {
+                                    showToast(response.message, 'error');
+                                    // Keep the edit modal open so user can fix the RR number
+                                } else {
+                                    showToast(response.message, 'error');
+                                    // Hide the modal for other errors
+                                    editModal.hide();
+                                }
+                            }
+                        },
+                        error() {
+                            showToast('Error processing request.', 'error');
+                        }
+                    });
                 });
             });
         });

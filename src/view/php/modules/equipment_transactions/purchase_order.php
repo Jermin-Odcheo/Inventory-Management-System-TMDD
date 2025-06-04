@@ -290,25 +290,56 @@ if (isset($_GET['action']) && $_GET['action'] === 'remove' && isset($_GET['id'])
         $oldData = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($oldData) {
-            $stmt = $pdo->prepare("UPDATE purchase_order SET is_disabled = 1 WHERE id = ?");
-            $stmt->execute([$id]);
-            $_SESSION['success'] = "Purchase Order removed successfully.";
-            // Log the removal with old values and entity id
-            logAudit(
-                $pdo,
-                'Remove',
-                json_encode($oldData),
-                null,
-                $id,
-                "Purchase Order {$oldData['po_no']} deleted",
-                'Successful'
-            );
+            // Start transaction to ensure all changes succeed or fail together
+            $pdo->beginTransaction();
+            
+            try {
+                // Get the PO number we're removing
+                $poNo = $oldData['po_no'];
+                
+                // 1. First clear PO references in any receive_report records
+                $rrUpdateStmt = $pdo->prepare("UPDATE receive_report SET po_no = NULL WHERE po_no = ? AND is_disabled = 0");
+                $rrUpdateStmt->execute([$poNo]);
+                $affectedRRs = $rrUpdateStmt->rowCount();
+                
+                // 2. Then soft-delete the purchase order
+                $poUpdateStmt = $pdo->prepare("UPDATE purchase_order SET is_disabled = 1 WHERE id = ?");
+                $poUpdateStmt->execute([$id]);
+                
+                // If we get here, both operations succeeded
+                $pdo->commit();
+                
+                $_SESSION['success'] = "Purchase Order removed successfully. $affectedRRs linked Receiving Reports were updated.";
+                
+                // Log the removal with old values and entity id
+                logAudit(
+                    $pdo,
+                    'Remove',
+                    json_encode($oldData),
+                    null,
+                    $id,
+                    "Purchase Order {$oldData['po_no']} deleted. $affectedRRs Receiving Reports updated.",
+                    'Successful'
+                );
+            } catch (Exception $innerEx) {
+                // Something went wrong during the transaction
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                throw $innerEx; // Re-throw for outer catch
+            }
         } else {
             $_SESSION['errors'] = ["Purchase Order not found for Removal."];
         }
     } catch (PDOException $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         $_SESSION['errors'] = ["Error Removing Purchase Order: " . $e->getMessage()];
     } catch (Exception $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         $_SESSION['errors'] = [$e->getMessage()];
     }
     if (is_ajax_request()) {
@@ -418,6 +449,30 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
             exit;
         }
     }
+}
+
+// Add the handler for checking PO existence
+if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_GET['po_no'])) {
+    ob_clean(); // Clear any output buffering
+    header('Content-Type: application/json');
+    
+    try {
+        $po_no = trim($_GET['po_no']);
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM purchase_order WHERE po_no = ? AND is_disabled = 0");
+        $stmt->execute([$po_no]);
+        $exists = $stmt->fetchColumn() > 0;
+        
+        echo json_encode([
+            'status' => $exists ? 'exists' : 'not_exists',
+            'message' => $exists ? 'PO is valid' : 'PO does not exist or is disabled'
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Error checking PO: ' . $e->getMessage()
+        ]);
+    }
+    exit;
 }
 ?>
 <!DOCTYPE html>
