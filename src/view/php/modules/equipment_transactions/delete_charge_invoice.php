@@ -50,7 +50,7 @@ if (isset($_POST['id']) && isset($_POST['permanent']) && $_POST['permanent'] == 
         // Log the permanent delete action
         logAudit(
             $pdo,
-            'Remove',
+            'Delete',
             'Charge Invoice "' . ($oldData['ci_no'] ?? 'ID: '.$ciId) . '" has been permanently deleted',
             'Successful',
             json_encode($oldData),
