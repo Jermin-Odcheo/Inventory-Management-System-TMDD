@@ -1537,7 +1537,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                     reinitializePagination();
                     attachRowEventHandlers();
                     attachSortingHandlers();
-                    showToast('Filters cleared.', 'success');
+                    
                 },
                 error: function() {
                     showToast('Error clearing filters.', 'error');
@@ -1549,7 +1549,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
         $('#applyFilters').off('click').on('click', function() {
             const filterType = $('#dateFilter').val();
             if (!filterType) {
-                showToast('Please select a filter type.', 'error');
+                 
                 return;
             }
             let params = {};
