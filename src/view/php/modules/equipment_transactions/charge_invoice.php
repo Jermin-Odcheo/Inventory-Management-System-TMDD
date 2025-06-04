@@ -1335,7 +1335,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                 dataType: 'json',
                 success: function(response) {
                     if (response.status === 'success') {
-                        $('#invoiceTable').load(location.href + ' #invoiceTable', function() {
+                        $('#invoiceTable').load(location.href + ' #invoiceTable > *', function() {
                             showToast(response.message, 'success');
                             if (window.paginationConfig) {
                                 window.paginationConfig.currentPage = currentPageBeforeDelete;
@@ -1390,12 +1390,16 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                 dataType: 'json',
                 success: function(response) {
                     if (response.status === 'success') {
-                        $('#invoiceTable').load(location.href + ' #invoiceTable', function() {
+                        $('#invoiceTable').load(location.href + ' #invoiceTable > *', function() {
                             showToast(response.message, 'success');
-                            window.paginationConfig.currentPage = 1;
+                            if (window.paginationConfig) {
+                                window.paginationConfig.currentPage = 1;
+                            }
                             reinitializePagination();
-                            attachRowEventHandlers();
-                            attachSortingHandlers();
+                            setTimeout(function() {
+                                attachRowEventHandlers();
+                                attachSortingHandlers();
+                            }, 100);
                         });
                         var addModalEl = document.getElementById('addInvoiceModal');
                         var addModal = bootstrap.Modal.getOrCreateInstance(addModalEl);
@@ -1450,11 +1454,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                 },
                 success: function(response) {
                     if (response.status === 'success') {
-                        $('#invoiceTable').load(location.href + ' #invoiceTable', function() {
+                        $('#invoiceTable').load(location.href + ' #invoiceTable > *', function() {
                             showToast(response.message, 'success');
                             reinitializePagination();
-                            attachRowEventHandlers();
-                            attachSortingHandlers();
+                            setTimeout(function() {
+                                attachRowEventHandlers();
+                                attachSortingHandlers();
+                            }, 100);
                         });
 
                         var editModalEl = document.getElementById('editInvoiceModal');
