@@ -593,6 +593,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
             height: 8px;
             position: relative;
         }
+        /* Default icon state - shows before any sorting happens */
+        .sort-icon::after {
+            content: "⇕";
+            position: absolute;
+            font-size: 10px;
+            opacity: 0.5;
+            top: -5px;
+        }
         .sortable[data-sort-direction="asc"] .sort-icon::after {
             content: "▲";
             position: absolute;
