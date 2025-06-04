@@ -1,4 +1,13 @@
 <?php
+
+/**
+ * Archives user accounts in the Inventory Management System.
+ * 
+ * This script handles the archiving of one or multiple user accounts by setting their 'is_disabled' status
+ * to 1. It processes input data to identify the user(s) to archive, performs validation and permission checks,
+ * and returns a JSON response indicating the success or failure of the operation. The script prevents self-deletion
+ * and logs actions for debugging purposes.
+ */
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
 
@@ -21,6 +30,9 @@ function debugLog($message, $data = null) {
     }
 }
 
+/**
+ * Performs authentication check to ensure the user is logged in before proceeding with deletion.
+ */
 if (!isset($_SESSION['user_id'])) {
     ob_clean();
     echo json_encode(['success' => false, 'message' => 'Not logged in']);
@@ -37,7 +49,9 @@ if (!class_exists('RBACService')) {
     exit();
 }
 
-// Initialize RBAC Service
+/**
+ * Initializes RBAC service to check if the user has the necessary permission to remove accounts.
+ */
 try {
     $rbac = new RBACService($pdo, $_SESSION['user_id']);
 } catch (Exception $e) {
@@ -50,6 +64,11 @@ try {
 }
 
 try {
+    /**
+     * Begins a database transaction to ensure data consistency during user account archiving.
+     */
+    $pdo->beginTransaction();
+
     // Debug incoming data
     debugLog("POST data:", $_POST);
     debugLog("Session user_id:", $_SESSION['user_id']);
@@ -59,9 +78,10 @@ try {
         throw new Exception("You don't have permission to remove users.");
     }
 
-    $pdo->beginTransaction();
-
-    // Handle single user deletion
+    /**
+     * Handles the archiving of a single user account based on the provided user ID.
+     * Prevents self-deletion and checks if the user exists before proceeding.
+     */
     if (isset($_POST['user_id'])) {
         $targetUserId = filter_var($_POST['user_id'], FILTER_VALIDATE_INT);
         debugLog("Target User ID:", $targetUserId);
@@ -107,7 +127,10 @@ try {
         }
 
     }
-    // Handle bulk deletion
+    /**
+     * Handles the bulk archiving of multiple user accounts based on the provided array of user IDs.
+     * Prevents self-deletion and validates the input IDs before proceeding.
+     */
     else if (isset($_POST['user_ids']) && is_array($_POST['user_ids'])) {
         $targetUserIds = array_filter(array_map('intval', $_POST['user_ids']));
         debugLog("Target User IDs:", $targetUserIds);

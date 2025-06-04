@@ -112,6 +112,25 @@ if ($dateFilterType === 'mdy') {
 
 $orderByClause = "ORDER BY " . $allowedSortColumns[$sort_by] . " " . strtoupper($sort_order);
 
+// --- Pagination Logic ---
+$rows_per_page = isset($_GET['rows_per_page']) ? (int)$_GET['rows_per_page'] : 10;
+$current_page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$offset = ($current_page - 1) * $rows_per_page;
+
+// Count total records for pagination
+$count_query = "SELECT COUNT(DISTINCT a.TrackID) as total FROM audit_log a LEFT JOIN users u ON a.EntityID = u.id JOIN users op ON a.UserID = op.id WHERE $baseWhere";
+$count_stmt = $pdo->prepare($count_query);
+$count_stmt->execute($params);
+$total_records = $count_stmt->fetch(PDO::FETCH_ASSOC)['total'];
+$total_pages = ceil($total_records / $rows_per_page);
+
+// Adjust current page if it exceeds total pages
+if ($current_page > $total_pages) {
+    $current_page = $total_pages;
+    $offset = ($current_page - 1) * $rows_per_page;
+}
+
+// Modify main query to include LIMIT and OFFSET for pagination
 $query = "
 SELECT DISTINCT
     a.TrackID AS track_id,
@@ -130,7 +149,11 @@ LEFT JOIN users u ON a.EntityID = u.id
 JOIN users op ON a.UserID = op.id
 WHERE $baseWhere
 {$orderByClause}
+LIMIT :offset, :rows_per_page
 ";
+
+$params[':offset'] = $offset;
+$params[':rows_per_page'] = $rows_per_page;
 
 try {
     // Debug the query and parameters
@@ -597,61 +620,37 @@ function formatChanges($oldJsonStr) {
 
                         // Pagination Configuration
                         const paginationConfig = {
-                            currentPage: 1,
-                            rowsPerPage: 10,
-                            totalRecords: <?php echo count($logs); ?>,
+                            currentPage: <?php echo $current_page; ?>,
+                            rowsPerPage: <?php echo $rows_per_page; ?>,
+                            totalRecords: <?php echo $total_records; ?>,
+                            totalPages: <?php echo $total_pages; ?>,
                             maxPageButtons: 5
                         };
 
-                        // Initialize Pagination
-                        function initializePagination() {
-                            const table = document.getElementById('archiveTableBody');
-                            const rows = Array.from(table.getElementsByTagName('tr'));
-                            const totalPages = Math.ceil(paginationConfig.totalRecords / paginationConfig.rowsPerPage);
-                            
-                            // Update display
-                            updateTableDisplay();
+                        // Function to update pagination display
+                        function updatePaginationDisplay() {
+                            document.getElementById('startRecord').textContent = ((paginationConfig.currentPage - 1) * paginationConfig.rowsPerPage) + 1;
+                            document.getElementById('endRecord').textContent = Math.min(paginationConfig.currentPage * paginationConfig.rowsPerPage, paginationConfig.totalRecords);
+                            document.getElementById('totalRecords').textContent = paginationConfig.totalRecords;
                             updatePaginationButtons();
                             updatePageNumbers();
                         }
 
-                        // Update Table Display
-                        function updateTableDisplay() {
-                            const table = document.getElementById('archiveTableBody');
-                            const rows = Array.from(table.getElementsByTagName('tr'));
-                            const start = (paginationConfig.currentPage - 1) * paginationConfig.rowsPerPage;
-                            const end = start + paginationConfig.rowsPerPage;
-
-                            // Hide all rows first
-                            rows.forEach(row => row.style.display = 'none');
-
-                            // Show only rows for current page
-                            rows.slice(start, end).forEach(row => row.style.display = '');
-
-                            // Update record count display
-                            document.getElementById('startRecord').textContent = start + 1;
-                            document.getElementById('endRecord').textContent = Math.min(end, paginationConfig.totalRecords);
-                            document.getElementById('totalRecords').textContent = paginationConfig.totalRecords;
-                        }
-
                         // Update Pagination Buttons
                         function updatePaginationButtons() {
-                            const totalPages = Math.ceil(paginationConfig.totalRecords / paginationConfig.rowsPerPage);
-                            
                             document.getElementById('firstPage').parentElement.classList.toggle('disabled', paginationConfig.currentPage === 1);
                             document.getElementById('prevPage').parentElement.classList.toggle('disabled', paginationConfig.currentPage === 1);
-                            document.getElementById('nextPage').parentElement.classList.toggle('disabled', paginationConfig.currentPage === totalPages);
-                            document.getElementById('lastPage').parentElement.classList.toggle('disabled', paginationConfig.currentPage === totalPages);
+                            document.getElementById('nextPage').parentElement.classList.toggle('disabled', paginationConfig.currentPage === paginationConfig.totalPages);
+                            document.getElementById('lastPage').parentElement.classList.toggle('disabled', paginationConfig.currentPage === paginationConfig.totalPages);
                         }
 
                         // Update Page Numbers
                         function updatePageNumbers() {
-                            const totalPages = Math.ceil(paginationConfig.totalRecords / paginationConfig.rowsPerPage);
                             const paginationNumbers = document.getElementById('paginationNumbers');
                             paginationNumbers.innerHTML = '';
 
                             let startPage = Math.max(1, paginationConfig.currentPage - Math.floor(paginationConfig.maxPageButtons / 2));
-                            let endPage = Math.min(totalPages, startPage + paginationConfig.maxPageButtons - 1);
+                            let endPage = Math.min(paginationConfig.totalPages, startPage + paginationConfig.maxPageButtons - 1);
 
                             if (endPage - startPage + 1 < paginationConfig.maxPageButtons) {
                                 startPage = Math.max(1, endPage - paginationConfig.maxPageButtons + 1);
@@ -670,9 +669,7 @@ function formatChanges($oldJsonStr) {
                         // Navigation Functions
                         function goToPage(page) {
                             paginationConfig.currentPage = page;
-                            updateTableDisplay();
-                            updatePaginationButtons();
-                            updatePageNumbers();
+                            window.location.href = updateQueryStringParameter(window.location.href, 'page', page);
                         }
 
                         function goToFirstPage() {
@@ -680,8 +677,7 @@ function formatChanges($oldJsonStr) {
                         }
 
                         function goToLastPage() {
-                            const totalPages = Math.ceil(paginationConfig.totalRecords / paginationConfig.rowsPerPage);
-                            goToPage(totalPages);
+                            goToPage(paginationConfig.totalPages);
                         }
 
                         function goToPrevPage() {
@@ -691,16 +687,26 @@ function formatChanges($oldJsonStr) {
                         }
 
                         function goToNextPage() {
-                            const totalPages = Math.ceil(paginationConfig.totalRecords / paginationConfig.rowsPerPage);
-                            if (paginationConfig.currentPage < totalPages) {
+                            if (paginationConfig.currentPage < paginationConfig.totalPages) {
                                 goToPage(paginationConfig.currentPage + 1);
+                            }
+                        }
+
+                        // Helper function to update query string parameters
+                        function updateQueryStringParameter(uri, key, value) {
+                            var re = new RegExp("([?&])" + key + "=.*?(&|$)", "i");
+                            var separator = uri.indexOf('?') !== -1 ? "&" : "?";
+                            if (uri.match(re)) {
+                                return uri.replace(re, '$1' + key + "=" + value + '$2');
+                            } else {
+                                return uri + separator + key + "=" + value;
                             }
                         }
 
                         // Event Listeners
                         document.addEventListener('DOMContentLoaded', function() {
-                            // Initialize pagination
-                            initializePagination();
+                            // Initialize pagination display
+                            updatePaginationDisplay();
 
                             // Add event listeners for pagination controls
                             document.getElementById('firstPage').addEventListener('click', goToFirstPage);
@@ -712,15 +718,10 @@ function formatChanges($oldJsonStr) {
                             document.getElementById('rowsPerPageSelect').addEventListener('change', function(e) {
                                 paginationConfig.rowsPerPage = parseInt(e.target.value);
                                 paginationConfig.currentPage = 1; // Reset to first page
-                                initializePagination();
+                                window.location.href = updateQueryStringParameter(window.location.href, 'rows_per_page', paginationConfig.rowsPerPage) + '&page=1';
                             });
 
                             // Initialize filters
-                            const actionFilter = document.getElementById('filterAction');
-                            const statusFilter = document.getElementById('filterStatus');
-                            const searchInput = document.getElementById('searchInput');
-
-                            // Date filter handling
                             const filterType = document.getElementById('dateFilterType');
                             const allDateFilters = document.querySelectorAll('.date-filter');
 
@@ -759,6 +760,46 @@ function formatChanges($oldJsonStr) {
                                     form.submit();
                                 });
                             }
+
+                            // Modal functionality for Restore and Delete buttons
+                            const restoreButtons = document.querySelectorAll('.restore-btn');
+                            const deleteButtons = document.querySelectorAll('.delete-permanent-btn');
+                            const restoreModal = new bootstrap.Modal(document.getElementById('restoreArchiveModal'));
+                            const deleteModal = new bootstrap.Modal(document.getElementById('deleteArchiveModal'));
+                            let currentRestoreId = null;
+                            let currentDeleteId = null;
+
+                            restoreButtons.forEach(button => {
+                                button.addEventListener('click', function() {
+                                    currentRestoreId = this.getAttribute('data-id');
+                                    restoreModal.show();
+                                });
+                            });
+
+                            deleteButtons.forEach(button => {
+                                button.addEventListener('click', function() {
+                                    currentDeleteId = this.getAttribute('data-id');
+                                    deleteModal.show();
+                                });
+                            });
+
+                            document.getElementById('confirmRestoreBtn').addEventListener('click', function() {
+                                if (currentRestoreId) {
+                                    // Here you would typically send an AJAX request to restore the record
+                                    console.log('Restoring record with ID: ' + currentRestoreId);
+                                    // For now, just close the modal
+                                    restoreModal.hide();
+                                }
+                            });
+
+                            document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+                                if (currentDeleteId) {
+                                    // Here you would typically send an AJAX request to delete the record
+                                    console.log('Deleting record with ID: ' + currentDeleteId);
+                                    // For now, just close the modal
+                                    deleteModal.hide();
+                                }
+                            });
                         });
                     </script>
                 </div>

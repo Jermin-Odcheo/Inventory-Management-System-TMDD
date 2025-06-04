@@ -1,23 +1,33 @@
 <?php
-require_once __DIR__ . '/../../../../../../config/ims-tmdd.php';
-require_once __DIR__ . '/../../../../../control/libs/vendor/autoload.php';
+/**
+ * @file generate_report_preview.php
+ * @brief Generates a preview of the equipment report, typically displayed in an iframe.
+ *
+ * This script receives report parameters via POST, queries the database for equipment data
+ * based on selected filters (location, area, date range, columns), and then generates
+ * an HTML representation of the report. It includes error logging for debugging.
+ */
 
+require_once __DIR__ . '/../../../../../../config/ims-tmdd.php'; // Include the database connection file, providing the $pdo object.
+require_once __DIR__ . '/../../../../../control/libs/vendor/autoload.php'; // Autoload Composer dependencies for libraries.
+
+// Import necessary classes from external libraries (though only Dompdf is directly used for HTML output here).
 use Dompdf\Dompdf;
 use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
-// Debug PDO connection
+// Debugging: Check PDO connection status.
 if (!isset($pdo)) {
     error_log("PDO connection is not set");
     die('Database connection error');
 }
 error_log("PDO connection exists");
 
-// Check for available date ranges in the database
+// Debugging: Check for available date ranges in the database.
 try {
     $dateRangeStmt = $pdo->query("
-        SELECT 
+        SELECT
             MIN(date_created) as min_created,
             MAX(date_created) as max_created,
             MIN(date_acquired) as min_acquired,
@@ -25,7 +35,7 @@ try {
             MIN(date_modified) as min_modified,
             MAX(date_modified) as max_modified,
             COUNT(*) as total_records
-        FROM equipment_details 
+        FROM equipment_details
         WHERE is_disabled = 0
     ");
     $dateRanges = $dateRangeStmt->fetch(PDO::FETCH_ASSOC);
@@ -34,7 +44,7 @@ try {
     error_log("Error checking date ranges: " . $e->getMessage());
 }
 
-// Check table structure
+// Debugging: Check table structure and record counts.
 try {
     $tables = ['equipment_details', 'equipment_location', 'equipment_status'];
     foreach ($tables as $table) {
@@ -55,6 +65,7 @@ try {
     die('Database structure error');
 }
 
+// Extract report parameters from the $_POST array.
 $data = $_POST;
 $columns = $data['columns'] ?? [];
 $specific_area = trim($data['specific_area'] ?? '');
@@ -64,14 +75,14 @@ $date_to = $data['date_to'] ?? '';
 $prepared_by = htmlspecialchars($data['prepared_by'] ?? '');
 $role_department = htmlspecialchars($data['role_department'] ?? '');
 $prep_date = htmlspecialchars($data['prepared_date'] ?? '');
-$export_type = $_GET['export_type'] ?? 'pdf';
+$export_type = $_GET['export_type'] ?? 'pdf'; // Get export type from GET (though for preview, it's always HTML).
 
-// Debug POST data
+// Debugging: Log received POST data and input filters.
 error_log("POST data: " . json_encode($_POST));
 error_log("Input Filters - building_loc: '$building_loc', specific_area: '$specific_area', date_from: '$date_from', date_to: '$date_to'");
 error_log("Selected columns: " . json_encode($columns));
 
-// Validate inputs
+// Validate and handle location inputs.
 if ($building_loc === '') {
     error_log("Warning: building_loc is empty, setting to 'all'");
     $building_loc = 'all';
@@ -81,7 +92,7 @@ if ($specific_area === '') {
     $specific_area = 'all';
 }
 
-// Validate and handle dates
+// Validate and handle date inputs for filtering.
 $date_filter_active = false;
 $date_from_valid = !empty($date_from) && strtotime($date_from);
 $date_to_valid = !empty($date_to) && strtotime($date_to);
@@ -97,10 +108,10 @@ if ($date_to_valid) {
 }
 
 error_log("Date filter active: " . ($date_filter_active ? 'Yes' : 'No'));
-error_log("Processed Dates - date_from: " . ($date_from_valid ? $date_from : 'Not set') . 
+error_log("Processed Dates - date_from: " . ($date_from_valid ? $date_from : 'Not set') .
           ", date_to: " . ($date_to_valid ? $date_to : 'Not set'));
 
-// Column mapping
+// Map friendly column names from frontend to actual SQL column expressions.
 $column_map = [
     'asset_tag' => 'ed.asset_tag',
     'asset_description' => "COALESCE(CONCAT(ed.asset_description_1, ' ', ed.asset_description_2), '')",
@@ -121,7 +132,7 @@ $column_map = [
     'status_remarks' => 'es.remarks'
 ];
 
-// Prepare selected columns
+// Prepare selected columns for the SQL query.
 $selected_sql_columns = [];
 if (!empty($columns)) {
     error_log("Processing columns: " . json_encode($columns));
@@ -134,6 +145,7 @@ if (!empty($columns)) {
     }
 } else {
     error_log("No columns specified, using defaults");
+    // Default columns if none are explicitly selected.
     $selected_sql_columns = [
         'ed.asset_tag AS asset_tag',
         "COALESCE(CONCAT(ed.asset_description_1, ' ', ed.asset_description_2), '') AS asset_description",
@@ -144,10 +156,11 @@ if (!empty($columns)) {
 }
 $columnList = implode(", ", $selected_sql_columns);
 
-// Build WHERE conditions dynamically
+// Build WHERE conditions dynamically.
 $whereClauses = [];
 $params = [];
 
+// Add building location filter if specified.
 if ($building_loc !== '' && $building_loc !== 'all') {
     $whereClauses[] = 'COALESCE(el.building_loc, ed.location) = ?';
     $params[] = $building_loc;
@@ -155,6 +168,7 @@ if ($building_loc !== '' && $building_loc !== 'all') {
     error_log("No building_loc filter applied (value: '$building_loc')");
 }
 
+// Add specific area filter if specified.
 if ($specific_area !== '' && $specific_area !== 'all') {
     $whereClauses[] = 'COALESCE(el.specific_area, \'\') = ?';
     $params[] = $specific_area;
@@ -162,13 +176,12 @@ if ($specific_area !== '' && $specific_area !== 'all') {
     error_log("No specific_area filter applied (value: '$specific_area')");
 }
 
-// Only add date filtering if at least one date is provided
+// Add date filtering if at least one date is provided.
 if ($date_filter_active) {
-    // Build the date filter condition
     if ($date_from_valid && $date_to_valid) {
-        // Both dates provided - filter between them
+        // Both dates provided - filter between them for all relevant date columns.
         $whereClauses[] = '(
-            (ed.date_created BETWEEN ? AND ?) OR 
+            (ed.date_created BETWEEN ? AND ?) OR
             (ed.date_acquired BETWEEN ? AND ?) OR
             (ed.date_modified BETWEEN ? AND ?) OR
             (es.date_created BETWEEN ? AND ?)
@@ -182,9 +195,9 @@ if ($date_filter_active) {
         $params[] = $date_from;
         $params[] = $date_to;
     } elseif ($date_from_valid) {
-        // Only from date provided - filter >= from date
+        // Only from date provided - filter >= from date for all relevant date columns.
         $whereClauses[] = '(
-            ed.date_created >= ? OR 
+            ed.date_created >= ? OR
             ed.date_acquired >= ? OR
             ed.date_modified >= ? OR
             es.date_created >= ?
@@ -194,9 +207,9 @@ if ($date_filter_active) {
         $params[] = $date_from;
         $params[] = $date_from;
     } elseif ($date_to_valid) {
-        // Only to date provided - filter <= to date
+        // Only to date provided - filter <= to date for all relevant date columns.
         $whereClauses[] = '(
-            ed.date_created <= ? OR 
+            ed.date_created <= ? OR
             ed.date_acquired <= ? OR
             ed.date_modified <= ? OR
             es.date_created <= ?
@@ -208,14 +221,16 @@ if ($date_filter_active) {
     }
 }
 
+// Always filter out disabled equipment details.
 $whereClauses[] = 'ed.is_disabled = 0';
 
+// Combine WHERE clauses.
 $whereSQL = '';
 if (!empty($whereClauses)) {
     $whereSQL = 'WHERE ' . implode(' AND ', $whereClauses);
 }
 
-// Build SQL query
+// Build SQL query.
 $sql = "SELECT $columnList
         FROM equipment_details ed
         LEFT JOIN (
@@ -231,7 +246,7 @@ $sql = "SELECT $columnList
         LEFT JOIN equipment_status es ON ed.asset_tag = es.asset_tag AND es.is_disabled = 0
         $whereSQL";
 
-// Log query for debugging
+// Log query for debugging.
 error_log("SQL Query: $sql");
 error_log("Query Params: " . json_encode($params));
 
@@ -247,7 +262,7 @@ try {
     }
     $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Log results
+    // Log results.
     error_log("Number of results: " . count($results));
     if (!empty($results)) {
         error_log("First row: " . json_encode($results[0]));
@@ -259,7 +274,12 @@ try {
     die('Error executing query: ' . $e->getMessage());
 }
 
-// Function to create table HTML
+/**
+ * @brief Creates HTML table structure for the report.
+ * @param array $columns An array of column keys to display.
+ * @param array $results An array of associative arrays, where each inner array is a row of data.
+ * @return string The generated HTML table.
+ */
 function createTable($columns, $results)
 {
     if (empty($columns)) {
@@ -290,10 +310,11 @@ function createTable($columns, $results)
     return $html;
 }
 
-// Handle export type
-if ($export_type === 'pdf') {
+// Handle export type (for preview, this will always be HTML output).
+if ($export_type === 'pdf') { // Although the file is for preview, it uses 'pdf' as a default for internal logic.
     try {
-        error_log("Generating PDF report");
+        error_log("Generating PDF report (preview)");
+        // Construct the HTML for the report preview.
         $html = "<html><head><style>
           @page { size: " . ($data['paper_size'] ?? 'letter') . " " . ($data['orientation'] ?? 'landscape') . "; margin: 20px; }
           body { font-family: Arial; font-size: 10px; }
@@ -301,44 +322,46 @@ if ($export_type === 'pdf') {
           th, td { border: 1px solid #000; padding: 4px; }
           th { background: #f0f0f0; }
         </style></head><body>";
-        $html .= "<h3>" . htmlspecialchars($data['docTypeSelect'] ?? 'Custom') . " Report</h3>";
+        $html .= "<h3>" . htmlspecialchars($data['repTypeSelect'] ?? 'Custom') . " Report</h3>"; // Use repTypeSelect for report title.
         $html .= "<p><strong>Office/Laboratory:</strong> " . htmlspecialchars($specific_area === 'all' ? 'All Areas' : $specific_area) . "<br>
                     <strong>Location:</strong> " . htmlspecialchars($building_loc === 'all' ? 'All Locations' : $building_loc) . "<br>
-                    <strong>Timeline:</strong> " . 
-                    ($date_filter_active ? 
-                        ($date_from_valid && $date_to_valid ? "$date_from to $date_to" : 
-                         ($date_from_valid ? "From $date_from" : "Until $date_to")) : 
+                    <strong>Timeline:</strong> " .
+                    ($date_filter_active ?
+                        ($date_from_valid && $date_to_valid ? "$date_from to $date_to" :
+                         ($date_from_valid ? "From $date_from" : "Until $date_to")) :
                         "All dates") . "<br>
                     <strong>Prepared By:</strong> $prepared_by<br>
                     <strong>$role_department</strong><br>
                     <strong>Date:</strong> $prep_date</p>";
-        $html .= createTable($columns, $results);
+        $html .= createTable($columns, $results); // Generate the table HTML.
         $html .= "</body></html>";
 
         error_log("HTML generated, length: " . strlen($html));
 
-        $dompdf = new Dompdf();
-        $dompdf->loadHtml($html);
-        $dompdf->setPaper($data['paper_size'] ?? 'letter', $data['orientation'] ?? 'landscape');
-        error_log("Starting PDF rendering");
-        $dompdf->render();
-        error_log("PDF rendered successfully");
-        $dompdf->stream("equipment_report_preview.pdf", ["Attachment" => false]);
+        // Output the HTML directly for iframe display.
+        echo $html;
         exit;
     } catch (Exception $e) {
-        error_log("Error generating PDF: " . $e->getMessage());
+        error_log("Error generating PDF preview: " . $e->getMessage());
         echo "<div style='color:red; padding:20px; border:1px solid red;'>
-              Error generating PDF report: " . htmlspecialchars($e->getMessage()) .
+              Error generating report preview: " . htmlspecialchars($e->getMessage()) .
             "<br><br>Please check the server logs for more details.</div>";
         exit;
     }
 } elseif ($export_type === 'word') {
+    // This block is for generating a Word document for preview, but typically previews are HTML.
+    // The original code has logic for Word generation here, which would usually be in `generate_report.php`.
+    // It is kept for consistency with the provided file structure.
     $phpWord = new PhpWord();
     $section = $phpWord->addSection();
-    $section->addText($data['docTypeSelect'] ?? 'Custom Report', ['bold' => true]);
+    $section->addText($data['repTypeSelect'] ?? 'Custom Report', ['bold' => true]);
     $section->addText("Office/Laboratory: " . htmlspecialchars($specific_area === 'all' ? 'All Areas' : $specific_area));
     $section->addText("Location: " . htmlspecialchars($building_loc === 'all' ? 'All Locations' : $building_loc));
-    $section->addText("Timeline: $date_from to $date_to");
+    $section->addText("Timeline: " .
+                    ($date_filter_active ?
+                        ($date_from_valid && $date_to_valid ? "$date_from to $date_to" :
+                         ($date_from_valid ? "From $date_from" : "Until $date_to")) :
+                        "All dates"));
     $section->addText("Prepared By: $prepared_by");
     $section->addText($role_department);
     $section->addText("Date: $prep_date");
@@ -359,6 +382,9 @@ if ($export_type === 'pdf') {
     $objWriter->save("php://output");
     exit;
 } elseif ($export_type === 'excel') {
+    // This block is for generating an Excel document for preview, but typically previews are HTML.
+    // The original code has logic for Excel generation here, which would usually be in `generate_report.php`.
+    // It is kept for consistency with the provided file structure.
     $spreadsheet = new Spreadsheet();
     $sheet = $spreadsheet->getActiveSheet();
     $sheet->fromArray(array_map(fn($col) => ucwords(str_replace('_', ' ', $col)), $columns));
