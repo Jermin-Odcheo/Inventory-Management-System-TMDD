@@ -57,6 +57,23 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']))
                 if (!$row) {
                     throw new Exception('Equipment not found');
                 }
+                // Process date_acquired for JSON response
+                $date_acquired_from_db_json = $row['date_acquired'] ?? '';
+                $processed_date_acquired_json = ''; // Default to blank
+
+                if (!empty($date_acquired_from_db_json) && $date_acquired_from_db_json !== '0000-00-00') {
+                    $timestamp_json = strtotime($date_acquired_from_db_json);
+                    if ($timestamp_json !== false) {
+                        $year_json = (int)date('Y', $timestamp_json);
+                        if ($year_json >= 1) {
+                            $formatted_date_json = date('Y-m-d', $timestamp_json);
+                            if ($formatted_date_json !== '-0001-11-30') {
+                                $processed_date_acquired_json = $formatted_date_json;
+                            }
+                        }
+                    }
+                }
+
                 // Return all relevant fields
                 echo json_encode([
                     'status' => 'success',
@@ -69,7 +86,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']))
                         'brand'                 => $row['brand'],
                         'model'                 => $row['model'],
                         'serial_number'         => $row['serial_number'],
-                        'date_acquired'         => $row['date_acquired'],
+                        'date_acquired'         => $processed_date_acquired_json,
                         'location'              => $row['location'],
                         'accountable_individual'=> $row['accountable_individual'],
                         'rr_no'                 => $row['rr_no'],
@@ -966,12 +983,25 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
                                         <td><?= safeHtml($equipment['model']); ?></td>
                                         <td><?= safeHtml($equipment['serial_number']); ?></td>
                                         <td><?php
-                                            $acq = $equipment['date_acquired'] ?? '';
-                                            if (empty($acq) || $acq === '0000-00-00' || !strtotime($acq)) {
-                                                echo '';
-                                            } else {
-                                                echo date('Y-m-d', strtotime($acq));
+                                            $acq_table = $equipment['date_acquired'] ?? '';
+                                            $display_date_table = ''; // Default to blank
+                                            if (!empty($acq_table) && $acq_table !== '0000-00-00') {
+                                                // Attempt to parse the date
+                                                $timestamp_table = strtotime($acq_table);
+                                                // Check if strtotime was successful
+                                                if ($timestamp_table !== false) {
+                                                    $year_table = (int)date('Y', $timestamp_table);
+                                                    // Only display if the year is 1 or greater
+                                                    if ($year_table >= 1) {
+                                                        $formatted_date_table = date('Y-m-d', $timestamp_table);
+                                                        // Final check for the specific problematic string
+                                                        if ($formatted_date_table !== '-0001-11-30') {
+                                                            $display_date_table = $formatted_date_table;
+                                                        }
+                                                    }
+                                                }
                                             }
+                                            echo $display_date_table;
                                             ?></td>
                                         <td class="d-none"><?= !empty($equipment['date_created']) ? date('Y-m-d H:i', strtotime($equipment['date_created'])) : ''; ?></td>
                                         <td class="d-none"><?= !empty($equipment['date_modified']) ? date('Y-m-d H:i', strtotime($equipment['date_modified'])) : ''; ?></td>
