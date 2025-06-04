@@ -34,7 +34,8 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']))
     header('Content-Type: application/json');
 
     // Helper: Validate required fields
-    function validateRequiredFields(array $fields) {
+    function validateRequiredFields(array $fields)
+    {
         foreach ($fields as $field) {
             if (empty($_POST[$field])) {
                 throw new Exception("Field {$field} is required");
@@ -88,7 +89,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']))
                         'serial_number'         => $row['serial_number'],
                         'date_acquired'         => $processed_date_acquired_json,
                         'location'              => $row['location'],
-                        'accountable_individual'=> $row['accountable_individual'],
+                        'accountable_individual' => $row['accountable_individual'],
                         'rr_no'                 => $row['rr_no'],
                         'remarks'               => $row['remarks']
                     ]
@@ -98,7 +99,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']))
             }
             exit;
 
-        // 2) Search (filter & pagination) - same as before
+            // 2) Search (filter & pagination) - same as before
         case 'search':
             try {
                 ini_set('display_errors', 1);
@@ -200,7 +201,7 @@ WHERE ed.is_disabled = 0 AND (
             }
             exit;
 
-        // 3) Create new equipment
+            // 3) Create new equipment
         case 'create':
             if (!$canCreate) {
                 echo json_encode(['status' => 'error', 'message' => 'You do not have permission to create equipment details']);
@@ -248,7 +249,7 @@ WHERE ed.is_disabled = 0 AND (
                     'model'                 => $_POST['model'] ?? null,
                     'serial_number'         => $_POST['serial_number'] ?? null,
                     'location'              => $_POST['location'] ?? null,
-                    'accountable_individual'=> $_POST['accountable_individual'] ?? null,
+                    'accountable_individual' => $_POST['accountable_individual'] ?? null,
                     'rr_no'                 => $_POST['rr_no'] ?? null,
                     'date_acquired'         => $_POST['date_acquired'] ?? null,
                     'date_created'          => $date_created,
@@ -271,7 +272,7 @@ WHERE ed.is_disabled = 0 AND (
                 // If date_acquired is provided and there's an RR number, update related charge_invoice
                 $dateAcquired = $_POST['date_acquired'] ?? null;
                 $updatedInvoiceCount = 0;
-                
+
                 if (!empty($dateAcquired)) {
                     try {
                         // Only proceed if we have an RR number
@@ -281,15 +282,15 @@ WHERE ed.is_disabled = 0 AND (
                             if (strpos($rrNo, 'RR') !== 0) {
                                 $rrNo = 'RR' . $rrNo;
                             }
-                            
+
                             // 1. Get the PO number from the receive_report table
                             $rrStmt = $pdo->prepare("SELECT po_no FROM receive_report WHERE rr_no = ? AND is_disabled = 0");
                             $rrStmt->execute([$rrNo]);
                             $rrData = $rrStmt->fetch(PDO::FETCH_ASSOC);
-                            
+
                             if ($rrData && !empty($rrData['po_no'])) {
                                 $poNo = $rrData['po_no'];
-                                
+
                                 // 2. Update the charge_invoice connected to this PO
                                 $ciStmt = $pdo->prepare("
                                     UPDATE charge_invoice 
@@ -297,17 +298,17 @@ WHERE ed.is_disabled = 0 AND (
                                     WHERE po_no = ? AND is_disabled = 0
                                 ");
                                 $ciStmt->execute([$dateAcquired, $poNo]);
-                                
+
                                 $updatedInvoices = $ciStmt->rowCount();
                                 if ($updatedInvoices > 0) {
                                     // Track the total number of updated invoices
                                     $updatedInvoiceCount = $updatedInvoices;
-                                    
+
                                     // 3. Log the changes to audit_log
                                     $auditStmt = $pdo->prepare("INSERT INTO audit_log (
                                         UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status, Date_Time
                                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())");
-                                    
+
                                     $auditStmt->execute([
                                         $_SESSION['user_id'],
                                         $newEquipmentId,
@@ -329,8 +330,8 @@ WHERE ed.is_disabled = 0 AND (
 
                 $pdo->commit();
                 echo json_encode([
-                    'status' => 'success', 
-                    'message' => 'Equipment Details has been added successfully' . 
+                    'status' => 'success',
+                    'message' => 'Equipment Details has been added successfully' .
                         ($updatedInvoiceCount > 0 ? " (also updated {$updatedInvoiceCount} charge invoice(s))" : ""),
                     'updated_invoice_count' => $updatedInvoiceCount
                 ]);
@@ -349,7 +350,7 @@ WHERE ed.is_disabled = 0 AND (
             }
             exit;
 
-        // 4) Update existing equipment
+            // 4) Update existing equipment
         case 'update':
             if (!$canModify) {
                 echo json_encode(['status' => 'error', 'message' => 'You do not have permission to modify equipment details']);
@@ -401,7 +402,7 @@ WHERE ed.is_disabled = 0 AND (
                     'model'                 => $_POST['model'] ?? null,
                     'serial_number'         => $_POST['serial_number'] ?? null,
                     'location'              => $_POST['location'] ?? null,
-                    'accountable_individual'=> $_POST['accountable_individual'] ?? null,
+                    'accountable_individual' => $_POST['accountable_individual'] ?? null,
                     'rr_no'                 => $_POST['rr_no'] ?? null,
                     'date_acquired'         => $_POST['date_acquired'] ?? null,
                     'remarks'               => $_POST['remarks'] ?? null
@@ -419,12 +420,12 @@ WHERE ed.is_disabled = 0 AND (
                     $newValues,
                     'Successful'
                 ]);
-                
+
                 // If date_acquired was changed, update related charge_invoice
                 $oldDateAcquired = $oldEquipment['date_acquired'] ?? null;
                 $newDateAcquired = $_POST['date_acquired'] ?? null;
                 $updatedInvoiceCount = 0;
-                
+
                 if ($oldDateAcquired !== $newDateAcquired && !empty($newDateAcquired)) {
                     try {
                         // Only proceed if we have an RR number
@@ -434,15 +435,15 @@ WHERE ed.is_disabled = 0 AND (
                             if (strpos($rrNo, 'RR') !== 0) {
                                 $rrNo = 'RR' . $rrNo;
                             }
-                            
+
                             // 1. Get the PO number from the receive_report table
                             $rrStmt = $pdo->prepare("SELECT po_no FROM receive_report WHERE rr_no = ? AND is_disabled = 0");
                             $rrStmt->execute([$rrNo]);
                             $rrData = $rrStmt->fetch(PDO::FETCH_ASSOC);
-                            
+
                             if ($rrData && !empty($rrData['po_no'])) {
                                 $poNo = $rrData['po_no'];
-                                
+
                                 // 2. Update the charge_invoice connected to this PO
                                 $ciStmt = $pdo->prepare("
                                     UPDATE charge_invoice 
@@ -450,17 +451,17 @@ WHERE ed.is_disabled = 0 AND (
                                     WHERE po_no = ? AND is_disabled = 0
                                 ");
                                 $ciStmt->execute([$newDateAcquired, $poNo]);
-                                
+
                                 $updatedInvoices = $ciStmt->rowCount();
                                 if ($updatedInvoices > 0) {
                                     // Track the total number of updated invoices
                                     $updatedInvoiceCount = $updatedInvoices;
-                                    
+
                                     // 3. Log the changes to audit_log
                                     $auditStmt = $pdo->prepare("INSERT INTO audit_log (
                                         UserID, EntityID, Module, Action, Details, OldVal, NewVal, Status, Date_Time
                                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())");
-                                    
+
                                     $auditStmt->execute([
                                         $_SESSION['user_id'],
                                         $_POST['equipment_id'],
@@ -479,11 +480,11 @@ WHERE ed.is_disabled = 0 AND (
                         error_log("Error updating charge invoice date: " . $e->getMessage());
                     }
                 }
-                
+
                 $pdo->commit();
                 echo json_encode([
-                    'status' => 'success', 
-                    'message' => 'Equipment updated successfully' . 
+                    'status' => 'success',
+                    'message' => 'Equipment updated successfully' .
                         ($updatedInvoiceCount > 0 ? " (also updated {$updatedInvoiceCount} charge invoice(s))" : ""),
                     'updated_invoice_count' => $updatedInvoiceCount
                 ]);
@@ -495,7 +496,7 @@ WHERE ed.is_disabled = 0 AND (
             }
             exit;
 
-        // 5) Soft delete equipment (and cascade)
+            // 5) Soft delete equipment (and cascade)
         case 'remove':
             if (!$canDelete) {
                 echo json_encode(['status' => 'error', 'message' => 'You do not have permission to remove equipment details']);
@@ -625,7 +626,8 @@ try {
     $errors[] = "Error retrieving Equipment Details: " . $e->getMessage();
 }
 
-function safeHtml($value) {
+function safeHtml($value)
+{
     return htmlspecialchars($value ?? '');
 }
 ob_end_clean();
@@ -651,6 +653,7 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -667,6 +670,7 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
             position: relative;
             padding-right: 20px !important;
         }
+
         th.sortable::after {
             content: "\f0dc";
             font-family: "Font Awesome 5 Free";
@@ -675,10 +679,12 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
             right: 8px;
             color: #999;
         }
+
         th.sortable.asc::after {
             content: "\f0de";
             color: #0d6efd;
         }
+
         th.sortable.desc::after {
             content: "\f0dd";
             color: #0d6efd;
@@ -690,27 +696,32 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
             justify-content: center;
             margin-top: 20px;
         }
+
         .page-item:first-child .page-link {
             margin-left: 0;
             border-top-left-radius: 0.25rem;
             border-bottom-left-radius: 0.25rem;
         }
+
         .page-item:last-child .page-link {
             border-top-right-radius: 0.25rem;
             border-bottom-right-radius: 0.25rem;
         }
+
         .page-item.active .page-link {
             z-index: 3;
             color: #fff;
             background-color: #0d6efd;
             border-color: #0d6efd;
         }
+
         .page-item.disabled .page-link {
             color: #6c757d;
             pointer-events: none;
             background-color: #fff;
             border-color: #dee2e6;
         }
+
         .page-link {
             position: relative;
             display: block;
@@ -722,6 +733,7 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
             border: 1px solid #dee2e6;
             text-decoration: none;
         }
+
         .page-link:hover {
             z-index: 2;
             color: #0056b3;
@@ -729,11 +741,13 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
             background-color: #e9ecef;
             border-color: #dee2e6;
         }
+
         .page-link:focus {
             z-index: 3;
             outline: 0;
             box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
         }
+
         .pagination:empty {
             display: none;
         }
@@ -750,36 +764,45 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
             display: flex;
             align-items: center;
         }
+
         .select2-container .select2-selection--single .select2-selection__rendered {
             line-height: 24px;
             color: #212529;
             padding-left: 0;
         }
+
         .select2-container--default .select2-selection--single .select2-selection__arrow {
             height: 36px;
             right: 10px;
         }
+
         .select2-container--open .select2-dropdown {
             z-index: 9999 !important;
         }
+
         .select2-container .select2-selection {
             min-height: 38px !important;
         }
+
         .select2-container--default .select2-selection--single .select2-selection__rendered {
             padding-top: 2px;
         }
+
         .select2-container--default .select2-selection--single .select2-selection__clear {
             margin-right: 20px;
         }
+
         .select2-dropdown {
             border-color: #ced4da;
             border-radius: 0.375rem;
         }
+
         .select2-container--default .select2-search--dropdown .select2-search__field {
             border: 1px solid #ced4da;
             border-radius: 0.25rem;
             padding: 0.375rem 0.75rem;
         }
+
         .filtered-out {
             display: none !important;
         }
@@ -788,16 +811,26 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
         .updated-row {
             animation: highlight-row 3s ease-in-out;
         }
+
         @keyframes highlight-row {
-            0% { background-color: rgba(255, 255, 0, 0.5); }
-            70% { background-color: rgba(255, 255, 0, 0.5); }
-            100% { background-color: transparent; }
+            0% {
+                background-color: rgba(255, 255, 0, 0.5);
+            }
+
+            70% {
+                background-color: rgba(255, 255, 0, 0.5);
+            }
+
+            100% {
+                background-color: transparent;
+            }
         }
 
         /* Filter form spacing */
         #equipmentFilterForm .row {
             margin-bottom: 10px;
         }
+
         #dateInputsContainer {
             padding-top: 10px;
             padding-bottom: 10px;
@@ -808,28 +841,36 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
         .main-header {
             z-index: 1030 !important;
         }
+
         .modal {
             z-index: 9999 !important;
         }
+
         .modal-backdrop {
             z-index: 9998 !important;
         }
+
         .modal-dialog {
             z-index: 10000 !important;
             margin-top: 50px;
         }
+
         .select2-container--open {
             z-index: 10001 !important;
         }
+
         .select2-dropdown {
             z-index: 10001 !important;
         }
+
         .modal-content {
             z-index: 10000 !important;
         }
+
         body.modal-open {
             padding-right: 0 !important;
         }
+
         .modal-open .main-header,
         .modal-open .header {
             z-index: 1029 !important;
@@ -838,6 +879,7 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
         }
     </style>
 </head>
+
 <body>
     <?php
     include '../../general/sidebar.php';
@@ -852,16 +894,19 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
         <section class="card">
             <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
                 <h2><i class="bi bi-list-task"></i> List of Equipment Details</h2>
-                <?php if ($canCreate): ?>
-                    <button type="button" class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#addEquipmentModal">
-                        <i class="bi bi-plus-lg"></i> Create Equipment
-                    </button>
-                <?php endif; ?>
+
             </div>
             <div class="card-body">
                 <div class="container-fluid px-0">
                     <form id="equipmentFilterForm" class="mb-4">
                         <div class="row g-3">
+                            <div class="col-auto col-md-2 d-grid">
+                                <?php if ($canCreate): ?>
+                                    <button type="button" class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#addEquipmentModal">
+                                        <i class="bi bi-plus-lg"></i> Create Equipment
+                                    </button>
+                                <?php endif; ?>
+                            </div>
                             <div class="col-md-3">
                                 <label for="filterEquipment" class="form-label">Equipment Type</label>
                                 <select class="form-select" id="filterEquipment" name="filterEquipment">
@@ -1264,12 +1309,12 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
                                 </div>
                                 <div class="mb-3 col-md-6">
                                     <label for="edit_location" class="form-label">Location</label>
-                                    <input type="text" class="form-control" name="location" id="edit_location" >
+                                    <input type="text" class="form-control" name="location" id="edit_location">
                                     <small class="text-muted">Auto-filled from database or by selecting an asset tag</small>
                                 </div>
                                 <div class="mb-3 col-md-6">
                                     <label for="edit_accountable_individual" class="form-label">Accountable Individual</label>
-                                    <input type="text" class="form-control" name="accountable_individual" id="edit_accountable_individual" >
+                                    <input type="text" class="form-control" name="accountable_individual" id="edit_accountable_individual">
                                     <small class="text-muted">Auto-filled from database or by selecting an asset tag</small>
                                 </div>
                             </div>
@@ -1333,7 +1378,10 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
                         if ($(this).text().toLowerCase() === term.toLowerCase()) exists = true;
                     });
                     if (!/^[0-9]+$/.test(term)) return null;
-                    return exists ? null : { id: term, text: term };
+                    return exists ? null : {
+                        id: term,
+                        text: term
+                    };
                 }
             });
 
@@ -1353,7 +1401,10 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
                         if ($(this).text().toLowerCase() === term.toLowerCase()) exists = true;
                     });
                     if (!/^[0-9]+$/.test(term)) return null;
-                    return exists ? null : { id: term, text: term };
+                    return exists ? null : {
+                        id: term,
+                        text: term
+                    };
                 }
             });
 
@@ -1372,12 +1423,16 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
                     $('#add_equipment_asset_tag option').each(function() {
                         if ($(this).text().toLowerCase() === term.toLowerCase()) exists = true;
                     });
-                    return exists ? null : { id: term, text: term, newTag: true };
+                    return exists ? null : {
+                        id: term,
+                        text: term,
+                        newTag: true
+                    };
                 }
             }).on('select2:select', function(e) {
                 var assetTag = e.params.data.id;
                 const $accountableField = $('#add_accountable_individual');
-                const $locationField    = $('#add_location');
+                const $locationField = $('#add_location');
                 if ($accountableField.attr('data-autofill') === 'true') {
                     $accountableField.val('').prop('readonly', false).attr('data-autofill', 'false').removeClass('bg-light');
                 }
@@ -1404,12 +1459,16 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
                     $('#edit_equipment_asset_tag option').each(function() {
                         if ($(this).text().toLowerCase() === term.toLowerCase()) exists = true;
                     });
-                    return exists ? null : { id: term, text: term, newTag: true };
+                    return exists ? null : {
+                        id: term,
+                        text: term,
+                        newTag: true
+                    };
                 }
             }).on('select2:select', function(e) {
                 var assetTag = e.params.data.id;
                 const $accountableField = $('#edit_accountable_individual');
-                const $locationField    = $('#edit_location');
+                const $locationField = $('#edit_location');
                 if ($accountableField.attr('data-autofill') === 'true') {
                     $accountableField.val('').prop('readonly', false).attr('data-autofill', 'false').removeClass('bg-light');
                 }
@@ -1423,10 +1482,18 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
 
             // Modal show/hide z-index fix
             $('.modal').on('show.bs.modal', function() {
-                $('.main-header, .header').css({ 'z-index': '1029', 'opacity': '0.5', 'pointer-events': 'none' });
+                $('.main-header, .header').css({
+                    'z-index': '1029',
+                    'opacity': '0.5',
+                    'pointer-events': 'none'
+                });
             });
             $('.modal').on('hidden.bs.modal', function() {
-                $('.main-header, .header').css({ 'z-index': '1030', 'opacity': '1', 'pointer-events': 'auto' });
+                $('.main-header, .header').css({
+                    'z-index': '1030',
+                    'opacity': '1',
+                    'pointer-events': 'auto'
+                });
             });
 
             // Initialize Select2 for filters
@@ -1459,13 +1526,13 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
 
         // ===== Filter & Pagination Logic =====
         function filterEquipmentTable() {
-            const searchText      = $('#searchEquipment').val() || '';
+            const searchText = $('#searchEquipment').val() || '';
             const filterEquipment = $('#filterEquipment').val() || '';
-            const filterBrand     = $('#filterBrand').val() || '';
-            const filterLocation  = $('#filterLocation').val() || '';
-            const dateFilterType  = $('#dateFilter').val() || '';
-            const mdyFrom         = $('#mdyFrom').val() || '';
-            const mdyTo           = $('#mdyTo').val() || '';
+            const filterBrand = $('#filterBrand').val() || '';
+            const filterLocation = $('#filterLocation').val() || '';
+            const dateFilterType = $('#dateFilter').val() || '';
+            const mdyFrom = $('#mdyFrom').val() || '';
+            const mdyTo = $('#mdyTo').val() || '';
 
             const tableRows = $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').toArray();
 
@@ -1477,7 +1544,10 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
                 const cells = Array.from(row.cells || []);
                 if (cells.length === 0) return;
 
-                let equipmentTypeText = '', brandText = '', locationText = '', dateText = '';
+                let equipmentTypeText = '',
+                    brandText = '',
+                    locationText = '',
+                    dateText = '';
                 const cellTexts = cells.map((cell, idx) => {
                     const text = (cell.textContent || '').trim();
                     if (idx === 2) equipmentTypeText = text.toLowerCase();
@@ -1488,10 +1558,10 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
                 });
                 const rowText = cellTexts.join(' ');
 
-                const searchMatch      = !searchText || rowText.includes(searchText.toLowerCase());
-                const equipmentMatch   = !filterEquipment || equipmentTypeText === filterEquipment.toLowerCase();
-                const brandMatch       = !filterBrand || brandText === filterBrand.toLowerCase();
-                const locationMatch    = !filterLocation || locationText === filterLocation.toLowerCase();
+                const searchMatch = !searchText || rowText.includes(searchText.toLowerCase());
+                const equipmentMatch = !filterEquipment || equipmentTypeText === filterEquipment.toLowerCase();
+                const brandMatch = !filterBrand || brandText === filterBrand.toLowerCase();
+                const locationMatch = !filterLocation || locationText === filterLocation.toLowerCase();
 
                 let dateMatch = true;
                 if (dateFilterType && dateText) {
@@ -1499,7 +1569,7 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
                     if (!isNaN(date.getTime())) {
                         if (dateFilterType === 'mdy' && (mdyFrom || mdyTo)) {
                             const fromDate = mdyFrom ? new Date(mdyFrom) : new Date(0);
-                            const toDate   = mdyTo   ? new Date(mdyTo)   : new Date(8640000000000000);
+                            const toDate = mdyTo ? new Date(mdyTo) : new Date(8640000000000000);
                             toDate.setHours(23, 59, 59, 999);
                             dateMatch = date >= fromDate && date <= toDate;
                         }
@@ -1517,13 +1587,13 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
                 }
             });
 
-            window.allRows      = tableRows;
+            window.allRows = tableRows;
             window.filteredRows = filteredRows;
-            window.currentPage  = 1;
+            window.currentPage = 1;
 
             const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
-            const totalRows   = filteredRows.length;
-            const totalPages  = Math.ceil(totalRows / rowsPerPage);
+            const totalRows = filteredRows.length;
+            const totalPages = Math.ceil(totalRows / rowsPerPage);
 
             $('#currentPage').text(window.currentPage);
             $('#rowsPerPage').text(rowsPerPage);
@@ -1556,8 +1626,8 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
 
         function initPagination() {
             const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
-            const totalRows   = window.filteredRows ? window.filteredRows.length : 0;
-            const totalPages  = Math.ceil(totalRows / rowsPerPage);
+            const totalRows = window.filteredRows ? window.filteredRows.length : 0;
+            const totalPages = Math.ceil(totalRows / rowsPerPage);
 
             window.currentPage = window.currentPage || 1;
             if (window.currentPage > totalPages && totalPages > 0) {
@@ -1578,7 +1648,7 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
             if (totalPages <= 1) return;
 
             let startPage = Math.max(1, window.currentPage - 2);
-            let endPage   = Math.min(totalPages, startPage + 4);
+            let endPage = Math.min(totalPages, startPage + 4);
             if (endPage === totalPages) {
                 startPage = Math.max(1, endPage - 4);
             }
@@ -1599,7 +1669,7 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
 
         function goToPage(page) {
             const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
-            const totalPages  = Math.ceil(window.filteredRows.length / rowsPerPage);
+            const totalPages = Math.ceil(window.filteredRows.length / rowsPerPage);
             if (page < 1 || page > totalPages) return;
 
             window.currentPage = page;
@@ -1610,8 +1680,8 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
 
         function showCurrentPageRows() {
             const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
-            const startIndex  = (window.currentPage - 1) * rowsPerPage;
-            const endIndex    = startIndex + rowsPerPage;
+            const startIndex = (window.currentPage - 1) * rowsPerPage;
+            const endIndex = startIndex + rowsPerPage;
 
             if (!window.filteredRows || window.filteredRows.length === 0) {
                 $('#noResultsMessage').show();
@@ -1626,15 +1696,15 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
         }
 
         $(document).ready(function() {
-            window.allRows      = $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').toArray();
+            window.allRows = $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').toArray();
             window.filteredRows = [...window.allRows];
-            window.currentPage  = 1;
+            window.currentPage = 1;
 
             initPagination();
             setTimeout(function() {
                 const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
-                const totalRows   = window.filteredRows.length;
-                const totalPages  = Math.ceil(totalRows / rowsPerPage);
+                const totalRows = window.filteredRows.length;
+                const totalPages = Math.ceil(totalRows / rowsPerPage);
                 buildPaginationButtons(totalPages);
                 showCurrentPageRows();
             }, 300);
@@ -1714,7 +1784,7 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
                 $('#currentPage').text(window.currentPage);
 
                 const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
-                const totalPages  = Math.ceil(window.filteredRows.length / rowsPerPage);
+                const totalPages = Math.ceil(window.filteredRows.length / rowsPerPage);
                 buildPaginationButtons(totalPages);
                 updatePaginationButtons();
                 showCurrentPageRows();
@@ -1751,7 +1821,9 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
                         equipment_id: equipmentId
                     },
                     dataType: 'json',
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
                     success: function(response) {
                         if (response.status === 'success') {
                             const d = response.data;
@@ -1812,7 +1884,7 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
                                     window.allRows = $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').toArray();
                                     window.filteredRows = [...window.allRows];
                                     if (typeof filterEquipmentTable === 'function') filterEquipmentTable();
-                                    
+
                                     // Show additional notification if invoices were updated
                                     if (result.updated_invoice_count && result.updated_invoice_count > 0) {
                                         setTimeout(function() {
@@ -1850,7 +1922,9 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
                     method: 'POST',
                     data: $form.serialize(),
                     dataType: 'json',
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
                     success: function(response) {
                         try {
                             submitBtn.prop('disabled', false).text(originalBtnText);
@@ -1906,7 +1980,9 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
                         details_id: deleteEquipmentId
                     },
                     dataType: 'json',
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
                     success: function(response) {
                         if (response.status === 'success') {
                             $('#deleteEDModal').modal('hide');
@@ -1931,4 +2007,5 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
         });
     </script>
 </body>
+
 </html>

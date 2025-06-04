@@ -112,7 +112,6 @@ $roles_display = implode(', ', array_filter(array_unique($roles)));
                         <ul class="subdropdown-menu">
                             <li><a href="<?php echo BASE_URL; ?>src/view/php/clients/account_details.php">Account
                                     Details</a></li>
-                            <li><a href="#">Personalization</a></li>
                         </ul>
                     </div>
 

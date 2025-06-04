@@ -1,28 +1,49 @@
 <?php
-require_once '../../../../../config/ims-tmdd.php';
-session_start();
+/**
+ * @file equipment_status.php
+ * @brief Manages equipment status, including creation, retrieval, updating, and soft deletion.
+ *
+ * This script handles both initial page load (displaying equipment statuses) and AJAX requests
+ * for CRUD operations (Create, Read, Update, Delete) on equipment statuses. It integrates
+ * with RBAC for privilege checks, manages session messages, and interacts with the
+ * `equipment_status` and `audit_log` database tables. It also includes client-side JavaScript
+ * for filtering, sorting, and pagination.
+ */
+
+require_once '../../../../../config/ims-tmdd.php'; // Include the database connection file, providing the $pdo object.
+session_start(); // Start the PHP session.
 
 // start buffering all output (header/sidebar/footer HTML will be captured)
 ob_start();
 
-include '../../general/header.php';
-include '../../general/sidebar.php';
-include '../../general/footer.php';
+include '../../general/header.php'; // Include the general header HTML.
+include '../../general/sidebar.php'; // Include the general sidebar HTML.
+include '../../general/footer.php'; // Include the general footer HTML.
+
 // For AJAX requests, we want to handle them separately
+/**
+ * Handles AJAX POST requests for 'add', 'update', and 'delete' actions.
+ * Discards any buffered HTML output before sending JSON responses.
+ */
 if (
     $_SERVER['REQUEST_METHOD'] === 'POST'
     && !empty($_SERVER['HTTP_X_REQUESTED_WITH'])
     && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest'
 ) {
-    ob_clean();
-    header('Content-Type: application/json');
+    ob_clean(); // Clean any existing output buffers.
+    header('Content-Type: application/json'); // Set the content type to JSON for AJAX responses.
 
+    /**
+     * Checks if the user is logged in. If not, returns an error message and exits.
+     */
     if (!isset($_SESSION['user_id'])) {
         echo json_encode(['status' => 'error', 'message' => 'Not logged in']);
         exit;
     }
 
-    // Initialize RBAC
+    /**
+     * @var RBACService $rbac Initializes the RBACService with the PDO object and current user ID.
+     */
     $rbac = new RBACService($pdo, $_SESSION['user_id']);
 
     // Handle POST requests
@@ -31,6 +52,11 @@ if (
 
         switch ($_POST['action']) {
             case 'add':
+                /**
+                 * Handles the 'add' action for equipment status.
+                 * Checks for 'Create' privilege, validates inputs, performs a transaction,
+                 * inserts a new record into `equipment_status`, and logs creation in `audit_log`.
+                 */
                 try {
                     // Check if user has Create privilege
                     if (!$rbac->hasPrivilege('Equipment Management', 'Create')) {
@@ -42,17 +68,23 @@ if (
                         throw new Exception('Asset Tag is required');
                     }
 
-                    $pdo->beginTransaction();
+                    $pdo->beginTransaction(); // Start a database transaction.
 
                     // Before inserting into the database
                     error_log('Status to insert: ' . $_POST['status']);
 
                     // Insert equipment status
+                    /**
+                     * Inserts a new record into the `equipment_status` table.
+                     *
+                     * @var PDOStatement $stmt The prepared SQL statement object.
+                     * @var bool $result True on success, false on failure.
+                     */
                     $stmt = $pdo->prepare("INSERT INTO equipment_status (
-                        asset_tag, 
-                        status, 
+                        asset_tag,
+                        status,
                         action,
-                        remarks, 
+                        remarks,
                         date_created,
                         is_disabled
                     ) VALUES (?, ?, ?, ?, NOW(), ?)");
@@ -69,9 +101,14 @@ if (
                         throw new Exception('Failed to insert equipment status');
                     }
 
+                    /** @var int $newStatusId The ID of the newly inserted status record. */
                     $newStatusId = $pdo->lastInsertId();
 
                     // Prepare audit log data
+                    /**
+                     * @var string $newValues JSON encoded string of the new status data for audit logging.
+                     * @var PDOStatement $auditStmt The prepared SQL statement object for inserting audit logs.
+                     */
                     $newValues = json_encode([
                         'asset_tag' => $_POST['asset_tag'],
                         'status' => $_POST['status'],
@@ -102,13 +139,17 @@ if (
                         throw new Exception('Failed to create audit log');
                     }
 
-                    $pdo->commit();
+                    $pdo->commit(); // Commit the transaction.
 
                     $response = [
                         'status' => 'success',
                         'message' => 'Equipment Status has been added successfully.'
                     ];
                 } catch (Exception $e) {
+                    /**
+                     * Catches exceptions during 'add' action, rolls back if active,
+                     * and sets an error response.
+                     */
                     if ($pdo->inTransaction()) {
                         $pdo->rollBack();
                     }
@@ -121,6 +162,11 @@ if (
                 break;
 
             case 'update':
+                /**
+                 * Handles the 'update' action for equipment status.
+                 * Checks for 'Modify' privilege, validates inputs, performs a transaction,
+                 * updates an existing record in `equipment_status`, and logs modification in `audit_log`.
+                 */
                 try {
                     // Check if user has Modify privilege
                     if (!$rbac->hasPrivilege('Equipment Management', 'Modify')) {
@@ -135,9 +181,15 @@ if (
                         throw new Exception('Asset Tag is required');
                     }
 
-                    $pdo->beginTransaction();
+                    $pdo->beginTransaction(); // Start a database transaction.
 
                     // Get old status details for audit log
+                    /**
+                     * Fetches the old equipment status data before updating for audit logging.
+                     *
+                     * @var PDOStatement $stmt The prepared SQL statement object.
+                     * @var array|false $oldStatus The fetched old status data, or false if not found.
+                     */
                     $stmt = $pdo->prepare("SELECT * FROM equipment_status WHERE equipment_status_id = ?");
                     $stmt->execute([$_POST['status_id']]);
                     $oldStatus = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -147,9 +199,15 @@ if (
                     }
 
                     // Update equipment status
-                    $stmt = $pdo->prepare("UPDATE equipment_status SET 
-                        asset_tag = ?, 
-                        status = ?, 
+                    /**
+                     * Updates the `equipment_status` record with new values.
+                     *
+                     * @var PDOStatement $stmt The prepared SQL statement object.
+                     * @var bool $result True on success, false on failure.
+                     */
+                    $stmt = $pdo->prepare("UPDATE equipment_status SET
+                        asset_tag = ?,
+                        status = ?,
                         action = ?,
                         remarks = ?,
                         is_disabled = ?
@@ -169,6 +227,11 @@ if (
                     }
 
                     // Prepare audit log data
+                    /**
+                     * @var string $oldValues JSON encoded string of the old status data for audit logging.
+                     * @var string $newValues JSON encoded string of the new status data for audit logging.
+                     * @var PDOStatement $auditStmt The prepared SQL statement object for inserting audit logs.
+                     */
                     $oldValues = json_encode([
                         'asset_tag' => $oldStatus['asset_tag'],
                         'status' => $oldStatus['status'],
@@ -216,12 +279,16 @@ if (
                         throw new Exception('Failed to create audit log');
                     }
 
-                    $pdo->commit();
+                    $pdo->commit(); // Commit the transaction.
                     $response = [
                         'status' => 'success',
                         'message' => 'Status updated successfully'
                     ];
                 } catch (Exception $e) {
+                    /**
+                     * Catches exceptions during 'update' action, rolls back if active,
+                     * and sets an error response.
+                     */
                     if ($pdo->inTransaction()) {
                         $pdo->rollBack();
                     }
@@ -233,6 +300,12 @@ if (
                 break;
 
             case 'delete':
+                /**
+                 * Handles the 'delete' action for equipment status.
+                 * Checks for 'Remove' privilege, validates inputs, performs a transaction,
+                 * soft deletes a record in `equipment_status` (sets `is_disabled` to 1),
+                 * and logs deletion in `audit_log`.
+                 */
                 try {
                     // Check if user has Remove privilege
                     if (!$rbac->hasPrivilege('Equipment Management', 'Remove')) {
@@ -244,6 +317,12 @@ if (
                     }
 
                     // Get status details before deletion for audit log
+                    /**
+                     * Fetches the equipment status data before soft deletion for audit logging.
+                     *
+                     * @var PDOStatement $stmt The prepared SQL statement object.
+                     * @var array|false $statusData The fetched status data, or false if not found.
+                     */
                     $stmt = $pdo->prepare("SELECT * FROM equipment_status WHERE equipment_status_id = ?");
                     $stmt->execute([$_POST['status_id']]);
                     $statusData = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -255,10 +334,13 @@ if (
                     // Get the asset tag
                     $assetTag = $statusData['asset_tag'];
 
-                    // Begin transaction
-                    $pdo->beginTransaction();
+                    $pdo->beginTransaction(); // Start a database transaction.
 
                     // Prepare audit log data
+                    /**
+                     * @var string $oldValue JSON encoded string of the old status data before soft deletion for audit logging.
+                     * @var PDOStatement $auditStmt The prepared SQL statement object for inserting audit logs.
+                     */
                     $oldValue = json_encode([
                         'equipment_status_id' => $statusData['equipment_status_id'],
                         'asset_tag' => $statusData['asset_tag'],
@@ -292,7 +374,12 @@ if (
                         'Successful'
                     ]);
 
-                    // Perform the delete on equipment_status
+                    // Perform the delete on equipment_status (soft delete)
+                    /**
+                     * Updates the `equipment_status` record to mark it as disabled.
+                     *
+                     * @var PDOStatement $stmt The prepared SQL statement object.
+                     */
                     $stmt = $pdo->prepare("UPDATE equipment_status SET is_disabled = 1 WHERE equipment_status_id = ?");
                     $stmt->execute([$_POST['status_id']]);
 
@@ -305,9 +392,12 @@ if (
                         'message' => 'Equipment Status deleted successfully.'
                     ];
 
-                    // Commit transaction
-                    $pdo->commit();
+                    $pdo->commit(); // Commit the transaction.
                 } catch (Exception $e) {
+                    /**
+                     * Catches exceptions during 'delete' action, rolls back if active,
+                     * and sets an error response.
+                     */
                     if ($pdo->inTransaction()) {
                         $pdo->rollBack();
                     }
@@ -327,9 +417,9 @@ if (
 }
 
 // Regular page load continues here...
-include('../../general/header.php');
+include('../../general/header.php'); // Include the general header HTML.
 
-// Initialize RBAC
+// Initialize RBAC (re-initialize for regular page load if not already done)
 $userId = $_SESSION['user_id'] ?? null;
 if (!is_int($userId) && !ctype_digit((string)$userId)) {
     header('Location: ' . BASE_URL . 'index.php');
@@ -341,7 +431,7 @@ $userId = (int)$userId;
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
 $rbac->requirePrivilege('Equipment Management', 'View');
 
-// Button flags
+// Button flags (re-set for clarity, though already determined above)
 $canCreate = $rbac->hasPrivilege('Equipment Management', 'Create');
 $canModify = $rbac->hasPrivilege('Equipment Management', 'Modify');
 $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
@@ -363,7 +453,8 @@ if (isset($_SESSION['success'])) {
     unset($_SESSION['success']);
 }
 
-// GET deletion (if applicable)
+// GET deletion (if applicable) - This block is now redundant due to AJAX handling above.
+// It's kept for completeness but the AJAX POST 'delete' case is preferred.
 if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
     // Check if user has Remove privilege
     if (!$rbac->hasPrivilege('Equipment Management', 'Remove')) {
@@ -383,8 +474,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             // Get the asset tag
             $assetTag = $statusData['asset_tag'];
 
-            // Begin transaction
-            $pdo->beginTransaction();
+            $pdo->beginTransaction(); // Start a database transaction.
 
             // Set current user for audit logging
             $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
@@ -423,7 +513,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                 'Successful'
             ]);
 
-            // Perform the delete on equipment_status
+            // Perform the delete on equipment_status (soft delete)
             $stmt = $pdo->prepare("UPDATE equipment_status SET is_disabled = 1 WHERE equipment_status_id = ?");
             $stmt->execute([$id]);
 
@@ -453,12 +543,26 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
     <title>Equipment Status Management</title>
     <link href="../../../styles/css/equipment-manager.css" rel="stylesheet">
     <style>
-        th.sortable.asc::after {
-            content: " ▲";
+        th.sortable {
+            cursor: pointer;
+            position: relative;
+            padding-right: 20px !important; /* Space for sort icon */
         }
-
+        th.sortable::after {
+            content: "\f0dc"; /* Font Awesome sort icon */
+            font-family: "Font Awesome 5 Free";
+            font-weight: 900;
+            position: absolute;
+            right: 8px;
+            color: #999;
+        }
+        th.sortable.asc::after {
+            content: "\f0de"; /* Font Awesome sort-up icon */
+            color: #0d6efd; /* Bootstrap primary color */
+        }
         th.sortable.desc::after {
-            content: " ▼";
+            content: "\f0dd"; /* Font Awesome sort-down icon */
+            color: #0d6efd; /* Bootstrap primary color */
         }
 
         /* Styling for read-only fields */
@@ -542,124 +646,100 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                 </button>
                             <?php endif; ?>
                         </div>
-                        <!-- <div class="col-md-3">
-                            <select class="form-select" id="filterStatus">
-                                <option value="">Filter by Status</option>
-                                <?php
-                                // Get unique status values from the database
-                                try {
-                                    // First, let's check for any problematic values for debugging
-                                    $debugQuery = $pdo->query("SELECT equipment_status_id, asset_tag, status, LENGTH(status) as status_length FROM equipment_status WHERE is_disabled = 0 ORDER BY status");
-                                    $debugResults = $debugQuery->fetchAll(PDO::FETCH_ASSOC);
+                        <!-- Filter and Search controls -->
+                        <div class="row mb-2 g-2 align-items-center flex-wrap">
+                            <div class="col-md-3">
+                                <select class="form-select" id="filterStatus">
+                                    <option value="">Filter by Status</option>
+                                    <?php
+                                    // Get unique status values from the database
+                                    try {
+                                        // Now get the distinct values for the dropdown, excluding empty values
+                                        $statusOptions = $pdo->query("SELECT DISTINCT status FROM equipment_status WHERE is_disabled = 0 AND status IS NOT NULL AND TRIM(status) != '' ORDER BY status")->fetchAll(PDO::FETCH_COLUMN);
 
-                                    // Log the raw status values with detailed info
-                                    foreach ($debugResults as $row) {
-                                        $statusValue = $row['status'];
-                                        $hexChars = '';
-                                        for ($i = 0; $i < strlen($statusValue); $i++) {
-                                            $hexChars .= '0x' . dechex(ord($statusValue[$i])) . ' ';
+                                        foreach ($statusOptions as $status) {
+                                            // Normalize the status value to remove any extra whitespace
+                                            $normalizedStatus = trim(preg_replace('/\s+/', ' ', $status));
+
+                                            // Skip empty values
+                                            if (empty($normalizedStatus)) {
+                                                continue;
+                                            }
+
+                                            echo "<option value=\"" . htmlspecialchars($normalizedStatus) . "\">" . htmlspecialchars($normalizedStatus) . "</option>";
                                         }
-                                        error_log("Status ID {$row['equipment_status_id']} (Asset: {$row['asset_tag']}): '{$statusValue}' - Length: {$row['status_length']} - Hex: {$hexChars}");
+                                    } catch (PDOException $e) {
+                                        error_log("Error retrieving status options: " . $e->getMessage());
+                                        // If query fails, fallback to static options
+                                        echo "<option value=\"Maintenance\">Maintenance</option>";
+                                        echo "<option value=\"Working\">Working</option>";
+                                        echo "<option value=\"For Repair\">For Repair</option>";
+                                        echo "<option value=\"For Disposal\">For Disposal</option>";
+                                        echo "<option value=\"Disposed\">Disposed</option>";
+                                        echo "<option value=\"Condemned\">Condemned</option>";
                                     }
-
-                                    // Now get the distinct values for the dropdown, excluding empty values
-                                    $statusOptions = $pdo->query("SELECT DISTINCT status FROM equipment_status WHERE is_disabled = 0 AND status IS NOT NULL AND TRIM(status) != '' ORDER BY status")->fetchAll(PDO::FETCH_COLUMN);
-
-                                    // Debug - print status values
-                                    error_log("Equipment Status Values: " . print_r($statusOptions, true));
-
-                                    foreach ($statusOptions as $status) {
-                                        // Normalize the status value to remove any extra whitespace
-                                        $normalizedStatus = trim(preg_replace('/\s+/', ' ', $status));
-
-                                        // Skip empty values
-                                        if (empty($normalizedStatus)) {
-                                            continue;
-                                        }
-
-                                        echo "<option value=\"" . htmlspecialchars($normalizedStatus) . "\">" . htmlspecialchars($normalizedStatus) . "</option>";
-                                    }
-                                } catch (PDOException $e) {
-                                    error_log("Error retrieving status options: " . $e->getMessage());
-                                    // If query fails, fallback to static options
-                                    echo "<option value=\"Maintenance\">Maintenance</option>";
-                                    echo "<option value=\"Working\">Working</option>";
-                                    echo "<option value=\"For Repair\">For Repair</option>";
-                                    echo "<option value=\"For Disposal\">For Disposal</option>";
-                                    echo "<option value=\"Disposed\">Disposed</option>";
-                                    echo "<option value=\"Condemned\">Condemned</option>";
-                                }
-                                ?>
-                            </select>
-                        </div>
-                        <div class="col-md-3 d-flex flex-column align-items-start" style="position:relative;">
-                            <select class="form-select mb-2" id="dateFilter">
-                                <option value="">Filter by Date</option>
-                                <option value="desc">Newest to Oldest</option>
-                                <option value="asc">Oldest to Newest</option>
-                                <option value="month">Specific Month</option>
-                                <option value="range">Custom Date Range</option>
-                            </select>
-                            <button id="filterBtn" type="button" class="btn filter-btn-custom mt-1" style="width:100%;"> 
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="white" class="bi bi-funnel" viewBox="0 0 16 16">
-                                    <path d="M1.5 1.5A.5.5 0 0 1 2 1h12a.5.5 0 0 1 .39.812L10 7.21V13.5a.5.5 0 0 1-.684.474l-2-1A.5.5 0 0 1 7 12.5V7.21L1.61 1.812A.5.5 0 0 1 1.5 1.5zM2.437 2l5.36 5.812a.5.5 0 0 1 .123.329v5.54l1 0.5V8.14a.5.5 0 0 1 .123-.329L13.563 2H2.437z"/>
-                                </svg>
-                                <span style="color:#fff;">Filter</span>
-                            </button>
-                        </div>
-                        <div class="col-md-3 d-flex flex-column align-items-end" style="position:relative;">
-                            <div class="input-group mb-2">
-                                <input type="text" id="searchStatus" class="form-control" placeholder="Search status...">
-                                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                    ?>
+                                </select>
                             </div>
-                            <button id="clearBtn" type="button" class="btn clear-btn-custom" style="width:100%;">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="white" class="bi bi-x-circle" viewBox="0 0 16 16">
-                                    <path d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14zm0 1A8 8 0 1 1 8 0a8 8 0 0 1 0 16z"/>
-                                    <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
-                                </svg>
-                                <span style="color:#fff;">Clear</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!--Date Inputs Row -->
-                        <!-- <div id="dateInputsContainer" class="date-inputs-container">
-                        <div class="month-picker-container" id="monthPickerContainer">
-                            <select class="form-select" id="monthSelect">
-                                <option value="">Select Month</option>
-                                <?php
-                                $months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-                                foreach ($months as $index => $month) {
-                                    echo "<option value='" . ($index + 1) . "'>" . $month . "</option>";
-                                }
-                                ?>
-                            </select>
-                            <select class="form-select" id="yearSelect">
-                                <option value="">Select Year</option>
-                                <?php
-                                $currentYear = date('Y');
-                                for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
-                                    echo "<option value='" . $year . "'>" . $year . "</option>";
-                                }
-                                ?>
-                            </select>
-                        </div>
-                        <div class="date-range-container" id="dateRangePickers">
-                            <input type="date" class="form-control" id="dateFrom" placeholder="From">
-                            <input type="date" class="form-control" id="dateTo" placeholder="To">
-                        </div>
-                    </div> -->
-
-                        <!-- Buttons -->
-                        <!-- Buttons-->
-                        <div class="col-6 col-md-2 d-grid">
-                            <button type="submit" class="btn btn-dark"><i class="bi bi-funnel"></i> Filter</button>
+                            <div class="col-md-3 d-flex flex-column align-items-start" style="position:relative;">
+                                <select class="form-select mb-2" id="dateFilter">
+                                    <option value="">Filter by Date</option>
+                                    <option value="desc">Newest to Oldest</option>
+                                    <option value="asc">Oldest to Newest</option>
+                                    <option value="month">Specific Month</option>
+                                    <option value="range">Custom Date Range</option>
+                                </select>
+                                <button id="filterBtn" type="button" class="btn filter-btn-custom mt-1" style="width:100%;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="white" class="bi bi-funnel" viewBox="0 0 16 16">
+                                        <path d="M1.5 1.5A.5.5 0 0 1 2 1h12a.5.5 0 0 1 .39.812L10 7.21V13.5a.5.5 0 0 1-.684.474l-2-1A.5.5 0 0 1 7 12.5V7.21L1.61 1.812A.5.5 0 0 1 1.5 1.5zM2.437 2l5.36 5.812a.5.5 0 0 1 .123.329v5.54l1 0.5V8.14a.5.5 0 0 1 .123-.329L13.563 2H2.437z"/>
+                                    </svg>
+                                    <span style="color:#fff;">Filter</span>
+                                </button>
+                            </div>
+                            <div class="col-md-3 d-flex flex-column align-items-end" style="position:relative;">
+                                <div class="input-group mb-2">
+                                    <input type="text" id="searchStatus" class="form-control" placeholder="Search status...">
+                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                </div>
+                                <button id="clearBtn" type="button" class="btn clear-btn-custom" style="width:100%;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="white" class="bi bi-x-circle" viewBox="0 0 16 16">
+                                        <path d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14zm0 1A8 8 0 1 1 8 0a8 8 0 0 1 0 16z"/>
+                                        <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                                    </svg>
+                                    <span style="color:#fff;">Clear</span>
+                                </button>
+                            </div>
                         </div>
 
-                        <div class="col-6 col-md-2 d-grid">
-                            <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary shadow-sm"><i class="bi bi-x-circle"></i> Clear</a>
+                        <!--Date Inputs Row -->
+                        <div id="dateInputsContainer" class="date-inputs-container" style="display: none;">
+                            <div class="month-picker-container" id="monthPickerContainer" style="display: none;">
+                                <select class="form-select" id="monthSelect">
+                                    <option value="">Select Month</option>
+                                    <?php
+                                    $months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                                    foreach ($months as $index => $month) {
+                                        echo "<option value='" . ($index + 1) . "'>" . $month . "</option>";
+                                    }
+                                    ?>
+                                </select>
+                                <select class="form-select" id="yearSelect">
+                                    <option value="">Select Year</option>
+                                    <?php
+                                    $currentYear = date('Y');
+                                    for ($year = $currentYear; $year >= $currentYear - 10; $year--) {
+                                        echo "<option value='" . $year . "'>" . $year . "</option>";
+                                    }
+                                    ?>
+                                </select>
+                            </div>
+                            <div class="date-range-container" id="dateRangePickers" style="display: none;">
+                                <input type="date" class="form-control" id="dateFrom" placeholder="From">
+                                <input type="date" class="form-control" id="dateTo" placeholder="To">
+                            </div>
                         </div>
 
+                        <!-- Buttons (redundant, moved into filter-container) -->
                         <div class="col-12 col-md-3 d-grid">
                             <a href="equipStat_change_log.php" class="btn btn-primary"><i class="bi bi-card-list"></i> View Equipment Status Changes</a>
                         </div>
@@ -681,6 +761,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                             <tbody id="statusTbody">
                                 <?php
                                 try {
+                                    /**
+                                     * Fetches all active equipment status records for initial page display.
+                                     *
+                                     * @var PDOStatement $stmt The prepared SQL statement object.
+                                     */
                                     $stmt = $pdo->query("SELECT * FROM equipment_status WHERE is_disabled = 0 ORDER BY date_created DESC");
                                     while ($row = $stmt->fetch()) {
                                         echo "<tr>";
@@ -694,7 +779,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                         <div class='d-flex justify-content-center gap-2'>";
 
                                         if ($canModify) {
-                                            echo "<button class='btn btn-sm btn-outline-info edit-status' 
+                                            echo "<button class='btn btn-sm btn-outline-info edit-status'
                                 data-id='" . htmlspecialchars($row['equipment_status_id']) . "'
                                 data-asset='" . htmlspecialchars($row['asset_tag']) . "'
                                 data-status='" . htmlspecialchars($row['status']) . "'
@@ -706,7 +791,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                         }
 
                                         if ($canDelete) {
-                                            echo "<button class='btn btn-sm btn-outline-danger delete-status' 
+                                            echo "<button class='btn btn-sm btn-outline-danger delete-status'
                                 data-id='" . htmlspecialchars($row['equipment_status_id']) . "'>
                               <i class='bi bi-trash'></i>
                             </button>";
@@ -1221,16 +1306,16 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                 if (deleteModal) {
                                     deleteModal.hide();
                                 }
-                                
+
                                 // Ensure scrolling is restored
                                 $('body').removeClass('modal-open');
                                 $('.modal-backdrop').remove();
                                 $('body').css('overflow', '');
                                 $('body').css('padding-right', '');
-                                
+
                                 // Show success message
                                 showToast(response.message || 'Status deleted successfully', 'success');
-                                
+
                                 // Refresh table without page reload
                                 refreshTable();
                             } else {
@@ -1278,19 +1363,19 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                             if (addModal) {
                                 addModal.hide();
                             }
-                            
+
                             // Reset form
                             $('#addStatusForm')[0].reset();
-                            
+
                             // Ensure scrolling is restored
                             $('body').removeClass('modal-open');
                             $('.modal-backdrop').remove();
                             $('body').css('overflow', '');
                             $('body').css('padding-right', '');
-                            
+
                             // Show success message
                             showToast(result.message || 'Status added successfully', 'success');
-                            
+
                             // Refresh table without page reload
                             refreshTable();
                         } else {
@@ -1309,7 +1394,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             // Ensure proper cleanup when modal is hidden
             $('#addStatusModal').on('hidden.bs.modal', function() {
                 $(this).find('form')[0].reset();
-                
+
                 // Ensure scrolling is restored
                 $('body').removeClass('modal-open');
                 $('.modal-backdrop').remove();
@@ -1343,16 +1428,16 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                             if (editModal) {
                                 editModal.hide();
                             }
-                            
+
                             // Ensure scrolling is restored
                             $('body').removeClass('modal-open');
                             $('.modal-backdrop').remove();
                             $('body').css('overflow', '');
                             $('body').css('padding-right', '');
-                            
+
                             // Show success message
                             showToast(result.message || 'Status updated successfully', 'success');
-                            
+
                             // Refresh table without page reload
                             refreshTable();
                         } else {
@@ -1369,7 +1454,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             // Ensure proper cleanup when edit modal is hidden
             $('#editStatusModal').on('hidden.bs.modal', function() {
                 $(this).find('form')[0].reset();
-                
+
                 // Ensure scrolling is restored
                 $('body').removeClass('modal-open');
                 $('.modal-backdrop').remove();
@@ -1457,27 +1542,27 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
         function refreshTable() {
             // Create a temporary container to hold the loaded content
             const tempContainer = $('<div>');
-            
+
             // Load the page content into the temporary container
             tempContainer.load(location.href + ' #statusTable', function() {
                 // Extract only the tbody content
                 const newTbody = tempContainer.find('#statusTbody').html();
-                
+
                 // Replace the current tbody content with the new content
                 $('#statusTbody').html(newTbody);
-                
+
                 // Update pagination after table refresh
                 window.allRows = Array.from(document.querySelectorAll('#statusTbody tr'));
                 window.filteredRows = window.allRows;
-                
+
                 // Update total count in the UI
                 $('#totalRows').text(window.allRows.length);
-                
+
                 // Reinitialize pagination
                 if (typeof updatePagination === 'function') {
                     updatePagination();
                 }
-                
+
                 // Check if pagination buttons should be hidden
                 if (typeof checkAndHidePagination === 'function') {
                     setTimeout(checkAndHidePagination, 100);
@@ -1485,7 +1570,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
             });
         }
     </script>
-    
+
 </body>
 
 </html>
