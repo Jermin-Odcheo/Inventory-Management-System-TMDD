@@ -1,13 +1,33 @@
 <?php
-// user_roles_management.php
+/**
+ * user_roles_management.php
+ *
+ * Handles display and management of user–department–role assignments,
+ * including filtering, sorting, pagination, and CRUD privilege checks.
+ *
+ * PHP version 7+
+ *
+ * @category  UserManagement
+ * @package   AcmeApp\UserRoles
+ * @author    Jermin 
+ * @license   MIT
+ * @link      https://example.com/docs/user_roles_management
+ */
+
 session_start();
+
+
 // Include configuration (assumes config.php defines a PDO instance in $pdo)
 require_once('../../../../../config/ims-tmdd.php');
 include '../../general/header.php';
 include '../../general/sidebar.php';
 include '../../general/footer.php';
 
-// 1) Auth guard
+/**
+ * Validate that the current session has a logged-in user.
+ *
+ * @var int|null $userId The current user ID from session, or null if not set.
+ */
 $userId = $_SESSION['user_id'] ?? null;
 if (!is_int($userId) && !ctype_digit((string)$userId)) {
     header('Location: ' . BASE_URL . 'index.php');
@@ -15,19 +35,40 @@ if (!is_int($userId) && !ctype_digit((string)$userId)) {
 }
 $userId = (int)$userId;
 
-// 2) Init RBAC & enforce "View"
+/**
+ * Initialize RBAC and enforce "View" privilege.
+ *
+ * @var RBACService $rbac The RBAC service instance.
+ */
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
 $rbac->requirePrivilege('User Management', 'View');
 
 // 3) Button flags
+/**
+ * @var mixed $canCreate True if the user has the "Create" privilege, false otherwise.
+ *
+ */
 $canCreate = $rbac->hasPrivilege('User Management', 'Create');
+/**
+ * @var mixed $canModify True if the user has the "Modify" privilege, false otherwise.
+ */
 $canModify = $rbac->hasPrivilege('User Management', 'Modify');
+/**
+ * @var mixed $canRemove True if the user has the "Remove" privilege, false otherwise.
+ */
 $canRemove = $rbac->hasPrivilege('User Management', 'Remove');
+/**
+ * @var mixed $canTrack True if the user has the "Track" privilege, false otherwise.
+ */
 $canTrack  = $rbac->hasPrivilege('User Management', 'Track');
 
 // --- START SORTING IMPLEMENTATION ---
 
 // Define allowed sortable columns and their corresponding database columns/aliases
+/**
+ * Allowed sortable columns mapped to their database expressions.
+ * @var array $sortMap Associative array mapping sortable column names to their corresponding database columns/aliases.
+ */
 $sortMap = [
     'username'    => 'u.username',
     'departments' => 'departments_concat', // Alias from GROUP_CONCAT
@@ -35,20 +76,37 @@ $sortMap = [
 ];
 
 // Get sort parameters from GET request
+/**
+ * Sort by parameter from GET request.
+ * @var string $sortBy Default sort by username.
+ */
 $sortBy = $_GET['sort_by'] ?? 'username'; // Default sort by username
+/**
+ * Sort direction parameter from GET request.
+ * @var string $sortDir Default sort order 'asc'.
+ */
 $sortDir = strtolower($_GET['sort_order'] ?? 'asc'); // Default sort order 'asc'
 
-// Validate sort by parameter against the allowed map
+/**
+ * Validate sort by parameter against the allowed map.
+ * @var string $sortBy Default sort by username.
+ */
 if (!isset($sortMap[$sortBy])) {
     $sortBy = 'username'; // Fallback to default if invalid
 }
 
-// Validate sort direction
+/**
+ * Validate sort direction.
+ * @var string $sortDir Default sort order 'asc'.
+ */
 if (!in_array($sortDir, ['asc', 'desc'])) {
     $sortDir = 'asc'; // Fallback to default if invalid
 }
 
-// Construct the ORDER BY clause dynamically
+/**
+ * Construct the ORDER BY clause dynamically.
+ * @var string $orderByClause ORDER BY clause.
+ */
 $orderByClause = "ORDER BY " . $sortMap[$sortBy] . " " . $sortDir;
 
 // --- END SORTING IMPLEMENTATION ---
@@ -56,13 +114,30 @@ $orderByClause = "ORDER BY " . $sortMap[$sortBy] . " " . $sortDir;
 // --- START FILTERING IMPLEMENTATION ---
 
 // Get filter parameters from GET request
+/**
+ * Raw search filter from GET parameters, trimmed of whitespace.
+ *
+ * @var string $searchFilter
+ */
 $searchFilter = isset($_GET['search']) ? trim($_GET['search']) : '';
+/**
+ * Role filter from GET parameters, cast to integer. Zero means no filter.
+ *
+ * @var int $roleFilter
+ */
 $roleFilter = isset($_GET['role']) ? (int)$_GET['role'] : 0;
 
 // Build WHERE clause for filtering
+/**
+ * WHERE clause for filtering.
+ *
+ * @var string $whereClause
+ */
 $whereClause = "u.is_disabled = 0";
 
-// Add search filter if provided
+/**
+ * Add search filter if provided.
+ */
 if (!empty($searchFilter)) {
     // Remove any existing % characters from the search term
     $searchFilter = str_replace('%', '', $searchFilter);
@@ -76,8 +151,9 @@ if (!empty($searchFilter)) {
                           d.department_name LIKE '%{$searchFilter}%' OR 
                           r.role_name LIKE '%{$searchFilter}%')";
 }
-
-// Add role filter if provided
+/**
+ * Add role filter if provided.
+ */
 if ($roleFilter > 0) {
     $whereClause .= " AND r.id = {$roleFilter}";
 }
@@ -86,19 +162,37 @@ if ($roleFilter > 0) {
 
 // --- START SERVER-SIDE PAGINATION ---
 
-// Get current page from URL parameter
+/**
+ * Current page from URL parameter.
+ *
+ * @var int $currentPage
+ */
 $currentPage = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
 
-// Default rows per page
+
+/**
+ * Default rows per page.
+ *
+ * @var int $rowsPerPage
+ */
 $rowsPerPage = isset($_GET['rows_per_page']) ? max(10, intval($_GET['rows_per_page'])) : 10;
 
-// Calculate offset for SQL query
+/**
+ * Offset for SQL LIMIT clause, calculated from current page and rows per page.
+ *
+ * @var int $offset
+ */
 $offset = ($currentPage - 1) * $rowsPerPage;
 
 // --- END SERVER-SIDE PAGINATION ---
 
 // Query active users with their roles and departments for display and sorting
 // Use GROUP_CONCAT to get all departments and roles for a user in a single row
+/**
+ * Fetch total number of distinct active users matching filters.
+ *
+ * @var PDOStatement $countStmt
+ */
 $countStmt = $pdo->query(
     "SELECT COUNT(DISTINCT u.id) AS total_users
     FROM
@@ -112,12 +206,25 @@ $countStmt = $pdo->query(
     WHERE
         {$whereClause}"
 );
+/**
+ * Total number of distinct active users matching filters.
+ *
+ * @var int $totalUsersCount
+ */
 $totalUsersCount = $countStmt->fetch(PDO::FETCH_ASSOC)['total_users'];
 
-// Calculate total pages
+/**
+ * Total number of pages for pagination.
+ *
+ * @var int $totalPages
+ */
 $totalPages = ceil($totalUsersCount / $rowsPerPage);
 
-// Query with pagination, filtering, and sorting
+/**
+ * Query with pagination, filtering, and sorting.
+ *
+ * @var PDOStatement $stmt
+ */
 $stmt = $pdo->prepare(
     "SELECT
         u.id,
@@ -144,25 +251,54 @@ $stmt = $pdo->prepare(
     {$orderByClause}
     LIMIT :limit OFFSET :offset"
 );
+
+/**
+ * Bind parameters to the query.
+ * Bind offset to the query.
+ * Execute the query.
+ * Fetch all users data.
+ */
 $stmt->bindParam(':limit', $rowsPerPage, PDO::PARAM_INT);
 $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
 $stmt->execute();
+/**
+ * Fetch all users data.
+ *
+ * @var array $usersData
+ */
 $usersData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Store the actual count of users (after filtering)
+
+/**
+ * Actual count of users (after filtering).
+ * Store the actual count of users (after filtering)
+ * @var int $totalUsers
+ */
 $totalUsers = $totalUsersCount;
 
-// Query active roles (for dropdowns)
+/**
+ * Query active roles (for dropdowns).
+ *
+ * @var PDOStatement $stmt
+ */
 $stmt = $pdo->query("SELECT id, role_name FROM roles WHERE is_disabled = 0");
 $rolesData = $stmt->fetchAll();
 
-// Query all departments (for dropdowns)
+/**
+ * Query all departments (for dropdowns).
+ *
+ * @var PDOStatement $stmt
+ */
 $stmt = $pdo->query("SELECT id, department_name, abbreviation FROM departments WHERE is_disabled = 0 ORDER BY department_name");
 $departmentsData = $stmt->fetchAll();
 
-// Fetch all user–department–role triples (for detailed client-side mapping in modals)
-// This is still needed as the main query above only provides concatenated strings
-// and the client-side logic needs individual department and role IDs for editing.
+/**
+ * Fetch all user–department–role triples (for detailed client-side mapping in modals).
+ * This is still needed as the main query above only provides concatenated strings
+ * and the client-side logic needs individual department and role IDs for editing.
+ *
+ * @var PDOStatement $stmt
+ */
 $stmt = $pdo->query(
     "SELECT user_id, role_id, department_id
      FROM user_department_roles
@@ -170,7 +306,11 @@ $stmt = $pdo->query(
 );
 $triples = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Build a map keyed by "userId–roleId" to collect department IDs
+/**
+ * Build a map keyed by "userId–roleId" to collect department IDs.
+ *
+ * @var array $userRoleMap
+ */
 $userRoleMap = [];
 foreach ($triples as $t) {
     $userId = (int)$t['user_id'];
