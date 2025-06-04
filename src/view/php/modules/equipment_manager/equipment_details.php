@@ -1647,6 +1647,15 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
             $pagination.empty();
             if (totalPages <= 1) return;
 
+            // Add Previous button
+            $pagination.append(`
+                <li class="page-item ${window.currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" data-page="${window.currentPage - 1}" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+            `);
+
             let startPage = Math.max(1, window.currentPage - 2);
             let endPage = Math.min(totalPages, startPage + 4);
             if (endPage === totalPages) {
@@ -1660,10 +1669,22 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
                     </li>
                 `);
             }
+
+            // Add Next button
+            $pagination.append(`
+                <li class="page-item ${window.currentPage === totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="#" data-page="${window.currentPage + 1}" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+            `);
+
             $('.page-link[data-page]').on('click', function(e) {
                 e.preventDefault();
                 const page = parseInt($(this).data('page'));
-                goToPage(page);
+                if (!$(this).parent().hasClass('disabled')) {
+                    goToPage(page);
+                }
             });
         }
 

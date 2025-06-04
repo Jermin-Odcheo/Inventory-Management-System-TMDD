@@ -10,5 +10,7 @@
     }
   ],
   "require": {
+    "cboden/ratchet": "^0.4.4",
+    "react/event-loop": "^1.5"
   }
 }
