@@ -1,4 +1,11 @@
 <?php
+/**
+ * @file restore_receiving_report.php
+ * @brief Handles the restoration of receiving reports.
+ *
+ * This script processes requests to restore archived receiving reports in the database,
+ * updating their status and logging the actions for audit purposes.
+ */
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
 
@@ -7,10 +14,27 @@ if (isset($_SESSION['user_id'])) {
 } else {
     $pdo->exec("SET @current_user_id = NULL");
 }
+/**
+ * @var string $ipAddress
+ * @brief Stores the IP address of the client for logging purposes.
+ *
+ * This variable holds the remote IP address of the client making the request.
+ */
 $ipAddress = $_SERVER['REMOTE_ADDR'];
 $pdo->exec("SET @current_ip = '" . $ipAddress . "'");
 
 // Function to log audit events
+/**
+ * @brief Logs audit events for actions performed on receiving reports.
+ * @param \PDO $pdo Database connection object.
+ * @param string $action The action being performed (e.g., 'restored').
+ * @param string $details Detailed description of the action.
+ * @param string $status Status of the action (e.g., 'Successful' or 'Failed').
+ * @param string $oldData The data before the action was performed.
+ * @param string $newData The data after the action was performed.
+ * @param int|null $entityId The ID of the entity being acted upon (optional).
+ * @return void
+ */
 function logAudit($pdo, $action, $details, $status, $oldData, $newData, $entityId = null)
 {
     $stmt = $pdo->prepare("
@@ -24,6 +48,12 @@ header('Content-Type: application/json');
 header('X-Content-Type-Options: nosniff');
 
 if (isset($_POST['id'])) {
+    /**
+     * @var int|bool $rrId
+     * @brief Stores the receiving report ID after validation.
+     *
+     * This variable holds the validated ID of the receiving report to be restored.
+     */
     $rrId = filter_var($_POST['id'], FILTER_VALIDATE_INT);
     if ($rrId === false) {
         echo json_encode(['status' => 'error', 'message' => 'Invalid receiving report ID']);
@@ -33,6 +63,12 @@ if (isset($_POST['id'])) {
         // Get the data before restoration for audit
         $checkStmt = $pdo->prepare("SELECT * FROM receive_report WHERE id = ? AND is_disabled = 1");
         $checkStmt->execute([$rrId]);
+        /**
+         * @var array|bool $oldData
+         * @brief Stores the existing data of the receiving report before restoration.
+         *
+         * This variable holds the data of the receiving report before restoration for audit logging.
+         */
         $oldData = $checkStmt->fetch(PDO::FETCH_ASSOC);
         
         if (!$oldData) {
@@ -46,6 +82,12 @@ if (isset($_POST['id'])) {
         // Fetch updated data for audit
         $checkStmt = $pdo->prepare("SELECT * FROM receive_report WHERE id = ?");
         $checkStmt->execute([$rrId]);
+        /**
+         * @var array|bool $newData
+         * @brief Stores the updated data of the receiving report after restoration.
+         *
+         * This variable holds the data of the receiving report after restoration for audit logging.
+         */
         $newData = $checkStmt->fetch(PDO::FETCH_ASSOC);
         
         // Log the restore action
@@ -96,6 +138,12 @@ if (isset($_POST['id'])) {
         }
     }
 } else if (isset($_POST['rr_ids']) && is_array($_POST['rr_ids'])) {
+    /**
+     * @var array $rrIds
+     * @brief Stores the array of receiving report IDs to be restored.
+     *
+     * This array contains the validated IDs of multiple receiving reports for bulk restoration.
+     */
     $rrIds = array_filter(array_map('intval', $_POST['rr_ids']));
     if(empty($rrIds)) {
         echo json_encode(['status' => 'error', 'message' => 'No valid receiving report IDs provided']);

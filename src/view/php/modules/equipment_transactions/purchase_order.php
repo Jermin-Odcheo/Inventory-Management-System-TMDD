@@ -1,4 +1,11 @@
 <?php
+/**
+ * @file purchase_order.php
+ * @brief Manages purchase orders for equipment transactions.
+ *
+ * This script handles the creation, updating, deletion, and display of purchase orders
+ * within the equipment transactions module, including user privilege checks and audit logging.
+ */
 require_once '../../../../../config/ims-tmdd.php';
 session_start();
 
@@ -9,6 +16,12 @@ include '../../general/header.php';
 
 // For AJAX requests, we want to handle them separately
 // 1) Auth guard
+/**
+ * @var int $userId
+ * @brief Stores the user ID from the session after validation.
+ *
+ * This variable holds the validated user ID to ensure the user is authenticated.
+ */
 $userId = $_SESSION['user_id'] ?? null;
 if (!is_int($userId) && !ctype_digit((string)$userId)) {
     header('Location: index.php');
@@ -17,16 +30,42 @@ if (!is_int($userId) && !ctype_digit((string)$userId)) {
 $userId = (int)$userId;
 
 // 2) Init RBAC & enforce "View"
+/**
+ * @var RBACService $rbac
+ * @brief Role-Based Access Control service instance.
+ *
+ * This object manages user privileges and access control for the equipment transactions module.
+ */
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
 $rbac->requirePrivilege('Equipment Transactions', 'View');
 
-
-
 // 3) Button flags
+/**
+ * @var bool $canCreate
+ * @brief Flag indicating if the user can create purchase orders.
+ *
+ * This boolean value determines if the user has the privilege to create new purchase orders.
+ */
 $canCreate = $rbac->hasPrivilege('Equipment Transactions', 'Create');
+/**
+ * @var bool $canModify
+ * @brief Flag indicating if the user can modify purchase orders.
+ *
+ * This boolean value determines if the user has the privilege to modify existing purchase orders.
+ */
 $canModify = $rbac->hasPrivilege('Equipment Transactions', 'Modify');
+/**
+ * @var bool $canRemove
+ * @brief Flag indicating if the user can remove purchase orders.
+ *
+ * This boolean value determines if the user has the privilege to remove purchase orders.
+ */
 $canRemove = $rbac->hasPrivilege('Equipment Transactions', 'Remove');
 
+/**
+ * @brief Determines if the current request is an AJAX request.
+ * @return bool Returns true if the request is AJAX, false otherwise.
+ */
 function is_ajax_request()
 {
     return isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&
@@ -35,15 +74,15 @@ function is_ajax_request()
 
 // Add this function to log audit entries
 /**
- * Logs an audit entry including Details and Status.
- *
- * @param PDO    $pdo
- * @param string $action   e.g. 'Create', 'Modify', 'Remove'
- * @param mixed  $oldVal   JSON or null
- * @param mixed  $newVal   JSON or null
- * @param int    $entityId optional PO ID
- * @param string $details  human-readable summary
- * @param string $status   e.g. 'Successful' or 'Failed'
+ * @brief Logs an audit entry including Details and Status.
+ * @param \PDO $pdo Database connection object.
+ * @param string $action The action being performed (e.g., 'Create', 'Modify', 'Remove').
+ * @param mixed $oldVal JSON or null, representing the data before the action.
+ * @param mixed $newVal JSON or null, representing the data after the action.
+ * @param int|null $entityId Optional ID of the purchase order being acted upon.
+ * @param string $details Human-readable summary of the action.
+ * @param string $status Status of the action (e.g., 'Successful' or 'Failed').
+ * @return void
  */
 function logAudit($pdo, $action, $oldVal, $newVal, $entityId = null, $details = '', $status = 'Successful')
 {
@@ -69,16 +108,52 @@ function logAudit($pdo, $action, $oldVal, $newVal, $entityId = null, $details = 
 // ------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Initialize messages
+    /**
+     * @var array $errors
+     * @brief Stores error messages for display.
+     *
+     * This array holds any error messages that occur during processing.
+     */
     $errors = [];
+    /**
+     * @var string $success
+     * @brief Stores success message for display.
+     *
+     * This variable holds the success message to be shown to the user.
+     */
     $success = "";
 
+    /**
+     * @var string $po_no
+     * @brief Stores the purchase order number from the POST data.
+     *
+     * This variable holds the purchase order number provided in the form submission.
+     */
     $po_no             = trim($_POST['po_no'] ?? '');
     // Enforce PO prefix before validation
     if ($po_no !== '' && strpos($po_no, 'PO') !== 0) {
         $po_no = 'PO' . $po_no;
     }
+    /**
+     * @var string $date_of_order
+     * @brief Stores the date of the purchase order.
+     *
+     * This variable holds the date when the purchase order was made.
+     */
     $date_of_order     = trim($_POST['date_of_order'] ?? '');
+    /**
+     * @var string $no_of_units
+     * @brief Stores the number of units in the purchase order.
+     *
+     * This variable holds the quantity of units specified in the purchase order.
+     */
     $no_of_units       = trim($_POST['no_of_units'] ?? '');
+    /**
+     * @var string $item_specifications
+     * @brief Stores the specifications of the items in the purchase order.
+     *
+     * This variable holds the detailed specifications of the items ordered.
+     */
     $item_specifications = trim($_POST['item_specifications'] ?? '');
 
     if (empty($po_no) || empty($date_of_order) || empty($no_of_units) || empty($item_specifications)) {
@@ -277,6 +352,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // REMOVE PURCHASE ORDER (soft delete) with AJAX support
 // ------------------------
 if (isset($_GET['action']) && $_GET['action'] === 'remove' && isset($_GET['id'])) {
+    /**
+     * @var int $id
+     * @brief Stores the ID of the purchase order to be removed.
+     *
+     * This variable holds the ID of the purchase order targeted for removal.
+     */
     $id = $_GET['id'];
     try {
         // Check if user has Remove privilege
@@ -364,6 +445,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'remove' && isset($_GET['id'])
 // ------------------------
 // LOAD PURCHASE ORDER DATA FOR EDITING (if applicable)
 // ------------------------
+/**
+ * @var array|null $editPurchaseOrder
+ * @brief Stores the purchase order data for editing.
+ *
+ * This variable holds the data of the purchase order being edited, or null if not editing.
+ */
 $editPurchaseOrder = null;
 if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) {
     $id = $_GET['id'];
@@ -386,6 +473,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) 
 // ------------------------
 try {
     $stmt = $pdo->query("SELECT * FROM purchase_order WHERE is_disabled = 0 ORDER BY id DESC");
+    /**
+     * @var array $purchaseOrders
+     * @brief Stores the list of all active purchase orders.
+     *
+     * This array contains all purchase orders that are not disabled, ordered by ID in descending order.
+     */
     $purchaseOrders = $stmt->fetchAll();
 } catch (PDOException $e) {
     $errors[] = "Error retrieving Purchase Orders: " . $e->getMessage();

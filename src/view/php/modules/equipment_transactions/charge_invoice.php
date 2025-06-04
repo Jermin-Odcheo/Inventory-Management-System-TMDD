@@ -1,4 +1,11 @@
 <?php
+/**
+ * @file charge_invoice.php
+ * @brief Manages charge invoices for equipment transactions.
+ *
+ * This script handles the creation, updating, deletion, and display of charge invoices
+ * within the equipment transactions module, including user privilege checks and audit logging.
+ */
 require_once '../../../../../config/ims-tmdd.php';
 session_start();
 
@@ -8,6 +15,12 @@ ob_start();
 include '../../general/header.php';
 
 // 1) Auth guard
+/**
+ * @var int $userId
+ * @brief Stores the user ID from the session after validation.
+ *
+ * This variable holds the validated user ID to ensure the user is authenticated.
+ */
 $userId = $_SESSION['user_id'] ?? null;
 if (!is_int($userId) && !ctype_digit((string)$userId)) {
     header('Location: index.php');
@@ -16,12 +29,36 @@ if (!is_int($userId) && !ctype_digit((string)$userId)) {
 $userId = (int)$userId;
 
 // 2) Init RBAC & enforce "View"
+/**
+ * @var RBACService $rbac
+ * @brief Role-Based Access Control service instance.
+ *
+ * This object manages user privileges and access control for the equipment transactions module.
+ */
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
 $rbac->requirePrivilege('Equipment Transactions', 'View');
 
 // 3) Button flags
+/**
+ * @var bool $canCreate
+ * @brief Flag indicating if the user can create charge invoices.
+ *
+ * This boolean value determines if the user has the privilege to create new charge invoices.
+ */
 $canCreate = $rbac->hasPrivilege('Equipment Transactions', 'Create');
+/**
+ * @var bool $canModify
+ * @brief Flag indicating if the user can modify charge invoices.
+ *
+ * This boolean value determines if the user has the privilege to modify existing charge invoices.
+ */
 $canModify = $rbac->hasPrivilege('Equipment Transactions', 'Modify');
+/**
+ * @var bool $canDelete
+ * @brief Flag indicating if the user can delete charge invoices.
+ *
+ * This boolean value determines if the user has the privilege to delete charge invoices.
+ */
 $canDelete = $rbac->hasPrivilege('Equipment Transactions', 'Remove');
 
 // Set audit-log session vars for MySQL triggers.
@@ -33,11 +70,29 @@ if (isset($_SESSION['user_id'])) {
     $pdo->exec("SET @current_module = NULL");
 }
 // Set IP (adjust if behind proxy)
+/**
+ * @var string $ipAddress
+ * @brief Stores the IP address of the client for logging purposes.
+ *
+ * This variable holds the remote IP address of the client making the request.
+ */
 $ipAddress = $_SERVER['REMOTE_ADDR'];
 $pdo->exec("SET @current_ip = '" . $ipAddress . "'");
 
 // Flash messages
+/**
+ * @var array $errors
+ * @brief Stores error messages for display.
+ *
+ * This array holds any error messages that occur during processing.
+ */
 $errors = $_SESSION['errors']  ?? [];
+/**
+ * @var string $success
+ * @brief Stores success message for display.
+ *
+ * This variable holds the success message to be shown to the user.
+ */
 $success = $_SESSION['success'] ?? '';
 unset($_SESSION['errors'], $_SESSION['success']);
 
@@ -49,6 +104,12 @@ $stmtPO = $pdo->prepare("
    ORDER BY po_no
 ");
 $stmtPO->execute();
+/**
+ * @var array $poList
+ * @brief Stores the list of active purchase orders for dropdown selection.
+ *
+ * This array contains the purchase order numbers that are not disabled, used for dropdown selection.
+ */
 $poList = $stmtPO->fetchAll(PDO::FETCH_COLUMN);
 
 function is_ajax_request()

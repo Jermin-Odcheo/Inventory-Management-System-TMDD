@@ -1,4 +1,11 @@
 <?php
+/**
+ * @file delete_charge_invoice.php
+ * @brief Handles the deletion of charge invoices.
+ *
+ * This script processes requests to permanently delete charge invoices from the database,
+ * ensuring that only archived invoices are deleted and logging the actions for audit purposes.
+ */
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
 
@@ -10,10 +17,26 @@ if (isset($_SESSION['user_id'])) {
 }
 
 // Set IP address for logging.
+/**
+ * @var string $ipAddress
+ * @brief Stores the IP address of the client for logging purposes.
+ *
+ * This variable holds the remote IP address of the client making the request.
+ */
 $ipAddress = $_SERVER['REMOTE_ADDR'];
 $pdo->exec("SET @current_ip = '" . $ipAddress . "'");
 
 // Function to log audit events
+/**
+ * @brief Logs audit events for actions performed on charge invoices.
+ * @param \PDO $pdo Database connection object.
+ * @param string $action The action being performed (e.g., 'Delete').
+ * @param string $details Detailed description of the action.
+ * @param string $status Status of the action (e.g., 'Successful' or 'Failed').
+ * @param string $oldData The data before the action was performed.
+ * @param int|null $entityId The ID of the entity being acted upon (optional).
+ * @return void
+ */
 function logAudit($pdo, $action, $details, $status, $oldData, $entityId = null)
 {
     $stmt = $pdo->prepare("
@@ -27,6 +50,12 @@ header('Content-Type: application/json');
 header('X-Content-Type-Options: nosniff');
 
 if (isset($_POST['id']) && isset($_POST['permanent']) && $_POST['permanent'] == 1) {
+    /**
+     * @var int|bool $ciId
+     * @brief Stores the charge invoice ID after validation.
+     *
+     * This variable holds the validated ID of the charge invoice to be deleted.
+     */
     $ciId = filter_var($_POST['id'], FILTER_VALIDATE_INT);
     if ($ciId === false) {
         echo json_encode(['status' => 'error', 'message' => 'Invalid charge invoice ID']);
@@ -36,6 +65,12 @@ if (isset($_POST['id']) && isset($_POST['permanent']) && $_POST['permanent'] == 
         // First check if the record exists and is already archived
         $checkStmt = $pdo->prepare("SELECT * FROM charge_invoice WHERE id = ? AND is_disabled = 1");
         $checkStmt->execute([$ciId]);
+        /**
+         * @var array|bool $oldData
+         * @brief Stores the existing data of the charge invoice.
+         *
+         * This variable holds the data of the charge invoice before deletion for audit logging.
+         */
         $oldData = $checkStmt->fetch(PDO::FETCH_ASSOC);
         
         if (!$oldData) {
@@ -72,6 +107,12 @@ if (isset($_POST['id']) && isset($_POST['permanent']) && $_POST['permanent'] == 
     }
 } else if (((isset($_POST['ids']) && is_array($_POST['ids'])) || (isset($_POST['ci_ids']) && is_array($_POST['ci_ids']))) && isset($_POST['permanent']) && $_POST['permanent'] == 1) {
     // Get IDs from either ids or ci_ids parameter
+    /**
+     * @var array $ciIds
+     * @brief Stores the array of charge invoice IDs to be deleted.
+     *
+     * This array contains the validated IDs of multiple charge invoices for bulk deletion.
+     */
     $ciIds = isset($_POST['ci_ids']) && is_array($_POST['ci_ids']) ? 
         array_filter(array_map('intval', $_POST['ci_ids'])) : 
         array_filter(array_map('intval', $_POST['ids'] ?? []));

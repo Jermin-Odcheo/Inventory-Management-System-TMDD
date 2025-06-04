@@ -1,4 +1,11 @@
 <?php
+/**
+ * @file receiving_report.php
+ * @brief Manages receiving reports for equipment transactions.
+ *
+ * This script handles the creation, updating, deletion, and display of receiving reports
+ * within the equipment transactions module, including user privilege checks and audit logging.
+ */
 require_once '../../../../../config/ims-tmdd.php';
 session_start();
 
@@ -8,6 +15,12 @@ ob_start();
 include '../../general/header.php';
 
 // 1) Auth guard
+/**
+ * @var int $userId
+ * @brief Stores the user ID from the session after validation.
+ *
+ * This variable holds the validated user ID to ensure the user is authenticated.
+ */
 $userId = $_SESSION['user_id'] ?? null;
 if (!is_int($userId) && !ctype_digit((string)$userId)) {
     header('Location: index.php');
@@ -16,12 +29,36 @@ if (!is_int($userId) && !ctype_digit((string)$userId)) {
 $userId = (int)$userId;
 
 // 2) Init RBAC & enforce "View"
+/**
+ * @var RBACService $rbac
+ * @brief Role-Based Access Control service instance.
+ *
+ * This object manages user privileges and access control for the equipment transactions module.
+ */
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
 $rbac->requirePrivilege('Equipment Transactions', 'View');
 
 // 3) Button flags
+/**
+ * @var bool $canCreate
+ * @brief Flag indicating if the user can create receiving reports.
+ *
+ * This boolean value determines if the user has the privilege to create new receiving reports.
+ */
 $canCreate = $rbac->hasPrivilege('Equipment Transactions', 'Create');
+/**
+ * @var bool $canModify
+ * @brief Flag indicating if the user can modify receiving reports.
+ *
+ * This boolean value determines if the user has the privilege to modify existing receiving reports.
+ */
 $canModify = $rbac->hasPrivilege('Equipment Transactions', 'Modify');
+/**
+ * @var bool $canDelete
+ * @brief Flag indicating if the user can delete receiving reports.
+ *
+ * This boolean value determines if the user has the privilege to delete receiving reports.
+ */
 $canDelete = $rbac->hasPrivilege('Equipment Transactions', 'Remove');
 
 // Set audit log session variables for MySQL triggers.
@@ -34,11 +71,29 @@ if (isset($_SESSION['user_id'])) {
 }
 
 // Set client IP address
+/**
+ * @var string $ipAddress
+ * @brief Stores the IP address of the client for logging purposes.
+ *
+ * This variable holds the remote IP address of the client making the request.
+ */
 $ipAddress = $_SERVER['REMOTE_ADDR'];
 $pdo->exec("SET @current_ip = '" . $ipAddress . "'");
 
 // Initialize messages
+/**
+ * @var array $errors
+ * @brief Stores error messages for display.
+ *
+ * This array holds any error messages that occur during processing.
+ */
 $errors = [];
+/**
+ * @var string $success
+ * @brief Stores success message for display.
+ *
+ * This variable holds the success message to be shown to the user.
+ */
 $success = "";
 if (isset($_SESSION['errors'])) {
     $errors = $_SESSION['errors'];
@@ -51,7 +106,19 @@ if (isset($_SESSION['success'])) {
 
 // Handler for AJAX RR existence check
 if (isset($_POST['action']) && $_POST['action'] === 'check_rr_exists' && isset($_POST['rr_no'])) {
+    /**
+     * @var string $rr_no
+     * @brief Stores the receiving report number to check for existence.
+     *
+     * This variable holds the receiving report number provided in the POST request.
+     */
     $rr_no = trim($_POST['rr_no']);
+    /**
+     * @var int|null $current_id
+     * @brief Stores the current ID of the receiving report being edited, if any.
+     *
+     * This variable holds the ID of the current receiving report to exclude it from the existence check during edit.
+     */
     $current_id = isset($_POST['current_id']) ? (int)$_POST['current_id'] : null;
     
     if ($current_id) {
@@ -72,7 +139,19 @@ if (isset($_POST['action']) && $_POST['action'] === 'check_rr_exists' && isset($
 
 // Auto-insert minimal RR entry if not exists
 if (isset($_POST['action']) && $_POST['action'] === 'auto_add_rr' && isset($_POST['rr_no']) && isset($_POST['date_created'])) {
+    /**
+     * @var string $rr_no
+     * @brief Stores the receiving report number for auto-insertion.
+     *
+     * This variable holds the receiving report number to be inserted if it does not exist.
+     */
     $rr_no = $_POST['rr_no'];
+    /**
+     * @var string $date_created
+     * @brief Stores the creation date for the receiving report.
+     *
+     * This variable holds the date when the receiving report was created.
+     */
     $date_created = $_POST['date_created'];
 
     // Check if already exists
@@ -94,6 +173,10 @@ if (isset($_POST['action']) && $_POST['action'] === 'auto_add_rr' && isset($_POS
     exit;
 }
 
+/**
+ * @brief Determines if the current request is an AJAX request.
+ * @return bool Returns true if the request is AJAX, false otherwise.
+ */
 function is_ajax_request()
 {
     return isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&
@@ -108,9 +191,26 @@ $stmtPO = $pdo->prepare("
    ORDER BY po_no
 ");
 $stmtPO->execute();
+/**
+ * @var array $poList
+ * @brief Stores the list of active purchase orders for dropdown selection.
+ *
+ * This array contains the purchase order numbers that are not disabled, used for dropdown selection.
+ */
 $poList = $stmtPO->fetchAll(PDO::FETCH_COLUMN);
 
 // Audit helper
+/**
+ * @brief Logs audit events for actions performed on receiving reports.
+ * @param \PDO $pdo Database connection object.
+ * @param string $action The action being performed (e.g., 'delete').
+ * @param string $details Detailed description of the action.
+ * @param string $status Status of the action (e.g., 'Successful' or 'Failed').
+ * @param string $oldVal The data before the action was performed.
+ * @param string $newVal The data after the action was performed.
+ * @param int|null $entityId The ID of the entity being acted upon (optional).
+ * @return void
+ */
 function logAudit($pdo, $action, $details, $status, $oldVal, $newVal, $entityId = null)
 {
     $stmt = $pdo->prepare("
@@ -122,6 +222,12 @@ function logAudit($pdo, $action, $details, $status, $oldVal, $newVal, $entityId 
 
 // DELETE
 if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
+    /**
+     * @var int $id
+     * @brief Stores the ID of the receiving report to be deleted.
+     *
+     * This variable holds the ID of the receiving report targeted for deletion.
+     */
     $id = $_GET['id'];
     try {
         // Check if user has Remove privilege
@@ -197,9 +303,33 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 // ADD / UPDATE
 // Modify the validation section in the POST handler
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    /**
+     * @var string $rr_no
+     * @brief Stores the receiving report number from the POST data.
+     *
+     * This variable holds the receiving report number provided in the form submission.
+     */
     $rr_no = trim($_POST['rr_no'] ?? '');
+    /**
+     * @var string $accountable_individual
+     * @brief Stores the name of the accountable individual.
+     *
+     * This variable holds the name of the individual responsible for the receiving report.
+     */
     $accountable_individual = trim($_POST['accountable_individual'] ?? '');
+    /**
+     * @var string $po_no
+     * @brief Stores the purchase order number associated with the receiving report.
+     *
+     * This variable holds the purchase order number linked to the receiving report.
+     */
     $po_no = trim($_POST['po_no'] ?? '');
+    /**
+     * @var string $ai_loc
+     * @brief Stores the location of the accountable individual.
+     *
+     * This variable holds the location information for the accountable individual.
+     */
     $ai_loc = trim($_POST['ai_loc'] ?? '');
 
     // Enforce RR and PO prefixes BEFORE validation
@@ -482,6 +612,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 // LOAD for edit
+/**
+ * @var array|null $editReceivingReport
+ * @brief Stores the receiving report data for editing.
+ *
+ * This variable holds the data of the receiving report being edited, or null if not editing.
+ */
 $editReceivingReport = null;
 if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) {
     $id = $_GET['id'];
@@ -502,6 +638,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) 
 // FETCH ALL
 try {
     $stmt = $pdo->query("SELECT * FROM receive_report WHERE is_disabled = 0 ORDER BY id DESC");
+    /**
+     * @var array $receivingReports
+     * @brief Stores the list of all active receiving reports.
+     *
+     * This array contains all receiving reports that are not disabled, ordered by ID in descending order.
+     */
     $receivingReports = $stmt->fetchAll();
 } catch (PDOException $e) {
     $errors[] = "Error retrieving Receiving Reports: " . $e->getMessage();
