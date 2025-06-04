@@ -70,7 +70,35 @@ $(document).ready(function() {
         $('#add_rr_no').on('select2:select', function(e) {
             const rrNo = e.params.data.id;
             if (rrNo) {
-                fetchRRInfo(rrNo, 'add', true);
+                const isNewOption = e.params.data.newOption || !e.params.data.element;
+                if (isNewOption) {
+                    // This is a newly created RR# that needs to be saved to the database
+                    $.ajax({
+                        url: window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1) + 'create_rr.php',
+                        method: 'POST',
+                        data: {
+                            action: 'create_rr',
+                            rr_no: rrNo,
+                            date_created: new Date().toISOString().slice(0, 19).replace('T', ' ')
+                        },
+                        dataType: 'json',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                        success: function(response) {
+                            if (response.status === 'success') {
+                                showToast('New RR# created successfully', 'success');
+                                fetchRRInfo(rrNo, 'add', false);
+                            } else {
+                                showToast(response.message || 'Failed to create RR#', 'warning');
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('Error creating RR:', error);
+                            showToast('Error creating RR entry', 'error');
+                        }
+                    });
+                } else {
+                    fetchRRInfo(rrNo, 'add', true);
+                }
             }
         });
         
@@ -82,8 +110,36 @@ $(document).ready(function() {
                 const location = $('#edit_location').val();
                 const accountable = $('#edit_accountable_individual').val();
                 
-                // Fetch RR info
-                fetchRRInfo(rrNo, 'edit', true);
+                const isNewOption = e.params.data.newOption || !e.params.data.element;
+                if (isNewOption) {
+                    // This is a newly created RR# that needs to be saved to the database
+                    $.ajax({
+                        url: window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1) + 'create_rr.php',
+                        method: 'POST',
+                        data: {
+                            action: 'create_rr',
+                            rr_no: rrNo,
+                            date_created: new Date().toISOString().slice(0, 19).replace('T', ' ')
+                        },
+                        dataType: 'json',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                        success: function(response) {
+                            if (response.status === 'success') {
+                                showToast('New RR# created successfully', 'success');
+                                fetchRRInfo(rrNo, 'edit', false);
+                            } else {
+                                showToast(response.message || 'Failed to create RR#', 'warning');
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('Error creating RR:', error);
+                            showToast('Error creating RR entry', 'error');
+                        }
+                    });
+                } else {
+                    // Fetch RR info
+                    fetchRRInfo(rrNo, 'edit', true);
+                }
                 
                 // Make sure we don't lose location and accountable values
                 if (location) {

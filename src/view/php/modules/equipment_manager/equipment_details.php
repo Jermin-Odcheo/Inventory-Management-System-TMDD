@@ -1335,36 +1335,6 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
                     if (!/^[0-9]+$/.test(term)) return null;
                     return exists ? null : { id: term, text: term };
                 }
-            }).on('select2:select', function(e) {
-                var rrNo = e.params.data.id;
-                var isNewOption = e.params.data.newOption;
-                if (isNewOption || !e.params.data.element) {
-                    $.ajax({
-                        url: window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1) + 'create_rr.php',
-                        method: 'POST',
-                        data: {
-                            action: 'create_rr',
-                            rr_no: rrNo,
-                            date_created: new Date().toISOString().slice(0, 19).replace('T', ' ')
-                        },
-                        dataType: 'json',
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                        success: function(response) {
-                            if (response.status === 'success') {
-                                showToast('New RR# created successfully', 'success');
-                                fetchRRInfo(rrNo, 'add', false);
-                            } else {
-                                showToast(response.message || 'Failed to create RR#', 'warning');
-                            }
-                        },
-                        error: function(xhr, status, error) {
-                            console.error('Error creating RR:', error);
-                            showToast('Error creating RR entry', 'error');
-                        }
-                    });
-                } else {
-                    fetchRRInfo(rrNo, 'add', true);
-                }
             });
 
             // RR# for Edit modal
@@ -1384,36 +1354,6 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
                     });
                     if (!/^[0-9]+$/.test(term)) return null;
                     return exists ? null : { id: term, text: term };
-                }
-            }).on('select2:select', function(e) {
-                var rrNo = e.params.data.id;
-                var isNewOption = e.params.data.newOption;
-                if (isNewOption || !e.params.data.element) {
-                    $.ajax({
-                        url: window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1) + 'create_rr.php',
-                        method: 'POST',
-                        data: {
-                            action: 'create_rr',
-                            rr_no: rrNo,
-                            date_created: new Date().toISOString().slice(0, 19).replace('T', ' ')
-                        },
-                        dataType: 'json',
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                        success: function(response) {
-                            if (response.status === 'success') {
-                                showToast('New RR# created successfully', 'success');
-                                fetchRRInfo(rrNo, 'edit', false);
-                            } else {
-                                showToast(response.message || 'Failed to create RR#', 'warning');
-                            }
-                        },
-                        error: function(xhr, status, error) {
-                            console.error('Error creating RR:', error);
-                            showToast('Error creating RR entry', 'error');
-                        }
-                    });
-                } else {
-                    fetchRRInfo(rrNo, 'edit', true);
                 }
             });
 
