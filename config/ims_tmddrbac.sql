@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 28, 2025 at 09:26 AM
+-- Generation Time: May 30, 2025 at 03:43 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -1292,7 +1292,38 @@ INSERT INTO `audit_log` (`TrackID`, `UserID`, `EntityID`, `Action`, `Details`, `
 (1342, 1, 208, 'Create', 'New user added: 312312312', NULL, '{\"id\": 208, \"username\": \"312312312\", \"email\": \"ad3123min@example.com\", \"first_name\": \"123123\", \"last_name\": \"123123\", \"department\": \"Unknown\", \"status\": \"Offline\", \"date_created\": \"2025-05-28 14:17:11\"}', 'User Management', 'Successful', '2025-05-28 14:17:11'),
 (1343, 1, 159, 'Remove', 'User has been removed', '{\"id\": 159, \"username\": \"lol123123\", \"email\": \"as12323d@gmail.com\", \"first_name\": \"lol\", \"last_name\": \"lol\", \"status\": \"\", \"date_created\": \"2025-05-28 09:27:15\", \"is_disabled\": 0}', '', 'User Management', 'Successful', '2025-05-28 15:16:58'),
 (1344, 1, 158, 'Remove', 'User has been removed', '{\"id\": 158, \"username\": \"moa\", \"email\": \"fff@example.com\", \"first_name\": \"moa\", \"last_name\": \"moa\", \"status\": \"Offline\", \"date_created\": \"2025-05-28 09:22:18\", \"is_disabled\": 0}', '', 'User Management', 'Successful', '2025-05-28 15:19:53'),
-(1345, 1, 210, 'Create', 'New user added: moa', NULL, '{\"id\": 210, \"username\": \"moa\", \"email\": \"fff@example.com\", \"first_name\": \"123123\", \"last_name\": \"123123\", \"department\": \"Unknown\", \"status\": \"Offline\", \"date_created\": \"2025-05-28 15:20:00\"}', 'User Management', 'Successful', '2025-05-28 15:20:00');
+(1345, 1, 210, 'Create', 'New user added: moa', NULL, '{\"id\": 210, \"username\": \"moa\", \"email\": \"fff@example.com\", \"first_name\": \"123123\", \"last_name\": \"123123\", \"department\": \"Unknown\", \"status\": \"Offline\", \"date_created\": \"2025-05-28 15:20:00\"}', 'User Management', 'Successful', '2025-05-28 15:20:00'),
+(1346, 1, 37, 'Remove', 'Purchase Order PO999999999999999999 deleted', '{\"id\":37,\"po_no\":\"PO999999999999999999\",\"date_of_order\":\"2025-07-27\",\"no_of_units\":9,\"item_specifications\":\"00000\",\"date_created\":\"2025-05-27 14:06:38\",\"is_disabled\":0,\"po_no_active\":\"PO999999999999999999\"}', NULL, 'Purchase Order', 'Successful', '2025-05-30 21:13:13'),
+(1347, 1, 38, 'Create', 'Purchase Order PO999999999999999999 created', NULL, '{\"po_no\":\"PO999999999999999999\",\"date_of_order\":\"2025-05-23\",\"no_of_units\":\"12312\",\"item_specifications\":\"123123\"}', 'Purchase Order', 'Successful', '2025-05-30 21:13:22'),
+(1348, 1, 37, 'restored', 'Purchase Order ID: 37 restoration failed', '{\"id\":37,\"error\":\"SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry \'PO999999999999999999\' for key \'uniq_po_po_no_active\'\"}', NULL, 'Purchase Order', 'Failed', '2025-05-30 21:13:33'),
+(1349, 1, 29, 'remove', 'Charge Invoice CI909090909090099090 removed', '{\"id\":29,\"invoice_no\":\"CI909090909090099090\",\"date_of_purchase\":\"2025-07-22\",\"po_no\":\"PO999999999999999999\",\"date_created\":\"2025-05-27 14:07:01\",\"is_disabled\":0,\"invoice_no_active\":\"CI909090909090099090\"}', NULL, 'Charge Invoice', 'Successful', '2025-05-30 21:13:48'),
+(1350, 1, 30, 'Create', 'Charge Invoice CI909090909090099090 created', NULL, '{\"invoice_no\":\"CI909090909090099090\",\"date_of_purchase\":\"2025-05-16\",\"po_no\":null}', 'Charge Invoice', 'Successful', '2025-05-30 21:13:55'),
+(1351, 1, 29, 'restored', 'Charge Invoice ID: 29 restoration failed', '{\"id\":29,\"error\":\"SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry \'CI909090909090099090\' for key \'uniq_ci_invoice_no_active\'\"}', NULL, 'Charge Invoice', 'Failed', '2025-05-30 21:14:03'),
+(1352, 1, 36, 'Remove', 'Receiving Report has been deleted', '{\"id\":36,\"rr_no\":\"RR808080808080808080\",\"accountable_individual\":\"saem same\",\"ai_loc\":\"23125123123adas234\",\"po_no\":\"PO999999999999999999\",\"date_created\":\"2025-05-27 08:07:19\",\"is_disabled\":0,\"rr_no_active\":\"RR808080808080808080\"}', NULL, 'Receiving Report', 'Successful', '2025-05-30 21:14:11'),
+(1353, 1, 36, 'cascade-update', 'Updated 1 equipment_details records to remove reference to deleted RR: RR808080808080808080', '{\"rr_no\":\"RR808080808080808080\",\"affected_records\":1}', NULL, 'Receiving Report', 'Successful', '2025-05-30 21:14:11'),
+(1354, 1, 34, 'Remove', 'Receiving Report has been deleted', '{\"id\":34,\"rr_no\":\"RR123456\",\"accountable_individual\":\"sdfghj\",\"ai_loc\":\"asdfghj\",\"po_no\":\"\",\"date_created\":\"2025-05-21 10:46:00\",\"is_disabled\":0,\"rr_no_active\":\"RR123456\"}', NULL, 'Receiving Report', 'Successful', '2025-05-30 21:15:38'),
+(1355, 1, 38, 'create', 'New Receiving Report has been Created', NULL, '{\"rr_no\":\"RR123456\",\"accountable_individual\":\"Steve\",\"po_no\":\"\",\"ai_loc\":\"12311100000\",\"date_created\":\"2025-05-30 15:15:47\"}', 'Receiving Report', 'Successful', '2025-05-30 21:15:48'),
+(1356, 1, 34, 'restored', 'Receiving Report ID: 34 restoration failed', '{\"id\":34,\"error\":\"SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry \'RR123456\' for key \'uniq_rr_rr_no_active\'\"}', NULL, 'Receiving Report', 'Failed', '2025-05-30 21:16:02'),
+(1357, 1, 34, 'restored', 'Receiving Report ID: 34 restoration failed', '{\"id\":34,\"error\":\"SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry \'RR123456\' for key \'uniq_rr_rr_no_active\'\"}', NULL, 'Receiving Report', 'Failed', '2025-05-30 21:16:54'),
+(1358, 1, 34, 'restored', 'Purchase Order \"PO12345678900987654\" has been restored', '{\"id\":34,\"po_no\":\"PO12345678900987654\",\"date_of_order\":\"0231-12-31\",\"no_of_units\":4356789,\"item_specifications\":\"4569870-=ghfdsasdasd\",\"date_created\":\"2025-05-21 10:14:27\",\"is_disabled\":1,\"po_no_active\":null}', '{\"id\":34,\"po_no\":\"PO12345678900987654\",\"date_of_order\":\"0231-12-31\",\"no_of_units\":4356789,\"item_specifications\":\"4569870-=ghfdsasdasd\",\"date_created\":\"2025-05-21 10:14:27\",\"is_disabled\":0,\"po_no_active\":\"PO12345678900987654\"}', 'Purchase Order', 'Successful', '2025-05-30 21:23:14'),
+(1359, 1, 23, 'restored', 'Purchase Order \"PO347823947\" has been restored', '{\"id\":23,\"po_no\":\"PO347823947\",\"date_of_order\":\"0000-00-00\",\"no_of_units\":2,\"item_specifications\":\"testing123\",\"date_created\":\"2025-05-19 15:43:16\",\"is_disabled\":1,\"po_no_active\":null}', '{\"id\":23,\"po_no\":\"PO347823947\",\"date_of_order\":\"0000-00-00\",\"no_of_units\":2,\"item_specifications\":\"testing123\",\"date_created\":\"2025-05-19 15:43:16\",\"is_disabled\":0,\"po_no_active\":\"PO347823947\"}', 'Purchase Order', 'Successful', '2025-05-30 21:23:26'),
+(1360, 1, 17, 'restored', 'Charge Invoice \"ID: 17\" has been restored', '{\"id\":17,\"invoice_no\":\"CI098765423456\",\"date_of_purchase\":\"2025-05-17\",\"po_no\":null,\"date_created\":\"2025-05-16 16:48:06\",\"is_disabled\":1,\"invoice_no_active\":null}', '{\"id\":17,\"invoice_no\":\"CI098765423456\",\"date_of_purchase\":\"2025-05-17\",\"po_no\":null,\"date_created\":\"2025-05-16 16:48:06\",\"is_disabled\":0,\"invoice_no_active\":\"CI098765423456\"}', 'Charge Invoice', 'Successful', '2025-05-30 21:23:28'),
+(1361, 1, 38, 'Remove', 'Purchase Order PO999999999999999999 deleted', '{\"id\":38,\"po_no\":\"PO999999999999999999\",\"date_of_order\":\"2025-05-23\",\"no_of_units\":12312,\"item_specifications\":\"123123\",\"date_created\":\"2025-05-30 21:13:22\",\"is_disabled\":0,\"po_no_active\":\"PO999999999999999999\"}', NULL, 'Purchase Order', 'Successful', '2025-05-30 21:23:59'),
+(1362, 1, 39, 'Create', 'Purchase Order PO999999999999999999 created', NULL, '{\"po_no\":\"PO999999999999999999\",\"date_of_order\":\"2025-05-30\",\"no_of_units\":\"1\",\"item_specifications\":\"asdaszxc\"}', 'Purchase Order', 'Successful', '2025-05-30 21:24:07'),
+(1363, 1, 30, 'remove', 'Charge Invoice CI909090909090099090 removed', '{\"id\":30,\"invoice_no\":\"CI909090909090099090\",\"date_of_purchase\":\"2025-05-16\",\"po_no\":null,\"date_created\":\"2025-05-30 21:13:54\",\"is_disabled\":0,\"invoice_no_active\":\"CI909090909090099090\"}', NULL, 'Charge Invoice', 'Successful', '2025-05-30 21:24:14'),
+(1364, 1, 31, 'Create', 'Charge Invoice CI909090909090099090 created', NULL, '{\"invoice_no\":\"CI909090909090099090\",\"date_of_purchase\":\"2025-05-25\",\"po_no\":null}', 'Charge Invoice', 'Successful', '2025-05-30 21:24:20'),
+(1365, 1, 38, 'Remove', 'Receiving Report has been deleted', '{\"id\":38,\"rr_no\":\"RR123456\",\"accountable_individual\":\"Steve\",\"ai_loc\":\"12311100000\",\"po_no\":\"\",\"date_created\":\"2025-05-30 15:15:47\",\"is_disabled\":0,\"rr_no_active\":\"RR123456\"}', NULL, 'Receiving Report', 'Successful', '2025-05-30 21:24:27'),
+(1366, 1, 39, 'create', 'New Receiving Report has been Created', NULL, '{\"rr_no\":\"RR123456\",\"accountable_individual\":\"loki\",\"po_no\":\"\",\"ai_loc\":\"asgard\",\"date_created\":\"2025-05-30 15:24:39\"}', 'Receiving Report', 'Successful', '2025-05-30 21:24:39'),
+(1367, 1, 38, 'restored', 'Receiving Report ID: 38 restoration failed - A document with the same RR number already exists', '{\"id\":38,\"error\":\"SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry \'RR123456\' for key \'uniq_rr_rr_no_active\'\"}', NULL, 'Receiving Report', 'Failed', '2025-05-30 21:24:45'),
+(1368, 1, 30, 'restored', 'Charge Invoice ID: 30 restoration failed - A document with the same CI number already exists', '{\"id\":30,\"error\":\"SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry \'CI909090909090099090\' for key \'uniq_ci_invoice_no_active\'\"}', NULL, 'Charge Invoice', 'Failed', '2025-05-30 21:24:48'),
+(1369, 1, 38, 'restored', 'Purchase Order ID: 38 restoration failed - A document with the same PO number already exists', '{\"id\":38,\"error\":\"SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry \'PO999999999999999999\' for key \'uniq_po_po_no_active\'\"}', NULL, 'Purchase Order', 'Failed', '2025-05-30 21:24:51'),
+(1370, 1, 38, 'Remove', 'Purchase Order \"PO999999999999999999\" has been permanently deleted', '{\"id\":38,\"po_no\":\"PO999999999999999999\",\"date_of_order\":\"2025-05-23\",\"no_of_units\":12312,\"item_specifications\":\"123123\",\"date_created\":\"2025-05-30 21:13:22\",\"is_disabled\":1,\"po_no_active\":null}', NULL, 'Purchase Order', 'Successful', '2025-05-30 21:24:52'),
+(1371, 1, 38, 'Remove', 'Receiving Report has been deleted', '{\"id\":38,\"rr_no\":\"RR123456\",\"accountable_individual\":\"Steve\",\"ai_loc\":\"12311100000\",\"po_no\":\"\",\"date_created\":\"2025-05-30 15:15:47\",\"is_disabled\":1,\"rr_no_active\":null}', NULL, 'Receiving Report', 'Successful', '2025-05-30 21:43:05'),
+(1372, 1, 31, 'remove', 'Charge Invoice CI909090909090099090 removed', '{\"id\":31,\"invoice_no\":\"CI909090909090099090\",\"date_of_purchase\":\"2025-05-25\",\"po_no\":null,\"date_created\":\"2025-05-30 21:24:19\",\"is_disabled\":0,\"invoice_no_active\":\"CI909090909090099090\"}', NULL, 'Charge Invoice', 'Successful', '2025-05-30 21:43:09'),
+(1373, 1, 39, 'Remove', 'Purchase Order PO999999999999999999 deleted', '{\"id\":39,\"po_no\":\"PO999999999999999999\",\"date_of_order\":\"2025-05-30\",\"no_of_units\":1,\"item_specifications\":\"asdaszxc\",\"date_created\":\"2025-05-30 21:24:07\",\"is_disabled\":0,\"po_no_active\":\"PO999999999999999999\"}', NULL, 'Purchase Order', 'Successful', '2025-05-30 21:43:12'),
+(1374, 1, 38, 'Remove', 'Receiving Report \"RR123456\" has been permanently removed', '{\"id\":38,\"rr_no\":\"RR123456\",\"accountable_individual\":\"Steve\",\"ai_loc\":\"12311100000\",\"po_no\":\"\",\"date_created\":\"2025-05-30 15:15:47\",\"is_disabled\":1,\"rr_no_active\":null}', NULL, 'Receiving Report', 'Successful', '2025-05-30 21:43:17'),
+(1375, 1, 31, 'Remove', 'Charge Invoice \"ID: 31\" has been permanently deleted', '{\"id\":31,\"invoice_no\":\"CI909090909090099090\",\"date_of_purchase\":\"2025-05-25\",\"po_no\":null,\"date_created\":\"2025-05-30 21:24:19\",\"is_disabled\":1,\"invoice_no_active\":null}', NULL, 'Charge Invoice', 'Successful', '2025-05-30 21:43:20'),
+(1376, 1, 39, 'Remove', 'Purchase Order \"PO999999999999999999\" has been permanently deleted', '{\"id\":39,\"po_no\":\"PO999999999999999999\",\"date_of_order\":\"2025-05-30\",\"no_of_units\":1,\"item_specifications\":\"asdaszxc\",\"date_created\":\"2025-05-30 21:24:07\",\"is_disabled\":1,\"po_no_active\":null}', NULL, 'Purchase Order', 'Successful', '2025-05-30 21:43:24');
 
 -- --------------------------------------------------------
 
@@ -1306,7 +1337,8 @@ CREATE TABLE `charge_invoice` (
   `date_of_purchase` date NOT NULL,
   `po_no` varchar(20) DEFAULT NULL,
   `date_created` datetime DEFAULT current_timestamp(),
-  `is_disabled` tinyint(1) NOT NULL DEFAULT 0
+  `is_disabled` tinyint(1) NOT NULL DEFAULT 0,
+  `invoice_no_active` varchar(20) GENERATED ALWAYS AS (case when `is_disabled` = 0 then `invoice_no` else NULL end) STORED
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -1314,11 +1346,11 @@ CREATE TABLE `charge_invoice` (
 --
 
 INSERT INTO `charge_invoice` (`id`, `invoice_no`, `date_of_purchase`, `po_no`, `date_created`, `is_disabled`) VALUES
-(13, 'CI21346', '2025-05-23', NULL, '2025-05-16 16:18:36', 1),
+(13, 'CI23213123', '2025-05-23', NULL, '2025-05-16 16:18:36', 1),
 (14, 'CI23213123', '2025-05-18', NULL, '2025-05-16 16:20:25', 1),
 (15, 'CI333161232', '2025-05-16', NULL, '2025-05-16 16:33:44', 0),
 (16, 'CI98765432', '2025-05-16', NULL, '2025-05-16 16:47:52', 1),
-(17, 'CI098765423456', '2025-05-17', NULL, '2025-05-16 16:48:06', 1),
+(17, 'CI098765423456', '2025-05-17', NULL, '2025-05-16 16:48:06', 0),
 (18, 'CI123123123123123', '2025-05-21', NULL, '2025-05-17 13:33:25', 1),
 (19, 'CI123123123', '2025-05-07', NULL, '2025-05-17 13:55:02', 1),
 (20, 'CI3123123', '2025-05-01', 'PO9928922', '2025-05-17 14:10:04', 0),
@@ -1329,7 +1361,8 @@ INSERT INTO `charge_invoice` (`id`, `invoice_no`, `date_of_purchase`, `po_no`, `
 (26, 'CI00001', '2025-05-20', 'PO0001', '2025-05-20 14:43:25', 0),
 (27, 'CI2345678', '2000-12-12', 'PO1213114123123', '2025-05-21 11:25:15', 0),
 (28, 'CI098765343434', '2025-05-21', 'PO0000978', '2025-05-27 13:41:25', 0),
-(29, 'CI909090909090099090', '2025-07-22', 'PO999999999999999999', '2025-05-27 14:07:01', 0);
+(29, 'CI909090909090099090', '2025-07-22', NULL, '2025-05-27 14:07:01', 1),
+(30, 'CI909090909090099090', '2025-05-16', NULL, '2025-05-30 21:13:54', 1);
 
 -- --------------------------------------------------------
 
@@ -1505,7 +1538,7 @@ INSERT INTO `equipment_details` (`id`, `asset_tag`, `asset_description_1`, `asse
 (88, '0987654', '', '', '', '', '', '', '2025-05-26 19:42:31', NULL, NULL, '123123', '123123', '', '2025-05-26 19:42:31', 1, '2025-05-26 19:42:34'),
 (89, 'AT213', '123123', '123123', '', '', '', '', '2025-05-26 20:51:48', NULL, NULL, '', '', '', '2025-05-26 20:51:48', 1, '2025-05-26 21:09:03'),
 (90, 'AT213', '', '', '', '', '', '', '2025-05-26 21:09:11', NULL, NULL, '', '', '', '2025-05-26 21:09:11', 1, '2025-05-26 22:46:22'),
-(91, '123123123', '', '', '', '', '', '', '2025-07-22 00:00:00', NULL, 'RR808080808080808080', '', '', '', '2025-05-26 23:16:46', 0, '2025-05-27 14:41:29'),
+(91, '123123123', '', '', '', '', '', '', '2025-07-22 00:00:00', NULL, NULL, '', '', '', '2025-05-26 23:16:46', 0, '2025-05-30 21:14:11'),
 (92, '1111', '1231', '2', '', '', '', '', '2024-11-19 00:00:00', NULL, 'RR007571', '', '', '', '2025-05-27 14:41:59', 0, '2025-05-27 14:41:59'),
 (98, '2134567890', '', '', '', '', '', '', '2025-11-21 00:00:00', NULL, 'RR95678353245345', '', '', '', '2025-05-27 15:07:47', 0, '2025-05-27 15:07:47'),
 (99, '5555555555555555555555555', '', '', '', '', '', '', '0000-00-00 00:00:00', NULL, NULL, '', '', '', '2025-05-28 13:54:35', 0, '2025-05-28 13:54:35');
@@ -1667,7 +1700,8 @@ CREATE TABLE `purchase_order` (
   `no_of_units` int(11) NOT NULL,
   `item_specifications` text NOT NULL,
   `date_created` datetime DEFAULT current_timestamp(),
-  `is_disabled` tinyint(1) NOT NULL DEFAULT 0
+  `is_disabled` tinyint(1) NOT NULL DEFAULT 0,
+  `po_no_active` varchar(20) GENERATED ALWAYS AS (case when `is_disabled` = 0 then `po_no` else NULL end) STORED
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -1679,7 +1713,7 @@ INSERT INTO `purchase_order` (`id`, `po_no`, `date_of_order`, `no_of_units`, `it
 (20, 'PO9928922', '2025-05-18', 12, 'AMD', '2025-05-17 14:03:16', 0),
 (21, 'PO0000978', '2025-05-18', 2, 'TRA', '2025-05-17 22:59:41', 0),
 (22, 'PO1025000664', '2024-11-12', 3, 'SET', '2025-05-19 09:29:56', 0),
-(23, 'PO347823947', '0000-00-00', 2, 'testing123', '2025-05-19 15:43:16', 1),
+(23, 'PO347823947', '0000-00-00', 2, 'testing123', '2025-05-19 15:43:16', 0),
 (24, 'PO0001', '2025-05-20', 1, '1', '2025-05-20 14:43:12', 0),
 (25, 'PO1213114123123', '2000-12-12', 123, 'KLSJDLKANSLKDN', '2025-05-21 10:12:20', 0),
 (26, 'PO2342342', '0000-00-00', 12313213, 'sfgdfgzdfgdfg', '2025-05-21 10:12:50', 0),
@@ -1687,10 +1721,10 @@ INSERT INTO `purchase_order` (`id`, `po_no`, `date_of_order`, `no_of_units`, `it
 (28, 'PO1234567890', '0123-12-31', 1235678, 'wertyuiop', '2025-05-21 10:13:29', 0),
 (29, 'PO234879734', '0123-12-31', 1234567, 'asdfghjk', '2025-05-21 10:13:41', 0),
 (30, 'PO123456', '2123-12-31', 23456789, '2346578', '2025-05-21 10:13:56', 0),
-(34, 'PO12345678900987654', '0231-12-31', 4356789, '4569870-=ghfdsasdasd', '2025-05-21 10:14:27', 1),
+(34, 'PO12345678900987654', '0231-12-31', 4356789, '4569870-=ghfdsasdasd', '2025-05-21 10:14:27', 0),
 (35, 'PO3234', '5634-12-12', 12789, 'dsfghmjh,kn', '2025-05-21 10:15:14', 0),
 (36, 'PO987654322323', '2025-05-17', 12, '123123', '2025-05-27 13:41:02', 0),
-(37, 'PO999999999999999999', '2025-07-27', 9, '00000', '2025-05-27 14:06:38', 0);
+(37, 'PO999999999999999999', '2025-07-27', 9, '00000', '2025-05-27 14:06:38', 1);
 
 -- --------------------------------------------------------
 
@@ -1705,7 +1739,8 @@ CREATE TABLE `receive_report` (
   `ai_loc` text DEFAULT NULL,
   `po_no` varchar(20) DEFAULT NULL,
   `date_created` datetime DEFAULT current_timestamp(),
-  `is_disabled` tinyint(1) NOT NULL DEFAULT 0
+  `is_disabled` tinyint(1) NOT NULL DEFAULT 0,
+  `rr_no_active` varchar(20) GENERATED ALWAYS AS (case when `is_disabled` = 0 then `rr_no` else NULL end) STORED
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -1729,10 +1764,11 @@ INSERT INTO `receive_report` (`id`, `rr_no`, `accountable_individual`, `ai_loc`,
 (30, 'RR3457', 'qerty', 'hgjasfsg', '', '2025-05-21 10:35:00', 0),
 (32, 'RR1234567890', 'dfghjkl;', 'azsdfghj', 'PO1213114123123', '2025-05-21 10:45:00', 0),
 (33, 'RR332131', 'xzczx', 'dfgdgd', 'PO23213123', '2025-05-21 10:45:00', 0),
-(34, 'RR123456', 'sdfghj', 'asdfghj', '', '2025-05-21 10:46:00', 0),
+(34, 'RR123456', 'sdfghj', 'asdfghj', '', '2025-05-21 10:46:00', 1),
 (35, 'RR00000000', '23234', '23123123', 'PO0000978', '2025-05-27 07:41:42', 0),
-(36, 'RR808080808080808080', 'saem same', '23125123123adas234', 'PO999999999999999999', '2025-05-27 08:07:19', 0),
-(37, 'RR95678353245345', NULL, NULL, NULL, '2025-05-27 07:07:06', 0);
+(36, 'RR808080808080808080', 'saem same', '23125123123adas234', 'PO999999999999999999', '2025-05-27 08:07:19', 1),
+(37, 'RR95678353245345', NULL, NULL, NULL, '2025-05-27 07:07:06', 0),
+(39, 'RR123456', 'loki', 'asgard', '', '2025-05-30 15:24:39', 0);
 
 -- --------------------------------------------------------
 
@@ -2728,7 +2764,7 @@ ALTER TABLE `audit_log`
 --
 ALTER TABLE `charge_invoice`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `invoice_no` (`invoice_no`),
+  ADD UNIQUE KEY `uniq_ci_invoice_no_active` (`invoice_no_active`),
   ADD KEY `po_no` (`po_no`);
 
 --
@@ -2743,8 +2779,7 @@ ALTER TABLE `departments`
 --
 ALTER TABLE `equipment_details`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uq_asset_tag_active` (`asset_tag_active`),
-  ADD KEY `invoice_no` (`invoice_no`);
+  ADD UNIQUE KEY `uq_asset_tag_active` (`asset_tag_active`);
 
 --
 -- Indexes for table `equipment_location`
@@ -2779,14 +2814,15 @@ ALTER TABLE `privileges`
 --
 ALTER TABLE `purchase_order`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `po_no` (`po_no`);
+  ADD UNIQUE KEY `uniq_po_po_no_active` (`po_no_active`),
+  ADD KEY `idx_po_no` (`po_no`);
 
 --
 -- Indexes for table `receive_report`
 --
 ALTER TABLE `receive_report`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `rr_no` (`rr_no`),
+  ADD UNIQUE KEY `uniq_rr_rr_no_active` (`rr_no_active`),
   ADD KEY `po_no` (`po_no`);
 
 --
@@ -2837,13 +2873,13 @@ ALTER TABLE `user_department_roles`
 -- AUTO_INCREMENT for table `audit_log`
 --
 ALTER TABLE `audit_log`
-  MODIFY `TrackID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1346;
+  MODIFY `TrackID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1377;
 
 --
 -- AUTO_INCREMENT for table `charge_invoice`
 --
 ALTER TABLE `charge_invoice`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=30;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
 
 --
 -- AUTO_INCREMENT for table `departments`
@@ -2885,13 +2921,13 @@ ALTER TABLE `privileges`
 -- AUTO_INCREMENT for table `purchase_order`
 --
 ALTER TABLE `purchase_order`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=38;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=40;
 
 --
 -- AUTO_INCREMENT for table `receive_report`
 --
 ALTER TABLE `receive_report`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=38;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=40;
 
 --
 -- AUTO_INCREMENT for table `roles`
