@@ -1,4 +1,13 @@
 <?php
+/**
+ * Creates a new user in the Inventory Management System.
+ * 
+ * This script handles the creation of a new user by processing form data submitted via POST request.
+ * It validates input fields such as email, username, password, and department assignments, checks for
+ * uniqueness of email and username, logs the action in an audit log, and returns a JSON response indicating
+ * the success or failure of the operation. The script also supports custom department creation and handles
+ * multiple department and role assignments.
+ */
 // create_user.php
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
@@ -10,7 +19,9 @@ ini_set('display_errors', 0);
 // Set header for JSON response
 header('Content-Type: application/json');
 
-// Set audit log variables
+/**
+ * Sets up audit log variables for tracking user creation actions.
+ */
 if (isset($_SESSION['user_id'])) {
     $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
 } else {
@@ -30,7 +41,18 @@ while ($dept = $deptStmt->fetch(PDO::FETCH_ASSOC)) {
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     try {
-        // Retrieve form values
+        /**
+         * Retrieves and validates form data for creating a new user.
+         * @var string $email The email address of the new user.
+         * @var string $firstName The first name of the new user.
+         * @var string $lastName The last name of the new user.
+         * @var string $password The password for the new user.
+         * @var string $username The username for the new user.
+         * @var string|null $departmentID The ID of a single department (for backward compatibility).
+         * @var string $customDept The name of a custom department if provided.
+         * @var array $departments The list of department IDs for the new user.
+         * @var array $roles The list of role IDs for the new user.
+         */
         $email = trim($_POST['email']);
         $firstName = trim($_POST['first_name']);
         $lastName = trim($_POST['last_name']);
@@ -50,7 +72,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if (empty($username)) $errors[] = "Username is required";
         if (empty($departments) && empty($departmentID)) $errors[] = "At least one department is required";
 
-        // Handle single department selection (for backward compatibility)
+        /**
+         * Handles the case of a single department selection or custom department creation.
+         */
         if (!empty($departmentID) && empty($departments)) {
             if ($departmentID === 'custom' && !empty($customDept)) {
                 // Check if custom department exists
@@ -75,9 +99,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             throw new Exception(implode("<br>", $errors));
         }
 
-        /* AUDIT LOG - USER MANAGEMENT
-         * Check email uniqueness
-         * Creating a user with existing email address will log and mark the status as 'Failed'
+        /**
+         * Checks for duplicate email addresses to ensure uniqueness before user creation.
+         * Logs an audit entry if a duplicate is found and throws an exception.
          */
         $stmt = $pdo->prepare("SELECT id, username FROM users WHERE email = ? and is_disabled = 0");
         $stmt->execute([$email]);
@@ -117,7 +141,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             throw new Exception("Email address already exists for user: " . $existingUsername);
         }
 
-        // Check for duplicate username
+        /**
+         * Checks for duplicate usernames to ensure uniqueness before user creation.
+         * Logs an audit entry if a duplicate is found and throws an exception.
+         */
         $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ? and is_disabled = 0");
         $stmt->execute([$username]);
         if ($stmt->rowCount() > 0) {
@@ -147,6 +174,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             throw new Exception("Username is already taken. Please try a different username.");
         }
 
+        /**
+         * Begins a database transaction to ensure data consistency during user creation and department/role assignments.
+         */
         $pdo->beginTransaction();
 
         // Create user
@@ -209,7 +239,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         $pdo->commit();
 
-        // Create a success audit log entry with proper department information
+        /**
+         * Creates a success audit log entry with department information after successful user creation.
+         */
         try {
             // Get department names for the audit log
             $deptNames = [];

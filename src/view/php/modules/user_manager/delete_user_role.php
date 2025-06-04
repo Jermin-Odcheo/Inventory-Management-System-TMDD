@@ -1,10 +1,20 @@
 <?php
+/**
+ * Deletes user role assignments in the Inventory Management System.
+ * 
+ * This script handles the deletion of specific or all role assignments for a user within a department.
+ * It processes JSON input data to identify the user, department, and roles to delete, performs validation
+ * and authentication checks, logs changes in an audit log if tracking is enabled, and returns a JSON response
+ * with the updated assignments. The script ensures a zero-role entry remains for visibility of the department.
+ */
 // delete_user_role.php
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
 header('Content-Type: application/json');
 
-// Auth check
+/**
+ * Performs authentication check to ensure the user is logged in before proceeding with role deletion.
+ */
 $currentUserId = $_SESSION['user_id'] ?? null;
 if (!$currentUserId) {
     echo json_encode(['success' => false, 'error' => 'Unauthorized']);
@@ -29,9 +39,15 @@ $removeAll    = $data['removeAll'] ?? false; // New flag to indicate removing al
 $trackChanges = $data['trackChanges'] ?? false;
 
 try {
+    /**
+     * Begins a database transaction to ensure data consistency during role deletion.
+     */
     $pdo->beginTransaction();
 
-    // Check if there are actual roles to delete
+    /**
+     * Checks if there are actual roles to delete before proceeding.
+     * Returns an error if no roles exist to delete when removeAll is true.
+     */
     $checkRoles = $pdo->prepare("
         SELECT COUNT(*) AS cnt
         FROM user_department_roles
@@ -51,7 +67,9 @@ try {
         exit;
     }
 
-    // Get information for audit log before deletion
+    /**
+     * Retrieves information for audit logging before deletion if tracking is enabled.
+     */
     $oldRoleNames = [];
     if ($trackChanges) {
         // Get user information
@@ -96,7 +114,11 @@ try {
         }
     }
 
-    // Handle the deletion based on removeAll flag
+    /**
+     * Handles the deletion of roles based on the removeAll flag.
+     * If removeAll is true, deletes all roles and inserts a zero-role entry.
+     * Otherwise, deletes a specific role and ensures a zero-role entry if no roles remain.
+     */
     if ($removeAll) {
         // Delete ALL roles for this user in this department
         $del = $pdo->prepare("
@@ -147,7 +169,9 @@ try {
         }
     }
 
-    // Add to audit log if tracking is enabled and there were roles to delete
+    /**
+     * Adds an audit log entry if tracking changes is enabled and roles were deleted.
+     */
     if ($trackChanges && !empty($oldRoleNames)) {
         // Create OldVal and NewVal JSON strings
         $oldValJSON = json_encode([
@@ -188,7 +212,10 @@ try {
         ]);
     }
 
-    // Re-fetch everything for this user
+    /**
+     * Re-fetches all current assignments for the user to build the response.
+     * Groups department IDs by role ID for a structured output.
+     */
     $fetch = $pdo->prepare("
         SELECT role_id, department_id
         FROM user_department_roles

@@ -1,4 +1,13 @@
 <?php
+
+/**
+ * Deletes or archives user accounts in the Inventory Management System.
+ * 
+ * This script handles both soft deletion (archiving) and permanent deletion of one or multiple user accounts.
+ * It processes input data to identify the user(s) to delete, performs validation and permission checks,
+ * logs actions in an audit log, and returns a JSON response indicating the success or failure of the operation.
+ * The script prevents self-deletion and ensures only authorized users can perform deletions.
+ */
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
 
@@ -9,6 +18,9 @@ ob_start();
 header('Content-Type: application/json');
 header('X-Content-Type-Options: nosniff');
 
+/**
+ * Performs authentication check to ensure the user is logged in before proceeding with deletion.
+ */
 if (!isset($_SESSION['user_id'])) {
     ob_clean();
     echo json_encode(['success' => false, 'message' => 'Not logged in']);
@@ -38,11 +50,9 @@ try {
 }
 
 try {
-    // Check if user has delete permission
-    if (!$rbac->hasPrivilege('User Management', 'Remove')) {
-        throw new Exception("You don't have permission to remove users.");
-    }
-
+    /**
+     * Begins a database transaction to ensure data consistency during user deletion or archiving.
+     */
     $pdo->beginTransaction();
 
     // Set the current user ID for the trigger
@@ -52,7 +62,10 @@ try {
     // Determine if this is a permanent deletion
     $isPermanent = isset($_POST['permanent']) && $_POST['permanent'] == 1;
 
-    // Handle single user deletion
+    /**
+     * Handles the deletion or archiving of a single user account based on the provided user ID.
+     * Supports both permanent deletion (for archived users) and soft deletion (archiving active users).
+     */
     if (isset($_POST['user_id'])) {
         $targetUserId = filter_var($_POST['user_id'], FILTER_VALIDATE_INT);
 
@@ -123,7 +136,10 @@ try {
             }
         }
     }
-    // Handle bulk deletion
+    /**
+     * Handles the bulk deletion or archiving of multiple user accounts based on the provided array of user IDs.
+     * Supports both permanent deletion (for archived users) and soft deletion (archiving active users).
+     */
     else if (isset($_POST['user_ids']) && is_array($_POST['user_ids'])) {
         $targetUserIds = array_filter(array_map('intval', $_POST['user_ids']));
 

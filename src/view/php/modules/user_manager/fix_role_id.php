@@ -1,4 +1,12 @@
 <?php
+
+/**
+ * Fixes null role ID values in the user_department_roles table of the Inventory Management System.
+ * 
+ * This utility script updates all null role_id values to 0 in the user_department_roles table to ensure
+ * data consistency. It also displays the current role assignments for review. The script requires the user
+ * to be logged in and includes basic styling for the output page.
+ */
 // fix_role_id.php
 // This script updates null role_id values to 0 in the user_department_roles table
 // and shows current role assignments
@@ -6,7 +14,9 @@
 require_once('../../../../../config/ims-tmdd.php');
 session_start();
 
-// Check if user is logged in and has admin privileges
+/**
+ * Performs authentication check to ensure the user is logged in before proceeding with database updates.
+ */
 if (!isset($_SESSION['user_id'])) {
     die("Not authorized");
 }
@@ -25,7 +35,9 @@ echo '<style>
 echo "<h1>Database Fix Utility</h1>";
 
 try {
-    // Update all null role_id values to 0
+    /**
+     * Updates all null role_id values to 0 in the user_department_roles table.
+     */
     $stmt = $pdo->prepare("UPDATE user_department_roles SET role_id = 0 WHERE role_id IS NULL");
     $result = $stmt->execute();
     
@@ -34,7 +46,9 @@ try {
     echo "<p class='success'>Fixed $count records with null role_id values.</p>";
     echo "<p>All null role_id values have been updated to 0.</p>";
     
-    // Display current role assignments
+    /**
+     * Displays the current role assignments for all users after the update.
+     */
     echo "<h2>Current Role Assignments</h2>";
     
     $query = "

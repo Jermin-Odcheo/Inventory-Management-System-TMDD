@@ -1,9 +1,18 @@
 <?php
 
+/**
+ * Retrieves the list of departments associated with a specific user in the Inventory Management System.
+ * 
+ * This script fetches the departments linked to a user based on their ID provided via GET request.
+ * It performs authentication checks to ensure the requester is logged in, validates the input user ID,
+ * and returns a JSON response with the list of unique departments associated with the user.
+ */
 session_start();
 require_once '../../../../../config/ims-tmdd.php';
 
-// 1) Auth guard
+/**
+ * Performs authentication check to ensure the user is logged in before accessing department data.
+ */
 $userId = $_SESSION['user_id'] ?? null;
 if (!is_int($userId) && !ctype_digit((string)$userId)) {
     header('Content-Type: application/json');
@@ -12,7 +21,9 @@ if (!is_int($userId) && !ctype_digit((string)$userId)) {
 }
 $userId = (int)$userId;
 
-// 2) Validate input
+/**
+ * Validates the input user ID received via GET request to ensure it is a valid integer.
+ */
 if (!isset($_GET['user_id']) || !filter_var($_GET['user_id'], FILTER_VALIDATE_INT)) {
     header('Content-Type: application/json');
     echo json_encode(['success' => false, 'message' => 'Invalid user ID']);
@@ -21,7 +32,10 @@ if (!isset($_GET['user_id']) || !filter_var($_GET['user_id'], FILTER_VALIDATE_IN
 $targetUserId = (int)$_GET['user_id'];
 
 try {
-    // 3) Fetch departments
+    /**
+     * Fetches the list of departments associated with the target user from the database.
+     * Ensures only active departments are retrieved and orders them by name.
+     */
     $stmt = $pdo->prepare("
         SELECT 
             d.id, 
@@ -35,7 +49,11 @@ try {
     $stmt->execute([$targetUserId]);
     $rawDepartments = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // 4) Remove duplicates by department ID
+    /**
+     * Removes duplicate department entries to ensure each department is listed only once.
+     * @var array $uniqueDepartments Stores the unique list of departments.
+     * @var array $seenIds Tracks department IDs already processed to avoid duplicates.
+     */
     $uniqueDepartments = [];
     $seenIds = [];
 
