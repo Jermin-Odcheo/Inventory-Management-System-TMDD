@@ -130,7 +130,11 @@ function getAcronym($string) {
                         <i class="fas fa-chevron-down dropdown-icon"></i>
                     </button>
                     <ul class="dropdown tree">
-                        <i class="bi bi-file-earmark-check"></i>
+                        <i class="bi bi-file-earmark-check">
+                            <a href="<?= BASE_URL ?>src/view/php/modules/management/department_manager/department_management.php<?= $file ?>">
+                                <span class="short-label"><?= getAcronym($module) ?>DM</span>
+                            </a>
+                        </i>
                         <li class="nav-item">
                             <a href="<?php echo BASE_URL; ?>src/view/php/modules/management/department_manager/department_management.php"
                                 class="nav-link">
@@ -150,7 +154,7 @@ function getAcronym($string) {
                     </button>
                     <ul class="dropdown tree">
                         <i class="bi bi-file-earmark-check">
-                            <a href="<?= BASE_URL ?>src/view/php/modules/user_manager/user_management.php<?= $file ?>">
+                            <a href="<?= BASE_URL ?>src/view/php/modules/user_manager/user_management.php">
                                 <span class="short-label">MA</span>
                             </a>
                         </i>
@@ -161,7 +165,7 @@ function getAcronym($string) {
                             </a>
                         </li>
                         <i class="bi bi-file-earmark-check">
-                            <a href="<?= BASE_URL ?>src/view/php/modules/user_manager/user_roles_management.php<?= $file ?>">
+                            <a href="<?= BASE_URL ?>src/view/php/modules/user_manager/user_roles_management.php">
                                 <span class="short-label">URM</span>
                             </a>
                         </i>
@@ -184,7 +188,7 @@ function getAcronym($string) {
                     </button>
                     <ul class="dropdown tree">
                         <i class="bi bi-file-earmark-check">
-                            <a href="<?= BASE_URL ?>src/view/php/modules/rolesandprivilege_manager/role_manager/manage_roles.php<?= $file ?>">
+                            <a href="<?= BASE_URL ?>src/view/php/modules/rolesandprivilege_manager/role_manager/manage_roles.php">
                                 <span class="short-label">RPM</span>
                             </a>
                         </i>
@@ -211,13 +215,25 @@ function getAcronym($string) {
                         <i class="fas fa-chevron-down dropdown-icon"></i>
                     </button>
                     <ul class="dropdown tree">
-                        <i class="bi bi-file-earmark-check"></i>
+                        <i class="bi bi-file-earmark-check">
+                            <a href="<?= BASE_URL ?>src/view/php/modules/equipment_manager/equipment_details.php<?= $file ?>">
+                                <span class="short-label">ED</span>
+                            </a>
+                        </i>
                         <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_manager/equipment_details.php">Equipment
                                 Details</a></li>
-                        <i class="bi bi-file-earmark-check"></i>
+                        <i class="bi bi-file-earmark-check">
+                            <a href="<?= BASE_URL ?>src/view/php/modules/equipment_manager/equipment_location.php<?= $file ?>">
+                                <span class="short-label">EL</span>
+                            </a>
+                        </i>
                         <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_manager/equipment_location.php">Equipment
                                 Location</a></li>
-                        <i class="bi bi-file-earmark-check"></i>
+                        <i class="bi bi-file-earmark-check">
+                            <a href="<?= BASE_URL ?>src/view/php/modules/equipment_manager/equipment_status.php<?= $file ?>">
+                                <span class="short-label">ES-PMS</span>
+                            </a>
+                        </i>
                         <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_manager/equipment_status.php">Equipment
                                 Status for PMS</a></li>
                     </ul>

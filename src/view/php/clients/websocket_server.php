@@ -16,6 +16,10 @@ class ActivityStream implements \Ratchet\MessageComponentInterface {
         $this->pdo = $pdo;
     }
 
+    public function getClients() {
+        return $this->clients;
+    }
+
     public function onOpen(\Ratchet\ConnectionInterface $conn) {
         $this->clients->attach($conn);
         echo "New connection! ({$conn->resourceId})\n";
@@ -61,7 +65,7 @@ $server->loop->addPeriodicTimer(5, function() use ($activityStream, $pdo) {
     try {
         // Get all connected clients and their user IDs
         $userModules = [];
-        foreach ($activityStream->clients as $client) {
+        foreach ($activityStream->getClients() as $client) {
             if (isset($client->userId)) {
                 // Get modules with track permissions for this user
                 $query = $pdo->prepare("
@@ -103,7 +107,7 @@ $server->loop->addPeriodicTimer(5, function() use ($activityStream, $pdo) {
 
             if (!empty($newActivities)) {
                 // Send activities to the specific user
-                foreach ($activityStream->clients as $client) {
+                foreach ($activityStream->getClients() as $client) {
                     if ($client->userId === $userId) {
                         foreach ($newActivities as $activity) {
                             $client->send(json_encode($activity));
