@@ -85,6 +85,171 @@ function logAudit($pdo, $action, $oldVal, $newVal, $entityId = null, $details = 
     ]);
 }
 
+// -------------------------------------------------------------------------------
+// HANDLE PO REMOVAL (Nullify PO in Charge Invoice, don't remove the invoice)
+// -------------------------------------------------------------------------------
+if (($_POST['action'] ?? '') === 'remove_po') {
+    ob_clean();
+    try {
+        if (!$canModify) {
+            throw new Exception('No permission to modify invoices.');
+        }
+        
+        $invoiceId = (int)$_POST['invoice_id'];
+        
+        // Log diagnostic information to the error log
+        error_log("PO Removal Request - Invoice ID: " . $invoiceId);
+        
+        // Get current invoice data before update
+        $stmt = $pdo->prepare("SELECT * FROM charge_invoice WHERE id = ? AND is_disabled = 0");
+        $stmt->execute([$invoiceId]);
+        $oldInvoice = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        error_log("Found invoice: " . ($oldInvoice ? 'Yes' : 'No'));
+        if ($oldInvoice) {
+            error_log("Invoice PO: " . ($oldInvoice['po_no'] ?? 'NULL'));
+        }
+        
+        if (!$oldInvoice) {
+            throw new Exception('Invoice not found.');
+        }
+        
+        // Only update if PO exists
+        if (!empty($oldInvoice['po_no'])) {
+            error_log("Removing PO: " . $oldInvoice['po_no'] . " from invoice ID: " . $invoiceId);
+            
+            // IMPORTANT: Only update the po_no field to NULL, keep everything else intact
+            $updateStmt = $pdo->prepare("UPDATE charge_invoice SET po_no = NULL WHERE id = ? AND is_disabled = 0");
+            $updateStmt->execute([$invoiceId]);
+            
+            error_log("Update complete. Rows affected: " . $updateStmt->rowCount());
+            
+            // Verify the invoice still exists after update
+            $verifyStmt = $pdo->prepare("SELECT id, po_no FROM charge_invoice WHERE id = ? AND is_disabled = 0");
+            $verifyStmt->execute([$invoiceId]);
+            $verifiedInvoice = $verifyStmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$verifiedInvoice) {
+                error_log("ERROR: Invoice disappeared after PO removal!");
+            } else {
+                error_log("Verified: Invoice still exists. New PO value: " . ($verifiedInvoice['po_no'] ?? 'NULL'));
+            }
+            
+            // Log the PO removal
+            logAudit(
+                $pdo,
+                'Modified',
+                json_encode(['po_no' => $oldInvoice['po_no']]),
+                json_encode(['po_no' => null]),
+                $invoiceId,
+                "PO reference {$oldInvoice['po_no']} removed from Charge Invoice {$oldInvoice['invoice_no']}",
+                'Successful'
+            );
+            
+            header('Content-Type: application/json');
+            echo json_encode([
+                'status' => 'success', 
+                'message' => "PO reference removed from invoice {$oldInvoice['invoice_no']}"
+            ]);
+            exit;
+        } else {
+            throw new Exception('No PO reference exists on this invoice.');
+        }
+    } catch (Exception $e) {
+        error_log("Error in remove_po action: " . $e->getMessage());
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        exit;
+    }
+}
+
+// -------------------------------------------------------------------------------
+// HANDLE PO RESTORATION (Only if not already set with a different PO)
+// -------------------------------------------------------------------------------
+if (($_POST['action'] ?? '') === 'restore_po') {
+    ob_clean();
+    try {
+        if (!$canModify) {
+            throw new Exception('No permission to modify invoices.');
+        }
+        
+        $invoiceId = (int)$_POST['invoice_id'];
+        $poNo = trim($_POST['po_no'] ?? '');
+        
+        // Get current invoice data
+        $stmt = $pdo->prepare("SELECT * FROM charge_invoice WHERE id = ? AND is_disabled = 0");
+        $stmt->execute([$invoiceId]);
+        $currentInvoice = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$currentInvoice) {
+            throw new Exception('Invoice not found.');
+        }
+        
+        // Check if PO exists in the purchase_order table
+        $poStmt = $pdo->prepare("SELECT po_no FROM purchase_order WHERE po_no = ? AND is_disabled = 0");
+        $poStmt->execute([$poNo]);
+        $poExists = $poStmt->fetchColumn();
+        
+        if (!$poExists) {
+            // Log failed restoration attempt with audit
+            logAudit(
+                $pdo,
+                'Restore',
+                json_encode(['current_po' => $currentInvoice['po_no']]),
+                json_encode(['attempted_po' => $poNo]),
+                $invoiceId,
+                "Failed to restore PO {$poNo} to Charge Invoice {$currentInvoice['invoice_no']} - PO does not exist or is disabled",
+                'Failed'
+            );
+            
+            throw new Exception('The specified PO does not exist or is disabled.');
+        }
+        
+        // Check if invoice already has a different PO assigned
+        if (!empty($currentInvoice['po_no']) && $currentInvoice['po_no'] !== $poNo) {
+            // Log failed restoration attempt - would overwrite existing PO
+            logAudit(
+                $pdo,
+                'Restore',
+                json_encode(['current_po' => $currentInvoice['po_no']]),
+                json_encode(['attempted_po' => $poNo]),
+                $invoiceId,
+                "Failed to restore PO {$poNo} to Charge Invoice {$currentInvoice['invoice_no']} - Would overwrite existing PO {$currentInvoice['po_no']}",
+                'Failed'
+            );
+            
+            throw new Exception("Invoice already has PO '{$currentInvoice['po_no']}' assigned. Cannot overwrite.");
+        }
+        
+        // If no conflicts, update the invoice with restored PO
+        if (empty($currentInvoice['po_no']) || $currentInvoice['po_no'] === $poNo) {
+            $updateStmt = $pdo->prepare("UPDATE charge_invoice SET po_no = ? WHERE id = ?");
+            $updateStmt->execute([$poNo, $invoiceId]);
+            
+            logAudit(
+                $pdo,
+                'Restore',
+                json_encode(['po_no' => $currentInvoice['po_no']]),
+                json_encode(['po_no' => $poNo]),
+                $invoiceId,
+                "PO {$poNo} restored to Charge Invoice {$currentInvoice['invoice_no']}",
+                'Successful'
+            );
+            
+            header('Content-Type: application/json');
+            echo json_encode([
+                'status' => 'success', 
+                'message' => "PO {$poNo} successfully restored to invoice {$currentInvoice['invoice_no']}"
+            ]);
+            exit;
+        }
+    } catch (Exception $e) {
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        exit;
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $invoice_no       = trim($_POST['invoice_no']       ?? '');
     $date_of_purchase = trim($_POST['date_of_purchase'] ?? '');
@@ -464,9 +629,9 @@ try {
         WHERE
             ci.is_disabled = 0
           AND (
-                ci.po_no      IS NULL      -- no PO selected
-             OR ci.po_no      = ''        -- empty string
-             OR po.is_disabled = 0        -- PO exists and is not disabled
+                ci.po_no      IS NULL      -- Include invoices without a PO (NULL)
+             OR ci.po_no      = ''         -- Include invoices with empty PO string
+             OR po.is_disabled = 0         -- Include invoices where PO exists and is not disabled
           )
         ORDER BY ci.id DESC
     ");
@@ -756,7 +921,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                                             <a class="btn btn-sm btn-outline-danger delete-invoice"
                                                data-id="<?php echo htmlspecialchars($invoice['id']); ?>"
                                                href="#">
-                                                <i class="bi bi-trash"></i> <span>Remove</span>
+                                                <i class="bi bi-trash"></i> <span>Remove Invoice</span>
                                             </a>
                                         <?php endif; ?>
                                     </div>
@@ -1204,6 +1369,24 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                 window.paginationConfig.currentPage = 1;
             }
             updatePagination();
+            
+            // Make sure we attach handlers to any new buttons
+            attachRowEventHandlers();
+            attachPOHandlers();
+            attachSortingHandlers();
+            
+            // Double-check that "Remove PO" buttons are only shown for rows with PO values
+            $('#invoiceTable tbody tr').each(function() {
+                const row = $(this);
+                const poCell = row.find('td:nth-child(4)'); // 4th column has PO number
+                const poValue = poCell.text().trim();
+                const removePoBtn = row.find('.remove-po');
+                
+                if (!poValue) {
+                    // No PO, make sure the Remove PO button is not visible
+                    removePoBtn.hide();
+                }
+            });
         }
 
         // ─────────── DIRECT FALLBACK PAGINATION (IN CASE pagination.js FAILS) ────────
@@ -1343,8 +1526,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                                 window.paginationConfig.currentPage = currentPageBeforeDelete;
                             }
                             reinitializePagination();
-                            attachRowEventHandlers();
-                            attachSortingHandlers();
                         });
                     } else {
                         showToast(response.message, 'error');
@@ -1358,6 +1539,100 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                     $('.modal-backdrop').remove();
                     $('body').removeClass('modal-open').css('overflow', '');
                     $('body').css('padding-right', '');
+                }
+            });
+        });
+
+        // PO Reference Removal Handling
+        let removePOInvoiceId = null;
+        let removePOInvoiceNumber = null;
+        let removePONumber = null;
+        
+        function attachPOHandlers() {
+            // Attach handlers to PO removal buttons - make sure we're using the correct selector
+            $('.remove-po').off('click').on('click', function(e) {
+                e.preventDefault();
+                console.log("Remove PO button clicked");
+                
+                removePOInvoiceId = $(this).data('id');
+                removePOInvoiceNumber = $(this).data('invoice');
+                removePONumber = $(this).data('po');
+                
+                console.log("PO Removal - Invoice ID:", removePOInvoiceId);
+                console.log("PO Removal - Invoice Number:", removePOInvoiceNumber);
+                console.log("PO Removal - PO Number:", removePONumber);
+                
+                // Update modal text
+                $('#po-to-remove').text(removePONumber);
+                
+                // Show the modal
+                const modalEl = document.getElementById('removePOModal');
+                bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            });
+        }
+        
+        // Initialize PO handlers on page load
+        attachPOHandlers();
+        
+        // Confirm PO removal
+        $('#confirmRemovePOBtn').on('click', function() {
+            console.log("Confirm PO Remove button clicked");
+            
+            if (!removePOInvoiceId || !removePONumber) {
+                console.error("Missing required data for PO removal");
+                console.log("removePOInvoiceId:", removePOInvoiceId);
+                console.log("removePONumber:", removePONumber);
+                return;
+            }
+            
+            var removePOModalEl = document.getElementById('removePOModal');
+            var removePOModalInstance = bootstrap.Modal.getInstance(removePOModalEl);
+            if (removePOModalInstance) {
+                removePOModalInstance.hide();
+            }
+            
+            // Clean up modal artifacts
+            setTimeout(function() {
+                $('.modal-backdrop').remove();
+                $('body').removeClass('modal-open').css('overflow', '');
+                $('body').css('padding-right', '');
+            }, 100);
+            
+            // Send AJAX request to remove PO reference
+            console.log("Sending AJAX request for PO removal");
+            console.log("Action: remove_po");
+            console.log("Invoice ID:", removePOInvoiceId);
+            
+            $.ajax({
+                url: 'charge_invoice.php',
+                method: 'POST',
+                data: {
+                    action: 'remove_po',
+                    invoice_id: removePOInvoiceId
+                },
+                dataType: 'json',
+                success: function(response) {
+                    console.log("PO removal AJAX response:", response);
+                    
+                    if (response.status === 'success') {
+                        // Reload the table content
+                        $('#invoiceTable').load(location.href + ' #invoiceTable > *', function() {
+                            showToast(response.message, 'success');
+                            reinitializePagination();
+                            
+                            // Log the operation for debugging
+                            console.log("PO removed successfully, UI refreshed");
+                        });
+                    } else {
+                        showToast(response.message, 'error');
+                        console.error("PO removal failed:", response.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('AJAX Error:', error);
+                    console.error('Status:', status);
+                    console.error('Response:', xhr.responseText);
+                    showToast('Error processing request', 'error');
                 }
             });
         });
@@ -1398,10 +1673,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                                 window.paginationConfig.currentPage = 1;
                             }
                             reinitializePagination();
-                            setTimeout(function() {
-                                attachRowEventHandlers();
-                                attachSortingHandlers();
-                            }, 100);
                         });
                         var addModalEl = document.getElementById('addInvoiceModal');
                         var addModal = bootstrap.Modal.getOrCreateInstance(addModalEl);
@@ -1459,10 +1730,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                         $('#invoiceTable').load(location.href + ' #invoiceTable > *', function() {
                             showToast(response.message, 'success');
                             reinitializePagination();
-                            setTimeout(function() {
-                                attachRowEventHandlers();
-                                attachSortingHandlers();
-                            }, 100);
                         });
 
                         var editModalEl = document.getElementById('editInvoiceModal');
@@ -1537,9 +1804,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                         window.paginationConfig.currentPage = 1;
                     }
                     reinitializePagination();
-                    attachRowEventHandlers();
-                    attachSortingHandlers();
-                    
+                    showToast('Filters cleared.', 'success');
                 },
                 error: function() {
                     showToast('Error clearing filters.', 'error');
@@ -1624,11 +1889,19 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                                                 data-po="${invoice.po_no || ''}">
                                                 <i class="bi bi-pencil-square"></i> <span>Edit</span>
                                             </a>` : ''}
+                                            ${canModify && invoice.po_no ? `
+                                            <a class="btn btn-sm btn-warning remove-po"
+                                               data-id="${invoice.id}"
+                                               data-invoice="${invoice.invoice_no || ''}"
+                                               data-po="${invoice.po_no || ''}"
+                                               href="#">
+                                                <i class="bi bi-eraser"></i> <span>Remove PO Only</span>
+                                            </a>` : ''}
                                             ${canDelete ? `
                                             <a class="btn btn-sm btn-outline-danger delete-invoice"
                                                 data-id="${invoice.id}"
                                                 href="#">
-                                                <i class="bi bi-trash"></i> <span>Remove</span>
+                                                <i class="bi bi-trash"></i> <span>Remove Invoice</span>
                                             </a>` : ''}
                                         </div>
                                     </td>
@@ -1637,8 +1910,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
                             });
                             $('#invoiceTable tbody').html(tableBody || '<tr><td colspan="6">No Charge Invoices found.</td></tr>');
                             reinitializePagination();
-                            attachRowEventHandlers();
-                            attachSortingHandlers();
                         } else {
                             showToast('Error filtering data: ' + data.message, 'error');
                         }

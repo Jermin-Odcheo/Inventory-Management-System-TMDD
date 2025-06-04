@@ -302,14 +302,19 @@ if (isset($_GET['action']) && $_GET['action'] === 'remove' && isset($_GET['id'])
                 $rrUpdateStmt->execute([$poNo]);
                 $affectedRRs = $rrUpdateStmt->rowCount();
                 
-                // 2. Then soft-delete the purchase order
+                // 2. Clear PO references in any charge_invoice records
+                $ciUpdateStmt = $pdo->prepare("UPDATE charge_invoice SET po_no = NULL WHERE po_no = ? AND is_disabled = 0");
+                $ciUpdateStmt->execute([$poNo]);
+                $affectedCIs = $ciUpdateStmt->rowCount();
+                
+                // 3. Then soft-delete the purchase order
                 $poUpdateStmt = $pdo->prepare("UPDATE purchase_order SET is_disabled = 1 WHERE id = ?");
                 $poUpdateStmt->execute([$id]);
                 
-                // If we get here, both operations succeeded
+                // If we get here, all operations succeeded
                 $pdo->commit();
                 
-                $_SESSION['success'] = "Purchase Order removed successfully. $affectedRRs linked Receiving Reports were updated.";
+                $_SESSION['success'] = "Purchase Order removed successfully. $affectedRRs linked Receiving Reports and $affectedCIs Charge Invoices were updated.";
                 
                 // Log the removal with old values and entity id
                 logAudit(
@@ -318,7 +323,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'remove' && isset($_GET['id'])
                     json_encode($oldData),
                     null,
                     $id,
-                    "Purchase Order {$oldData['po_no']} deleted. $affectedRRs Receiving Reports updated.",
+                    "Purchase Order {$oldData['po_no']} deleted. $affectedRRs Receiving Reports and $affectedCIs Charge Invoices updated.",
                     'Successful'
                 );
             } catch (Exception $innerEx) {
