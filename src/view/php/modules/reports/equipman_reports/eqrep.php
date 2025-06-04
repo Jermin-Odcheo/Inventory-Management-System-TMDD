@@ -1,12 +1,30 @@
 <?php
-require_once __DIR__ . '/../../../../../../config/ims-tmdd.php';
-require_once __DIR__ . '/../../../../../control/RBACService.php';
-session_start();
+/**
+ * @file eqrep.php
+ * @brief Provides the user interface for generating equipment reports.
+ *
+ * This script allows users to select report types, locations, date ranges,
+ * and specific columns to include in the report. It also handles the preparation
+ * details and export options (PDF, Excel, Word). The report preview and download
+ * functionalities are triggered via JavaScript, which interacts with other PHP scripts.
+ */
+
+require_once __DIR__ . '/../../../../../../config/ims-tmdd.php'; // Include the database connection file, providing the $pdo object.
+require_once __DIR__ . '/../../../../../control/RBACService.php'; // Include the RBACService class.
+session_start(); // Start the PHP session.
 
 // RBAC check
+/**
+ * @var RBACService $rbac Initializes the RBACService with the PDO object and current user ID.
+ * Enforces 'View' privilege for 'Reports' to access this page.
+ */
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
 $rbac->requirePrivilege('Reports', 'View');
 
+/**
+ * @var string $today The current date in 'YYYY-MM-DD' format.
+ * @var string $todayDisplay The current date in 'Month Day, Year' format for display.
+ */
 $today = date('Y-m-d');
 $todayDisplay = date('F j, Y');
 ?>
@@ -19,6 +37,7 @@ $todayDisplay = date('F j, Y');
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
   <style>
+    /* Basic styling for the body, main content area, form sections, and preview box. */
     body {
       background-color: #f5f5f5;
     }
@@ -46,6 +65,7 @@ $todayDisplay = date('F j, Y');
       background-color: #fff;
     }
 
+    /* Select2 specific styling to ensure proper alignment and height. */
     .select2-container .select2-selection--single {
       height: 38px;
     }
@@ -56,7 +76,7 @@ $todayDisplay = date('F j, Y');
 
     .select2-container--default .select2-selection--single .select2-selection__arrow {
       height: 38px;
-    } 
+    }
   </style>
 </head>
 
@@ -75,15 +95,15 @@ $todayDisplay = date('F j, Y');
             <div class="col-md-6">
               <label class="form-label">Report Type:</label>
               <select class="form-select" id="repTypeSelect" name="repTypeSelect" required>
-  <option value="summarized">Summarized Report</option>
-  <option value="detailed">Complete Detailed Report</option>
-  <option value="equipment_details">Equipment Details Only</option>
-  <option value="equipment_status">Equipment Status Only</option>
-  <option value="equipment_location"> Equipment Location Only</option>
-  <option value="receiving_report">Receiving Report Only</option>
-  <option value="charge_invoice">Charge Invoice Only</option>
-  <option value="custom" >Custom Report</option>
-</select>
+                <option value="summarized">Summarized Report</option>
+                <option value="detailed">Complete Detailed Report</option>
+                <option value="equipment_details">Equipment Details Only</option>
+                <option value="equipment_status">Equipment Status Only</option>
+                <option value="equipment_location"> Equipment Location Only</option>
+                <option value="receiving_report">Receiving Report Only</option>
+                <option value="charge_invoice">Charge Invoice Only</option>
+                <option value="custom" >Custom Report</option>
+              </select>
 
             </div>
             <div class="col-md-6">
@@ -117,51 +137,60 @@ $todayDisplay = date('F j, Y');
             <button type="button" class="btn btn-outline-secondary btn-sm" id="clearCheckboxes">Clear All</button>
           </div>
           <div class="row" id="checkboxContainer">
-  <?php
-  $columnGroups = [
-    'Equipment Details' => [
-      'asset_tag' => 'Asset Tag',
-      'asset_description' => 'Asset Description 1 & 2',
-      'spec_brand_model' => 'Specifications, Brand and Model',
-      'serial_number' => 'Serial Number',
-      'remarks' => 'Remarks',
-      'date_created' => 'Date Created',
-      'last_date_modified' => 'Last Date Modified',
-    ],
-    'Equipment Status' => [
-      'equipment_status' => 'Equipment Status',
-      'action_taken' => 'Action Taken',
-      'status_date_creation' => 'Status Date Creation',
-      'status_remarks' => 'Status Remarks',
-    ],
-    'Equipment Location' => [
-      'building_location' => 'Location',
-      'accountable_individual' => 'Person Responsible',
-      'specific_area' => 'Laboratory/Office',
-    ],
-    'Receiving Report' => [
-      'receiving_report' => 'RR number',
-    ],
-    'Charge Invoice' => [
-      'date_acquired' => 'Date Acquired',
-      'invoice_no' => 'Invoice No',
-    ]
-  ];
+            <?php
+            /**
+             * @var array $columnGroups Defines the available column groups and their associated columns
+             * for selection in the report. Each group has a title and a list of key-value pairs
+             * (value => label) for the checkboxes.
+             */
+            $columnGroups = [
+              'Equipment Details' => [
+                'asset_tag' => 'Asset Tag',
+                'asset_description' => 'Asset Description 1 & 2',
+                'spec_brand_model' => 'Specifications, Brand and Model',
+                'serial_number' => 'Serial Number',
+                'remarks' => 'Remarks',
+                'date_created' => 'Date Created',
+                'last_date_modified' => 'Last Date Modified',
+              ],
+              'Equipment Status' => [
+                'equipment_status' => 'Equipment Status',
+                'action_taken' => 'Action Taken',
+                'status_date_creation' => 'Status Date Creation',
+                'status_remarks' => 'Status Remarks',
+              ],
+              'Equipment Location' => [
+                'building_location' => 'Location',
+                'accountable_individual' => 'Person Responsible',
+                'specific_area' => 'Laboratory/Office',
+              ],
+              'Receiving Report' => [
+                'receiving_report' => 'RR number',
+              ],
+              'Charge Invoice' => [
+                'date_acquired' => 'Date Acquired',
+                'invoice_no' => 'Invoice No',
+              ]
+            ];
 
-  foreach ($columnGroups as $groupTitle => $groupColumns) {
-    echo "<div class='col-md-12 mt-3'><h6 class='fw-bold'>$groupTitle</h6><div class='row'>";
-    foreach ($groupColumns as $val => $label) {
-      echo "<div class='col-md-4'><div class='form-check'>";
-      echo "<input class='form-check-input report-checkbox' type='checkbox' 
-      name='columns[]' value='$val' id='$val'>";
-      echo "<label class='form-check-label' for='$val'>$label</label>";
-      echo "</div></div>";
-    }
-    echo "</div></div>";
-  }
-  ?>
+            /**
+             * Loops through each column group and its columns to dynamically generate
+             * checkbox inputs for column selection.
+             */
+            foreach ($columnGroups as $groupTitle => $groupColumns) {
+              echo "<div class='col-md-12 mt-3'><h6 class='fw-bold'>$groupTitle</h6><div class='row'>";
+              foreach ($groupColumns as $val => $label) {
+                echo "<div class='col-md-4'><div class='form-check'>";
+                echo "<input class='form-check-input report-checkbox' type='checkbox'
+                name='columns[]' value='$val' id='$val'>";
+                echo "<label class='form-check-label' for='$val'>$label</label>";
+                echo "</div></div>";
+              }
+              echo "</div></div>";
+            }
+            ?>
 
-</div>
+          </div>
         </div>
 
         <div class="form-section">
@@ -196,7 +225,7 @@ $todayDisplay = date('F j, Y');
             <div class="col-md-8 d-flex justify-content-end gap-2 mt-3">
               <button type="button" class="btn btn-dark" id="previewBtn">Preview Report</button>
               <?php if ($rbac->hasPrivilege('Reports', 'Export')): ?>
-              <button type="submit" class="btn btn-primary" id="downloadBtn">Download Report</button>
+                <button type="submit" class="btn btn-primary" id="downloadBtn">Download Report</button>
               <?php endif; ?>
             </div>
           </div>
@@ -219,23 +248,34 @@ $todayDisplay = date('F j, Y');
     </div>
   </div>
   <?php include_once __DIR__ . '/../../../general/footer.php'; ?>
- 
+
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
   <script>
     document.addEventListener("DOMContentLoaded", function() {
-      const BASE_URL = 'get_locations.php';
+      const BASE_URL = 'get_locations.php'; // Base URL for fetching location data via AJAX.
+
+      // Initialize Select2 for location dropdowns.
       $('#buildingLocSelect, #specificAreaSelect').select2({
         width: '100%'
       });
 
+      /**
+       * @function populateLocations
+       * @brief Fetches and populates the "Location" (building_loc) dropdown.
+       * @param {string} [selectedValue='all'] The value to pre-select in the dropdown after population.
+       */
       function populateLocations(selectedValue = 'all') {
         $.getJSON(`${BASE_URL}?action=get_locations`, function(data) {
           if (data.locations) {
             const $buildingLocSelect = $('#buildingLocSelect');
-            const currentValue = $buildingLocSelect.val() || selectedValue;
-            $buildingLocSelect.empty().append('<option value="all">All Locations</option>');
+            const currentValue = $buildingLocSelect.val() || selectedValue; // Get current value or use default.
+            $buildingLocSelect.empty().append('<option value="all">All Locations</option>'); // Clear and add default option.
             $.each(data.locations, function(i, loc) {
-              $buildingLocSelect.append(`<option value="${loc}">${loc}</option>`);
+              $buildingLocSelect.append(`<option value="${loc}">${loc}</option>`); // Add each location.
             });
+            // Set the selected value, or default to 'all' if current value is not in the new options.
             $buildingLocSelect.val(data.locations.includes(currentValue) ? currentValue : 'all').trigger('change');
           } else {
             console.error('Error fetching locations:', data.error);
@@ -246,18 +286,27 @@ $todayDisplay = date('F j, Y');
         });
       }
 
+      /**
+       * @function populateSpecificAreas
+       * @brief Fetches and populates the "Laboratory/Office" (specific_area) dropdown.
+       * Can be filtered by a selected building location.
+       * @param {string} [building_loc=''] The selected building location to filter by.
+       * @param {string} [selectedValue='all'] The value to pre-select in the dropdown after population.
+       */
       function populateSpecificAreas(building_loc = '', selectedValue = 'all') {
+        // Construct the URL based on whether a building location is provided.
         const url = building_loc && building_loc !== 'all' ?
           `${BASE_URL}?action=get_specific_areas&building_loc=${encodeURIComponent(building_loc)}` :
           `${BASE_URL}?action=get_specific_areas`;
         $.getJSON(url, function(data) {
           if (data.specific_areas) {
             const $specificAreaSelect = $('#specificAreaSelect');
-            const currentValue = $specificAreaSelect.val() || selectedValue;
-            $specificAreaSelect.empty().append('<option value="all">All Areas</option>');
+            const currentValue = $specificAreaSelect.val() || selectedValue; // Get current value or use default.
+            $specificAreaSelect.empty().append('<option value="all">All Areas</option>'); // Clear and add default option.
             $.each(data.specific_areas, function(i, area) {
-              $specificAreaSelect.append(`<option value="${area}">${area}</option>`);
+              $specificAreaSelect.append(`<option value="${area}">${area}</option>`); // Add each area.
             });
+            // Set the selected value, or default to 'all' if current value is not in the new options.
             $specificAreaSelect.val(data.specific_areas.includes(currentValue) ? currentValue : 'all').trigger('change');
           } else {
             console.error('Error fetching specific areas:', data.error);
@@ -268,18 +317,23 @@ $todayDisplay = date('F j, Y');
         });
       }
 
+      // Initial population of location dropdowns on page load.
       populateLocations();
       populateSpecificAreas();
 
+      // Event listener for changes in the "Location" dropdown to update "Laboratory/Office".
       $('#buildingLocSelect').on('change', function() {
         const building_loc = $(this).val();
         populateSpecificAreas(building_loc);
       });
 
+      // Event listener for changes in the "Laboratory/Office" dropdown (currently no action defined).
       $('#specificAreaSelect').on('change', function() {
         const specific_area = $(this).val();
+        // No specific action defined for this change in the original code.
       });
 
+      // Get references to form elements.
       const form = document.getElementById("mainForm");
       const exportType = document.getElementById("exportTypeSelect");
       const docSpecs = document.getElementById("docSpecsSection");
@@ -289,6 +343,15 @@ $todayDisplay = date('F j, Y');
       const previewBtn = document.getElementById("previewBtn");
       const downloadBtn = document.getElementById("downloadBtn");
 
+      /**
+       * @var array detailedCols Defines the columns to be selected for a 'Detailed Report'.
+       * @var array summarizedCols Defines the columns to be selected for a 'Summarized Report'.
+       * @var array eqpDetailsCols Defines the columns for 'Equipment Details Only' report.
+       * @var array eqpStatusCols Defines the columns for 'Equipment Status Only' report.
+       * @var array eqpLocationCols Defines the columns for 'Equipment Location Only' report.
+       * @var array RRCols Defines the columns for 'Receiving Report Only' report.
+       * @var array CICols Defines the columns for 'Charge Invoice Only' report.
+       */
       const detailedCols = [
         'asset_tag', 'asset_description', 'spec_brand_model', 'serial_number', 'date_acquired',
         'invoice_no', 'receiving_report', 'building_location', 'specific_area',
@@ -303,14 +366,14 @@ $todayDisplay = date('F j, Y');
       ];
 
       const eqpDetailsCols = [
-        'asset_tag', 'asset_description', 'spec_brand_model', 'serial_number', 'remarks', 
+        'asset_tag', 'asset_description', 'spec_brand_model', 'serial_number', 'remarks',
         'date_created', 'last_date_modified',
       ];
-      
+
       const eqpStatusCols = [
         'asset_tag',  'equipment_status', 'action_taken', 'status_date_creation', 'status_remarks'
       ];
-  
+
       const eqpLocationCols = [
         'asset_tag', 'specific_area', 'building_location', 'accountable_individual'
       ];
@@ -318,11 +381,16 @@ $todayDisplay = date('F j, Y');
       const RRCols = [
         'asset_tag','receiving_report'
       ];
-      
+
       const CICols = [
         'asset_tag', 'date_acquired', 'invoice_no'
       ];
 
+      /**
+       * @function applyRepTypeSelection
+       * @brief Sets the checked state of column checkboxes based on the selected report type.
+       * If 'Custom Report' is selected, all checkboxes are unchecked.
+       */
       const applyRepTypeSelection = () => {
         const docType = repTypeSelect.value;
         if (docType === 'summarized') {
@@ -341,23 +409,41 @@ $todayDisplay = date('F j, Y');
           checkboxes.forEach(cb => cb.checked = CICols.includes(cb.value));
         }
         else {
-          checkboxes.forEach(cb => cb.checked = false);
+          checkboxes.forEach(cb => cb.checked = false); // For 'custom' or unknown types, uncheck all.
         }
-        updateDocTypeByCheckboxes();
+        updateDocTypeByCheckboxes(); // Update the report type dropdown based on current checkbox state.
       };
 
+      /**
+       * @function getCheckedColumns
+       * @brief Returns an array of values for all currently checked column checkboxes, sorted alphabetically.
+       * @returns {string[]} An array of checked column values.
+       */
       const getCheckedColumns = () => checkboxes.filter(cb => cb.checked).map(cb => cb.value).sort();
 
+      /**
+       * @function arraysEqual
+       * @brief Compares two arrays to check if they are identical (same length and same elements in order).
+       * @param {Array} a The first array.
+       * @param {Array} b The second array.
+       * @returns {boolean} True if arrays are equal, false otherwise.
+       */
       const arraysEqual = (a, b) => {
         if (a.length !== b.length) return false;
         return a.every((val, i) => val === b[i]);
       };
 
+      /**
+       * @function updateDocTypeByCheckboxes
+       * @brief Updates the 'Report Type' dropdown selection based on the currently checked column checkboxes.
+       * If the checked columns match a predefined report type, that type is selected; otherwise, 'Custom Report' is selected.
+       */
       const updateDocTypeByCheckboxes = () => {
-        const selectedCols = getCheckedColumns();
+        const selectedCols = getCheckedColumns(); // Get currently selected columns.
+        // Check if selected columns match any predefined report types.
         if (arraysEqual(selectedCols, detailedCols.slice().sort())) {
           repTypeSelect.value = 'detailed';
-        } 
+        }
         else if (arraysEqual(selectedCols, summarizedCols.slice().sort())) {
           repTypeSelect.value = 'summarized';
         }
@@ -375,76 +461,80 @@ $todayDisplay = date('F j, Y');
         }
         else if (arraysEqual(selectedCols, CICols.slice().sort())) {
           repTypeSelect.value = 'charge_invoice';
-        } 
-        else {
-          repTypeSelect.value = 'custom';
         }
-
+        else {
+          repTypeSelect.value = 'custom'; // If no match, set to 'custom'.
+        }
       };
 
-// Clear checkboxes automatically when "Custom Report" is selected
-document.getElementById("repTypeSelect").addEventListener("change", function () {
-  if (this.value === "custom") {
-    const checkboxes = document.querySelectorAll(".report-checkbox");
-    checkboxes.forEach(cb => {
-      if (!cb.disabled) {
-        cb.checked = false;
-      }
-    });
-  }
-});
-      
-      clearBtn?.addEventListener("click", () => {
-        checkboxes.forEach(cb => cb.checked = false);
-        repTypeSelect.value = 'custom';
+      // Clear checkboxes automatically when "Custom Report" is selected.
+      document.getElementById("repTypeSelect").addEventListener("change", function () {
+        if (this.value === "custom") {
+          const checkboxes = document.querySelectorAll(".report-checkbox");
+          checkboxes.forEach(cb => {
+            if (!cb.disabled) { // Ensure only non-disabled checkboxes are cleared.
+              cb.checked = false;
+            }
+          });
+        }
       });
 
+      // Event listener for the "Clear All" button to uncheck all column checkboxes.
+      clearBtn?.addEventListener("click", () => {
+        checkboxes.forEach(cb => cb.checked = false); // Uncheck all.
+        repTypeSelect.value = 'custom'; // Set report type to 'custom'.
+      });
+
+      // Event listeners for report type selection and checkbox changes.
       repTypeSelect?.addEventListener("change", applyRepTypeSelection);
       checkboxes.forEach(cb => cb.addEventListener('change', updateDocTypeByCheckboxes));
-      applyRepTypeSelection();
+      applyRepTypeSelection(); // Apply initial selection on page load.
 
+      // Event listener for form submission to validate location fields.
       form.addEventListener("submit", (e) => {
         const building_loc = $('#buildingLocSelect').val();
         const specific_area = $('#specificAreaSelect').val();
         if (!building_loc || !specific_area) {
-          e.preventDefault();
+          e.preventDefault(); // Prevent submission if locations are not selected.
           alert('Please select valid Location and Laboratory/Office values');
         }
       });
 
+      // Event listener for "Preview Report" button.
       previewBtn.addEventListener("click", () => {
         const building_loc = $('#buildingLocSelect').val();
         const specific_area = $('#specificAreaSelect').val();
         if (!building_loc || !specific_area) {
           alert('Please select valid Location and Laboratory/Office values');
-          return;
+          return; // Stop if validation fails.
         }
-        form.action = 'generate_report_preview.php';
-        form.target = 'previewFrame';
-        form.submit();
+        form.action = 'generate_report_preview.php'; // Set form action for preview.
+        form.target = 'previewFrame'; // Target the iframe for preview.
+        form.submit(); // Submit the form.
       });
 
+      // Event listener for "Download Report" button.
       downloadBtn.addEventListener("click", () => {
         const building_loc = $('#buildingLocSelect').val();
         const specific_area = $('#specificAreaSelect').val();
         if (!building_loc || !specific_area) {
           alert('Please select valid Location and Laboratory/Office values');
-          return;
+          return; // Stop if validation fails.
         }
-        const type = exportType.value;
-        form.action = `generate_report.php?export_type=${type}`;
-        form.target = '';
-        form.submit();
+        const type = exportType.value; // Get the selected export type.
+        form.action = `generate_report.php?export_type=${type}`; // Set form action for download.
+        form.target = ''; // Clear target to open in the same window (or download).
+        form.submit(); // Submit the form.
       });
 
+      // Event listener for changes in the "Download Type" dropdown to show/hide document specifications.
       exportType.addEventListener("change", () => {
-        const show = ['pdf', 'word'].includes(exportType.value);
+        const show = ['pdf', 'word'].includes(exportType.value); // Show only for PDF and Word.
         docSpecs.style.display = show ? 'block' : 'none';
       });
 
-      exportType.dispatchEvent(new Event('change'));
+      exportType.dispatchEvent(new Event('change')); // Trigger change event on load to set initial visibility.
     });
-    
   </script>
 </body>
 
