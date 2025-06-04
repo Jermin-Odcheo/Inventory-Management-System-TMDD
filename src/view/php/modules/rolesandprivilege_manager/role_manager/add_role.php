@@ -1,8 +1,21 @@
 <?php
+/**
+ * Add Role Script
+ *
+ * This script handles the creation of a new role in the system. It processes form submissions,
+ * validates input, logs the creation in the audit log, and returns a JSON response.
+ */
 session_start();
 require_once('../../../../../../config/ims-tmdd.php');
 
-//@current_user_id is For audit logs
+/**
+ * Authentication Check
+ *
+ * Ensures that the user is authenticated by checking for a valid user ID in the session.
+ * Sets the user ID for database context or returns an error if not authenticated.
+ *
+ * @return void
+ */
 $userId = $_SESSION['user_id'] ?? null;
 
 if (!$userId) {
@@ -15,8 +28,14 @@ if (!$userId) {
 $ipAddress = $_SERVER['REMOTE_ADDR'];
 $pdo->exec("SET @current_ip = '" . $ipAddress . "'");
 
-// Process form submission via POST and return JSON response.
-
+/**
+ * Process Form Submission
+ *
+ * Handles the form submission for creating a new role. Validates input, checks for duplicates,
+ * inserts the role into the database, logs the action, and returns a JSON response.
+ *
+ * @return void
+ */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
     $userId   = $_SESSION['user_id'] ?? null;
@@ -41,35 +60,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         // 1) Start transaction
+        /**
+         * Begin Database Transaction
+         *
+         * Starts a transaction to ensure data consistency during the role creation process.
+         *
+         * @return void
+         */
         $pdo->beginTransaction();
 
         // 2) Check for duplicate (case-insensitive) with improved debugging
-        $checkQuery = "SELECT COUNT(*) FROM roles 
-                      WHERE LOWER(TRIM(Role_Name)) = LOWER(TRIM(?)) 
-                      AND is_disabled = 0";
+        /**
+         * Check for Duplicate Role
+         *
+         * Checks if a role with the same name already exists in the database (case-insensitive).
+         *
+         * @param string $roleName The name of the role to check.
+         * @return int The count of matching roles.
+         */
+        $checkQuery = "SELECT COUNT(*) FROM roles WHERE LOWER(TRIM(Role_Name)) = LOWER(TRIM(?)) AND is_disabled = 0";
         $stmt = $pdo->prepare($checkQuery);
         $stmt->execute([$roleName]);
         $count = $stmt->fetchColumn();
         
         // Also check if there are any roles with similar names (ignoring case and whitespace)
-        $similarQuery = "SELECT id, Role_Name, HEX(Role_Name) as hex_name 
-                        FROM roles 
-                        WHERE (SOUNDEX(Role_Name) = SOUNDEX(?) 
-                        OR LOWER(REPLACE(TRIM(Role_Name), ' ', '')) = LOWER(REPLACE(TRIM(?), ' ', '')))
-                        AND is_disabled = 0
-                        LIMIT 5";
+        /**
+         * Check for Similar Roles
+         *
+         * Retrieves roles with similar names for debugging purposes.
+         *
+         * @param string $roleName The name of the role to check.
+         * @return array The list of similar roles.
+         */
+        $similarQuery = "SELECT id, Role_Name, HEX(Role_Name) as hex_name FROM roles WHERE (SOUNDEX(Role_Name) = SOUNDEX(?) OR LOWER(REPLACE(TRIM(Role_Name), ' ', '')) = LOWER(REPLACE(TRIM(?), ' ', ''))) AND is_disabled = 0 LIMIT 5";
         $similarStmt = $pdo->prepare($similarQuery);
         $similarStmt->execute([$roleName, $roleName]);
         $similarRoles = $similarStmt->fetchAll(PDO::FETCH_ASSOC);
         
         if ($count > 0) {
             // Let's find what role is matching to help debugging
-            $debugStmt = $pdo->prepare("SELECT id, Role_Name, HEX(Role_Name) as hex_name, 
-                                      LENGTH(Role_Name) as name_length,
-                                      LENGTH(TRIM(Role_Name)) as trimmed_length
-                                      FROM roles 
-                                      WHERE LOWER(TRIM(Role_Name)) = LOWER(TRIM(?)) 
-                                      AND is_disabled = 0");
+            /**
+             * Debug Matching Role
+             *
+             * Retrieves detailed information about the matching role for debugging.
+             *
+             * @param string $roleName The name of the role to check.
+             * @return array The details of the matching role.
+             */
+            $debugStmt = $pdo->prepare("SELECT id, Role_Name, HEX(Role_Name) as hex_name, LENGTH(Role_Name) as name_length, LENGTH(TRIM(Role_Name)) as trimmed_length FROM roles WHERE LOWER(TRIM(Role_Name)) = LOWER(TRIM(?)) AND is_disabled = 0");
             $debugStmt->execute([$roleName]);
             $matchingRole = $debugStmt->fetch(PDO::FETCH_ASSOC);
             
@@ -101,6 +139,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // 3) Insert new role
+        /**
+         * Insert New Role
+         *
+         * Adds a new role to the database with the specified name.
+         *
+         * @param string $roleName The name of the new role.
+         * @return bool True on success, false on failure.
+         */
         $stmt = $pdo->prepare("INSERT INTO roles (Role_Name, is_disabled) VALUES (?, 0)");
         if (!$stmt->execute([$roleName])) {
             throw new Exception('Error inserting role.');
@@ -108,6 +154,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $roleID = $pdo->lastInsertId();
 
         // 4) Fetch the freshly inserted row (only the columns we need)
+        /**
+         * Fetch New Role
+         *
+         * Retrieves the details of the newly created role.
+         *
+         * @param int $roleID The ID of the new role.
+         * @return array The details of the new role.
+         */
         $stmt    = $pdo->prepare("SELECT id, Role_Name FROM roles WHERE id = ?");
         $stmt->execute([$roleID]);
         $newRole = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -122,13 +176,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $newValue = json_encode($newValueArray);
 
         // 6) Insert into audit_log
+        /**
+         * Log Role Creation
+         *
+         * Records the creation of the new role in the audit log.
+         *
+         * @param int $userId The ID of the user creating the role.
+         * @param int $roleID The ID of the new role.
+         * @param string $detailsMessage The description of the action.
+         * @param string $newValue The JSON-encoded details of the new role.
+         * @return void
+         */
         $detailsMessage = "Role '{$roleName}' has been created";
-        $stmt = $pdo->prepare("
-            INSERT INTO audit_log
-              (UserID, EntityID, Action, Details, OldVal, NewVal, Module, Date_Time, Status)
-            VALUES
-              (?, ?, 'Create', ?, NULL, ?, 'Roles and Privileges', NOW(), 'Successful')
-        ");
+        $stmt = $pdo->prepare("INSERT INTO audit_log (UserID, EntityID, Action, Details, OldVal, NewVal, Module, Date_Time, Status) VALUES (?, ?, 'Create', ?, NULL, ?, 'Roles and Privileges', NOW(), 'Successful')");
         $stmt->execute([
             $userId,
             $roleID,
@@ -137,18 +197,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ]);
 
         // 7) (Optional) legacy role_changes table
-        $stmt = $pdo->prepare("
-            INSERT INTO role_changes (UserID, RoleID, Action, NewRoleName)
-            VALUES (?, ?, 'Add', ?)
-        ");
+        /**
+         * Log to Legacy Table
+         *
+         * Records the role creation in a legacy table for backward compatibility.
+         *
+         * @param int $userId The ID of the user creating the role.
+         * @param int $roleID The ID of the new role.
+         * @param string $roleName The name of the new role.
+         * @return void
+         */
+        $stmt = $pdo->prepare("INSERT INTO role_changes (UserID, RoleID, Action, NewRoleName) VALUES (?, ?, 'Add', ?)");
         $stmt->execute([$userId, $roleID, $roleName]);
 
         // 8) Commit & respond
+        /**
+         * Commit Transaction
+         *
+         * Commits the database transaction if all operations are successful.
+         *
+         * @return void
+         */
         $pdo->commit();
         echo json_encode(['success' => true, 'message' => 'Role created successfully.']);
         exit();
 
     } catch (PDOException $e) {
+        /**
+         * Rollback Transaction on PDO Error
+         *
+         * Rolls back the database transaction if a PDO error occurs during the role creation process.
+         *
+         * @return void
+         */
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
@@ -162,6 +243,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         echo json_encode(['success' => false, 'message' => $errMsg]);
         exit();
     } catch (Exception $e) {
+        /**
+         * Rollback Transaction on General Error
+         *
+         * Rolls back the database transaction if a general error occurs during the role creation process.
+         *
+         * @return void
+         */
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }

@@ -1,14 +1,33 @@
 <?php
+/**
+ * Delete Role Script
+ *
+ * This script handles the deletion of a role from the system. It performs a soft delete by marking the role as disabled,
+ * logs the action in the audit log, and returns a JSON response indicating the success or failure of the operation.
+ *
+ */
 session_start();
 require_once('../../../../../../config/ims-tmdd.php'); // Adjust path as needed
 
-// Ensure the request method is POST.
+/**
+ * Validate Request Method
+ *
+ * Ensures that the request method is POST to prevent unauthorized access or incorrect usage.
+ *
+ * @return void
+ */
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'message' => 'Invalid request method.']);
     exit();
 }
 
-// Check if the role ID is provided in the POST data.
+/**
+ * Validate Role ID
+ *
+ * Checks if a role ID is provided in the POST data to ensure the correct role is targeted for deletion.
+ *
+ * @return void
+ */
 if (!isset($_POST['id']) || empty($_POST['id'])) {
     echo json_encode(['success' => false, 'message' => 'No role ID specified.']);
     exit();
@@ -17,7 +36,14 @@ if (!isset($_POST['id']) || empty($_POST['id'])) {
 $role_id = intval($_POST['id']);
 $userId = $_SESSION['user_id'] ?? null;
 
-// Set the user ID for audit purposes
+/**
+ * Set Current User ID
+ *
+ * Sets the current user ID for audit purposes in the database session. If not authenticated, returns an error.
+ *
+ * @param int|null $userId The ID of the currently logged-in user.
+ * @return void
+ */
 if ($userId) {
     $pdo->exec("SET @current_user_id = " . (int)$userId);
 } else {
@@ -26,10 +52,23 @@ if ($userId) {
     exit();
 }
 try {
-    // 1) Start transaction
+    /**
+     * Begin Database Transaction
+     *
+     * Starts a transaction to ensure data consistency during the deletion process.
+     *
+     * @return void
+     */
     $pdo->beginTransaction();
 
-    // 2) Fetch the existing role
+    /**
+     * Fetch Role Details
+     *
+     * Retrieves the details of the role to be deleted for audit logging purposes.
+     *
+     * @param int $role_id The ID of the role to fetch.
+     * @return array|null The role details if found, null otherwise.
+     */
     $stmt = $pdo->prepare("SELECT id, role_name FROM roles WHERE id = ? AND is_disabled = 0");
     $stmt->execute([$role_id]);
     $role = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -38,7 +77,14 @@ try {
         throw new Exception('Role not found or already deleted.');
     }
 
-    // 3) Fetch its modules & privileges
+    /**
+     * Fetch Role Privileges
+     *
+     * Retrieves the modules and privileges associated with the role for audit logging.
+     *
+     * @param int $role_id The ID of the role to fetch privileges for.
+     * @return array The list of modules and privileges associated with the role.
+     */
     $sql = "
         SELECT 
             m.module_name,
@@ -67,7 +113,14 @@ try {
     ];
     $oldValue = json_encode($oldValueArray);
 
-    // 6) Soft-delete the role
+    /**
+     * Soft Delete Role
+     *
+     * Marks the role as disabled in the database to perform a soft delete.
+     *
+     * @param int $role_id The ID of the role to delete.
+     * @return bool True on success, false on failure.
+     */
     $stmt = $pdo->prepare("UPDATE roles SET is_disabled = 1 WHERE id = ?");
     if (!$stmt->execute([$role_id])) {
         throw new Exception('Failed to archive role.');
@@ -84,10 +137,20 @@ try {
     ];
     $newValue = json_encode($newValueArray);
 
-    // 8) Insert into audit_log
+    /**
+     * Log Deletion to Audit Log
+     *
+     * Records the deletion action in the audit log for tracking purposes.
+     *
+     * @param int $userId The ID of the user performing the deletion.
+     * @param int $role_id The ID of the deleted role.
+     * @param string $details A description of the action performed.
+     * @param string $oldValue The state of the role before deletion.
+     * @param string $newValue The state of the role after deletion.
+     * @return void
+     */
     $details = "Role '{$role['role_name']}' has been archived";
-    $stmt = $pdo->prepare("
-        INSERT INTO audit_log
+    $stmt = $pdo->prepare("INSERT INTO audit_log
           (UserID, EntityID, Action, Details, OldVal, NewVal, Module, Date_Time, Status)
         VALUES
           (?, ?, 'Remove', ?, ?, ?, 'Roles and Privileges', NOW(), 'Successful')
@@ -114,11 +177,24 @@ try {
        $oldValue
     ]);
 
-    // 10) Commit and respond
+    /**
+     * Commit Transaction
+     *
+     * Commits the database transaction if all operations are successful.
+     *
+     * @return void
+     */
     $pdo->commit();
     echo json_encode(['success' => true, 'message' => 'Role deleted successfully.']);
 
 } catch (Exception $e) {
+    /**
+     * Rollback Transaction on Error
+     *
+     * Rolls back the database transaction if an error occurs during the deletion process.
+     *
+     * @return void
+     */
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
     }

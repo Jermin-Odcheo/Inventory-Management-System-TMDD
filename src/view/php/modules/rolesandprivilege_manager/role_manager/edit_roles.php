@@ -6,6 +6,7 @@
  * associated privileges, and available modules and privileges for display in an edit form.
  * Upon form submission, it updates the role's name and privileges, logs the changes, and returns
  * the updated information via AJAX.
+ *
  */
 session_start();
 error_reporting(E_ALL);
@@ -18,6 +19,8 @@ require_once('../../../../../../config/ims-tmdd.php');
  *
  * Ensures that the user is authenticated by checking for a valid user ID in the session.
  * Sets the user ID for database context or returns an error if not authenticated.
+ *
+ * @return void
  */
 $userId = $_SESSION['user_id'] ?? null; // User ID from session for authentication check
 if (!$userId) {
@@ -31,6 +34,8 @@ if (!$userId) {
  * Validate Role ID
  *
  * Checks if a role ID is provided in the request. Returns an error if not provided.
+ *
+ * @return void
  */
 if (!isset($_GET['id'])) {
     die(json_encode(['success' => false, 'message' => 'Role ID not provided.']));
@@ -43,6 +48,9 @@ $pdo->exec("SET @current_ip = '" . $ipAddress . "'");
  * Fetch Role Details
  *
  * Retrieves the details of the specified role from the database. Returns an error if the role is not found or is disabled.
+ *
+ * @param int $roleID The ID of the role to fetch.
+ * @return array|null The role details if found, null otherwise.
  */
 $stmt = $pdo->prepare("SELECT * FROM roles WHERE id = ? AND is_disabled = 0");
 $stmt->execute([$roleID]);
@@ -55,6 +63,9 @@ if (!$role) {
  * Fetch Current Privileges
  *
  * Retrieves all privileges currently assigned to the role, including module and privilege details.
+ *
+ * @param int $roleID The ID of the role to fetch privileges for.
+ * @return array The list of current privileges assigned to the role.
  */
 $stmtCurrent = $pdo->prepare("
     SELECT rp.module_id, rp.privilege_id, p.priv_name, m.module_name
@@ -140,6 +151,8 @@ foreach ($allPrivileges as $priv) {
  *
  * Processes the form submission for updating the role's name and privileges. Validates input,
  * checks for duplicates, updates the database, and logs changes for audit purposes.
+ *
+ * @return void
  */
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $roleName = trim($_POST['role_name']); // Trimmed role name from form submission
@@ -151,6 +164,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 
     // Check for duplicate role name
+    /**
+     * Check Duplicate Role Name
+     *
+     * Validates if the new role name already exists in the system for a different role.
+     *
+     * @param string $roleName The new name for the role.
+     * @param int $roleID The ID of the role being edited.
+     * @return bool True if duplicate found, false otherwise.
+     */
     $stmtDuplicate = $pdo->prepare("SELECT id FROM roles WHERE role_name = ? AND id != ? AND is_disabled = 0");
     $stmtDuplicate->execute([$roleName, $roleID]);
     if ($stmtDuplicate->fetch(PDO::FETCH_ASSOC)) {
@@ -188,6 +210,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
     try {
+        /**
+         * Begin Database Transaction
+         *
+         * Starts a transaction to ensure data consistency during the update process.
+         *
+         * @return void
+         */
         $pdo->beginTransaction();
 
         // Store original role data for audit
@@ -328,6 +357,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             json_encode($selected)
         ]);
 
+        /**
+         * Commit Transaction
+         *
+         * Commits the database transaction if all operations are successful.
+         *
+         * @return void
+         */
         $pdo->commit();
 
         // Fetch updated privileges for display in the UI
@@ -350,6 +386,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         ]);
         exit;
     } catch (Exception $e) {
+        /**
+         * Rollback Transaction on Error
+         *
+         * Rolls back the database transaction if an error occurs during the update process.
+         *
+         * @return void
+         */
         $pdo->rollBack();
         error_log("Error updating role: " . $e->getMessage());
         echo json_encode(['success' => false, 'message' => 'Error updating role: ' . $e->getMessage()]);

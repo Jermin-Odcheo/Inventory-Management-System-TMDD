@@ -1,7 +1,20 @@
 <?php
+/**
+ * Assign Modules Script
+ *
+ * This script handles the assignment of modules and privileges to roles. It allows users to select a role,
+ * view and update its associated modules and privileges, and assign new modules to the role.
+ */
 session_start();
 require_once('../../../../../../config/ims-tmdd.php');
-// Fetch all roles
+
+/**
+ * Fetch All Roles
+ *
+ * Retrieves all roles from the database for selection in the UI.
+ *
+ * @return array The list of roles ordered by name.
+ */
 try {
     $stmt = $pdo->prepare("SELECT id, Role_Name FROM roles ORDER BY Role_Name");
     $stmt->execute();
@@ -9,20 +22,39 @@ try {
 } catch (PDOException $e) {
     die("Database error: " . $e->getMessage());
 }
-// Handle role selection
+
+/**
+ * Handle Role Selection
+ *
+ * Processes the selected role ID from the form submission to fetch associated modules and privileges.
+ *
+ * @return string The ID of the selected role, if any.
+ */
 $modules = [];
 $selectedRoleId = isset($_POST['role_id']) ? $_POST['role_id'] : '';
-//remove module from a role
+
+/**
+ * Remove Module from Role
+ *
+ * Removes a specified module and its associated privileges from a role.
+ *
+ * @return void
+ */
 if (isset($_POST['remove_module']) && isset($_POST['module_id'])) {
     try {
         $moduleId = $_POST['module_id'];
 
         // Delete module privileges for the role
-        $deleteStmt = $pdo->prepare("
-            DELETE FROM role_module_privileges 
-            WHERE Role_ID = ? 
-            AND Privilege_ID IN (SELECT Privilege_ID FROM privileges WHERE Module_ID = ?)
-        ");
+        /**
+         * Delete Module Privileges
+         *
+         * Removes all privileges associated with a specific module for the selected role.
+         *
+         * @param string $selectedRoleId The ID of the role to remove the module from.
+         * @param string $moduleId The ID of the module to remove.
+         * @return void
+         */
+        $deleteStmt = $pdo->prepare("DELETE FROM role_module_privileges WHERE Role_ID = ? AND Privilege_ID IN (SELECT Privilege_ID FROM privileges WHERE Module_ID = ?)");
         $deleteStmt->execute([$selectedRoleId, $moduleId]);
 
         echo "<p style='color: green;'>Module removed successfully!</p>";
@@ -36,24 +68,28 @@ if (isset($_POST['remove_module']) && isset($_POST['module_id'])) {
 if ($selectedRoleId) {
     try {
         // Fetch modules and privileges for the selected role
-        $moduleStmt = $pdo->prepare("
-            SELECT DISTINCT m.id, m.Module_Name 
-            FROM modules AS m
-            INNER JOIN privileges AS p ON m.id = p.id
-            INNER JOIN role_module_privileges AS rp ON p.id = rp.Privilege_ID
-            WHERE rp.Role_ID = ?
-            ORDER BY m.Module_Name
-        ");
+        /**
+         * Fetch Modules for Role
+         *
+         * Retrieves the modules associated with the selected role.
+         *
+         * @param string $selectedRoleId The ID of the selected role.
+         * @return array The list of modules associated with the role.
+         */
+        $moduleStmt = $pdo->prepare("SELECT DISTINCT m.id, m.Module_Name FROM modules AS m INNER JOIN privileges AS p ON m.id = p.id INNER JOIN role_module_privileges AS rp ON p.id = rp.Privilege_ID WHERE rp.Role_ID = ? ORDER BY m.Module_Name");
         $moduleStmt->execute([$selectedRoleId]);
         $modules = $moduleStmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Fetch existing privileges for the role
-        $privilegeStmt = $pdo->prepare("
-            SELECT p.id, p.priv_name 
-            FROM privileges AS p
-            INNER JOIN role_module_privileges AS rp ON p.id = rp.Privilege_ID
-            WHERE rp.Role_ID = ?
-        ");
+        /**
+         * Fetch Role Privileges
+         *
+         * Retrieves the privileges associated with the selected role.
+         *
+         * @param string $selectedRoleId The ID of the selected role.
+         * @return array The list of privileges for the role.
+         */
+        $privilegeStmt = $pdo->prepare("SELECT p.id, p.priv_name FROM privileges AS p INNER JOIN role_module_privileges AS rp ON p.id = rp.Privilege_ID WHERE rp.Role_ID = ?");
         $privilegeStmt->execute([$selectedRoleId]);
         $rolePrivileges = $privilegeStmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -64,17 +100,15 @@ if ($selectedRoleId) {
         }
 
         // Fetch available modules (not already assigned)
-        $availableModulesStmt = $pdo->prepare("
-            SELECT m.id, m.Module_Name 
-            FROM modules AS m
-            WHERE m.id NOT IN (
-                SELECT DISTINCT p.id 
-                FROM privileges AS p
-                INNER JOIN role_module_privileges AS rp ON p.id = rp.Privilege_ID
-                WHERE rp.Role_ID = ?
-            )
-            ORDER BY m.Module_Name
-        ");
+        /**
+         * Fetch Available Modules
+         *
+         * Retrieves modules that are not yet assigned to the selected role.
+         *
+         * @param string $selectedRoleId The ID of the selected role.
+         * @return array The list of available modules.
+         */
+        $availableModulesStmt = $pdo->prepare("SELECT m.id, m.Module_Name FROM modules AS m WHERE m.id NOT IN (SELECT DISTINCT p.id FROM privileges AS p INNER JOIN role_module_privileges AS rp ON p.id = rp.Privilege_ID WHERE rp.Role_ID = ?) ORDER BY m.Module_Name");
         $availableModulesStmt->execute([$selectedRoleId]);
         $availableModules = $availableModulesStmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -83,32 +117,56 @@ if ($selectedRoleId) {
     }
 }
 
-// Handle privilege updates
+/**
+ * Handle Privilege Updates
+ *
+ * Updates the privileges for the selected role based on form submission.
+ *
+ * @return void
+ */
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_privileges'])) {
     try {
         foreach ($_POST['privileges'] as $moduleID => $privileges) {
             // Remove existing privileges for this role & module
-            $deleteStmt = $pdo->prepare("
-                DELETE FROM role_module_privileges 
-                WHERE Role_ID = ? 
-                AND Privilege_ID IN (SELECT Privilege_ID FROM privileges WHERE Module_ID = ?)
-            ");
+            /**
+             * Remove Existing Privileges
+             *
+             * Deletes existing privileges for a specific module and role before adding new ones.
+             *
+             * @param string $selectedRoleId The ID of the role to update.
+             * @param string $moduleID The ID of the module to update privileges for.
+             * @return void
+             */
+            $deleteStmt = $pdo->prepare("DELETE FROM role_module_privileges WHERE Role_ID = ? AND Privilege_ID IN (SELECT Privilege_ID FROM privileges WHERE Module_ID = ?)");
             $deleteStmt->execute([$selectedRoleId, $moduleID]);
 
             // Insert selected privileges
             foreach ($privileges as $privilegeName) {
-                $privilegeStmt = $pdo->prepare("
-                    SELECT id FROM privileges WHERE priv_name = ? AND id = ?
-                ");
+                /**
+                 * Fetch Privilege ID
+                 *
+                 * Retrieves the ID of a privilege based on its name and module.
+                 *
+                 * @param string $privilegeName The name of the privilege.
+                 * @param string $moduleID The ID of the module.
+                 * @return array|null The privilege details if found, null otherwise.
+                 */
+                $privilegeStmt = $pdo->prepare("SELECT id FROM privileges WHERE priv_name = ? AND id = ?");
                 $privilegeStmt->execute([$privilegeName, $moduleID]);
                 $privilege = $privilegeStmt->fetch(PDO::FETCH_ASSOC);
                 if (!$privilege) continue;
 
                 // Insert new privilege
-                $insertStmt = $pdo->prepare("
-                    INSERT INTO role_module_privileges (Role_ID, Privilege_ID) 
-                    VALUES (?, ?)
-                ");
+                /**
+                 * Insert New Privilege
+                 *
+                 * Adds a new privilege to the role for the specified module.
+                 *
+                 * @param string $selectedRoleId The ID of the role.
+                 * @param string $privilegeID The ID of the privilege to add.
+                 * @return void
+                 */
+                $insertStmt = $pdo->prepare("INSERT INTO role_module_privileges (Role_ID, Privilege_ID) VALUES (?, ?)");
                 $insertStmt->execute([$selectedRoleId, $privilege['Privilege_ID']]);
             }
         }
@@ -118,24 +176,41 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_privileges'])) 
     }
 }
 
-//add module
+/**
+ * Add Module to Role
+ *
+ * Assigns a new module to the selected role with default privileges.
+ *
+ * @return void
+ */
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['assign_module'])) {
     $roleId = $_POST['role_id'];
     $moduleId = $_POST['module_id'];
     echo($roleId . " trying to add module " . $moduleId);
     try {
-        $checkStmt = $pdo->prepare("
-            SELECT * FROM role_module_privileges 
-            WHERE Role_ID = ? 
-            AND Privilege_ID IN (SELECT Privilege_ID FROM privileges WHERE Module_ID = ?)
-        ");
+        /**
+         * Check Existing Assignment
+         *
+         * Verifies if the module is already assigned to the role.
+         *
+         * @param string $roleId The ID of the role.
+         * @param string $moduleId The ID of the module.
+         * @return int The number of existing assignments.
+         */
+        $checkStmt = $pdo->prepare("SELECT * FROM role_module_privileges WHERE Role_ID = ? AND Privilege_ID IN (SELECT Privilege_ID FROM privileges WHERE Module_ID = ?)");
         $checkStmt->execute([$roleId, $moduleId]);
 
         if ($checkStmt->rowCount() == 0) {
-            $insertStmt = $pdo->prepare("
-                INSERT INTO role_module_privileges (Role_ID, Privilege_ID) 
-                SELECT ?, id FROM privileges WHERE id = ?
-            ");
+            /**
+             * Assign Module to Role
+             *
+             * Assigns the module to the role by inserting default privileges.
+             *
+             * @param string $roleId The ID of the role.
+             * @param string $moduleId The ID of the module.
+             * @return void
+             */
+            $insertStmt = $pdo->prepare("INSERT INTO role_module_privileges (Role_ID, Privilege_ID) SELECT ?, id FROM privileges WHERE id = ?");
             $insertStmt->execute([$roleId, $moduleId]);
             echo("Module successfully assigned!");
         } 

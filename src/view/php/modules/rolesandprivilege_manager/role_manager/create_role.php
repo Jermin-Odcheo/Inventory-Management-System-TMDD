@@ -1,8 +1,21 @@
 <?php
+/**
+ * Create Role Script
+ *
+ * This script handles the creation of new roles and the management of their privileges across different modules.
+ * It fetches existing roles and their associated modules and privileges for display and updating.
+ *
+ */
 session_start();
 require_once('../../../../../../config/ims-tmdd.php');// Database connection
 
-// Fetch roles grouped by module with privileges
+/**
+ * Fetch Roles and Privileges
+ *
+ * Retrieves roles grouped by module with their associated privileges from the database for display.
+ *
+ * @return array The organized data of roles and their associated modules and privileges.
+ */
 try {
     $stmt = $pdo->prepare("
     SELECT 
@@ -53,12 +66,27 @@ foreach ($getData as $row) {
 }
 
 
-//Process privilege updates
+/**
+ * Process Privilege Updates
+ *
+ * Updates the privileges for roles based on form submission. Deletes old privileges and inserts new ones.
+ *
+ * @return void
+ */
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update'])) {
     try {
         foreach ($_POST['privileges'] as $roleID => $modulesData) {
             foreach ($modulesData as $moduleID => $privileges) {
                 // Delete old privileges for this role & module
+                /**
+                 * Delete Old Privileges
+                 *
+                 * Removes existing privileges for a specific role and module before adding new ones.
+                 *
+                 * @param int $roleID The ID of the role to update.
+                 * @param int $moduleID The ID of the module to update privileges for.
+                 * @return void
+                 */
                 $deleteStmt = $pdo->prepare("
                     DELETE FROM role_module_privileges 
                     WHERE Role_ID = ? 
@@ -68,6 +96,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update'])) {
 
                 // Insert new privileges
                 foreach ($privileges as $privilegeName) {
+                    /**
+                     * Fetch Privilege ID
+                     *
+                     * Retrieves the ID of a privilege by its name and associated module.
+                     *
+                     * @param string $privilegeName The name of the privilege to fetch.
+                     * @param int $moduleID The ID of the module associated with the privilege.
+                     * @return int|null The ID of the privilege if found, null otherwise.
+                     */
                     $privilegeStmt = $pdo->prepare("
                         SELECT id FROM privileges WHERE priv_name = ? AND id = ?
                     ");
@@ -76,6 +113,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update'])) {
                     if (!$privilege) continue;
 
                     // Insert new privilege
+                    /**
+                     * Insert New Privilege
+                     *
+                     * Adds a new privilege association for a role in the database.
+                     *
+                     * @param int $roleID The ID of the role to add the privilege to.
+                     * @param int $privilegeID The ID of the privilege to add.
+                     * @return void
+                     */
                     $insertStmt = $pdo->prepare("
                         INSERT INTO role_module_privileges (Role_ID, Privilege_ID) 
                         VALUES (?, ?)
@@ -90,7 +136,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update'])) {
     }
 }
 
-//Add role
+/**
+ * Add New Role
+ *
+ * Processes the form submission to add a new role to the database.
+ *
+ * @return void
+ */
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (!empty($_POST['rolename'])) {
         $moduleName = trim($_POST['rolename']); // Sanitize input
