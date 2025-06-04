@@ -1,7 +1,10 @@
 <?php
 /**
  * @file restore_equipment_status.php
- * @brief Handles the restoration of soft-deleted equipment status records.
+ * @brief Equipment Status Restoration Management
+ * 
+ * This script handles the restoration of soft-deleted equipment status records. It includes session validation,
+ * role-based access control (RBAC) checks, and processes requests to restore equipment status entries from the database.
  *
  * This script processes POST requests to restore one or more equipment status records
  * (by setting `is_disabled` to 0). It also cascades the restoration to related

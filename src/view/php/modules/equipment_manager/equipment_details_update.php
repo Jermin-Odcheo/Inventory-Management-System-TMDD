@@ -1,19 +1,38 @@
 <?php
+/**
+ * @file equipment_details_update.php
+ * @brief Equipment Details Update Management
+ * 
+ * This script handles AJAX requests to update equipment details records based on changes from equipment location.
+ * It includes session validation, RBAC privilege checks, and database transactions to ensure data integrity while updating records.
+ */
 session_start();
 date_default_timezone_set('Asia/Manila');
 require_once('../../../../../config/ims-tmdd.php'); // Adjust path as needed
 
-// Check if this is an AJAX request
+/**
+ * Detects if the request is an AJAX request.
+ * @var bool
+ */
 $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
     strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
 
+/**
+ * AJAX Request Validation
+ * 
+ * Ensures that the request is an AJAX request; otherwise, denies access with an error message.
+ */
 if (!$isAjax) {
     http_response_code(403);
     echo json_encode(['status' => 'error', 'message' => 'Direct access not allowed']);
     exit;
 }
 
-// Ensure user is logged in
+/**
+ * Session Validation
+ * 
+ * Checks if the user is logged in by validating the session variable. If not, returns an unauthorized access error.
+ */
 $userId = $_SESSION['user_id'] ?? null;
 if (!$userId) {
     http_response_code(401);
@@ -21,7 +40,11 @@ if (!$userId) {
     exit;
 }
 
-// Initialize RBAC & enforce "Modify" privilege
+/**
+ * RBAC Privilege Check
+ * 
+ * Initializes the RBAC service and ensures the user has the 'Modify' privilege for equipment management.
+ */
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
 if (!$rbac->hasPrivilege('Equipment Management', 'Modify')) {
     http_response_code(403);
@@ -29,11 +52,27 @@ if (!$rbac->hasPrivilege('Equipment Management', 'Modify')) {
     exit;
 }
 
-// Check if action and required parameters are provided
+/**
+ * Request Action Validation
+ * 
+ * Validates that the request method is POST and the action is 'update_from_location' with required parameters.
+ */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_from_location') {
     // Get parameters
+    /**
+     * Asset tag from POST request, trimmed for consistency.
+     * @var string
+     */
     $assetTag = trim($_POST['asset_tag'] ?? '');
+    /**
+     * Location from POST request, trimmed for consistency.
+     * @var string
+     */
     $location = trim($_POST['location'] ?? '');
+    /**
+     * Accountable individual from POST request, trimmed for consistency.
+     * @var string
+     */
     $accountableIndividual = trim($_POST['accountable_individual'] ?? '');
     
     // Validate required parameters

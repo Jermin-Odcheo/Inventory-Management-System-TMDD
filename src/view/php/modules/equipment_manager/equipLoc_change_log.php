@@ -1,14 +1,32 @@
 <?php
+/**
+ * @file equipLoc_change_log.php
+ * @brief Equipment Location Change Log Management
+ * 
+ * This script manages the display and filtering of equipment location change logs. It handles user session validation,
+ * role-based access control (RBAC) checks, fetches audit logs from the database, and renders a table with client-side
+ * filtering and pagination options for building location, floor, specific area, device state, and date ranges.
+ */
 session_start();
 require '../../../../../config/ims-tmdd.php';
 include '../../general/header.php';
 include '../../general/sidebar.php';
 
+/**
+ * Session Validation
+ * 
+ * Validates if a user is logged in by checking the session variable. If not, redirects to the login page.
+ */
 if (!isset($_SESSION['user_id'])) {
     header("Location: " . BASE_URL . "index.php");
     exit();
 }
 
+/**
+ * RBAC Privilege Check
+ * 
+ * Initializes the RBAC service and ensures the user has the 'View' privilege for equipment management.
+ */
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
 if (!$rbac->hasPrivilege('Equipment Management', 'View')) {
     echo '
@@ -21,6 +39,10 @@ if (!$rbac->hasPrivilege('Equipment Management', 'View')) {
     exit();
 }
 
+/**
+ * Fields to Display in Table
+ * @var array
+ */
 $fieldsToShow = [
     'asset_tag' => 'Asset Tag',
     'building_loc' => 'Building Location',
@@ -31,7 +53,16 @@ $fieldsToShow = [
     'remarks' => 'Remarks'
 ];
 
-// Prepare dropdown filter values
+/**
+ * Filter Preparation and Population
+ * 
+ * Prepares arrays for dropdown filter values by querying the database for unique values from audit logs
+ * related to equipment location changes. This allows users to filter logs by specific attributes.
+ */
+/**
+ * Filter Values for Dropdowns
+ * @var array
+ */
 $filterValues = [
     'building_loc' => [],
     'floor_n' => [],
@@ -39,7 +70,12 @@ $filterValues = [
     'device_state' => []
 ];
 
-// Arrays to track lowercase values to avoid duplicates with different cases
+/**
+ * Case-Insensitive Tracker for Filter Values
+ * 
+ * Tracks lowercase values to avoid duplicates with different cases in filter dropdowns.
+ * @var array
+ */
 $caseInsensitiveTracker = [
     'building_loc' => [],
     'floor_n' => [],
@@ -72,11 +108,18 @@ while ($row = $filterStmt->fetch(PDO::FETCH_ASSOC)) {
     }
 }
 
-// Fetch all audit logs for client-side filtering and pagination
-// The PHP will fetch all relevant data, and JavaScript will handle display.
+/**
+ * Fetch Audit Logs
+ * 
+ * Retrieves all relevant audit logs for equipment location changes from the database for client-side filtering and pagination.
+ */
 $sql = "SELECT * FROM audit_log WHERE Module = 'Equipment Location' AND Status = 'Successful' AND Action IN ('modified', 'create') ORDER BY TrackID DESC";
 $stmt = $pdo->prepare($sql);
 $stmt->execute();
+/**
+ * Array of audit log entries fetched from the database.
+ * @var array
+ */
 $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 ?>

@@ -1,9 +1,23 @@
 <?php
+/**
+ * @file equipStat_change_log.php
+ * @brief Equipment Status Change Log Management
+ * 
+ * This script handles the display and filtering of equipment status change logs. It handles user session validation,
+ * role-based access control (RBAC) checks, builds dynamic SQL queries based on user input filters, and renders
+ * a table of audit logs with various filtering options for status, date ranges, and search keywords.
+ */
 session_start();
 require '../../../../../config/ims-tmdd.php';
 include '../../general/header.php';
 include '../../general/sidebar.php';
 
+/**
+ * Session Validation and Access Control
+ * 
+ * Validates if a user is logged in by checking the session variable. If not, redirects to the login page.
+ * Implements RBAC to ensure the user has the necessary privilege to view the equipment management page.
+ */
 if (!isset($_SESSION['user_id'])) {
     header("Location: " . BASE_URL . "index.php");
     exit();
@@ -21,6 +35,10 @@ if (!$rbac->hasPrivilege('Equipment Management', 'View')) {
     exit();
 }
 
+/**
+ * Fields to Display in Table
+ * @var array
+ */
 $fieldsToShow = [
     'asset_tag' => 'Asset Tag',
     'status' => 'Status',
@@ -28,7 +46,16 @@ $fieldsToShow = [
     'remarks' => 'Remarks'
 ];
 
-// Prepare dropdown filter values
+/**
+ * Filter Preparation and Population
+ * 
+ * Prepares arrays for dropdown filter values by querying the database for unique values from audit logs
+ * related to equipment status changes. This allows users to filter logs by specific statuses.
+ */
+/**
+ * Filter Values for Dropdowns
+ * @var array
+ */
 $filterValues = [
     'status' =>  [],
 ];
@@ -44,7 +71,18 @@ while ($row = $filterStmt->fetch(PDO::FETCH_ASSOC)) {
         }
     }
 }
+
+/**
+ * Filter Application and Query Building
+ * 
+ * Retrieves filter parameters from GET requests and builds SQL query conditions dynamically based on user input.
+ * Handles different date filter types (e.g., specific date range, month range, year range) and search keywords.
+ */
 // Get filters
+/**
+ * Applied Filters from GET Parameters
+ * @var array
+ */
 $filters = [
     'status' =>  $_GET['status' ] ?? '',
     'search' => $_GET['search'] ?? '',
@@ -52,6 +90,10 @@ $filters = [
 ];
 
 // Base conditions
+/**
+ * SQL WHERE Conditions for Query Building
+ * @var array
+ */
 $conditions = [
     "audit_log.Module = 'Equipment Status'",
     "audit_log.Status = 'Successful'",
@@ -75,6 +117,10 @@ if (!empty($filters['search'])) {
 }
 
 // Add date filters based on filter type
+/**
+ * Parameters for SQL Query Binding
+ * @var array
+ */
 $params = [];
 switch ($filters['date_filter_type']) {
     case 'mdy':
@@ -144,6 +190,10 @@ foreach ($params as $param => $value) {
 }
 
 $stmt->execute();
+/**
+ * Audit Log Entries Fetched from Database
+ * @var array
+ */
 $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 ?>

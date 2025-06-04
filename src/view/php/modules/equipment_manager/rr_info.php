@@ -1,9 +1,23 @@
 <?php
+/**
+ * @file rr_info.php
+ * @brief Handles the retrieval of receiving report (RR) information.
+ *
+ * This script processes POST requests to retrieve information about a receiving report
+ * based on the provided RR number. It includes checks for user authentication,
+ * AJAX request validation, and database queries to fetch relevant data.
+**/
 session_start();
 date_default_timezone_set('Asia/Manila');
 require_once('../../../../../config/ims-tmdd.php'); // Adjust path as needed
 
-// Check if this is an AJAX request
+/**
+ * @var bool $isAjax
+ * @brief Determines if the request is an AJAX request.
+ *
+ * This variable checks if the request includes the HTTP_X_REQUESTED_WITH header
+ * with a value of 'xmlhttprequest' to ensure that direct access is not allowed.
+ */
 $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
     strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
 
@@ -13,7 +27,13 @@ if (!$isAjax) {
     exit;
 }
 
-// Ensure user is logged in
+/**
+ * @var int|null $userId
+ * @brief Stores the user ID from the session.
+ *
+ * This variable holds the user ID retrieved from the session to verify if the user
+ * is logged in before processing the request.
+ */
 $userId = $_SESSION['user_id'] ?? null;
 if (!$userId) {
     http_response_code(401);
@@ -23,17 +43,34 @@ if (!$userId) {
 
 // Check if action and rr_no are provided
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'get_rr_info' && isset($_POST['rr_no'])) {
+    /**
+     * @var string $rrNo
+     * @brief Stores the receiving report number provided in the POST request.
+     *
+     * This variable holds the RR number after trimming any whitespace for consistent querying.
+     */
     $rrNo = trim($_POST['rr_no']);
     
     // Remove 'RR' prefix if present for consistent querying
     if (strpos($rrNo, 'RR') === 0) {
+        /**
+         * @var string $rrNoForQuery
+         * @brief Stores the RR number without the 'RR' prefix for database queries.
+         *
+         * This variable is used to ensure consistent querying by removing the 'RR' prefix if present.
+         */
         $rrNoForQuery = substr($rrNo, 2);
     } else {
         $rrNoForQuery = $rrNo;
         $rrNo = 'RR' . $rrNo; // Add prefix for response
     }
     
-    // Initialize response
+    /**
+     * @var array $response
+     * @brief Stores the response data to be returned as JSON.
+     *
+     * This array contains the status, message, and data related to the RR information request.
+     */
     $response = [
         'status' => 'error',
         'message' => 'No data found for the RR number',

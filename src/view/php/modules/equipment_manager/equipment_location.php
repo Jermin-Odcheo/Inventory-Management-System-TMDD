@@ -1,13 +1,28 @@
 <?php
+/**
+ * @file equipment_location.php
+ * @brief Equipment Location Management
+ * 
+ * This script manages the display, creation, updating, and deletion of equipment locations. It handles user session validation,
+ * role-based access control (RBAC) checks, processes AJAX requests for CRUD operations, builds dynamic queries for filtering,
+ * and renders a table of equipment locations with various filtering and pagination options.
+ */
 require_once '../../../../../config/ims-tmdd.php';
-require_once '../../../../control/RBACService.php'; // adjust path as needed
+require_once '../../../../control/RBACService.php';
 session_start();
 
-// detect AJAX
+/**
+ * Detects if the request is an AJAX request.
+ * @var bool
+ */
 $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH'])
     && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 
-// 1) Auth guard (always run, AJAX or not)
+/**
+ * Authentication and Session Validation
+ * 
+ * Validates if a user is logged in by checking the session variable. If not, redirects to the login page or returns an error for AJAX requests.
+ */
 $userId = $_SESSION['user_id'] ?? null;
 if (!is_int($userId) && !ctype_digit((string)$userId)) {
     if ($isAjax) {
@@ -21,19 +36,39 @@ if (!is_int($userId) && !ctype_digit((string)$userId)) {
 }
 $userId = (int)$userId;
 
-// 2) Init RBAC & enforce "View"
+/**
+ * RBAC Initialization and Privilege Check
+ * 
+ * Initializes the RBAC service and enforces the 'View' privilege for equipment management.
+ */
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
 $rbac->requirePrivilege('Equipment Management', 'View');
 
-// 3) Button flags
+/**
+ * Permission Flags for UI Controls
+ * @var bool
+ */
 $canCreate = $rbac->hasPrivilege('Equipment Management', 'Create');
+/**
+ * Permission Flag for Modify Action
+ * @var bool
+ */
 $canModify = $rbac->hasPrivilege('Equipment Management', 'Modify');
+/**
+ * Permission Flag for Delete Action
+ * @var bool
+ */
 $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
 
 // ------------------------
 // AJAX Handling Section
 // ------------------------
 
+/**
+ * AJAX Request Handling for CRUD Operations
+ * 
+ * Processes AJAX POST and GET requests for adding, updating, and deleting equipment locations. Returns JSON responses.
+ */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAjax) {
     // discard any buffered HTML
     ob_end_clean();
@@ -541,7 +576,11 @@ if (
     exit;
 }
 
-// Only include HTML templates for non-AJAX requests
+/**
+ * HTML Template Inclusion
+ * 
+ * Includes HTML templates for header, sidebar, and footer for non-AJAX requests.
+ */
 include '../../general/header.php';
 include '../../general/sidebar.php';
 include '../../general/footer.php';
@@ -550,7 +589,20 @@ include '../../general/footer.php';
 // Normal (non-AJAX) Page Logic
 // ------------------------
 
+/**
+ * Error and Success Message Handling
+ * 
+ * Retrieves and clears error or success messages from the session for display on the page.
+ */
+/**
+ * Array of error messages.
+ * @var array
+ */
 $errors = [];
+/**
+ * Success message string.
+ * @var string
+ */
 $success = '';
 if (isset($_SESSION['success'])) {
     $success = $_SESSION['success'];
@@ -561,7 +613,15 @@ if (isset($_SESSION['errors'])) {
     unset($_SESSION['errors']);
 }
 
-// Live search
+/**
+ * Live Search Functionality
+ * 
+ * Handles live search queries via GET requests and returns matching equipment location results.
+ */
+/**
+ * Search query parameter from GET request.
+ * @var string
+ */
 $q = $_GET['q'] ?? '';
 if (strlen($q) > 0) {
     $stmt = $pdo->prepare("
@@ -592,21 +652,31 @@ if (strlen($q) > 0) {
     exit;
 }
 
-// Fetch all equipment locations
+/**
+ * Fetch Equipment Locations
+ * 
+ * Retrieves all active equipment locations from the database for display in the table.
+ */
 try {
-    $stmt = $pdo->query("
-        SELECT el.*, d.department_name
-        FROM equipment_location el
-        LEFT JOIN departments d ON el.department_id = d.id
-        WHERE el.is_disabled = 0
-        ORDER BY el.date_created DESC
-    ");
+    $stmt = $pdo->query("SELECT el.*, d.department_name FROM equipment_location el LEFT JOIN departments d ON el.department_id = d.id WHERE el.is_disabled = 0 ORDER BY el.date_created DESC");
+    /**
+     * Array of equipment location records fetched from the database.
+     * @var array
+     */
     $equipmentLocations = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     $errors[] = "Error retrieving Equipment Locations: " . $e->getMessage();
 }
 
-// Prepare filter values
+/**
+ * Filter Values Preparation
+ * 
+ * Prepares arrays of unique values for dropdown filters based on equipment location data.
+ */
+/**
+ * Associative array of filter options for dropdowns.
+ * @var array
+ */
 $filterValues = [
     'building_loc' => [],
     'floor_no' => [],
@@ -614,7 +684,12 @@ $filterValues = [
     'device_state' => []
 ];
 
-// Arrays to track lowercase values to avoid duplicates with different cases
+/**
+ * Case-Insensitive Tracker for Filter Values
+ * 
+ * Tracks lowercase values to avoid duplicates with different cases in filter dropdowns.
+ * @var array
+ */
 $caseInsensitiveTracker = [
     'building_loc' => [],
     'floor_no' => [],
@@ -649,11 +724,17 @@ foreach ($filterValues as &$arr) {
     sort($arr);
 }
 
+/**
+ * Utility Function for HTML Escaping
+ * 
+ * Escapes HTML content to prevent XSS attacks when displaying data.
+ * @param string $value The value to escape
+ * @return string The escaped HTML content
+ */
 function safeHtml($value)
 {
     return htmlspecialchars($value ?? 'N/A');
 }
-
 
 ?>
 <!DOCTYPE html>

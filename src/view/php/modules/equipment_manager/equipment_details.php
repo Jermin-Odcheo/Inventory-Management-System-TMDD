@@ -1,12 +1,25 @@
 <?php
+/**
+ * @file equipment_details.php
+ * @brief Equipment Details Management
+ * 
+ * This script manages the display, creation, updating, and deletion of equipment details. It handles user session validation,
+ * role-based access control (RBAC) checks, processes AJAX requests for CRUD operations, and renders a table of equipment details
+ * with filtering, sorting, and pagination options.
+ */
 session_start();
 date_default_timezone_set('Asia/Manila');
 ob_start();
-require_once('../../../../../config/ims-tmdd.php'); // Adjust path as needed
+require_once('../../../../../config/ims-tmdd.php');
 
 // -------------------------
 // Auth and RBAC Setup
 // -------------------------
+/**
+ * Session Validation
+ * 
+ * Validates if a user is logged in by checking the session variable. If not, redirects to the login page.
+ */
 $userId = $_SESSION['user_id'] ?? null;
 if (!is_int($userId) && !ctype_digit((string)$userId)) {
     header('Location: ' . BASE_URL . 'index.php');
@@ -14,21 +27,45 @@ if (!is_int($userId) && !ctype_digit((string)$userId)) {
 }
 $userId = (int)$userId;
 
-// Initialize RBAC & enforce "View" privilege
+/**
+ * RBAC Initialization and Privilege Check
+ * 
+ * Initializes the RBAC service and enforces the 'View' privilege for equipment management.
+ */
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
 $rbac->requirePrivilege('Equipment Management', 'View');
 
-// Set button flags based on privileges
+/**
+ * Permission Flags for UI Controls
+ * @var bool
+ */
 $canCreate = $rbac->hasPrivilege('Equipment Management', 'Create');
+/**
+ * Permission Flag for Modify Action
+ * @var bool
+ */
 $canModify = $rbac->hasPrivilege('Equipment Management', 'Modify');
+/**
+ * Permission Flag for Delete Action
+ * @var bool
+ */
 $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
 
 // -------------------------
 // AJAX Request Handling
 // -------------------------
+/**
+ * Detects if the request is an AJAX request.
+ * @var bool
+ */
 $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
     strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 
+/**
+ * AJAX Request Processing
+ * 
+ * Handles AJAX POST requests for various actions like fetching details, searching, creating, updating, and deleting equipment records.
+ */
 if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     // Return JSON for any AJAX call
     header('Content-Type: application/json');
@@ -597,35 +634,56 @@ WHERE ed.is_disabled = 0 AND (
 // -------------------------
 // Non-AJAX: Page Setup
 // -------------------------
+/**
+ * Error and Success Message Handling
+ * 
+ * Retrieves and clears error or success messages from the session for display on the page.
+ */
 $errors  = $_SESSION['errors']  ?? [];
 $success = $_SESSION['success'] ?? '';
 unset($_SESSION['errors'], $_SESSION['success']);
 
-// Check if equipment details have been updated from equipment_location.php
+/**
+ * Force Refresh Check
+ * 
+ * Checks if equipment details have been updated from another script to force a page refresh.
+ * @var bool
+ */
 $forceRefresh = false;
 if (isset($_SESSION['equipment_details_updated']) && $_SESSION['equipment_details_updated'] === true) {
     $forceRefresh = true;
+    /**
+     * Updated asset tag from session, if available.
+     * @var string
+     */
     $updatedAssetTag = $_SESSION['updated_asset_tag'] ?? '';
     unset($_SESSION['equipment_details_updated'], $_SESSION['updated_asset_tag']);
     $success = 'Equipment details updated successfully from location changes.';
 }
 
+/**
+ * Fetch Equipment Details
+ * 
+ * Retrieves all active equipment details from the database for display in the table.
+ */
 try {
-    // Base query to list all active equipment details
-    $stmt = $pdo->query("SELECT ed.id, ed.asset_tag, ed.asset_description_1, ed.asset_description_2,
-                         ed.specifications, ed.brand, ed.model, ed.serial_number, ed.date_acquired, ed.location, 
-                         ed.accountable_individual, 
-                         CASE WHEN rr.is_disabled = 1 OR rr.rr_no IS NULL THEN NULL ELSE ed.rr_no END AS rr_no,
-                         ed.remarks, ed.date_created, ed.date_modified 
-                         FROM equipment_details ed
-                         LEFT JOIN receive_report rr ON ed.rr_no = rr.rr_no
-                         WHERE ed.is_disabled = 0 
-                         ORDER BY ed.id DESC");
+    $stmt = $pdo->query("SELECT ed.id, ed.asset_tag, ed.asset_description_1, ed.asset_description_2, ed.specifications, ed.brand, ed.model, ed.serial_number, ed.date_acquired, ed.location, ed.accountable_individual, CASE WHEN rr.is_disabled = 1 OR rr.rr_no IS NULL THEN NULL ELSE ed.rr_no END AS rr_no, ed.remarks, ed.date_created, ed.date_modified FROM equipment_details ed LEFT JOIN receive_report rr ON ed.rr_no = rr.rr_no WHERE ed.is_disabled = 0 ORDER BY ed.id DESC");
+    /**
+     * Array of equipment detail records fetched from the database.
+     * @var array
+     */
     $equipmentDetails = $stmt->fetchAll();
 } catch (PDOException $e) {
     $errors[] = "Error retrieving Equipment Details: " . $e->getMessage();
 }
 
+/**
+ * Utility Function for HTML Escaping
+ * 
+ * Escapes HTML content to prevent XSS attacks when displaying data.
+ * @param string $value The value to escape
+ * @return string The escaped HTML content
+ */
 function safeHtml($value)
 {
     return htmlspecialchars($value ?? '');
