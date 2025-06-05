@@ -127,32 +127,62 @@ if (!empty($_GET['search'])) {
  * @var string $baseWhere The base SQL WHERE clause.
  * @var array $params The parameters for the SQL query.
  */
+// Server-side validation for date filters to prevent "from" being greater than "to"
+$dateValidationError = false;
+
 if ($dateFilterType === 'mdy') {
-    if (!empty($_GET['date_from'])) {
-        $baseWhere .= " AND DATE(a.Date_Time) >= :date_from";
-        $params[':date_from'] = $_GET['date_from'];
-    }
-    if (!empty($_GET['date_to'])) {
-        $baseWhere .= " AND DATE(a.Date_Time) <= :date_to";
-        $params[':date_to'] = $_GET['date_to'];
+    $fromDate = $_GET['date_from'] ?? null;
+    $toDate = $_GET['date_to'] ?? null;
+    
+    if (!empty($fromDate) && !empty($toDate) && strtotime($fromDate) > strtotime($toDate)) {
+        $dateValidationError = true;
+        // Reset these parameters to prevent invalid filtering
+        unset($_GET['date_from'], $_GET['date_to']);
+    } else {
+        if (!empty($fromDate)) {
+            $baseWhere .= " AND DATE(a.Date_Time) >= :date_from";
+            $params[':date_from'] = $fromDate;
+        }
+        if (!empty($toDate)) {
+            $baseWhere .= " AND DATE(a.Date_Time) <= :date_to";
+            $params[':date_to'] = $toDate;
+        }
     }
 } else if ($dateFilterType === 'month_year') {
-    if (!empty($_GET['month_year_from'])) {
-        $baseWhere .= " AND a.Date_Time >= STR_TO_DATE(:month_year_from, '%Y-%m')";
-        $params[':month_year_from'] = $_GET['month_year_from'];
-    }
-    if (!empty($_GET['month_year_to'])) {
-        $baseWhere .= " AND a.Date_Time < DATE_ADD(STR_TO_DATE(:month_year_to, '%Y-%m'), INTERVAL 1 MONTH)";
-        $params[':month_year_to'] = $_GET['month_year_to'];
+    $fromMonthYear = $_GET['month_year_from'] ?? null;
+    $toMonthYear = $_GET['month_year_to'] ?? null;
+    
+    if (!empty($fromMonthYear) && !empty($toMonthYear) && $fromMonthYear > $toMonthYear) {
+        $dateValidationError = true;
+        // Reset these parameters to prevent invalid filtering
+        unset($_GET['month_year_from'], $_GET['month_year_to']);
+    } else {
+        if (!empty($fromMonthYear)) {
+            $baseWhere .= " AND a.Date_Time >= STR_TO_DATE(:month_year_from, '%Y-%m')";
+            $params[':month_year_from'] = $fromMonthYear;
+        }
+        if (!empty($toMonthYear)) {
+            $baseWhere .= " AND a.Date_Time < DATE_ADD(STR_TO_DATE(:month_year_to, '%Y-%m'), INTERVAL 1 MONTH)";
+            $params[':month_year_to'] = $toMonthYear;
+        }
     }
 } else if ($dateFilterType === 'year') {
-    if (!empty($_GET['year_from'])) {
-        $baseWhere .= " AND YEAR(a.Date_Time) >= :year_from";
-        $params[':year_from'] = $_GET['year_from'];
-    }
-    if (!empty($_GET['year_to'])) {
-        $baseWhere .= " AND YEAR(a.Date_Time) <= :year_to";
-        $params[':year_to'] = $_GET['year_to'];
+    $fromYear = isset($_GET['year_from']) ? (int)$_GET['year_from'] : null;
+    $toYear = isset($_GET['year_to']) ? (int)$_GET['year_to'] : null;
+    
+    if ($fromYear && $toYear && $fromYear > $toYear) {
+        $dateValidationError = true;
+        // Reset these parameters to prevent invalid filtering
+        unset($_GET['year_from'], $_GET['year_to']);
+    } else {
+        if ($fromYear) {
+            $baseWhere .= " AND YEAR(a.Date_Time) >= :year_from";
+            $params[':year_from'] = $fromYear;
+        }
+        if ($toYear) {
+            $baseWhere .= " AND YEAR(a.Date_Time) <= :year_to";
+            $params[':year_to'] = $toYear;
+        }
     }
 }
 
@@ -411,6 +441,15 @@ function formatChanges($oldJsonStr)
 
                     <!-- Filter Section -->
                     <form method="GET" class="row g-3 mb-4" id="archiveFilterForm" action="">
+                        <?php if ($dateValidationError): ?>
+                        <div class="col-md-12">
+                            <div class="alert alert-danger" role="alert">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Invalid date range: "From" date cannot be greater than "To" date. Date filter has been reset.
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
                         <!-- Date Range selector -->
                         <div class="col-12 col-md-3">
                             <label class="form-label fw-semibold">Date Filter Type</label>
@@ -449,7 +488,7 @@ function formatChanges($oldJsonStr)
                             <input type="number" name="year_to" class="form-control shadow-sm"
                                 min="1900" max="2100"
                                 placeholder="e.g., 2025"
-                                value="<?= htmlspecialchars($_GET['year_from'] ?? '') ?>">
+                                value="<?= htmlspecialchars($_GET['year_to'] ?? '') ?>">
                         </div>
 
                         <!-- Month-Year Range -->
@@ -482,6 +521,8 @@ function formatChanges($oldJsonStr)
                                 <i class="fas fa-filter"></i> Filter
                             </button>
                         </div>
+                        
+                        <div id="date-filter-error" class="position-relative"></div>
 
                         <div class="col-6 col-md-2 d-grid">
                             <button type="button" id="clearFilters" class="btn btn-secondary shadow-sm">
@@ -836,6 +877,8 @@ function formatChanges($oldJsonStr)
 
             function updateDateFields() {
                 allDateFilters.forEach(field => field.classList.add('d-none'));
+                // Clear any error messages when changing filter type
+                document.getElementById('date-filter-error').innerHTML = '';
                 if (filterType.value) {
                     document.querySelectorAll('.date-' + filterType.value).forEach(field => field.classList.remove('d-none'));
                 }
@@ -846,10 +889,105 @@ function formatChanges($oldJsonStr)
                 updateDateFields(); // Initialize on page load
             }
 
-            // Filter form submission
+            // Filter form submission with client-side validation
             if (filterForm) {
                 filterForm.addEventListener('submit', function(e) {
                     e.preventDefault();
+                    
+                    // Validate date filters
+                    let isValid = true;
+                    let errorMessage = '';
+                    const selectedType = filterType.value;
+                    
+                    if (selectedType) {
+                        let fromDate, toDate;
+                        
+                        if (selectedType === 'mdy') {
+                            fromDate = document.querySelector('input[name="date_from"]').value;
+                            toDate = document.querySelector('input[name="date_to"]').value;
+                            
+                            // Check if dates are empty
+                            if (fromDate && !toDate) {
+                                isValid = false;
+                                errorMessage = 'Please select both From and To dates';
+                            } else if (!fromDate && toDate) {
+                                isValid = false;
+                                errorMessage = 'Please select both From and To dates';
+                            } else if (fromDate && toDate) {
+                                // Convert to Date objects for comparison
+                                const fromDateObj = new Date(fromDate);
+                                const toDateObj = new Date(toDate);
+                                
+                                // Check if from date is greater than to date
+                                if (fromDateObj > toDateObj) {
+                                    isValid = false;
+                                    errorMessage = 'From date cannot be greater than To date';
+                                }
+                            }
+                        } else if (selectedType === 'month_year') {
+                            fromDate = document.querySelector('input[name="month_year_from"]').value;
+                            toDate = document.querySelector('input[name="month_year_to"]').value;
+                            
+                            // Check if dates are empty
+                            if (fromDate && !toDate) {
+                                isValid = false;
+                                errorMessage = 'Please select both From and To month-year values';
+                            } else if (!fromDate && toDate) {
+                                isValid = false;
+                                errorMessage = 'Please select both From and To month-year values';
+                            } else if (fromDate && toDate) {
+                                // Compare the month-year values as strings (YYYY-MM format)
+                                if (fromDate > toDate) {
+                                    isValid = false;
+                                    errorMessage = 'From month-year cannot be greater than To month-year';
+                                }
+                            }
+                        } else if (selectedType === 'year') {
+                            fromDate = document.querySelector('input[name="year_from"]').value;
+                            toDate = document.querySelector('input[name="year_to"]').value;
+                            
+                            // Check if years are empty
+                            if (fromDate && !toDate) {
+                                isValid = false;
+                                errorMessage = 'Please select both From and To years';
+                            } else if (!fromDate && toDate) {
+                                isValid = false;
+                                errorMessage = 'Please select both From and To years';
+                            } else if (fromDate && toDate) {
+                                // Compare as integers
+                                const fromYear = parseInt(fromDate);
+                                const toYear = parseInt(toDate);
+                                
+                                if (fromYear > toYear) {
+                                    isValid = false;
+                                    errorMessage = 'From year cannot be greater than To year';
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Display validation error if any
+                    if (!isValid) {
+                        // Show the error message
+                        const dateContainer = document.getElementById('date-filter-error');
+                        dateContainer.innerHTML = '<div class="validation-tooltip" style="position: absolute; top: 100%; left: 50%; transform: translateX(-50%); background-color: #d9534f; color: white; padding: 6px 10px; border-radius: 4px; font-size: 0.85em; z-index: 1000; margin-top: 5px; white-space: nowrap; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">' + errorMessage + '<div style="position: absolute; top: -5px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 5px solid #d9534f;"></div></div>';
+                        
+                        // Auto hide after 3 seconds
+                        setTimeout(function() {
+                            const errorElement = document.querySelector('#date-filter-error .validation-tooltip');
+                            if (errorElement) {
+                                errorElement.style.transition = 'opacity 0.5s';
+                                errorElement.style.opacity = '0';
+                                setTimeout(() => {
+                                    document.getElementById('date-filter-error').innerHTML = '';
+                                }, 500);
+                            }
+                        }, 3000);
+                        
+                        return false;
+                    }
+                    
+                    // If validation passes, continue with form submission
                     const formData = new FormData(filterForm);
                     const params = new URLSearchParams(window.location.search);
 
