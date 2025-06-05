@@ -1,6 +1,7 @@
 <?php
 /**
- * Assign Modules Script
+ * @file assign_modules.php
+ * @brief handles the assignment of modules and privileges to roles
  *
  * This script handles the assignment of modules and privileges to roles. It allows users to select a role,
  * view and update its associated modules and privileges, and assign new modules to the role.

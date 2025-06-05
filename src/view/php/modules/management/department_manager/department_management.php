@@ -1,4 +1,13 @@
 <?php
+/**
+ * @file department_management.php
+ * @brief handles the management of departments within the system
+ *
+ * This script handles the management of departments within the system, including viewing, creating, modifying,
+ * and deleting departments. It implements Role-Based Access Control (RBAC) to enforce user privileges,
+ * provides filtering and pagination for department data, and manages the display of departments and their associated
+ * modules and privileges.
+ */
 // Start output buffering to prevent "headers already sent" errors.
 ob_start();
 session_start();
@@ -10,37 +19,65 @@ include '../../../general/sidebar.php';
 // Determine if this is an AJAX request.
 $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 
-// Optionally check for admin privileges
+/**
+ * Check if the user is logged in.
+ *
+ * @return void
+ */
 if (!isset($_SESSION['user_id'])) {
     header("Location: index.php");
     exit();
 }
 
-// Init RBAC & enforce "View" privilege
+/**
+ * Initialize RBAC and enforce "View" privilege.
+ *
+ * @return void
+ */
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
 $rbac->requirePrivilege('Management', 'View');
 
-// Button flags for RBAC controls
+/**
+ * Button flags for RBAC controls.
+ *
+ * @return void
+ */
 $canCreate = $rbac->hasPrivilege('Management', 'Create');
 $canModify = $rbac->hasPrivilege('Management', 'Modify');
 $canDelete = $rbac->hasPrivilege('Management', 'Remove');
 
-// Set the audit log session variables for MySQL triggers.
+/**
+ * Set the audit log session variables for MySQL triggers.
+ *
+ * @return void
+ */
 if (isset($_SESSION['user_id'])) {
     $pdo->exec("SET @current_user_id = " . (int)$_SESSION['user_id']);
 } else {
     $pdo->exec("SET @current_user_id = NULL");
 }
 
-// Set the IP address
+/**
+ * Set the IP address.
+ *
+ * @return void
+ */
 $ipAddress = $_SERVER['REMOTE_ADDR'];
 $pdo->exec("SET @current_ip = '" . $ipAddress . "'");
 
-// Initialize messages
+/**
+ * Initialize messages.
+ *
+ * @return void
+ */
 $errors = [];
 $success = "";
 
-// Retrieve any session messages from previous requests
+/**
+ * Retrieve any session messages from previous requests.
+ *
+ * @return void
+ */
 if (isset($_SESSION['errors'])) {
     $errors = $_SESSION['errors'];
     unset($_SESSION['errors']);
@@ -50,22 +87,34 @@ if (isset($_SESSION['success'])) {
     unset($_SESSION['success']);
 }
 
-// ------------------------
-// PROCESS FORM SUBMISSIONS (Create / Update)
-// ------------------------
+/**
+ * Process form submissions (Create / Update).
+ *
+ * @return void
+ */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($isAjax) {
         ob_clean();
         header('Content-Type: application/json');
     }
-
+    /**
+     * @var string $DepartmentName The name of the department.
+     * @var string $DepartmentAcronym The acronym of the department.
+     */
     $DepartmentName    = trim((string)($_POST['department_name']  ?? ''));
     $DepartmentAcronym = trim((string)($_POST['abbreviation']      ?? ''));
 
+    /**
+     * @var array $response The response array.
+     */
     $response = array('status' => '', 'message' => '');
 
     if (isset($_POST['action']) && $_POST['action'] === 'create') {
-        // RBAC: check "Create" privilege
+        /**
+         * RBAC: check "Create" privilege.
+         *
+         * @return void
+         */
         if (!$canCreate) {
             $response = [
                 'status'  => 'error',
@@ -75,7 +124,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        // Check only for required fields (Acronym and Name)
+        /**
+         * Check only for required fields (Acronym and Name).
+         *
+         * @return void
+         */
         if (empty($DepartmentAcronym) || empty($DepartmentName)) {
             $response['status'] = 'error';
             $response['message'] = 'Please fill in all required fields.';
@@ -84,7 +137,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         try {
-            // Check if an active department with the same name or acronym exists
+            /**
+             * Check if an active department with the same name or acronym exists.
+             *
+             * @return void
+             */
             $checkStmt = $pdo->prepare("
                 SELECT COUNT(*) 
                   FROM departments 
@@ -93,7 +150,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ");
             $checkStmt->execute([$DepartmentName, $DepartmentAcronym]);
             if ($checkStmt->fetchColumn() > 0) {
-                // Check which one caused the conflict
+                /**
+                 * Check which one caused the conflict.
+                 * @var PDOStatement $nameCheck The prepared statement to check if the department name exists.
+                 * @var PDOStatement $acronymCheck The prepared statement to check if the department acronym exists.
+                 * @return void
+                 */
                 $nameCheck = $pdo->prepare("SELECT COUNT(*) FROM departments WHERE department_name = ? AND is_disabled = 0");
                 $nameCheck->execute([$DepartmentName]);
                 $acronymCheck = $pdo->prepare("SELECT COUNT(*) FROM departments WHERE abbreviation = ? AND is_disabled = 0");
@@ -108,6 +170,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $pdo->beginTransaction();
 
+            /**
+             * Insert the new department.
+             *
+             * @var PDOStatement $insertDept The prepared statement to insert the new department.
+             */
             $insertDept = $pdo->prepare("
                 INSERT INTO departments 
                     (abbreviation, department_name, is_disabled) 
@@ -116,12 +183,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $insertDept->execute([$DepartmentAcronym, $DepartmentName]);
             $newDepartmentId = (int)$pdo->lastInsertId();
 
+            /**
+             * @var string $newValues The new values of the department.
+             */
             $newValues = json_encode([
                 'id'              => $newDepartmentId,
                 'abbreviation'    => $DepartmentAcronym,
                 'department_name' => $DepartmentName
             ]);
 
+            /**
+             * @var PDOStatement $auditStmt The prepared statement to insert the audit log.
+             */
             $auditStmt = $pdo->prepare("
                 INSERT INTO audit_log (
                     UserID, EntityID, Module, Action, 
@@ -169,6 +242,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
+        /**
+         * @var string $id The ID of the department.
+         * @var string $DepartmentAcronym The acronym of the department.
+         * @var string $DepartmentName The name of the department.
+         */
         $id = $_POST['id'];
         $DepartmentAcronym = trim($_POST['DepartmentAcronym']);
         $DepartmentName = trim($_POST['DepartmentName']);
@@ -276,9 +354,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// ------------------------
-// RETRIEVE ALL DEPARTMENTS
-// ------------------------
+/**
+ * Retrieve all departments.
+ *
+ * @return void
+ */
 try {
     $stmt = $pdo->query("SELECT * FROM departments WHERE is_disabled = 0 ORDER BY id DESC");
     $departments = $stmt->fetchAll();
@@ -286,27 +366,45 @@ try {
     $errors[] = "Error retrieving departments: " . $e->getMessage();
 }
 
-// ------------------------
-// LIVE SEARCH DEPARTMENTS
-// ------------------------
+/**
+ * Retrieve all departments.
+ *
+ * @return void
+ */
 if (isset($_GET["q"])) {
-    // This prevents any HTML output for search queries
+    /**
+     * This prevents any HTML output for search queries.
+     *
+     * @return void
+     */
     ob_clean();
 
     $q = isset($_GET["q"]) ? $conn->real_escape_string($_GET["q"]) : '';
 
-    // Only first 3 letters of the query
+    /**
+     * Only first 3 letters of the query.
+     *
+     * @return void
+     */
     $q = substr($q, 0, 3);
 
     if (strlen($q) > 0) {
+        /**
+         * @var string $sql The SQL query to retrieve the departments.
+         */
         $sql = "SELECT id, department_name, abbreviation FROM departments 
                 WHERE id LIKE '%$q%' 
                 OR department_name LIKE '%$q%' 
                 OR abbreviation LIKE '%$q%' 
                 LIMIT 10";
-
+        /**
+         * @var mysqli_result $result The result of the SQL query.
+         */
         $result = $conn->query($sql);
 
+        /**
+         * @var int $num_rows The number of rows in the result.
+         */
         if ($result->num_rows > 0) {
             while ($row = $result->fetch_assoc()) {
                 echo "<div class='result-item'>"

@@ -1,6 +1,7 @@
 <?php
 /**
- * Restore Department Script
+ * @file restore_department.php
+ * @brief handles the restoration of departments in the system
  *
  * This script handles the restoration of departments in the system. It supports both single and bulk restoration,
  * checks for user permissions, logs actions in the audit log, and returns JSON responses for AJAX requests.

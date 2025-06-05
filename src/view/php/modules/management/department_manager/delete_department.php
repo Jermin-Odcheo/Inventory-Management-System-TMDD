@@ -1,6 +1,7 @@
 <?php
 /**
- * Delete Department Script
+ * @file delete_department.php
+ * @brief handles the deletion of departments in the system
  *
  * This script handles the deletion of departments in the system. It supports both single and bulk deletion,
  * offers soft and permanent delete options, checks for user permissions, logs actions in the audit log,

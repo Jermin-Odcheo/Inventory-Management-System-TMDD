@@ -1,6 +1,7 @@
 <?php
 /**
- * Delete Role Script
+ * @file delete_role.php
+ * @brief handles the deletion of a role from the system
  *
  * This script handles the deletion of a role from the system. It performs a soft delete by marking the role as disabled,
  * logs the action in the audit log, and returns a JSON response indicating the success or failure of the operation.

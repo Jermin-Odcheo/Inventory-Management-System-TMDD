@@ -1,6 +1,7 @@
 <?php
 /**
- * Role Management Script
+ * @file manage_roles.php
+ * @brief handles the management of roles within the system
  *
  * This script handles the management of roles within the system, including viewing, creating, modifying,
  * and deleting roles. It implements Role-Based Access Control (RBAC) to enforce user privileges,

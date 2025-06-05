@@ -1,13 +1,11 @@
 <?php
 /**
- * Roles and Modules Management Script
+ * @file roles_list.php
+ * @brief handles the display and assignment of modules to roles within the system
  *
  * This script manages the display and assignment of modules to roles within the system.
  * It fetches roles and their associated modules from the database, displays them in a table,
  * and provides a modal interface for assigning or removing modules from specific roles.
- * The script handles database operations for fetching roles and modules, as well as processing
- * form submissions for module assignments and removals.
- *
  */
 session_start();
 require_once('../../../../../../config/ims-tmdd.php'); // Database connection
