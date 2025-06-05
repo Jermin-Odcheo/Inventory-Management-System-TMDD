@@ -1921,28 +1921,53 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_po_list') {
                 return;
             }
             let params = {};
+            let isValid = true;
+            let errorMessage = '';
+            
             if (filterType === 'mdy') {
                 params.dateFrom = $('#dateFrom').val();
                 params.dateTo = $('#dateTo').val();
                 if (!params.dateFrom || !params.dateTo) {
-                    showToast('Please select both Date From and Date To.', 'error');
-                    return;
+                    isValid = false;
+                    errorMessage = 'Please select both Date From and Date To.';
+                } else if (new Date(params.dateFrom) > new Date(params.dateTo)) {
+                    isValid = false;
+                    errorMessage = 'Date From must be before or equal to Date To.';
                 }
             } else if (filterType === 'month') {
                 params.monthFrom = $('#monthFrom').val();
                 params.monthTo = $('#monthTo').val();
                 if (!params.monthFrom || !params.monthTo) {
-                    showToast('Please select both Month From and Month To.', 'error');
-                    return;
+                    isValid = false;
+                    errorMessage = 'Please select both Month From and Month To.';
+                } else if (new Date(params.monthFrom) > new Date(params.monthTo)) {
+                    isValid = false;
+                    errorMessage = 'Month From must be before or equal to Month To.';
                 }
             } else if (filterType === 'year') {
                 params.yearFrom = $('#yearFrom').val();
                 params.yearTo = $('#yearTo').val();
                 if (!params.yearFrom || !params.yearTo) {
-                    showToast('Please select both Year From and Year To.', 'error');
-                    return;
+                    isValid = false;
+                    errorMessage = 'Please select both Year From and Year To.';
+                } else if (parseInt(params.yearFrom) > parseInt(params.yearTo)) {
+                    isValid = false;
+                    errorMessage = 'Year From must be before or equal to Year To.';
                 }
             }
+            
+            if (!isValid) {
+                $('#filterError').remove();
+                $('#dateInputsContainer').css('position', 'relative');
+                $('#dateInputsContainer').append('<div id="filterError" class="validation-tooltip" style="position: absolute; top: 100%; left: 50%; transform: translateX(-50%); background-color: #d9534f; color: white; padding: 6px 10px; border-radius: 4px; font-size: 0.85em; z-index: 1000; margin-top: 5px; white-space: nowrap; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">' + errorMessage + '<div style="position: absolute; top: -5px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 5px solid #d9534f;"></div></div>');
+                setTimeout(function() {
+                    $('#filterError').fadeOut('slow', function() {
+                        $(this).remove();
+                    });
+                }, 3000);
+                return;
+            }
+            $('#filterError').remove();
 
             let filterData = {
                 action: 'filter',
