@@ -942,6 +942,9 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
     <?php
     include '../../general/sidebar.php';
     include '../../general/footer.php';
+    
+    // Add equipment-details class to body
+    echo '<script>document.body.classList.add("equipment-details");</script>';
     ?>
 
     <div class="main-container">
@@ -1012,6 +1015,8 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
                                 <select class="form-select" id="dateFilter" name="dateFilter">
                                     <option value="">No Date Filter</option>
                                     <option value="mdy">Month-Day-Year</option>
+                                    <option value="month">Month Range</option>
+                                    <option value="year">Year Range</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
@@ -1044,6 +1049,34 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
                                     <div class="col-12 col-md-6">
                                         <label class="form-label fw-semibold">To (YYYY-MM-DD)</label>
                                         <input type="date" class="form-control shadow-sm" id="mdyTo" name="mdyTo" placeholder="e.g., 2023-12-31">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Month Range Picker -->
+                            <div class="col-md-6 date-filter date-month d-none">
+                                <div class="row">
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label fw-semibold">Month From</label>
+                                        <input type="month" class="form-control shadow-sm" id="monthFrom" name="monthFrom">
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label fw-semibold">Month To</label>
+                                        <input type="month" class="form-control shadow-sm" id="monthTo" name="monthTo">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Year Range Picker -->
+                            <div class="col-md-6 date-filter date-year d-none">
+                                <div class="row">
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label fw-semibold">Year From</label>
+                                        <input type="number" class="form-control shadow-sm" id="yearFrom" name="yearFrom" min="1900" max="2100" placeholder="YYYY">
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label fw-semibold">Year To</label>
+                                        <input type="number" class="form-control shadow-sm" id="yearTo" name="yearTo" min="1900" max="2100" placeholder="YYYY">
                                     </div>
                                 </div>
                             </div>
@@ -1589,8 +1622,14 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
             const filterBrand = $('#filterBrand').val() || '';
             const filterLocation = $('#filterLocation').val() || '';
             const dateFilterType = $('#dateFilter').val() || '';
+            
+            // Get date values for different filter types
             const mdyFrom = $('#mdyFrom').val() || '';
             const mdyTo = $('#mdyTo').val() || '';
+            const monthFrom = $('#monthFrom').val() || '';
+            const monthTo = $('#monthTo').val() || '';
+            const yearFrom = $('#yearFrom').val() || '';
+            const yearTo = $('#yearTo').val() || '';
 
             const tableRows = $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').toArray();
 
@@ -1625,11 +1664,38 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
                 if (dateFilterType && dateText) {
                     const date = new Date(dateText);
                     if (!isNaN(date.getTime())) {
+                        // Month-Day-Year filter
                         if (dateFilterType === 'mdy' && (mdyFrom || mdyTo)) {
                             const fromDate = mdyFrom ? new Date(mdyFrom) : new Date(0);
                             const toDate = mdyTo ? new Date(mdyTo) : new Date(8640000000000000);
                             toDate.setHours(23, 59, 59, 999);
                             dateMatch = date >= fromDate && date <= toDate;
+                        } 
+                        // Month Range filter
+                        else if (dateFilterType === 'month' && (monthFrom || monthTo)) {
+                            const year = date.getFullYear();
+                            const month = date.getMonth() + 1; // JavaScript months are 0-based
+                            const dateYearMonth = `${year}-${month.toString().padStart(2, '0')}`;
+                            
+                            let fromYearMonth = '0000-01';
+                            if (monthFrom) {
+                                fromYearMonth = monthFrom;
+                            }
+                            
+                            let toYearMonth = '9999-12';
+                            if (monthTo) {
+                                toYearMonth = monthTo;
+                            }
+                            
+                            dateMatch = dateYearMonth >= fromYearMonth && dateYearMonth <= toYearMonth;
+                        } 
+                        // Year Range filter
+                        else if (dateFilterType === 'year' && (yearFrom || yearTo)) {
+                            const year = date.getFullYear();
+                            const fromYear = yearFrom ? parseInt(yearFrom) : 0;
+                            const toYear = yearTo ? parseInt(yearTo) : 9999;
+                            
+                            dateMatch = year >= fromYear && year <= toYear;
                         }
                     } else {
                         dateMatch = false;
@@ -1639,28 +1705,33 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
                 const shouldShow = searchMatch && equipmentMatch && brandMatch && locationMatch && dateMatch;
                 if (shouldShow) {
                     filteredRows.push(row);
-                    $(row).show();
                 } else {
                     $(row).hide();
                 }
             });
 
+            // Store filtered rows and reset pagination
             window.allRows = tableRows;
             window.filteredRows = filteredRows;
             window.currentPage = 1;
 
+            // Update pagination counters
             const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
             const totalRows = filteredRows.length;
             const totalPages = Math.ceil(totalRows / rowsPerPage);
 
             $('#currentPage').text(window.currentPage);
-            $('#rowsPerPage').text(rowsPerPage);
+            $('#rowsPerPage').text(Math.min(rowsPerPage, totalRows));
             $('#totalRows').text(totalRows);
 
+            // Update pagination controls
             buildPaginationButtons(totalPages);
             updatePaginationButtons();
+            
+            // Show only the first page of results
             showCurrentPageRows();
 
+            // Show no results message if needed
             if (filteredRows.length === 0) {
                 $('#noResultsMessage').remove();
                 const tbody = document.getElementById('equipmentTable');
@@ -1767,11 +1838,18 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
                 return;
             }
 
+            // First hide all rows
             $('#equipmentTable tr:not(#noResultsMessage):not(#initialFilterMessage)').hide();
+            
+            // Then only show the rows for the current page
             window.filteredRows.slice(startIndex, endIndex).forEach(row => {
                 $(row).show();
             });
-            $('#noResultsMessage').show();
+            
+            // Make sure no results message is visible if needed
+            if ($('#noResultsMessage').length > 0) {
+                $('#noResultsMessage').show();
+            }
         }
 
         $(document).ready(function() {
@@ -1789,12 +1867,19 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
             }, 300);
 
             $('#rowsPerPageSelect').on('change', function() {
+                if (window.paginationConfig) {
+                    window.paginationConfig.currentPage = 1;
+                }
                 window.currentPage = 1;
-                const newRowsPerPage = parseInt($(this).val());
-                $('#rowsPerPage').text(newRowsPerPage);
-                $('#currentPage').text(window.currentPage);
-                const totalRows = window.filteredRows.length;
-                const totalPages = Math.ceil(totalRows / newRowsPerPage);
+                
+                const rowsPerPage = parseInt($(this).val() || 10);
+                const totalRows = window.filteredRows ? window.filteredRows.length : 0;
+                
+                $('#currentPage').text(1);
+                $('#rowsPerPage').text(Math.min(rowsPerPage, totalRows));
+                $('#totalRows').text(totalRows);
+                
+                const totalPages = Math.ceil(totalRows / rowsPerPage);
                 buildPaginationButtons(totalPages);
                 showCurrentPageRows();
             });
@@ -1805,14 +1890,17 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
                 $('.date-filter').addClass('d-none');
                 if (filterType) {
                     $('#dateInputsContainer').removeClass('d-none');
-                    if (filterType === 'month_year') {
-                        $('.date-month_year').removeClass('d-none');
-                    } else if (filterType === 'year_range') {
-                        $('.date-year_range').removeClass('d-none');
+                    if (filterType === 'month') {
+                        $('.date-month').removeClass('d-none');
+                    } else if (filterType === 'year') {
+                        $('.date-year').removeClass('d-none');
                     } else if (filterType === 'mdy') {
                         $('.date-mdy').removeClass('d-none');
                     }
                 }
+                
+                // Clear any existing validation errors when changing filter type
+                $('#filterError').remove();
             });
 
             $('.sortable').on('click', function() {
@@ -2083,6 +2171,119 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
                     }
                 });
             });
+        });
+
+        // Apply filters button click handler
+        $('#applyFilters').on('click', function(e) {
+            // Validate date filters before applying
+            let isValid = true;
+            let errorMessage = '';
+            let dateFilterType = $('#dateFilter').val();
+            
+            if (dateFilterType) {
+                let fromDate, toDate;
+                
+                if (dateFilterType === 'mdy') {
+                    fromDate = $('#mdyFrom').val();
+                    toDate = $('#mdyTo').val();
+                    
+                    // Check if dates are empty
+                    if (fromDate && !toDate) {
+                        isValid = false;
+                        errorMessage = 'Please select both From and To dates.';
+                    } else if (!fromDate && toDate) {
+                        isValid = false;
+                        errorMessage = 'Please select both From and To dates.';
+                    } else if (fromDate && toDate) {
+                        // Check if from date is greater than to date
+                        if (new Date(fromDate) > new Date(toDate)) {
+                            isValid = false;
+                            errorMessage = 'From date cannot be greater than To date.';
+                        }
+                    }
+                } else if (dateFilterType === 'month') {
+                    fromDate = $('#monthFrom').val();
+                    toDate = $('#monthTo').val();
+                    
+                    // Check if dates are empty
+                    if (fromDate && !toDate) {
+                        isValid = false;
+                        errorMessage = 'Please select both From and To months.';
+                    } else if (!fromDate && toDate) {
+                        isValid = false;
+                        errorMessage = 'Please select both From and To months.';
+                    } else if (fromDate && toDate) {
+                        // Check if from date is greater than to date
+                        if (new Date(fromDate) > new Date(toDate)) {
+                            isValid = false;
+                            errorMessage = 'From month cannot be greater than To month.';
+                        }
+                    }
+                } else if (dateFilterType === 'year') {
+                    fromDate = $('#yearFrom').val();
+                    toDate = $('#yearTo').val();
+                    
+                    // Check if years are empty
+                    if (fromDate && !toDate) {
+                        isValid = false;
+                        errorMessage = 'Please enter both From and To years.';
+                    } else if (!fromDate && toDate) {
+                        isValid = false;
+                        errorMessage = 'Please enter both From and To years.';
+                    } else if (fromDate && toDate) {
+                        // Check if from year is greater than to year
+                        if (parseInt(fromDate) > parseInt(toDate)) {
+                            isValid = false;
+                            errorMessage = 'From year cannot be greater than To year.';
+                        }
+                    }
+                }
+            }
+            
+            if (!isValid) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                $('#filterError').remove();
+                $('#dateInputsContainer').css('position', 'relative');
+                $('#dateInputsContainer').append('<div id="filterError" class="validation-tooltip" style="position: absolute; top: 100%; left: 50%; transform: translateX(-50%); background-color: #d9534f; color: white; padding: 6px 10px; border-radius: 4px; font-size: 0.85em; z-index: 1000; margin-top: 5px; white-space: nowrap; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">' + errorMessage + '<div style="position: absolute; top: -5px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 5px solid #d9534f;"></div></div>');
+                setTimeout(function() {
+                    $('#filterError').fadeOut('slow', function() {
+                        $(this).remove();
+                    });
+                }, 3000);
+                return false;
+            }
+            
+            $('#filterError').remove();
+            filterEquipmentTable();
+            showToast('Filters applied successfully', 'success');
+        });
+        
+        // Clear filters button click handler
+        $('#clearFilters').on('click', function() {
+            // Clear all filter inputs
+            $('#searchEquipment').val('');
+            $('#filterEquipment').val('').trigger('change');
+            $('#filterBrand').val('').trigger('change');
+            $('#filterLocation').val('').trigger('change');
+            $('#dateFilter').val('').trigger('change');
+            $('#mdyFrom').val('');
+            $('#mdyTo').val('');
+            $('#monthFrom').val('');
+            $('#monthTo').val('');
+            $('#yearFrom').val('');
+            $('#yearTo').val('');
+            
+            // Remove any error messages
+            $('#filterError').remove();
+            
+            // Reset filters and show all rows
+            window.filteredRows = [...window.allRows];
+            window.currentPage = 1;
+            
+            // Update pagination and redisplay rows
+            filterEquipmentTable();
+            showToast('Filters cleared successfully', 'success');
         });
     </script>
 </body>
