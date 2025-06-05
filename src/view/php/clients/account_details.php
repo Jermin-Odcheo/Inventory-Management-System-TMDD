@@ -9,14 +9,106 @@
 session_start();
 require '../../../../config/ims-tmdd.php'; // This defines $pdo (PDO connection)
 
-include '../general/header.php';
+// Handle AJAX requests first
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_account_details'])) {
+    // Check if this is an AJAX request
+    $is_ajax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
+               strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
+    
+    if ($is_ajax) {
+        try {
+            $user_id = $_SESSION['user_id'] ?? null;
+            if (!$user_id) {
+                throw new Exception("User not logged in.");
+            }
+
+            $new_first_name = trim($_POST['first_name']);
+            $new_last_name = trim($_POST['last_name']);
+            $new_username = trim($_POST['username']);
+            $new_email = trim($_POST['email']);
+            
+            $errors = [];
+            
+            // Validate input
+            if (empty($new_first_name) || empty($new_last_name)) {
+                $errors[] = "First name and last name are required.";
+            }
+            
+            if (empty($new_username)) {
+                $errors[] = "Username is required.";
+            }
+
+            if (empty($new_email)) {
+                $errors[] = "Email is required.";
+            } elseif (!filter_var($new_email, FILTER_VALIDATE_EMAIL)) {
+                $errors[] = "Invalid email format.";
+            }
+            
+            // Check if username is already taken
+            $check_sql = "SELECT id FROM users WHERE username = ? AND id != ?";
+            $check_stmt = $pdo->prepare($check_sql);
+            $check_stmt->execute([$new_username, $user_id]);
+            if ($check_stmt->rowCount() > 0) {
+                $errors[] = "Username is already taken.";
+            }
+
+            // Check if email is already taken
+            $check_sql = "SELECT id FROM users WHERE email = ? AND id != ?";
+            $check_stmt = $pdo->prepare($check_sql);
+            $check_stmt->execute([$new_email, $user_id]);
+            if ($check_stmt->rowCount() > 0) {
+                $errors[] = "Email is already taken.";
+            }
+            
+            if (empty($errors)) {
+                // Start transaction
+                $pdo->beginTransaction();
+                
+                // Update user details
+                $update_sql = "UPDATE users SET first_name = ?, last_name = ?, username = ?, email = ? WHERE id = ?";
+                $update_stmt = $pdo->prepare($update_sql);
+                $update_result = $update_stmt->execute([$new_first_name, $new_last_name, $new_username, $new_email, $user_id]);
+                
+                if ($update_result) {
+                    // Commit transaction
+                    $pdo->commit();
+                    
+                    // Update session variables if needed
+                    $_SESSION['username'] = $new_username;
+                    
+                    // Return JSON response
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => true]);
+                    exit();
+                } else {
+                    throw new Exception("Failed to update account details.");
+                }
+            } else {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'error' => implode("<br>", $errors)]);
+                exit();
+            }
+        } catch (Exception $e) {
+            // Rollback transaction on error
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+            exit();
+        }
+    }
+}
 
 // If not logged in, redirect to login page
 if (!isset($_SESSION['user_id'])) {
     header('Location: ' . BASE_URL . 'index.php');
-    exit;
-
+    exit();
 }
+
+include '../general/header.php';
+
 /**
  * @var int $user_id
  * @brief Stores the ID of the currently logged-in user.
@@ -42,66 +134,38 @@ if ($user_id !== null) {
      */
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
     print("hello " . $user['profile_pic_path']);
+
+    // Fetch user details and role
+    $sql = "
+        SELECT u.email, u.username, u.first_name, u.last_name, r.role_name, u.profile_pic_path
+        FROM users u
+        LEFT JOIN user_department_roles ur ON u.id = ur.user_id
+        LEFT JOIN roles r ON ur.role_id = r.id
+        WHERE u.id = ?
+    ";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$user_id]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    // Debug information
+    error_log("User ID: " . $user_id);
+    error_log("User Data: " . print_r($user, true));
+
+    if (!$user) {
+        die("User not found."); // or redirect
+    }
+
+    // Set variables for use throughout the page
+    $email = $user['email'] ?? '';
+    $username = $user['username'] ?? '';
+    $first_name = $user['first_name'] ?? '';
+    $last_name = $user['last_name'] ?? '';
+    $full_name = trim($first_name . ' ' . $last_name);
+    $role = $user['role_name'] ?? 'User'; // Default to 'User' if no role is found
 } else {
     die("User not logged in."); // or redirect
 }
-// Fetch user details and role
-/**
- * @var string $sql
- * @brief SQL query for retrieving user details and role.
- *
- * This query fetches user information and associated role from the database.
- */
-$sql = "\
-    SELECT u.email, u.username, u.first_name, u.last_name, r.role_name \
-    FROM users u \
-    LEFT JOIN user_department_roles ur ON u.id = ur.user_id \
-    LEFT JOIN roles r ON ur.role_id = r.id \
-    WHERE u.id = ?\
-";
-/**
- * @var \PDOStatement $stmt
- * @brief Prepared statement for retrieving user details.
- *
- * This statement executes the SQL query to fetch user details.
- */
-$stmt = $pdo->prepare($sql);
-$stmt->execute([$user_id]);
-/**
- * @var array $user
- * @brief Stores detailed user information.
- *
- * This array contains detailed user data including email, username, name, and role.
- */
-$user = $stmt->fetch();
-/**
- * @var string $email
- * @brief Stores the user's email address.
- *
- * This variable holds the email address retrieved from the database.
- */
-$email = $user['email'] ?? '';
-/**
- * @var string $username
- * @brief Stores the user's username.
- *
- * This variable holds the username retrieved from the database.
- */
-$username = $user['username'] ?? '';
-/**
- * @var string $full_name
- * @brief Stores the user's full name.
- *
- * This variable concatenates the first and last names of the user.
- */
-$full_name = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
-/**
- * @var string $role
- * @brief Stores the user's role.
- *
- * This variable holds the role name, defaulting to 'User' if not found.
- */
-$role = $user['role_name'] ?? 'User'; // Default to 'User' if no role is found
 
 // Handle email update
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_email'])) {
@@ -156,159 +220,69 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_email'])) {
     }
 }
 
-// Handle password update
+// Add this after the email update handling code
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_password'])) {
-    /**
-     * @var string $current_password
-     * @brief Stores the current password provided by the user.
-     *
-     * This variable holds the current password input from the form.
-     */
     $current_password = $_POST['current_password'];
-    /**
-     * @var string $new_password
-     * @brief Stores the new password provided by the user.
-     *
-     * This variable holds the new password input from the form.
-     */
     $new_password = $_POST['new_password'];
-    /**
-     * @var string $confirm_password
-     * @brief Stores the confirmation of the new password.
-     *
-     * This variable holds the confirmation password input from the form.
-     */
     $confirm_password = $_POST['confirm_password'];
 
+    $errors = [];
+
     // Verify current password
-    /**
-     * @var string $sql
-     * @brief SQL query for verifying current password.
-     *
-     * This query fetches the current password hash from the database.
-     */
     $sql = "SELECT password FROM users WHERE id = ?";
-    /**
-     * @var \PDOStatement $stmt
-     * @brief Prepared statement for password verification.
-     *
-     * This statement executes the query to fetch the password hash.
-     */
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$user_id]);
-    /**
-     * @var array $user
-     * @brief Stores user data for password verification.
-     *
-     * This array contains the user's password hash for verification.
-     */
     $user = $stmt->fetch();
 
-    if (password_verify($current_password, $user['password'])) {
-        if ($new_password === $confirm_password) {
-            // Server-side password validation
-            if (strlen($new_password) < 8) {
-                /**
-                 * @var string $error_message
-                 * @brief Stores error message for password length.
-                 *
-                 * This variable holds the error message for insufficient password length.
-                 */
-                $error_message = "Password must be at least 8 characters long.";
-            } elseif (!preg_match('/[A-Z]/', $new_password)) {
-                /**
-                 * @var string $error_message
-                 * @brief Stores error message for missing uppercase letter.
-                 *
-                 * This variable holds the error message for missing uppercase letter in password.
-                 */
-                $error_message = "Password must contain at least one uppercase letter.";
-            } elseif (!preg_match('/[a-z]/', $new_password)) {
-                /**
-                 * @var string $error_message
-                 * @brief Stores error message for missing lowercase letter.
-                 *
-                 * This variable holds the error message for missing lowercase letter in password.
-                 */
-                $error_message = "Password must contain at least one lowercase letter.";
-            } elseif (!preg_match('/\d/', $new_password)) {
-                /**
-                 * @var string $error_message
-                 * @brief Stores error message for missing number.
-                 *
-                 * This variable holds the error message for missing number in password.
-                 */
-                $error_message = "Password must contain at least one number.";
-            } elseif (!preg_match('/[@$!%*?&]/', $new_password)) {
-                /**
-                 * @var string $error_message
-                 * @brief Stores error message for missing special character.
-                 *
-                 * This variable holds the error message for missing special character in password.
-                 */
-                $error_message = "Password must contain at least one special character (@$!%*?&).";
+    if (!password_verify($current_password, $user['password'])) {
+        $errors[] = "Current password is incorrect.";
+    }
+
+    if ($new_password !== $confirm_password) {
+        $errors[] = "New passwords do not match.";
+    }
+
+    // Password validation
+    if (strlen($new_password) < 8) {
+        $errors[] = "Password must be at least 8 characters long.";
+    }
+    if (!preg_match('/[A-Z]/', $new_password)) {
+        $errors[] = "Password must contain at least one uppercase letter.";
+    }
+    if (!preg_match('/[a-z]/', $new_password)) {
+        $errors[] = "Password must contain at least one lowercase letter.";
+    }
+    if (!preg_match('/\d/', $new_password)) {
+        $errors[] = "Password must contain at least one number.";
+    }
+    if (!preg_match('/[@$!%*?&]/', $new_password)) {
+        $errors[] = "Password must contain at least one special character (@$!%*?&).";
+    }
+
+    if (empty($errors)) {
+        try {
+            // Start transaction
+            $pdo->beginTransaction();
+
+            $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
+            $update_sql = "UPDATE users SET password = ? WHERE id = ?";
+            $update_stmt = $pdo->prepare($update_sql);
+            $update_result = $update_stmt->execute([$hashed_password, $user_id]);
+
+            if ($update_result) {
+                // Commit transaction
+                $pdo->commit();
+                $success_message = "Password updated successfully.";
             } else {
-                /**
-                 * @var string $hashed_password
-                 * @brief Stores the hashed new password.
-                 *
-                 * This variable holds the hashed version of the new password.
-                 */
-                $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
-
-                // Set the @current_user_id variable (e.g., for auditing in a trigger)
-                $pdo->exec("SET @current_user_id = $user_id;");
-
-                // Update the password
-                /**
-                 * @var string $update_sql
-                 * @brief SQL query for updating user password.
-                 *
-                 * This query updates the user's password in the database.
-                 */
-                $update_sql = "UPDATE users SET password = ? WHERE id = ?";
-                /**
-                 * @var \PDOStatement $update_stmt
-                 * @brief Prepared statement for updating password.
-                 *
-                 * This statement executes the update query for the user's password.
-                 */
-                $update_stmt = $pdo->prepare($update_sql);
-                if ($update_stmt->execute([$hashed_password, $user_id])) {
-                    /**
-                     * @var string $success_message
-                     * @brief Stores success message for password update.
-                     *
-                     * This variable holds the success message displayed to the user.
-                     */
-                    $success_message = "Password updated successfully.";
-                } else {
-                    /**
-                     * @var string $error_message
-                     * @brief Stores error message for password update failure.
-                     *
-                     * This variable holds the error message displayed to the user.
-                     */
-                    $error_message = "Failed to update password.";
-                }
+                throw new Exception("Failed to update password.");
             }
-        } else {
-            /**
-             * @var string $error_message
-             * @brief Stores error message for password mismatch.
-             *
-             * This variable holds the error message for mismatched new passwords.
-             */
-            $error_message = "New passwords do not match.";
+        } catch (Exception $e) {
+            // Rollback transaction on error
+            $pdo->rollBack();
+            $error_message = $e->getMessage();
         }
     } else {
-        /**
-         * @var string $error_message
-         * @brief Stores error message for incorrect current password.
-         *
-         * This variable holds the error message for incorrect current password.
-         */
-        $error_message = "Current password is incorrect.";
+        $error_message = implode("<br>", $errors);
     }
 }
 
@@ -490,42 +464,271 @@ if ($user_id !== null) {
     <title>Account Details</title>
     <style>
         html, body {
-    height: 100%;
-    margin: 0;
-    padding: 0;
-    overflow-y: auto; /* Add this to enable vertical scrolling */
-}
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
 
-.main-content, .container, .sidebar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-}
-
-.main-content::-webkit-scrollbar,
-.container::-webkit-scrollbar,
-.sidebar::-webkit-scrollbar,
-body::-webkit-scrollbar,
-html::-webkit-scrollbar {
-    display: none;
-}
-        
         .main-content {
             margin-left: 230px;
-            padding: 30px;
+            padding: 20px;
+            min-height: calc(100vh - 60px);
+            width: calc(100% - 230px);
+            margin-top: 60px;
             display: flex;
             justify-content: center;
-            min-height: 100vh;
         }
         
         .container {
-            box-sizing: border-box;
             background-color: #fff;
             border-radius: 10px;
-            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+            border: 1px solid #eee;
+            padding: 20px;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            margin-bottom: 40px;
+        }
+
+        .account-layout {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .info-section,
+        .form-section,
+        .danger-zone {
+            background-color: #fff;
+            border: 1px solid #eee;
+            border-radius: 10px;
             padding: 25px;
-            width: 88%;
-            max-width: 1000px;
-            margin: 80px auto 15px auto;
+            width: 100%;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .current-pic {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #eee;
+            border-radius: 6px;
+            background-color: #f8f9fa;
+            width: 100%;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+        }
+
+        .info-item {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #eee;
+        }
+
+        /* Basic button styles without transitions */
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        .btn-secondary {
+            background-color: #f8f9fa;
+            color: #333;
+            border: 1px solid #ddd;
+            padding: 8px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        /* Simple form styles */
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        input[type="email"],
+        input[type="password"],
+        input[type="text"] {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        /* Simple section styles */
+        .form-section {
+            margin-bottom: 25px;
+            padding: 20px;
+            border: 1px solid #eee;
+            border-radius: 10px;
+            background-color: #fff;
+            width: 100%;
+            max-width: 800px; /* Limit width */
+        }
+
+        .info-section {
+            margin-bottom: 25px;
+            padding: 20px;
+            border: 1px solid #eee;
+            border-radius: 10px;
+            background-color: #fff;
+            width: 100%;
+            max-width: 800px; /* Limit width */
+        }
+
+        .danger-zone {
+            margin-top: 30px;
+            padding: 20px;
+            border: 1px solid #eee;
+            border-radius: 10px;
+            background-color: #fff;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 800px; /* Limit width */
+        }
+
+        .form-actions {
+            margin-top: 20px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        /* Style the danger zone button */
+        .danger-zone .btn-danger {
+            margin-top: 15px;
+        }
+
+        /* Style the profile picture section */
+        .profile-pic-form {
+            margin-top: 15px;
+        }
+
+        .profile-pic-form .form-group {
+            margin-bottom: 20px;
+        }
+
+        .profile-pic-form input[type="file"] {
+            margin-top: 10px;
+        }
+
+        /* Simple modal styles */
+        .modal-content {
+            border-radius: 10px;
+            border: 1px solid #eee;
+        }
+
+        .modal-header {
+            border-bottom: 1px solid #eee;
+            padding: 15px;
+        }
+
+        .modal-body {
+            padding: 15px;
+        }
+
+        .modal-footer {
+            border-top: 1px solid #eee;
+            padding: 15px;
+        }
+
+        /* Responsive styles */
+        @media (min-width: 2000px) {
+            .container {
+                max-width: 1600px;
+            }
+            
+            .account-layout {
+                grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+                gap: 30px;
+            }
+        }
+
+        @media (min-width: 1600px) and (max-width: 1999px) {
+            .container {
+                max-width: 1400px;
+            }
+            
+            .account-layout {
+                grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+                gap: 25px;
+            }
+        }
+
+        @media (min-width: 1200px) and (max-width: 1599px) {
+            .container {
+                max-width: 1200px;
+            }
+            
+            .account-layout {
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 20px;
+            }
+        }
+
+        @media (max-width: 1199px) {
+            .container {
+                max-width: 900px;
+            }
+            
+            .account-layout {
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: 15px;
+            }
+        }
+
+        @media (max-width: 992px) {
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+                padding: 15px;
+            }
+            
+            .container {
+                width: 100%;
+                padding: 15px;
+            }
+            
+            .account-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 10px;
+            }
+
+            .container {
+                padding: 10px;
+            }
+            
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
         }
         
         h2 {
@@ -541,79 +744,6 @@ html::-webkit-scrollbar {
             color: #444;
         }
         
-        .account-layout {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-        }
-        
-        @media (max-width: 992px) {
-            .account-layout {
-                grid-template-columns: 1fr;
-            }
-            
-            .main-content {
-                margin-left: 0;
-            }
-            
-            .container {
-                width: 95%;
-            }
-        }
-        
-        .form-section {
-            margin-bottom: 25px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .form-group {
-            margin-bottom: 16px;
-        }
-        
-        label {
-            display: block;
-            margin-bottom: 6px;
-            font-weight: 500;
-        }
-        
-        input[type="email"],
-        input[type="password"] {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 14px;
-            transition: border-color 0.2s;
-        }
-        
-        input[type="email"]:focus,
-        input[type="password"]:focus {
-            border-color: #007bff;
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
-        }
-        
-        .password-field {
-            position: relative;
-        }
-        
-        .toggle-password {
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            cursor: pointer;
-            color: #888;
-            transition: color 0.2s;
-        }
-        
-        .toggle-password:hover {
-            color: #333;
-        }
-        
         .form-actions {
             display: flex;
             justify-content: flex-end;
@@ -621,55 +751,16 @@ html::-webkit-scrollbar {
             margin-top: 20px;
         }
         
-        .btn-primary {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            padding: 8px 20px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: background-color 0.2s;
-        }
-        
         .btn-primary:hover {
             background-color: #0069d9;
-        }
-        
-        .btn-secondary {
-            background-color: #f8f9fa;
-            color: #333;
-            border: 1px solid #ddd;
-            padding: 8px 20px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: background-color 0.2s;
         }
         
         .btn-secondary:hover {
             background-color: #e9ecef;
         }
         
-        .btn-danger {
-            background-color: #dc3545;
-            color: white;
-            border: none;
-            padding: 8px 20px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: background-color 0.2s;
-        }
-        
         .btn-danger:hover {
             background-color: #c82333;
-        }
-        
-        .danger-zone {
-            margin-top: 30px;
-            padding-top: 15px;
-            border-top: 1px solid #eee;
         }
         
         .danger-zone h3 {
@@ -694,26 +785,6 @@ html::-webkit-scrollbar {
             border: 1px solid #f5c6cb;
         }
         
-        .info-section {
-            margin-bottom: 25px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-        }
-        
-        .info-item {
-            display: flex;
-            flex-direction: column;
-            background-color: #f8f9fa;
-            padding: 12px;
-            border-radius: 6px;
-        }
-        
         .info-label {
             font-size: 13px;
             color: #666;
@@ -723,42 +794,6 @@ html::-webkit-scrollbar {
         .info-value {
             font-weight: 500;
             font-size: 16px;
-        }
-        
-        .modal-content {
-            border-radius: 10px;
-            border: none;
-        }
-        
-        .modal-header {
-            border-bottom: 1px solid #eee;
-            padding: 18px 22px;
-        }
-        
-        .modal-body {
-            padding: 22px;
-        }
-        
-        .modal-footer {
-            border-top: 1px solid #eee;
-            padding: 18px 22px;
-        }
-        
-        /* Password validation styles */
-        #password-requirements {
-            list-style-type: none;
-            padding-left: 0;
-            margin-top: 5px;
-        }
-        
-        #password-requirements li {
-            margin-bottom: 3px;
-            font-size: 13px;
-        }
-        
-        #password-requirements li:before {
-            content: "•";
-            margin-right: 8px;
         }
         
         .text-success {
@@ -777,12 +812,57 @@ html::-webkit-scrollbar {
         #password-match {
             display: none;
         }
+
+        .inline-form {
+            margin-top: 5px;
+        }
+
+        .inline-form .form-group {
+            margin-bottom: 0;
+        }
+
+        .inline-form input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .inline-form .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 5px;
+        }
+
+        .inline-form .btn-primary {
+            padding: 4px 12px;
+            font-size: 12px;
+        }
+
+        .info-item {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+        }
+
+        .info-label {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .info-value {
+            font-weight: 500;
+            font-size: 16px;
+        }
     </style>
 </head>
 <body>
 <?php include '../general/sidebar.php'; ?>
 <div class="main-content">
-<div style="max-height: 100vh; overflow-y: auto;">
     <div class="container">
         <h2>Account Details</h2>
         
@@ -794,42 +874,56 @@ html::-webkit-scrollbar {
             <div class="alert alert-error"><?php echo htmlspecialchars($error_message); ?></div>
         <?php endif; ?>
         
-        <div class="info-section">
-            <h3>User Information</h3>
-            <div class="info-grid">
-                <div class="info-item">
-                    <span class="info-label">Full Name</span>
-                    <span class="info-value"><?php echo htmlspecialchars($user['first_name'] ?? '') . ' ' . htmlspecialchars($user['last_name'] ?? ''); ?></span>
+        <div class="account-layout">
+            <div class="info-section">
+                <h3>User Information</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Full Name</span>
+                        <span class="info-value"><?php echo htmlspecialchars($full_name); ?></span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Username</span>
+                        <span class="info-value"><?php echo htmlspecialchars($username); ?></span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Email</span>
+                        <span class="info-value"><?php echo htmlspecialchars($email); ?></span>
+                    </div>
                 </div>
-                <div class="info-item">
-                    <span class="info-label">Username</span>
-                    <span class="info-value"><?php echo htmlspecialchars($username); ?></span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Role</span>
-                    <span class="info-value"><?php echo htmlspecialchars($role); ?></span>
+                <div class="form-actions" style="margin-top: 20px;">
+                    <button type="button" class="btn-primary" data-bs-toggle="modal" data-bs-target="#updateAccountModal">
+                        Update Account Details
+                    </button>
                 </div>
             </div>
-        </div>
-        
-        <div class="account-layout">
+
             <div class="form-section">
-                <h3>Email Address</h3>
-                <form method="POST" id="email-form">
+                <h3>Profile Picture</h3>
+                <form method="POST" enctype="multipart/form-data" id="profile-pic-form">
                     <div class="form-group">
-                        <label for="email">Email</label>
-                        <input type="email" id="email" name="email" value="<?php echo htmlspecialchars($email); ?>" required>
+                        <?php if (!empty($user['profile_pic_path'])): ?>
+                            <div class="current-pic">
+                                <p>Current Picture:</p>
+                                <img 
+                                    src="<?php echo !empty($user['profile_pic_path']) 
+                                        ? '/public/' . htmlspecialchars($user['profile_pic_path']) 
+                                        : '/public/assets/img/default_profile.jpg'; ?>" 
+                                    style="max-width: 150px; height: auto;"
+                                >
+                            </div>
+                        <?php endif; ?>
+                        <label for="profile_picture">Upload New Picture</label>
+                        <input type="file" id="profile_picture" name="profile_picture" accept="image/*" required>
                     </div>
-                    
+
                     <div class="form-actions">
-                        <button type="button" class="btn-secondary" onclick="document.getElementById('email-form').reset()">Cancel</button>
-                        <button type="submit" name="update_email" class="btn-primary">Update Email</button>
+                        <button type="button" class="btn-secondary" onclick="document.getElementById('profile-pic-form').reset()">Cancel</button>
+                        <button type="submit" name="update_profile_pic" class="btn-primary">Update Picture</button>
                     </div>
                 </form>
             </div>
 
-            
-            
             <div class="form-section">
                 <h3>Change Password</h3>
                 <form method="POST" id="password-form">
@@ -884,42 +978,60 @@ html::-webkit-scrollbar {
                     </div>
                 </form>
             </div>
-        </div>
-        
-        <div class="form-section">
-            <h3>Profile Picture</h3>
-            <form method="POST" enctype="multipart/form-data" id="profile-pic-form">
-                <div class="form-group">
-                    <?php if (!empty($user['profile_pic_path'])): ?>
-                        <div class="current-pic">
-                            <p>Current Picture:</p>
-                            <img 
-                                src="<?php echo !empty($user['profile_pic_path']) 
-                                    ? '/public/' . htmlspecialchars($user['profile_pic_path']) 
-                                    : '/public/assets/img/default_profile.jpg'; ?>" 
-                                style="max-width: 150px; height: auto;"
-                            >
-                        </div>
-                    <?php endif; ?>
-                    <label for="profile_picture">Upload New Picture</label>
-                    <input type="file" id="profile_picture" name="profile_picture" accept="image/*" required>
-                </div>
 
-                <div class="form-actions">
-                    <button type="button" class="btn-secondary" onclick="document.getElementById('profile-pic-form').reset()">Cancel</button>
-                    <button type="submit" name="update_profile_pic" class="btn-primary">Update Picture</button>
+            <div class="danger-zone">
+                <h3>Danger Zone</h3>
+                <p>Permanently delete your account and all associated data. This action cannot be undone.</p>
+                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+                    Delete My Account
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Update Account Modal -->
+<div class="modal fade" id="updateAccountModal" tabindex="-1" aria-labelledby="updateAccountModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="updateAccountModalLabel">Update Account Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" id="account-details-form">
+                <div class="modal-body">
+                    <?php
+                    // Debug information
+                    error_log("Modal Values - First Name: " . $first_name);
+                    error_log("Modal Values - Last Name: " . $last_name);
+                    ?>
+                    <div class="form-group mb-3">
+                        <label for="first_name">First Name</label>
+                        <input type="text" class="form-control" id="first_name" name="first_name" 
+                               value="<?php echo htmlspecialchars($first_name); ?>" required>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="last_name">Last Name</label>
+                        <input type="text" class="form-control" id="last_name" name="last_name" 
+                               value="<?php echo htmlspecialchars($last_name); ?>" required>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="username">Username</label>
+                        <input type="text" class="form-control" id="username" name="username" 
+                               value="<?php echo htmlspecialchars($username); ?>" required>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="email">Email</label>
+                        <input type="email" class="form-control" id="email" name="email" 
+                               value="<?php echo htmlspecialchars($email); ?>" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" name="update_account_details" class="btn btn-primary">Save Changes</button>
                 </div>
             </form>
         </div>
-
-        <div class="danger-zone">
-    <h3>Danger Zone</h3>
-    <p>Permanently delete your account and all associated data. This action cannot be undone.</p>
-    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
-        Delete My Account
-    </button>
-</div>
-    </div>
     </div>
 </div>
 
@@ -1030,6 +1142,59 @@ html::-webkit-scrollbar {
         if (newPassword !== confirmPassword) {
             event.preventDefault();
             alert('New passwords do not match.');
+        }
+    });
+
+    // Add this script to help debug the modal values
+    document.addEventListener('DOMContentLoaded', function() {
+        const accountDetailsForm = document.getElementById('account-details-form');
+        if (accountDetailsForm) {
+            accountDetailsForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(this);
+                formData.append('update_account_details', '1');
+                
+                fetch('update_account.php', {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        // Close the modal
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('updateAccountModal'));
+                        modal.hide();
+                        
+                        // Reload the page
+                        window.location.reload();
+                    } else {
+                        // Show error message
+                        alert(data.error || 'An error occurred while updating account details.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while updating account details. Please try again.');
+                });
+            });
+        }
+
+        // Add this script to help debug the modal values
+        const updateAccountModal = document.getElementById('updateAccountModal');
+        if (updateAccountModal) {
+            updateAccountModal.addEventListener('show.bs.modal', function () {
+                console.log('Modal Opening - First Name:', document.getElementById('first_name').value);
+                console.log('Modal Opening - Last Name:', document.getElementById('last_name').value);
+            });
         }
     });
 </script>
