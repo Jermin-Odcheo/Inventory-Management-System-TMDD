@@ -33,7 +33,7 @@ $modules = [
     'Equipment Management' => ['audit' => 'em_audit_log.php', 'archive' => 'em_archive.php'],
     'Equipment Transactions' => ['audit' => 'et_audit_log.php', 'archive' => 'et_archive.php'],
     'Roles and Privileges' => ['audit' => 'rm_audit_log.php', 'archive' => 'rm_archive.php'],
-    'Administration' => ['audit' => 'department_audit_log.php', 'archive' => 'department_archive.php'],
+    'Management' => ['audit' => 'department_audit_log.php', 'archive' => 'department_archive.php'],
 ];
 
 /**
@@ -160,12 +160,12 @@ function getAcronym($string) {
                     </button>
                     <ul class="dropdown tree">
                         <i class="bi bi-file-earmark-check">
-                            <a href="<?= BASE_URL ?>src/view/php/modules/administration/department_manager/department_management.php<?= $file ?>">
+                            <a href="<?= BASE_URL ?>src/view/php/modules/management/department_manager/department_management.php<?= $file ?>">
                                 <span class="short-label"><?= getAcronym($module) ?>DM</span>
                             </a>
                         </i>
                         <li class="nav-item">
-                            <a href="<?php echo BASE_URL; ?>src/view/php/modules/administration/department_manager/department_management.php"
+                            <a href="<?php echo BASE_URL; ?>src/view/php/modules/management/department_manager/department_management.php"
                                 class="nav-link">
                                 <span class="submenu-text">Department Management</span>
                             </a>
