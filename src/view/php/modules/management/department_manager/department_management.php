@@ -35,16 +35,16 @@ if (!isset($_SESSION['user_id'])) {
  * @return void
  */
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
-$rbac->requirePrivilege('Management', 'View');
+$rbac->requirePrivilege('Administration', 'View');
 
 /**
  * Button flags for RBAC controls.
  *
  * @return void
  */
-$canCreate = $rbac->hasPrivilege('Management', 'Create');
-$canModify = $rbac->hasPrivilege('Management', 'Modify');
-$canDelete = $rbac->hasPrivilege('Management', 'Remove');
+$canCreate = $rbac->hasPrivilege('Administration', 'Create');
+$canModify = $rbac->hasPrivilege('Administration', 'Modify');
+$canDelete = $rbac->hasPrivilege('Administration', 'Remove');
 
 /**
  * Set the audit log session variables for MySQL triggers.
@@ -821,6 +821,21 @@ if (isset($_GET["q"])) {
                 const paginationUl = $('#pagination');
                 paginationUl.empty();
 
+                // Add Previous button
+                const prevLi = $('<li>').addClass('page-item');
+                const prevButton = $('<button>').addClass('page-link').html('&laquo;');
+                if (currentPage === 1) {
+                    prevLi.addClass('disabled');
+                }
+                prevButton.on('click', function() {
+                    if (currentPage > 1) {
+                        currentPage--;
+                        renderTableRows();
+                    }
+                });
+                prevLi.append(prevButton);
+                paginationUl.append(prevLi);
+
                 // Add page number buttons
                 for (let i = 1; i <= totalPages; i++) {
                     const li = $('<li>').addClass('page-item');
@@ -835,6 +850,21 @@ if (isset($_GET["q"])) {
                     li.append(button);
                     paginationUl.append(li);
                 }
+
+                // Add Next button
+                const nextLi = $('<li>').addClass('page-item');
+                const nextButton = $('<button>').addClass('page-link').html('&raquo;');
+                if (currentPage === totalPages) {
+                    nextLi.addClass('disabled');
+                }
+                nextButton.on('click', function() {
+                    if (currentPage < totalPages) {
+                        currentPage++;
+                        renderTableRows();
+                    }
+                });
+                nextLi.append(nextButton);
+                paginationUl.append(nextLi);
             }
 
             // Function to initialize/re-initialize pagination
@@ -1161,20 +1191,26 @@ if (isset($_GET["q"])) {
                 const initialSortHeader = $('.sortable[data-sort="acronym"]');
                 initialSortHeader.addClass('desc');
                 
-                // Reset table to initial state
-                allTableRows = $('#departmentTable').data('original-rows') || $('#departmentTable tbody tr').get();
-                const rows = allTableRows;
-                rows.sort(function(a, b) {
-                    const A = $(a).children('td').eq(0).text().toUpperCase();
-                    const B = $(b).children('td').eq(0).text().toUpperCase();
-                    return A < B ? 1 : A > B ? -1 : 0;
+                // Reload the table content from server
+                $('#table').load(location.href + ' #table > *', function() {
+                    // Get all rows after reload
+                    allTableRows = $('#departmentTable tbody tr').get();
+                    const rows = allTableRows;
+                    rows.sort(function(a, b) {
+                        const idA = parseInt($(a).find('.edit-btn').data('id'));
+                        const idB = parseInt($(b).find('.edit-btn').data('id'));
+                        return idB - idA; // Sort by ID descending (newest first)
+                    });
+                    allTableRows = rows;
+                    
+                    // Reset to first page and render
+                    currentPage = 1;
+                    renderTableRows();
+                    updatePaginationControls();
+                    
+                    // Reattach event listeners
+                    attachTableEventListeners();
                 });
-                allTableRows = rows;
-                
-                // Reset to first page and render
-                currentPage = 1;
-                renderTableRows();
-                updatePaginationControls();
             });
         });
     </script>

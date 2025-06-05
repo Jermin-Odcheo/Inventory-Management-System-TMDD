@@ -50,6 +50,7 @@ body {
     overflow: hidden;
 }
 
+
 /* Page header */
 header h1 {
     margin-bottom: 25px;
@@ -827,7 +828,7 @@ table tbody tr:hover {
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .main-content {
-        margin-left: 0;
+        margin-left: 60px;
         padding: 70px 1rem 2rem;
         overflow: auto;
     }

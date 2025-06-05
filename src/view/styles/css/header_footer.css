@@ -317,6 +317,46 @@ body {
         width: 100%;
         justify-content: center;
     }
+
+    /* Dashboard specific styles */
+    .dashboard .main-content {
+        margin-left: 60px;
+        width: calc(100% - 60px);
+        padding: 70px 15px 15px;
+    }
+
+    .dashboard .main-content.sidebar-collapsed {
+        margin-left: 60px;
+        width: calc(100% - 60px);
+    }
+
+    /* Audit Log specific styles */
+    .audit-log .main-content,
+    .em-audit-log .main-content,
+    .et-audit-log .main-content,
+    .dm-audit-log .main-content,
+    .rm-audit-log .main-content,
+    /* Archive specific styles */
+    .um-archive .main-content,
+    .em-archive .main-content,
+    .rm-archive .main-content {
+        margin-left: 60px;
+        width: calc(100% - 60px);
+        padding: 70px 15px 15px;
+    }
+
+    .audit-log .main-content.sidebar-collapsed,
+    .em-audit-log .main-content.sidebar-collapsed,
+    .et-audit-log .main-content.sidebar-collapsed,
+    .dm-audit-log .main-content.sidebar-collapsed,
+    .rm-audit-log .main-content.sidebar-collapsed,
+    /* Archive specific styles */
+    .um-archive .main-content.sidebar-collapsed,
+    .em-archive .main-content.sidebar-collapsed,
+    .rm-archive .main-content.sidebar-collapsed {
+        margin-left: 60px;
+        width: calc(100% - 60px);
+    }
 }
 
 @media (max-width: 768px) {

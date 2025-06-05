@@ -17,6 +17,8 @@ if (!isset($_SESSION['user_id'])) {
 include '../general/header.php';
 include '../general/sidebar.php';
 
+// Add dashboard class to body
+echo '<script>document.body.classList.add("dashboard");</script>';
 
 /**
  * @var string $role

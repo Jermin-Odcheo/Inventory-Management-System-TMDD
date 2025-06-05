@@ -11,7 +11,9 @@ require_once('../../../../../../config/ims-tmdd.php');
 session_start();
 include '../../../general/header.php';
 include '../../../general/sidebar.php';
-include '../../../general/footer.php';
+
+// Add rm-archive class to body
+echo '<script>document.body.classList.add("rm-archive");</script>';
 
 // 1) Auth guard
 /**
