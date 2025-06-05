@@ -259,6 +259,9 @@ function formatChanges($oldJsonStr)
     $html .= '</ul>';
     return $html;
 }
+
+// Add um-archive class to body
+echo '<script>document.body.classList.add("um-archive");</script>';
 ?>
 <!DOCTYPE html>
 <html lang="en">

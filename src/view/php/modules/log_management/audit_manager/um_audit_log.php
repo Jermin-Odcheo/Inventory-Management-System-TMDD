@@ -12,6 +12,10 @@ require '../../../../../../config/ims-tmdd.php';
 // Include Header
 include '../../../general/header.php';
 include '../../../general/sidebar.php';
+
+// Add audit-log class to body
+echo '<script>document.body.classList.add("audit-log");</script>';
+
 // Redirect if not logged in
 if (!isset($_SESSION['user_id'])) {
     header("Location: " . BASE_URL . "index.php");
