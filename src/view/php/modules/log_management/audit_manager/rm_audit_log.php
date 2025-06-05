@@ -1,6 +1,7 @@
 <?php
 /**
- * Role Management Audit Logs Script
+ * @file rm_audit_log.php
+ * @brief handles the display of audit logs for role management activities
  *
  * This script handles the display of audit logs for role management activities. It checks user permissions,
  * fetches and filters audit log data based on various criteria, and formats the data for presentation in a user interface.

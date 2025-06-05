@@ -1,13 +1,29 @@
 <?php
+/**
+ * @file ims-tmdd.php
+ * @brief handles the database connection
+ *
+ * This script handles the database connection. It includes the main config file,
+ * defines the database credentials, and creates a PDO object.
+ */
 // Include the main config file first
 require_once __DIR__ . '/config.php';
-
+/**
+ * @var string $host The host name of the database.
+ * @var string $db The database name.
+ * @var string $user The username of the database.
+ * @var string $pass The password of the database.
+ * @var string $charset The charset of the database.
+ */
 $host = 'localhost';
 $db   = 'ims_tmddrbac';
 $user = 'root'; // default username for localhost
 $pass = ''; // default password for localhost
 $charset = 'utf8mb4';
-
+/**
+ * @var string $dsn The data source name of the database.
+ * @var array $options The options of the database.
+ */
 $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
 $options = [
     PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
