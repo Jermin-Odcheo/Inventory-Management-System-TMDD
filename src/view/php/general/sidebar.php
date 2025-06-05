@@ -152,10 +152,10 @@ function getAcronym($string) {
                 </li>
             <?php endif; ?>
 
-            <?php if ($rbac->hasPrivilege('Management', 'View')): ?>
+            <?php if ($rbac->hasPrivilege('Administration', 'View')): ?>
                 <li class="dropdown-item">
                     <button class="dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('show')">
-                        <i class="fas fa-university"></i><span class="menu-text">Management</span>
+                        <i class="fas fa-university"></i><span class="menu-text">Administration</span>
                         <i class="fas fa-chevron-down dropdown-icon"></i>
                     </button>
                     <ul class="dropdown tree">
