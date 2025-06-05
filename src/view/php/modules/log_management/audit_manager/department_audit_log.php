@@ -563,9 +563,8 @@ function getDisplayAction($action)
                                 <option value="month_year" <?= (($_GET['date_filter_type'] ?? '') === 'month_year') ? 'selected' : '' ?>>Month-Year Range</option>
                                 <option value="year" <?= (($_GET['date_filter_type'] ?? '') === 'year') ? 'selected' : '' ?>>Year Range</option>
                                 <option value="mdy" <?= (($_GET['date_filter_type'] ?? '') === 'mdy') ? 'selected' : '' ?>>Month-Date-Year Range</option>
-
                             </select>
-
+                            <div id="date-filter-error" class="position-relative"></div>
                         </div>
 
                         <!-- MDY Range -->
@@ -864,6 +863,112 @@ function getDisplayAction($action)
         if (applyFiltersBtn) {
             applyFiltersBtn.addEventListener('click', function(e) {
                 e.preventDefault();
+                
+                // Validate date filters before submitting
+                let isValid = true;
+                let errorMessage = '';
+                let selectedType = dateFilterType.value;
+                
+                if (selectedType) {
+                    let fromDate, toDate;
+                    
+                    if (selectedType === 'mdy') {
+                        fromDate = document.querySelector('input[name="date_from"]').value;
+                        toDate = document.querySelector('input[name="date_to"]').value;
+                        
+                        // Check if dates are empty
+                        if (fromDate && !toDate) {
+                            isValid = false;
+                            errorMessage = 'Please select both From and To dates';
+                        } else if (!fromDate && toDate) {
+                            isValid = false;
+                            errorMessage = 'Please select both From and To dates';
+                        } else if (fromDate && toDate) {
+                            // Convert to Date objects for comparison
+                            const fromDateObj = new Date(fromDate);
+                            const toDateObj = new Date(toDate);
+                            
+                            // Check if from date is greater than to date
+                            if (fromDateObj > toDateObj) {
+                                isValid = false;
+                                errorMessage = 'From date cannot be greater than To date';
+                            }
+                        }
+                    } else if (selectedType === 'month_year') {
+                        fromDate = document.querySelector('input[name="month_year_from"]').value;
+                        toDate = document.querySelector('input[name="month_year_to"]').value;
+                        
+                        // Check if dates are empty
+                        if (fromDate && !toDate) {
+                            isValid = false;
+                            errorMessage = 'Please select both From and To month-year values';
+                        } else if (!fromDate && toDate) {
+                            isValid = false;
+                            errorMessage = 'Please select both From and To month-year values';
+                        } else if (fromDate && toDate) {
+                            // Compare the month-year values as strings (YYYY-MM format)
+                            if (fromDate > toDate) {
+                                isValid = false;
+                                errorMessage = 'From month-year cannot be greater than To month-year';
+                            }
+                        }
+                    } else if (selectedType === 'year') {
+                        fromDate = document.querySelector('input[name="year_from"]').value;
+                        toDate = document.querySelector('input[name="year_to"]').value;
+                        
+                        // Check if years are empty
+                        if (fromDate && !toDate) {
+                            isValid = false;
+                            errorMessage = 'Please select both From and To years';
+                        } else if (!fromDate && toDate) {
+                            isValid = false;
+                            errorMessage = 'Please select both From and To years';
+                        } else if (fromDate && toDate) {
+                            // Compare as integers
+                            const fromYear = parseInt(fromDate);
+                            const toYear = parseInt(toDate);
+                            
+                            if (fromYear > toYear) {
+                                isValid = false;
+                                errorMessage = 'From year cannot be greater than To year';
+                            }
+                        }
+                    }
+                }
+                
+                // Display validation error if any
+                if (!isValid) {
+                    // Remove any existing error messages
+                    document.getElementById('date-filter-error')?.remove();
+                    
+                    // Create error message container if it doesn't exist
+                    if (!document.getElementById('date-filter-error')) {
+                        const errorContainer = document.createElement('div');
+                        errorContainer.id = 'date-filter-error';
+                        errorContainer.style.position = 'relative';
+                        dateFilterType.parentElement.appendChild(errorContainer);
+                    }
+                    
+                    // Show the error message
+                    const dateContainer = document.getElementById('date-filter-error');
+                    dateContainer.innerHTML = '<div class="validation-tooltip" style="position: absolute; top: 100%; left: 50%; transform: translateX(-50%); background-color: #d9534f; color: white; padding: 6px 10px; border-radius: 4px; font-size: 0.85em; z-index: 1000; margin-top: 5px; white-space: nowrap; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">' + errorMessage + '<div style="position: absolute; top: -5px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 5px solid #d9534f;"></div></div>';
+                    
+                    // Auto hide after 3 seconds
+                    setTimeout(function() {
+                        const errorElement = document.querySelector('#date-filter-error .validation-tooltip');
+                        if (errorElement) {
+                            errorElement.style.transition = 'opacity 0.5s';
+                            errorElement.style.opacity = '0';
+                            setTimeout(() => {
+                                document.getElementById('date-filter-error').innerHTML = '';
+                            }, 500);
+                        }
+                    }, 3000);
+                    
+                    return;
+                }
+                
+                // If all validations pass, submit the form
                 submitForm();
             });
         }
@@ -880,6 +985,9 @@ function getDisplayAction($action)
                 const allDateFilters = document.querySelectorAll('.date-filter');
                 allDateFilters.forEach(field => field.classList.add('d-none'));
                 
+                // Clear any error messages
+                document.getElementById('date-filter-error').innerHTML = '';
+                
                 // Clear URL parameters and reload page
                 window.location.href = window.location.pathname;
             });
@@ -890,6 +998,9 @@ function getDisplayAction($action)
             dateFilterType.addEventListener('change', function() {
                 const allDateFilters = document.querySelectorAll('.date-filter');
                 allDateFilters.forEach(field => field.classList.add('d-none'));
+                
+                // Clear any error messages when changing filter type
+                document.getElementById('date-filter-error').innerHTML = '';
                 
                 if (this.value) {
                     const selected = document.querySelectorAll('.date-' + this.value);
