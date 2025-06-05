@@ -2,7 +2,7 @@
 // config/config.php
 
 // Base URL for links
-define('BASE_URL', '/Inventory-Management-System-TMDD/');
+define('BASE_URL', '/');
  
 // ROOT_PATH is your project’s root directory (one level up from config/)
 define('ROOT_PATH', realpath(__DIR__ . '/..') . '/');

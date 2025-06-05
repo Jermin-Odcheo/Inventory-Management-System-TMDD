@@ -2245,7 +2245,7 @@ try {
             // Rebind delete buttons
             $('.delete-btn').off('click').on('click', function() {
                 const userId = $(this).data('id');
-                const username = $(this).closest('tr').find('td:eq(4)').text();
+                const username = $(this).closest('tr').find('td:eq(1)').text(); // Get username from the second column
                 
                 // Set up the confirmation modal
                 $('#confirmDeleteMessage').text(`Are you sure you want to remove user "${username}"?`);
@@ -2650,7 +2650,7 @@ try {
         // Handle delete button click
         $(document).on('click', '.delete-btn', function() {
             const userId = $(this).data('id');
-            const username = $(this).closest('tr').find('td:eq(4)').text(); // Get username from the row
+            const username = $(this).closest('tr').find('td:eq(1)').text(); // Get username from the second column
             
             // Close any open Select2 dropdowns first
             if ($.fn.select2) {

@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (! $user) {
-        $_SESSION['error'] = 'Invalid username/email or password.';
+        $_SESSION['error'] = 'User does not exist. Please check your username/email and try again.';
         header('Location: ' . BASE_URL . 'index.php');
         exit;
     }
