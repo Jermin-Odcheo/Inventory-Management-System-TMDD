@@ -12,6 +12,10 @@ require '../../../../../../config/ims-tmdd.php';
 
 // Include Header
 include '../../../general/header.php';
+include '../../../general/sidebar.php';
+
+// Add em-archive class to body
+echo '<script>document.body.classList.add("em-archive");</script>';
 
 /**
  * If the user is not logged in, they are redirected to the login page.
@@ -347,8 +351,6 @@ function formatChanges($oldJsonStr, $extraDate = null)
 </head>
 
 <body>
-    <?php include '../../../general/sidebar.php'; ?>
-
     <div class="main-content">
         <div class="container-fluid">
             <div class="card">
