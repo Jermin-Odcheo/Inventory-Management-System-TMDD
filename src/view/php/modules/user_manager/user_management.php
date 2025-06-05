@@ -1653,10 +1653,7 @@ try {
                     placeholder: '-- Select Type --',
                     allowClear: true,
                     width: '100%',
-                    minimumResultsForSearch: -1, // Hide search box
-                    dropdownParent: $('body'), // Attach to body for proper z-index handling
-                    closeOnSelect: true,
-                    selectOnClose: true
+                    minimumResultsForSearch: -1 // Hide search box
                 }).on('select2:select', function(e) {
                     console.log('Date filter type selected:', e.params.data.id);
                     handleDateFilterTypeChange(e.params.data.id);
@@ -1706,6 +1703,9 @@ try {
                 const selectedType = $(this).val();
                 console.log('Date filter type changed via regular change event:', selectedType);
                 handleDateFilterTypeChange(selectedType);
+                
+                // Clear any existing validation errors when changing filter type
+                $('#filterError').remove();
             });
             
             // Handle the clear filters button
@@ -1720,7 +1720,94 @@ try {
                 // Hide all date filter containers
                 $('#dateInputsContainer').addClass('d-none');
                 $('.date-filter').addClass('d-none');
-        });
+                $('#filterError').remove();
+            });
+
+            // Enhanced validation for date filters
+            var form = $('#userFilterForm');
+            form.on('submit', function(e) {
+                let isValid = true;
+                let errorMessage = '';
+                let selectedType = $('#dateFilterType').val();
+                
+                if (selectedType) {
+                    let fromDate, toDate;
+                    
+                    if (selectedType === 'mdy') {
+                        fromDate = $('input[name="date_from"]').val();
+                        toDate = $('input[name="date_to"]').val();
+                        
+                        // Check if dates are empty
+                        if (fromDate && !toDate) {
+                            isValid = false;
+                            errorMessage = 'Please select both From and To dates.';
+                        } else if (!fromDate && toDate) {
+                            isValid = false;
+                            errorMessage = 'Please select both From and To dates.';
+                        } else if (fromDate && toDate) {
+                            // Check if from date is greater than to date
+                            if (new Date(fromDate) > new Date(toDate)) {
+                                isValid = false;
+                                errorMessage = 'From date cannot be greater than To date.';
+                            }
+                        }
+                    } else if (selectedType === 'month_year') {
+                        fromDate = $('input[name="month_year_from"]').val();
+                        toDate = $('input[name="month_year_to"]').val();
+                        
+                        // Check if dates are empty
+                        if (fromDate && !toDate) {
+                            isValid = false;
+                            errorMessage = 'Please select both From and To dates.';
+                        } else if (!fromDate && toDate) {
+                            isValid = false;
+                            errorMessage = 'Please select both From and To dates.';
+                        } else if (fromDate && toDate) {
+                            // Check if from date is greater than to date
+                            if (new Date(fromDate) > new Date(toDate)) {
+                                isValid = false;
+                                errorMessage = 'From date cannot be greater than To date.';
+                            }
+                        }
+                    } else if (selectedType === 'year') {
+                        fromDate = $('input[name="year_from"]').val();
+                        toDate = $('input[name="year_to"]').val();
+                        
+                        // Check if years are empty
+                        if (fromDate && !toDate) {
+                            isValid = false;
+                            errorMessage = 'Please enter both From and To years.';
+                        } else if (!fromDate && toDate) {
+                            isValid = false;
+                            errorMessage = 'Please enter both From and To years.';
+                        } else if (fromDate && toDate) {
+                            // Check if from year is greater than to year
+                            if (parseInt(fromDate) > parseInt(toDate)) {
+                                isValid = false;
+                                errorMessage = 'From year cannot be greater than To year.';
+                            }
+                        }
+                    }
+                }
+                
+                if (!isValid) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    $('#filterError').remove();
+                    $('#dateInputsContainer').css('position', 'relative');
+                    $('#dateInputsContainer').append('<div id="filterError" class="validation-tooltip" style="position: absolute; top: 100%; left: 50%; transform: translateX(-50%); background-color: #d9534f; color: white; padding: 6px 10px; border-radius: 4px; font-size: 0.85em; z-index: 1000; margin-top: 5px; white-space: nowrap; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">' + errorMessage + '<div style="position: absolute; top: -5px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 5px solid #d9534f;"></div></div>');
+                    setTimeout(function() {
+                        $('#filterError').fadeOut('slow', function() {
+                            $(this).remove();
+                        });
+                    }, 3000);
+                    return false;
+                }
+                $('#filterError').remove();
+                return true;
+            });
+            
+            // Apply filter button handler not needed anymore as we're using form submit validation
 
         // Initialize Select2 for modal department dropdown
         $('#modal_department').select2({
@@ -3004,6 +3091,7 @@ try {
                 // Hide all date filter containers
                 $('#dateInputsContainer').addClass('d-none');
                 $('.date-filter').addClass('d-none');
+                $('#filterError').remove();
             });
         });
     </script>
