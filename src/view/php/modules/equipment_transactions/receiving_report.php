@@ -750,26 +750,53 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_data_json') {
             user-select: none;
             width: auto;
         }
+        /* General sort icon container adjustments */
         .sort-icon {
             margin-left: 5px;
             display: inline-block;
-            width: 8px;
-            height: 8px;
+            width: 1em; /* Based on font size of header */
+            height: 1.5em; /* To accommodate stacked arrows */
             position: relative;
+            vertical-align: text-bottom; /* Align with text better */
+            line-height: 1; /* Prevent extra space */
         }
+
+        /* Default stacked arrows (visible when no data-sort-direction on th) */
+        .sort-icon .default-arrows::before {
+            content: "▲\A▼"; /* Unicode up arrow, newline, down arrow */
+            white-space: pre;    /* Respect the newline character */
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.8em; /* Slightly smaller than active sort icon */
+            line-height: 0.8; /* Tighter stacking */
+            opacity: 0.5;     /* Less prominent */
+            color: currentColor; /* Inherit color from header text */
+        }
+
+        /* Hide default arrows when a sort direction is active on the parent TH */
+        .sortable[data-sort-direction] .sort-icon .default-arrows {
+            display: none;
+        }
+
+        /* Active sort arrow */
+        .sortable[data-sort-direction="asc"] .sort-icon::after,
+        .sortable[data-sort-direction="desc"] .sort-icon::after {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.9em; /* Size of the active arrow */
+            opacity: 1;       /* Fully visible */
+            color: currentColor;
+        }
+
         .sortable[data-sort-direction="asc"] .sort-icon::after {
             content: "▲";
-            position: absolute;
-            font-size: 10px;
-            opacity: 0.8;
-            top: -5px;
         }
         .sortable[data-sort-direction="desc"] .sort-icon::after {
             content: "▼";
-            position: absolute;
-            font-size: 10px;
-            opacity: 0.8;
-            top: -5px;
         }
         /* Fixed width for table columns */
         #rrTable th:nth-child(1) { width: 5%; }  /* # column */
@@ -948,11 +975,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_data_json') {
                         <table id="rrTable" class="table table-striped table-bordered table-sm mb-0">
                             <thead class="table-dark">
                                 <tr>
-                                    <th class="sortable" data-sort="id">#<span class="sort-icon"></span></th>
-                                    <th class="sortable" data-sort="rr_no">RR Number<span class="sort-icon"></span></th>
-                                    <th class="sortable" data-sort="accountable_individual">Accountable Individual<span class="sort-icon"></span></th>
-                                    <th class="sortable" data-sort="po_no">PO Number<span class="sort-icon"></span></th>
-                                    <th class="sortable" data-sort="ai_loc">Location<span class="sort-icon"></span></th>
+                                    <th class="sortable" data-sort="id">#<span class="sort-icon"><span class="default-arrows"></span></span></th>
+                                    <th class="sortable" data-sort="rr_no">RR Number<span class="sort-icon"><span class="default-arrows"></span></span></th>
+                                    <th class="sortable" data-sort="accountable_individual">Accountable Individual<span class="sort-icon"><span class="default-arrows"></span></span></th>
+                                    <th class="sortable" data-sort="po_no">PO Number<span class="sort-icon"><span class="default-arrows"></span></span></th>
+                                    <th class="sortable" data-sort="ai_loc">Location<span class="sort-icon"><span class="default-arrows"></span></span></th>
                                     
                                     <th class="text-center">Actions</th>
                                 </tr>
