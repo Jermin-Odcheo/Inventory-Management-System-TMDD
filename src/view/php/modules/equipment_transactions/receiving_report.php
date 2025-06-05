@@ -1377,12 +1377,80 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_data_json') {
 
             $('#applyFilters').on('click', function() {
                 const filterType = $('#dateFilter').val();
-                if (!filterType) return;
-                let params = gatherFilterParams();
+                if (!filterType) {
+                    return;
+                }
+                let params = {};
+                let isValid = true;
+                let errorMessage = '';
+                if (filterType === 'mdy') {
+                    params.dateFrom = $('#dateFrom').val();
+                    params.dateTo = $('#dateTo').val();
+                    if (!params.dateFrom || !params.dateTo) {
+                        isValid = false;
+                        errorMessage = 'Please select both Date From and Date To.';
+                    } else if (new Date(params.dateFrom) > new Date(params.dateTo)) {
+                        isValid = false;
+                        errorMessage = 'Date From must be before or equal to Date To.';
+                    }
+                } else if (filterType === 'month') {
+                    params.monthFrom = $('#monthFrom').val();
+                    params.monthTo = $('#monthTo').val();
+                    if (!params.monthFrom || !params.monthTo) {
+                        isValid = false;
+                        errorMessage = 'Please select both Month From and Month To.';
+                    } else if (new Date(params.monthFrom) > new Date(params.monthTo)) {
+                        isValid = false;
+                        errorMessage = 'Month From must be before or equal to Month To.';
+                    }
+                } else if (filterType === 'year') {
+                    params.yearFrom = $('#yearFrom').val();
+                    params.yearTo = $('#yearTo').val();
+                    if (!params.yearFrom || !params.yearTo) {
+                        isValid = false;
+                        errorMessage = 'Please select both Year From and Year To.';
+                    } else if (parseInt(params.yearFrom) > parseInt(params.yearTo)) {
+                        isValid = false;
+                        errorMessage = 'Year From must be before or equal to Year To.';
+                    }
+                } else if (filterType === 'month_year') {
+                    params.monthYearFrom = $('#monthYearFrom').val();
+                    params.monthYearTo = $('#monthYearTo').val();
+                    if (!params.monthYearFrom || !params.monthYearTo) {
+                        isValid = false;
+                        errorMessage = 'Please select both From and To (MM-YYYY).';
+                    } else if (new Date(params.monthYearFrom) > new Date(params.monthYearTo)) {
+                        isValid = false;
+                        errorMessage = 'From (MM-YYYY) must be before or equal to To (MM-YYYY).';
+                    }
+                }
+                if (!isValid) {
+                    $('#filterError').remove();
+                    $('#dateInputsContainer').css('position', 'relative');
+                    $('#dateInputsContainer').append('<div id="filterError" class="validation-tooltip" style="position: absolute; top: 100%; left: 50%; transform: translateX(-50%); background-color: #d9534f; color: white; padding: 6px 10px; border-radius: 4px; font-size: 0.85em; z-index: 1000; margin-top: 5px; white-space: nowrap; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">' + errorMessage + '<div style="position: absolute; top: -5px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 5px solid #d9534f;"></div></div>');
+                    setTimeout(function() {
+                        $('#filterError').fadeOut('slow', function() {
+                            $(this).remove();
+                        });
+                    }, 3000);
+                    return;
+                }
+                $('#filterError').remove();
                 $.ajax({
                     url: 'receiving_report.php',
                     method: 'GET',
-                    data: params,
+                    data: {
+                        action: 'filter',
+                        type: filterType,
+                        dateFrom: params.dateFrom,
+                        dateTo: params.dateTo,
+                        monthFrom: params.monthFrom,
+                        monthTo: params.monthTo,
+                        yearFrom: params.yearFrom,
+                        yearTo: params.yearTo,
+                        monthYearFrom: params.monthYearFrom,
+                        monthYearTo: params.monthYearTo
+                    },
                     success: function(response) {
                         try {
                             const data = typeof response === 'string' ? JSON.parse(response) : response;
@@ -1395,14 +1463,33 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_data_json') {
                                             <td>${rr.id}</td>
                                             <td>${rr.rr_no}</td>
                                             <td>${rr.accountable_individual}</td>
-                                            <td>${rr.po_no}</td>
+                                            <td>${rr.po_no || ''}</td>
                                             <td>${rr.ai_loc}</td>
-                                            <td>${rr.date_created}</td>
-                                            <td class="text-center">-</td>
+                                            <td class="text-center">
+                                                <div class="btn-group" role="group">
+                                                    <?php if ($canModify): ?>
+                                                        <button class="btn btn-sm btn-outline-primary edit-report" data-id="${rr.id}" data-rr="${rr.rr_no}" data-individual="${rr.accountable_individual}" data-po="${rr.po_no || ''}" data-location="${rr.ai_loc}" data-date-created="${rr.date_created}">
+                                                            <i class="bi bi-pencil-square"></i> <span>Edit</span>
+                                                        </button>
+                                                    <?php endif; ?>
+                                                    <?php if ($canDelete): ?>
+                                                        <button class="btn btn-sm btn-outline-danger delete-report" data-id="${rr.id}">
+                                                            <i class="bi bi-trash"></i> <span>Remove</span>
+                                                        </button>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </td>
                                         </tr>`;
                                     });
                                 }
                                 $('#rrTableBody').html(tableBody || '<tr><td colspan="6">No Receiving Reports found.</td></tr>');
+                                // Update pagination after filtering
+                                window.allRows = Array.from(document.querySelectorAll('#rrTableBody tr'));
+                                window.filteredRows = [...window.allRows];
+                                if (window.paginationConfig) {
+                                    window.paginationConfig.currentPage = 1;
+                                }
+                                updatePagination();
                             } else {
                                 showToast('Error filtering data: ' + data.message, 'error');
                             }

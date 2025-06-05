@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file purchase_order.php
  * @brief Manages purchase orders for equipment transactions.
@@ -361,30 +362,30 @@ if (isset($_GET['action']) && $_GET['action'] === 'remove' && isset($_GET['id'])
         if ($oldData) {
             // Start transaction to ensure all changes succeed or fail together
             $pdo->beginTransaction();
-            
+
             try {
                 // Get the PO number we're removing
                 $poNo = $oldData['po_no'];
-                
+
                 // 1. First clear PO references in any receive_report records
                 $rrUpdateStmt = $pdo->prepare("UPDATE receive_report SET po_no = NULL WHERE po_no = ? AND is_disabled = 0");
                 $rrUpdateStmt->execute([$poNo]);
                 $affectedRRs = $rrUpdateStmt->rowCount();
-                
+
                 // 2. Clear PO references in any charge_invoice records
                 $ciUpdateStmt = $pdo->prepare("UPDATE charge_invoice SET po_no = NULL WHERE po_no = ? AND is_disabled = 0");
                 $ciUpdateStmt->execute([$poNo]);
                 $affectedCIs = $ciUpdateStmt->rowCount();
-                
+
                 // 3. Then soft-delete the purchase order
                 $poUpdateStmt = $pdo->prepare("UPDATE purchase_order SET is_disabled = 1 WHERE id = ?");
                 $poUpdateStmt->execute([$id]);
-                
+
                 // If we get here, all operations succeeded
                 $pdo->commit();
-                
+
                 $_SESSION['success'] = "Purchase Order removed successfully. $affectedRRs linked Receiving Reports and $affectedCIs Charge Invoices were updated.";
-                
+
                 // Log the removal with old values and entity id
                 logAudit(
                     $pdo,
@@ -541,13 +542,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'filter') {
 if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_GET['po_no'])) {
     ob_clean(); // Clear any output buffering
     header('Content-Type: application/json');
-    
+
     try {
         $po_no = trim($_GET['po_no']);
         $stmt = $pdo->prepare("SELECT COUNT(*) FROM purchase_order WHERE po_no = ? AND is_disabled = 0");
         $stmt->execute([$po_no]);
         $exists = $stmt->fetchColumn() > 0;
-        
+
         echo json_encode([
             'status' => $exists ? 'exists' : 'not_exists',
             'message' => $exists ? 'PO is valid' : 'PO does not exist or is disabled'
@@ -579,16 +580,16 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
         function showToast(message, type = 'info', duration = 3000) {
             // Remove any existing toasts
             $('.toast-container').remove();
-            
+
             // Create toast container if it doesn't exist
             let toastContainer = $('<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>');
-            
+
             // Set the appropriate background color based on type
             let bgClass = 'bg-info';
             if (type === 'success') bgClass = 'bg-success';
             if (type === 'error') bgClass = 'bg-danger';
             if (type === 'warning') bgClass = 'bg-warning';
-            
+
             // Create the toast element
             let toast = $(`
                 <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
@@ -601,18 +602,18 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
                     </div>
                 </div>
             `);
-            
+
             // Add the toast to the container and the container to the body
             toastContainer.append(toast);
             $('body').append(toastContainer);
-            
+
             // Auto-hide the toast after the specified duration
             setTimeout(function() {
                 toast.fadeOut('slow', function() {
                     toastContainer.remove();
                 });
             }, duration);
-            
+
             // Add click handler to close button
             toast.find('.btn-close').on('click', function() {
                 toast.fadeOut('slow', function() {
@@ -654,62 +655,62 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
                                 <div></div>
                             <?php endif; ?>
                             <div class="d-flex align-items-center gap-2 flex-wrap">
-    <select class="form-select form-select-sm" id="dateFilter" style="width: auto; min-width: 140px;">
-        <option value="">Filter by Date</option>
-        <option value="mdy">Month-Day-Year Range</option>
-        <option value="month">Month Range</option>
-        <option value="year">Year Range</option>
-        <option value="month_year">Month-Year Range</option>
-    </select>
-    <div id="dateInputsContainer" class="d-flex align-items-center gap-3 ms-2" style="display: none;">
-        <div class="date-group d-none flex-row" id="mdy-group">
-            <div class="d-flex flex-column me-2">
-                <label for="dateFrom" class="form-label mb-0" style="font-size: 0.9em;">Date From</label>
-                <input type="date" id="dateFrom" class="form-control form-control-sm" style="width: 140px;">
-            </div>
-            <div class="d-flex flex-column">
-                <label for="dateTo" class="form-label mb-0" style="font-size: 0.9em;">Date To</label>
-                <input type="date" id="dateTo" class="form-control form-control-sm" style="width: 140px;">
-            </div>
-        </div>
-        <div class="date-group d-none flex-row" id="month-group">
-            <div class="d-flex flex-column me-2">
-                <label for="monthFrom" class="form-label mb-0" style="font-size: 0.9em;">Month From</label>
-                <input type="month" id="monthFrom" class="form-control form-control-sm" style="width: 120px;">
-            </div>
-            <div class="d-flex flex-column">
-                <label for="monthTo" class="form-label mb-0" style="font-size: 0.9em;">Month To</label>
-                <input type="month" id="monthTo" class="form-control form-control-sm" style="width: 120px;">
-            </div>
-        </div>
-        <div class="date-group d-none flex-row" id="year-group">
-            <div class="d-flex flex-column me-2">
-                <label for="yearFrom" class="form-label mb-0" style="font-size: 0.9em;">Year From</label>
-                <input type="number" id="yearFrom" class="form-control form-control-sm" style="width: 90px;" min="1900" max="2100">
-            </div>
-            <div class="d-flex flex-column">
-                <label for="yearTo" class="form-label mb-0" style="font-size: 0.9em;">Year To</label>
-                <input type="number" id="yearTo" class="form-control form-control-sm" style="width: 90px;" min="1900" max="2100">
-            </div>
-        </div>
-        <div class="date-group d-none flex-row" id="monthyear-group">
-            <div class="d-flex flex-column me-2">
-                <label for="monthYearFrom" class="form-label mb-0" style="font-size: 0.9em;">From (MM-YYYY)</label>
-                <input type="month" id="monthYearFrom" class="form-control form-control-sm" style="width: 120px;">
-            </div>
-            <div class="d-flex flex-column">
-                <label for="monthYearTo" class="form-label mb-0" style="font-size: 0.9em;">To (MM-YYYY)</label>
-                <input type="month" id="monthYearTo" class="form-control form-control-sm" style="width: 120px;">
-            </div>
-        </div>
-    </div>
-    <div class="input-group w-auto" style="min-width:220px;">
-        <span class="input-group-text"><i class="bi bi-search"></i></span>
-        <input type="text" id="searchPO" class="form-control form-control-sm" placeholder="Search purchase order...">
-    </div>
-    <button type="button" id="applyFilters" class="btn btn-dark btn-sm"><i class="bi bi-funnel"></i> Filter</button>
-    <button type="button" id="clearFilters" class="btn btn-secondary btn-sm"><i class="bi bi-x-circle"></i> Clear</button>
-</div>
+                                <select class="form-select form-select-sm" id="dateFilter" style="width: auto; min-width: 140px;">
+                                    <option value="">Filter by Date</option>
+                                    <option value="mdy">Month-Day-Year Range</option>
+                                    <option value="month">Month Range</option>
+                                    <option value="year">Year Range</option>
+                                    <option value="month_year">Month-Year Range</option>
+                                </select>
+                                <div id="dateInputsContainer" class="d-flex align-items-center gap-3 ms-2" style="display: none;">
+                                    <div class="date-group d-none flex-row" id="mdy-group">
+                                        <div class="d-flex flex-column me-2">
+                                            <label for="dateFrom" class="form-label mb-0" style="font-size: 0.9em;">Date From</label>
+                                            <input type="date" id="dateFrom" class="form-control form-control-sm" style="width: 140px;">
+                                        </div>
+                                        <div class="d-flex flex-column">
+                                            <label for="dateTo" class="form-label mb-0" style="font-size: 0.9em;">Date To</label>
+                                            <input type="date" id="dateTo" class="form-control form-control-sm" style="width: 140px;">
+                                        </div>
+                                    </div>
+                                    <div class="date-group d-none flex-row" id="month-group">
+                                        <div class="d-flex flex-column me-2">
+                                            <label for="monthFrom" class="form-label mb-0" style="font-size: 0.9em;">Month From</label>
+                                            <input type="month" id="monthFrom" class="form-control form-control-sm" style="width: 120px;">
+                                        </div>
+                                        <div class="d-flex flex-column">
+                                            <label for="monthTo" class="form-label mb-0" style="font-size: 0.9em;">Month To</label>
+                                            <input type="month" id="monthTo" class="form-control form-control-sm" style="width: 120px;">
+                                        </div>
+                                    </div>
+                                    <div class="date-group d-none flex-row" id="year-group">
+                                        <div class="d-flex flex-column me-2">
+                                            <label for="yearFrom" class="form-label mb-0" style="font-size: 0.9em;">Year From</label>
+                                            <input type="number" id="yearFrom" class="form-control form-control-sm" style="width: 90px;" min="1900" max="2100">
+                                        </div>
+                                        <div class="d-flex flex-column">
+                                            <label for="yearTo" class="form-label mb-0" style="font-size: 0.9em;">Year To</label>
+                                            <input type="number" id="yearTo" class="form-control form-control-sm" style="width: 90px;" min="1900" max="2100">
+                                        </div>
+                                    </div>
+                                    <div class="date-group d-none flex-row" id="monthyear-group">
+                                        <div class="d-flex flex-column me-2">
+                                            <label for="monthYearFrom" class="form-label mb-0" style="font-size: 0.9em;">From (MM-YYYY)</label>
+                                            <input type="month" id="monthYearFrom" class="form-control form-control-sm" style="width: 120px;">
+                                        </div>
+                                        <div class="d-flex flex-column">
+                                            <label for="monthYearTo" class="form-label mb-0" style="font-size: 0.9em;">To (MM-YYYY)</label>
+                                            <input type="month" id="monthYearTo" class="form-control form-control-sm" style="width: 120px;">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="input-group w-auto" style="min-width:220px;">
+                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                    <input type="text" id="searchPO" class="form-control form-control-sm" placeholder="Search purchase order...">
+                                </div>
+                                <button type="button" id="applyFilters" class="btn btn-dark btn-sm"><i class="bi bi-funnel"></i> Filter</button>
+                                <button type="button" id="clearFilters" class="btn btn-secondary btn-sm"><i class="bi bi-x-circle"></i> Clear</button>
+                            </div>
 
                         </div>
 
@@ -801,7 +802,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
                     </div>
                 </div>
             </div>
-        </div> </div> <?php if ($canRemove): ?>
+        </div>
+    </div> <?php if ($canRemove): ?>
         <div class="modal fade" id="removePOModal" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
@@ -827,7 +829,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
 
     <?php if ($canCreate): ?>
         <link rel="stylesheet" href="src/view/php/modules/equipment_transactions/add_po_modal.css">
-<div class="modal fade" id="addPOModal" tabindex="-1">
+        <div class="modal fade" id="addPOModal" tabindex="-1">
             <div class="modal-dialog" style="margin-top:100px;">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -906,7 +908,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
             // Initialize with all rows
             window.allRows = Array.from(document.querySelectorAll('#poTable tr'));
             window.filteredRows = [...window.allRows];
-            
+
             // Initialize pagination with the purchase table ID
             initPagination({
                 tableId: 'poTable',
@@ -919,21 +921,21 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
                 nextPageId: 'nextPage',
                 paginationId: 'pagination'
             });
-            
+
             // Force pagination update after initialization
             updatePagination();
-            
+
             // Create search functionality for the table
             const searchInput = document.getElementById('searchPO');
             if (searchInput) {
                 searchInput.addEventListener('input', function() {
                     const searchText = this.value.toLowerCase();
-                    
+
                     // Filter the rows based on the search text
                     window.filteredRows = window.allRows.filter(row => {
                         return row.textContent.toLowerCase().includes(searchText);
                     });
-                    
+
                     // Reset to first page and update pagination
                     if (window.paginationConfig) {
                         window.paginationConfig.currentPage = 1;
@@ -953,13 +955,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
                 });
             }
         });
-        
+
         // Function to reinitialize purchase table pagination after AJAX operations
         function reinitPurchaseTableJS() {
             // Initialize with fresh rows
             window.allRows = Array.from(document.querySelectorAll('#poTable tr'));
             window.filteredRows = [...window.allRows];
-            
+
             // Initialize pagination with the purchase table ID
             initPagination({
                 tableId: 'poTable',
@@ -972,7 +974,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
                 nextPageId: 'nextPage',
                 paginationId: 'pagination'
             });
-            
+
             // Force pagination update
             updatePagination();
         }
@@ -998,12 +1000,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
                 if (window.paginationConfig) {
                     window.paginationConfig.currentPage = 1;
                 }
-                
+
                 // Filter the rows based on the search text
                 window.filteredRows = window.allRows.filter(row => {
                     return row.textContent.toLowerCase().includes(searchText);
                 });
-                
+
                 // Update pagination with filtered rows
                 updatePagination();
             } else {
@@ -1016,14 +1018,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
 
         $(document).ready(function() {
             // Reset create modal form when closed
-            $('#addPOModal').on('hidden.bs.modal', function () {
+            $('#addPOModal').on('hidden.bs.modal', function() {
                 $('#addPOForm')[0].reset();
             });
-      
+
 
             $(document).on('click', '.edit-po', function(e) {
                 e.preventDefault();
-               
+
 
                 // Extract all data- attributes
                 const id = $(this).data('id');
@@ -1069,11 +1071,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
             // Check if we have a stored toast message
             const storedMessage = sessionStorage.getItem('toastMessage');
             const storedType = sessionStorage.getItem('toastType');
-            
+
             if (storedMessage) {
                 // Display the toast
                 showToast(storedMessage, storedType);
-                
+
                 // Clear the stored message so it doesn't show again on future page loads
                 sessionStorage.removeItem('toastMessage');
                 sessionStorage.removeItem('toastType');
@@ -1091,11 +1093,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
             }
             // Remove any lingering modal backdrop and restore scrolling
             removeModalBackdrop();
-            
+
             // Store current pagination state
             const currentPage = window.paginationConfig ? window.paginationConfig.currentPage : 1;
             const rowsPerPage = $('#rowsPerPageSelect').val();
-            
+
             // Add PO prefix before sending
             let poNo = $('input[name="po_no"]', this).val();
             let formData = $(this).serializeArray();
@@ -1117,10 +1119,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
                         // Update table without page reload
                         $('#purchaseTable').load(location.href + ' #purchaseTable', function() {
                             showToast(response.message, 'success');
-                            
+
                             // Reinitialize pagination with fresh DOM elements
                             reinitPurchaseTableJS();
-                            
+
                             // Reattach event handlers
                             reattachEventHandlers();
                         });
@@ -1147,11 +1149,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
         // Edit Purchase Order AJAX submission
         $('#editPOForm').on('submit', function(e) {
             e.preventDefault();
-            
+
             // Store current pagination state
             const currentPage = window.paginationConfig ? window.paginationConfig.currentPage : 1;
             const rowsPerPage = $('#rowsPerPageSelect').val();
-            
+
             // Add PO prefix before sending
             let poNo = $('#edit_po_no').val();
             let formData = $(this).serializeArray();
@@ -1173,14 +1175,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
                         // Update table without page reload
                         $('#purchaseTable').load(location.href + ' #purchaseTable', function() {
                             showToast(response.message, 'success');
-                            
+
                             // Reinitialize pagination with fresh DOM elements
                             reinitPurchaseTableJS();
-                            
+
                             // Reattach event handlers
                             reattachEventHandlers();
                         });
-                        
+
                         // Hide the edit modal
                         var editModalEl = document.getElementById('editPOModal');
                         var editModal = bootstrap.Modal.getInstance(editModalEl);
@@ -1215,7 +1217,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
                 // Store current pagination state
                 const currentPage = window.paginationConfig ? window.paginationConfig.currentPage : 1;
                 const rowsPerPage = $('#rowsPerPageSelect').val();
-                
+
                 $.ajax({
                     url: 'purchase_order.php',
                     method: 'GET',
@@ -1229,10 +1231,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
                             // Update table without page reload
                             $('#purchaseTable').load(location.href + ' #purchaseTable', function() {
                                 showToast(response.message, 'success');
-                                
+
                                 // Reinitialize pagination with fresh DOM elements
                                 reinitPurchaseTableJS();
-                                
+
                                 // Reattach event handlers
                                 reattachEventHandlers();
                             });
@@ -1250,13 +1252,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
                 });
             }
         });
-        
+
         // Function to reattach event handlers to the newly loaded table elements
         function reattachEventHandlers() {
             // Edit button handler
             $('.edit-po').off('click').on('click', function(e) {
                 e.preventDefault();
-               
+
                 // Extract all data- attributes
                 const id = $(this).data('id');
                 const rawPo = $(this).data('po') || ''; // e.g. "PO123"
@@ -1277,7 +1279,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
                 const editModal = bootstrap.Modal.getOrCreateInstance(modalEl);
                 editModal.show();
             });
-            
+
             // Remove button handler
             $('.remove-po').off('click').on('click', function(e) {
                 e.preventDefault();
@@ -1286,7 +1288,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
                 removeModal.show();
             });
         }
-        
+
         // Clear filters and reload table
         $('#clearFilters').on('click', function() {
             $('#dateFilter').val('');
@@ -1295,7 +1297,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
             $('#dateInputsContainer').hide();
             // Clear search input
             $('#searchPO').val('');
-            
+
             // Reset the pagination and filters
             if (typeof window.filteredRows !== 'undefined' && typeof window.allRows !== 'undefined') {
                 window.filteredRows = [...window.allRows];
@@ -1304,7 +1306,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
                 }
                 updatePagination();
             }
-            
+
             // Instead of reloading the whole table, just reload the page
             window.location.href = 'purchase_order.php';
         });
@@ -1335,39 +1337,65 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
         $('#applyFilters').on('click', function() {
             const filterType = $('#dateFilter').val();
             if (!filterType) {
-              
                 return;
             }
             let params = {};
+            let isValid = true;
+            let errorMessage = '';
             if (filterType === 'mdy') {
                 params.dateFrom = $('#dateFrom').val();
                 params.dateTo = $('#dateTo').val();
                 if (!params.dateFrom || !params.dateTo) {
-                    showToast('Please select both Date From and Date To.', 'error');
-                    return;
+                    isValid = false;
+                    errorMessage = 'Please select both Date From and Date To.';
+                } else if (new Date(params.dateFrom) > new Date(params.dateTo)) {
+                    isValid = false;
+                    errorMessage = 'Date From must be before or equal to Date To.';
                 }
             } else if (filterType === 'month') {
                 params.monthFrom = $('#monthFrom').val();
                 params.monthTo = $('#monthTo').val();
                 if (!params.monthFrom || !params.monthTo) {
-                    showToast('Please select both Month From and Month To.', 'error');
-                    return;
+                    isValid = false;
+                    errorMessage = 'Please select both Month From and Month To.';
+                } else if (new Date(params.monthFrom) > new Date(params.monthTo)) {
+                    isValid = false;
+                    errorMessage = 'Month From must be before or equal to Month To.';
                 }
             } else if (filterType === 'year') {
                 params.yearFrom = $('#yearFrom').val();
                 params.yearTo = $('#yearTo').val();
                 if (!params.yearFrom || !params.yearTo) {
-                    showToast('Please select both Year From and Year To.', 'error');
-                    return;
+                    isValid = false;
+                    errorMessage = 'Please select both Year From and Year To.';
+                } else if (parseInt(params.yearFrom) > parseInt(params.yearTo)) {
+                    isValid = false;
+                    errorMessage = 'Year From must be before or equal to Year To.';
                 }
             } else if (filterType === 'month_year') {
                 params.monthYearFrom = $('#monthYearFrom').val();
                 params.monthYearTo = $('#monthYearTo').val();
                 if (!params.monthYearFrom || !params.monthYearTo) {
-                    showToast('Please select both From and To (MM-YYYY).', 'error');
-                    return;
+                    isValid = false;
+                    errorMessage = 'Please select both From and To (MM-YYYY).';
+                } else if (new Date(params.monthYearFrom) > new Date(params.monthYearTo)) {
+                    isValid = false;
+                    errorMessage = 'From (MM-YYYY) must be before or equal to To (MM-YYYY).';
                 }
             }
+            if (!isValid) {
+                $('#filterError').remove();
+                $('#dateInputsContainer').css('position', 'relative');
+                $('#dateInputsContainer').append('<div id="filterError" class="validation-tooltip" style="position: absolute; top: 100%; left: 50%; transform: translateX(-50%); background-color: #d9534f; color: white; padding: 6px 10px; border-radius: 4px; font-size: 0.85em; z-index: 1000; margin-top: 5px; white-space: nowrap; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">' + errorMessage + '<div style="position: absolute; top: -5px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 5px solid #d9534f;"></div></div>');
+                setTimeout(function() {
+                    $('#filterError').fadeOut('slow', function() {
+                        $(this).remove();
+                    });
+                }, 3000);
+                return;
+            }
+            $('#filterError').remove();
+
             applyFilter(filterType, params);
         });
 
@@ -1392,12 +1420,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
                 filterData.monthYearFrom = params.monthYearFrom;
                 filterData.monthYearTo = params.monthYearTo;
             }
-             
-            
+
+
             // Store the filter settings in sessionStorage so they persist through page reload
             sessionStorage.setItem('filterType', type);
             sessionStorage.setItem('filterParams', JSON.stringify(params));
-            
+
             // Reload page with the filter parameters in the URL
             let url = 'purchase_order.php?action=filter&type=' + type;
             for (const key in params) {
@@ -1440,7 +1468,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
             // Initialize with all rows
             window.allRows = Array.from(document.querySelectorAll('#poTable tr'));
             window.filteredRows = [...window.allRows];
-            
+
             // Initialize pagination with the purchase table ID
             initPagination({
                 tableId: 'poTable',
@@ -1453,21 +1481,21 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
                 nextPageId: 'nextPage',
                 paginationId: 'pagination'
             });
-            
+
             // Force pagination update after initialization
             updatePagination();
-            
+
             // Create search functionality for the table
             const searchInput = document.getElementById('searchPO');
             if (searchInput) {
                 searchInput.addEventListener('input', function() {
                     const searchText = this.value.toLowerCase();
-                    
+
                     // Filter the rows based on the search text
                     window.filteredRows = window.allRows.filter(row => {
                         return row.textContent.toLowerCase().includes(searchText);
                     });
-                    
+
                     // Reset to first page and update pagination
                     if (window.paginationConfig) {
                         window.paginationConfig.currentPage = 1;
@@ -1487,29 +1515,29 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
                 });
             }
         });
-    // Block letters in PO Number fields (Create & Edit)
-    function restrictPONumberInput(selector) {
-        $(document).on('input', selector, function() {
-            // Remove any character that is not a digit, hyphen, or slash
-            this.value = this.value.replace(/[^0-9\-/]/g, '');
-        });
-        $(document).on('keypress', selector, function(e) {
-            // Allow only digits, hyphen, slash
-            const char = String.fromCharCode(e.which);
-            if (!/[0-9\-/]/.test(char)) {
-                e.preventDefault();
-            }
-        });
-        // Optional: Block paste of invalid chars
-        $(document).on('paste', selector, function(e) {
-            const paste = (e.originalEvent || e).clipboardData.getData('text');
-            if (/[^0-9\-/]/.test(paste)) {
-                e.preventDefault();
-            }
-        });
-    }
-    restrictPONumberInput('#create_po_no');
-    restrictPONumberInput('#edit_po_no');
+        // Block letters in PO Number fields (Create & Edit)
+        function restrictPONumberInput(selector) {
+            $(document).on('input', selector, function() {
+                // Remove any character that is not a digit, hyphen, or slash
+                this.value = this.value.replace(/[^0-9\-/]/g, '');
+            });
+            $(document).on('keypress', selector, function(e) {
+                // Allow only digits, hyphen, slash
+                const char = String.fromCharCode(e.which);
+                if (!/[0-9\-/]/.test(char)) {
+                    e.preventDefault();
+                }
+            });
+            // Optional: Block paste of invalid chars
+            $(document).on('paste', selector, function(e) {
+                const paste = (e.originalEvent || e).clipboardData.getData('text');
+                if (/[^0-9\-/]/.test(paste)) {
+                    e.preventDefault();
+                }
+            });
+        }
+        restrictPONumberInput('#create_po_no');
+        restrictPONumberInput('#edit_po_no');
     </script>
     <style>
         th.sortable .sort-indicator {
@@ -1519,143 +1547,187 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
             flex-direction: column;
             vertical-align: middle;
         }
+
         th.sortable .arrow-up,
         th.sortable .arrow-down {
             color: #999;
             display: block;
             line-height: 0.9;
         }
+
         th.sortable.asc .arrow-up {
             color: #0d6efd;
             display: block;
         }
+
         th.sortable.asc .arrow-down {
             display: none;
         }
+
         th.sortable.desc .arrow-down {
             color: #0d6efd;
             display: block;
         }
+
         th.sortable.desc .arrow-up {
             display: none;
         }
 
         /* Fallback if add_po_modal.css is missing */
-        th.sortable { cursor: pointer; user-select: none; }
-        th.sortable .sort-indicator { margin-left: 4px; font-size: 0.9em; }
-        th.sortable.asc .sort-indicator { content: "▲"; }
-        th.sortable.desc .sort-indicator { content: "▼"; }
+        th.sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        th.sortable .sort-indicator {
+            margin-left: 4px;
+            font-size: 0.9em;
+        }
+
+        th.sortable.asc .sort-indicator {
+            content: "▲";
+        }
+
+        th.sortable.desc .sort-indicator {
+            content: "▼";
+        }
     </style>
     <script>
-    // --- SORTABLE COLUMN HEADERS ---
-    function initSortableHeaders() {
-        const table = document.getElementById('purchaseTable');
-        if (!table) return;
-        const thead = table.querySelector('thead');
-        if (!thead) return;
-        let currentSort = { col: null, dir: 'asc' };
+        // --- SORTABLE COLUMN HEADERS ---
+        function initSortableHeaders() {
+            const table = document.getElementById('purchaseTable');
+            if (!table) return;
+            const thead = table.querySelector('thead');
+            if (!thead) return;
+            let currentSort = {
+                col: null,
+                dir: 'asc'
+            };
 
-        // Add pointer cursor for UX
-        thead.querySelectorAll('th.sortable').forEach(th => {
-            th.style.cursor = 'pointer';
-        });
-
-        function getCellValue(row, idx) {
-            return row.children[idx]?.innerText.trim();
-        }
-        function parseValue(val, sortKey) {
-    if (["id"].includes(sortKey)) return parseFloat(val) || 0;
-    if (["date_of_order", "date_created"].includes(sortKey)) return new Date(val);
-    return val ? val.toLowerCase() : '';
-}
-        function getColIdx(sortKey) {
-            const headers = Array.from(thead.querySelectorAll('th.sortable'));
-            return headers.findIndex(th => th.dataset.sort === sortKey);
-        }
-        function sortRows(sortKey, dir) {
-            const idx = getColIdx(sortKey);
-            if (idx === -1) return;
-            const colName = thead.querySelectorAll('th.sortable')[idx]?.innerText.split(' ')[0];
-            window.filteredRows.sort((a, b) => {
-                let vA = getCellValue(a, idx);
-                let vB = getCellValue(b, idx);
-                vA = parseValue(vA, sortKey);
-                vB = parseValue(vB, sortKey);
-                if (vA < vB) return dir === 'asc' ? -1 : 1;
-                if (vA > vB) return dir === 'asc' ? 1 : -1;
-                return 0;
-            });
-            // Update DOM with sorted rows (first page only, pagination will refresh)
-            const tbody = document.getElementById('poTable');
-            if (tbody) {
-                // Remove all rows
-                while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
-                // Append sorted rows for current page
-                window.filteredRows.forEach(row => tbody.appendChild(row));
-            }
-        }
-        function updateIndicators(activeTh, dir) {
-    // Only update indicator arrows, do not touch any other logic
-    thead.querySelectorAll('th.sortable').forEach(th => {
-        th.classList.remove('asc', 'desc');
-        const indicator = th.querySelector('.sort-indicator');
-        if (indicator) {
-            const up = indicator.querySelector('.arrow-up');
-            const down = indicator.querySelector('.arrow-down');
-            if (up) { up.style.display = 'block'; up.style.color = '#999'; }
-            if (down) { down.style.display = 'block'; down.style.color = '#999'; }
-        }
-    });
-    if (activeTh) {
-        activeTh.classList.add(dir);
-        const indicator = activeTh.querySelector('.sort-indicator');
-        if (indicator) {
-            const up = indicator.querySelector('.arrow-up');
-            const down = indicator.querySelector('.arrow-down');
-            if (dir === 'asc') {
-                if (up) { up.style.display = 'block'; up.style.color = '#0d6efd'; }
-                if (down) { down.style.display = 'none'; }
-            } else if (dir === 'desc') {
-                if (up) { up.style.display = 'none'; }
-                if (down) { down.style.display = 'block'; down.style.color = '#0d6efd'; }
-            }
-        }
-    }
-
+            // Add pointer cursor for UX
             thead.querySelectorAll('th.sortable').forEach(th => {
-                th.classList.remove('asc', 'desc');
-                const indicator = th.querySelector('.sort-indicator');
-                if (indicator) indicator.textContent = '';
+                th.style.cursor = 'pointer';
             });
-            if (activeTh) {
-                activeTh.classList.add(dir);
-                const indicator = activeTh.querySelector('.sort-indicator');
-                if (indicator) indicator.textContent = dir === 'asc' ? '▲' : '▼';
-            }
-        }
-        thead.querySelectorAll('th.sortable').forEach(th => {
-            th.addEventListener('click', function() {
-                const sortKey = th.dataset.sort;
-                let dir = 'asc';
-                if (currentSort.col === sortKey && currentSort.dir === 'asc') dir = 'desc';
-                currentSort = { col: sortKey, dir };
-                sortRows(sortKey, dir);
-                updateIndicators(th, dir);
-                if (window.paginationConfig) window.paginationConfig.currentPage = 1;
-                updatePagination();
-            });
-        });
-    }
 
-    // Call on ready and after AJAX reloads
-    $(document).ready(function() {
-        initSortableHeaders();
-    });
-    // If you reload the table with AJAX, call initSortableHeaders() after DOM update.
-    function reattachEventHandlers() {
-        // ...existing handlers...
-        initSortableHeaders(); // ensure sorting re-binds after AJAX
-    }
+            function getCellValue(row, idx) {
+                return row.children[idx]?.innerText.trim();
+            }
+
+            function parseValue(val, sortKey) {
+                if (["id"].includes(sortKey)) return parseFloat(val) || 0;
+                if (["date_of_order", "date_created"].includes(sortKey)) return new Date(val);
+                return val ? val.toLowerCase() : '';
+            }
+
+            function getColIdx(sortKey) {
+                const headers = Array.from(thead.querySelectorAll('th.sortable'));
+                return headers.findIndex(th => th.dataset.sort === sortKey);
+            }
+
+            function sortRows(sortKey, dir) {
+                const idx = getColIdx(sortKey);
+                if (idx === -1) return;
+                const colName = thead.querySelectorAll('th.sortable')[idx]?.innerText.split(' ')[0];
+                window.filteredRows.sort((a, b) => {
+                    let vA = getCellValue(a, idx);
+                    let vB = getCellValue(b, idx);
+                    vA = parseValue(vA, sortKey);
+                    vB = parseValue(vB, sortKey);
+                    if (vA < vB) return dir === 'asc' ? -1 : 1;
+                    if (vA > vB) return dir === 'asc' ? 1 : -1;
+                    return 0;
+                });
+                // Update DOM with sorted rows (first page only, pagination will refresh)
+                const tbody = document.getElementById('poTable');
+                if (tbody) {
+                    // Remove all rows
+                    while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+                    // Append sorted rows for current page
+                    window.filteredRows.forEach(row => tbody.appendChild(row));
+                }
+            }
+
+            function updateIndicators(activeTh, dir) {
+                // Only update indicator arrows, do not touch any other logic
+                thead.querySelectorAll('th.sortable').forEach(th => {
+                    th.classList.remove('asc', 'desc');
+                    const indicator = th.querySelector('.sort-indicator');
+                    if (indicator) {
+                        const up = indicator.querySelector('.arrow-up');
+                        const down = indicator.querySelector('.arrow-down');
+                        if (up) {
+                            up.style.display = 'block';
+                            up.style.color = '#999';
+                        }
+                        if (down) {
+                            down.style.display = 'block';
+                            down.style.color = '#999';
+                        }
+                    }
+                });
+                if (activeTh) {
+                    activeTh.classList.add(dir);
+                    const indicator = activeTh.querySelector('.sort-indicator');
+                    if (indicator) {
+                        const up = indicator.querySelector('.arrow-up');
+                        const down = indicator.querySelector('.arrow-down');
+                        if (dir === 'asc') {
+                            if (up) {
+                                up.style.display = 'block';
+                                up.style.color = '#0d6efd';
+                            }
+                            if (down) {
+                                down.style.display = 'none';
+                            }
+                        } else if (dir === 'desc') {
+                            if (up) {
+                                up.style.display = 'none';
+                            }
+                            if (down) {
+                                down.style.display = 'block';
+                                down.style.color = '#0d6efd';
+                            }
+                        }
+                    }
+                }
+
+                thead.querySelectorAll('th.sortable').forEach(th => {
+                    th.classList.remove('asc', 'desc');
+                    const indicator = th.querySelector('.sort-indicator');
+                    if (indicator) indicator.textContent = '';
+                });
+                if (activeTh) {
+                    activeTh.classList.add(dir);
+                    const indicator = activeTh.querySelector('.sort-indicator');
+                    if (indicator) indicator.textContent = dir === 'asc' ? '▲' : '▼';
+                }
+            }
+            thead.querySelectorAll('th.sortable').forEach(th => {
+                th.addEventListener('click', function() {
+                    const sortKey = th.dataset.sort;
+                    let dir = 'asc';
+                    if (currentSort.col === sortKey && currentSort.dir === 'asc') dir = 'desc';
+                    currentSort = {
+                        col: sortKey,
+                        dir
+                    };
+                    sortRows(sortKey, dir);
+                    updateIndicators(th, dir);
+                    if (window.paginationConfig) window.paginationConfig.currentPage = 1;
+                    updatePagination();
+                });
+            });
+        }
+
+        // Call on ready and after AJAX reloads
+        $(document).ready(function() {
+            initSortableHeaders();
+        });
+        // If you reload the table with AJAX, call initSortableHeaders() after DOM update.
+        function reattachEventHandlers() {
+            // ...existing handlers...
+            initSortableHeaders(); // ensure sorting re-binds after AJAX
+        }
     </script>
     <?php include '../../general/footer.php'; ?>
 
