@@ -23,6 +23,8 @@ include '../../general/header.php';
 include '../../general/sidebar.php';
 include '../../general/footer.php';
 
+echo '<script>document.body.classList.add("user-roles-management");</script>';
+
 /**
  * Validate that the current session has a logged-in user.
  *

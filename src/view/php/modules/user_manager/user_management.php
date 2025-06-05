@@ -29,6 +29,8 @@ error_reporting(E_ALL);
     include '../../general/sidebar.php';
     include '../../general/footer.php';
 
+// Add user-management class to body
+echo '<script>document.body.classList.add("user-management");</script>';
 
 /**
  * Ensure a valid user_id is present in the session.

@@ -245,21 +245,21 @@ function getAcronym($string) {
                     </button>
                     <ul class="dropdown tree">
                         <i class="bi bi-file-earmark-check">
-                            <a href="<?= BASE_URL ?>src/view/php/modules/equipment_manager/equipment_details.php<?= $file ?>">
+                            <a href="<?= BASE_URL ?>src/view/php/modules/equipment_manager/equipment_details.php">
                                 <span class="short-label">ED</span>
                             </a>
                         </i>
                         <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_manager/equipment_details.php">Equipment
                                 Details</a></li>
                         <i class="bi bi-file-earmark-check">
-                            <a href="<?= BASE_URL ?>src/view/php/modules/equipment_manager/equipment_location.php<?= $file ?>">
+                            <a href="<?= BASE_URL ?>src/view/php/modules/equipment_manager/equipment_location.php">
                                 <span class="short-label">EL</span>
                             </a>
                         </i>
                         <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_manager/equipment_location.php">Equipment
                                 Location</a></li>
                         <i class="bi bi-file-earmark-check">
-                            <a href="<?= BASE_URL ?>src/view/php/modules/equipment_manager/equipment_status.php<?= $file ?>">
+                            <a href="<?= BASE_URL ?>src/view/php/modules/equipment_manager/equipment_status.php">
                                 <span class="short-label">ES-PMS</span>
                             </a>
                         </i>
@@ -319,11 +319,26 @@ function getAcronym($string) {
         header?.classList.toggle('sidebar-collapsed', isCollapsed);
         if (mainContent) {
             mainContent.classList.toggle('sidebar-collapsed', isCollapsed);
-            // Update margin directly if needed
             mainContent.style.marginLeft = isCollapsed ? '60px' : '300px';
         }
         localStorage.setItem('sidebarCollapsed', isCollapsed);
     }
+
+    // Function to check screen size and collapse if needed
+    function checkScreenSize() {
+        if (window.innerWidth <= 768) {
+            updateCollapsedState(true);
+        } else {
+            const isSidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+            updateCollapsedState(isSidebarCollapsed);
+        }
+    }
+
+    // Initial check
+    checkScreenSize();
+
+    // Listen for window resize
+    window.addEventListener('resize', checkScreenSize);
 
     // Check if there's a saved state in localStorage
     const isSidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';

@@ -339,7 +339,16 @@ body {
     /* Archive specific styles */
     .um-archive .main-content,
     .em-archive .main-content,
-    .rm-archive .main-content {
+    .rm-archive .main-content,
+    /* User Management specific styles */
+    .user-management .main-content,
+    .user-roles-management .main-content,
+    /* Manage Roles specific styles */
+    .manage-roles .main-content,
+    /* Equipment Management specific styles */
+    .equipment-details .main-content,
+    .equipment-location .main-content,
+    .equipment-status .main-content {
         margin-left: 60px;
         width: calc(100% - 60px);
         padding: 70px 15px 15px;
@@ -353,7 +362,16 @@ body {
     /* Archive specific styles */
     .um-archive .main-content.sidebar-collapsed,
     .em-archive .main-content.sidebar-collapsed,
-    .rm-archive .main-content.sidebar-collapsed {
+    .rm-archive .main-content.sidebar-collapsed,
+    /* User Management specific styles */
+    .user-management .main-content.sidebar-collapsed,
+    .user-roles-management .main-content.sidebar-collapsed,
+    /* Manage Roles specific styles */
+    .manage-roles .main-content.sidebar-collapsed,
+    /* Equipment Management specific styles */
+    .equipment-details .main-content.sidebar-collapsed,
+    .equipment-location .main-content.sidebar-collapsed,
+    .equipment-status .main-content.sidebar-collapsed {
         margin-left: 60px;
         width: calc(100% - 60px);
     }

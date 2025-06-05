@@ -14,6 +14,7 @@ session_start();
 include '../../../general/header.php';
 include '../../../general/sidebar.php';
 include '../../../general/footer.php';
+echo '<script>document.body.classList.add("manage-roles");</script>';
 
 /**
  * Authentication Guard
