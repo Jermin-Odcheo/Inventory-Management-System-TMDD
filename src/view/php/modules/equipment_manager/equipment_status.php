@@ -411,8 +411,6 @@ if (
     exit;
 }
 
-// Regular page load continues here...
-include('../../general/header.php'); // Include the general header HTML.
 
 // Initialize RBAC (re-initialize for regular page load if not already done)
 $userId = $_SESSION['user_id'] ?? null;
