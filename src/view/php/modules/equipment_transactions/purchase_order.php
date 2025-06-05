@@ -142,13 +142,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
      */
     $date_of_order     = trim($_POST['date_of_order'] ?? '');
     /**
-     * @var string $no_of_units
-     * @brief Stores the number of units in the purchase order.
-     *
-     * This variable holds the quantity of units specified in the purchase order.
-     */
-    $no_of_units       = trim($_POST['no_of_units'] ?? '');
-    /**
      * @var string $item_specifications
      * @brief Stores the specifications of the items in the purchase order.
      *
@@ -156,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
      */
     $item_specifications = trim($_POST['item_specifications'] ?? '');
 
-    if (empty($po_no) || empty($date_of_order) || empty($no_of_units) || empty($item_specifications)) {
+    if (empty($po_no) || empty($date_of_order) || empty($item_specifications)) {
         $errors[] = "Please fill in all required fields.";
     } elseif (!preg_match('/^PO[0-9\/-]+$/', $po_no)) {
         $errors[] = "PO Number must start with 'PO' and can only contain numbers, hyphens (-), and slashes (/).";
@@ -178,13 +171,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 $stmt = $pdo->prepare("INSERT INTO purchase_order 
-                    (po_no, date_of_order, no_of_units, item_specifications, date_created, is_disabled)
-                    VALUES (?, ?, ?, ?, NOW(), 0)");
-                $stmt->execute([$po_no, $date_of_order, $no_of_units, $item_specifications]);
+                    (po_no, date_of_order, item_specifications, date_created, is_disabled)
+                    VALUES (?, ?, ?, NOW(), 0)");
+                $stmt->execute([$po_no, $date_of_order, $item_specifications]);
                 $payload = json_encode([
                     'po_no'               => $po_no,
                     'date_of_order'       => $date_of_order,
-                    'no_of_units'         => $no_of_units,
                     'item_specifications' => $item_specifications
                 ]);
                 logAudit(
@@ -220,7 +212,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
 
                     // 2) fetch existing row
-                    $stmt = $pdo->prepare("SELECT po_no, date_of_order, no_of_units, item_specifications FROM purchase_order WHERE id = ?");
+                    $stmt = $pdo->prepare("SELECT po_no, date_of_order, item_specifications FROM purchase_order WHERE id = ?");
                     $stmt->execute([$id]);
                     $oldData = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -240,7 +232,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $newData = [
                             'po_no'               => $po_no,
                             'date_of_order'       => $date_of_order,
-                            'no_of_units'         => $no_of_units,
                             'item_specifications' => $item_specifications
                         ];
 
@@ -248,7 +239,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $fieldLabels = [
                             'po_no'               => 'PO No',
                             'date_of_order'       => 'Date of Order',
-                            'no_of_units'         => 'No of Units',
                             'item_specifications' => 'Item Specifications'
                         ];
                         $oldSubset   = [];
@@ -260,7 +250,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $newVal = $newData[$key];
 
                             // normalize numeric fields by casting to int, others by trimming strings
-                            if ($key === 'no_of_units') {
+                            if ($key === 'po_no') {
                                 $oldNorm = (string)(int)$oldVal;
                                 $newNorm = (string)(int)$newVal;
                             } else {
@@ -284,14 +274,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         UPDATE purchase_order SET 
                           po_no               = ?, 
                           date_of_order       = ?, 
-                          no_of_units         = ?, 
                           item_specifications = ? 
                         WHERE id = ?
                     ");
                             $stmt->execute([
                                 $newData['po_no'],
                                 $newData['date_of_order'],
-                                $newData['no_of_units'],
                                 $newData['item_specifications'],
                                 $id
                             ]);
@@ -732,7 +720,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
                                         <th class="sortable" data-sort="id"># <span class="sort-indicator"><span class="arrow-up">▲</span><span class="arrow-down">▼</span></span></th>
                                         <th class="sortable" data-sort="po_no">PO Number <span class="sort-indicator"><span class="arrow-up">▲</span><span class="arrow-down">▼</span></span></th>
                                         <th class="sortable" data-sort="date_of_order">Date of Order <span class="sort-indicator"><span class="arrow-up">▲</span><span class="arrow-down">▼</span></span></th>
-                                        <th class="sortable" data-sort="no_of_units">No. of Units <span class="sort-indicator"><span class="arrow-up">▲</span><span class="arrow-down">▼</span></span></th>
                                         <th class="sortable" data-sort="item_specifications">Item Specifications <span class="sort-indicator"><span class="arrow-up">▲</span><span class="arrow-down">▼</span></span></th>
                                         <th class="sortable d-none" data-sort="date_created">Created Date <span class="sort-indicator"></span></th>
                                         <th class="text-center">Actions</th>
@@ -745,7 +732,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
                                                 <td><?php echo htmlspecialchars($po['id']); ?></td>
                                                 <td><?php echo htmlspecialchars($po['po_no']); ?></td>
                                                 <td><?php echo htmlspecialchars($po['date_of_order']); ?></td>
-                                                <td><?php echo htmlspecialchars($po['no_of_units']); ?></td>
                                                 <td><?php echo htmlspecialchars($po['item_specifications']); ?></td>
                                                 <td class="d-none"><?php echo date('Y-m-d h:i A', strtotime($po['date_created'])); ?></td>
                                                 <td class="text-center">
@@ -755,7 +741,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
                                                                 data-id="<?php echo htmlspecialchars($po['id']); ?>"
                                                                 data-po="<?php echo htmlspecialchars($po['po_no']); ?>"
                                                                 data-date="<?php echo htmlspecialchars($po['date_of_order']); ?>"
-                                                                data-units="<?php echo htmlspecialchars($po['no_of_units']); ?>"
                                                                 data-item="<?php echo htmlspecialchars($po['item_specifications']); ?>">
                                                                 <i class="bi bi-pencil-square"></i> <span>Edit</span>
                                                             </a>
@@ -773,7 +758,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
                                         <?php endforeach; ?>
                                     <?php else: ?>
                                         <tr>
-                                            <td colspan="7">No Purchase Orders found.</td>
+                                            <td colspan="6">No Purchase Orders found.</td>
                                         </tr>
                                     <?php endif; ?>
                                 </tbody>
@@ -863,11 +848,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
                                 <input type="date" class="form-control" name="date_of_order" required>
                             </div>
                             <div class="mb-3">
-                                <label for="no_of_units" class="form-label">No. of Units <span
-                                        class="text-danger">*</span></label>
-                                <input type="number" class="form-control" name="no_of_units" required>
-                            </div>
-                            <div class="mb-3">
                                 <label for="item_specifications" class="form-label">Item Specifications
                                     <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" name="item_specifications"
@@ -905,10 +885,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
                             <div class="mb-3">
                                 <label for="edit_date_of_order" class="form-label">Date of Order <span class="text-danger">*</span></label>
                                 <input type="date" class="form-control" name="date_of_order" id="edit_date_of_order" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="edit_no_of_units" class="form-label">No. of Units <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control" name="no_of_units" id="edit_no_of_units" required>
                             </div>
                             <div class="mb-3">
                                 <label for="edit_item_specifications" class="form-label">Item Specifications <span class="text-danger">*</span></label>
@@ -1053,7 +1029,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
                 const id = $(this).data('id');
                 const rawPo = $(this).data('po') || ''; // e.g. "PO123"
                 const date = $(this).data('date') || '';
-                const units = $(this).data('units') || '';
                 const item = $(this).data('item') || '';
 
                 // Strip off the "PO" prefix so the <input> only gets allowed chars
@@ -1063,7 +1038,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
                 $('#edit_po_id').val(id);
                 $('#edit_po_no').val(numericPo);
                 $('#edit_date_of_order').val(date);
-                $('#edit_no_of_units').val(units);
                 $('#edit_item_specifications').val(item);
 
                 // Show the modal (using getOrCreateInstance is a bit safer)
@@ -1287,7 +1261,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
                 const id = $(this).data('id');
                 const rawPo = $(this).data('po') || ''; // e.g. "PO123"
                 const date = $(this).data('date') || '';
-                const units = $(this).data('units') || '';
                 const item = $(this).data('item') || '';
 
                 // Strip off the "PO" prefix so the <input> only gets allowed chars
@@ -1297,7 +1270,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
                 $('#edit_po_id').val(id);
                 $('#edit_po_no').val(numericPo);
                 $('#edit_date_of_order').val(date);
-                $('#edit_no_of_units').val(units);
                 $('#edit_item_specifications').val(item);
 
                 // Show the modal (using getOrCreateInstance is a bit safer)
@@ -1592,7 +1564,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'check_po_exists' && isset($_G
             return row.children[idx]?.innerText.trim();
         }
         function parseValue(val, sortKey) {
-    if (["id", "no_of_units"].includes(sortKey)) return parseFloat(val) || 0;
+    if (["id"].includes(sortKey)) return parseFloat(val) || 0;
     if (["date_of_order", "date_created"].includes(sortKey)) return new Date(val);
     return val ? val.toLowerCase() : '';
 }
