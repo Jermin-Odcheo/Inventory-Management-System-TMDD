@@ -96,6 +96,9 @@ $baseWhere = "r.is_disabled = 1
     )";
 $params = [];
 
+// Initialize error message array
+$errorMessages = [];
+
 /**
  * @var string $searchTerm The search term to apply to the SQL query.
  */
@@ -117,31 +120,55 @@ if (!empty($_GET['search'])) {
  * @var array $params The parameters for the SQL query.
  */
 if ($dateFilterType === 'mdy') {
-    if (!empty($_GET['date_from'])) {
-        $baseWhere .= " AND DATE(a.Date_Time) >= :date_from";
-        $params[':date_from'] = $_GET['date_from'];
-    }
-    if (!empty($_GET['date_to'])) {
-        $baseWhere .= " AND DATE(a.Date_Time) <= :date_to";
-        $params[':date_to'] = $_GET['date_to'];
+    $dateFrom = !empty($_GET['date_from']) ? $_GET['date_from'] : null;
+    $dateTo = !empty($_GET['date_to']) ? $_GET['date_to'] : null;
+    
+    // Server-side date validation
+    if ($dateFrom && $dateTo && strtotime($dateFrom) > strtotime($dateTo)) {
+        $errorMessages[] = '"Date From" cannot be greater than "Date To"';
+    } else {
+        if (!empty($dateFrom)) {
+            $baseWhere .= " AND DATE(a.Date_Time) >= :date_from";
+            $params[':date_from'] = $dateFrom;
+        }
+        if (!empty($dateTo)) {
+            $baseWhere .= " AND DATE(a.Date_Time) <= :date_to";
+            $params[':date_to'] = $dateTo;
+        }
     }
 } else if ($dateFilterType === 'month_year') {
-    if (!empty($_GET['month_year_from'])) {
-        $baseWhere .= " AND a.Date_Time >= STR_TO_DATE(:month_year_from, '%Y-%m')";
-        $params[':month_year_from'] = $_GET['month_year_from'];
-    }
-    if (!empty($_GET['month_year_to'])) {
-        $baseWhere .= " AND a.Date_Time < DATE_ADD(STR_TO_DATE(:month_year_to, '%Y-%m'), INTERVAL 1 MONTH)";
-        $params[':month_year_to'] = $_GET['month_year_to'];
+    $monthYearFrom = !empty($_GET['month_year_from']) ? $_GET['month_year_from'] : null;
+    $monthYearTo = !empty($_GET['month_year_to']) ? $_GET['month_year_to'] : null;
+    
+    // Server-side month-year validation
+    if ($monthYearFrom && $monthYearTo && strtotime($monthYearFrom . '-01') > strtotime($monthYearTo . '-01')) {
+        $errorMessages[] = '"From (MM-YYYY)" cannot be greater than "To (MM-YYYY)"';
+    } else {
+        if (!empty($monthYearFrom)) {
+            $baseWhere .= " AND a.Date_Time >= STR_TO_DATE(:month_year_from, '%Y-%m')";
+            $params[':month_year_from'] = $monthYearFrom;
+        }
+        if (!empty($monthYearTo)) {
+            $baseWhere .= " AND a.Date_Time < DATE_ADD(STR_TO_DATE(:month_year_to, '%Y-%m'), INTERVAL 1 MONTH)";
+            $params[':month_year_to'] = $monthYearTo;
+        }
     }
 } else if ($dateFilterType === 'year') {
-    if (!empty($_GET['year_from'])) {
-        $baseWhere .= " AND YEAR(a.Date_Time) >= :year_from";
-        $params[':year_from'] = $_GET['year_from'];
-    }
-    if (!empty($_GET['year_to'])) {
-        $baseWhere .= " AND YEAR(a.Date_Time) <= :year_to";
-        $params[':year_to'] = $_GET['year_to'];
+    $yearFrom = !empty($_GET['year_from']) ? (int)$_GET['year_from'] : null;
+    $yearTo = !empty($_GET['year_to']) ? (int)$_GET['year_to'] : null;
+    
+    // Server-side year validation
+    if ($yearFrom && $yearTo && $yearFrom > $yearTo) {
+        $errorMessages[] = '"Year From" cannot be greater than "Year To"';
+    } else {
+        if (!empty($yearFrom)) {
+            $baseWhere .= " AND YEAR(a.Date_Time) >= :year_from";
+            $params[':year_from'] = $yearFrom;
+        }
+        if (!empty($yearTo)) {
+            $baseWhere .= " AND YEAR(a.Date_Time) <= :year_to";
+            $params[':year_to'] = $yearTo;
+        }
     }
 }
 
@@ -315,12 +342,14 @@ function formatChanges($oldJsonStr)
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 
     <meta charset="UTF-8">
     <title>Roles Archives</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <link rel="stylesheet" src="<?php echo BASE_URL; ?> /src/view/styles/css/audit_log.css">
     <style>
         .wrapper {
@@ -337,6 +366,13 @@ function formatChanges($oldJsonStr)
         #tableContainer {
             max-height: 500px;
             overflow-y: auto;
+        }
+        
+        #dateInputsContainer {
+            position: relative;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
         }
 
         /* Styles for sortable headers */
@@ -404,66 +440,95 @@ function formatChanges($oldJsonStr)
                         </div>
                     </div>
 
+                    <!-- Display validation errors if any -->
+                    <?php if (!empty($errorMessages)): ?>
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <strong><i class="fas fa-exclamation-triangle me-2"></i>Error:</strong>
+                        <ul class="mb-0 mt-2">
+                            <?php foreach ($errorMessages as $error): ?>
+                                <li><?php echo htmlspecialchars($error); ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                    <?php endif; ?>
+
                     <!-- Filter Section -->
                     <form method="GET" class="row g-3 mb-4" id="archiveFilterForm" action="">
 
-                        <!-- Date Range selector -->
-                        <div class="col-12 col-md-3">
-                            <label class="form-label fw-semibold">Date Filter Type</label>
-                            <select id="dateFilterType" name="date_filter_type" class="form-select shadow-sm">
-                                <option value="" <?= empty($_GET['date_filter_type']) ? 'selected' : '' ?>>-- Select Type --</option>
-                                <option value="month_year" <?= (($_GET['date_filter_type'] ?? '') === 'month_year') ? 'selected' : '' ?>>Month-Year Range</option>
-                                <option value="year" <?= (($_GET['date_filter_type'] ?? '') === 'year') ? 'selected' : '' ?>>Year Range</option>
-                                <option value="mdy" <?= (($_GET['date_filter_type'] ?? '') === 'mdy') ? 'selected' : '' ?>>Month-Date-Year Range</option>
-                            </select>
-                        </div>
+                        <!-- Date Filter Row with flex layout -->
+                        <div class="col-12 d-flex flex-wrap align-items-end gap-3 mb-3">
+                            <!-- Date Range selector -->
+                            <div style="width: 200px;">
+                                <label class="form-label fw-semibold">Date Filter Type</label>
+                                <select id="dateFilterType" name="date_filter_type" class="form-select shadow-sm">
+                                    <option value="" <?= empty($_GET['date_filter_type']) ? 'selected' : '' ?>>-- Select Type --</option>
+                                    <option value="month_year" <?= (($_GET['date_filter_type'] ?? '') === 'month_year') ? 'selected' : '' ?>>Month-Year Range</option>
+                                    <option value="year" <?= (($_GET['date_filter_type'] ?? '') === 'year') ? 'selected' : '' ?>>Year Range</option>
+                                    <option value="mdy" <?= (($_GET['date_filter_type'] ?? '') === 'mdy') ? 'selected' : '' ?>>Month-Date-Year Range</option>
+                                </select>
+                            </div>
 
-                        <!-- MDY Range -->
-                        <div class="col-12 col-md-3 date-filter date-mdy d-none">
-                            <label class="form-label fw-semibold">Date From</label>
-                            <input type="date" name="date_from" class="form-control shadow-sm"
-                                value="<?= htmlspecialchars($_GET['date_from'] ?? '') ?>"
-                                placeholder="Start Date (YYYY-MM-DD)">
-                        </div>
-                        <div class="col-12 col-md-3 date-filter date-mdy d-none">
-                            <label class="form-label fw-semibold">Date To</label>
-                            <input type="date" name="date_to" class="form-control shadow-sm"
-                                value="<?= htmlspecialchars($_GET['date_to'] ?? '') ?>"
-                                placeholder="End Date (YYYY-MM-DD)">
-                        </div>
+                            <!-- Date inputs container positioned to the right -->
+                            <div id="dateInputsContainer" class="d-flex flex-wrap gap-3">
+                                <!-- MDY Range -->
+                                <div class="date-filter date-mdy d-none" style="width: 200px;">
+                                    <label class="form-label fw-semibold">Date From</label>
+                                    <input type="date" name="date_from" class="form-control shadow-sm"
+                                        value="<?= htmlspecialchars($_GET['date_from'] ?? '') ?>"
+                                        placeholder="Start Date (YYYY-MM-DD)">
+                                </div>
+                                <div class="date-filter date-mdy d-none" style="width: 200px;">
+                                    <label class="form-label fw-semibold">Date To</label>
+                                    <input type="date" name="date_to" class="form-control shadow-sm"
+                                        value="<?= htmlspecialchars($_GET['date_to'] ?? '') ?>"
+                                        placeholder="End Date (YYYY-MM-DD)">
+                                </div>
 
-                        <!-- Year Range -->
-                        <div class="col-12 col-md-3 date-filter date-year d-none">
-                            <label class="form-label fw-semibold">Year From</label>
-                            <input type="number" name="year_from" class="form-control shadow-sm"
-                                min="1900" max="2100"
-                                placeholder="e.g., 2023"
-                                value="<?= htmlspecialchars($_GET['year_from'] ?? '') ?>">
-                        </div>
-                        <div class="col-12 col-md-3 date-filter date-year d-none">
-                            <label class="form-label fw-semibold">Year To</label>
-                            <input type="number" name="year_to" class="form-control shadow-sm"
-                                min="1900" max="2100"
-                                placeholder="e.g., 2025"
-                                value="<?= htmlspecialchars($_GET['year_to'] ?? '') ?>">
-                        </div>
+                                <!-- Year Range -->
+                                <div class="date-filter date-year d-none" style="width: 200px;">
+                                    <label class="form-label fw-semibold">Year From</label>
+                                    <input type="number" name="year_from" class="form-control shadow-sm"
+                                        min="1900" max="2100"
+                                        placeholder="e.g., 2023"
+                                        value="<?= htmlspecialchars($_GET['year_from'] ?? '') ?>">
+                                </div>
+                                <div class="date-filter date-year d-none" style="width: 200px;">
+                                    <label class="form-label fw-semibold">Year To</label>
+                                    <input type="number" name="year_to" class="form-control shadow-sm"
+                                        min="1900" max="2100"
+                                        placeholder="e.g., 2025"
+                                        value="<?= htmlspecialchars($_GET['year_to'] ?? '') ?>">
+                                </div>
 
-                        <!-- Month-Year Range -->
-                        <div class="col-12 col-md-3 date-filter date-month_year d-none">
-                            <label class="form-label fw-semibold">From (MM-YYYY)</label>
-                            <input type="month" name="month_year_from" class="form-control shadow-sm"
-                                value="<?= htmlspecialchars($_GET['month_year_from'] ?? '') ?>"
-                                placeholder="e.g., 2023-01">
-                        </div>
-                        <div class="col-12 col-md-3 date-filter date-month_year d-none">
-                            <label class="form-label fw-semibold">To (MM-YYYY)</label>
-                            <input type="month" name="month_year_to" class="form-control shadow-sm"
-                                value="<?= htmlspecialchars($_GET['month_year_to'] ?? '') ?>"
-                                placeholder="e.g., 2023-12">
+                                <!-- Month-Year Range -->
+                                <div class="date-filter date-month_year d-none" style="width: 200px;">
+                                    <label class="form-label fw-semibold">From (MM-YYYY)</label>
+                                    <input type="month" name="month_year_from" class="form-control shadow-sm"
+                                        value="<?= htmlspecialchars($_GET['month_year_from'] ?? '') ?>"
+                                        placeholder="e.g., 2023-01">
+                                </div>
+                                <div class="date-filter date-month_year d-none" style="width: 200px;">
+                                    <label class="form-label fw-semibold">To (MM-YYYY)</label>
+                                    <input type="month" name="month_year_to" class="form-control shadow-sm"
+                                        value="<?= htmlspecialchars($_GET['month_year_to'] ?? '') ?>"
+                                        placeholder="e.g., 2023-12">
+                                </div>
+                            </div>
+
+                            <!-- Filter buttons moved to the same row -->
+                            <div class="ms-auto d-flex gap-2">
+                                <button type="submit" id="applyFilters" class="btn btn-dark">
+                                    <i class="fas fa-filter"></i> Filter
+                                </button>
+                                <button type="button" id="clearFilters" class="btn btn-secondary shadow-sm">
+                                    <i class="fas fa-times-circle"></i> Clear
+                                </button>
+                            </div>
                         </div>
 
                         <!-- Search bar -->
-                        <div class="col-12 col-sm-6 col-md-3">
+                        <div class="col-12 col-sm-6 col-md-4">
                             <label class="form-label fw-semibold">Search</label>
                             <div class="input-group shadow-sm">
                                 <span class="input-group-text"><i class="fas fa-search"></i></span>
@@ -471,18 +536,6 @@ function formatChanges($oldJsonStr)
                                     placeholder="Search role archives..."
                                     value="<?= htmlspecialchars($_GET['search'] ?? '') ?>">
                             </div>
-                        </div>
-
-                        <div class="col-6 col-md-2 d-grid">
-                            <button type="submit" id="applyFilters" class="btn btn-dark">
-                                <i class="fas fa-filter"></i> Filter
-                            </button>
-                        </div>
-
-                        <div class="col-6 col-md-2 d-grid">
-                            <button type="button" id="clearFilters" class="btn btn-secondary shadow-sm">
-                                <i class="fas fa-times-circle"></i> Clear
-                            </button>
                         </div>
                     </form>
 
@@ -1045,6 +1098,100 @@ function formatChanges($oldJsonStr)
                         form.submit();
                     });
                 }
+
+        // Date filter validation
+        document.addEventListener('DOMContentLoaded', function() {
+            const filterForm = document.getElementById('archiveFilterForm');
+            
+            // Date validation function
+            function validateDateRange(fromValue, toValue, format) {
+                if (!fromValue || !toValue) return true; // If either field is empty, don't validate
+                
+                let fromDate, toDate;
+                
+                switch(format) {
+                    case 'mdy':
+                        fromDate = new Date(fromValue);
+                        toDate = new Date(toValue);
+                        break;
+                    case 'month_year':
+                        fromDate = new Date(fromValue + '-01'); // Add day for valid date
+                        toDate = new Date(toValue + '-01');
+                        break;
+                    case 'year':
+                        fromDate = new Date(fromValue, 0, 1); // Jan 1st of the year
+                        toDate = new Date(toValue, 0, 1);
+                        break;
+                }
+                
+                return fromDate <= toDate;
+            }
+            
+            // Form submission validation
+            if (filterForm) {
+                filterForm.addEventListener('submit', function(e) {
+                    const dateFilterType = document.getElementById('dateFilterType').value;
+                    let isValid = true;
+                    let errorMessage = '';
+                    
+                    if (dateFilterType === 'mdy') {
+                        const dateFrom = document.querySelector('input[name="date_from"]').value;
+                        const dateTo = document.querySelector('input[name="date_to"]').value;
+                        
+                        if (!validateDateRange(dateFrom, dateTo, 'mdy')) {
+                            isValid = false;
+                            errorMessage = 'Error: "Date From" cannot be greater than "Date To"';
+                        }
+                    } 
+                    else if (dateFilterType === 'month_year') {
+                        const monthYearFrom = document.querySelector('input[name="month_year_from"]').value;
+                        const monthYearTo = document.querySelector('input[name="month_year_to"]').value;
+                        
+                        if (!validateDateRange(monthYearFrom, monthYearTo, 'month_year')) {
+                            isValid = false;
+                            errorMessage = 'Error: "From (MM-YYYY)" cannot be greater than "To (MM-YYYY)"';
+                        }
+                    } 
+                    else if (dateFilterType === 'year') {
+                        const yearFrom = document.querySelector('input[name="year_from"]').value;
+                        const yearTo = document.querySelector('input[name="year_to"]').value;
+                        
+                        if (yearFrom && yearTo && parseInt(yearFrom) > parseInt(yearTo)) {
+                            isValid = false;
+                            errorMessage = 'Error: "Year From" cannot be greater than "Year To"';
+                        }
+                    }
+                    
+                                         if (!isValid) {
+                         e.preventDefault();
+                         $('#filterError').remove();
+                         
+                         // Add the error tooltip directly to the form
+                         const filterRow = document.querySelector('.col-12.d-flex.flex-wrap.align-items-end');
+                         filterRow.style.position = 'relative';
+                         
+                         const errorDiv = document.createElement('div');
+                         errorDiv.id = 'filterError';
+                         errorDiv.className = 'validation-tooltip';
+                         errorDiv.style.cssText = 'position: absolute; top: calc(100% + 5px); left: 50%; transform: translateX(-50%); background-color: #d9534f; color: white; padding: 6px 10px; border-radius: 4px; font-size: 0.85em; z-index: 1000; white-space: nowrap; box-shadow: 0 2px 5px rgba(0,0,0,0.2);';
+                         errorDiv.innerHTML = errorMessage + '<div style="position: absolute; top: -5px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 5px solid #d9534f;"></div>';
+                         
+                         filterRow.appendChild(errorDiv);
+                         
+                         // Make sure the error message is visible by scrolling to it if needed
+                         errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                         
+                         setTimeout(function() {
+                             $('#filterError').fadeOut('slow', function() {
+                                 $(this).remove();
+                             });
+                         }, 3000);
+                         return;
+                     }
+                     $('#filterError').remove();
+                });
+            }
+        });
     </script>
 </body>
 
