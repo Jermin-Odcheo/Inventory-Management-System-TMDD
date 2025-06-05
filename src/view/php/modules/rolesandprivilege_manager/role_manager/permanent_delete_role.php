@@ -1,6 +1,7 @@
 <?php
 /**
- * Permanent Role Deletion Script
+ * @file permanent_delete_role.php
+ * @brief handles the permanent deletion of roles that have been previously disabled or archived
  *
  * This script handles the permanent deletion of roles that have been previously disabled or archived.
  * It supports both single role deletion and bulk deletion of multiple roles.

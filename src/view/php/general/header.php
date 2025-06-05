@@ -1,13 +1,26 @@
 <?php
+/**
+ * @file header.php
+ * @brief handles the display of the header
+ *
+ * This script handles the display of the header. It checks if the user is logged in,
+ * fetches the user's information, and displays it in the header.
+ */
 require_once(__DIR__ . '/../../../../config/config.php');
-//If not logged in redirect to the LOGIN PAGE
+/**
+ * If not logged in redirect to the LOGIN PAGE
+ */
 if (!isset($_SESSION['user_id'])) {
     header("Location: " . BASE_URL . "index.php"); // Redirect to login page
     exit();
 }
-
+/**
+ * @var int|null $user_id The user ID of the current user.
+ */
 $user_id = $_SESSION['user_id'] ?? null;
-
+/**
+ * @var PDOStatement $stmt The prepared statement to fetch the user's information.
+ */
 $stmt = $pdo->prepare("
     SELECT u.username, u.profile_pic_path, r.role_name AS role
     FROM users u
@@ -15,6 +28,7 @@ $stmt = $pdo->prepare("
     LEFT JOIN roles r ON ur.role_id = r.id
     WHERE u.id = ?
 ");
+
 $stmt->execute([$user_id]);
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 

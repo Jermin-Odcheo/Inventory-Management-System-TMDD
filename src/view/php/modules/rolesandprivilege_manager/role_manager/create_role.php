@@ -1,6 +1,7 @@
 <?php
 /**
- * Create Role Script
+ * @file create_role.php
+ * @brief handles the creation of new roles and the management of their privileges across different modules
  *
  * This script handles the creation of new roles and the management of their privileges across different modules.
  * It fetches existing roles and their associated modules and privileges for display and updating.

@@ -1,28 +1,48 @@
 <?php
+/**
+ * @file et_archive.php
+ * @brief handles the display of archived equipment transactions
+ *
+ * This script handles the display of archived equipment transactions. It checks user permissions,
+ * fetches and filters archived data based on various criteria, and formats the data for presentation in a user interface.
+ */
+
 session_start();
 require '../../../../../../config/ims-tmdd.php';
 
 // Include Header
 include '../../../general/header.php';
 
-// If not logged in, redirect to the LOGIN PAGE
+/**
+ * If the user is not logged in, they are redirected to the login page.
+ */
 if (!isset($_SESSION['user_id'])) {
     header("Location: " . BASE_URL . "public/index.php");
     exit();
 }
 
-// Initialize RBAC for Equipment Transaction
+/**
+ * @var RBACService $rbac The RBAC service instance.
+ * @var bool $canRestore The flag indicating if the user can restore equipment transactions.
+ * @var bool $canRemove The flag indicating if the user can remove equipment transactions.
+ * @var bool $canDelete The flag indicating if the user can permanently delete equipment transactions.
+ */
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
 $rbac->requirePrivilege('Equipment Transactions', 'View');
 $canRestore = $rbac->hasPrivilege('Equipment Transactions', 'Restore');
 $canRemove = $rbac->hasPrivilege('Equipment Transactions', 'Remove');
 $canDelete = $rbac->hasPrivilege('Equipment Transactions', 'Permanently Delete');
 
-// --- Sorting Logic ---
+/**
+ * @var string $sort_by The column to sort the data by.
+ * @var string $sort_order The order to sort the data by.
+ */
 $sort_by = $_GET['sort_by'] ?? 'track_id'; // Default sort column
 $sort_order = $_GET['sort_order'] ?? 'desc'; // Default sort order
 
-// Whitelist allowed columns to prevent SQL injection
+/**
+ * @var array $allowedSortColumns The allowed columns to sort the data by.
+ */
 $allowedSortColumns = [
     'track_id' => 'a.TrackID',
     'operator_name' => 'operator_name', // Alias from CONCAT
@@ -32,15 +52,26 @@ $allowedSortColumns = [
     'date_time' => 'a.Date_Time'
 ];
 
-// Validate sort_by and sort_order
+/**
+ * @var string $dateFilterType The type of date filter to apply.
+ * @var string $baseWhere The base SQL WHERE clause.
+ * @var array $params The parameters for the SQL query.
+ */
 if (!array_key_exists($sort_by, $allowedSortColumns)) {
     $sort_by = 'track_id'; // Fallback to default
 }
+/**
+ * @var string $sort_order The order to sort the data by.
+ */
 if (!in_array(strtolower($sort_order), ['asc', 'desc'])) {
     $sort_order = 'desc'; // Fallback to default
 }
 
-// --- Filter Logic ---
+/**
+ * @var string $dateFilterType The type of date filter to apply.
+ * @var string $baseWhere The base SQL WHERE clause.
+ * @var array $params The parameters for the SQL query.
+ */
 $dateFilterType = $_GET['date_filter_type'] ?? '';
 $moduleType = $_GET['module_type'] ?? '';
 
@@ -59,13 +90,17 @@ $baseWhere = "a.Module IN ('Purchase Order', 'Charge Invoice', 'Receiving Report
       OR (a.Module = 'Receiving Report' AND rr.is_disabled = 1)
   )";
 
-// Apply module type filter
+/**
+ * @var string $moduleType The type of module to filter by.
+ */
 if (!empty($moduleType)) {
     $baseWhere .= " AND a.Module = :module_type";
     $params[':module_type'] = $moduleType;
 }
 
-// Apply search filter
+/**
+ * @var string $searchTerm The search term to apply to the SQL query.
+ */
 if (!empty($_GET['search'])) {
     $searchTerm = '%' . $_GET['search'] . '%';
     $baseWhere .= " AND (
@@ -80,7 +115,11 @@ if (!empty($_GET['search'])) {
     $params[':search_newval'] = $searchTerm;
 }
 
-// Apply date filters
+/**
+ * @var string $dateFilterType The type of date filter to apply.
+ * @var string $baseWhere The base SQL WHERE clause.
+ * @var array $params The parameters for the SQL query.
+ */
 if ($dateFilterType === 'mdy') {
     if (!empty($_GET['date_from'])) {
         $baseWhere .= " AND DATE(a.Date_Time) >= :date_from";
@@ -112,6 +151,9 @@ if ($dateFilterType === 'mdy') {
 
 $orderByClause = "ORDER BY " . $allowedSortColumns[$sort_by] . " " . strtoupper($sort_order);
 
+/**
+ * @var string $query The SQL query for archived equipment transactions.
+ */
 $query = "
 SELECT
     a.TrackID AS track_id,
@@ -135,9 +177,15 @@ WHERE $baseWhere
 ";
 
 
+/**
+ * @var PDOStatement $stmt The prepared statement for the SQL query.
+ */
 try {
     $stmt = $pdo->prepare($query);
     $stmt->execute($params);
+    /**
+     * @var array $logs The data from the SQL query.
+     */
     $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
     if (!$logs) {
         $logs = [];
@@ -147,7 +195,10 @@ try {
 }
 
 /**
- * Format JSON data into a list (for the 'Changes' column).
+ * Format JSON data into a list for display in the 'Changes' column.
+ *
+ * @param string $jsonStr The JSON string containing the data to format.
+ * @return string HTML formatted list of key-value pairs from the JSON data.
  */
 function formatNewValue($jsonStr)
 {
@@ -168,7 +219,10 @@ function formatNewValue($jsonStr)
 }
 
 /**
- * Helper function to return an icon based on action.
+ * Helper function to return an icon based on the action type.
+ *
+ * @param string $action The action type to get an icon for.
+ * @return string HTML string containing the FontAwesome icon for the action.
  */
 function getActionIcon($action)
 {
@@ -185,7 +239,10 @@ function getActionIcon($action)
 }
 
 /**
- * Helper function to return a status icon.
+ * Helper function to return a status icon based on the status value.
+ *
+ * @param string $status The status of the action (e.g., 'successful').
+ * @return string HTML string containing the FontAwesome icon for the status.
  */
 function getStatusIcon($status)
 {
@@ -194,8 +251,15 @@ function getStatusIcon($status)
         ? '<i class="fas fa-check-circle"></i>'
         : '<i class="fas fa-times-circle"></i>';
 }
+
 /**
- * Format JSON data to display old values only.
+ * Format JSON data to display old values only in the 'Changes' column.
+ *
+ * This function processes the old values from a JSON string and formats them into an HTML list
+ * for display purposes, highlighting changes made to equipment type data.
+ *
+ * @param string $oldJsonStr The JSON string containing the old values to format.
+ * @return string HTML formatted list of old values.
  */
 function formatChanges($oldJsonStr)
 {

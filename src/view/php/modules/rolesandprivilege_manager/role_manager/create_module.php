@@ -1,6 +1,7 @@
 <?php
 /**
- * Create Module Script
+ * @file create_module.php
+ * @brief handles the creation and deletion of modules in the system
  *
  * This script handles the creation and deletion of modules in the system. It fetches existing modules
  * with their associated privileges and provides a form to add new modules with default privileges.

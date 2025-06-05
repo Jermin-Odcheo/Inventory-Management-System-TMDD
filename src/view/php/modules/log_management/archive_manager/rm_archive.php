@@ -1,4 +1,11 @@
 <?php
+/**
+ * @file rm_archive.php
+ * @brief handles the display of archived roles and their audit logs
+ *
+ * This script handles the display of archived roles and their audit logs. It checks user permissions,
+ * fetches and filters archived data based on various criteria, and formats the data for presentation in a user interface.
+ */
 ob_start();
 require_once('../../../../../../config/ims-tmdd.php');
 session_start();
@@ -7,27 +14,49 @@ include '../../../general/sidebar.php';
 include '../../../general/footer.php';
 
 // 1) Auth guard
+/**
+ * @var int|null $userId The user ID of the logged-in user.
+ */
 $userId = $_SESSION['user_id'] ?? null;
+/**
+ * If the user is not logged in, they are redirected to the login page.
+ */
 if (!is_int($userId) && !ctype_digit((string)$userId)) {
     header("Location: " . BASE_URL . "index.php");
     exit();
 }
+/**
+ * @var int $userId The user ID of the logged-in user.
+ */
 $userId = (int)$userId;
 
-// 2) Init RBAC & enforce "View"
+/**
+ * @var RBACService $rbac The RBAC service instance.
+ */
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
+/**
+ * @var bool $canView The flag indicating if the user can view roles.
+ * @var bool $canRestore The flag indicating if the user can restore roles.
+ * @var bool $canRemove The flag indicating if the user can remove roles.
+ * @var bool $canPermanentDelete The flag indicating if the user can permanently delete roles.
+ */
 $rbac->requirePrivilege('Roles and Privileges', 'View');
-
-// 3) Button flags
 $canRestore = $rbac->hasPrivilege('Roles and Privileges', 'Restore');
 $canRemove = $rbac->hasPrivilege('Roles and Privileges', 'Remove');
 $canPermanentDelete = $rbac->hasPrivilege('Roles and Privileges', 'Permanently Delete');
 
 // --- Sorting Logic ---
+/**
+ * @var string $sort_by The column to sort the data by.
+ * @var string $sort_order The order to sort the data by.
+ */
 $sort_by = $_GET['sort_by'] ?? 'date_time'; // Default sort column
 $sort_order = $_GET['sort_order'] ?? 'desc'; // Default sort order
 
 // Whitelist allowed columns to prevent SQL injection
+/**
+ * @var array $allowedSortColumns The allowed columns to sort the data by.
+ */
 $allowedSortColumns = [
     'role_id' => 'r.id',
     'operator_name' => 'operator_name', // Alias from CONCAT
@@ -46,6 +75,11 @@ if (!in_array(strtolower($sort_order), ['asc', 'desc'])) {
 }
 
 // --- Filter Logic ---
+/**
+ * @var string $dateFilterType The type of date filter to apply.
+ * @var string $baseWhere The base SQL WHERE clause.
+ * @var array $params The parameters for the SQL query.
+ */
 $dateFilterType = $_GET['date_filter_type'] ?? '';
 $baseWhere = "r.is_disabled = 1 
     AND LOWER(a.Module) = 'roles and privileges'
@@ -60,7 +94,9 @@ $baseWhere = "r.is_disabled = 1
     )";
 $params = [];
 
-// Apply search filter
+/**
+ * @var string $searchTerm The search term to apply to the SQL query.
+ */
 if (!empty($_GET['search'])) {
     $searchTerm = '%' . $_GET['search'] . '%';
     $baseWhere .= " AND (
@@ -73,7 +109,11 @@ if (!empty($_GET['search'])) {
     $params[':search_details'] = $searchTerm;
 }
 
-// Apply date filters
+/**
+ * @var string $dateFilterType The type of date filter to apply.
+ * @var string $baseWhere The base SQL WHERE clause.
+ * @var array $params The parameters for the SQL query.
+ */
 if ($dateFilterType === 'mdy') {
     if (!empty($_GET['date_from'])) {
         $baseWhere .= " AND DATE(a.Date_Time) >= :date_from";
@@ -105,7 +145,9 @@ if ($dateFilterType === 'mdy') {
 
 $orderByClause = "ORDER BY " . $allowedSortColumns[$sort_by] . " " . strtoupper($sort_order);
 
-// SQL query for archived roles with audit information
+/**
+ * @var string $sql The SQL query for archived roles with audit information.
+ */
 $sql = "
     SELECT 
         r.id AS role_id,
@@ -132,12 +174,21 @@ $sql = "
     $orderByClause
 ";
 
+/**
+ * @var PDOStatement $stmt The prepared statement for the SQL query.
+ */
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
+/**
+ * @var array $roleData The data from the SQL query.
+ */
 $roleData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 /**
- * Format JSON data into a list (for the 'Changes' column).
+ * Format JSON data into a list for display in the 'Changes' column.
+ *
+ * @param string $jsonStr The JSON string containing the data to format.
+ * @return string HTML formatted list of key-value pairs from the JSON data.
  */
 function formatNewValue($jsonStr)
 {
@@ -158,7 +209,10 @@ function formatNewValue($jsonStr)
 }
 
 /**
- * Helper function to return an icon based on action.
+ * Helper function to return an icon based on the action type.
+ *
+ * @param string $action The action type to get an icon for.
+ * @return string HTML string containing the FontAwesome icon for the action.
  */
 function getActionIcon($action)
 {
@@ -175,7 +229,10 @@ function getActionIcon($action)
 }
 
 /**
- * Helper function to return a status icon.
+ * Helper function to return a status icon based on the status value.
+ *
+ * @param string $status The status of the action (e.g., 'successful').
+ * @return string HTML string containing the FontAwesome icon for the status.
  */
 function getStatusIcon($status)
 {
@@ -185,7 +242,13 @@ function getStatusIcon($status)
 }
 
 /**
- * Format data to display old values (for the 'Changes' column).
+ * Format JSON data to display old values only in the 'Changes' column.
+ *
+ * This function processes the old values from a JSON string and formats them into an HTML list
+ * for display purposes, highlighting changes made to room data.
+ *
+ * @param string $oldJsonStr The JSON string containing the old values to format.
+ * @return string HTML formatted list of old values.
  */
 function formatChanges($oldJsonStr)
 {

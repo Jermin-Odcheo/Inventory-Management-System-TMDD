@@ -1,16 +1,33 @@
 <?php
+/**
+ * @file sidebar.php
+ * @brief handles the display of the sidebar menu
+ *
+ * This script handles the display of the sidebar menu. It checks user permissions,
+ * fetches and filters audit log data based on various criteria, and formats the data for presentation in a user interface.
+ */
 declare(strict_types=1);
 
 require_once(__DIR__ . '/../../../../config/ims-tmdd.php');
 require_once(__DIR__ . '/../../../control/RBACService.php');
-
+/**
+ * @var int|null $userId The user ID of the current user.
+ */
 $userId = $_SESSION['user_id'] ?? null;
+/**
+ * If the user is not logged in, the script end.
+ */
 if (!$userId) {
     die('User not logged in');
 }
-
+/**
+ * @var RBACService $rbac The RBAC service instance.
+ */
 $rbac = new RBACService($pdo, $userId);
 
+/**
+ * @var array $modules The modules to display in the sidebar.
+ */
 $modules = [
     'User Management' => ['audit' => 'um_audit_log.php', 'archive' => 'archive.php', 'user management' => ''],
     'Equipment Management' => ['audit' => 'em_audit_log.php', 'archive' => 'em_archive.php'],
@@ -19,12 +36,22 @@ $modules = [
     'Management' => ['audit' => 'department_audit_log.php', 'archive' => 'department_archive.php'],
 ];
 
+/**
+ * @var array $auditModules The audit modules to display in the sidebar.
+ *
+ * @var array $archiveModules The archive modules to display in the sidebar.
+ */
 $auditModules = [];
 $archiveModules = [];
 
-// Check if user has global Track privilege on Audit module
+/**
+ * @var bool $hasGlobalAuditTrack The flag indicating if the user has global Track privilege on Audit module.
+ */
 $hasGlobalAuditTrack = $rbac->hasPrivilege('Audit', 'Track');
 
+/**
+ * @var array $auditModules The audit modules to display in the sidebar.
+ */
 foreach ($modules as $module => $paths) {
     if ($hasGlobalAuditTrack) {
         // User has global Audit Track, so include all modules audit logs
@@ -47,8 +74,11 @@ foreach ($modules as $module => $paths) {
     }
 }
 
-//This generates an acronym out of a given string, so when I collapse the sidebar the
-//acronym will be displayed instead of the full module name
+/**
+ * Summary of getAcronym
+ * @param mixed $string
+ * @return string
+ */
 function getAcronym($string) {
     $words = preg_split("/[\s_]+/", $string);
     $acronym = '';
@@ -59,7 +89,6 @@ function getAcronym($string) {
 }
 
 ?>
-
 <button class="sidebar-toggle" id="sidebarToggle">
     <i class="fas fa-bars"></i>
 </button>

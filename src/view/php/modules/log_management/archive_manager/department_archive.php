@@ -1,30 +1,52 @@
 <?php
+/**
+ * @file department_archive.php
+ * @brief handles the display of archived department data
+ *
+ * This script handles the display of archived department data. It checks user permissions,
+ * fetches and filters archived data based on various criteria, and formats the data for presentation in a user interface.
+ */
 session_start();
 require '../../../../../../config/ims-tmdd.php';
 
 // Include Header
 include '../../../general/header.php';
 
-// If not logged in, redirect to the LOGIN PAGE
+/**
+ * If the user is not logged in, they are redirected to the login page.
+ */
 if (!isset($_SESSION['user_id'])) {
     header("Location: " . BASE_URL . "index.php");
     exit();
 }
 
-// Initialize RBAC for Roles and Privileges
+/**
+ * @var RBACService $rbac The RBAC service instance.
+ */
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
 $rbac->requirePrivilege('Management', 'View');
 
-// Check for additional privileges
+/**
+ * @var bool $canRestore The flag indicating if the user can restore department data.
+ * @var bool $canRemove The flag indicating if the user can remove department data.
+ * @var bool $canDelete The flag indicating if the user can permanently delete department data.
+ */
 $canRestore = $rbac->hasPrivilege('Management', 'Restore');
 $canRemove = $rbac->hasPrivilege('Management', 'Remove');
 $canDelete = $rbac->hasPrivilege('Management', 'Permanently Delete');
 
 // --- Sorting Logic ---
+/**
+ * @var string $sort_by The column to sort the data by.
+ * @var string $sort_order The order to sort the data by.
+ */
 $sort_by = $_GET['sort_by'] ?? 'track_id'; // Default sort column
 $sort_order = $_GET['sort_order'] ?? 'desc'; // Default sort order
 
 // Whitelist allowed columns to prevent SQL injection
+/**
+ * @var array $allowedSortColumns The allowed columns to sort the data by.
+ */
 $allowedSortColumns = [
     'track_id' => 'a.TrackID',
     'operator_name' => 'operator_name', // Alias from CONCAT
@@ -35,15 +57,25 @@ $allowedSortColumns = [
     'department_name' => 'd.department_name' // For sorting by department name
 ];
 
-// Validate sort_by and sort_order
+/**
+ * @var string $sort_by The column to sort the data by.
+ * @var string $sort_order The order to sort the data by.
+ */
 if (!array_key_exists($sort_by, $allowedSortColumns)) {
     $sort_by = 'track_id'; // Fallback to default
 }
+/**
+ * @var string $sort_order The order to sort the data by.
+ */
 if (!in_array(strtolower($sort_order), ['asc', 'desc'])) {
     $sort_order = 'desc'; // Fallback to default
 }
 
-// --- Filter Logic ---
+/**
+ * @var string $dateFilterType The type of date filter to apply.
+ * @var string $baseWhere The base SQL WHERE clause.
+ * @var array $params The parameters for the SQL query.
+ */
 $dateFilterType = $_GET['date_filter_type'] ?? '';
 $baseWhere = "LOWER(a.Module) = 'department management' 
     AND LOWER(a.Action) IN ('delete', 'remove')
@@ -55,19 +87,25 @@ $baseWhere = "LOWER(a.Module) = 'department management'
     AND d.is_disabled = 1";
 $params = [];
 
-// Apply action filter
+/**
+ * @var string $actionType The action type to apply to the SQL query.
+ */
 if (!empty($_GET['action_type'])) {
     $baseWhere .= " AND a.Action = :action_type";
     $params[':action_type'] = $_GET['action_type'];
 }
 
-// Apply status filter
+/**
+ * @var string $status The status to apply to the SQL query.
+ */
 if (!empty($_GET['status'])) {
     $baseWhere .= " AND a.Status = :status";
     $params[':status'] = $_GET['status'];
 }
 
-// Apply search filter
+/**
+ * @var string $searchTerm The search term to apply to the SQL query.
+ */
 if (!empty($_GET['search'])) {
     $searchTerm = '%' . $_GET['search'] . '%';
     $baseWhere .= " AND (
@@ -84,7 +122,11 @@ if (!empty($_GET['search'])) {
     $params[':search_dept'] = $searchTerm;
 }
 
-// Apply date filters
+/**
+ * @var string $dateFilterType The type of date filter to apply.
+ * @var string $baseWhere The base SQL WHERE clause.
+ * @var array $params The parameters for the SQL query.
+ */
 if ($dateFilterType === 'mdy') {
     if (!empty($_GET['date_from'])) {
         $baseWhere .= " AND DATE(a.Date_Time) >= :date_from";
@@ -114,13 +156,19 @@ if ($dateFilterType === 'mdy') {
     }
 }
 
-// --- Pagination Logic ---
+/**
+ * @var int $rowsPerPage The number of rows per page.
+ * @var int $currentPage The current page number.
+ * @var int $offset The offset for the query.
+ */
 $rowsPerPage = isset($_GET['rows_per_page']) ? (int)$_GET['rows_per_page'] : 10;
 $currentPage = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 if ($currentPage < 1) $currentPage = 1;
 $offset = ($currentPage - 1) * $rowsPerPage;
 
-// Count total records for pagination
+/**
+ * @var string $countQuery The SQL query to count total records for pagination.
+ */
 $countQuery = "
     SELECT COUNT(*) as total
     FROM audit_log a
@@ -128,14 +176,25 @@ $countQuery = "
     JOIN departments d ON a.EntityID = d.id
     WHERE $baseWhere
 ";
+
+/**
+ * @var PDOStatement $countStmt The prepared statement for the count query.
+ * @var int $totalRows The total number of records.
+ * @var int $totalPages The total number of pages.
+ */
 $countStmt = $pdo->prepare($countQuery);
 $countStmt->execute($params);
 $totalRows = $countStmt->fetch(PDO::FETCH_ASSOC)['total'];
 $totalPages = ceil($totalRows / $rowsPerPage);
 
+/**
+ * @var string $orderByClause The SQL ORDER BY clause for the query.
+ */
 $orderByClause = "ORDER BY " . $allowedSortColumns[$sort_by] . " " . strtoupper($sort_order);
 
-// Fetch paginated data
+/**
+ * @var string $query The SQL query for archived department data.
+ */
 $query = "
     SELECT
         a.TrackID AS track_id,
@@ -172,7 +231,10 @@ try {
 }
 
 /**
- * Format JSON data into a list (for the 'Changes' column).
+ * Format JSON data into a list for display in the 'Changes' column.
+ *
+ * @param string $jsonStr The JSON string containing the data to format.
+ * @return string HTML formatted list of key-value pairs from the JSON data.
  */
 function formatNewValue($jsonStr)
 {
@@ -193,7 +255,10 @@ function formatNewValue($jsonStr)
 }
 
 /**
- * Helper function to return an icon based on action.
+ * Helper function to return an icon based on the action type.
+ *
+ * @param string $action The action type to get an icon for.
+ * @return string HTML string containing the FontAwesome icon for the action.
  */
 function getActionIcon($action)
 {
@@ -209,7 +274,10 @@ function getActionIcon($action)
 }
 
 /**
- * Helper function to return a status icon.
+ * Helper function to return a status icon based on the status value.
+ *
+ * @param string $status The status of the action (e.g., 'successful').
+ * @return string HTML string containing the FontAwesome icon for the status.
  */
 function getStatusIcon($status)
 {
@@ -219,7 +287,13 @@ function getStatusIcon($status)
 }
 
 /**
- * Format JSON data to display old values only.
+ * Format JSON data to display old values only in the 'Changes' column.
+ *
+ * This function processes the old values from a JSON string and formats them into an HTML list
+ * for display purposes, highlighting changes made to department data.
+ *
+ * @param string $oldJsonStr The JSON string containing the old values to format.
+ * @return string HTML formatted list of old values.
  */
 function formatChanges($oldJsonStr)
 {
@@ -229,7 +303,9 @@ function formatChanges($oldJsonStr)
     if (!is_array($oldData)) {
         return '<span>' . htmlspecialchars($oldJsonStr) . '</span>';
     }
-
+    /**
+     * @var string $html The HTML string containing the formatted changes.
+     */
     $html = '<ul class="list-group">';
     foreach ($oldData as $key => $value) {
         // Format the value

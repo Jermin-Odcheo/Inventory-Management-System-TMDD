@@ -1,6 +1,7 @@
 <?php
 /**
- * Add Role Script
+ * @file add_role.php
+ * @brief handles the creation of a new role in the system
  *
  * This script handles the creation of a new role in the system. It processes form submissions,
  * validates input, logs the creation in the audit log, and returns a JSON response.

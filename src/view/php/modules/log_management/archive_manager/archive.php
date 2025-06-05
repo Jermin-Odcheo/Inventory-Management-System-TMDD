@@ -1,4 +1,12 @@
 <?php
+/**
+ * @file archive.php
+ * @brief handles the display of archived user data
+ *
+ * This script handles the display of archived user data. It checks user permissions,
+ * fetches and filters archived data based on various criteria, and formats the data for presentation in a user interface.
+ */
+
 session_start();
 require '../../../../../../config/ims-tmdd.php';
 
@@ -154,7 +162,10 @@ try {
 }
 
 /**
- * Format JSON data into a list (for the 'Changes' column).
+ * Format JSON data into a list for display in the 'Changes' column.
+ *
+ * @param string $jsonStr The JSON string containing the data to format.
+ * @return string HTML formatted list of key-value pairs from the JSON data.
  */
 function formatNewValue($jsonStr)
 {
@@ -175,7 +186,10 @@ function formatNewValue($jsonStr)
 }
 
 /**
- * Helper function to return an icon based on action.
+ * Helper function to return an icon based on the action type.
+ *
+ * @param string $action The action type to get an icon for.
+ * @return string HTML string containing the FontAwesome icon for the action.
  */
 function getActionIcon($action)
 {
@@ -191,7 +205,10 @@ function getActionIcon($action)
 }
 
 /**
- * Helper function to return a status icon.
+ * Helper function to return a status icon based on the status value.
+ *
+ * @param string $status The status of the action (e.g., 'successful').
+ * @return string HTML string containing the FontAwesome icon for the status.
  */
 function getStatusIcon($status)
 {
@@ -201,7 +218,13 @@ function getStatusIcon($status)
 }
 
 /**
- * Format JSON data to display old values only.
+ * Format JSON data to display old values only in the 'Changes' column.
+ *
+ * This function processes the old values from a JSON string, removes the 'is_disabled' field
+ * to avoid displaying irrelevant data, and formats the remaining data into an HTML list.
+ *
+ * @param string $oldJsonStr The JSON string containing the old values to format.
+ * @return string HTML formatted list of old values with 'is_disabled' field removed.
  */
 function formatChanges($oldJsonStr)
 {

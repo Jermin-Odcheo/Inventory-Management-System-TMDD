@@ -1,6 +1,7 @@
 <?php
 /**
- * Redo Role Changes Script
+ * @file redo.php
+ * @brief handles the redoing of the last undone role change action performed by a logged-in user
  *
  * This script handles the redoing of the last undone role change action performed by a logged-in user.
  * It supports reapplying actions such as adding, modifying, or deleting roles in the system.

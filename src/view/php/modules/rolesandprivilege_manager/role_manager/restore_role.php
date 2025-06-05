@@ -1,11 +1,13 @@
 <?php
 /**
- * Role Restoration Script
+ * @file restore_role.php
+ * @brief handles the restoration of roles that have been previously disabled or archived
  *
  * This script handles the restoration of roles that have been previously disabled or archived.
  * It supports both single role restoration and bulk restoration of multiple roles.
  * The script verifies the existence and disabled status of roles before restoration,
  * logs the actions in audit logs, and handles database transactions to ensure data integrity.
+
  */
 session_start();
 require_once('../../../../../../config/ims-tmdd.php');

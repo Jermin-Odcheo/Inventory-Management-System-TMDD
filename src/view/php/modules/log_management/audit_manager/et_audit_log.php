@@ -1,6 +1,7 @@
 <?php
 /**
- * Equipment Tracking Audit Logs Script
+ * @file et_audit_log.php
+ * @brief handles the display of audit logs for equipment tracking activities
  *
  * This script handles the display of audit logs for equipment tracking activities. It checks user permissions,
  * fetches and filters audit log data based on various criteria, and formats the data for presentation in a user interface.

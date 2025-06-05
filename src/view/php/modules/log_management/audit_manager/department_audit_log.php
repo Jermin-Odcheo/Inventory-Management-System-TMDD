@@ -1,6 +1,7 @@
 <?php
 /**
- * Department Management Audit Logs Script
+ * @file department_audit_log.php
+ * @brief handles the display of audit logs for department management activities
  *
  * This script handles the display of audit logs for department management activities. It checks user permissions,
  * fetches and filters audit log data based on various criteria, and formats the data for presentation in a user interface.

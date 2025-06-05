@@ -1,5 +1,11 @@
 <?php
-// config/config.php
+/**
+ * @file config.php
+ * @brief handles the configuration of the application
+ *
+ * This script handles the configuration of the application. It defines the base URL,
+ * the root path, and requires the RBACService class.
+ */
 
 // Base URL for links
 define('BASE_URL', '/');

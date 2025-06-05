@@ -1,6 +1,7 @@
 <?php
 /**
- * Edit Role Script
+ * @file edit_roles.php
+ * @brief handles the editing of an existing role within the system
  *
  * This script handles the editing of an existing role within the system. It fetches role details,
  * associated privileges, and available modules and privileges for display in an edit form.
