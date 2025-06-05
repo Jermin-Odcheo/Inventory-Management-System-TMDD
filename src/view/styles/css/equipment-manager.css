@@ -482,18 +482,27 @@ body {
 /* Responsive Design */
 @media (max-width: 768px) {
     .main-container {
-        margin-left: 0;
-        padding: 15px;
-        padding-top: 80px;
+        margin-left: 60px;
+        width: calc(100% - 60px);
+        padding: 70px 15px 15px;
+    }
+
+    .main-container.sidebar-collapsed {
+        margin-left: 60px;
+        width: calc(100% - 60px);
+    }
+
+    /* Specific rule for equipment status page */
+    .main-container {
+        padding-top: 200px;
     }
 
     .toolbar, .filter-row {
         flex-direction: column;
-        align-items: flex-start;
+        align-items: stretch;
     }
-    
+
     .btn-group {
-        flex-wrap: wrap;
-        justify-content: center;
+        width: 100%;
     }
 }
