@@ -33,7 +33,7 @@ $modules = [
     'Equipment Management' => ['audit' => 'em_audit_log.php', 'archive' => 'em_archive.php'],
     'Equipment Transactions' => ['audit' => 'et_audit_log.php', 'archive' => 'et_archive.php'],
     'Roles and Privileges' => ['audit' => 'rm_audit_log.php', 'archive' => 'rm_archive.php'],
-    'Administration' => ['audit' => 'department_audit_log.php', 'archive' => 'department_archive.php'],
+    'Management' => ['audit' => 'department_audit_log.php', 'archive' => 'department_archive.php'],
 ];
 
 /**
@@ -152,20 +152,20 @@ function getAcronym($string) {
                 </li>
             <?php endif; ?>
 
-            <?php if ($rbac->hasPrivilege('Administration', 'View')): ?>
+            <?php if ($rbac->hasPrivilege('Management', 'View')): ?>
                 <li class="dropdown-item">
                     <button class="dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('show')">
-                        <i class="fas fa-university"></i><span class="menu-text">Administration</span>
+                        <i class="fas fa-university"></i><span class="menu-text">Management</span>
                         <i class="fas fa-chevron-down dropdown-icon"></i>
                     </button>
                     <ul class="dropdown tree">
                         <i class="bi bi-file-earmark-check">
-                            <a href="<?= BASE_URL ?>src/view/php/modules/administration/department_manager/department_management.php<?= $file ?>">
+                            <a href="<?= BASE_URL ?>src/view/php/modules/management/department_manager/department_management.php<?= $file ?>">
                                 <span class="short-label"><?= getAcronym($module) ?>DM</span>
                             </a>
                         </i>
                         <li class="nav-item">
-                            <a href="<?php echo BASE_URL; ?>src/view/php/modules/administration/department_manager/department_management.php"
+                            <a href="<?php echo BASE_URL; ?>src/view/php/modules/management/department_manager/department_management.php"
                                 class="nav-link">
                                 <span class="submenu-text">Department Management</span>
                             </a>
