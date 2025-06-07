@@ -94,11 +94,11 @@ if ($dateFilterType === 'mdy') {
     }
 } else if ($dateFilterType === 'month_year') {
     if (!empty($_GET['month_year_from'])) {
-        $baseWhere .= " AND a.Date_Time >= STR_TO_DATE(:month_year_from, '%Y-%m')";
+        $baseWhere .= " AND a.Date_Time >= STR_TO_DATE(CONCAT(:month_year_from, '-01'), '%Y-%m-%d')";
         $params[':month_year_from'] = $_GET['month_year_from'];
     }
     if (!empty($_GET['month_year_to'])) {
-        $baseWhere .= " AND a.Date_Time < DATE_ADD(STR_TO_DATE(:month_year_to, '%Y-%m'), INTERVAL 1 MONTH)";
+        $baseWhere .= " AND a.Date_Time <= LAST_DAY(STR_TO_DATE(CONCAT(:month_year_to, '-01'), '%Y-%m-%d'))";
         $params[':month_year_to'] = $_GET['month_year_to'];
     }
 } else if ($dateFilterType === 'year') {
@@ -388,13 +388,13 @@ echo '<script>document.body.classList.add("um-archive");</script>';
 
                         <!-- Month-Year Range -->
                         <div class="col-12 col-md-3 date-filter date-month_year d-none">
-                            <label class="form-label fw-semibold">From (MM-YYYY)</label>
+                            <label class="form-label fw-semibold">From (YYYY-MM)</label>
                             <input type="month" name="month_year_from" class="form-control shadow-sm"
                                 value="<?= htmlspecialchars($_GET['month_year_from'] ?? '') ?>"
                                 placeholder="e.g., 2023-01">
                         </div>
                         <div class="col-12 col-md-3 date-filter date-month_year d-none">
-                            <label class="form-label fw-semibold">To (MM-YYYY)</label>
+                            <label class="form-label fw-semibold">To (YYYY-MM)</label>
                             <input type="month" name="month_year_to" class="form-control shadow-sm"
                                 value="<?= htmlspecialchars($_GET['month_year_to'] ?? '') ?>"
                                 placeholder="e.g., 2023-12">
@@ -654,6 +654,111 @@ echo '<script>document.body.classList.add("um-archive");</script>';
             if (filterType) {
                 filterType.addEventListener('change', updateDateFields);
                 updateDateFields(); // Initialize on page load
+            }
+
+            // Date filter validation
+            const filterForm = document.getElementById('archiveFilterForm');
+            const applyFiltersButton = document.getElementById('applyFilters');
+
+            // Date validation function
+            function validateDateRange(fromValue, toValue, format) {
+                if (!fromValue || !toValue) return true; // If either field is empty, don't validate
+
+                let fromDate, toDate;
+
+                switch (format) {
+                    case 'mdy':
+                        fromDate = new Date(fromValue);
+                        toDate = new Date(toValue);
+                        break;
+                    case 'month_year':
+                        fromDate = new Date(fromValue + '-01');
+                        toDate = new Date(toValue + '-01');
+                        break;
+                    case 'year':
+                        fromDate = new Date(fromValue + '-01-01');
+                        toDate = new Date(toValue + '-01-01');
+                        break;
+                    default:
+                        return true;
+                }
+
+                return fromDate <= toDate;
+            }
+
+            // Remove any existing submit handlers to avoid conflicts
+            if (filterForm) {
+                filterForm.removeEventListener('submit', filterForm.onsubmit, true);
+                filterForm.onsubmit = null;
+
+                filterForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+
+                    let isValid = true;
+                    let errorMessage = '';
+                    const filterTypeValue = filterType.value;
+
+                    if (filterTypeValue === 'mdy') {
+                        const fromValue = document.querySelector('input[name="date_from"]').value;
+                        const toValue = document.querySelector('input[name="date_to"]').value;
+                        isValid = validateDateRange(fromValue, toValue, 'mdy');
+                        errorMessage = 'Invalid date range: "From" date cannot be after "To" date.';
+                    } else if (filterTypeValue === 'month_year') {
+                        const fromValue = document.querySelector('input[name="month_year_from"]').value;
+                        const toValue = document.querySelector('input[name="month_year_to"]').value;
+                        isValid = validateDateRange(fromValue, toValue, 'month_year');
+                        errorMessage = 'Invalid month-year range: "From" cannot be after "To".';
+                    } else if (filterTypeValue === 'year') {
+                        const fromValue = document.querySelector('input[name="year_from"]').value;
+                        const toValue = document.querySelector('input[name="year_to"]').value;
+                        isValid = validateDateRange(fromValue, toValue, 'year');
+                        errorMessage = 'Invalid year range: "From" year cannot be after "To" year.';
+                    }
+
+                    if (!isValid) {
+                        $('#filterError').remove();
+
+                        // 1) pick your filter-row container
+                        const filterRow = document.querySelector('.col-6.col-md-2.d-grid');
+
+                        // 2) build a "block" error div (no absolute positioning needed)
+                        const errorDiv = document.createElement('div');
+                        errorDiv.id = 'filterError';
+                        errorDiv.className = 'validation-tooltip mt-2';  // mt-2 gives a little gap
+                        Object.assign(errorDiv.style, {
+                            backgroundColor: '#f8d7da',
+                            color: '#842029',
+                            padding: '8px 12px',
+                            borderRadius: '4px',
+                            fontSize: '0.875rem',
+                            maxWidth: '100%',
+                            marginBottom: '10px',
+                            display: 'block',
+                            opacity: '1',
+                            position: 'relative',
+                            zIndex: '10'
+                        });
+                        errorDiv.innerHTML = `<i class="fas fa-exclamation-circle me-1"></i> ${errorMessage}`;
+
+                        // 3) insert after the filter row
+                        filterRow.insertAdjacentElement('afterend', errorDiv);
+
+                        // 4) auto-dismiss after 3 seconds
+                        setTimeout(() => errorDiv.style.display = 'none', 3000);
+
+                        e.stopPropagation();
+                        return false; // Explicitly prevent form submission
+                    } else {
+                        $('#filterError').remove();
+
+                        // Custom submission logic to prevent default behavior
+                        const formData = new FormData(filterForm);
+                        const urlParams = new URLSearchParams(formData).toString();
+                        window.location.href = `${window.location.pathname}?${urlParams}`;
+                        return false;
+                    }
+                }, true); // Capture phase to ensure this runs first
             }
 
             // Clear filters button
