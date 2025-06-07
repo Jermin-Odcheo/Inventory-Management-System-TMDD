@@ -999,6 +999,136 @@ document.addEventListener('DOMContentLoaded', function() {
     filterType.addEventListener('change', updateDateFields);
     updateDateFields();
 
+    // Date filter validation
+    function validateDateRange(fromValue, toValue, format) {
+        if (!fromValue || !toValue) return true; // If either field is empty, don't validate
+
+        let fromDate, toDate;
+
+        switch (format) {
+            case 'mdy':
+                fromDate = new Date(fromValue);
+                toDate = new Date(toValue);
+                break;
+            case 'month_year':
+                fromDate = new Date(fromValue + '-01'); // Add day for valid date
+                toDate = new Date(toValue + '-01');
+                break;
+            case 'year':
+                fromDate = new Date(fromValue, 0, 1); // Jan 1st of the year
+                toDate = new Date(toValue, 0, 1);
+                break;
+            default:
+                return true;
+        }
+
+        return fromDate <= toDate;
+    }
+
+    // Override any existing form submission handlers to prioritize validation
+    if (form) {
+        // Remove any existing submit handlers to avoid conflicts
+        form.removeEventListener('submit', form.onsubmit, true);
+        form.onsubmit = null;
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault(); // Prevent default submission initially
+            e.stopImmediatePropagation(); // Stop any other handlers from running
+
+            const dateFilterType = filterType.value;
+            let isValid = true;
+            let errorMessage = '';
+
+            if (dateFilterType === 'mdy') {
+                const dateFrom = document.querySelector('input[name="date_from"]').value;
+                const dateTo = document.querySelector('input[name="date_to"]').value;
+
+                if (!validateDateRange(dateFrom, dateTo, 'mdy')) {
+                    isValid = false;
+                    errorMessage = '"Date From" cannot be greater than "Date To"';
+                }
+            } else if (dateFilterType === 'month_year') {
+                const monthYearFrom = document.querySelector('input[name="month_year_from"]').value;
+                const monthYearTo = document.querySelector('input[name="month_year_to"]').value;
+
+                if (!validateDateRange(monthYearFrom, monthYearTo, 'month_year')) {
+                    isValid = false;
+                    errorMessage = '"From (YYYY-MM)" cannot be greater than "To (YYYY-MM)"';
+                }
+            } else if (dateFilterType === 'year') {
+                const yearFrom = document.querySelector('input[name="year_from"]').value;
+                const yearTo = document.querySelector('input[name="year_to"]').value;
+
+                if (yearFrom && yearTo && parseInt(yearFrom) > parseInt(yearTo)) {
+                    isValid = false;
+                    errorMessage = '"Year From" cannot be greater than "Year To"';
+                }
+            }
+
+            if (!isValid) {
+                // Remove any existing error messages
+                const existingError = document.getElementById('filterError');
+                if (existingError) {
+                    existingError.remove();
+                }
+
+                // 1) pick your filter-row container
+                const filterRow = document.querySelector('.col-6.col-md-2.d-grid');
+
+                // 2) build a "block" error div (no absolute positioning needed)
+                const errorDiv = document.createElement('div');
+                errorDiv.id = 'filterError';
+                errorDiv.className = 'validation-tooltip mt-2';  // mt-2 gives a little gap
+                Object.assign(errorDiv.style, {
+                    display: 'inline-block',
+                    backgroundColor: '#d9534f',
+                    color: 'white',
+                    padding: '6px 10px',
+                    borderRadius: '4px',
+                    fontSize: '0.85em',
+                    whiteSpace: 'nowrap',
+                    boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+                    zIndex: 1000
+                });
+                errorDiv.textContent = errorMessage;
+
+                // 3) insert it *after* the filter row, so it sits right below the date filters
+                filterRow.insertAdjacentElement('afterend', errorDiv);
+
+                // optional: scroll into view
+                errorDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+                // auto-dismiss
+                setTimeout(() => {
+                    const fadeOutError = document.getElementById('filterError');
+                    if (fadeOutError) {
+                        // Simple fade out effect
+                        let opacity = 1;
+                        const fadeInterval = setInterval(() => {
+                            if (opacity <= 0.1) {
+                                clearInterval(fadeInterval);
+                                fadeOutError.remove();
+                            }
+                            opacity -= 0.1;
+                            fadeOutError.style.opacity = opacity;
+                        }, 50);
+                    }
+                }, 3000);
+
+                return false; // Explicitly prevent form submission
+            }
+
+            // Remove any existing error message if validation passes
+            const existingError = document.getElementById('filterError');
+            if (existingError) {
+                existingError.remove();
+            }
+            
+            // If validation passes, manually submit the form
+            this.submit();
+        }, true); // Use capture phase to ensure this handler runs first
+    }
+
     clearButton.addEventListener('click', function(e) {
         e.preventDefault(); // Prevent default button behavior
         
