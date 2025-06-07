@@ -46,6 +46,16 @@ $hasUMPermission = $rbac->hasPrivilege('User Management', 'Track');
 $dateFilterType = $_GET['date_filter_type'] ?? '';
 
 /**
+ * Initialize Pagination Parameters
+ * 
+ * Sets up pagination parameters based on user input or default values.
+ * 
+ * @return void
+ */
+$currentPage = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+$recordsPerPage = isset($_GET['per_page']) ? intval($_GET['per_page']) : 20;
+
+/**
  * Initialize Sorting Parameters
  *
  * Sets up the sorting parameters for displaying audit logs based on user input or default values.
@@ -629,23 +639,56 @@ if ($dateFilterType === 'year') {
 }
 
 /**
+ * Count Total Records
+ * 
+ * Count the total number of filtered records for pagination.
+ * 
+ * @return void
+ */
+$countQuery = "
+    SELECT COUNT(*) as total
+    FROM audit_log 
+    LEFT JOIN users ON audit_log.UserID = users.id 
+    $where
+";
+$countStmt = $pdo->prepare($countQuery);
+$countStmt->execute($params);
+$totalRecords = $countStmt->fetch(PDO::FETCH_ASSOC)['total'];
+
+// Calculate total pages
+$totalPages = ceil($totalRecords / $recordsPerPage);
+$currentPage = min($currentPage, max(1, $totalPages));
+
+// Calculate OFFSET for SQL query
+$offset = ($currentPage - 1) * $recordsPerPage;
+
+/**
  * Fetch Filtered Audit Logs
  *
  * Retrieves audit logs based on the constructed filters and sorting parameters.
  *
  * @return void
  */
-// Modify the query to include sorting
+// Modify the query to include sorting, pagination with LIMIT and OFFSET
 $query = "
   SELECT audit_log.*, users.email AS email 
   FROM audit_log 
   LEFT JOIN users ON audit_log.UserID = users.id 
   $where 
   ORDER BY $sortColumn $sortOrder
+  LIMIT :limit OFFSET :offset
 ";
 
 $stmt = $pdo->prepare($query);
-$stmt->execute($params);
+$stmt->bindParam(':limit', $recordsPerPage, PDO::PARAM_INT);
+$stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
+
+// Bind all other parameters
+foreach ($params as $key => $value) {
+    $stmt->bindValue($key, $value);
+}
+
+$stmt->execute();
 $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 ?>
@@ -953,25 +996,70 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <div class="row align-items-center g-3">
                                 <div class="col-12 col-sm-auto">
                                     <div class="text-muted">
-                                        <?php $totalLogs = count($auditLogs); ?>
-                                        <input type="hidden" id="total-users" value="<?= $totalLogs ?>">
-                                        Showing <span id="currentPage">1</span> to <span id="rowsPerPage">20</span> of <span id="totalRows"><?= $totalLogs ?></span> entries
+                                        <?php 
+                                        $startRecord = min($totalRecords, ($currentPage - 1) * $recordsPerPage + 1);
+                                        $endRecord = min($totalRecords, $currentPage * $recordsPerPage);
+                                        ?>
+                                        Showing <span id="startRecord"><?= $startRecord ?></span> to <span id="endRecord"><?= $endRecord ?></span> of <span id="totalRows"><?= $totalRecords ?></span> entries
                                     </div>
                                 </div>
                                 <div class="col-12 col-sm-auto ms-sm-auto">
                                     <div class="d-flex align-items-center gap-2">
                                         <select id="rowsPerPageSelect" class="form-select" style="width: auto;">
-                                            <option value="10" selected>10</option>
-                                            <option value="20">20</option>
-                                            <option value="30">30</option>
-                                            <option value="50">50</option>
+                                            <option value="10" <?= $recordsPerPage == 10 ? 'selected' : '' ?>>10</option>
+                                            <option value="20" <?= $recordsPerPage == 20 ? 'selected' : '' ?>>20</option>
+                                            <option value="30" <?= $recordsPerPage == 30 ? 'selected' : '' ?>>30</option>
+                                            <option value="50" <?= $recordsPerPage == 50 ? 'selected' : '' ?>>50</option>
                                         </select>
                                     </div>
                                 </div>
                             </div>
                             <div class="row mt-3">
                                 <div class="col-12">
-                                    <ul class="pagination justify-content-center" id="pagination"></ul>
+                                    <!-- Server-side pagination controls -->
+                                    <ul class="pagination justify-content-center">
+                                        <?php if ($totalPages > 1): ?>
+                                            <!-- First Page -->
+                                            <li class="page-item <?= ($currentPage == 1) ? 'disabled' : '' ?>">
+                                                <a class="page-link" href="<?= buildPageUrl(1) ?>" aria-label="First">
+                                                    <span aria-hidden="true">&laquo;&laquo;</span>
+                                                </a>
+                                            </li>
+                                            
+                                            <!-- Previous Page -->
+                                            <li class="page-item <?= ($currentPage == 1) ? 'disabled' : '' ?>">
+                                                <a class="page-link" href="<?= buildPageUrl(max(1, $currentPage - 1)) ?>" aria-label="Previous">
+                                                    <span aria-hidden="true">&laquo;</span>
+                                                </a>
+                                            </li>
+                                            
+                                            <!-- Page Numbers -->
+                                            <?php
+                                            $startPage = max(1, min($currentPage - 2, $totalPages - 4));
+                                            $endPage = min($totalPages, max(5, $currentPage + 2));
+                                            
+                                            for ($i = $startPage; $i <= $endPage; $i++):
+                                            ?>
+                                                <li class="page-item <?= ($i == $currentPage) ? 'active' : '' ?>">
+                                                    <a class="page-link" href="<?= buildPageUrl($i) ?>"><?= $i ?></a>
+                                                </li>
+                                            <?php endfor; ?>
+                                            
+                                            <!-- Next Page -->
+                                            <li class="page-item <?= ($currentPage == $totalPages) ? 'disabled' : '' ?>">
+                                                <a class="page-link" href="<?= buildPageUrl(min($totalPages, $currentPage + 1)) ?>" aria-label="Next">
+                                                    <span aria-hidden="true">&raquo;</span>
+                                                </a>
+                                            </li>
+                                            
+                                            <!-- Last Page -->
+                                            <li class="page-item <?= ($currentPage == $totalPages) ? 'disabled' : '' ?>">
+                                                <a class="page-link" href="<?= buildPageUrl($totalPages) ?>" aria-label="Last">
+                                                    <span aria-hidden="true">&raquo;&raquo;</span>
+                                                </a>
+                                            </li>
+                                        <?php endif; ?>
+                                    </ul>
                                 </div>
                             </div>
                         </div> <!-- /.Pagination -->
@@ -981,14 +1069,35 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div><!-- /.container-fluid -->
     </div><!-- /.main-content -->
 
+    <?php
+    /**
+     * Build Page URL
+     * 
+     * Helper function to build pagination URLs while preserving all existing query parameters.
+     * 
+     * @param int $page The page number to link to
+     * @return string The URL with all parameters
+     */
+    function buildPageUrl($page) {
+        $params = $_GET;
+        $params['page'] = $page;
+        
+        if (isset($_GET['per_page'])) {
+            $params['per_page'] = $_GET['per_page'];
+        }
+        
+        return '?' . http_build_query($params);
+    }
+    ?>
+
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/logs.js" defer></script>
-    <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/pagination.js" defer></script>
-    <script>
+    <script type="text/javascript">
 document.addEventListener('DOMContentLoaded', function() {
     const filterType = document.getElementById('dateFilterType');
     const allDateFilters = document.querySelectorAll('.date-filter');
     const form = document.getElementById('auditFilterForm');
     const clearButton = document.getElementById('clearFilters');
+    const rowsPerPageSelect = document.getElementById('rowsPerPageSelect');
 
     function updateDateFields() {
         allDateFilters.forEach(field => field.classList.add('d-none'));
@@ -998,6 +1107,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     filterType.addEventListener('change', updateDateFields);
     updateDateFields();
+
+    // Handle rows per page change
+    rowsPerPageSelect.addEventListener('change', function() {
+        const perPage = this.value;
+        const urlParams = new URLSearchParams(window.location.search);
+        urlParams.set('per_page', perPage);
+        urlParams.set('page', 1); // Reset to first page when changing records per page
+        window.location.href = window.location.pathname + '?' + urlParams.toString();
+    });
 
     // Date filter validation
     function validateDateRange(fromValue, toValue, format) {
@@ -1195,6 +1313,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
 .sortable:hover i {
     color: #0d6efd;
+}
+
+/* Additional pagination styles */
+.pagination .page-item.active .page-link {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.pagination .page-link {
+    color: #0d6efd;
+}
+
+.pagination .page-item.disabled .page-link {
+    color: #6c757d;
 }
 </style>
 
