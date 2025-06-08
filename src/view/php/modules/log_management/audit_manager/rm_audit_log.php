@@ -705,7 +705,69 @@ function getNormalizedAction($log)
         if (applyFiltersBtn) {
             applyFiltersBtn.addEventListener('click', function(e) {
                 e.preventDefault();
-                submitForm();
+                // Date filter validation
+                const dateType = dateFilterType.value;
+                let isValid = true;
+                let errorMessage = '';
+
+                if (dateType === 'mdy') {
+                    const dateFrom = document.querySelector('input[name="date_from"]').value;
+                    const dateTo = document.querySelector('input[name="date_to"]').value;
+                    if (dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo)) {
+                        isValid = false;
+                        errorMessage = '"From" date cannot be greater than "To" date.';
+                    }
+                } else if (dateType === 'month_year') {
+                    const monthYearFrom = document.querySelector('input[name="month_year_from"]').value;
+                    const monthYearTo = document.querySelector('input[name="month_year_to"]').value;
+                    if (monthYearFrom && monthYearTo && new Date(monthYearFrom) > new Date(monthYearTo)) {
+                        isValid = false;
+                        errorMessage = '"From" month-year cannot be greater than "To" month-year.';
+                    }
+                } else if (dateType === 'year') {
+                    const yearFrom = document.querySelector('input[name="year_from"]').value;
+                    const yearTo = document.querySelector('input[name="year_to"]').value;
+                    if (yearFrom && yearTo && parseInt(yearFrom) > parseInt(yearTo)) {
+                        isValid = false;
+                        errorMessage = '"From" year cannot be greater than "To" year.';
+                    }
+                }
+
+                if (!isValid) {
+                    e.stopImmediatePropagation();
+
+                    // Remove any existing error message
+                    const existingError = document.querySelector('.date-error-message');
+                    if (existingError) {
+                        existingError.remove();
+                    }
+
+                    // Add error message below the auditFilterForm with max-width
+                    const formContainer = document.getElementById('auditFilterForm');
+                    if (formContainer) {
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'alert alert-danger alert-dismissible fade show mt-2 date-error-message';
+                        errorDiv.role = 'alert';
+                        errorDiv.style.cssText = 'max-width: 100%; margin-top: 10px;';
+                        errorDiv.innerHTML = `
+                            <strong> </strong> ${errorMessage}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        `;
+                        formContainer.insertAdjacentElement('afterend', errorDiv);
+
+                        // Auto-dismiss after 3 seconds
+                        setTimeout(() => {
+                            errorDiv.classList.remove('show');
+                            errorDiv.classList.add('fade');
+                            setTimeout(() => errorDiv.remove(), 150);
+                        }, 3000);
+                    }
+
+                    return false;
+                } else {
+                    // If validation passes, submit the form
+                    submitForm();
+                }
             });
         }
 
