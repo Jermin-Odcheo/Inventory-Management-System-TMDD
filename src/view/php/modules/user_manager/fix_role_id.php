@@ -1,11 +1,12 @@
 <?php
-
 /**
- * Fixes null role ID values in the user_department_roles table of the Inventory Management System.
- * 
- * This utility script updates all null role_id values to 0 in the user_department_roles table to ensure
- * data consistency. It also displays the current role assignments for review. The script requires the user
- * to be logged in and includes basic styling for the output page.
+ * Fix Role ID Module
+ *
+ * This file provides functionality to correct and update role ID assignments in the system. It handles the repair of role associations, ensuring data consistency and proper role assignments. The module ensures proper validation and maintains data integrity during the role ID correction process.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage UserManager
+ * @author     TMDD Interns 25'
  */
 // fix_role_id.php
 // This script updates null role_id values to 0 in the user_department_roles table

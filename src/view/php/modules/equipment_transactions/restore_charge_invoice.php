@@ -1,11 +1,47 @@
 <?php
 /**
- * @file restore_charge_invoice.php
- * @brief Handles the restoration of charge invoices.
+ * Restore Charge Invoice Module
  *
- * This script processes requests to restore archived charge invoices in the database,
- * updating their status and logging the actions for audit purposes.
+ * This file provides the logic to restore previously deleted charge invoices in the system. It is used to recover charge invoice records that were soft-deleted, ensuring that accidental deletions can be reversed. The class interacts with the database to update the status of a charge invoice, making it active again and available for use in the system.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage EquipmentTransactions
+ * @author     TMDD Interns 25'
  */
+
+/**
+ * RestoreChargeInvoice Class
+ *
+ * Handles the restoration of deleted charge invoice records by updating their status in the database. This class provides a method to reinstate charge invoices, supporting data integrity and recovery operations.
+ */
+class RestoreChargeInvoice {
+    /**
+     * Database connection instance
+     *
+     * @var PDO
+     */
+    private $db;
+
+    /**
+     * Constructor
+     *
+     * @param PDO $db Database connection
+     */
+    public function __construct(PDO $db) {
+        $this->db = $db;
+    }
+
+    /**
+     * Restore a deleted charge invoice
+     *
+     * @param int $chargeInvoiceId Charge Invoice ID
+     * @return bool Success status
+     */
+    public function restore($chargeInvoiceId) {
+        // ... existing code ...
+    }
+}
+
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
 

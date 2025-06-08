@@ -1,11 +1,12 @@
 <?php
 /**
- * @file roles_list.php
- * @brief handles the display and assignment of modules to roles within the system
+ * Roles List Module
  *
- * This script manages the display and assignment of modules to roles within the system.
- * It fetches roles and their associated modules from the database, displays them in a table,
- * and provides a modal interface for assigning or removing modules from specific roles.
+ * This file provides functionality to display and manage a list of all roles in the system. It handles the retrieval, filtering, and sorting of role data, including pagination and search capabilities. The module ensures proper access control and supports integration with other modules for comprehensive role management.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage RolesAndPrivilegeManager
+ * @author     TMDD Interns 25'
  */
 session_start();
 require_once('../../../../../../config/ims-tmdd.php'); // Database connection

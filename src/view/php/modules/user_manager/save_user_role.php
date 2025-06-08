@@ -1,11 +1,12 @@
 <?php
 /**
- * Saves user role assignments in the Inventory Management System.
- * 
- * This script handles the creation of user-department-role assignments. It processes JSON input data
- * to add new role assignments for users within specific departments, logs changes in an audit log if
- * tracking is enabled, and returns a JSON response with all current assignments for affected users.
- * The script ensures proper authorization before making any changes.
+ * Save User Role Module
+ *
+ * This file provides functionality to save and update user role assignments in the system. It handles the association between users and roles, including permission settings. The module ensures proper validation, user authorization, and maintains data consistency during the role assignment process.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage UserManager
+ * @author     TMDD Interns 25'
  */
 // save_user_role.php
 session_start();

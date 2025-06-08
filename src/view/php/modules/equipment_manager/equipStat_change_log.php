@@ -1,11 +1,12 @@
 <?php
 /**
- * @file equipStat_change_log.php
- * @brief Equipment Status Change Log Management
- * 
- * This script handles the display and filtering of equipment status change logs. It handles user session validation,
- * role-based access control (RBAC) checks, builds dynamic SQL queries based on user input filters, and renders
- * a table of audit logs with various filtering options for status, date ranges, and search keywords.
+ * Equipment Status Change Log Module
+ *
+ * This file provides functionality to track and manage changes in equipment status. It handles the logging of status changes, including timestamps, user actions, and status details. The module ensures proper audit trail maintenance and supports integration with other modules for comprehensive equipment tracking.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage EquipmentManager
+ * @author     TMDD Interns 25'
  */
 session_start();
 require '../../../../../config/ims-tmdd.php';
@@ -245,12 +246,12 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <body>
     <div class="main-container">
         <header class="main-header">
-            <h1> Equipment Status Change Logs</h1>
+            <h1> Asset Status Change Logs</h1>
         </header>
 
         <section class="card">
             <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                <h2><i class="bi bi-list-task"></i> List of Equipment Status Changes</h2>
+                <h2><i class="bi bi-list-task"></i> List of Asset Status Changes</h2>
             </div>
             <div class="card-body">
                 <div class="container-fluid px-0">

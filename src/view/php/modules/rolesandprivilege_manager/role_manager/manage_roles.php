@@ -1,12 +1,12 @@
 <?php
 /**
- * @file manage_roles.php
- * @brief handles the management of roles within the system
+ * Manage Roles Module
  *
- * This script handles the management of roles within the system, including viewing, creating, modifying,
- * and deleting roles. It implements Role-Based Access Control (RBAC) to enforce user privileges,
- * provides filtering and pagination for role data, and manages the display of roles and their associated
- * modules and privileges.
+ * This file provides comprehensive functionality for managing roles in the system. It serves as the central hub for role management operations, including creation, modification, deletion, and assignment of roles. The module ensures proper validation, user authorization, and maintains data consistency across the system.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage RolesAndPrivilegeManager
+ * @author     TMDD Interns 25'
  */
 ob_start();
 require_once('../../../../../../config/ims-tmdd.php');

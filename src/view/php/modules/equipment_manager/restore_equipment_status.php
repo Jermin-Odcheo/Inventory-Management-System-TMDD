@@ -1,16 +1,12 @@
 <?php
 /**
- * @file restore_equipment_status.php
- * @brief Equipment Status Restoration Management
- * 
- * This script handles the restoration of soft-deleted equipment status records. It includes session validation,
- * role-based access control (RBAC) checks, and processes requests to restore equipment status entries from the database.
+ * Restore Equipment Status Module
  *
- * This script processes POST requests to restore one or more equipment status records
- * (by setting `is_disabled` to 0). It also cascades the restoration to related
- * `equipment_details` and `equipment_location` records with the same asset tag.
- * It includes checks for existing active records to prevent duplicates and logs all
- * restoration actions in the `audit_log` table within a database transaction.
+ * This file provides functionality to restore previously modified equipment status in the system. It handles the recovery of status information, including historical records and change logs. The module ensures proper validation, user authorization, and maintains data consistency during the restoration process.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage EquipmentManager
+ * @author     TMDD Interns 25'
  */
 
 session_start(); // Start the PHP session.

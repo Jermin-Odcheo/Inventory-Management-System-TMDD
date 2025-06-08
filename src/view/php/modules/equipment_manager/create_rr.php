@@ -1,11 +1,12 @@
 <?php
 /**
- * @file create_rr.php
- * @brief Handles the creation of new Receiving Report (RR) records via AJAX.
+ * Create Receiving Report Module
  *
- * This script processes POST requests to create a new RR entry in the `receive_report` table.
- * It includes checks for user authentication, RBAC privileges, and ensures the RR number
- * has a proper prefix. It also logs the creation in the audit log.
+ * This file provides functionality to create receiving reports for equipment in the system. It handles the generation of reports for newly received equipment, including documentation and verification processes. The module ensures proper validation and maintains data consistency for equipment receiving procedures.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage EquipmentManager
+ * @author     TMDD Interns 25'
  */
 
 session_start(); // Start the PHP session.

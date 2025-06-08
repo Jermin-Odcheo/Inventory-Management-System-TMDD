@@ -1,12 +1,12 @@
 <?php
 /**
- * @file permanent_delete_role.php
- * @brief handles the permanent deletion of roles that have been previously disabled or archived
+ * Permanent Delete Role Module
  *
- * This script handles the permanent deletion of roles that have been previously disabled or archived.
- * It supports both single role deletion and bulk deletion of multiple roles.
- * The script verifies the existence and disabled status of roles before deletion,
- * logs the actions in audit logs, and handles database transactions to ensure data integrity.
+ * This file provides functionality to permanently delete roles from the system. It handles the complete removal of role data, including associated permissions and settings. The module ensures proper validation, user authorization, and maintains data integrity during the deletion process.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage RolesAndPrivilegeManager
+ * @author     TMDD Interns 25'
  */
 session_start();
 require_once('../../../../../../config/ims-tmdd.php');

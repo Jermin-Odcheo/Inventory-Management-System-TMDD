@@ -1,10 +1,12 @@
 <?php
 /**
- * @file department_archive.php
- * @brief handles the display of archived department data
+ * Department Archive Module
  *
- * This script handles the display of archived department data. It checks user permissions,
- * fetches and filters archived data based on various criteria, and formats the data for presentation in a user interface.
+ * This file provides functionality for archiving and managing historical department records. It handles the storage, retrieval, and management of archived department data, ensuring data preservation while maintaining system performance. The module supports comprehensive archiving features including data compression, indexing, and secure storage.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage LogManagement
+ * @author     TMDD Interns 25'
  */
 session_start();
 require '../../../../../../config/ims-tmdd.php';

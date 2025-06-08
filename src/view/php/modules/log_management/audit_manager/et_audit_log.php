@@ -1,10 +1,12 @@
 <?php
 /**
- * @file et_audit_log.php
- * @brief handles the display of audit logs for equipment tracking activities
+ * Equipment Transaction Audit Log Module
  *
- * This script handles the display of audit logs for equipment tracking activities. It checks user permissions,
- * fetches and filters audit log data based on various criteria, and formats the data for presentation in a user interface.
+ * This file provides comprehensive audit logging functionality for equipment transaction activities. It tracks and records all equipment movements, transfers, and status changes. The module ensures detailed logging of user actions, timestamps, and relevant data changes for security and accountability purposes.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage LogManagement
+ * @author     TMDD Interns 25'
  */
 session_start();
 require '../../../../../../config/ims-tmdd.php';

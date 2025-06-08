@@ -1,12 +1,12 @@
 <?php
 /**
- * @file redo.php
- * @brief handles the redoing of the last undone role change action performed by a logged-in user
+ * Redo Module
  *
- * This script handles the redoing of the last undone role change action performed by a logged-in user.
- * It supports reapplying actions such as adding, modifying, or deleting roles in the system.
- * The script checks for the last undone action and performs the necessary database operations
- * to reapply it. The action is then marked as not undone in the database.
+ * This file provides functionality to redo previously undone role-related actions in the system. It handles the reapplication of role modifications, ensuring that changes can be restored while maintaining data integrity. The module supports audit trails and integrates with other modules to maintain system consistency.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage RolesAndPrivilegeManager
+ * @author     TMDD Interns 25'
  */
 session_start();
 require_once('../../../../../../config/ims-tmdd.php');

@@ -1,10 +1,12 @@
 <?php
 /**
- * @file account_details.php
- * @brief Manages client account details.
+ * Account Details Module
  *
- * This script handles the display and management of client account information,
- * including personal details, settings, and account-related actions.
+ * This file provides functionality to view and manage detailed account information. It displays comprehensive user profile data, account settings, and related information. The module ensures secure access to account details and proper data presentation.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage Clients
+ * @author     TMDD Interns 25'
  */
 session_start();
 require '../../../../config/ims-tmdd.php'; // This defines $pdo (PDO connection)

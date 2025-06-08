@@ -1,12 +1,12 @@
 <?php
 /**
- * @file department_management.php
- * @brief handles the management of departments within the system
+ * Department Management Module
  *
- * This script handles the management of departments within the system, including viewing, creating, modifying,
- * and deleting departments. It implements Role-Based Access Control (RBAC) to enforce user privileges,
- * provides filtering and pagination for department data, and manages the display of departments and their associated
- * modules and privileges.
+ * This file provides comprehensive functionality for managing departments within the system. It handles the creation, modification, and management of departments, including their relationships with users and equipment. The module ensures proper data validation, user authorization, and maintains data consistency across the Inventory Management System.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage Management
+ * @author     TMDD Interns 25'
  */
 // Start output buffering to prevent "headers already sent" errors.
 ob_start();

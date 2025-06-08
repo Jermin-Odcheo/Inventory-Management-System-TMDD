@@ -1,10 +1,12 @@
 <?php
 /**
- * @file dashboard.php
- * @brief Main dashboard for client interface.
+ * Dashboard Module
  *
- * This script serves as the primary dashboard for clients, providing an overview
- * of key metrics, recent activities, and access to various system functionalities.
+ * This file provides the main dashboard functionality for the system. It displays key metrics, recent activities, and system status information. The module handles data aggregation, user-specific views, and real-time updates to provide a comprehensive overview of the system's state.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage Clients
+ * @author     TMDD Interns 25'
  */
 session_start();
 require '../../../../config/ims-tmdd.php';

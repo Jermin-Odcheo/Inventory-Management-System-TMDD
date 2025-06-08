@@ -1,10 +1,12 @@
 <?php
 /**
- * @file add_role.php
- * @brief handles the creation of a new role in the system
+ * Add Role Module
  *
- * This script handles the creation of a new role in the system. It processes form submissions,
- * validates input, logs the creation in the audit log, and returns a JSON response.
+ * This file provides functionality to add new roles to the system. It handles the creation of role data, including permissions and settings. The module ensures proper validation, user authorization, and maintains data consistency during the role addition process.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage RolesAndPrivilegeManager
+ * @author     TMDD Interns 25'
  */
 session_start();
 require_once('../../../../../../config/ims-tmdd.php');

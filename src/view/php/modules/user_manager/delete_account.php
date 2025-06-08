@@ -1,12 +1,12 @@
 <?php
-
 /**
- * Archives user accounts in the Inventory Management System.
- * 
- * This script handles the archiving of one or multiple user accounts by setting their 'is_disabled' status
- * to 1. It processes input data to identify the user(s) to archive, performs validation and permission checks,
- * and returns a JSON response indicating the success or failure of the operation. The script prevents self-deletion
- * and logs actions for debugging purposes.
+ * Delete Account Module
+ *
+ * This file provides functionality to delete user accounts from the system. It handles the removal of user data, including role assignments and department associations. The module ensures proper validation, user authorization, and maintains data integrity during the account deletion process.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage UserManager
+ * @author     TMDD Interns 25'
  */
 session_start();
 require_once('../../../../../config/ims-tmdd.php');

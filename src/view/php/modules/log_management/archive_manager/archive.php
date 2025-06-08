@@ -1,10 +1,12 @@
 <?php
 /**
- * @file archive.php
- * @brief handles the display of archived user data
+ * General Archive Module
  *
- * This script handles the display of archived user data. It checks user permissions,
- * fetches and filters archived data based on various criteria, and formats the data for presentation in a user interface.
+ * This file provides core functionality for the system's archiving system. It serves as the central hub for managing archived records across all modules, handling the storage, retrieval, and management of archived data. The module ensures data preservation while maintaining system performance and supports comprehensive archiving features including data compression, indexing, and secure storage.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage LogManagement
+ * @author     TMDD Interns 25'
  */
 
 session_start();
@@ -720,7 +722,7 @@ echo '<script>document.body.classList.add("um-archive");</script>';
                         $('#filterError').remove();
 
                         // 1) pick your filter-row container
-                        const filterRow = document.querySelector('.col-6.col-md-2.d-grid');
+                        const filterRow = document.querySelector('.col-6.col-md.2.d-grid');
 
                         // 2) build a "block" error div (no absolute positioning needed)
                         const errorDiv = document.createElement('div');

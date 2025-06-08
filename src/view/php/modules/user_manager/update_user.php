@@ -1,13 +1,12 @@
 <?php
-
 /**
- * Updates user information in the Inventory Management System.
- * 
- * This script handles the update of user details including email, username, password,
- * first name, last name, and department/role assignments. It performs validation checks
- * for input data, ensures uniqueness of email and username, and logs changes in an audit log.
- * The script returns a JSON response indicating the success or failure of the update operation.
- * 
+ * Update User Module
+ *
+ * This file provides functionality to update user information in the system. It handles the modification of user data, including personal information, role assignments, and department associations. The module ensures proper validation, user authorization, and maintains data consistency during the user update process.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage UserManager
+ * @author     TMDD Interns 25'
  */
 session_start();
 require_once('../../../../../config/ims-tmdd.php');

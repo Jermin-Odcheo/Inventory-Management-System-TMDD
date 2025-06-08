@@ -1,10 +1,12 @@
 <?php
 /**
- * @file et_archive.php
- * @brief handles the display of archived equipment transactions
+ * Equipment Transaction Archive Module
  *
- * This script handles the display of archived equipment transactions. It checks user permissions,
- * fetches and filters archived data based on various criteria, and formats the data for presentation in a user interface.
+ * This file provides functionality for archiving and managing historical equipment transaction records. It handles the storage, retrieval, and management of archived transaction data, ensuring data preservation while maintaining system performance. The module supports comprehensive archiving features including data compression, indexing, and secure storage.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage LogManagement
+ * @author     TMDD Interns 25'
  */
 
 session_start();

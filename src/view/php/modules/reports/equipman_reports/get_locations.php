@@ -1,11 +1,12 @@
 <?php
 /**
- * @file get_locations.php
- * @brief Provides location and specific area data via AJAX requests for report generation filters.
+ * Get Locations Module
  *
- * This script handles AJAX requests to fetch distinct building locations and specific areas
- * from the `equipment_location` table. It can filter specific areas by building location
- * and vice-versa, depending on the 'action' parameter.
+ * This file provides functionality to retrieve and display location data for equipment reports. It handles requests to fetch location information from the database, including filtering and sorting options. The module ensures that only authorized users can access location data and supports integration with other modules to maintain data consistency across the Inventory Management System.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage Reports
+ * @author     TMDD Interns 25'
  */
 
 require_once __DIR__ . '/../../../../../../config/ims-tmdd.php'; // Include the database connection file, providing the $pdo object.

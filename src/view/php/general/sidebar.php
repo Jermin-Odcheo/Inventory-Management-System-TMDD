@@ -1,10 +1,12 @@
 <?php
 /**
- * @file sidebar.php
- * @brief handles the display of the sidebar menu
+ * Sidebar Module
  *
- * This script handles the display of the sidebar menu. It checks user permissions,
- * fetches and filters audit log data based on various criteria, and formats the data for presentation in a user interface.
+ * This file provides the sidebar navigation functionality for the system. It generates the dynamic sidebar menu based on user roles and permissions, ensuring that users only see menu items they have access to. The module handles menu item organization, active state management, and responsive behavior.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage General
+ * @author     TMDD Interns 25'
  */
 declare(strict_types=1);
 
@@ -33,7 +35,7 @@ $modules = [
     'Equipment Management' => ['audit' => 'em_audit_log.php', 'archive' => 'em_archive.php'],
     'Equipment Transactions' => ['audit' => 'et_audit_log.php', 'archive' => 'et_archive.php'],
     'Roles and Privileges' => ['audit' => 'rm_audit_log.php', 'archive' => 'rm_archive.php'],
-    'Management' => ['audit' => 'department_audit_log.php', 'archive' => 'department_archive.php'],
+    'Administration' => ['audit' => 'department_audit_log.php', 'archive' => 'department_archive.php'],
 ];
 
 /**

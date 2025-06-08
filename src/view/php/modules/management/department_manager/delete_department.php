@@ -7,6 +7,51 @@
  * offers soft and permanent delete options, checks for user permissions, logs actions in the audit log,
  * and returns JSON responses for AJAX requests.
  */
+
+/**
+ * Delete Department Module
+ *
+ * This file provides functionality for deleting departments from the system. It handles the deletion process, including validation checks, dependency verification, and proper cleanup of related data. The module ensures that only authorized users can perform deletions and maintains data integrity throughout the process.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage Management
+ * @author     TMDD Interns 25'
+ */
+
+/**
+ * DeleteDepartment Class
+ *
+ * Handles the logic for deleting department records, including permission checks and data integrity validation. Supports soft deletion to allow for future restoration if needed.
+
+ */
+class DeleteDepartment {
+    /**
+     * Database connection instance
+     *
+     * @var PDO
+     */
+    private $db;
+
+    /**
+     * Constructor
+     *
+     * @param PDO $db Database connection
+     */
+    public function __construct(PDO $db) {
+        $this->db = $db;
+    }
+
+    /**
+     * Delete a department
+     *
+     * @param int $departmentId Department ID
+     * @return bool Success status
+     */
+    public function delete($departmentId) {
+        // ... existing code ...
+    }
+}
+
 session_start();
 require_once('../../../../../../config/ims-tmdd.php');
 

@@ -1,11 +1,12 @@
 <?php
-
 /**
- * Retrieves the list of roles associated with a specific user in the Inventory Management System.
- * 
- * This script fetches the roles linked to a user based on their ID provided via GET request.
- * It performs authentication and permission checks to ensure the requester has the necessary access,
- * validates the input user ID, and returns a JSON response with the list of roles associated with the user.
+ * Get User Roles Module
+ *
+ * This file provides functionality to retrieve and display detailed information about user role assignments. It is used to fetch specific user role data from the database, including role details and user assignments. The code ensures that only authorized users can access this information and supports integration with other modules for a comprehensive view of user role assignments.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage UserManager
+ * @author     TMDD Interns 25'
  */
 declare(strict_types=1);
 require_once '../../../../../config/ims-tmdd.php';

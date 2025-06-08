@@ -1,11 +1,12 @@
 <?php
 /**
- * Updates user department and role assignments in the Inventory Management System.
- * 
- * This script handles the assignment of roles to a user within a specific department. It processes
- * JSON input data to update or remove role assignments, logs changes in an audit log if tracking is enabled,
- * and returns a JSON response with the updated assignments. The script ensures proper authorization before
- * making any changes.
+ * Update User Department Module
+ *
+ * This file provides functionality to update user department assignments in the system. It handles the modification of department associations, ensuring proper organizational structure maintenance. The module ensures proper validation, user authorization, and maintains data consistency during the department update process.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage UserManager
+ * @author     TMDD Interns 25'
  */
 // update_user_department.php
 session_start();

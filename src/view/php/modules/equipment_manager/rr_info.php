@@ -1,12 +1,13 @@
 <?php
 /**
- * @file rr_info.php
- * @brief Handles the retrieval of receiving report (RR) information.
+ * Receiving Report Info Module
  *
- * This script processes POST requests to retrieve information about a receiving report
- * based on the provided RR number. It includes checks for user authentication,
- * AJAX request validation, and database queries to fetch relevant data.
-**/
+ * This file provides functionality to manage and display receiving report information in the system. It handles the creation, modification, and tracking of receiving reports, including documentation and verification processes. The module ensures proper validation and maintains data consistency for equipment receiving procedures.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage EquipmentManager
+ * @author     TMDD Interns 25'
+ */
 session_start();
 date_default_timezone_set('Asia/Manila');
 require_once('../../../../../config/ims-tmdd.php'); // Adjust path as needed

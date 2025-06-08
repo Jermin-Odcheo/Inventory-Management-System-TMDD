@@ -1,11 +1,12 @@
 <?php
-
 /**
- * @file rm_archive.php
- * @brief handles the display of archived roles and their audit logs
+ * Role Management Archive Module
  *
- * This script handles the display of archived roles and their audit logs. It checks user permissions,
- * fetches and filters archived data based on various criteria, and formats the data for presentation in a user interface.
+ * This file provides functionality for archiving and managing historical role management records. It handles the storage, retrieval, and management of archived role data, ensuring data preservation while maintaining system performance. The module supports comprehensive archiving features including data compression, indexing, and secure storage.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage LogManagement
+ * @author     TMDD Interns 25'
  */
 ob_start();
 require_once('../../../../../../config/ims-tmdd.php');
@@ -1167,7 +1168,7 @@ function formatChanges($oldJsonStr)
   // 1) pick your filter-row container
   const filterRow = document.querySelector('.col-12.d-flex.flex-wrap.align-items-end');
 
-  // 2) build a “block” error div (no absolute positioning needed)
+  // 2) build a "block" error div (no absolute positioning needed)
   const errorDiv = document.createElement('div');
   errorDiv.id = 'filterError';
   errorDiv.className = 'validation-tooltip mt-2';  // mt-2 gives a little gap

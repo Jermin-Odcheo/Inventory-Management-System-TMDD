@@ -1,3 +1,12 @@
+/**
+ * Users Module
+ *
+ * This file provides functionality to manage users and their role assignments in the system. It handles the display and management of user data, including role assignments and permissions. The module ensures proper validation, user authorization, and maintains data consistency across the system.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage RolesAndPrivilegeManager
+ * @author     TMDD Interns 25'
+ */
 <!DOCTYPE html>
 <html lang="en">
 <head>

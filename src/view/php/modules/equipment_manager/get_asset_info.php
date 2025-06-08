@@ -1,12 +1,12 @@
 <?php
 /**
- * @file get_asset_info.php
- * @brief Provides asset location and responsible person information via AJAX requests.
+ * Get Asset Info Module
  *
- * This script is designed to be called via AJAX. It fetches the `building_loc`,
- * `specific_area`, and `person_responsible` from the `equipment_location` table
- * based on a provided asset tag. It ensures the request is an AJAX request and
- * that the user is authenticated.
+ * This file provides functionality to retrieve and display asset information in the system. It handles the fetching of asset details, including specifications, location, and status. The module ensures proper access control and supports integration with other modules for comprehensive asset management.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage EquipmentManager
+ * @author     TMDD Interns 25'
  */
 
 session_start(); // Start the PHP session.

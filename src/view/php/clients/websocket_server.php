@@ -1,10 +1,12 @@
 <?php
 /**
- * @file websocket_server.php
- * @brief WebSocket server for real-time communication.
+ * WebSocket Server Module
  *
- * This script sets up a WebSocket server to handle real-time communication
- * between clients and the server, facilitating instant updates and notifications.
+ * This file provides real-time communication functionality through WebSocket connections. It handles client connections, message broadcasting, and real-time updates for the system. The module ensures secure communication, connection management, and proper error handling.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage Clients
+ * @author     TMDD Interns 25'
  */
 require '../../../../config/ims-tmdd.php';
 require '../../../../config/vendor/autoload.php';

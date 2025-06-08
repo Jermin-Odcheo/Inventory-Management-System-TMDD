@@ -1,13 +1,12 @@
 <?php
 /**
- * @file edit_roles.php
- * @brief handles the editing of an existing role within the system
+ * Edit Roles Module
  *
- * This script handles the editing of an existing role within the system. It fetches role details,
- * associated privileges, and available modules and privileges for display in an edit form.
- * Upon form submission, it updates the role's name and privileges, logs the changes, and returns
- * the updated information via AJAX.
+ * This file provides functionality to edit existing roles in the system. It handles the modification of role data, including permissions, descriptions, and associated settings. The module ensures proper validation, user authorization, and maintains data consistency during the editing process.
  *
+ * @package    InventoryManagementSystem
+ * @subpackage RolesAndPrivilegeManager
+ * @author     TMDD Interns 25'
  */
 session_start();
 error_reporting(E_ALL);

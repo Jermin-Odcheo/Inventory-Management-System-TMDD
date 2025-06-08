@@ -1,10 +1,12 @@
 <?php
 /**
- * @file create_tables.php
- * @brief Script for creating database tables.
+ * Create Tables Module
  *
- * This script is responsible for creating necessary database tables for the application,
- * ensuring the database structure is properly initialized.
+ * This file provides functionality for initializing and creating database tables required by the system. It handles table creation, schema definition, and initial data population. The module ensures proper database structure and data integrity during system setup.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage Clients
+ * @author     TMDD Interns 25'
  */
 require '../../../../config/ims-tmdd.php';
 
