@@ -104,7 +104,7 @@ function getAcronym($string) {
         <ul>
             <li>
                 <a href="<?php echo BASE_URL; ?>src/view/php/clients/dashboard.php">
-                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                    <i class="fas fa-tachometer-alt"></i> <span class="menu-text">Dashboard</span>
                 </a>
             </li>
 
@@ -186,7 +186,7 @@ function getAcronym($string) {
                     <ul class="dropdown tree">
                         <i class="bi bi-file-earmark-check">
                             <a href="<?= BASE_URL ?>src/view/php/modules/user_manager/user_management.php">
-                                <span class="short-label">MA</span>
+                                <span class="short-label">UM</span>
                             </a>
                         </i>
                         <li class="nav-item">
@@ -229,11 +229,6 @@ function getAcronym($string) {
                                 <span class="submenu-text">Roles and Privileges Management</span>
                             </a>
                         </li>
-                        <!-- <li class="nav-item">
-                        <a href="<?php echo BASE_URL; ?>src/view/php/modules/rolesandprivilege_manager/privilege_manager/manage_privileges.php" class="nav-link">
-                            <span class="submenu-text">Privilege Management <br> 🆕💻 (Prototype)</span>
-                        </a>
-                    </li> -->
                     </ul>
                 </li>
             <?php endif; ?>
@@ -248,21 +243,23 @@ function getAcronym($string) {
                     <ul class="dropdown tree">
                         <i class="bi bi-file-earmark-check">
                             <a href="<?= BASE_URL ?>src/view/php/modules/equipment_manager/equipment_details.php">
-                                <span class="short-label">ED</span>
+                                <span class="short-label">EDet</span>
                             </a>
                         </i>
                         <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_manager/equipment_details.php">Equipment
                                 Details</a></li>
                         <i class="bi bi-file-earmark-check">
                             <a href="<?= BASE_URL ?>src/view/php/modules/equipment_manager/equipment_location.php">
-                                <span class="short-label">EL</span>
+                                <span class="short-label">ELoc</span>
                             </a>
                         </i>
+                        
                         <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_manager/equipment_location.php">Equipment
                                 Location</a></li>
-                        <i class="bi bi-file-earmark-check">
+                        
+                                <i class="bi bi-file-earmark-check">
                             <a href="<?= BASE_URL ?>src/view/php/modules/equipment_manager/equipment_status.php">
-                                <span class="short-label">ES-PMS</span>
+                                <span class="short-label">EStat</span>
                             </a>
                         </i>
                         <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_manager/equipment_status.php">Equipment
@@ -279,13 +276,27 @@ function getAcronym($string) {
                         <i class="fas fa-chevron-down dropdown-icon"></i>
                     </button>
                     <ul class="dropdown tree">
-                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_transactions/purchase_order.php">Purchase
-                                Order</a></li>
-                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_transactions/charge_invoice.php">Charge
-                                Invoice</a></li>
-                        <li><a
-                                href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_transactions/receiving_report.php">Receiving
-                                Report</a></li>
+                    <i class="bi bi-file-earmark-check">
+                    <a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_transactions/purchase_order.php">
+                                <span class="short-label">PO</span>
+                            </a>
+                        </i>
+                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_transactions/purchase_order.php">Purchase Order</a></li>
+
+
+                        <i class="bi bi-file-earmark-check">
+                            <a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_transactions/charge_invoice.php">
+                                <span class="short-label">CI</span>
+                            </a>
+                        </i>
+                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_transactions/charge_invoice.php">Charge Invoice</a></li>
+                        
+                        <i class="bi bi-file-earmark-check">
+                            <a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_transactions/receiving_report.php">
+                                <span class="short-label">RR</span>
+                            </a>
+                        </i>
+                        <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/equipment_transactions/receiving_report.php">Receiving Report</a></li>
                     </ul>
                 </li>
             <?php endif; ?>
@@ -297,7 +308,6 @@ function getAcronym($string) {
                         <i class="fas fa-chevron-down dropdown-icon"></i>
                     </button>
                     <ul class="dropdown tree">
-                        <!-- <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/reports/userman_reports/usrep.php">User Management Reports 🔜 (Under Development)</a></li> -->
                         <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/reports/equipman_reports/eqrep.php">Equipment
                                 Management Report </a></li>
                     </ul>
