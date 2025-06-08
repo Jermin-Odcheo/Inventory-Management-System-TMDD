@@ -1,5 +1,14 @@
 <?php
 /**
+ * IMS-TMDD Configuration Module
+ *
+ * This file provides specific configuration settings for the TMDD Inventory Management System. It defines system-wide parameters, custom settings, and integration configurations. The module ensures proper system initialization and maintains configuration consistency across the application.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage Configuration
+ * @author     TMDD Interns 25'
+ */
+/**
  * @file ims-tmdd.php
  * @brief handles the database connection
  *

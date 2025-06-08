@@ -1,10 +1,12 @@
 <?php
 /**
- * @file password_hash.php
- * @brief handles the password hashing
+ * Password Hash Module
  *
- * This script handles the password hashing. It fetches all users with plain text passwords,
- * checks if they are already hashed, and updates the user record with the hashed password.
+ * This file provides secure password hashing and verification functionality for the system. It handles password encryption, validation, and security measures. The module ensures proper password management and maintains security standards for user authentication.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage Configuration
+ * @author     TMDD Interns 25'
  */
 require 'ims-tmdd.php'; // Your DB connection file
 
