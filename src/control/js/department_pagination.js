@@ -19,13 +19,11 @@ const departmentPaginationConfig = {
 
 // Initialize pagination for department table
 function initDepartmentPagination() {
-    console.log('department_pagination.js: Initializing department pagination');
-    
+
     // Get all rows from the department table (excluding header row)
     const tableBody = document.querySelector('#departmentTable tbody');
     if (tableBody) {
         departmentRows = Array.from(tableBody.querySelectorAll('tr'));
-        console.log(`department_pagination.js: Found ${departmentRows.length} department rows`);
         
         // Store original rows for reference
         filteredDepartmentRows = [...departmentRows];
@@ -35,35 +33,26 @@ function initDepartmentPagination() {
         
         // Perform initial pagination
         updateDepartmentPagination();
-        
-        console.log('department_pagination.js: Initialization completed');
-    } else {
-        console.error('department_pagination.js: Department table body not found');
     }
 }
 
 // Set up event listeners for department table
 function setupDepartmentEventListeners() {
-    console.log('department_pagination.js: Setting up event listeners');
-    
     // Search input listener
     const searchInput = document.getElementById('eqSearch');
     if (searchInput) {
         searchInput.addEventListener('input', function() {
             filterDepartmentTable(this.value.toLowerCase());
         });
-        console.log('department_pagination.js: Added listener to search input');
     }
     
     // Rows per page select listener
     const rowsPerPageSelect = document.getElementById(departmentPaginationConfig.rowsPerPageSelectId);
     if (rowsPerPageSelect) {
         rowsPerPageSelect.addEventListener('change', () => {
-            console.log('department_pagination.js: Rows per page changed');
             departmentPaginationConfig.currentPage = 1; // Reset to first page
             updateDepartmentPagination();
         });
-        console.log('department_pagination.js: Added listener to rows per page select');
     }
     
     // Previous page button listener - Remove any existing listeners first
@@ -77,13 +66,11 @@ function setupDepartmentEventListeners() {
         newPrevButton.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation(); // Prevent event bubbling
-            console.log('department_pagination.js: Previous button clicked');
             if (departmentPaginationConfig.currentPage > 1) {
                 departmentPaginationConfig.currentPage--;
                 updateDepartmentPagination();
             }
         });
-        console.log('department_pagination.js: Added listener to previous button');
     }
     
     // Next page button listener - Remove any existing listeners first
@@ -97,21 +84,17 @@ function setupDepartmentEventListeners() {
         newNextButton.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation(); // Prevent event bubbling
-            console.log('department_pagination.js: Next button clicked');
             const totalPages = getDepartmentTotalPages();
             if (departmentPaginationConfig.currentPage < totalPages) {
                 departmentPaginationConfig.currentPage++;
                 updateDepartmentPagination();
             }
         });
-        console.log('department_pagination.js: Added listener to next button');
     }
 }
 
 // Filter department table based on search input
 function filterDepartmentTable(searchTerm = '') {
-    console.log('department_pagination.js: Filtering department table');
-    
     if (searchTerm === '') {
         // If no search term, show all rows
         filteredDepartmentRows = [...departmentRows];
@@ -123,8 +106,6 @@ function filterDepartmentTable(searchTerm = '') {
         });
     }
     
-    console.log(`department_pagination.js: Filtered to ${filteredDepartmentRows.length} rows`);
-    
     // Reset to first page after filtering
     departmentPaginationConfig.currentPage = 1;
     
@@ -134,8 +115,6 @@ function filterDepartmentTable(searchTerm = '') {
 
 // Update department pagination based on current page and filters
 function updateDepartmentPagination() {
-    console.log(`department_pagination.js: Updating pagination. Current page: ${departmentPaginationConfig.currentPage}`);
-    
     // Get pagination parameters
     const rowsPerPageSelect = document.getElementById(departmentPaginationConfig.rowsPerPageSelectId);
     const rowsPerPage = parseInt(rowsPerPageSelect?.value || '10');
@@ -153,8 +132,6 @@ function updateDepartmentPagination() {
     // Calculate start and end indices for current page
     const startIndex = (departmentPaginationConfig.currentPage - 1) * rowsPerPage;
     const endIndex = Math.min(startIndex + rowsPerPage, totalRows);
-    
-    console.log(`department_pagination.js: Showing rows ${startIndex + 1} to ${endIndex} of ${totalRows}`);
     
     // Hide all rows first
     departmentRows.forEach(row => {
@@ -191,8 +168,6 @@ function updateDepartmentPagination() {
     if (nextButton) {
         nextButton.disabled = departmentPaginationConfig.currentPage >= totalPages;
     }
-    
-    console.log(`department_pagination.js: Pagination updated. Current page: ${departmentPaginationConfig.currentPage}, Total pages: ${totalPages}`);
 }
 
 // Get total number of pages
@@ -258,8 +233,6 @@ function renderDepartmentPaginationControls(totalPages) {
         }
         addDepartmentPaginationItem(paginationContainer, totalPages);
     }
-    
-    console.log(`department_pagination.js: Rendered pagination controls. Start page: ${startPage}, End page: ${endPage}, Total pages: ${totalPages}`);
 }
 
 // Add a pagination item (page number)
@@ -275,7 +248,6 @@ function addDepartmentPaginationItem(container, page, isActive = false) {
     link.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation(); // Prevent event bubbling
-        console.log(`department_pagination.js: Page ${page} clicked`);
         departmentPaginationConfig.currentPage = page;
         updateDepartmentPagination();
     });

@@ -92,7 +92,6 @@ $(document).ready(function() {
             return this.create(message, 'info');
         }
     };
-    console.log("Toast contains " + Toast);
     // Initialize Toast
     Toast.init();
     
@@ -178,13 +177,11 @@ $(document).ready(function() {
                     // Show success message
                     Toast.success('Data updated successfully');
                 } else {
-                    console.error('Could not find table in response');
                     $('.loading-overlay').remove();
                     Toast.error('Failed to refresh data. Please reload the page.');
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Error refreshing table:', error);
                 $('.loading-overlay').remove();
                 Toast.error('Failed to refresh data. Please reload the page.');
             }
@@ -207,8 +204,6 @@ $(document).ready(function() {
         const firstName = $(this).data('first-name');
         const lastName = $(this).data('last-name');
         
-        console.log("Opening edit modal for user:", userId, email, username);
-        
         // Set values in form
         $('#editUserID').val(userId);
         $('#editEmail').val(email);
@@ -230,21 +225,18 @@ $(document).ready(function() {
         }).appendTo($('#editUserForm'));
         
         // Fetch user's departments
-        console.log("Fetching departments for user ID:", userId);
         $.ajax({
             url: 'get_user_departments.php',
             type: 'GET',
             data: { user_id: userId },
             dataType: 'json',
             success: function(response) {
-                console.log("Department fetch response:", response);
                 if (response.success && response.departments && response.departments.length > 0) {
                     // Ensure department ids are treated as integers
                     selectedDepartments = response.departments.map(dept => ({
                         id: parseInt(dept.id),
                         name: dept.name
                     }));
-                    console.log("Departments loaded successfully:", selectedDepartments);
                     updateEditDepartmentsDisplay();
                     
                     // Also add the departments directly to the form as hidden inputs
@@ -257,7 +249,6 @@ $(document).ready(function() {
                         }).appendTo($form);
                     });
                 } else {
-                    console.error("Failed to load departments or no departments returned:", response);
                     if (response.success && (!response.departments || response.departments.length === 0)) {
                         Toast.warning('User has no departments assigned');
                     } else {
@@ -266,18 +257,9 @@ $(document).ready(function() {
                 }
             },
             error: function(xhr, status, error) {
-                console.error("Error fetching departments:", {
-                    status: status,
-                    error: error,
-                    responseText: xhr.responseText,
-                    statusText: xhr.statusText,
-                    readyState: xhr.readyState
-                });
-                
                 // Try to extract JSON from HTML response if it exists
                 try {
                     const responseText = xhr.responseText;
-                    console.log("Attempting to extract JSON from response:", responseText);
                     
                     // Direct attempt to extract the JSON portion by finding the first {
                     const jsonStartIndex = responseText.indexOf('{');
@@ -285,11 +267,9 @@ $(document).ready(function() {
                     
                     if (jsonStartIndex >= 0 && jsonEndIndex > jsonStartIndex) {
                         const jsonString = responseText.substring(jsonStartIndex, jsonEndIndex);
-                        console.log("Extracted JSON string:", jsonString);
                         
                         try {
                             const jsonData = JSON.parse(jsonString);
-                            console.log("Successfully parsed JSON:", jsonData);
                             
                             // Process the JSON response
                             if (jsonData.success) {
@@ -298,7 +278,6 @@ $(document).ready(function() {
                                     id: parseInt(dept.id),
                                     name: dept.name
                                 }));
-                                console.log("Departments loaded from error handler:", selectedDepartments);
                                 updateEditDepartmentsDisplay();
                                 return;
                             } else {
@@ -339,7 +318,6 @@ $(document).ready(function() {
                                     id: parseInt(dept.id),
                                     name: dept.name
                                 }));
-                                console.log("Departments loaded from regex fallback:", selectedDepartments);
                                 updateEditDepartmentsDisplay();
                                 return;
                             } else {
@@ -449,7 +427,6 @@ $(document).ready(function() {
             const deptId = parseInt(dept.id);
             if (!isNaN(deptId)) {
                 formData.append(`departments[${index}]`, deptId);
-                console.log(`Adding department ${dept.name} with ID: ${deptId}`);
             }
         });
         
@@ -490,8 +467,6 @@ $(document).ready(function() {
                 }
             },
             error: function(xhr, status, error) {
-                console.error("Error creating user:", error, xhr.responseText);
-                
                 try {
                     const responseText = xhr.responseText;
                     console.log("Attempting to extract JSON from response:", responseText);
@@ -580,7 +555,6 @@ $(document).ready(function() {
         const deptName = $(this).find('option:selected').text();
         
         if (deptId && !isNaN(deptId) && !selectedDepartments.some(d => parseInt(d.id) === deptId)) {
-            console.log(`Adding department: ${deptName} with ID: ${deptId}`);
             selectedDepartments.push({ id: deptId, name: deptName });
             updateDepartmentsDisplay();
         }
@@ -613,12 +587,6 @@ $(document).ready(function() {
         // Get existing departments from hidden inputs
         const hiddenDepts = form.find('input[name="departments[]"]');
         
-        // Log what departments we have
-        console.log("Hidden department inputs:", hiddenDepts.length);
-        hiddenDepts.each(function() {
-            console.log("Department input value:", $(this).val());
-        });
-        
         // Check if we have departments
         if (hiddenDepts.length === 0) {
             // No departments in hidden inputs, check the table
@@ -633,7 +601,6 @@ $(document).ready(function() {
                 }
                 
                 // We have departments in the array, add them to the form
-                console.log("Adding departments from selectedDepartments array:", selectedDepartments.length);
                 selectedDepartments.forEach(function(dept, index) {
                     const deptId = parseInt(dept.id);
                     if (!isNaN(deptId)) {
@@ -649,7 +616,6 @@ $(document).ready(function() {
                 });
             } else {
                 // We have departments in the table, use those
-                console.log("Adding departments from table rows:", departmentRows.length);
                 departmentRows.each(function(index) {
                     const deptId = $(this).data('department-id');
                     if (deptId) {
@@ -666,7 +632,6 @@ $(document).ready(function() {
             }
         } else {
             // We already have departments in hidden inputs, make sure they're in the formData
-            console.log("Using existing hidden department inputs:", hiddenDepts.length);
             hiddenDepts.each(function(index) {
                 const deptId = $(this).val();
                 formData.append(`departments[${index}]`, deptId);
@@ -676,7 +641,6 @@ $(document).ready(function() {
         // Final check - if we still don't have departments, add a special flag to tell the server
         // to use the user's existing departments
         if (!formData.has('departments[0]')) {
-            console.warn("No departments found, adding use_existing_departments flag");
             formData.append('use_existing_departments', '1');
         }
         
@@ -714,14 +678,10 @@ $(document).ready(function() {
                         reloadUserTable();
                     } else {
                         Toast.error('Error processing response');
-                        console.error('Error parsing response:', e, response);
                     }
                 }
             },
             error: function(xhr, status, error) {
-                console.error("Error updating user:", error);
-                console.error("Response text:", xhr.responseText);
-                
                 try {
                     const responseText = xhr.responseText;
                     console.log("Attempting to extract JSON from response:", responseText);
@@ -812,7 +772,6 @@ $(document).ready(function() {
         const deptName = $(this).find('option:selected').text();
         
         if (deptId && !isNaN(deptId) && !selectedDepartments.some(d => parseInt(d.id) === deptId)) {
-            console.log(`Adding department: ${deptName} with ID: ${deptId}`);
             selectedDepartments.push({ id: deptId, name: deptName });
             updateEditDepartmentsDisplay();
         }
@@ -859,43 +818,6 @@ $(document).ready(function() {
                 }
             },
             error: function(xhr, status, error) {
-                console.error("Error deleting user:", error, xhr.responseText);
-                
-                try {
-                    const responseText = xhr.responseText;
-                    console.log("Attempting to extract JSON from response:", responseText);
-                    
-                    // Direct attempt to extract the JSON portion by finding the first {
-                    const jsonStartIndex = responseText.indexOf('{');
-                    const jsonEndIndex = responseText.lastIndexOf('}') + 1;
-                    
-                    if (jsonStartIndex >= 0 && jsonEndIndex > jsonStartIndex) {
-                        const jsonString = responseText.substring(jsonStartIndex, jsonEndIndex);
-                        console.log("Extracted JSON string:", jsonString);
-                        
-                        try {
-                            const jsonData = JSON.parse(jsonString);
-                            console.log("Successfully parsed JSON:", jsonData);
-                            
-                            // Process the JSON response
-                            if (jsonData.success) {
-                                // Process success even though there were warnings
-                                reloadUserTable();
-                                Toast.success('User removed successfully');
-                                return;
-                            } else {
-                                // Display the error message from the JSON
-                                Toast.error(jsonData.message || 'Failed to remove user');
-                                return;
-                            }
-                        } catch (parseError) {
-                            console.error("Error parsing extracted JSON:", parseError);
-                        }
-                    }
-                } catch (e) {
-                    console.error("Error extracting JSON from response:", e);
-                }
-                
                 Toast.error('An error occurred while processing your request');
             }
         });
@@ -924,44 +846,6 @@ $(document).ready(function() {
                 }
             },
             error: function(xhr, status, error) {
-                console.error("Error deleting multiple users:", error, xhr.responseText);
-                
-                try {
-                    const responseText = xhr.responseText;
-                    console.log("Attempting to extract JSON from response:", responseText);
-                    
-                    // Direct attempt to extract the JSON portion by finding the first {
-                    const jsonStartIndex = responseText.indexOf('{');
-                    const jsonEndIndex = responseText.lastIndexOf('}') + 1;
-                    
-                    if (jsonStartIndex >= 0 && jsonEndIndex > jsonStartIndex) {
-                        const jsonString = responseText.substring(jsonStartIndex, jsonEndIndex);
-                        console.log("Extracted JSON string:", jsonString);
-                        
-                        try {
-                            const jsonData = JSON.parse(jsonString);
-                            console.log("Successfully parsed JSON:", jsonData);
-                            
-                            // Process the JSON response
-                            if (jsonData.success || (jsonData.status && jsonData.status.toLowerCase() === "success")) {
-                                // Process success even though there were warnings
-                                reloadUserTable();
-                                Toast.success("Selected users removed successfully");
-                                $("#delete-selected").hide().prop("disabled", true);
-                                return;
-                            } else {
-                                // Display the error message from the JSON
-                                Toast.error(jsonData.message || 'Failed to remove users');
-                                return;
-                            }
-                        } catch (parseError) {
-                            console.error("Error parsing extracted JSON:", parseError);
-                        }
-                    }
-                } catch (e) {
-                    console.error("Error extracting JSON from response:", e);
-                }
-                
                 Toast.error('An error occurred while processing your request');
             }
         });

@@ -1388,7 +1388,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_po_list') {
             });
             updatePagination();
         } catch (e) {
-            console.error("Error initializing pagination:", e);
+            // console.error("Error initializing pagination:", e);
             manualInitPagination();
         }
 
@@ -1537,7 +1537,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_po_list') {
         }
 
         function manualInitPagination() {
-            console.warn("Using manual pagination implementation");
+            // console.warn("Using manual pagination implementation");
             const allRows = $('#invoiceTable tbody tr').toArray();
             const rowsPerPage = parseInt($('#rowsPerPageSelect').val() || 10);
             const total = allRows.length;
@@ -1655,15 +1655,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_po_list') {
             // Attach handlers to PO removal buttons - make sure we're using the correct selector
             $('.remove-po').off('click').on('click', function(e) {
                 e.preventDefault();
-                console.log("Remove PO button clicked");
+                // console.log("Remove PO button clicked");
                 
                 removePOInvoiceId = $(this).data('id');
                 removePOInvoiceNumber = $(this).data('invoice');
                 removePONumber = $(this).data('po');
-                
-                console.log("PO Removal - Invoice ID:", removePOInvoiceId);
-                console.log("PO Removal - Invoice Number:", removePOInvoiceNumber);
-                console.log("PO Removal - PO Number:", removePONumber);
                 
                 // Update modal text
                 $('#po-to-remove').text(removePONumber);
@@ -1679,12 +1675,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_po_list') {
         
         // Confirm PO removal
         $('#confirmRemovePOBtn').on('click', function() {
-            console.log("Confirm PO Remove button clicked");
+            // console.log("Confirm PO Remove button clicked");
             
             if (!removePOInvoiceId || !removePONumber) {
-                console.error("Missing required data for PO removal");
-                console.log("removePOInvoiceId:", removePOInvoiceId);
-                console.log("removePONumber:", removePONumber);
+                // console.error("Missing required data for PO removal");
+                // console.log("removePOInvoiceId:", removePOInvoiceId);
+                // console.log("removePONumber:", removePONumber);
                 return;
             }
             
@@ -1702,9 +1698,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_po_list') {
             }, 100);
             
             // Send AJAX request to remove PO reference
-            console.log("Sending AJAX request for PO removal");
-            console.log("Action: remove_po");
-            console.log("Invoice ID:", removePOInvoiceId);
+            // console.log("Sending AJAX request for PO removal");
+            // console.log("Action: remove_po");
+            // console.log("Invoice ID:", removePOInvoiceId);
             
             $.ajax({
                 url: 'charge_invoice.php',
@@ -1715,7 +1711,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_po_list') {
                 },
                 dataType: 'json',
                 success: function(response) {
-                    console.log("PO removal AJAX response:", response);
+                    // console.log("PO removal AJAX response:", response);
                     
                     if (response.status === 'success') {
                         // Reload the table content
@@ -1724,17 +1720,17 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_po_list') {
                             reinitializePagination();
                             
                             // Log the operation for debugging
-                            console.log("PO removed successfully, UI refreshed");
+                            // console.log("PO removed successfully, UI refreshed");
                         });
                     } else {
                         showToast(response.message, 'error');
-                        console.error("PO removal failed:", response.message);
+                        // console.error("PO removal failed:", response.message);
                     }
                 },
                 error: function(xhr, status, error) {
-                    console.error('AJAX Error:', error);
-                    console.error('Status:', status);
-                    console.error('Response:', xhr.responseText);
+                    // console.error('AJAX Error:', error);
+                    // console.error('Status:', status);
+                    // console.error('Response:', xhr.responseText);
                     showToast('Error processing request', 'error');
                 }
             });
@@ -1788,7 +1784,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_po_list') {
                     }
                 },
                 error: function(xhr, status, error) {
-                    console.error('Ajax error:', error);
+                    // console.error('Ajax error:', error);
                     showToast('Error processing request. Please try again.', 'error');
                     $('.modal-backdrop').remove();
                     $('body').removeClass('modal-open').css('overflow', '');
@@ -1855,7 +1851,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_po_list') {
                     }
                 },
                 error: function(xhr, status, error) {
-                    console.error('Ajax error:', error);
+                    // console.error('Ajax error:', error);
                     showToast('Error processing request. Please try again.', 'error');
                     $('.modal-backdrop').remove();
                     $('body').removeClass('modal-open').css('overflow', '');
@@ -2033,12 +2029,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_po_list') {
                             showToast('Error filtering data: ' + data.message, 'error');
                         }
                     } catch (e) {
-                        console.error('Error parsing response:', e);
+                        // console.error('Error parsing response:', e);
                         showToast('Error processing response', 'error');
                     }
                 },
                 error: function(xhr, status, error) {
-                    console.error('AJAX Error:', error);
+                    // console.error('AJAX Error:', error);
                     showToast('Error filtering data', 'error');
                 }
             });
@@ -2077,7 +2073,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_po_list') {
                 }
             },
             error: function() {
-                console.error('Failed to fetch updated PO list');
+                // console.error('Failed to fetch updated PO list');
             }
         });
     }
