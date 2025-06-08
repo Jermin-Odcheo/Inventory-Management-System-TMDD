@@ -747,7 +747,6 @@ class UserRolesManagement {
             <table class="table table-striped table-hover" id="urTable">
                 <thead>
                     <tr>
-                        <!-- <th><?php if ($canRemove): ?><input type="checkbox" id="select-all"><?php endif; ?></th> -->
                         <th>
                             <a href="#" class="sort-header <?php echo $sortBy === 'username' ? 'active-sort' : ''; ?>" data-sort="username">
                                 User
@@ -777,7 +776,6 @@ class UserRolesManagement {
                     <?php else: ?>
                         <?php foreach ($usersData as $user): ?>
                             <tr>
-                                <!-- <td><?php if ($canRemove): ?><input type="checkbox" class="select-row" value="<?= htmlspecialchars($user['id']); ?>"><?php endif; ?></td> -->
                                 <td><?= htmlspecialchars($user['username']); ?></td>
                                 <td><?= htmlspecialchars($user['departments_concat'] ?? 'Not assigned'); ?></td>
                                 <td><?= htmlspecialchars($user['roles_concat'] ?? 'No roles assigned'); ?></td>
@@ -802,13 +800,6 @@ class UserRolesManagement {
                 </tbody>
             </table>
 
-            <?php if ($canRemove): ?>
-                <div class="mb-3">
-                    <button type="button" id="delete-selected" class="btn btn-danger" style="display: none;" disabled>
-                        Remove Selected User Roles
-                    </button>
-                </div>
-            <?php endif; ?>
             <div class="container-fluid">
                 <div class="row align-items-center g-3">
                     <div class="col-12 col-md-4">

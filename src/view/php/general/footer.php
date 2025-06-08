@@ -1,14 +1,5 @@
-
-/**
- * Footer Module
- *
- * This file provides the footer functionality for the system. It generates the common footer elements including copyright information, system version, and additional navigation links. The module ensures consistent footer display across all pages and handles responsive behavior.
- *
- * @package    InventoryManagementSystem
- * @subpackage General
- * @author     TMDD Interns 25'
- */
-<div id="toastContainer"></div>
+<div id="toastContainer">
+    </div>
 
 <footer class="footer">
     <p class="footer-text">&copy; 2025 TMDD Interns</p>

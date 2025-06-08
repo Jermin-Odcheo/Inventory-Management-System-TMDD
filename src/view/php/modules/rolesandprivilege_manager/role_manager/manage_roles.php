@@ -793,16 +793,30 @@ unset($role, $privileges);
         aria-hidden="true" style="transition: none !important;">
         <div class="modal-dialog modal-dialog-centered" style="transition: none !important;">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Confirm Delete</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Delete Role Confirmation</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    Are you sure you want to delete the role "<span id="roleNamePlaceholder"></span>"?
+                    <div class="alert alert-danger mb-0">
+                        <h6 class="alert-heading mb-2"><i class="bi bi-exclamation-circle-fill me-2"></i>Warning: This action cannot be undone!</h6>
+                        <p class="mb-2">You are about to delete the role "<strong id="roleNamePlaceholder"></strong>". This will:</p>
+                        <ul class="mb-0">
+                            <li>Remove all privileges associated with this role</li>
+                            <li>Affect all users currently assigned to this role</li>
+                            <li>Impact system access and permissions</li>
+                        </ul>
+                        <hr>
+                        <p class="mb-0">Are you sure you want to proceed with deleting this role?</p>
+                    </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <a id="confirmDeleteButton" href="#" class="btn btn-danger">Delete</a>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Cancel
+                    </button>
+                    <a id="confirmDeleteButton" href="#" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i>Delete Role
+                    </a>
                 </div>
             </div>
         </div>
