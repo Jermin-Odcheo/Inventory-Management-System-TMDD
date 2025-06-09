@@ -705,7 +705,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 
     <div class="main-container">
         <header class="main-header">
-            <h1>Asset Status Management</h1>
+            <h1>Equipment Status - Asset Status Management</h1>
         </header>
 
         <section class="card">

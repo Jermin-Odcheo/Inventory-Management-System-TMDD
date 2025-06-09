@@ -293,7 +293,7 @@ function getAcronym($string) {
                             </i>
                             <li class="nav-item">
                                 <a href="<?= BASE_URL ?>src/view/php/modules/log_management/archive_manager/<?= $file ?>">
-                                    <?= $module ?> Archives
+                                    <?= $module === 'Administration' ? 'Department' : $module ?> Archives
                                 </a>
                             </li>
                         <?php endforeach; ?>

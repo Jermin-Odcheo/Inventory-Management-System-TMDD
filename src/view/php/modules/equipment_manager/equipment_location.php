@@ -840,7 +840,7 @@ function safeHtml($value)
 
     <div class="main-container">
         <header class="main-header">
-            <h1> Asset Location Management</h1>
+            <h1>Equipment Location - Asset Location Management</h1>
         </header>
 
         <section class="card">
