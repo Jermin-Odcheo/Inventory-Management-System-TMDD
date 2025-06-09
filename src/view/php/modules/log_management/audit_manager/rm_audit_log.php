@@ -514,7 +514,7 @@ function getNormalizedAction($log)
         <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/audit_log.css">
     </noscript>
     <meta charset="UTF-8">
-    <title>Role Management Audit Logs</title>
+    <title>Roles and Privileges Audit Logs</title>
 </head>
 <body>
 

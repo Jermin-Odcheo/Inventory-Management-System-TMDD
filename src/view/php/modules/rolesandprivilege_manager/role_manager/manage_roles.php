@@ -544,7 +544,7 @@ unset($role, $privileges);
         <div class="main-content container-fluid">
             <div class="row">
                 <main class="col-md-12 px-md-4 py-4">
-                    <h2 class="mb-4">Role Management</h2>
+                    <h2 class="mb-4">Roles and Privileges Management</h2>
 
                     <div class="card shadow-sm">
                         <div class="card-header d-flex justify-content-between align-items-center bg-dark text-white">

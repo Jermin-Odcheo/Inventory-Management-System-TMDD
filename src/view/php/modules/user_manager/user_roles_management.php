@@ -674,7 +674,7 @@ class UserRolesManagement {
 <body>
     <div class="main-content container-fluid">
         <header>
-            <h1>USER ROLES MANAGER</h1>
+            <h1>User Roles Management</h1>
         </header>
 
         <div class="filters-container">

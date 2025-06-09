@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Equipment Details Module
  *
@@ -1012,7 +1012,7 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
 
     <div class="main-container">
         <header class="main-header">
-            <h1>Asset Details Management</h1>
+            <h1>Equipment Details - Asset Details Management</h1>
         </header>
 
         <section class="card">
