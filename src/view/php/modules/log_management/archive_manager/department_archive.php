@@ -26,16 +26,16 @@ if (!isset($_SESSION['user_id'])) {
  * @var RBACService $rbac The RBAC service instance.
  */
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
-$rbac->requirePrivilege('Management', 'View');
+$rbac->requirePrivilege('Administration', 'View');
 
 /**
  * @var bool $canRestore The flag indicating if the user can restore department data.
  * @var bool $canRemove The flag indicating if the user can remove department data.
  * @var bool $canDelete The flag indicating if the user can permanently delete department data.
  */
-$canRestore = $rbac->hasPrivilege('Management', 'Restore');
-$canRemove = $rbac->hasPrivilege('Management', 'Remove');
-$canDelete = $rbac->hasPrivilege('Management', 'Permanently Delete');
+$canRestore = $rbac->hasPrivilege('Administration', 'Restore');
+$canRemove = $rbac->hasPrivilege('Administration', 'Remove');
+$canDelete = $rbac->hasPrivilege('Administration', 'Permanently Delete');
 
 // --- Sorting Logic ---
 /**
