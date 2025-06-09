@@ -1166,11 +1166,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_data_json') {
                                 <label class="form-label">Location <span class="text-danger">*</span></label>
                                 <input type="text" name="ai_loc" id="edit_ai_loc" class="form-control" required>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">Date Created <span class="text-danger">*</span></label>
-                                <input type="datetime-local" name="date_created" id="edit_date_created" class="form-control"
-                                    required>
-                            </div>
+                            
                             <div class="mb-3 text-end">
                                 <button type="submit" class="btn btn-primary">Save Changes</button>
                             </div>
