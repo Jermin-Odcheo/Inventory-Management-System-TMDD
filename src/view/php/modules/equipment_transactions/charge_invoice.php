@@ -1147,30 +1147,23 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_po_list') {
                 <div class="modal-body">
                     <form id="editInvoiceForm" method="post">
                         <input type="hidden" name="action" value="update">
-                        <input type="hidden" name="id" id="edit_invoice_id">
-                        <div class="mb-3">
-                            <label for="edit_invoice_no" class="form-label">Invoice Number <span
-                                        class="text-danger">*</span></label>
-                            <input type="number" class="form-control" name="invoice_no" id="edit_invoice_no" min="0" step="1" required pattern="\d*" inputmode="numeric">
-                        </div>
-                        <div class="mb-3">
-                            <label for="edit_date_of_purchase" class="form-label">Date of Purchase <span
-                                        class="text-danger">*</span></label>
-                            <input type="date" class="form-control" name="date_of_purchase"
-                                   id="edit_date_of_purchase" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="po_no" class="form-label">Purchase Order Number</label>
-                            <select class="form-select" name="po_no" id="edit_po_no">
-                                <option value="">— None —</option>
-                                <?php foreach ($poList as $opt): ?>
-                                    <option value="<?= htmlspecialchars($opt) ?>"><?= htmlspecialchars($opt) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <button type="submit" class="btn btn-primary">Save Changes</button>
-                        </div>
+<input type="hidden" name="id" id="edit_invoice_id">
+<div class="mb-3">
+    <label for="edit_invoice_no" class="form-label">Invoice Number <span class="text-danger">*</span></label>
+    <input type="number" class="form-control" name="invoice_no" id="edit_invoice_no" min="0" step="1" required pattern="\d*" inputmode="numeric">
+</div>
+<div class="mb-3">
+    <label for="po_no" class="form-label">Purchase Order Number</label>
+    <select class="form-select" name="po_no" id="edit_po_no">
+        <option value="">— None —</option>
+        <?php foreach ($poList as $opt): ?>
+            <option value="<?= htmlspecialchars($opt) ?>"><?= htmlspecialchars($opt) ?></option>
+        <?php endforeach; ?>
+    </select>
+</div>
+<div class="mb-3 text-end">
+    <button type="submit" class="btn btn-primary">Save Changes</button>
+</div>
                     </form>
                 </div>
             </div>
