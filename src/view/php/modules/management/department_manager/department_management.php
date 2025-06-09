@@ -381,22 +381,16 @@ if (isset($_GET["q"])) {
 
     $q = isset($_GET["q"]) ? $conn->real_escape_string($_GET["q"]) : '';
 
-    /**
-     * Only first 3 letters of the query.
-     *
-     * @return void
-     */
-    $q = substr($q, 0, 3);
-
     if (strlen($q) > 0) {
         /**
          * @var string $sql The SQL query to retrieve the departments.
          */
-        $sql = "SELECT id, department_name, abbreviation FROM departments 
-                WHERE id LIKE '%$q%' 
-                OR department_name LIKE '%$q%' 
-                OR abbreviation LIKE '%$q%' 
-                LIMIT 10";
+        $sql = "SELECT id, department_name, abbreviation 
+                FROM departments 
+                WHERE (department_name LIKE '%$q%' 
+                OR abbreviation LIKE '%$q%')
+                AND is_disabled = 0
+                ORDER BY id DESC";
         /**
          * @var mysqli_result $result The result of the SQL query.
          */
@@ -418,7 +412,7 @@ if (isset($_GET["q"])) {
         }
         exit;
     } else {
-        echo "<div class='result-item'>Enter at least 1 letter...</div>";
+        echo "<div class='result-item'>Enter search terms...</div>";
         exit;
     }
 }
@@ -904,8 +898,9 @@ if (isset($_GET["q"])) {
 
                     if (searchText.length > 0) {
                         allTableRows = originalRows.filter(row => {
-                            const rowText = $(row).text().toLowerCase();
-                            return rowText.includes(searchText);
+                            const deptName = $(row).find('td:eq(1)').text().toLowerCase();
+                            const deptAcronym = $(row).find('td:eq(0)').text().toLowerCase();
+                            return deptName.includes(searchText) || deptAcronym.includes(searchText);
                         });
                     } else {
                         allTableRows = originalRows;
