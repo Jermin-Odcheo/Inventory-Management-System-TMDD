@@ -441,11 +441,57 @@ try {
             background-color: rgba(0, 0, 0, 0.4);
         }
 
-        /* Fix z-index for modal and dropdowns */
-        .modal {
-            z-index: 1055 !important; /* Higher than select2 containers */
+        /* New responsive modal styles */
+        .modal-dialog {
+            max-width: 90%;
+            margin: 1.75rem auto;
+            max-height: calc(100vh - 3.5rem);
+            display: flex;
+            flex-direction: column;
         }
-        
+
+        .modal-content {
+            max-height: calc(100vh - 3.5rem);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-body {
+            overflow-y: auto;
+            padding: 1rem;
+            flex: 1;
+        }
+
+        .department-table-container {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-bottom: 1rem;
+        }
+
+        @media (min-width: 576px) {
+            .modal-dialog {
+                max-width: 500px;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .modal-dialog {
+                max-width: 600px;
+            }
+        }
+
+        @media (min-width: 992px) {
+            .modal-dialog {
+                max-width: 700px;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            .modal-dialog {
+                max-width: 800px;
+            }
+        }
+
         /* Make select2 stay behind modal when modal is open */
         body.modal-open .select2-container--open {
             z-index: 1000 !important; /* Lower than modal */
