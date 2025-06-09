@@ -162,7 +162,7 @@ function getAcronym($string) {
                     </button>
                     <ul class="dropdown tree">
                         <i class="bi bi-file-earmark-check">
-                            <a href="<?= BASE_URL ?>src/view/php/modules/management/department_manager/department_management.php<?= $file ?>">
+                            <a href="<?= BASE_URL ?>src/view/php/modules/management/department_manager/department_management.php">
                                 <span class="short-label"><?= getAcronym($module) ?>DM</span>
                             </a>
                         </i>
