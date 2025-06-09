@@ -1,11 +1,12 @@
 <?php
-
 /**
- * @file purchase_order.php
- * @brief Manages purchase orders for equipment transactions.
+ * Purchase Order Management Module
  *
- * This script handles the creation, updating, deletion, and display of purchase orders
- * within the equipment transactions module, including user privilege checks and audit logging.
+ * This file implements all backend logic for managing purchase orders within the Inventory Management System. It provides features for creating, editing, viewing, deleting, and restoring purchase orders, as well as handling related validations, status updates, and user permissions. The code ensures data integrity, supports audit trails, and integrates with other modules such as equipment and transaction management. It is designed to be robust and secure, supporting both administrative and operational workflows for purchase order processing.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage EquipmentTransactions
+ * @author     TMDD Interns 25'
  */
 require_once '../../../../../config/ims-tmdd.php';
 session_start();

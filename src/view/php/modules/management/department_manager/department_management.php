@@ -1,12 +1,12 @@
 <?php
 /**
- * @file department_management.php
- * @brief handles the management of departments within the system
+ * Department Management Module
  *
- * This script handles the management of departments within the system, including viewing, creating, modifying,
- * and deleting departments. It implements Role-Based Access Control (RBAC) to enforce user privileges,
- * provides filtering and pagination for department data, and manages the display of departments and their associated
- * modules and privileges.
+ * This file provides comprehensive functionality for managing departments within the system. It handles the creation, modification, and management of departments, including their relationships with users and equipment. The module ensures proper data validation, user authorization, and maintains data consistency across the Inventory Management System.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage Management
+ * @author     TMDD Interns 25'
  */
 // Start output buffering to prevent "headers already sent" errors.
 ob_start();
@@ -383,22 +383,16 @@ if (isset($_GET["q"])) {
 
     $q = isset($_GET["q"]) ? $conn->real_escape_string($_GET["q"]) : '';
 
-    /**
-     * Only first 3 letters of the query.
-     *
-     * @return void
-     */
-    $q = substr($q, 0, 3);
-
     if (strlen($q) > 0) {
         /**
          * @var string $sql The SQL query to retrieve the departments.
          */
-        $sql = "SELECT id, department_name, abbreviation FROM departments 
-                WHERE id LIKE '%$q%' 
-                OR department_name LIKE '%$q%' 
-                OR abbreviation LIKE '%$q%' 
-                LIMIT 10";
+        $sql = "SELECT id, department_name, abbreviation 
+                FROM departments 
+                WHERE (department_name LIKE '%$q%' 
+                OR abbreviation LIKE '%$q%')
+                AND is_disabled = 0
+                ORDER BY id DESC";
         /**
          * @var mysqli_result $result The result of the SQL query.
          */
@@ -420,7 +414,7 @@ if (isset($_GET["q"])) {
         }
         exit;
     } else {
-        echo "<div class='result-item'>Enter at least 1 letter...</div>";
+        echo "<div class='result-item'>Enter search terms...</div>";
         exit;
     }
 }

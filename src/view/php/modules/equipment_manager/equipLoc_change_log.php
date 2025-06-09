@@ -1,11 +1,12 @@
 <?php
 /**
- * @file equipLoc_change_log.php
- * @brief Equipment Location Change Log Management
- * 
- * This script manages the display and filtering of equipment location change logs. It handles user session validation,
- * role-based access control (RBAC) checks, fetches audit logs from the database, and renders a table with client-side
- * filtering and pagination options for building location, floor, specific area, device state, and date ranges.
+ * Equipment Location Change Log Module
+ *
+ * This file provides functionality to track and manage changes in equipment locations. It handles the logging of location changes, including timestamps, user actions, and location details. The module ensures proper audit trail maintenance and supports integration with other modules for comprehensive equipment tracking.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage EquipmentManager
+ * @author     TMDD Interns 25'
  */
 session_start();
 require '../../../../../config/ims-tmdd.php';
@@ -184,12 +185,12 @@ $auditLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <body>
     <div class="main-container">
         <header class="main-header">
-            <h1> Equipment Location Change Logs</h1>
+            <h1> Asset Location Change Logs</h1>
         </header>
 
         <section class="card">
             <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                <h2><i class="bi bi-list-task"></i> List of Equipment Location Changes</h2>
+                <h2><i class="bi bi-list-task"></i> List of Asset Location Changes</h2>
             </div>
             <div class="card-body">
                 <div class="container-fluid px-0">

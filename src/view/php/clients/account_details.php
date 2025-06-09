@@ -1,10 +1,12 @@
 <?php
 /**
- * @file account_details.php
- * @brief Manages client account details.
+ * Account Details Module
  *
- * This script handles the display and management of client account information,
- * including personal details, settings, and account-related actions.
+ * This file provides functionality to view and manage detailed account information. It displays comprehensive user profile data, account settings, and related information. The module ensures secure access to account details and proper data presentation.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage Clients
+ * @author     TMDD Interns 25'
  */
 session_start();
 require '../../../../config/ims-tmdd.php'; // This defines $pdo (PDO connection)
@@ -471,7 +473,7 @@ if ($user_id !== null) {
         }
 
         .main-content {
-            margin-left: 230px;
+            margin-left: 270px;
             padding: 20px;
             min-height: calc(100vh - 60px);
             width: calc(100% - 230px);
@@ -484,17 +486,17 @@ if ($user_id !== null) {
             background-color: #fff;
             border-radius: 10px;
             border: 1px solid #eee;
-            padding: 20px;
-            width: 100%;
-            max-width: 1200px;
+            padding: 12px;
+            width: 90%;
+            max-width: 800px;
             margin: 0 auto;
-            margin-bottom: 40px;
+            margin-bottom: 20px;
         }
 
         .account-layout {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
             width: 100%;
             justify-content: center;
         }
@@ -504,32 +506,94 @@ if ($user_id !== null) {
         .danger-zone {
             background-color: #fff;
             border: 1px solid #eee;
-            border-radius: 10px;
-            padding: 25px;
+            border-radius: 8px;
+            padding: 15px;
             width: 100%;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 
-        .current-pic {
-            margin-bottom: 20px;
-            padding: 15px;
-            border: 1px solid #eee;
-            border-radius: 6px;
-            background-color: #f8f9fa;
-            width: 100%;
-        }
-
         .info-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 8px;
         }
 
         .info-item {
             background-color: #f8f9fa;
-            padding: 15px;
+            padding: 8px;
             border-radius: 6px;
             border: 1px solid #eee;
+        }
+
+        .info-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .info-value {
+            font-weight: 500;
+            font-size: 12px;
+            word-break: break-word;
+        }
+
+        h2 {
+            margin-bottom: 15px;
+            color: #333;
+            font-weight: 600;
+            font-size: 1.5rem;
+        }
+        
+        h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #444;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+                padding: 10px;
+            }
+            
+            .container {
+                width: 95%;
+                padding: 10px;
+            }
+            
+            .account-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                width: 98%;
+                padding: 8px;
+            }
+
+            .info-section,
+            .form-section,
+            .danger-zone {
+                padding: 12px;
+            }
+
+            h2 {
+                font-size: 1.3rem;
+                margin-bottom: 12px;
+            }
+
+            h3 {
+                font-size: 15px;
+                margin-bottom: 8px;
+            }
         }
 
         /* Basic button styles without transitions */
@@ -658,17 +722,6 @@ if ($user_id !== null) {
         /* Responsive styles */
         @media (min-width: 2000px) {
             .container {
-                max-width: 1600px;
-            }
-            
-            .account-layout {
-                grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-                gap: 30px;
-            }
-        }
-
-        @media (min-width: 1600px) and (max-width: 1999px) {
-            .container {
                 max-width: 1400px;
             }
             
@@ -678,7 +731,7 @@ if ($user_id !== null) {
             }
         }
 
-        @media (min-width: 1200px) and (max-width: 1599px) {
+        @media (min-width: 1600px) and (max-width: 1999px) {
             .container {
                 max-width: 1200px;
             }
@@ -689,13 +742,24 @@ if ($user_id !== null) {
             }
         }
 
-        @media (max-width: 1199px) {
+        @media (min-width: 1200px) and (max-width: 1599px) {
             .container {
-                max-width: 900px;
+                max-width: 1000px;
             }
             
             .account-layout {
                 grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: 15px;
+            }
+        }
+
+        @media (max-width: 1199px) {
+            .container {
+                max-width: 800px;
+            }
+            
+            .account-layout {
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
                 gap: 15px;
             }
         }
@@ -791,11 +855,6 @@ if ($user_id !== null) {
             margin-bottom: 5px;
         }
         
-        .info-value {
-            font-weight: 500;
-            font-size: 16px;
-        }
-        
         .text-success {
             color: #28a745 !important;
         }
@@ -843,7 +902,7 @@ if ($user_id !== null) {
 
         .info-item {
             background-color: #f8f9fa;
-            padding: 15px;
+            padding: 12px;
             border-radius: 6px;
         }
 
@@ -856,7 +915,8 @@ if ($user_id !== null) {
 
         .info-value {
             font-weight: 500;
-            font-size: 16px;
+            font-size: 14px;
+            word-break: break-word;
         }
     </style>
 </head>

@@ -1,11 +1,12 @@
 <?php
 /**
- * @file equipment_details.php
- * @brief Equipment Details Management
- * 
- * This script manages the display, creation, updating, and deletion of equipment details. It handles user session validation,
- * role-based access control (RBAC) checks, processes AJAX requests for CRUD operations, and renders a table of equipment details
- * with filtering, sorting, and pagination options.
+ * Equipment Details Module
+ *
+ * This file provides comprehensive functionality for managing equipment details in the system. It handles the creation, modification, and tracking of equipment information, including specifications, maintenance records, and historical data. The module ensures proper validation, user authorization, and maintains data consistency across the system.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage EquipmentManager
+ * @author     TMDD Interns 25'
  */
 session_start();
 date_default_timezone_set('Asia/Manila');
@@ -949,12 +950,12 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
 
     <div class="main-container">
         <header class="main-header">
-            <h1>Equipment Details Management</h1>
+            <h1>Asset Details Management</h1>
         </header>
 
         <section class="card">
             <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                <h2><i class="bi bi-list-task"></i> List of Equipment Details</h2>
+                <h2><i class="bi bi-list-task"></i> List of Asset Details</h2>
 
             </div>
             <div class="card-body">

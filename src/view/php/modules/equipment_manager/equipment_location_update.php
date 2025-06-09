@@ -1,10 +1,12 @@
 <?php
 /**
- * @file equipment_location_update.php
- * @brief Equipment Location Update Management
- * 
- * This script handles AJAX requests to update or create equipment location records based on changes from equipment details.
- * It includes session validation, RBAC privilege checks, and database transactions to ensure data integrity while updating or creating records.
+ * Equipment Location Update Module
+ *
+ * This file provides functionality to update equipment locations in the system. It handles the modification of location assignments, including tracking and historical records. The module ensures proper validation, user authorization, and maintains data consistency during the location update process.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage EquipmentManager
+ * @author     TMDD Interns 25'
  */
 session_start();
 date_default_timezone_set('Asia/Manila');

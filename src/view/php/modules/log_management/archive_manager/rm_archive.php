@@ -1,10 +1,12 @@
 <?php
 /**
- * @file rm_archive.php
- * @brief handles the display of archived roles and their audit logs
+ * Role Management Archive Module
  *
- * This script handles the display of archived roles and their audit logs. It checks user permissions,
- * fetches and filters archived data based on various criteria, and formats the data for presentation in a user interface.
+ * This file provides functionality for archiving and managing historical role management records. It handles the storage, retrieval, and management of archived role data, ensuring data preservation while maintaining system performance. The module supports comprehensive archiving features including data compression, indexing, and secure storage.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage LogManagement
+ * @author     TMDD Interns 25'
  */
 ob_start();
 require_once('../../../../../../config/ims-tmdd.php');
@@ -96,6 +98,9 @@ $baseWhere = "r.is_disabled = 1
     )";
 $params = [];
 
+// Initialize error message array
+$errorMessages = [];
+
 /**
  * @var string $searchTerm The search term to apply to the SQL query.
  */
@@ -117,31 +122,55 @@ if (!empty($_GET['search'])) {
  * @var array $params The parameters for the SQL query.
  */
 if ($dateFilterType === 'mdy') {
-    if (!empty($_GET['date_from'])) {
-        $baseWhere .= " AND DATE(a.Date_Time) >= :date_from";
-        $params[':date_from'] = $_GET['date_from'];
-    }
-    if (!empty($_GET['date_to'])) {
-        $baseWhere .= " AND DATE(a.Date_Time) <= :date_to";
-        $params[':date_to'] = $_GET['date_to'];
+    $dateFrom = !empty($_GET['date_from']) ? $_GET['date_from'] : null;
+    $dateTo = !empty($_GET['date_to']) ? $_GET['date_to'] : null;
+
+    // Server-side date validation
+    if ($dateFrom && $dateTo && strtotime($dateFrom) > strtotime($dateTo)) {
+        $errorMessages[] = '"Date From" cannot be greater than "Date To"';
+    } else {
+        if (!empty($dateFrom)) {
+            $baseWhere .= " AND DATE(a.Date_Time) >= :date_from";
+            $params[':date_from'] = $dateFrom;
+        }
+        if (!empty($dateTo)) {
+            $baseWhere .= " AND DATE(a.Date_Time) <= :date_to";
+            $params[':date_to'] = $dateTo;
+        }
     }
 } else if ($dateFilterType === 'month_year') {
-    if (!empty($_GET['month_year_from'])) {
-        $baseWhere .= " AND a.Date_Time >= STR_TO_DATE(:month_year_from, '%Y-%m')";
-        $params[':month_year_from'] = $_GET['month_year_from'];
-    }
-    if (!empty($_GET['month_year_to'])) {
-        $baseWhere .= " AND a.Date_Time < DATE_ADD(STR_TO_DATE(:month_year_to, '%Y-%m'), INTERVAL 1 MONTH)";
-        $params[':month_year_to'] = $_GET['month_year_to'];
+    $monthYearFrom = !empty($_GET['month_year_from']) ? $_GET['month_year_from'] : null;
+    $monthYearTo = !empty($_GET['month_year_to']) ? $_GET['month_year_to'] : null;
+
+    // Server-side month-year validation
+    if ($monthYearFrom && $monthYearTo && strtotime($monthYearFrom . '-01') > strtotime($monthYearTo . '-01')) {
+        $errorMessages[] = '"From (MM-YYYY)" cannot be greater than "To (MM-YYYY)"';
+    } else {
+        if (!empty($monthYearFrom)) {
+            $baseWhere .= " AND a.Date_Time >= STR_TO_DATE(:month_year_from, '%Y-%m')";
+            $params[':month_year_from'] = $monthYearFrom;
+        }
+        if (!empty($monthYearTo)) {
+            $baseWhere .= " AND a.Date_Time < DATE_ADD(STR_TO_DATE(:month_year_to, '%Y-%m'), INTERVAL 1 MONTH)";
+            $params[':month_year_to'] = $monthYearTo;
+        }
     }
 } else if ($dateFilterType === 'year') {
-    if (!empty($_GET['year_from'])) {
-        $baseWhere .= " AND YEAR(a.Date_Time) >= :year_from";
-        $params[':year_from'] = $_GET['year_from'];
-    }
-    if (!empty($_GET['year_to'])) {
-        $baseWhere .= " AND YEAR(a.Date_Time) <= :year_to";
-        $params[':year_to'] = $_GET['year_to'];
+    $yearFrom = !empty($_GET['year_from']) ? (int)$_GET['year_from'] : null;
+    $yearTo = !empty($_GET['year_to']) ? (int)$_GET['year_to'] : null;
+
+    // Server-side year validation
+    if ($yearFrom && $yearTo && $yearFrom > $yearTo) {
+        $errorMessages[] = '"Year From" cannot be greater than "Year To"';
+    } else {
+        if (!empty($yearFrom)) {
+            $baseWhere .= " AND YEAR(a.Date_Time) >= :year_from";
+            $params[':year_from'] = $yearFrom;
+        }
+        if (!empty($yearTo)) {
+            $baseWhere .= " AND YEAR(a.Date_Time) <= :year_to";
+            $params[':year_to'] = $yearTo;
+        }
     }
 }
 
@@ -315,12 +344,14 @@ function formatChanges($oldJsonStr)
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 
     <meta charset="UTF-8">
     <title>Roles Archives</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <link rel="stylesheet" src="<?php echo BASE_URL; ?> /src/view/styles/css/audit_log.css">
     <style>
         .wrapper {
@@ -337,6 +368,13 @@ function formatChanges($oldJsonStr)
         #tableContainer {
             max-height: 500px;
             overflow-y: auto;
+        }
+
+        #dateInputsContainer {
+            position: relative;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
         }
 
         /* Styles for sortable headers */
@@ -404,66 +442,95 @@ function formatChanges($oldJsonStr)
                         </div>
                     </div>
 
+                    <!-- Display validation errors if any -->
+                    <?php if (!empty($errorMessages)): ?>
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <strong><i class="fas fa-exclamation-triangle me-2"></i></strong>
+                            <ul class="mb-0 mt-2">
+                                <?php foreach ($errorMessages as $error): ?>
+                                    <li><?php echo htmlspecialchars($error); ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    <?php endif; ?>
+
                     <!-- Filter Section -->
                     <form method="GET" class="row g-3 mb-4" id="archiveFilterForm" action="">
 
-                        <!-- Date Range selector -->
-                        <div class="col-12 col-md-3">
-                            <label class="form-label fw-semibold">Date Filter Type</label>
-                            <select id="dateFilterType" name="date_filter_type" class="form-select shadow-sm">
-                                <option value="" <?= empty($_GET['date_filter_type']) ? 'selected' : '' ?>>-- Select Type --</option>
-                                <option value="month_year" <?= (($_GET['date_filter_type'] ?? '') === 'month_year') ? 'selected' : '' ?>>Month-Year Range</option>
-                                <option value="year" <?= (($_GET['date_filter_type'] ?? '') === 'year') ? 'selected' : '' ?>>Year Range</option>
-                                <option value="mdy" <?= (($_GET['date_filter_type'] ?? '') === 'mdy') ? 'selected' : '' ?>>Month-Date-Year Range</option>
-                            </select>
-                        </div>
+                        <!-- Date Filter Row with flex layout -->
+                        <div class="col-12 d-flex flex-wrap align-items-end gap-3 mb-3">
+                            <!-- Date Range selector -->
+                            <div style="width: 200px;">
+                                <label class="form-label fw-semibold">Date Filter Type</label>
+                                <select id="dateFilterType" name="date_filter_type" class="form-select shadow-sm">
+                                    <option value="" <?= empty($_GET['date_filter_type']) ? 'selected' : '' ?>>-- Select Type --</option>
+                                    <option value="month_year" <?= (($_GET['date_filter_type'] ?? '') === 'month_year') ? 'selected' : '' ?>>Month-Year Range</option>
+                                    <option value="year" <?= (($_GET['date_filter_type'] ?? '') === 'year') ? 'selected' : '' ?>>Year Range</option>
+                                    <option value="mdy" <?= (($_GET['date_filter_type'] ?? '') === 'mdy') ? 'selected' : '' ?>>Month-Date-Year Range</option>
+                                </select>
+                            </div>
 
-                        <!-- MDY Range -->
-                        <div class="col-12 col-md-3 date-filter date-mdy d-none">
-                            <label class="form-label fw-semibold">Date From</label>
-                            <input type="date" name="date_from" class="form-control shadow-sm"
-                                value="<?= htmlspecialchars($_GET['date_from'] ?? '') ?>"
-                                placeholder="Start Date (YYYY-MM-DD)">
-                        </div>
-                        <div class="col-12 col-md-3 date-filter date-mdy d-none">
-                            <label class="form-label fw-semibold">Date To</label>
-                            <input type="date" name="date_to" class="form-control shadow-sm"
-                                value="<?= htmlspecialchars($_GET['date_to'] ?? '') ?>"
-                                placeholder="End Date (YYYY-MM-DD)">
-                        </div>
+                            <!-- Date inputs container positioned to the right -->
+                            <div id="dateInputsContainer" class="d-flex flex-wrap gap-3">
+                                <!-- MDY Range -->
+                                <div class="date-filter date-mdy d-none" style="width: 200px;">
+                                    <label class="form-label fw-semibold">Date From</label>
+                                    <input type="date" name="date_from" class="form-control shadow-sm"
+                                        value="<?= htmlspecialchars($_GET['date_from'] ?? '') ?>"
+                                        placeholder="Start Date (YYYY-MM-DD)">
+                                </div>
+                                <div class="date-filter date-mdy d-none" style="width: 200px;">
+                                    <label class="form-label fw-semibold">Date To</label>
+                                    <input type="date" name="date_to" class="form-control shadow-sm"
+                                        value="<?= htmlspecialchars($_GET['date_to'] ?? '') ?>"
+                                        placeholder="End Date (YYYY-MM-DD)">
+                                </div>
 
-                        <!-- Year Range -->
-                        <div class="col-12 col-md-3 date-filter date-year d-none">
-                            <label class="form-label fw-semibold">Year From</label>
-                            <input type="number" name="year_from" class="form-control shadow-sm"
-                                min="1900" max="2100"
-                                placeholder="e.g., 2023"
-                                value="<?= htmlspecialchars($_GET['year_from'] ?? '') ?>">
-                        </div>
-                        <div class="col-12 col-md-3 date-filter date-year d-none">
-                            <label class="form-label fw-semibold">Year To</label>
-                            <input type="number" name="year_to" class="form-control shadow-sm"
-                                min="1900" max="2100"
-                                placeholder="e.g., 2025"
-                                value="<?= htmlspecialchars($_GET['year_to'] ?? '') ?>">
-                        </div>
+                                <!-- Year Range -->
+                                <div class="date-filter date-year d-none" style="width: 200px;">
+                                    <label class="form-label fw-semibold">Year From</label>
+                                    <input type="number" name="year_from" class="form-control shadow-sm"
+                                        min="1900" max="2100"
+                                        placeholder="e.g., 2023"
+                                        value="<?= htmlspecialchars($_GET['year_from'] ?? '') ?>">
+                                </div>
+                                <div class="date-filter date-year d-none" style="width: 200px;">
+                                    <label class="form-label fw-semibold">Year To</label>
+                                    <input type="number" name="year_to" class="form-control shadow-sm"
+                                        min="1900" max="2100"
+                                        placeholder="e.g., 2025"
+                                        value="<?= htmlspecialchars($_GET['year_to'] ?? '') ?>">
+                                </div>
 
-                        <!-- Month-Year Range -->
-                        <div class="col-12 col-md-3 date-filter date-month_year d-none">
-                            <label class="form-label fw-semibold">From (MM-YYYY)</label>
-                            <input type="month" name="month_year_from" class="form-control shadow-sm"
-                                value="<?= htmlspecialchars($_GET['month_year_from'] ?? '') ?>"
-                                placeholder="e.g., 2023-01">
-                        </div>
-                        <div class="col-12 col-md-3 date-filter date-month_year d-none">
-                            <label class="form-label fw-semibold">To (MM-YYYY)</label>
-                            <input type="month" name="month_year_to" class="form-control shadow-sm"
-                                value="<?= htmlspecialchars($_GET['month_year_to'] ?? '') ?>"
-                                placeholder="e.g., 2023-12">
+                                <!-- Month-Year Range -->
+                                <div class="date-filter date-month_year d-none" style="width: 200px;">
+                                    <label class="form-label fw-semibold">From (MM-YYYY)</label>
+                                    <input type="month" name="month_year_from" class="form-control shadow-sm"
+                                        value="<?= htmlspecialchars($_GET['month_year_from'] ?? '') ?>"
+                                        placeholder="e.g., 2023-01">
+                                </div>
+                                <div class="date-filter date-month_year d-none" style="width: 200px;">
+                                    <label class="form-label fw-semibold">To (MM-YYYY)</label>
+                                    <input type="month" name="month_year_to" class="form-control shadow-sm"
+                                        value="<?= htmlspecialchars($_GET['month_year_to'] ?? '') ?>"
+                                        placeholder="e.g., 2023-12">
+                                </div>
+                            </div>
+
+                            <!-- Filter buttons moved to the same row -->
+                            <div class="ms-auto d-flex gap-2">
+                                <button type="submit" id="applyFilters" class="btn btn-dark">
+                                    <i class="fas fa-filter"></i> Filter
+                                </button>
+                                <button type="button" id="clearFilters" class="btn btn-secondary shadow-sm">
+                                    <i class="fas fa-times-circle"></i> Clear
+                                </button>
+                            </div>
                         </div>
 
                         <!-- Search bar -->
-                        <div class="col-12 col-sm-6 col-md-3">
+                        <div class="col-12 col-sm-6 col-md-4">
                             <label class="form-label fw-semibold">Search</label>
                             <div class="input-group shadow-sm">
                                 <span class="input-group-text"><i class="fas fa-search"></i></span>
@@ -471,18 +538,6 @@ function formatChanges($oldJsonStr)
                                     placeholder="Search role archives..."
                                     value="<?= htmlspecialchars($_GET['search'] ?? '') ?>">
                             </div>
-                        </div>
-
-                        <div class="col-6 col-md-2 d-grid">
-                            <button type="submit" id="applyFilters" class="btn btn-dark">
-                                <i class="fas fa-filter"></i> Filter
-                            </button>
-                        </div>
-
-                        <div class="col-6 col-md-2 d-grid">
-                            <button type="button" id="clearFilters" class="btn btn-secondary shadow-sm">
-                                <i class="fas fa-times-circle"></i> Clear
-                            </button>
                         </div>
                     </form>
 
@@ -571,7 +626,7 @@ function formatChanges($oldJsonStr)
                         </table>
 
 
-                    
+
                         <div class="container-fluid">
                             <div class="row align-items-center g-3">
                                 <div class="col-12 col-sm-auto">
@@ -614,7 +669,7 @@ function formatChanges($oldJsonStr)
     <script type="text/javascript">
         document.addEventListener('DOMContentLoaded', function() {
             console.log("DOM loaded - initializing direct pagination");
-            
+
             // Basic pagination elements
             const tableRows = document.querySelectorAll('#auditTable tr');
             const prevBtn = document.getElementById('prevPage');
@@ -624,97 +679,97 @@ function formatChanges($oldJsonStr)
             const currentPageDisplay = document.getElementById('currentPage');
             const rowsPerPageDisplay = document.getElementById('rowsPerPage');
             const totalRowsDisplay = document.getElementById('totalRows');
-            
+
             // Pagination state
             let currentPage = 1;
             let rowsPerPage = parseInt(rowsPerPageSelect.value) || 10;
             const totalRows = tableRows.length;
-            
+
             console.log(`Pagination initialized with ${totalRows} rows, ${rowsPerPage} per page`);
-            
+
             // Update displays
             totalRowsDisplay.textContent = totalRows;
-            
+
             // Function to show only rows for current page
             function displayPage(page) {
                 currentPage = page;
                 const start = (page - 1) * rowsPerPage;
                 const end = start + rowsPerPage;
-                
+
                 console.log(`Displaying page ${page}, rows ${start}-${Math.min(end, totalRows)}`);
-                
+
                 // Hide all rows first
                 tableRows.forEach(row => row.style.display = 'none');
-                
+
                 // Show only rows for current page
                 for (let i = start; i < Math.min(end, totalRows); i++) {
                     if (tableRows[i]) tableRows[i].style.display = '';
                 }
-                
+
                 // Update the "showing X to Y of Z entries" text
                 currentPageDisplay.textContent = page;
                 rowsPerPageDisplay.textContent = Math.min(rowsPerPage, totalRows - start);
-                
+
                 // Update page buttons
                 generatePagination();
-                
+
                 // Update prev/next button states
                 updateButtonStates();
             }
-            
+
             function generatePagination() {
                 // Clear existing pagination
                 paginationUl.innerHTML = '';
-                
+
                 // Calculate total pages
                 const totalPages = Math.max(1, Math.ceil(totalRows / rowsPerPage));
-                
+
                 // Don't show pagination if only one page
                 if (totalPages <= 1) {
                     return;
                 }
-                
+
                 // Determine visible page range
                 const maxVisiblePages = 5;
                 let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
                 let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-                
+
                 // Adjust if at the end
                 if (endPage === totalPages) {
                     startPage = Math.max(1, endPage - maxVisiblePages + 1);
                 }
-                
+
                 // Create first page button if needed
                 if (startPage > 1) {
                     addPageButton(1);
-                    
+
                     // Add ellipsis if needed
                     if (startPage > 2) {
                         addEllipsis();
                     }
                 }
-                
+
                 // Add numbered page buttons
                 for (let i = startPage; i <= endPage; i++) {
                     addPageButton(i, i === currentPage);
                 }
-                
+
                 // Add last page button if needed
                 if (endPage < totalPages) {
                     // Add ellipsis if needed
                     if (endPage < totalPages - 1) {
                         addEllipsis();
                     }
-                    
+
                     addPageButton(totalPages);
                 }
             }
-            
+
             // Helper function to add a page button
             function addPageButton(pageNum, isActive = false) {
                 const li = document.createElement('li');
                 li.className = 'page-item' + (isActive ? ' active' : '');
-                
+
                 const a = document.createElement('a');
                 a.className = 'page-link';
                 a.href = '#';
@@ -723,48 +778,48 @@ function formatChanges($oldJsonStr)
                     e.preventDefault();
                     displayPage(pageNum);
                 });
-                
+
                 li.appendChild(a);
                 paginationUl.appendChild(li);
             }
-            
+
             // Helper function to add ellipsis
             function addEllipsis() {
                 const li = document.createElement('li');
                 li.className = 'page-item disabled';
-                
+
                 const span = document.createElement('span');
                 span.className = 'page-link';
                 span.textContent = '...';
-                
+
                 li.appendChild(span);
                 paginationUl.appendChild(li);
             }
-            
+
             // Update prev/next button states
             function updateButtonStates() {
                 const totalPages = Math.ceil(totalRows / rowsPerPage);
-                
+
                 // Update prev button
                 prevBtn.disabled = currentPage <= 1;
                 prevBtn.classList.toggle('disabled', currentPage <= 1);
-                
+
                 // Update next button
                 nextBtn.disabled = currentPage >= totalPages;
                 nextBtn.classList.toggle('disabled', currentPage >= totalPages);
             }
-            
+
             // Event handler for previous button - using multiple approaches for reliability
             if (prevBtn) {
                 console.log("Setting up prev button click handlers");
-                
+
                 // Remove any existing click handlers by cloning and replacing
                 const newPrevBtn = prevBtn.cloneNode(true);
                 prevBtn.parentNode.replaceChild(newPrevBtn, prevBtn);
-                
+
                 // Re-assign prevBtn reference to the new element
                 prevBtn = newPrevBtn;
-                
+
                 // Using standard event listener
                 prevBtn.addEventListener('click', function(e) {
                     console.log("Prev button clicked via DOM event");
@@ -774,7 +829,7 @@ function formatChanges($oldJsonStr)
                         displayPage(currentPage);
                     }
                 });
-                
+
                 // Also add jQuery handler as a backup
                 if (typeof jQuery !== 'undefined') {
                     jQuery(prevBtn).off('click').on('click', function(e) {
@@ -786,7 +841,7 @@ function formatChanges($oldJsonStr)
                         }
                     });
                 }
-                
+
                 // Direct onclick attribute as a fallback
                 prevBtn.onclick = function(e) {
                     console.log("Prev button clicked via onclick");
@@ -800,18 +855,18 @@ function formatChanges($oldJsonStr)
             } else {
                 console.error("Previous button not found in the DOM!");
             }
-            
+
             // Event handler for next button
             if (nextBtn) {
                 console.log("Setting up next button click handlers");
-                
+
                 // Remove any existing click handlers by cloning and replacing
                 const newNextBtn = nextBtn.cloneNode(true);
                 nextBtn.parentNode.replaceChild(newNextBtn, nextBtn);
-                
+
                 // Re-assign nextBtn reference to the new element
                 nextBtn = newNextBtn;
-                
+
                 // Using standard event listener
                 nextBtn.addEventListener('click', function(e) {
                     console.log("Next button clicked via DOM event");
@@ -822,7 +877,7 @@ function formatChanges($oldJsonStr)
                         displayPage(currentPage);
                     }
                 });
-                
+
                 // Also add jQuery handler as a backup
                 if (typeof jQuery !== 'undefined') {
                     jQuery(nextBtn).off('click').on('click', function(e) {
@@ -835,7 +890,7 @@ function formatChanges($oldJsonStr)
                         }
                     });
                 }
-                
+
                 // Direct onclick attribute as a fallback
                 nextBtn.onclick = function(e) {
                     console.log("Next button clicked via onclick");
@@ -848,19 +903,19 @@ function formatChanges($oldJsonStr)
                     return false;
                 };
             }
-            
+
             // Event handler for rows per page change
             rowsPerPageSelect.addEventListener('change', function() {
                 rowsPerPage = parseInt(this.value);
                 currentPage = 1; // Reset to first page
                 displayPage(1);
             });
-            
+
             // Initialize display
             displayPage(1);
         });
     </script>
-    
+
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/archive_filters.js" defer></script>
     <script type="text/javascript" src="<?php echo BASE_URL; ?>src/control/js/sort_archives.js" defer></script>
 
@@ -941,9 +996,9 @@ function formatChanges($oldJsonStr)
     </div>
 
     <script>
-            // Pass RBAC privileges to JavaScript
+        // Pass RBAC privileges to JavaScript
         var userPrivileges = {
-                canRestore: <?php echo json_encode($canRestore); ?>,
+            canRestore: <?php echo json_encode($canRestore); ?>,
             canRemove: <?php echo json_encode($canRemove); ?>,
             canPermanentDelete: <?php echo json_encode($canPermanentDelete); ?>
         };
@@ -953,7 +1008,7 @@ function formatChanges($oldJsonStr)
             let restoreId = $(this).data('role-id');
             let restoreName = $(this).data('role-name');
             $('#restoreRoleNamePlaceholder').text(restoreName);
-            
+
             // Store the ID to use in confirm button handler
             $('#confirmRestoreBtn').data('role-id', restoreId);
         });
@@ -961,48 +1016,48 @@ function formatChanges($oldJsonStr)
         // Update the restore confirmation handler
         $('#confirmRestoreBtn').on('click', function() {
             let restoreId = $(this).data('role-id');
-            
+
             if (!userPrivileges.canRestore || !restoreId) return;
 
-                $.ajax({
-                    url: '../../rolesandprivilege_manager/role_manager/restore_role.php',
+            $.ajax({
+                url: '../../rolesandprivilege_manager/role_manager/restore_role.php',
                 method: 'POST',
-                    data: {
+                data: {
                     id: restoreId,
                     action: 'restore',
-                        module: 'Roles and Privileges'
-                    },
-                    dataType: 'json',
-                    success: function(response) {
+                    module: 'Roles and Privileges'
+                },
+                dataType: 'json',
+                success: function(response) {
                     // Hide restore modal
                     $('#confirmRestoreModal').modal('hide');
 
                     if (response.success) {
                         showToast(response.message || 'Role restored successfully', 'success');
-                            // Reload the page after a short delay
-                            setTimeout(function() {
-                                window.location.reload();
-                            }, 500);
-                        } else {
+                        // Reload the page after a short delay
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 500);
+                    } else {
                         showToast(response.message || 'Failed to restore role', 'error');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                    showToast('Error restoring role: ' + error, 'error');
                     }
-                });
+                },
+                error: function(xhr, status, error) {
+                    showToast('Error restoring role: ' + error, 'error');
+                }
             });
+        });
 
         // Add click handler for delete buttons
         $(document).on('click', '.delete-btn', function() {
             let deleteId = $(this).data('role-id');
             let deleteName = $(this).data('role-name');
             $('#roleNamePlaceholder').text(deleteName);
-            
+
             // Set the URL for the confirm button
             $('#confirmDeleteButton').attr('href', '../../rolesandprivilege_manager/role_manager/permanent_delete_role.php?id=' + deleteId);
         });
-        
+
         // Date filter type change handler
         const filterType = document.getElementById('dateFilterType');
         if (filterType) {
@@ -1021,30 +1076,134 @@ function formatChanges($oldJsonStr)
                 document.querySelectorAll('.date-' + filterType.value).forEach(field => field.classList.remove('d-none'));
             }
         }
-        
-                // Clear filters button
-                const clearFiltersBtn = document.getElementById('clearFilters');
-                if (clearFiltersBtn) {
-                    clearFiltersBtn.addEventListener('click', function() {
-                        const form = document.getElementById('archiveFilterForm');
-                        form.reset();
 
-                        // Clear date filter type and hide all date filter fields
-                        if (filterType) {
-                            filterType.value = '';
-                            document.querySelectorAll('.date-filter').forEach(field => field.classList.add('d-none'));
-                        }
+        // Clear filters button
+        const clearFiltersBtn = document.getElementById('clearFilters');
+        if (clearFiltersBtn) {
+            clearFiltersBtn.addEventListener('click', function() {
+                const form = document.getElementById('archiveFilterForm');
+                form.reset();
 
-                        // Clear search input
-                        const searchInput = document.getElementById('searchInput');
-                        if (searchInput) {
-                            searchInput.value = '';
-                        }
-
-                        // Submit the form to reset the data
-                        form.submit();
-                    });
+                // Clear date filter type and hide all date filter fields
+                if (filterType) {
+                    filterType.value = '';
+                    document.querySelectorAll('.date-filter').forEach(field => field.classList.add('d-none'));
                 }
+
+                // Clear search input
+                const searchInput = document.getElementById('searchInput');
+                if (searchInput) {
+                    searchInput.value = '';
+                }
+
+                // Submit the form to reset the data
+                form.submit();
+            });
+        }
+
+        // Date filter validation
+        document.addEventListener('DOMContentLoaded', function() {
+            const filterForm = document.getElementById('archiveFilterForm');
+
+            // Date validation function
+            function validateDateRange(fromValue, toValue, format) {
+                if (!fromValue || !toValue) return true; // If either field is empty, don't validate
+
+                let fromDate, toDate;
+
+                switch (format) {
+                    case 'mdy':
+                        fromDate = new Date(fromValue);
+                        toDate = new Date(toValue);
+                        break;
+                    case 'month_year':
+                        fromDate = new Date(fromValue + '-01'); // Add day for valid date
+                        toDate = new Date(toValue + '-01');
+                        break;
+                    case 'year':
+                        fromDate = new Date(fromValue, 0, 1); // Jan 1st of the year
+                        toDate = new Date(toValue, 0, 1);
+                        break;
+                }
+
+                return fromDate <= toDate;
+            }
+
+            // Form submission validation
+            if (filterForm) {
+                filterForm.addEventListener('submit', function(e) {
+                    const dateFilterType = document.getElementById('dateFilterType').value;
+                    let isValid = true;
+                    let errorMessage = '';
+
+                    if (dateFilterType === 'mdy') {
+                        const dateFrom = document.querySelector('input[name="date_from"]').value;
+                        const dateTo = document.querySelector('input[name="date_to"]').value;
+
+                        if (!validateDateRange(dateFrom, dateTo, 'mdy')) {
+                            isValid = false;
+                            errorMessage = '"Date From" cannot be greater than "Date To"';
+                        }
+                    } else if (dateFilterType === 'month_year') {
+                        const monthYearFrom = document.querySelector('input[name="month_year_from"]').value;
+                        const monthYearTo = document.querySelector('input[name="month_year_to"]').value;
+
+                        if (!validateDateRange(monthYearFrom, monthYearTo, 'month_year')) {
+                            isValid = false;
+                            errorMessage = '"From (MM-YYYY)" cannot be greater than "To (MM-YYYY)"';
+                        }
+                    } else if (dateFilterType === 'year') {
+                        const yearFrom = document.querySelector('input[name="year_from"]').value;
+                        const yearTo = document.querySelector('input[name="year_to"]').value;
+
+                        if (yearFrom && yearTo && parseInt(yearFrom) > parseInt(yearTo)) {
+                            isValid = false;
+                            errorMessage = '"Year From" cannot be greater than "Year To"';
+                        }
+                    }
+                    if (!isValid) {
+  e.preventDefault();
+  $('#filterError').remove();
+
+  // 1) pick your filter-row container
+  const filterRow = document.querySelector('.col-12.d-flex.flex-wrap.align-items-end');
+
+  // 2) build a "block" error div (no absolute positioning needed)
+  const errorDiv = document.createElement('div');
+  errorDiv.id = 'filterError';
+  errorDiv.className = 'validation-tooltip mt-2';  // mt-2 gives a little gap
+  Object.assign(errorDiv.style, {
+    display: 'inline-block',
+    backgroundColor: '#d9534f',
+    color: 'white',
+    padding: '6px 10px',
+    borderRadius: '4px',
+    fontSize: '0.85em',
+    whiteSpace: 'nowrap',
+    boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+    zIndex: 1000
+  });
+  errorDiv.textContent = errorMessage;
+
+  // 3) insert it *after* the filter row, so it sits right below
+  filterRow.insertAdjacentElement('afterend', errorDiv);
+
+  // optional: scroll into view
+  errorDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  // auto-dismiss
+  setTimeout(() => {
+    $('#filterError').fadeOut('slow', () => $('#filterError').remove());
+  }, 3000);
+
+  return;
+}
+
+
+                    $('#filterError').remove();
+                });
+            }
+        });
     </script>
 </body>
 

@@ -1,13 +1,12 @@
 <?php
 /**
- * @file restore_role.php
- * @brief handles the restoration of roles that have been previously disabled or archived
+ * Restore Role Module
  *
- * This script handles the restoration of roles that have been previously disabled or archived.
- * It supports both single role restoration and bulk restoration of multiple roles.
- * The script verifies the existence and disabled status of roles before restoration,
- * logs the actions in audit logs, and handles database transactions to ensure data integrity.
-
+ * This file provides functionality to restore previously deleted roles in the system. It handles the recovery of role data, including associated permissions and settings. The module ensures proper validation, user authorization, and maintains data consistency during the restoration process.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage RolesAndPrivilegeManager
+ * @author     TMDD Interns 25'
  */
 session_start();
 require_once('../../../../../../config/ims-tmdd.php');

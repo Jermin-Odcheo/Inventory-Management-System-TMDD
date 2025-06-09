@@ -1,12 +1,12 @@
 <?php
 /**
- * @file eqrep.php
- * @brief Provides the user interface for generating equipment reports.
+ * Equipment Reports Module
  *
- * This script allows users to select report types, locations, date ranges,
- * and specific columns to include in the report. It also handles the preparation
- * details and export options (PDF, Excel, Word). The report preview and download
- * functionalities are triggered via JavaScript, which interacts with other PHP scripts.
+ * This file serves as the main interface for equipment reporting functionality. It provides comprehensive features for generating, viewing, and managing equipment reports, including filtering options, data visualization, and export capabilities. The module ensures proper data validation, user authorization, and integration with other system components to maintain data consistency across the Inventory Management System.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage Reports
+ * @author     TMDD Interns 25'
  */
 
 require_once __DIR__ . '/../../../../../../config/ims-tmdd.php'; // Include the database connection file, providing the $pdo object.

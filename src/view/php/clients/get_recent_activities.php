@@ -1,10 +1,12 @@
 <?php
 /**
- * @file get_recent_activities.php
- * @brief Retrieves recent activities for display.
+ * Get Recent Activities Module
  *
- * This script handles the retrieval of recent activities or updates from the database
- * to be displayed on the client dashboard or activity log.
+ * This file provides functionality to retrieve and display recent system activities. It handles the fetching of activity logs, filtering, and formatting of activity data. The module ensures that users can track system changes and user actions in real-time.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage Clients
+ * @author     TMDD Interns 25'
  */
 session_start();
 require '../../../../config/ims-tmdd.php';

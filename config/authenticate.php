@@ -1,10 +1,12 @@
 <?php
 /**
- * @file authenticate.php
- * @brief handles the authentication process
+ * Authentication Module
  *
- * This script handles the authentication process. It checks if the user is logged in,
- * fetches the user's information, and displays it in the header.
+ * This file provides core authentication functionality for the system. It handles user authentication, session management, and access control. The module ensures secure login processes, password validation, and proper session handling to maintain system security.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage Configuration
+ * @author     TMDD Interns 25'
  */
 session_start();
 require 'ims-tmdd.php'; // your PDO $pdo comes from here

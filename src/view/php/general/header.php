@@ -1,10 +1,12 @@
 <?php
 /**
- * @file header.php
- * @brief handles the display of the header
+ * Header Module
  *
- * This script handles the display of the header. It checks if the user is logged in,
- * fetches the user's information, and displays it in the header.
+ * This file provides the header functionality for the system. It generates the common header elements including the navigation bar, user information, and system branding. The module handles user session management, notification display, and responsive behavior.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage General
+ * @author     TMDD Interns 25'
  */
 require_once(__DIR__ . '/../../../../config/config.php');
 /**

@@ -1,4 +1,5 @@
-<div id="toastContainer"></div>
+<div id="toastContainer">
+    </div>
 
 <footer class="footer">
     <p class="footer-text">&copy; 2025 TMDD Interns</p>

@@ -1,13 +1,12 @@
 <?php
 /**
- * @file undo.php
- * @brief handles the undoing of the last role change action performed by a logged-in user
+ * Undo Module
  *
- * This script handles the undoing of the last role change action performed by a logged-in user.
- * It supports reversing actions such as adding, modifying, or deleting roles in the system.
- * The script checks for the last action that hasn't been undone and performs the necessary
- * database operations to revert it. The action is then marked as undone in the database.
+ * This file provides functionality to undo previous role-related actions in the system. It handles the reversal of role modifications, ensuring that changes can be reverted while maintaining data integrity. The module supports audit trails and integrates with other modules to maintain system consistency.
  *
+ * @package    InventoryManagementSystem
+ * @subpackage RolesAndPrivilegeManager
+ * @author     TMDD Interns 25'
  */
 session_start();
 header('Content-Type: application/json');

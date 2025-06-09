@@ -1,11 +1,12 @@
 <?php
-
 /**
- * @file RBACService.php
- * @brief Role-Based Access Control (RBAC) Service class.
+ * Role-Based Access Control Service
  *
- * This class manages user privileges and access control based on roles and modules.
- * It loads user privileges from the database and provides methods to check and enforce access rights.
+ * This file provides comprehensive role-based access control functionality for the system. It handles user permissions, role management, and access validation. The module ensures proper authorization checks, maintains security policies, and supports integration with other system components.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage Control
+ * @author     TMDD Interns 25'
  */
 declare(strict_types=1);
 

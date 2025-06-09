@@ -1,4 +1,13 @@
 <?php
+/**
+ * Update Account Module
+ *
+ * This file provides functionality for users to update their account information. It handles the modification of user profiles, including personal details, preferences, and security settings. The module ensures proper validation, data integrity, and security during account updates.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage Clients
+ * @author     TMDD Interns 25'
+ */
 session_start();
 require '../../../../config/ims-tmdd.php'; // This defines $pdo (PDO connection)
 

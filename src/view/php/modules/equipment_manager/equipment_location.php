@@ -1,11 +1,12 @@
 <?php
 /**
- * @file equipment_location.php
- * @brief Equipment Location Management
- * 
- * This script manages the display, creation, updating, and deletion of equipment locations. It handles user session validation,
- * role-based access control (RBAC) checks, processes AJAX requests for CRUD operations, builds dynamic queries for filtering,
- * and renders a table of equipment locations with various filtering and pagination options.
+ * Equipment Location Module
+ *
+ * This file provides comprehensive functionality for managing equipment locations in the system. It handles the assignment, modification, and tracking of equipment locations, including location changes and historical records. The module ensures proper validation, user authorization, and maintains data consistency across the system.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage EquipmentManager
+ * @author     TMDD Interns 25'
  */
 require_once '../../../../../config/ims-tmdd.php';
 require_once '../../../../control/RBACService.php';
@@ -839,12 +840,12 @@ function safeHtml($value)
 
     <div class="main-container">
         <header class="main-header">
-            <h1> Equipment Location Management</h1>
+            <h1> Asset Location Management</h1>
         </header>
 
         <section class="card">
             <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                <h2><i class="bi bi-list-task"></i> List of Equipment Locations</h2>
+                <h2><i class="bi bi-list-task"></i> List of Asset Locations</h2>
             </div>
 
             <div class="card-body">

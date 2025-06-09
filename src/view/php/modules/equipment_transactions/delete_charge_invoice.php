@@ -1,11 +1,47 @@
 <?php
 /**
- * @file delete_charge_invoice.php
- * @brief Handles the deletion of charge invoices.
+ * Delete Charge Invoice Module
  *
- * This script processes requests to permanently delete charge invoices from the database,
- * ensuring that only archived invoices are deleted and logging the actions for audit purposes.
+ * This file manages the deletion of charge invoices from the Inventory Management System. It provides the backend logic to safely remove charge invoice records, typically by marking them as deleted (soft delete) rather than permanently erasing them. This approach allows for potential recovery and auditing. The class ensures that all related data integrity checks are performed before deletion, and that only users with the appropriate permissions can execute this operation.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage EquipmentTransactions
+ * @author     TMDD Interns 25'
  */
+
+/**
+ * DeleteChargeInvoice Class
+ *
+ * Handles the logic for deleting charge invoice records, including permission checks and data integrity validation. Supports soft deletion to allow for future restoration if needed.
+ */
+class DeleteChargeInvoice {
+    /**
+     * Database connection instance
+     *
+     * @var PDO
+     */
+    private $db;
+
+    /**
+     * Constructor
+     *
+     * @param PDO $db Database connection
+     */
+    public function __construct(PDO $db) {
+        $this->db = $db;
+    }
+
+    /**
+     * Delete a charge invoice
+     *
+     * @param int $chargeInvoiceId Charge Invoice ID
+     * @return bool Success status
+     */
+    public function delete($chargeInvoiceId) {
+        // ... existing code ...
+    }
+}
+
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
 

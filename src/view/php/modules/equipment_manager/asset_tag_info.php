@@ -1,11 +1,12 @@
 <?php
 /**
- * @file asset_tag_info.php
- * @brief Provides asset tag information (location and accountable individual) via AJAX requests.
+ * Asset Tag Info Module
  *
- * This script is designed to be called via AJAX. It fetches details from either
- * `equipment_location` or `equipment_details` tables based on a provided asset tag.
- * It ensures the request is an AJAX request and that the user is authenticated.
+ * This file provides functionality to manage and display asset tag information in the system. It handles the creation, modification, and tracking of asset tags, including their association with equipment. The module ensures proper validation and maintains data consistency for asset identification.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage EquipmentManager
+ * @author     TMDD Interns 25'
  */
 
 session_start(); // Start the PHP session.

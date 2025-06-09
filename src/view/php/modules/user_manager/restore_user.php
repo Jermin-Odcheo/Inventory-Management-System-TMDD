@@ -1,12 +1,12 @@
 <?php
-
 /**
- * Restores archived users in the Inventory Management System.
- * 
- * This script handles the restoration of one or multiple archived users by setting their 'is_disabled' status
- * to 0. It processes input data to identify the user(s) to restore, performs validation checks, logs the action
- * via database triggers, and returns a JSON response indicating the success or failure of the operation.
- * The script ensures proper authorization and handles potential conflicts with existing active users.
+ * Restore User Module
+ *
+ * This file provides functionality to restore previously deleted user accounts in the system. It handles the recovery of user data, including role assignments and department associations. The module ensures proper validation, user authorization, and maintains data consistency during the restoration process.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage UserManager
+ * @author     TMDD Interns 25'
  */
 session_start();
 require_once('../../../../../config/ims-tmdd.php');

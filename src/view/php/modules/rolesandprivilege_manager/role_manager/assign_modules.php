@@ -1,10 +1,12 @@
 <?php
 /**
- * @file assign_modules.php
- * @brief handles the assignment of modules and privileges to roles
+ * Assign Modules Module
  *
- * This script handles the assignment of modules and privileges to roles. It allows users to select a role,
- * view and update its associated modules and privileges, and assign new modules to the role.
+ * This file provides functionality to assign modules to roles in the system. It handles the association between roles and modules, including permission settings. The module ensures proper validation, user authorization, and maintains data consistency during the module assignment process.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage RolesAndPrivilegeManager
+ * @author     TMDD Interns 25'
  */
 session_start();
 require_once('../../../../../../config/ims-tmdd.php');

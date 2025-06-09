@@ -1,11 +1,47 @@
 <?php
 /**
- * @file restore_purchase_order.php
- * @brief Handles the restoration of purchase orders.
+ * Restore Purchase Order Module
  *
- * This script processes requests to restore archived purchase orders in the database,
- * updating their status and logging the actions for audit purposes.
+ * This file provides the logic to restore previously deleted purchase orders in the system. It is used to recover purchase order records that were soft-deleted, ensuring that accidental deletions can be reversed. The class interacts with the database to update the status of a purchase order, making it active again and available for use in the system.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage EquipmentTransactions
+ * @author     TMDD Interns 25'
  */
+
+/**
+ * RestorePurchaseOrder Class
+ *
+ * Handles the restoration of deleted purchase order records by updating their status in the database. This class provides a method to reinstate purchase orders, supporting data integrity and recovery operations.
+ */
+class RestorePurchaseOrder {
+    /**
+     * Database connection instance
+     *
+     * @var PDO
+     */
+    private $db;
+
+    /**
+     * Constructor
+     *
+     * @param PDO $db Database connection
+     */
+    public function __construct(PDO $db) {
+        $this->db = $db;
+    }
+
+    /**
+     * Restore a deleted purchase order
+     *
+     * @param int $purchaseOrderId Purchase Order ID
+     * @return bool Success status
+     */
+    public function restore($purchaseOrderId) {
+        // ... existing code ...
+    }
+}
+
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
 

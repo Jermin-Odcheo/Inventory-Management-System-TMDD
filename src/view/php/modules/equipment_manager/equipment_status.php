@@ -1,13 +1,12 @@
 <?php
 /**
- * @file equipment_status.php
- * @brief Manages equipment status, including creation, retrieval, updating, and soft deletion.
+ * Equipment Status Module
  *
- * This script handles both initial page load (displaying equipment statuses) and AJAX requests
- * for CRUD operations (Create, Read, Update, Delete) on equipment statuses. It integrates
- * with RBAC for privilege checks, manages session messages, and interacts with the
- * `equipment_status` and `audit_log` database tables. It also includes client-side JavaScript
- * for filtering, sorting, and pagination.
+ * This file provides comprehensive functionality for managing equipment status in the system. It handles the creation, modification, and tracking of equipment status, including status changes and historical records. The module ensures proper validation, user authorization, and maintains data consistency across the system.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage EquipmentManager
+ * @author     TMDD Interns 25'
  */
 
 require_once '../../../../../config/ims-tmdd.php'; // Include the database connection file, providing the $pdo object.
@@ -706,12 +705,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
 
     <div class="main-container">
         <header class="main-header">
-            <h1>Equipment Status Management</h1>
+            <h1>Asset Status Management</h1>
         </header>
 
         <section class="card">
             <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                <h2><i class="bi bi-list-task"></i> List of Equipment Status</h2>
+                <h2><i class="bi bi-list-task"></i> List of Asset Status</h2>
             </div>
 
             <div class="card-body">

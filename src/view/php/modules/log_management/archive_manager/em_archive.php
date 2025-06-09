@@ -1,10 +1,12 @@
 <?php
 /**
- * @file em_archive.php
- * @brief handles the display of archived equipment management data
+ * Equipment Management Archive Module
  *
- * This script handles the display of archived equipment management data. It checks user permissions,
- * fetches and filters archived data based on various criteria, and formats the data for presentation in a user interface.
+ * This file provides functionality for archiving and managing historical equipment management records. It handles the storage, retrieval, and management of archived equipment data, ensuring data preservation while maintaining system performance. The module supports comprehensive archiving features including data compression, indexing, and secure storage.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage LogManagement
+ * @author     TMDD Interns 25'
  */
 
 session_start();
@@ -1048,23 +1050,114 @@ function formatChanges($oldJsonStr, $extraDate = null)
                 updateDateFields(); // Initialize on page load
             }
 
-            // Filter form submission
+            // Date validation function
+            function validateDateRange(fromValue, toValue, format) {
+                if (!fromValue || !toValue) return true; // If either field is empty, don't validate
+
+                let fromDate, toDate;
+
+                switch (format) {
+                    case 'mdy':
+                        fromDate = new Date(fromValue);
+                        toDate = new Date(toValue);
+                        break;
+                    case 'month_year':
+                        fromDate = new Date(fromValue + '-01'); // Add day for valid date
+                        toDate = new Date(toValue + '-01');
+                        break;
+                    case 'year':
+                        fromDate = new Date(fromValue, 0, 1); // Jan 1st of the year
+                        toDate = new Date(toValue, 0, 1);
+                        break;
+                }
+
+                return fromDate <= toDate;
+            }
+
+            // Override any existing form submission handlers to prioritize validation
             if (filterForm) {
+                // Remove any existing submit handlers to avoid conflicts
+                filterForm.removeEventListener('submit', function() {}, true);
+                
                 filterForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    
-                    // Get all form data
+                    e.preventDefault(); // Prevent default submission initially
+                    e.stopImmediatePropagation(); // Stop any other handlers from running
+
+                    const dateFilterType = document.getElementById('dateFilterType').value;
+                    let isValid = true;
+                    let errorMessage = '';
+
+                    if (dateFilterType === 'mdy') {
+                        const dateFrom = document.querySelector('input[name="date_from"]').value;
+                        const dateTo = document.querySelector('input[name="date_to"]').value;
+
+                        if (!validateDateRange(dateFrom, dateTo, 'mdy')) {
+                            isValid = false;
+                            errorMessage = '"Date From" cannot be greater than "Date To"';
+                        }
+                    } else if (dateFilterType === 'month_year') {
+                        const monthYearFrom = document.querySelector('input[name="month_year_from"]').value;
+                        const monthYearTo = document.querySelector('input[name="month_year_to"]').value;
+
+                        if (!validateDateRange(monthYearFrom, monthYearTo, 'month_year')) {
+                            isValid = false;
+                            errorMessage = '"From (MM-YYYY)" cannot be greater than "To (MM-YYYY)"';
+                        }
+                    } else if (dateFilterType === 'year') {
+                        const yearFrom = document.querySelector('input[name="year_from"]').value;
+                        const yearTo = document.querySelector('input[name="year_to"]').value;
+
+                        if (yearFrom && yearTo && parseInt(yearFrom) > parseInt(yearTo)) {
+                            isValid = false;
+                            errorMessage = '"Year From" cannot be greater than "Year To"';
+                        }
+                    }
+
+                    if (!isValid) {
+                        $('#filterError').remove();
+
+                        // 1) pick your filter-row container
+                        const filterRow = document.querySelector('.col-6.col-md.2.d-grid');
+
+                        // 2) build a "block" error div (no absolute positioning needed)
+                        const errorDiv = document.createElement('div');
+                        errorDiv.id = 'filterError';
+                        errorDiv.className = 'validation-tooltip mt-2';  // mt-2 gives a little gap
+                        Object.assign(errorDiv.style, {
+                            display: 'inline-block',
+                            backgroundColor: '#d9534f',
+                            color: 'white',
+                            padding: '6px 10px',
+                            borderRadius: '4px',
+                            fontSize: '0.85em',
+                            whiteSpace: 'nowrap',
+                            boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+                            zIndex: 1000
+                        });
+                        errorDiv.textContent = errorMessage;
+
+                        // 3) insert it *after* the filter row, so it sits right below the date filters
+                        filterRow.insertAdjacentElement('afterend', errorDiv);
+
+                        // optional: scroll into view
+                        errorDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+                        // auto-dismiss
+                        setTimeout(() => {
+                            $('#filterError').fadeOut('slow', () => $('#filterError').remove());
+                        }, 3000);
+
+                        return false; // Explicitly prevent form submission
+                    }
+
+                    $('#filterError').remove();
+                    // If validation passes, manually trigger the form submission without event listeners interfering
                     const formData = new FormData(filterForm);
                     const params = new URLSearchParams();
-                    
-                    // Add all form fields to params
                     for (let [key, value] of formData.entries()) {
-                        // Only add non-empty values and handle date filters properly
                         if (value && value.trim() !== '') {
-                            // Special handling for date filters
                             if (key === 'date_filter_type') {
                                 params.append(key, value);
-                                // Only add date values if a filter type is selected
                                 if (value === 'mdy') {
                                     if (formData.get('date_from')) params.append('date_from', formData.get('date_from'));
                                     if (formData.get('date_to')) params.append('date_to', formData.get('date_to'));
@@ -1076,15 +1169,12 @@ function formatChanges($oldJsonStr, $extraDate = null)
                                     if (formData.get('year_to')) params.append('year_to', formData.get('year_to'));
                                 }
                             } else {
-                                // For non-date fields, just add them if they have a value
                                 params.append(key, value);
                             }
                         }
                     }
-                    
-                    // Redirect to the same page with the filter parameters
                     window.location.href = window.location.pathname + '?' + params.toString();
-                });
+                }, true); // Use capture phase to ensure this handler runs first
             }
             
             // Clear filters button

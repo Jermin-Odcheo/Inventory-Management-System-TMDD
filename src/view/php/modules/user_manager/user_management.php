@@ -1,17 +1,12 @@
 <?php
-
 /**
- * User management module.
+ * User Management Module
  *
- * Provides functionality to view, filter, sort, and manage users,
- * including department and role assignments. Handles creation of the
- * `created_at` column if missing, and supports date-based filtering
- * when the column is present.
+ * This file provides comprehensive functionality for managing users in the system. It serves as the central hub for user management operations, including creation, modification, deletion, and assignment of user roles and departments. The module ensures proper validation, user authorization, and maintains data consistency across the system.
  *
- * @package    IMS-TMDD
- * @subpackage UserManagement
- * @author     Jermin
- * @license    MIT
+ * @package    InventoryManagementSystem
+ * @subpackage UserManager
+ * @author     TMDD Interns 25'
  */
 declare(strict_types=1);
 

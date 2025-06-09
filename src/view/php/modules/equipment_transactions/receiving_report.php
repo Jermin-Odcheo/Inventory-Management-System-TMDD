@@ -1,10 +1,12 @@
 <?php
 /**
- * @file receiving_report.php
- * @brief Manages receiving reports for equipment transactions.
+ * Receiving Report Management Module
  *
- * This script handles the creation, updating, deletion, and display of receiving reports
- * within the equipment transactions module, including user privilege checks and audit logging.
+ * This file implements all backend logic for managing receiving reports within the Inventory Management System. It provides features for creating, editing, viewing, deleting, and restoring receiving reports, as well as handling related validations, status updates, and user permissions. The code ensures data integrity, supports audit trails, and integrates with other modules such as equipment and transaction management. It is designed to be robust and secure, supporting both administrative and operational workflows for receiving report processing.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage EquipmentTransactions
+ * @author     TMDD Interns 25'
  */
 require_once '../../../../../config/ims-tmdd.php';
 session_start();

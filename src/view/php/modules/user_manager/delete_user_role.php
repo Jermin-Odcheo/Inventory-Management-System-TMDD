@@ -1,11 +1,12 @@
 <?php
 /**
- * Deletes user role assignments in the Inventory Management System.
- * 
- * This script handles the deletion of specific or all role assignments for a user within a department.
- * It processes JSON input data to identify the user, department, and roles to delete, performs validation
- * and authentication checks, logs changes in an audit log if tracking is enabled, and returns a JSON response
- * with the updated assignments. The script ensures a zero-role entry remains for visibility of the department.
+ * Delete User Role Module
+ *
+ * This file provides functionality to remove role assignments from users in the system. It handles the deletion of role associations, ensuring proper cleanup of permissions and access rights. The module ensures proper validation, user authorization, and maintains data consistency during the role removal process.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage UserManager
+ * @author     TMDD Interns 25'
  */
 // delete_user_role.php
 session_start();

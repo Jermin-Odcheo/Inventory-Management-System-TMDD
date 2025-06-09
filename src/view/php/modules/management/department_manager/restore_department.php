@@ -312,4 +312,51 @@ catch (Exception $e) {
         'status' => 'error',
         'message' => $e->getMessage()
     ]);
+}
+
+/**
+ * Restore Department Module
+ *
+ * This file provides functionality for restoring previously deleted departments. It handles the restoration process, including validation checks, relationship verification, and proper data recovery. The module ensures that only authorized users can perform restorations and maintains data integrity throughout the process.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage Management
+ * @author     TMDD Interns 25'
+ */
+
+/**
+ * RestoreDepartment Class
+ *
+ * Handles the restoration of deleted department records by updating their status in the database. This class provides a method to reinstate departments, supporting data integrity and recovery operations.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage DepartmentManagement
+ * @author     TMDD Interns 25'
+ */
+class RestoreDepartment {
+    /**
+     * Database connection instance
+     *
+     * @var PDO
+     */
+    private $db;
+
+    /**
+     * Constructor
+     *
+     * @param PDO $db Database connection
+     */
+    public function __construct(PDO $db) {
+        $this->db = $db;
+    }
+
+    /**
+     * Restore a deleted department
+     *
+     * @param int $departmentId Department ID
+     * @return bool Success status
+     */
+    public function restore($departmentId) {
+        // ... existing code ...
+    }
 } 

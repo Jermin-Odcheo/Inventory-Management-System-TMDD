@@ -1,11 +1,12 @@
 <?php
-
 /**
- * Retrieves the list of departments associated with a specific user in the Inventory Management System.
- * 
- * This script fetches the departments linked to a user based on their ID provided via GET request.
- * It performs authentication checks to ensure the requester is logged in, validates the input user ID,
- * and returns a JSON response with the list of unique departments associated with the user.
+ * Get User Departments Module
+ *
+ * This file provides functionality to retrieve and display detailed information about user department assignments. It is used to fetch specific user department data from the database, including department details and user assignments. The code ensures that only authorized users can access this information and supports integration with other modules for a comprehensive view of user department assignments.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage UserManager
+ * @author     TMDD Interns 25'
  */
 session_start();
 require_once '../../../../../config/ims-tmdd.php';

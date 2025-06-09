@@ -1,10 +1,12 @@
 <?php
 /**
- * @file equipment_details_update.php
- * @brief Equipment Details Update Management
- * 
- * This script handles AJAX requests to update equipment details records based on changes from equipment location.
- * It includes session validation, RBAC privilege checks, and database transactions to ensure data integrity while updating records.
+ * Equipment Details Update Module
+ *
+ * This file provides functionality to update equipment details in the system. It handles the modification of equipment information, including specifications, maintenance records, and associated data. The module ensures proper validation, user authorization, and maintains data consistency during the update process.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage EquipmentManager
+ * @author     TMDD Interns 25'
  */
 session_start();
 date_default_timezone_set('Asia/Manila');

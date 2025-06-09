@@ -1,11 +1,47 @@
 <?php
 /**
- * @file restore_receiving_report.php
- * @brief Handles the restoration of receiving reports.
+ * Restore Receiving Report Module
  *
- * This script processes requests to restore archived receiving reports in the database,
- * updating their status and logging the actions for audit purposes.
+ * This file provides the logic to restore previously deleted receiving reports in the system. It is used to recover receiving report records that were soft-deleted, ensuring that accidental deletions can be reversed. The class interacts with the database to update the status of a receiving report, making it active again and available for use in the system.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage EquipmentTransactions
+ * @author     TMDD Interns 25'
  */
+
+/**
+ * RestoreReceivingReport Class
+ *
+ * Handles the restoration of deleted receiving report records by updating their status in the database. This class provides a method to reinstate receiving reports, supporting data integrity and recovery operations.
+ */
+class RestoreReceivingReport {
+    /**
+     * Database connection instance
+     *
+     * @var PDO
+     */
+    private $db;
+
+    /**
+     * Constructor
+     *
+     * @param PDO $db Database connection
+     */
+    public function __construct(PDO $db) {
+        $this->db = $db;
+    }
+
+    /**
+     * Restore a deleted receiving report
+     *
+     * @param int $receivingReportId Receiving Report ID
+     * @return bool Success status
+     */
+    public function restore($receivingReportId) {
+        // ... existing code ...
+    }
+}
+
 session_start();
 require_once('../../../../../config/ims-tmdd.php');
 

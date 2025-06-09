@@ -1,11 +1,12 @@
 <?php
 /**
- * @file generate_report.php
- * @brief Generates and exports equipment reports in PDF, Excel, or Word format.
+ * Generate Report Module
  *
- * This script receives report parameters via POST, queries the database for equipment data
- * based on selected filters (location, area, date range, columns), and then generates
- * the report in the specified format using Dompdf, PhpSpreadsheet, or PhpWord libraries.
+ * This file provides the core functionality for generating equipment reports in the system. It handles the processing of report parameters, data retrieval from the database, and report generation in various formats. The module supports multiple report types, filtering options, and export capabilities while ensuring data accuracy and user authorization.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage Reports
+ * @author     TMDD Interns 25'
  */
 
 require_once __DIR__ . '/../../../../../../config/ims-tmdd.php'; // Include the database connection file, providing the $pdo object.

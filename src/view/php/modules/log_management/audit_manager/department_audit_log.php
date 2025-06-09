@@ -1,10 +1,12 @@
 <?php
 /**
- * @file department_audit_log.php
- * @brief handles the display of audit logs for department management activities
+ * Department Audit Log Module
  *
- * This script handles the display of audit logs for department management activities. It checks user permissions,
- * fetches and filters audit log data based on various criteria, and formats the data for presentation in a user interface.
+ * This file provides comprehensive audit logging functionality for department management activities. It tracks and records all changes made to departments, including creation, modification, and deletion events. The module ensures detailed logging of user actions, timestamps, and relevant data changes for security and accountability purposes.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage LogManagement
+ * @author     TMDD Interns 25'
  */
 session_start();
 require '../../../../../../config/ims-tmdd.php';
@@ -813,247 +815,256 @@ function getDisplayAction($action)
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Set a flag to indicate that this page explicitly initializes pagination
-        window.paginationInitialized = true;
-        
-        // Initialize pagination with the audit table ID
+            window.paginationInitialized = true;
+            
+            // Initialize pagination with the audit table ID
             initPagination({
                 tableId: 'auditTable'
             });
 
-        // Get form and filter elements
+            // Get form and filter elements
             const filterForm = document.getElementById('auditFilterForm');
-        const actionTypeSelect = document.getElementById('actionType');
-        const statusSelect = document.getElementById('status');
+            const actionTypeSelect = document.getElementById('actionType');
+            const statusSelect = document.getElementById('status');
             const searchInput = document.getElementById('searchInput');
             const applyFiltersBtn = document.getElementById('applyFilters');
             const clearFiltersBtn = document.getElementById('clearFilters');
-        const dateFilterType = document.getElementById('dateFilterType');
+            const dateFilterType = document.getElementById('dateFilterType');
 
-        // Function to submit the form
-        function submitForm() {
-            const formData = new FormData(filterForm);
-            const queryString = new URLSearchParams(formData).toString();
-            window.location.href = window.location.pathname + '?' + queryString;
-        }
+            // Function to submit the form
+            function submitForm() {
+                const formData = new FormData(filterForm);
+                const queryString = new URLSearchParams(formData).toString();
+                window.location.href = window.location.pathname + '?' + queryString;
+            }
 
-        // Add event listeners for dropdowns
-        if (actionTypeSelect) {
-            actionTypeSelect.addEventListener('change', function() {
-                submitForm();
-            });
-        }
-
-        if (statusSelect) {
-            statusSelect.addEventListener('change', function() {
-                submitForm();
-            });
-        }
-
-        // Add event listener for search input - only trigger on Enter key or Apply button
-            if (searchInput) {
-            searchInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
+            // Add event listeners for dropdowns
+            if (actionTypeSelect) {
+                actionTypeSelect.addEventListener('change', function() {
                     submitForm();
-                }
-            });
-        }
+                });
+            }
 
-        // Add event listener for apply filters button
-        if (applyFiltersBtn) {
-            applyFiltersBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                
-                // Validate date filters before submitting
-                let isValid = true;
-                let errorMessage = '';
-                let selectedType = dateFilterType.value;
-                
-                if (selectedType) {
-                    let fromDate, toDate;
+            if (statusSelect) {
+                statusSelect.addEventListener('change', function() {
+                    submitForm();
+                });
+            }
+
+            // Add event listener for search input - only trigger on Enter key or Apply button
+            if (searchInput) {
+                searchInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        submitForm();
+                    }
+                });
+            }
+
+            // Add event listener for apply filters button
+            if (applyFiltersBtn) {
+                applyFiltersBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
                     
-                    if (selectedType === 'mdy') {
-                        fromDate = document.querySelector('input[name="date_from"]').value;
-                        toDate = document.querySelector('input[name="date_to"]').value;
+                    // Validate date filters before submitting
+                    let isValid = true;
+                    let errorMessage = '';
+                    let selectedType = dateFilterType.value;
+                    
+                    if (selectedType) {
+                        let fromDate, toDate;
                         
-                        // Check if dates are empty
-                        if (fromDate && !toDate) {
-                            isValid = false;
-                            errorMessage = 'Please select both From and To dates';
-                        } else if (!fromDate && toDate) {
-                            isValid = false;
-                            errorMessage = 'Please select both From and To dates';
-                        } else if (fromDate && toDate) {
-                            // Convert to Date objects for comparison
-                            const fromDateObj = new Date(fromDate);
-                            const toDateObj = new Date(toDate);
+                        if (selectedType === 'mdy') {
+                            fromDate = document.querySelector('input[name="date_from"]').value;
+                            toDate = document.querySelector('input[name="date_to"]').value;
                             
-                            // Check if from date is greater than to date
-                            if (fromDateObj > toDateObj) {
+                            // Check if dates are empty
+                            if (fromDate && !toDate) {
                                 isValid = false;
-                                errorMessage = 'From date cannot be greater than To date';
-                            }
-                        }
-                    } else if (selectedType === 'month_year') {
-                        fromDate = document.querySelector('input[name="month_year_from"]').value;
-                        toDate = document.querySelector('input[name="month_year_to"]').value;
-                        
-                        // Check if dates are empty
-                        if (fromDate && !toDate) {
-                            isValid = false;
-                            errorMessage = 'Please select both From and To month-year values';
-                        } else if (!fromDate && toDate) {
-                            isValid = false;
-                            errorMessage = 'Please select both From and To month-year values';
-                        } else if (fromDate && toDate) {
-                            // Compare the month-year values as strings (YYYY-MM format)
-                            if (fromDate > toDate) {
+                                errorMessage = 'Please select both From and To dates';
+                            } else if (!fromDate && toDate) {
                                 isValid = false;
-                                errorMessage = 'From month-year cannot be greater than To month-year';
+                                errorMessage = 'Please select both From and To dates';
+                            } else if (fromDate && toDate) {
+                                // Convert to Date objects for comparison
+                                const fromDateObj = new Date(fromDate);
+                                const toDateObj = new Date(toDate);
+                                
+                                // Check if from date is greater than to date
+                                if (fromDateObj > toDateObj) {
+                                    isValid = false;
+                                    errorMessage = 'From date cannot be greater than To date';
+                                }
                             }
-                        }
-                    } else if (selectedType === 'year') {
-                        fromDate = document.querySelector('input[name="year_from"]').value;
-                        toDate = document.querySelector('input[name="year_to"]').value;
-                        
-                        // Check if years are empty
-                        if (fromDate && !toDate) {
-                            isValid = false;
-                            errorMessage = 'Please select both From and To years';
-                        } else if (!fromDate && toDate) {
-                            isValid = false;
-                            errorMessage = 'Please select both From and To years';
-                        } else if (fromDate && toDate) {
-                            // Compare as integers
-                            const fromYear = parseInt(fromDate);
-                            const toYear = parseInt(toDate);
+                        } else if (selectedType === 'month_year') {
+                            fromDate = document.querySelector('input[name="month_year_from"]').value;
+                            toDate = document.querySelector('input[name="month_year_to"]').value;
                             
-                            if (fromYear > toYear) {
+                            // Check if dates are empty
+                            if (fromDate && !toDate) {
                                 isValid = false;
-                                errorMessage = 'From year cannot be greater than To year';
+                                errorMessage = 'Please select both From and To month-year values';
+                            } else if (!fromDate && toDate) {
+                                isValid = false;
+                                errorMessage = 'Please select both From and To month-year values';
+                            } else if (fromDate && toDate) {
+                                // Compare the month-year values as strings (YYYY-MM format)
+                                if (fromDate > toDate) {
+                                    isValid = false;
+                                    errorMessage = 'From month-year cannot be greater than To month-year';
+                                }
+                            }
+                        } else if (selectedType === 'year') {
+                            fromDate = document.querySelector('input[name="year_from"]').value;
+                            toDate = document.querySelector('input[name="year_to"]').value;
+                            
+                            // Check if years are empty
+                            if (fromDate && !toDate) {
+                                isValid = false;
+                                errorMessage = 'Please select both From and To years';
+                            } else if (!fromDate && toDate) {
+                                isValid = false;
+                                errorMessage = 'Please select both From and To years';
+                            } else if (fromDate && toDate) {
+                                // Compare as integers
+                                const fromYear = parseInt(fromDate);
+                                const toYear = parseInt(toDate);
+                                
+                                if (fromYear > toYear) {
+                                    isValid = false;
+                                    errorMessage = 'From year cannot be greater than To year';
+                                }
                             }
                         }
                     }
-                }
-                
-                // Display validation error if any
-                if (!isValid) {
-                    // Remove any existing error messages
-                    document.getElementById('date-filter-error')?.remove();
                     
-                    // Create error message container if it doesn't exist
-                    if (!document.getElementById('date-filter-error')) {
+                    // Display validation error if any
+                    if (!isValid) {
+                        // Remove any existing error messages
+                        const existingError = document.querySelector('.date-filter-error');
+                        if (existingError) {
+                            existingError.remove();
+                        }
+                        
+                        // Show the error message below the form
                         const errorContainer = document.createElement('div');
-                        errorContainer.id = 'date-filter-error';
-                        errorContainer.style.position = 'relative';
-                        dateFilterType.parentElement.appendChild(errorContainer);
+                        errorContainer.className = 'date-filter-error alert alert-danger alert-dismissible fade show';
+                        errorContainer.style.marginTop = '20px';
+                        errorContainer.style.maxWidth = '100%';
+                        errorContainer.role = 'alert';
+                        errorContainer.innerHTML = `
+                            <strong> </strong> ${errorMessage}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        `;
+                        filterForm.parentNode.insertBefore(errorContainer, filterForm.nextSibling);
+                        
+                        // Auto hide after 3 seconds
+                        setTimeout(function() {
+                            if (errorContainer) {
+                                errorContainer.style.transition = 'opacity 0.5s';
+                                errorContainer.style.opacity = '0';
+                                setTimeout(() => {
+                                    errorContainer.remove();
+                                }, 500);
+                            }
+                        }, 3000);
+                        
+                        return;
                     }
                     
-                    // Show the error message
-                    const dateContainer = document.getElementById('date-filter-error');
-                    dateContainer.innerHTML = '<div class="validation-tooltip" style="position: absolute; top: 100%; left: 50%; transform: translateX(-50%); background-color: #d9534f; color: white; padding: 6px 10px; border-radius: 4px; font-size: 0.85em; z-index: 1000; margin-top: 5px; white-space: nowrap; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">' + errorMessage + '<div style="position: absolute; top: -5px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 5px solid #d9534f;"></div></div>';
-                    
-                    // Auto hide after 3 seconds
-                    setTimeout(function() {
-                        const errorElement = document.querySelector('#date-filter-error .validation-tooltip');
-                        if (errorElement) {
-                            errorElement.style.transition = 'opacity 0.5s';
-                            errorElement.style.opacity = '0';
-                            setTimeout(() => {
-                                document.getElementById('date-filter-error').innerHTML = '';
-                            }, 500);
-                        }
-                    }, 3000);
-                    
-                    return;
-                }
-                
-                // If all validations pass, submit the form
-                submitForm();
-            });
-        }
+                    // If all validations pass, submit the form
+                    submitForm();
+                });
+            }
 
-        // Add event listener for clear filters button
-        if (clearFiltersBtn) {
-            clearFiltersBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                
-                // Reset all form fields
-                filterForm.reset();
-                
-                // Reset date fields visibility
+            // Add event listener for clear filters button
+            if (clearFiltersBtn) {
+                clearFiltersBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Reset all form fields
+                    filterForm.reset();
+                    
+                    // Reset date fields visibility
+                    const allDateFilters = document.querySelectorAll('.date-filter');
+                    allDateFilters.forEach(field => field.classList.add('d-none'));
+                    
+                    // Clear any error messages
+                    const errorElement = document.querySelector('.date-filter-error');
+                    if (errorElement) {
+                        errorElement.remove();
+                    }
+                    
+                    // Clear URL parameters and reload page
+                    window.location.href = window.location.pathname;
+                });
+            }
+
+            // Date filter type change handler
+            if (dateFilterType) {
+                dateFilterType.addEventListener('change', function() {
+                    const allDateFilters = document.querySelectorAll('.date-filter');
+                    allDateFilters.forEach(field => field.classList.add('d-none'));
+                    
+                    // Clear any error messages when changing filter type
+                    const errorElement = document.querySelector('.date-filter-error');
+                    if (errorElement) {
+                        errorElement.remove();
+                    }
+                    
+                    if (this.value) {
+                        const selected = document.querySelectorAll('.date-' + this.value);
+                        selected.forEach(field => field.classList.remove('d-none'));
+                    }
+                });
+
+                // Initialize date fields visibility
                 const allDateFilters = document.querySelectorAll('.date-filter');
                 allDateFilters.forEach(field => field.classList.add('d-none'));
-                
-                // Clear any error messages
-                document.getElementById('date-filter-error').innerHTML = '';
-                
-                // Clear URL parameters and reload page
-                window.location.href = window.location.pathname;
-            });
-        }
-
-        // Date filter type change handler
-        if (dateFilterType) {
-            dateFilterType.addEventListener('change', function() {
-                const allDateFilters = document.querySelectorAll('.date-filter');
-                allDateFilters.forEach(field => field.classList.add('d-none'));
-                
-                // Clear any error messages when changing filter type
-                document.getElementById('date-filter-error').innerHTML = '';
-                
-                if (this.value) {
-                    const selected = document.querySelectorAll('.date-' + this.value);
+                if (dateFilterType.value) {
+                    const selected = document.querySelectorAll('.date-' + dateFilterType.value);
                     selected.forEach(field => field.classList.remove('d-none'));
                 }
-            });
-
-            // Initialize date fields visibility
-            const allDateFilters = document.querySelectorAll('.date-filter');
-            allDateFilters.forEach(field => field.classList.add('d-none'));
-            if (dateFilterType.value) {
-                const selected = document.querySelectorAll('.date-' + dateFilterType.value);
-                selected.forEach(field => field.classList.remove('d-none'));
             }
-        }
 
-        // Add event listeners for date inputs - only trigger on Apply button
-        document.querySelectorAll('.date-filter input').forEach(input => {
-            input.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    submitForm();
-                }
+            // Add event listeners for date inputs - only trigger on Apply button
+            document.querySelectorAll('.date-filter input').forEach(input => {
+                input.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        submitForm();
+                    }
+                });
             });
         });
-    });
 
-    // Add sorting functionality
-    document.addEventListener('DOMContentLoaded', function() {
-        const sortableHeaders = document.querySelectorAll('.sortable');
-        sortableHeaders.forEach(header => {
-            header.addEventListener('click', function() {
-                const column = this.dataset.column;
-                const currentOrder = '<?= $sortOrder ?>';
-                const currentColumn = '<?= $sortColumn ?>';
-                
-                // Determine new sort order
-                let newOrder = 'ASC';
-                if (column === currentColumn) {
-                    newOrder = currentOrder === 'ASC' ? 'DESC' : 'ASC';
-                }
-                
-                // Get current URL parameters
-                const urlParams = new URLSearchParams(window.location.search);
-                
-                // Update sort parameters
-                urlParams.set('sort', column);
-                urlParams.set('order', newOrder);
-                
-                // Redirect to new URL with sort parameters
-                window.location.href = window.location.pathname + '?' + urlParams.toString();
+        // Add sorting functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const sortableHeaders = document.querySelectorAll('.sortable');
+            sortableHeaders.forEach(header => {
+                header.addEventListener('click', function() {
+                    const column = this.dataset.column;
+                    const currentOrder = '<?= $sortOrder ?>';
+                    const currentColumn = '<?= $sortColumn ?>';
+                    
+                    // Determine new sort order
+                    let newOrder = 'ASC';
+                    if (column === currentColumn) {
+                        newOrder = currentOrder === 'ASC' ? 'DESC' : 'ASC';
+                    }
+                    
+                    // Get current URL parameters
+                    const urlParams = new URLSearchParams(window.location.search);
+                    
+                    // Update sort parameters
+                    urlParams.set('sort', column);
+                    urlParams.set('order', newOrder);
+                    
+                    // Redirect to new URL with sort parameters
+                    window.location.href = window.location.pathname + '?' + urlParams.toString();
+                });
             });
-        });
         });
     </script>
 </body>

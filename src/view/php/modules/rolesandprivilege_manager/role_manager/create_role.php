@@ -1,11 +1,12 @@
 <?php
 /**
- * @file create_role.php
- * @brief handles the creation of new roles and the management of their privileges across different modules
+ * Create Role Module
  *
- * This script handles the creation of new roles and the management of their privileges across different modules.
- * It fetches existing roles and their associated modules and privileges for display and updating.
+ * This file provides functionality to create new roles in the system. It handles the creation of role data, including permissions and settings. The module ensures proper validation, user authorization, and maintains data consistency during the role creation process.
  *
+ * @package    InventoryManagementSystem
+ * @subpackage RolesAndPrivilegeManager
+ * @author     TMDD Interns 25'
  */
 session_start();
 require_once('../../../../../../config/ims-tmdd.php');// Database connection

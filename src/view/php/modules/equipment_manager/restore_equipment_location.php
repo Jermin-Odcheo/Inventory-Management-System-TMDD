@@ -1,13 +1,12 @@
 <?php
 /**
- * @file restore_equipment_location.php
- * @brief Handles the restoration of soft-deleted equipment location records.
+ * Restore Equipment Location Module
  *
- * This script processes POST requests to restore one or more equipment location records
- * (by setting `is_disabled` to 0). It also cascades the restoration to related
- * `equipment_details` and `equipment_status` records with the same asset tag.
- * It includes checks for existing active records to prevent duplicates and logs all
- * restoration actions in the `audit_log` table within a database transaction.
+ * This file provides functionality to restore previously modified equipment locations in the system. It handles the recovery of location information, including historical records and change logs. The module ensures proper validation, user authorization, and maintains data consistency during the restoration process.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage EquipmentManager
+ * @author     TMDD Interns 25'
  */
 
 session_start(); // Start the PHP session.

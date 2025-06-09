@@ -1,12 +1,12 @@
 <?php
 /**
- * Creates a new user in the Inventory Management System.
- * 
- * This script handles the creation of a new user by processing form data submitted via POST request.
- * It validates input fields such as email, username, password, and department assignments, checks for
- * uniqueness of email and username, logs the action in an audit log, and returns a JSON response indicating
- * the success or failure of the operation. The script also supports custom department creation and handles
- * multiple department and role assignments.
+ * Create User Module
+ *
+ * This file provides functionality to create new user accounts in the system. It handles the creation of user data, including personal information, role assignments, and department associations. The module ensures proper validation, user authorization, and maintains data consistency during the user creation process.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage UserManager
+ * @author     TMDD Interns 25'
  */
 // create_user.php
 session_start();

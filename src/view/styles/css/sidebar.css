@@ -49,6 +49,17 @@
     display: none;
 }
 
+/* Keep dashboard icon visible in collapsed state */
+.sidebar.collapsed nav ul li:first-child a {
+    justify-content: center;
+    padding: 12px 5px;
+}
+
+.sidebar.collapsed nav ul li:first-child a i {
+    margin-right: 0;
+    font-size: 1.2em;
+}
+
 .sidebar.collapsed .dropdown-toggle i.fas.fa-history {
     display: inline-block;
     cursor: pointer;

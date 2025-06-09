@@ -1,11 +1,12 @@
 <?php
 /**
- * @file create_module.php
- * @brief handles the creation and deletion of modules in the system
+ * Create Module Module
  *
- * This script handles the creation and deletion of modules in the system. It fetches existing modules
- * with their associated privileges and provides a form to add new modules with default privileges.
+ * This file provides functionality to create new modules in the system. It handles the creation of module data, including permissions and settings. The module ensures proper validation, user authorization, and maintains data consistency during the module creation process.
  *
+ * @package    InventoryManagementSystem
+ * @subpackage RolesAndPrivilegeManager
+ * @author     TMDD Interns 25'
  */
 require_once('../../../../../../config/ims-tmdd.php');// Database connection
 

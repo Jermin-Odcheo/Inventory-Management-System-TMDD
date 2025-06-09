@@ -1,11 +1,12 @@
 <?php
 /**
- * @file delete_role.php
- * @brief handles the deletion of a role from the system
+ * Delete Role Module
  *
- * This script handles the deletion of a role from the system. It performs a soft delete by marking the role as disabled,
- * logs the action in the audit log, and returns a JSON response indicating the success or failure of the operation.
+ * This file provides functionality to delete roles from the system. It handles the removal of role data, including associated permissions and settings. The module ensures proper validation, user authorization, and maintains data integrity during the deletion process.
  *
+ * @package    InventoryManagementSystem
+ * @subpackage RolesAndPrivilegeManager
+ * @author     TMDD Interns 25'
  */
 session_start();
 require_once('../../../../../../config/ims-tmdd.php'); // Adjust path as needed

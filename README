@@ -1,29 +1,257 @@
-File Structure
+# Inventory Management System (TMDD)
 
-A. Config - all db exports
-B. Public - only assets and index pls
-C. Src - actual coding area natin 
-    c.1 control : anything input management, i.e. yung functionalities and features, processes all the business logic and incoming requests, manipulates data using the Model component, and interact with the View to render the final output.
-        - Receiving user input and interpreting it.
-        - Updating the Model based on user actions.
-        - Selecting and displaying the appropriate View.
-        - Example: In a bookstore application, the Controller would handle actions such as searching for a book, adding a book to the cart, or checking out.
+## Overview
+A comprehensive inventory management system built with PHP, featuring role-based access control, real-time updates, and modern UI components.
 
-    c.2 model : anything data management, i.e. kung connectors from db to control, The model interacts with the database and gives the required data back to the controller, db queries and connection etc.
-        - Managing data: CRUD (Create, Read, Update, Delete) operations.
-        - Enforcing business rules.
-        - Notifying the View and Controller of state changes.
-        - Example: In a bookstore application, the Model would handle data related to books, such as the book title, author, price, and stock level.
+### Project and Team Details
 
-    c.3 view
-        - PHP : all modules na user 
-        - Styles : all css
+#### Project Development 
+- Duration:             January - June, 2025
+- Academic Year:        2025, 2nd Semester
+- Client Information
+* Department:           Technology Management and Development Department
+* Organization:         Saint Louis University (Main), Baguio City
 
-        Technologies used:
-        PHP
-        JS
-        Bootstrap
+#### Team Members
+TMDD Interns
+* Program/ Degree:      Bachelors of Science in Information Technology
+* Course:               Practicum Internship Program
 
-Models Used:
-RBAC Model
-Inventory Management Systems Model
+1. Lucas, Justine B.         -> 2202887@slu.edu.ph
+- Role: Team Leader, Front End Developer, Back End Developer, Quality Assurance
+2. Odcheo, Jermin B.         -> 2224981@slu.edu.ph
+- Role: Lead Back End Developer
+3. Pampo, John Gabriel V.    -> 2227003@slu.edu.ph
+- Role: Lead Front End Developer
+4. Balanza, Psalmer Josh C.  -> 2205867@slu.edu.ph
+- Role: Back End Developer
+5. Chua, Harvey Lance M.     -> 2166734@slu.edu.ph
+- Role: Back End Developer
+6. Garcia, Evan Danielle R.  -> 2222783@slu.edu.ph
+- Front End Developer
+
+## Technology Stack
+- Backend: PHP
+- Frontend: JavaScript, CSS, Bootstrap
+- UI Framework: Bootstrap 5.3.2
+- Database: MySQL 
+- Icons: Font Awesome
+- Styling: Custom CSS (index.css)
+- Other Technologies and API: Websocket, Composer, DomPDF, PHPOffice
+
+## Key Features
+- Role-Based Access Control (RBAC)
+- Inventory and asset management
+- Secure user authentication with session handling
+- Modern, responsive design with mobile support
+- Real-time updates via WebSocket
+
+## Security Features
+- Session-based authentication system
+- Show/hide password toggle
+- Input sanitization
+- Secure password hashing
+
+## Initial Administrator Access
+Username: navithebear
+Email: navi@example.com
+Password: navi123
+
+## Installation Guide
+
+### Server Setup (XAMPP)
+
+#### Apache Configuration
+1. Access httpd.conf:
+   - Via XAMPP Control Panel
+   - Direct path: C:\xampp\apache\conf\httpd.conf
+
+2. Configure Server:
+   - Set ServerName to localhost:80 (default port)
+   - Configure directory access rules
+   - Enable virtual hosts
+
+3. Virtual Host Setup:
+   - Edit C:\xampp\apache\conf\extra\httpd-vhosts.conf
+   - Add new Virtual Host entry
+   - Restart Apache
+
+#### Firewall Configuration
+1. Open Windows Firewall with Advanced Security
+2. Create new Inbound Rule
+3. Configure rule properties
+
+### Code Setup
+
+#### Composer Dependencies
+Run: composer install
+
+#### WebSocket Server Setup
+1. Verify File Structure:
+   - config/vendor/ (Composer dependencies)
+   - src/view/php/clients/websocket_server.php
+   - config/ims-tmdd.php (database config)
+
+2. Database Configuration:
+   - Update credentials in config/ims-tmdd.php
+
+3. Start WebSocket Server:
+   - Run websocket server
+   - Verify connection on port 8080
+
+## Configuration Details
+
+### Apache Configuration
+The Xampp configuration files can be managed in two ways:
+1. Through the XAMPP Control Panel
+2. Directly via the File System at "C:\xampp\apache\conf\httpd.conf"
+
+#### Listen Directive
+Specifies the ports the server should listen to for incoming connections.
+Example configuration:
+```apache
+# Listen on port 80 (default HTTP port)
+Listen 80
+```
+
+#### ServerName Configuration
+The ServerName directive defines the hostname and optional port number Apache should respond to. In this case, Apache will serve requests on localhost:80.
+
+Example configuration:
+```apache
+# ServerName configuration
+ServerName localhost:80
+```
+
+#### Directory Access Rules
+This configuration dictates how Apache handles access to the root directory:
+- Prevents .htaccess files from altering Apache's settings
+- Allows users to have unrestricted access to the root directory
+
+Example configuration:
+```apache
+<Directory "C:/xampp/htdocs">
+    Options Indexes FollowSymLinks Includes ExecCGI
+    AllowOverride All
+    Require all granted
+</Directory>
+```
+
+### Virtual Host Configuration
+1. Enable Virtual Hosts in Apache:
+   - Find and uncomment the line in "httpd.conf" to enable virtual hosts
+2. Configure Virtual Host:
+   - Open "httpd-vhosts.conf" at "C:\xampp\apache\conf\extra\"
+   - Add new Virtual Host entry
+
+Example Virtual Host configuration:
+```apache
+<VirtualHost *:80>
+    DocumentRoot "C:/xampp/htdocs/Inventory-Managment-System-TMDD"
+    ServerName localhost
+    <Directory "C:/xampp/htdocs/Inventory-Managment-System-TMDD">
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+</VirtualHost>
+```
+
+3. Restart Apache through XAMPP Control Panel
+
+### WebSocket Server Configuration
+
+#### File Structure Verification
+Ensure these files are in place:
+- config/vendor/ (created by Composer)
+- src/view/php/clients/websocket_server.php
+- config/ims-tmdd.php (database configuration)
+
+#### Database Configuration
+Verify your config/ims-tmdd.php file has the correct database credentials.
+
+#### WebSocket Server Code
+The websocket_server.php should contain:
+- Correct autoload path: require '../../../../config/vendor/autoload.php'
+- All required use statements
+- The ActivityStream class implementation
+- Server initialization code
+
+#### Server Startup
+1. Start the WebSocket Server
+   - You should see: "WebSocket server started on port 8080"
+2. Test the Connection:
+   - Open browser's developer tools
+   - Use a WebSocket client like wscat
+
+#### Running as a Service (Optional)
+For production environments:
+- Windows: Create a batch file and set it to run on startup
+- Linux: Use systemd or supervisor
+
+## Project Structure
+
+### Main Directories
+- config/ - Configuration files
+- misc/ - Miscellaneous code
+- public/ - Public web resources
+- src/ - Core application code
+- index files - Main entry points
+
+### Detailed Structure
+
+#### /config
+- vendor/ - Composer packages
+- xampp_configs/ - Server configurations
+- db_backups/ - Database backups
+- Key files:
+  - authenticate.php - Authentication logic
+  - composer.json - Dependencies
+  - config.php - App settings
+  - ims_tmddrbac.sql - Database schema
+  - ims-tmdd.php - DB connection
+  - password_hash.php - Security
+
+#### /public
+- assets/ - Static resources (images, icons)
+
+#### /src
+- control/
+  - js/ - Backend logic
+  - libs/ - Data processing
+  - RBACService.php - Security controls
+
+- view/
+  - php/
+    - clients/ - Client components
+    - general/ - Shared components
+    - modules/ - Feature-specific views
+      - user_management/
+      - equipment_manage/
+      - equipment_transactions/
+      - log_management/
+      - management/
+      - rolesandprivilege_manager/
+      - reports/
+  - styles/css/ - Styling components
+
+## Troubleshooting
+
+### Common Issues
+1. "Address already in use"
+   - Check port 8080 availability
+   - Modify port if needed
+
+2. "Class not found"
+   - Verify Composer installation
+   - Check autoload paths
+
+3. Database Connection
+   - Verify credentials
+   - Check database server status
+
+## Security Best Practices
+- Keep WebSocket server behind firewall
+- Implement authentication
+- Use WSS in production
+- Monitor server logs and memory usage

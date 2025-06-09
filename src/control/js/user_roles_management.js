@@ -285,13 +285,6 @@ document.addEventListener("DOMContentLoaded", function () {
         // This case handles users who might exist but have no relevant assignments after filtering
         const tr = $(`
             <tr>
-              <td>${
-                userPrivileges.canDelete
-                  ? '<input type="checkbox" class="select-row" value="' +
-                    user.id +
-                    '">'
-                  : ""
-              }</td>
               <td>${user.username}</td>
               <td>No Department</td>
               <td>No Role Assigned</td>
@@ -325,13 +318,6 @@ document.addEventListener("DOMContentLoaded", function () {
           if (rowIndex === 0) {
             tr = $(`
                 <tr>
-                  <td rowspan="${displayData.length}">${
-                  userPrivileges.canDelete
-                    ? '<input type="checkbox" class="select-row" value="' +
-                    user.id +
-                    '">'
-                  : ""
-                }</td>
                   <td rowspan="${displayData.length}">${user.username}</td>
                   <td>${row.departmentName}</td>
                   <td>${row.roleNames}</td>
@@ -1596,13 +1582,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  // Listen for changes on any checkbox in the table
-  if (userPrivileges.canDelete) {
-    $(document).on("change", ".select-row", function () {
-      toggleBulkDeleteButton();
-    });
-  }
-
   // Bulk delete event handler
   if ($("#delete-selected").length && userPrivileges.canDelete) {
     $("#delete-selected").click(function () {
@@ -1647,14 +1626,6 @@ document.addEventListener("DOMContentLoaded", function () {
           },
         });
       }
-    });
-  }
-
-  // "Select All" checkbox functionality (placed after table render)
-  if ($("#select-all").length && userPrivileges.canDelete) {
-    $("#select-all").on("change", function () {
-      $(".select-row").prop("checked", this.checked);
-      toggleBulkDeleteButton();
     });
   }
 

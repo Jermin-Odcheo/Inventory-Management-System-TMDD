@@ -1,10 +1,12 @@
 <?php
 /**
- * @file et_audit_log.php
- * @brief handles the display of audit logs for equipment tracking activities
+ * Equipment Transaction Audit Log Module
  *
- * This script handles the display of audit logs for equipment tracking activities. It checks user permissions,
- * fetches and filters audit log data based on various criteria, and formats the data for presentation in a user interface.
+ * This file provides comprehensive audit logging functionality for equipment transaction activities. It tracks and records all equipment movements, transfers, and status changes. The module ensures detailed logging of user actions, timestamps, and relevant data changes for security and accountability purposes.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage LogManagement
+ * @author     TMDD Interns 25'
  */
 session_start();
 require '../../../../../../config/ims-tmdd.php';
@@ -1111,13 +1113,76 @@ error_log("Number of results: " . count($auditLogs));
                     input.value = '';
                 });
                 
-                // Submit the form to refresh the page
-                filterForm.submit();
+                // Redirect to the base URL without any query parameters
+                window.location.href = window.location.pathname;
             });
 
             // Apply filters button
-            applyFiltersBtn.addEventListener('click', function() {
-                filterForm.submit();
+            applyFiltersBtn.addEventListener('click', function(e) {
+                // Date filter validation
+                const dateType = dateFilterType.value;
+                let isValid = true;
+                let errorMessage = '';
+
+                if (dateType === 'mdy') {
+                    const dateFrom = document.querySelector('input[name="date_from"]').value;
+                    const dateTo = document.querySelector('input[name="date_to"]').value;
+                    if (dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo)) {
+                        isValid = false;
+                        errorMessage = '"From" date cannot be greater than "To" date.';
+                    }
+                } else if (dateType === 'month_year') {
+                    const monthYearFrom = document.querySelector('input[name="month_year_from"]').value;
+                    const monthYearTo = document.querySelector('input[name="month_year_to"]').value;
+                    if (monthYearFrom && monthYearTo && new Date(monthYearFrom) > new Date(monthYearTo)) {
+                        isValid = false;
+                        errorMessage = '"From" month-year cannot be greater than "To" month-year.';
+                    }
+                } else if (dateType === 'year') {
+                    const yearFrom = document.querySelector('input[name="year_from"]').value;
+                    const yearTo = document.querySelector('input[name="year_to"]').value;
+                    if (yearFrom && yearTo && parseInt(yearFrom) > parseInt(yearTo)) {
+                        isValid = false;
+                        errorMessage = '"From" year cannot be greater than "To" year.';
+                    }
+                }
+
+                if (!isValid) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+
+                    // Remove any existing error message
+                    const existingError = document.querySelector('.date-error-message');
+                    if (existingError) {
+                        existingError.remove();
+                    }
+
+                    // Add error message below the auditFilterForm with max-width
+                    const formContainer = document.getElementById('auditFilterForm');
+                    if (formContainer) {
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'alert alert-danger alert-dismissible fade show mt-2 date-error-message';
+                        errorDiv.role = 'alert';
+                        errorDiv.style.cssText = 'max-width: 100%; margin-top: 10px;';
+                        errorDiv.innerHTML = `
+                            <strong> </strong> ${errorMessage}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        `;
+                        formContainer.insertAdjacentElement('afterend', errorDiv);
+
+                        // Auto-dismiss after 3 seconds
+                        setTimeout(() => {
+                            errorDiv.classList.remove('show');
+                            errorDiv.classList.add('fade');
+                            setTimeout(() => errorDiv.remove(), 150);
+                        }, 3000);
+                    }
+
+                    return false;
+                } else {
+                    // If validation passes, submit the form
+                    filterForm.submit();
+                }
             });
         });
     </script>

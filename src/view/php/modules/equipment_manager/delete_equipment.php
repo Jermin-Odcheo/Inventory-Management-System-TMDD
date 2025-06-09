@@ -1,12 +1,12 @@
 <?php
 /**
- * @file delete_equipment.php
- * @brief Handles the permanent deletion of equipment-related records from the database.
+ * Delete Equipment Module
  *
- * This script processes POST requests to permanently delete records from `equipment_location`,
- * `equipment_status`, or `equipment_details` tables based on the 'module' and 'id' provided.
- * It performs audit logging for deletions and handles cascading deletions for `equipment_details`.
- * All operations are wrapped in a database transaction for atomicity.
+ * This file provides functionality to delete equipment records from the system. It handles the removal of equipment data, including associated details, locations, and status information. The module ensures proper validation, user authorization, and maintains data integrity during the deletion process.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage EquipmentManager
+ * @author     TMDD Interns 25'
  */
 
 session_start(); // Start the PHP session.

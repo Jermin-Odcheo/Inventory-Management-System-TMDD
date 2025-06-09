@@ -1,10 +1,12 @@
 <?php
 /**
- * @file logout.php
- * @brief handles the logout process
+ * Logout Module
  *
- * This script handles the logout process. It sets the user's status to 'Offline'
- * and destroys the session.
+ * This file provides the logout functionality for the system. It handles user session termination, cleanup of session data, and secure redirection to the login page. The module ensures proper security measures are taken during the logout process.
+ *
+ * @package    InventoryManagementSystem
+ * @subpackage General
+ * @author     TMDD Interns 25'
  */
 session_start();
 require '../../../../config/ims-tmdd.php';
