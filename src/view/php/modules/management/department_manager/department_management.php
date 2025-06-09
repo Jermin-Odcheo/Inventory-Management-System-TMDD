@@ -19,6 +19,43 @@ include '../../../general/sidebar.php';
 // Determine if this is an AJAX request.
 $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 
+// Handle search request
+if (isset($_GET['action']) && $_GET['action'] === 'search') {
+    ob_clean(); // Clear any output buffers
+    header('Content-Type: application/json');
+    
+    $searchTerm = isset($_GET['search']) ? trim($_GET['search']) : '';
+    
+    try {
+        if (!empty($searchTerm)) {
+            $searchStmt = $pdo->prepare("
+                SELECT id, abbreviation, department_name 
+                FROM departments 
+                WHERE (department_name LIKE ? OR abbreviation LIKE ?)
+                AND is_disabled = 0
+                ORDER BY id DESC
+            ");
+            $searchTerm = "%{$searchTerm}%";
+            $searchStmt->execute([$searchTerm, $searchTerm]);
+        } else {
+            $searchStmt = $pdo->query("
+                SELECT id, abbreviation, department_name 
+                FROM departments 
+                WHERE is_disabled = 0 
+                ORDER BY id DESC
+            ");
+        }
+        
+        $results = $searchStmt->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode($results);
+        exit;
+    } catch (PDOException $e) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
+        exit;
+    }
+}
+
 /**
  * Check if the user is logged in.
  *
@@ -33,7 +70,7 @@ if (!isset($_SESSION['user_id'])) {
  * Initialize RBAC and enforce "View" privilege.
  *
  * @return void
-*/
+ */
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
 $rbac->requirePrivilege('Administration', 'View');
 
@@ -45,9 +82,7 @@ $rbac->requirePrivilege('Administration', 'View');
 $canCreate = $rbac->hasPrivilege('Administration', 'Create');
 $canModify = $rbac->hasPrivilege('Administration', 'Modify');
 $canDelete = $rbac->hasPrivilege('Administration', 'Remove');
-// $canCreate = true;
-// $canModify = true;
-// $canDelete = true;
+
 /**
  * Set the audit log session variables for MySQL triggers.
  *
@@ -362,7 +397,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  * @return void
  */
 try {
-    $stmt = $pdo->query("SELECT * FROM departments ORDER BY id DESC");
+    $stmt = $pdo->query("SELECT * FROM departments WHERE is_disabled = 0 ORDER BY id DESC");
     $departments = $stmt->fetchAll();
 } catch (PDOException $e) {
     $errors[] = "Error retrieving departments: " . $e->getMessage();
@@ -601,14 +636,11 @@ if (isset($_GET["q"])) {
                                             </button>
                                         <?php endif; ?>
 
-                                        <div class="input-group w-auto" id="livesearch">
-                                            <span class="input-group-text"><i class="bi bi-search"></i></span>
-                                            <input type="text" class="form-control" placeholder="Search..." id="eqSearch">
-                                        </div>
-
-                                        <div class="form-check form-switch ms-2">
-                                            <input class="form-check-input" type="checkbox" id="showDisabledToggle">
-                                            <label class="form-check-label" for="showDisabledToggle">Show Disabled Departments</label>
+                                        <div class="input-group w-auto" style="min-width:220px;">
+                                            <input type="text" id="searchInput" class="form-control" placeholder="Search departments...">
+                                            <button class="btn btn-outline-secondary" type="button" id="searchButton">
+                                                <i class="bi bi-search"></i>
+                                            </button>
                                         </div>
 
                                         <button type="button" id="clearFilters" class="btn btn-secondary shadow-sm">
@@ -630,15 +662,9 @@ if (isset($_GET["q"])) {
                                         </thead>
                                         <tbody>
                                             <?php foreach ($departments as $department): ?>
-                                                <tr class="<?php echo $department['is_disabled'] ? 'table-secondary' : ''; ?>" 
-                                                    style="<?php echo $department['is_disabled'] ? 'display: none;' : ''; ?>">
+                                                <tr>
                                                     <td><?php echo htmlspecialchars($department['abbreviation']); ?></td>
-                                                    <td>
-                                                        <?php echo htmlspecialchars($department['department_name']); ?>
-                                                        <?php if ($department['is_disabled']): ?>
-                                                            <span class="badge bg-secondary ms-2">Disabled</span>
-                                                        <?php endif; ?>
-                                                    </td>
+                                                    <td><?php echo htmlspecialchars($department['department_name']); ?></td>
                                                     <td class="text-center">
                                                         <div class="btn-group" role="group">
                                                             <?php if ($canModify): ?>
@@ -794,61 +820,35 @@ if (isset($_GET["q"])) {
             let currentPage = 1;
             let rowsPerPage = 10;
             let allTableRows = []; // To store all rows for client-side pagination
-            let deptIdToDelete = null; // Declare deptIdToDelete in the main scope
-
+            let deptIdToDelete = null;
 
             // Function to render table rows for the current page
             function renderTableRows() {
-                const searchText = $('#eqSearch').val().toLowerCase();
-                const showDisabled = $('#showDisabledToggle').is(':checked');
-                
-                // Filter rows based on current search and disabled status
-                const filteredRows = allTableRows.filter(row => {
-                    const isDisabled = $(row).hasClass('table-secondary');
-                    if (isDisabled && !showDisabled) return false;
-                    
-                    const rowText = $(row).text().toLowerCase();
-                    return searchText === '' || rowText.includes(searchText);
-                });
-
                 const tableBody = $('#departmentTable tbody');
-                tableBody.empty();
+                tableBody.empty(); // Clear existing rows
 
                 const startIndex = (currentPage - 1) * rowsPerPage;
                 const endIndex = startIndex + rowsPerPage;
-                const paginatedRows = filteredRows.slice(startIndex, endIndex);
+                const rowsToDisplay = allTableRows.slice(startIndex, endIndex);
 
-                paginatedRows.forEach(row => {
+                rowsToDisplay.forEach(row => {
                     tableBody.append(row);
                 });
 
-                // Update pagination info
-                const totalFilteredRows = filteredRows.length;
-                const displayedStart = totalFilteredRows === 0 ? 0 : startIndex + 1;
-                const displayedEnd = Math.min(endIndex, totalFilteredRows);
-                
+                // Update pagination info text
+                const totalRows = allTableRows.length;
+                const displayedStart = totalRows === 0 ? 0 : startIndex + 1;
+                const displayedEnd = Math.min(endIndex, totalRows);
                 $('#currentPage').text(currentPage);
                 $('#rowsPerPageDisplay').text(displayedEnd);
-                $('#totalRows').text(totalFilteredRows);
+                $('#totalRows').text(totalRows);
 
                 updatePaginationControls();
             }
 
             // Function to update pagination buttons and page numbers
             function updatePaginationControls() {
-                const searchText = $('#eqSearch').val().toLowerCase();
-                const showDisabled = $('#showDisabledToggle').is(':checked');
-                
-                // Filter rows based on current search and disabled status
-                const filteredRows = allTableRows.filter(row => {
-                    const isDisabled = $(row).hasClass('table-secondary');
-                    if (isDisabled && !showDisabled) return false;
-                    
-                    const rowText = $(row).text().toLowerCase();
-                    return searchText === '' || rowText.includes(searchText);
-                });
-
-                const totalPages = Math.ceil(filteredRows.length / rowsPerPage);
+                const totalPages = Math.ceil(allTableRows.length / rowsPerPage);
                 const paginationUl = $('#pagination');
                 paginationUl.empty();
 
@@ -902,7 +902,7 @@ if (isset($_GET["q"])) {
             window.initDepartmentPagination = function(initialPage = 1, initialRowsPerPage = 10) {
                 // Get all rows from the table (before any filtering/slicing)
                 allTableRows = $('#departmentTable tbody tr').get();
-
+                
                 // Set initial state
                 rowsPerPage = initialRowsPerPage;
                 $('#rowsPerPageSelect').val(rowsPerPage); // Update dropdown
@@ -921,98 +921,6 @@ if (isset($_GET["q"])) {
                     rowsPerPage = parseInt($(this).val());
                     currentPage = 1; // Reset to first page when rows per page changes
                     renderTableRows();
-                });
-
-                // Live search filtering (re-attach)
-                $('#eqSearch').off('keyup').on('keyup', function() {
-                    const searchText = $(this).val().toLowerCase();
-                    const showDisabled = $('#showDisabledToggle').is(':checked');
-                    
-                    // Get all rows from the original data
-                    if (!allTableRows || allTableRows.length === 0) {
-                        allTableRows = $('#departmentTable tbody tr').get();
-                    }
-
-                    // Filter rows based on search text and disabled status
-                    const filteredRows = allTableRows.filter(row => {
-                        const isDisabled = $(row).hasClass('table-secondary');
-                        if (isDisabled && !showDisabled) return false;
-                        
-                        const rowText = $(row).text().toLowerCase();
-                        return searchText === '' || rowText.includes(searchText);
-                    });
-
-                    // Update the table with filtered results
-                    const tableBody = $('#departmentTable tbody');
-                    tableBody.empty();
-
-                    // Apply pagination to filtered results
-                    const startIndex = (currentPage - 1) * rowsPerPage;
-                    const endIndex = startIndex + rowsPerPage;
-                    const paginatedRows = filteredRows.slice(startIndex, endIndex);
-
-                    paginatedRows.forEach(row => {
-                        tableBody.append(row);
-                    });
-
-                    // Update pagination info
-                    const totalFilteredRows = filteredRows.length;
-                    const displayedStart = totalFilteredRows === 0 ? 0 : startIndex + 1;
-                    const displayedEnd = Math.min(endIndex, totalFilteredRows);
-                    
-                    $('#currentPage').text(currentPage);
-                    $('#rowsPerPageDisplay').text(displayedEnd);
-                    $('#totalRows').text(totalFilteredRows);
-
-                    // Update pagination controls based on filtered results
-                    const totalPages = Math.ceil(totalFilteredRows / rowsPerPage);
-                    const paginationUl = $('#pagination');
-                    paginationUl.empty();
-
-                    // Add Previous button
-                    const prevLi = $('<li>').addClass('page-item');
-                    const prevButton = $('<button>').addClass('page-link').html('&laquo;');
-                    if (currentPage === 1) {
-                        prevLi.addClass('disabled');
-                    }
-                    prevButton.on('click', function() {
-                        if (currentPage > 1) {
-                            currentPage--;
-                            renderTableRows();
-                        }
-                    });
-                    prevLi.append(prevButton);
-                    paginationUl.append(prevLi);
-
-                    // Add page number buttons
-                    for (let i = 1; i <= totalPages; i++) {
-                        const li = $('<li>').addClass('page-item');
-                        const button = $('<button>').addClass('page-link').text(i);
-                        if (i === currentPage) {
-                            li.addClass('active');
-                        }
-                        button.on('click', function() {
-                            currentPage = i;
-                            renderTableRows();
-                        });
-                        li.append(button);
-                        paginationUl.append(li);
-                    }
-
-                    // Add Next button
-                    const nextLi = $('<li>').addClass('page-item');
-                    const nextButton = $('<button>').addClass('page-link').html('&raquo;');
-                    if (currentPage === totalPages) {
-                        nextLi.addClass('disabled');
-                    }
-                    nextButton.on('click', function() {
-                        if (currentPage < totalPages) {
-                            currentPage++;
-                            renderTableRows();
-                        }
-                    });
-                    nextLi.append(nextButton);
-                    paginationUl.append(nextLi);
                 });
 
                 // Open Edit Department modal and populate its fields (delegated event listener)
@@ -1063,7 +971,6 @@ if (isset($_GET["q"])) {
                     updatePaginationControls();
                 });
             }
-
 
             // Check for success or error messages from PHP session
             <?php if (!empty($success)): ?>
@@ -1265,9 +1172,9 @@ if (isset($_GET["q"])) {
                 }
             });
 
-            // Initial setup: call initDepartmentPagination and attachTableEventListeners
+            // Initial setup
             window.initDepartmentPagination();
-            attachTableEventListeners(); // Attach listeners on initial page load
+            attachTableEventListeners();
 
             // Set initial sort state to newest first (by ID)
             const rows = allTableRows;
@@ -1279,10 +1186,93 @@ if (isset($_GET["q"])) {
             allTableRows = rows;
             renderTableRows();
 
-            // Add clear filters functionality
+            // Add search functionality
+            $('#searchButton').on('click', function() {
+                performSearch();
+            });
+
+            $('#searchInput').on('keypress', function(e) {
+                if (e.which === 13) { // Enter key
+                    e.preventDefault();
+                    performSearch();
+                }
+            });
+
+            function performSearch() {
+                const searchTerm = $('#searchInput').val().trim();
+                
+                $.ajax({
+                    url: 'search_departments.php',
+                    method: 'GET',
+                    data: {
+                        search: searchTerm
+                    },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.error) {
+                            showToast(response.error, 'error', 5000);
+                            return;
+                        }
+
+                        // Clear existing table rows
+                        const tableBody = $('#departmentTable tbody');
+                        tableBody.empty();
+
+                        // Add new rows from search results
+                        response.forEach(function(dept) {
+                            const row = $('<tr>');
+                            row.append($('<td>').text(dept.abbreviation));
+                            row.append($('<td>').text(dept.department_name));
+                            
+                            const actionsCell = $('<td>').addClass('text-center');
+                            const btnGroup = $('<div>').addClass('btn-group').attr('role', 'group');
+                            
+                            <?php if ($canModify): ?>
+                            const editBtn = $('<button>')
+                                .addClass('edit-btn')
+                                .attr('type', 'button')
+                                .attr('data-id', dept.id)
+                                .attr('data-department-acronym', dept.abbreviation)
+                                .attr('data-department-name', dept.department_name)
+                                .html('<i class="bi bi-pencil-square"></i>');
+                            btnGroup.append(editBtn);
+                            <?php endif; ?>
+                            
+                            <?php if ($canDelete): ?>
+                            const deleteBtn = $('<button>')
+                                .addClass('delete-btn')
+                                .attr('type', 'button')
+                                .attr('data-id', dept.id)
+                                .attr('data-dept-name', dept.department_name)
+                                .html('<i class="bi bi-trash"></i>');
+                            btnGroup.append(deleteBtn);
+                            <?php endif; ?>
+                            
+                            actionsCell.append(btnGroup);
+                            row.append(actionsCell);
+                            tableBody.append(row);
+                        });
+
+                        // Update pagination with all search results
+                        allTableRows = $('#departmentTable tbody tr').get();
+                        currentPage = 1;
+                        renderTableRows();
+                        updatePaginationControls();
+                        
+                        // Reattach event listeners
+                        attachTableEventListeners();
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Search Error:', error);
+                        showToast('Error performing search: ' + error, 'error', 5000);
+                    }
+                });
+            }
+
+            // Update clear filters to also clear search and reload all data
             $('#clearFilters').on('click', function() {
                 // Clear search input
-                $('#eqSearch').val('');
+                $('#searchInput').val('');
                 
                 // Reset sort headers
                 $('.sortable').removeClass('asc desc');
@@ -1291,39 +1281,73 @@ if (isset($_GET["q"])) {
                 const initialSortHeader = $('.sortable[data-sort="acronym"]');
                 initialSortHeader.addClass('desc');
                 
-                // Reload the table content from server
-                $('#table').load(location.href + ' #table > *', function() {
-                    // Get all rows after reload
-                    allTableRows = $('#departmentTable tbody tr').get();
-                    const rows = allTableRows;
-                    rows.sort(function(a, b) {
-                        const idA = parseInt($(a).find('.edit-btn').data('id'));
-                        const idB = parseInt($(b).find('.edit-btn').data('id'));
-                        return idB - idA; // Sort by ID descending (newest first)
-                    });
-                    allTableRows = rows;
-                    
-                    // Reset to first page and render
-                    currentPage = 1;
-                    renderTableRows();
-                    updatePaginationControls();
-                    
-                    // Reattach event listeners
-                    attachTableEventListeners();
-                });
-            });
+                // Reload all data from server
+                $.ajax({
+                    url: 'search_departments.php',
+                    method: 'GET',
+                    data: {
+                        search: ''
+                    },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.error) {
+                            showToast(response.error, 'error', 5000);
+                            return;
+                        }
 
-            // Add toggle functionality for disabled departments
-            $('#showDisabledToggle').on('change', function() {
-                const showDisabled = $(this).is(':checked');
-                $('#departmentTable tbody tr').each(function() {
-                    if ($(this).hasClass('table-secondary')) {
-                        $(this).toggle(showDisabled);
+                        // Clear existing table rows
+                        const tableBody = $('#departmentTable tbody');
+                        tableBody.empty();
+
+                        // Add all rows back
+                        response.forEach(function(dept) {
+                            const row = $('<tr>');
+                            row.append($('<td>').text(dept.abbreviation));
+                            row.append($('<td>').text(dept.department_name));
+                            
+                            const actionsCell = $('<td>').addClass('text-center');
+                            const btnGroup = $('<div>').addClass('btn-group').attr('role', 'group');
+                            
+                            <?php if ($canModify): ?>
+                            const editBtn = $('<button>')
+                                .addClass('edit-btn')
+                                .attr('type', 'button')
+                                .attr('data-id', dept.id)
+                                .attr('data-department-acronym', dept.abbreviation)
+                                .attr('data-department-name', dept.department_name)
+                                .html('<i class="bi bi-pencil-square"></i>');
+                            btnGroup.append(editBtn);
+                            <?php endif; ?>
+                            
+                            <?php if ($canDelete): ?>
+                            const deleteBtn = $('<button>')
+                                .addClass('delete-btn')
+                                .attr('type', 'button')
+                                .attr('data-id', dept.id)
+                                .attr('data-dept-name', dept.department_name)
+                                .html('<i class="bi bi-trash"></i>');
+                            btnGroup.append(deleteBtn);
+                            <?php endif; ?>
+                            
+                            actionsCell.append(btnGroup);
+                            row.append(actionsCell);
+                            tableBody.append(row);
+                        });
+
+                        // Update pagination with all data
+                        allTableRows = $('#departmentTable tbody tr').get();
+                        currentPage = 1;
+                        renderTableRows();
+                        updatePaginationControls();
+                        
+                        // Reattach event listeners
+                        attachTableEventListeners();
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Clear Error:', error);
+                        showToast('Error clearing filters: ' + error, 'error', 5000);
                     }
                 });
-                
-                // Reinitialize pagination after toggling
-                window.initDepartmentPagination(currentPage, rowsPerPage);
             });
         });
     </script>
