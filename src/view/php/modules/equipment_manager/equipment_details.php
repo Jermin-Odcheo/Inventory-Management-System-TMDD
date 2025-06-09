@@ -862,6 +862,68 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
             padding: 0.375rem 0.75rem;
         }
 
+        /* Fix for Select2 dropdown positioning in modals */
+        .modal .select2-container {
+            width: 100% !important;
+        }
+
+        .modal .select2-container--open .select2-dropdown {
+            position: fixed !important;
+            width: auto !important;
+            min-width: 100% !important;
+            max-height: 200px !important;
+            overflow-y: auto !important;
+        }
+
+        .modal .select2-container--open .select2-dropdown--below {
+            margin-top: 5px !important;
+        }
+
+        .modal .select2-container--open .select2-dropdown--above {
+            margin-bottom: 5px !important;
+        }
+
+        .modal .select2-results__option {
+            padding: 4px 8px !important;
+            font-size: 0.9em !important;
+        }
+
+        /* Specific styles for RR dropdown */
+        .rr-select2 + .select2-container .select2-selection--single {
+            height: 32px !important;
+        }
+
+        .rr-select2 + .select2-container .select2-selection--single .select2-selection__rendered {
+            line-height: 32px !important;
+            padding-left: 8px !important;
+        }
+
+        .rr-select2 + .select2-container .select2-selection--single .select2-selection__arrow {
+            height: 30px !important;
+        }
+
+        /* Adjust RR dropdown width */
+        .rr-select2 + .select2-container--open .select2-dropdown {
+            width: 180px !important;
+            min-width: 180px !important;
+            max-width: 180px !important;
+        }
+
+        .rr-select2 + .select2-container--open .select2-results__option {
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+        }
+
+        .rr-select2 + .select2-container--open .select2-search--dropdown {
+            padding: 4px !important;
+        }
+
+        .rr-select2 + .select2-container--open .select2-search--dropdown .select2-search__field {
+            padding: 4px !important;
+            width: 100% !important;
+        }
+
         .filtered-out {
             display: none !important;
         }
@@ -1462,6 +1524,7 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
                 tags: true,
                 dropdownParent: $('#addEquipmentModal'),
                 minimumResultsForSearch: 0,
+                dropdownPosition: 'below',
                 createTag: function(params) {
                     var term = $.trim(params.term);
                     if (term === '') return null;
@@ -1485,6 +1548,7 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
                 tags: true,
                 dropdownParent: $('#editEquipmentModal'),
                 minimumResultsForSearch: 0,
+                dropdownPosition: 'below',
                 createTag: function(params) {
                     var term = $.trim(params.term);
                     if (term === '') return null;
