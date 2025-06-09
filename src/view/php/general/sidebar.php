@@ -308,6 +308,11 @@ function getAcronym($string) {
                         <i class="fas fa-chevron-down dropdown-icon"></i>
                     </button>
                     <ul class="dropdown tree">
+                        <i class="bi bi-file-earmark-check">
+                            <a href="<?php echo BASE_URL; ?>src/view/php/modules/reports/equipman_reports/eqrep.php">
+                                <span class="short-label"><?php echo getAcronym('Equipment Management'); ?>R</span>
+                            </a>
+                        </i>
                         <li><a href="<?php echo BASE_URL; ?>src/view/php/modules/reports/equipman_reports/eqrep.php">Equipment
                                 Management Report </a></li>
                     </ul>
