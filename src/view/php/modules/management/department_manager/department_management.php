@@ -33,7 +33,7 @@ if (!isset($_SESSION['user_id'])) {
  * Initialize RBAC and enforce "View" privilege.
  *
  * @return void
-*/
+ */
 $rbac = new RBACService($pdo, $_SESSION['user_id']);
 $rbac->requirePrivilege('Administration', 'View');
 
@@ -45,9 +45,7 @@ $rbac->requirePrivilege('Administration', 'View');
 $canCreate = $rbac->hasPrivilege('Administration', 'Create');
 $canModify = $rbac->hasPrivilege('Administration', 'Modify');
 $canDelete = $rbac->hasPrivilege('Administration', 'Remove');
-// $canCreate = true;
-// $canModify = true;
-// $canDelete = true;
+
 /**
  * Set the audit log session variables for MySQL triggers.
  *
@@ -362,7 +360,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  * @return void
  */
 try {
-    $stmt = $pdo->query("SELECT * FROM departments ORDER BY id DESC");
+    $stmt = $pdo->query("SELECT * FROM departments WHERE is_disabled = 0 ORDER BY id DESC");
     $departments = $stmt->fetchAll();
 } catch (PDOException $e) {
     $errors[] = "Error retrieving departments: " . $e->getMessage();
@@ -606,11 +604,6 @@ if (isset($_GET["q"])) {
                                             <input type="text" class="form-control" placeholder="Search..." id="eqSearch">
                                         </div>
 
-                                        <div class="form-check form-switch ms-2">
-                                            <input class="form-check-input" type="checkbox" id="showDisabledToggle">
-                                            <label class="form-check-label" for="showDisabledToggle">Show Disabled Departments</label>
-                                        </div>
-
                                         <button type="button" id="clearFilters" class="btn btn-secondary shadow-sm">
                                             <i class="bi bi-x-circle"></i> Clear
                                         </button>
@@ -630,15 +623,9 @@ if (isset($_GET["q"])) {
                                         </thead>
                                         <tbody>
                                             <?php foreach ($departments as $department): ?>
-                                                <tr class="<?php echo $department['is_disabled'] ? 'table-secondary' : ''; ?>" 
-                                                    style="<?php echo $department['is_disabled'] ? 'display: none;' : ''; ?>">
+                                                <tr>
                                                     <td><?php echo htmlspecialchars($department['abbreviation']); ?></td>
-                                                    <td>
-                                                        <?php echo htmlspecialchars($department['department_name']); ?>
-                                                        <?php if ($department['is_disabled']): ?>
-                                                            <span class="badge bg-secondary ms-2">Disabled</span>
-                                                        <?php endif; ?>
-                                                    </td>
+                                                    <td><?php echo htmlspecialchars($department['department_name']); ?></td>
                                                     <td class="text-center">
                                                         <div class="btn-group" role="group">
                                                             <?php if ($canModify): ?>
@@ -799,56 +786,32 @@ if (isset($_GET["q"])) {
 
             // Function to render table rows for the current page
             function renderTableRows() {
-                const searchText = $('#eqSearch').val().toLowerCase();
-                const showDisabled = $('#showDisabledToggle').is(':checked');
-                
-                // Filter rows based on current search and disabled status
-                const filteredRows = allTableRows.filter(row => {
-                    const isDisabled = $(row).hasClass('table-secondary');
-                    if (isDisabled && !showDisabled) return false;
-                    
-                    const rowText = $(row).text().toLowerCase();
-                    return searchText === '' || rowText.includes(searchText);
-                });
-
                 const tableBody = $('#departmentTable tbody');
-                tableBody.empty();
+                tableBody.empty(); // Clear existing rows
 
                 const startIndex = (currentPage - 1) * rowsPerPage;
                 const endIndex = startIndex + rowsPerPage;
-                const paginatedRows = filteredRows.slice(startIndex, endIndex);
+                const rowsToDisplay = allTableRows.slice(startIndex, endIndex);
 
-                paginatedRows.forEach(row => {
+                rowsToDisplay.forEach(row => {
                     tableBody.append(row);
                 });
 
-                // Update pagination info
-                const totalFilteredRows = filteredRows.length;
-                const displayedStart = totalFilteredRows === 0 ? 0 : startIndex + 1;
-                const displayedEnd = Math.min(endIndex, totalFilteredRows);
-                
+                // Update pagination info text
+                const totalRows = allTableRows.length;
+                const displayedStart = totalRows === 0 ? 0 : startIndex + 1;
+                const displayedEnd = Math.min(endIndex, totalRows);
                 $('#currentPage').text(currentPage);
                 $('#rowsPerPageDisplay').text(displayedEnd);
-                $('#totalRows').text(totalFilteredRows);
+                $('#totalRows').text(totalRows);
 
                 updatePaginationControls();
             }
 
             // Function to update pagination buttons and page numbers
             function updatePaginationControls() {
-                const searchText = $('#eqSearch').val().toLowerCase();
-                const showDisabled = $('#showDisabledToggle').is(':checked');
-                
-                // Filter rows based on current search and disabled status
-                const filteredRows = allTableRows.filter(row => {
-                    const isDisabled = $(row).hasClass('table-secondary');
-                    if (isDisabled && !showDisabled) return false;
-                    
-                    const rowText = $(row).text().toLowerCase();
-                    return searchText === '' || rowText.includes(searchText);
-                });
+                const totalPages = Math.ceil(allTableRows.length / rowsPerPage);
 
-                const totalPages = Math.ceil(filteredRows.length / rowsPerPage);
                 const paginationUl = $('#pagination');
                 paginationUl.empty();
 
@@ -926,93 +889,24 @@ if (isset($_GET["q"])) {
                 // Live search filtering (re-attach)
                 $('#eqSearch').off('keyup').on('keyup', function() {
                     const searchText = $(this).val().toLowerCase();
-                    const showDisabled = $('#showDisabledToggle').is(':checked');
-                    
-                    // Get all rows from the original data
-                    if (!allTableRows || allTableRows.length === 0) {
-                        allTableRows = $('#departmentTable tbody tr').get();
+                    const originalRows = $('#departmentTable').data('original-rows');
+
+                    if (!originalRows) {
+                        $('#departmentTable').data('original-rows', $('#departmentTable tbody tr').get());
+                        originalRows = $('#departmentTable tbody tr').get();
                     }
 
-                    // Filter rows based on search text and disabled status
-                    const filteredRows = allTableRows.filter(row => {
-                        const isDisabled = $(row).hasClass('table-secondary');
-                        if (isDisabled && !showDisabled) return false;
-                        
-                        const rowText = $(row).text().toLowerCase();
-                        return searchText === '' || rowText.includes(searchText);
-                    });
-
-                    // Update the table with filtered results
-                    const tableBody = $('#departmentTable tbody');
-                    tableBody.empty();
-
-                    // Apply pagination to filtered results
-                    const startIndex = (currentPage - 1) * rowsPerPage;
-                    const endIndex = startIndex + rowsPerPage;
-                    const paginatedRows = filteredRows.slice(startIndex, endIndex);
-
-                    paginatedRows.forEach(row => {
-                        tableBody.append(row);
-                    });
-
-                    // Update pagination info
-                    const totalFilteredRows = filteredRows.length;
-                    const displayedStart = totalFilteredRows === 0 ? 0 : startIndex + 1;
-                    const displayedEnd = Math.min(endIndex, totalFilteredRows);
-                    
-                    $('#currentPage').text(currentPage);
-                    $('#rowsPerPageDisplay').text(displayedEnd);
-                    $('#totalRows').text(totalFilteredRows);
-
-                    // Update pagination controls based on filtered results
-                    const totalPages = Math.ceil(totalFilteredRows / rowsPerPage);
-                    const paginationUl = $('#pagination');
-                    paginationUl.empty();
-
-                    // Add Previous button
-                    const prevLi = $('<li>').addClass('page-item');
-                    const prevButton = $('<button>').addClass('page-link').html('&laquo;');
-                    if (currentPage === 1) {
-                        prevLi.addClass('disabled');
-                    }
-                    prevButton.on('click', function() {
-                        if (currentPage > 1) {
-                            currentPage--;
-                            renderTableRows();
-                        }
-                    });
-                    prevLi.append(prevButton);
-                    paginationUl.append(prevLi);
-
-                    // Add page number buttons
-                    for (let i = 1; i <= totalPages; i++) {
-                        const li = $('<li>').addClass('page-item');
-                        const button = $('<button>').addClass('page-link').text(i);
-                        if (i === currentPage) {
-                            li.addClass('active');
-                        }
-                        button.on('click', function() {
-                            currentPage = i;
-                            renderTableRows();
+                    if (searchText.length > 0) {
+                        allTableRows = originalRows.filter(row => {
+                            const rowText = $(row).text().toLowerCase();
+                            return rowText.includes(searchText);
                         });
-                        li.append(button);
-                        paginationUl.append(li);
+                    } else {
+                        allTableRows = originalRows;
                     }
-
-                    // Add Next button
-                    const nextLi = $('<li>').addClass('page-item');
-                    const nextButton = $('<button>').addClass('page-link').html('&raquo;');
-                    if (currentPage === totalPages) {
-                        nextLi.addClass('disabled');
-                    }
-                    nextButton.on('click', function() {
-                        if (currentPage < totalPages) {
-                            currentPage++;
-                            renderTableRows();
-                        }
-                    });
-                    nextLi.append(nextButton);
-                    paginationUl.append(nextLi);
+                    currentPage = 1;
+                    renderTableRows();
+                    updatePaginationControls();
                 });
 
                 // Open Edit Department modal and populate its fields (delegated event listener)
@@ -1311,19 +1205,6 @@ if (isset($_GET["q"])) {
                     // Reattach event listeners
                     attachTableEventListeners();
                 });
-            });
-
-            // Add toggle functionality for disabled departments
-            $('#showDisabledToggle').on('change', function() {
-                const showDisabled = $(this).is(':checked');
-                $('#departmentTable tbody tr').each(function() {
-                    if ($(this).hasClass('table-secondary')) {
-                        $(this).toggle(showDisabled);
-                    }
-                });
-                
-                // Reinitialize pagination after toggling
-                window.initDepartmentPagination(currentPage, rowsPerPage);
             });
         });
     </script>
