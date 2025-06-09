@@ -1187,15 +1187,12 @@ if (isset($_GET["q"])) {
             renderTableRows();
 
             // Add search functionality
-            $('#searchButton').on('click', function() {
-                performSearch();
-            });
-
-            $('#searchInput').on('keypress', function(e) {
-                if (e.which === 13) { // Enter key
-                    e.preventDefault();
+            let searchTimeout;
+            $('#searchInput').on('input', function() {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(function() {
                     performSearch();
-                }
+                }, 300); // 300ms delay to prevent too many requests
             });
 
             function performSearch() {
