@@ -957,7 +957,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                     <th class="sortable" data-sort="string" data-column="2">Asset Tag</th>
                                     <th class="sortable" data-sort="string" data-column="3">Status</th>
                                     <th class="sortable" data-sort="string" data-column="4">Process Action Taken</th>
-                                    <th class="sortable" data-sort="date" data-column="5">Created Date</th>
+                                    <!-- <th class="sortable" data-sort="date" data-column="5">Created Date</th> -->
                                     <th class="sortable" data-sort="string" data-column="6">Remarks</th>
                                     <th>Actions</th>
                                 </tr>
@@ -977,7 +977,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
                                         echo "<td>" . htmlspecialchars($row['asset_tag']) . "</td>";
                                         echo "<td>" . htmlspecialchars($row['status']) . "</td>";
                                         echo "<td>" . htmlspecialchars($row['action']) . "</td>";
-                                        echo "<td>" . date('Y-m-d H:i', strtotime($row['date_created'])) . "</td>";
+                                        // echo "<td>" . date('Y-m-d H:i', strtotime($row['date_created'])) . "</td>";
                                         echo "<td>" . htmlspecialchars($row['remarks']) . "</td>";
                                         echo "<td>
                         <div class='d-flex justify-content-center gap-2'>";

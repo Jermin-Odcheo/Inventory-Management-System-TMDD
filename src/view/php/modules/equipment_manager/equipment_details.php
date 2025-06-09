@@ -198,10 +198,6 @@ WHERE ed.is_disabled = 0 AND (
                             'Y-m-d',
                             strtotime($equipment['date_acquired'])
                         ) : '') . '</td>';
-                        echo '<td>' . (!empty($equipment['date_created']) ? date(
-                            'Y-m-d H:i',
-                            strtotime($equipment['date_created'])
-                        ) : '') . '</td>';
                         echo '<td>' . (!empty($equipment['date_modified']) ? date(
                             'Y-m-d H:i',
                             strtotime($equipment['date_modified'])
@@ -1160,11 +1156,10 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
                                 <th class="sortable" data-column="6">Model</th>
                                 <th class="sortable" data-column="7">Serial #</th>
                                 <th class="sortable" data-column="8">Acquired Date</th>
-                                <th class="sortable d-none" data-column="9">Created Date</th>
-                                <th class="sortable d-none" data-column="10">Modified Date</th>
-                                <th class="sortable" data-column="11">RR #</th>
-                                <th class="sortable" data-column="12">Location</th>
-                                <th class="sortable" data-column="13">Accountable Individual</th>
+                                <th class="sortable d-none" data-column="9">Modified Date</th>
+                                <th class="sortable" data-column="10">RR #</th>
+                                <th class="sortable" data-column="11">Location</th>
+                                <th class="sortable" data-column="12">Accountable Individual</th>
                                 <th>Remarks</th>
                                 <th>Actions</th>
                             </tr>
@@ -1202,7 +1197,6 @@ $canDelete = $rbac->hasPrivilege('Equipment Management', 'Remove');
                                             }
                                             echo $display_date_table;
                                             ?></td>
-                                        <td class="d-none"><?= !empty($equipment['date_created']) ? date('Y-m-d H:i', strtotime($equipment['date_created'])) : ''; ?></td>
                                         <td class="d-none"><?= !empty($equipment['date_modified']) ? date('Y-m-d H:i', strtotime($equipment['date_modified'])) : ''; ?></td>
                                         <td><?= safeHtml((strpos($equipment['rr_no'] ?? '', 'RR') === 0 ? $equipment['rr_no'] : ('RR' . $equipment['rr_no']))); ?></td>
                                         <td><?= safeHtml($equipment['location']); ?></td>
