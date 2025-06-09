@@ -685,7 +685,7 @@ class UserRolesManagement {
                         <div class="form-group">
                             <label class="form-label">&nbsp;</label>
                             <button type="button" id="create-btn" class="btn btn-dark">
-                                <i class="bi bi-plus-lg"></i> Add User/s to role
+                                <i class="bi bi-plus-lg"></i> Add Role/s to User/s
                             </button>
                         </div>
                     <?php endif; ?>
