@@ -622,11 +622,27 @@ try {
             background-color: #e9ecef;
         }
 
-        .action-buttons {
-            margin-top: 1rem;
+        /* Consistent button styling in filter form */
+        #userFilterForm .btn {
+            height: 38px;
             display: flex;
-            gap: 0.5rem;
-            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+            padding: 0.375rem 0.75rem;
+        }
+
+        #userFilterForm .btn i {
+            margin-right: 0.5rem;
+        }
+
+        #userFilterForm .col {
+            display: flex;
+            flex-direction: column;
+        }
+
+        #userFilterForm .col > * {
+            width: 100%;
         }
 
         /* Make the filters container responsive */
@@ -819,7 +835,7 @@ try {
                             <div class="col">
                                 <label class="form-label d-none d-md-block">&nbsp;</label>
                                 <?php if ($canCreate): ?>
-                                    <button type="button" id="create-btn" class="btn btn-dark w-100">
+                                    <button type="button" id="create-btn" class="btn btn-dark">
                                         <i class="bi bi-plus-lg"></i> Create New User
                                     </button>
                                 <?php endif; ?>
@@ -842,20 +858,9 @@ try {
                                             echo '<option value="' . $name . '" ' . $selected . '>' . $label . '</option>';
                                         }
                                     } catch (PDOException $e) {
-                                        // fallback: empty
+                                        echo "<!-- Error fetching departments: " . htmlspecialchars($e->getMessage()) . " -->";
                                     }
                                     ?>
-                                </select>
-                            </div>
-
-                            <!-- Date Filter Type -->
-                            <div class="col">
-                                <label class="form-label fw-semibold">Date Filter Type</label>
-                                <select id="dateFilterType" name="date_filter_type" class="form-select shadow-sm">
-                                    <option value="">-- Select Type --</option>
-                                    <option value="month_year" <?= (($_GET['date_filter_type'] ?? '') === 'month_year') ? 'selected' : '' ?>>Month-Year Range</option>
-                                    <option value="year" <?= (($_GET['date_filter_type'] ?? '') === 'year') ? 'selected' : '' ?>>Year Range</option>
-                                    <option value="mdy" <?= (($_GET['date_filter_type'] ?? '') === 'mdy') ? 'selected' : '' ?>>Month-Date-Year Range</option>
                                 </select>
                             </div>
 
@@ -870,38 +875,37 @@ try {
 
                             <!-- Filter and Clear buttons -->
                             <div class="col">
+                                <label class="form-label d-none d-md-block">&nbsp;</label>
                                 <div class="d-flex gap-2">
-                                    <div class="flex-grow-1">
-                                        <label class="form-label d-none d-md-block">&nbsp;</label>
-                                        <button type="submit" id="apply-filters" name="apply-filters" class="btn btn-dark w-100">
-                                            <i class="bi bi-funnel"></i> Filter
-                                        </button>
-                                    </div>
-                                    <div class="flex-grow-1">
-                                        <label class="form-label d-none d-md-block">&nbsp;</label>
-                                        <a href="<?= $_SERVER['PHP_SELF'] ?>" id="clear-filters-btn" class="btn btn-secondary w-100">
-                                            <i class="bi bi-x-circle"></i> Clear
-                                        </a>
-                                    </div>
+                                    <button type="submit" id="apply-filters" name="apply-filters" class="btn btn-dark flex-grow-1">
+                                        <i class="bi bi-funnel"></i> Filter
+                                    </button>
+                                    <a href="<?= $_SERVER['PHP_SELF'] ?>" id="clear-filters-btn" class="btn btn-secondary flex-grow-1">
+                                        <i class="bi bi-x-circle"></i> Clear
+                                    </a>
                                 </div>
+                            </div>
+
+                            <!-- Manage Roles button -->
+                            <div class="col">
+                                <?php if ($rbac->hasPrivilege('User Management', 'Modify')): ?>
+                                    <label class="form-label d-none d-md-block">&nbsp;</label>
+                                    <a href="user_roles_management.php" class="btn btn-primary">
+                                        <i class="bi bi-person-gear"></i> Manage User Roles
+                                    </a>
+                                <?php endif; ?>
                             </div>
                             <!-- Manage Roles button -->
                             <div class="col">
- <?php if ($rbac->hasPrivilege('User Management', 'Modify')): ?>
-                                <label class="form-label d-none d-md-block">&nbsp;</label>
-                                <a href="user_roles_management.php" class="btn btn-primary w-100">
-                                    <i class="bi bi-person-gear"></i>  Manage User Roles
-                                </a>
-                <?php endif; ?>
-                <?php if ($canDelete): ?>
-     <!-- Bulk remove button, hidden until >=2 checked -->
-                    <button type="button" id="delete-selected"
-                        class="btn btn-danger"
-                        style="display:none;"
-                        disabled>
-                        Remove Selected
-                    </button>
-                <?php endif; ?>
+                                <?php if ($canDelete): ?>
+                                    <label class="form-label d-none d-md-block">&nbsp;</label>
+                                    <button type="button" id="delete-selected"
+                                        class="btn btn-danger"
+                                        style="display:none;"
+                                        disabled>
+                                        Remove Selected
+                                    </button>
+                                <?php endif; ?>
                             </div>
                         </div>
 
