@@ -195,7 +195,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             // Set default values for empty fields
             $floorNo = ''; // Default floor number
             $departmentId = null; // Default department ID
-            $deviceState = 'inventory'; // Default device state
+            $deviceState = 'Inventory'; // Default device state
             $remarks = ''; // Default remarks
             
             $insertStmt = $pdo->prepare("INSERT INTO equipment_location 
