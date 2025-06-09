@@ -968,7 +968,7 @@ function safeHtml($value)
                                     <th class="sortable" data-sort="string">Department <i class="fas fa-sort"></i></th>
                                     <th class="sortable" data-sort="string">Device State <i class="fas fa-sort"></i></th>
                                     <th>Remarks</th>
-                                    <th class="sortable" data-sort="date">Date Created <i class="fas fa-sort"></i></th>
+                                    <!-- <th class="sortable" data-sort="date">Date Created <i class="fas fa-sort"></i></th> -->
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -985,7 +985,7 @@ function safeHtml($value)
                                             <td><?= htmlspecialchars($loc['department_name'] ?? '') ?></td>
                                             <td><?= htmlspecialchars($loc['device_state'] ?? '') ?></td>
                                             <td><?= htmlspecialchars($loc['remarks'] ?? '') ?></td>
-                                            <td><?= date('Y-m-d H:i', strtotime($loc['date_created'])) ?></td>
+                                            <!-- <td><?= date('Y-m-d H:i', strtotime($loc['date_created'])) ?></td> -->
                                             <td>
                                                 <?php if ($canModify): ?>
                                                     <button class="btn btn-sm btn-outline-info edit-location"
