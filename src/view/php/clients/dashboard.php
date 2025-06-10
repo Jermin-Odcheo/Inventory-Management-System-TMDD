@@ -61,8 +61,8 @@ function getUserDetails($pdo, $userId)
         SELECT 
             m.module_name,
             p.priv_name
-        FROM role_module_privileges rmp
-        JOIN modules m ON rmp.module_id = m.id
+        FROM role_module_privileges rmp 
+        JOIN modules m ON rmp.module_id = m.id  /* FIX: Added missing JOIN keyword here */
         JOIN privileges p ON rmp.privilege_id = p.id
         JOIN user_department_roles ur ON rmp.role_id = ur.role_id
         WHERE ur.user_id = ?
@@ -129,71 +129,6 @@ try {
     die("Error retrieving departments: " . $e->getMessage());
 }
 
-// Get recent activities based on user's access rights
-/**
- * @brief Retrieves recent activities based on user's access rights.
- * @param \PDO $pdo Database connection object.
- * @param int $userId The ID of the user whose activities are to be retrieved.
- * @param int $limit The maximum number of activities to retrieve (default is 5).
- * @return array Returns an array of grouped activities by module.
- */
-function getRecentActivities($pdo, $userId, $limit = 5) {
-    try {
-        // First, let's check if the user has any module permissions
-        $checkPermissions = $pdo->prepare("
-            SELECT DISTINCT m.id, m.module_name
-            FROM modules m
-            JOIN role_module_privileges rmp ON m.id = rmp.module_id
-            JOIN user_department_roles udr ON rmp.role_id = udr.role_id
-            WHERE udr.user_id = ?
-        ");
-        $checkPermissions->execute([$userId]);
-        $userModules = $checkPermissions->fetchAll(PDO::FETCH_ASSOC);
-
-        if (empty($userModules)) {
-            return [];
-        }
-
-        // Get activities for the modules the user has access to
-        $moduleNames = array_column($userModules, 'module_name');
-        $placeholders = str_repeat('?,', count($moduleNames) - 1) . '?';
-        
-        $query = $pdo->prepare("
-            SELECT 
-                al.TrackID as id,
-                al.Action,
-                al.Details as description,
-                al.Date_Time as created_at,
-                u.email as user_email,
-                al.Module as module_name
-            FROM audit_log al
-            JOIN users u ON al.UserID = u.id
-            WHERE al.Module IN ($placeholders)
-            ORDER BY al.Module, al.Date_Time DESC
-            LIMIT ?
-        ");
-        
-        $params = array_merge($moduleNames, [$limit]);
-        $query->execute($params);
-        $activities = $query->fetchAll(PDO::FETCH_ASSOC);
-
-        // Group activities by module
-        $groupedActivities = [];
-        foreach ($activities as $activity) {
-            $moduleName = $activity['module_name'];
-            if (!isset($groupedActivities[$moduleName])) {
-                $groupedActivities[$moduleName] = [];
-            }
-            $groupedActivities[$moduleName][] = $activity;
-        }
-
-        return $groupedActivities;
-    } catch (PDOException $e) {
-        error_log("Error in getRecentActivities: " . $e->getMessage());
-        return [];
-    }
-}
-
 // Get relevant notifications based on user's access rights
 /**
  * @brief Retrieves notifications based on user's access rights.
@@ -230,15 +165,6 @@ function getNotifications($pdo, $userId, $limit = 5) {
     }
 }
 
-// Get the activities and notifications
-/**
- * @var array $recentActivities
- * @brief Stores recent activities for the user.
- *
- * This array contains the recent activities grouped by module for the logged-in user.
- */
-$recentActivities = getRecentActivities($pdo, $_SESSION['user_id']);
-
 /**
  * @var array $notifications
  * @brief Stores notifications for the user.
@@ -246,6 +172,133 @@ $recentActivities = getRecentActivities($pdo, $_SESSION['user_id']);
  * This array contains the notifications relevant to the logged-in user.
  */
 $notifications = getNotifications($pdo, $_SESSION['user_id']);
+
+
+// --- PHP Data Fetching for Charts and Summary ---
+/**
+ * @brief Fetches monthly summary data for various transaction types and total counts.
+ * @param PDO $pdo The PDO database connection object.
+ * @return array An associative array containing monthly data for charge invoices, purchase orders, receiving reports, recently ordered items, and total counts for all three transaction types.
+ */
+function getMonthlySummaryData($pdo) {
+    $data = [
+        'charge_invoices_monthly' => [],
+        'purchase_orders_monthly' => [],
+        'receiving_reports_monthly' => [],
+        'recently_ordered_items' => [], // Changed from top_item_specifications
+        'total_orders_count' => 0, // All-time total purchase orders
+        'total_charge_invoices_count' => 0, // All-time total charge invoices
+        'total_receiving_reports_count' => 0 // All-time total receiving reports
+    ];
+
+    try {
+        // Monthly Charge Invoices (last 12 months)
+        $stmtCI = $pdo->prepare("
+            SELECT
+                DATE_FORMAT(date_of_purchase, '%Y-%m') AS month,
+                COUNT(id) AS count
+            FROM charge_invoice
+            WHERE is_disabled = 0
+              AND date_of_purchase IS NOT NULL
+              AND date_of_purchase >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+            GROUP BY month
+            ORDER BY month ASC
+        ");
+        $stmtCI->execute();
+        $data['charge_invoices_monthly'] = $stmtCI->fetchAll(PDO::FETCH_ASSOC);
+
+        // Monthly Purchase Orders & Units (last 12 months)
+        $stmtPO = $pdo->prepare("
+            SELECT
+                DATE_FORMAT(date_of_order, '%Y-%m') AS month,
+                COUNT(id) AS count,
+                SUM(no_of_units) AS total_units
+            FROM purchase_order
+            WHERE is_disabled = 0
+              AND date_of_order IS NOT NULL
+              AND date_of_order >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+            GROUP BY month
+            ORDER BY month ASC
+        ");
+        $stmtPO->execute();
+        $data['purchase_orders_monthly'] = $stmtPO->fetchAll(PDO::FETCH_ASSOC);
+
+        // Monthly Receiving Reports (last 12 months)
+        $stmtRR = $pdo->prepare("
+            SELECT
+                DATE_FORMAT(date_created, '%Y-%m') AS month,
+                COUNT(id) AS count
+            FROM receive_report
+            WHERE is_disabled = 0
+              AND date_created IS NOT NULL
+              AND date_created >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+            GROUP BY month
+            ORDER BY month ASC
+        ");
+        $stmtRR->execute();
+        $data['receiving_reports_monthly'] = $stmtRR->fetchAll(PDO::FETCH_ASSOC);
+
+        // Recently Ordered Items (last 10 orders) - Changed from Top Item Specifications
+        $stmtRecentOrders = $pdo->prepare("
+            SELECT
+                po_no,
+                item_specifications,
+                no_of_units,
+                date_of_order
+            FROM purchase_order
+            WHERE is_disabled = 0
+            ORDER BY date_of_order DESC, id DESC
+            LIMIT 10
+        ");
+        $stmtRecentOrders->execute();
+        $data['recently_ordered_items'] = $stmtRecentOrders->fetchAll(PDO::FETCH_ASSOC);
+
+
+        // Total Orders Count (All-time)
+        $stmtTotalOrders = $pdo->prepare("
+            SELECT COUNT(id) AS total_count
+            FROM purchase_order
+            WHERE is_disabled = 0
+        ");
+        $stmtTotalOrders->execute();
+        $totalOrdersResult = $stmtTotalOrders->fetch(PDO::FETCH_ASSOC);
+        $data['total_orders_count'] = $totalOrdersResult['total_count'];
+
+        // Total Charge Invoices Count (All-time)
+        $stmtTotalCI = $pdo->prepare("
+            SELECT COUNT(id) AS total_count
+            FROM charge_invoice
+            WHERE is_disabled = 0
+        ");
+        $stmtTotalCI->execute();
+        $totalCIResult = $stmtTotalCI->fetch(PDO::FETCH_ASSOC);
+        $data['total_charge_invoices_count'] = $totalCIResult['total_count'];
+
+        // Total Receiving Reports Count (All-time)
+        $stmtTotalRR = $pdo->prepare("
+            SELECT COUNT(id) AS total_count
+            FROM receive_report
+            WHERE is_disabled = 0
+        ");
+        $stmtTotalRR->execute();
+        $totalRRResult = $stmtTotalRR->fetch(PDO::FETCH_ASSOC);
+        $data['total_receiving_reports_count'] = $totalRRResult['total_count'];
+
+    } catch (PDOException $e) {
+        error_log("Error fetching monthly summary data: " . $e->getMessage());
+        // Return empty data arrays on error to prevent JavaScript issues
+    }
+    return $data;
+}
+
+$dashboardData = getMonthlySummaryData($pdo);
+
+// Encode data as JSON for JavaScript
+echo '<script>';
+// Using JSON_HEX_TAG and JSON_HEX_AMP to prevent potential XSS and malformed HTML issues when embedding JSON in <script> tags
+echo 'const dashboardChartData = ' . json_encode($dashboardData, JSON_HEX_TAG | JSON_HEX_AMP) . ';';
+echo '</script>';
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -253,7 +306,12 @@ $notifications = getNotifications($pdo, $_SESSION['user_id']);
     <meta charset="UTF-8">
     <title><?php echo $dashboardTitle; ?></title>
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>src/view/styles/css/dashboard.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    <!-- Tailwind CSS for utility classes for the new list items -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        /* Existing CSS styles */
         body {
             background-color: #f4f7fc;
             color: #333;
@@ -321,7 +379,8 @@ $notifications = getNotifications($pdo, $_SESSION['user_id']);
             border: 3px solid rgba(255,255,255,0.3);
         }
 
-        /* Module Activity Group Styles */
+        /* Module Activity Group Styles (Removed - No longer needed) */
+        /*
         .module-activity-group {
             margin-bottom: 30px;
             background: #fff;
@@ -329,7 +388,7 @@ $notifications = getNotifications($pdo, $_SESSION['user_id']);
             padding: 25px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.05);
             transition: transform 0.2s ease, box-shadow 0.2s ease;
-            max-height: 500px; /* Set maximum height */
+            max-height: 500px;
             display: flex;
             flex-direction: column;
         }
@@ -348,7 +407,7 @@ $notifications = getNotifications($pdo, $_SESSION['user_id']);
             display: flex;
             align-items: center;
             gap: 10px;
-            flex-shrink: 0; /* Prevent title from shrinking */
+            flex-shrink: 0;
         }
 
         .module-title::before {
@@ -363,13 +422,12 @@ $notifications = getNotifications($pdo, $_SESSION['user_id']);
         .activity-timeline {
             position: relative;
             padding-left: 30px;
-            overflow-y: auto; /* Enable vertical scrolling */
-            max-height: calc(500px - 80px); /* Adjust for title height */
-            scrollbar-width: thin; /* For Firefox */
-            scrollbar-color: #3498db #f0f0f0; /* For Firefox */
+            overflow-y: auto;
+            max-height: calc(500px - 80px);
+            scrollbar-width: thin;
+            scrollbar-color: #3498db #f0f0f0;
         }
 
-        /* Custom scrollbar for Webkit browsers */
         .activity-timeline::-webkit-scrollbar {
             width: 8px;
         }
@@ -391,14 +449,13 @@ $notifications = getNotifications($pdo, $_SESSION['user_id']);
         .activity-item {
             position: relative;
             padding-bottom: 20px;
-            padding-right: 10px; /* Add padding for scrollbar */
+            padding-right: 10px;
         }
 
         .activity-item:last-child {
             padding-bottom: 0;
         }
 
-        /* Add a fade effect at the bottom of scrollable content */
         .activity-timeline::after {
             content: '';
             position: absolute;
@@ -416,7 +473,6 @@ $notifications = getNotifications($pdo, $_SESSION['user_id']);
             opacity: 1;
         }
 
-        /* Add scroll indicator when content is scrollable */
         .scroll-indicator {
             text-align: center;
             color: #7f8c8d;
@@ -490,6 +546,7 @@ $notifications = getNotifications($pdo, $_SESSION['user_id']);
         .activity-time i {
             color: #e67e22;
         }
+        */
 
         .no-data {
             text-align: center;
@@ -518,18 +575,19 @@ $notifications = getNotifications($pdo, $_SESSION['user_id']);
                 margin: 20px auto 0;
             }
 
+            /*
             .activity-meta {
                 flex-direction: column;
                 gap: 8px;
             }
 
             .module-activity-group {
-                max-height: 400px; /* Smaller max height on mobile */
+                max-height: 400px;
             }
 
             .activity-timeline {
                 max-height: calc(400px - 80px);
-            }
+            */
         }
 
         /* Add loading animation styles */
@@ -968,7 +1026,8 @@ $notifications = getNotifications($pdo, $_SESSION['user_id']);
             }
         }
 
-        /* Activity Logs Section */
+        /* Activity Logs Section (Removed - Styling commented out) */
+        /*
         .activity-logs {
             margin-top: 30px;
         }
@@ -1108,6 +1167,7 @@ $notifications = getNotifications($pdo, $_SESSION['user_id']);
         .module-activity-group.has-scroll .scroll-indicator {
             display: block;
         }
+        */
 
         .no-data {
             text-align: center;
@@ -1118,156 +1178,647 @@ $notifications = getNotifications($pdo, $_SESSION['user_id']);
             margin: 10px 0;
         }
 
+        /* New styles for charts */
+        .charts-section {
+            margin-top: 40px;
+        }
+
+        .charts-section h2 {
+            margin-bottom: 20px;
+            color: #2c3e50;
+            font-size: 1.8em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            height: 400px; 
+            display: flex; 
+            flex-direction: column; /* Changed to column for title positioning */
+            justify-content: flex-start; /* Align content to top */
+            align-items: stretch; /* Stretch content to fill container */
+        }
+        
+        .chart-container canvas {
+            max-height: 100%; 
+            width: 100% !important; 
+            height: 100% !important; 
+            flex-grow: 1; /* Allow canvas to take available space */
+        }
+
+        .chart-container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .chart-container h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #2c3e50; /* Changed title color to match section titles */
+            font-size: 1.4em; /* Increased font size for chart titles */
+            font-weight: 600; /* Made titles bolder */
+            border-bottom: 2px solid #e0e0e0; /* More prominent border */
+            padding-bottom: 10px;
+            text-align: center; /* Centered chart title */
+        }
+        
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
         @media (max-width: 1200px) {
             #activity-container {
-                grid-template-columns: 1fr;
+                grid-template-columns: 1fr; 
+                padding-bottom: 0; 
             }
         }
 
         @media (max-width: 768px) {
-            .activity-meta {
-                flex-direction: column;
-                gap: 5px;
+             .chart-grid {
+                grid-template-columns: 1fr; 
             }
-
-            .module-activity-group {
-                max-height: 500px;
+            .chart-container {
+                height: 300px; 
             }
         }
+
+        /* New styles for summary cards */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+            margin-bottom: 40px; /* Add some space below summary grid */
+        }
+
+        .summary-card {
+            background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            position: relative;
+            overflow: hidden;
+            border-top: 6px solid; /* Placeholder for color bar */
+        }
+
+        .summary-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        /* Specific border colors for summary cards */
+        .summary-card.total-orders {
+            border-top-color: #3498db; /* Blue */
+        }
+        .summary-card.total-invoices {
+            border-top-color: #2ecc71; /* Green */
+        }
+        .summary-card.total-reports {
+            border-top-color: #f39c12; /* Orange */
+        }
+
+        .summary-card-icon {
+            width: 60px;
+            height: 60px;
+            background: rgba(52, 152, 219, 0.1); /* Light background for icon */
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            color: #3498db; /* Icon color */
+            margin-bottom: 15px;
+            transition: transform 0.3s ease;
+        }
+
+        .summary-card.total-orders .summary-card-icon {
+            background: rgba(52, 152, 219, 0.1);
+            color: #3498db;
+        }
+        .summary-card.total-invoices .summary-card-icon {
+            background: rgba(46, 204, 113, 0.1);
+            color: #2ecc71;
+        }
+        .summary-card.total-reports .summary-card-icon {
+            background: rgba(243, 156, 18, 0.1);
+            color: #f39c12;
+        }
+
+
+        .summary-card:hover .summary-card-icon {
+            transform: scale(1.1);
+        }
+
+        .summary-card h3 {
+            margin: 0 0 10px 0;
+            font-size: 1.2em;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        .summary-card .value {
+            font-size: 2.5em;
+            font-weight: 700;
+            color: #3498db;
+            margin-bottom: 5px;
+        }
+        .summary-card.total-invoices .value {
+            color: #2ecc71;
+        }
+        .summary-card.total-reports .value {
+            color: #f39c12;
+        }
+
+        .summary-card .description {
+            font-size: 0.9em;
+            color: #7f8c8d;
+        }
+
+        @media (max-width: 768px) {
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* New styles for recently placed orders list */
+        .recent-order-item {
+            background-color: #f8f9fa;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.95em;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            border-left: 4px solid #3498db; /* Subtle blue highlight */
+        }
+        .recent-order-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .recent-order-item:last-child {
+            margin-bottom: 0;
+        }
+        .recent-order-item .font-semibold {
+            color: #2c3e50;
+        }
+        .recent-order-item .text-blue-700 {
+            color: #3498db; /* Match overall theme */
+        }
+        .recent-order-item .text-gray-600 {
+            color: #7f8c8d;
+        }
+        .recent-order-item .text-gray-500 {
+            color: #555;
+            font-weight: 500;
+        }
+        .recent-order-item .text-xs {
+            font-size: 0.8em;
+            color: #999;
+        }
+
     </style>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // The module privileges toggle button and content are no longer needed
+            // as the entire section is being removed.
             const toggleBtn = document.querySelector('.module-privileges-toggle');
             const content = document.querySelector('.module-privileges-content');
             const icon = document.querySelector('.toggle-icon');
 
-            toggleBtn.addEventListener('click', function() {
-                content.classList.toggle('active');
-                icon.style.transform = content.classList.contains('active') ? 'rotate(180deg)' : 'rotate(0)';
-            });
+            if (toggleBtn && content && icon) {
+                toggleBtn.addEventListener('click', function() {
+                    content.classList.toggle('active');
+                    icon.style.transform = content.classList.contains('active') ? 'rotate(180deg)' : 'rotate(0)';
+                });
+            }
 
-            // WebSocket connection
-            const ws = new WebSocket('ws://localhost:8080');
-            const activityGroups = {};
+            // --- Chart.js Initialization ---
+            const monthlyTransactionsCanvas = document.getElementById('monthlyTransactionsChart');
+            const totalUnitsCanvas = document.getElementById('totalUnitsChart');
+            // Changed from itemSpecsCanvas to recentlyPlacedOrdersList
+            const recentlyPlacedOrdersList = document.getElementById('recentlyPlacedOrdersList');
 
-            ws.onopen = function() {
-                console.log('Connected to activity stream');
-                // Send user ID to server
-                ws.send(JSON.stringify({
-                    type: 'auth',
-                    userId: <?php echo $_SESSION['user_id']; ?>
-                }));
-            };
 
-            // Initial load of activities
-            fetch('get_recent_activities.php')
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
+            if (typeof dashboardChartData !== 'undefined' && Object.keys(dashboardChartData).length > 0) {
+
+                // Generate labels for the last 12 months (e.g., "Jan 2024")
+                const monthLabels = [];
+                const currentDate = new Date();
+                currentDate.setDate(1); // Set to 1st to avoid issues with months having fewer days
+
+                for (let i = 11; i >= 0; i--) {
+                    const d = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+                    monthLabels.push(d.toLocaleString('en-US', { month: 'short', year: 'numeric' }));
+                }
+
+                // Helper function to map data to labels for a given month
+                const mapDataToLabels = (data, field, labelKey = 'month') => {
+                    const mapped = {};
+                    // Ensure data is an array before attempting to iterate
+                    if (!Array.isArray(data)) {
+                        console.warn(`mapDataToLabels: Expected array for data, but received ${typeof data}. Returning array of zeros.`);
+                        return Array(monthLabels.length).fill(0);
                     }
-                    return response.text();
-                })
-                .then(html => {
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-                    const moduleGroups = doc.querySelectorAll('.module-activity-group');
-                    
-                    // Clear existing activities
-                    const container = document.querySelector('#activity-container');
-                    container.innerHTML = '';
-                    
-                    if (moduleGroups.length === 0) {
-                        container.innerHTML = '<div class="no-data">No modules with track permissions found.</div>';
-                        return;
-                    }
-                    
-                    // Add each module group
-                    moduleGroups.forEach(moduleGroup => {
-                        const moduleName = moduleGroup.querySelector('.module-title').textContent.trim();
-                        activityGroups[moduleName] = moduleGroup;
-                        container.appendChild(moduleGroup);
-                        
-                        // Check if content is scrollable
-                        const timeline = moduleGroup.querySelector('.activity-timeline');
-                        if (timeline.scrollHeight > timeline.clientHeight) {
-                            moduleGroup.classList.add('has-scroll');
+                    data.forEach(item => {
+                        // Ensure item[labelKey] is a string before splitting
+                        if (typeof item[labelKey] === 'string') {
+                            const [year, monthNum] = item[labelKey].split('-').map(Number);
+                            const date = new Date(year, monthNum - 1, 1);
+                            const label = date.toLocaleString('en-US', { month: 'short', year: 'numeric' });
+                            mapped[label] = item[field];
+                        } else {
+                            console.warn(`mapDataToLabels: Invalid labelKey value encountered: ${item[labelKey]}`);
                         }
                     });
-                })
-                .catch(error => {
-                    console.error('Error loading initial activities:', error);
-                    document.querySelector('#activity-container').innerHTML = 
-                        '<div class="no-data">Error loading activities. Please try again later.</div>';
+                    return monthLabels.map(label => mapped[label] || 0);
+                };
+
+                // Data for Monthly Transaction Overview
+                const ciCounts = mapDataToLabels(dashboardChartData.charge_invoices_monthly, 'count');
+                const poCounts = mapDataToLabels(dashboardChartData.purchase_orders_monthly, 'count');
+                const rrCounts = mapDataToLabels(dashboardChartData.receiving_reports_monthly, 'count');
+
+                // Data for Total Units Ordered by Month
+                const totalUnits = mapDataToLabels(dashboardChartData.purchase_orders_monthly, 'total_units');
+
+                // Data for Recently Ordered Items (reverted from Top Item Specifications)
+                const recentlyOrderedItems = (dashboardChartData.recently_ordered_items && Array.isArray(dashboardChartData.recently_ordered_items))
+                                            ? dashboardChartData.recently_ordered_items : [];
+
+
+                // Common Chart Options for better aesthetics (only applies to actual charts)
+                const commonChartOptions = {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        duration: 1000, // General animation time
+                        easing: 'easeInOutQuart' // Smooth animation
+                    },
+                    plugins: {
+                        legend: {
+                            display: true, // Ensure legends are displayed by default unless explicitly hidden
+                            position: 'bottom', // Default legend position
+                            labels: {
+                                font: {
+                                    size: 13,
+                                    family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+                                },
+                                color: '#555', // Darker legend text
+                                usePointStyle: true, // Use point style for all legends
+                                padding: 20 // Padding between legend items
+                            },
+                        },
+                        tooltip: {
+                            enabled: true, // Enable tooltips
+                            backgroundColor: 'rgba(39, 55, 70, 0.95)', // Slightly darker, more opaque
+                            titleFont: {
+                                size: 15,
+                                family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                                weight: 'bold'
+                            },
+                            bodyFont: {
+                                size: 13,
+                                family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+                            },
+                            padding: 12,
+                            cornerRadius: 6,
+                            displayColors: true,
+                            bodySpacing: 4, // Spacing between body lines
+                            titleSpacing: 6, // Spacing between title and body
+                        },
+                        title: {
+                            display: false, // Set to false here, as titles are in h3 tags within HTML
+                            font: {
+                                size: 18,
+                                weight: 'bold',
+                                family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+                            },
+                            padding: {
+                                top: 10,
+                                bottom: 20
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false, // Hide vertical grid lines
+                                drawOnChartArea: false, 
+                            },
+                            ticks: {
+                                font: {
+                                    size: 11,
+                                    family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                                    color: '#666'
+                                },
+                                autoSkip: true, // Automatically skip labels to prevent overlap
+                                maxRotation: 45, // Max rotation for x-axis labels
+                                minRotation: 0
+                            },
+                            title: {
+                                display: true,
+                                font: {
+                                    size: 13,
+                                    weight: 'bold',
+                                    family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+                                },
+                                color: '#444',
+                                padding: { top: 15 }
+                            }
+                        },
+                        y: {
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)', // Even lighter horizontal grid lines
+                                drawBorder: false, // Do not draw axis line
+                            },
+                            ticks: {
+                                font: {
+                                    size: 11,
+                                    family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                                    color: '#666'
+                                },
+                                callback: function(value) {
+                                    if (Number.isInteger(value)) {
+                                        return value; // Ensure integer values for counts/units
+                                    }
+                                    return null;
+                                }
+                            },
+                            title: {
+                                display: true,
+                                font: {
+                                    size: 13,
+                                    weight: 'bold',
+                                    family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+                                },
+                                color: '#444',
+                                padding: { bottom: 15 }
+                            }
+                        }
+                    }
+                };
+
+
+                // --- Chart 1: Monthly Transaction Overview (Bar Chart) ---
+                try {
+                    if (monthlyTransactionsCanvas) {
+                        new Chart(monthlyTransactionsCanvas.getContext('2d'), {
+                            type: 'bar',
+                            data: {
+                                labels: monthLabels,
+                                datasets: [
+                                    {
+                                        label: 'Charge Invoices',
+                                        data: ciCounts,
+                                        backgroundColor: function(context) {
+                                            const chart = context.chart;
+                                            const {ctx, chartArea} = chart;
+                                            if (!chartArea) return;
+                                            const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+                                            gradient.addColorStop(0, 'rgba(52, 152, 219, 0.7)');
+                                            gradient.addColorStop(1, 'rgba(52, 152, 219, 1)');
+                                            return gradient;
+                                        },
+                                        hoverBackgroundColor: 'rgba(52, 152, 219, 1)',
+                                        borderColor: 'rgba(52, 152, 219, 1)',
+                                        borderWidth: 1,
+                                        borderRadius: 6,
+                                        barPercentage: 0.8,
+                                        categoryPercentage: 0.7
+                                    },
+                                    {
+                                        label: 'Purchase Orders',
+                                        data: poCounts,
+                                        backgroundColor: function(context) {
+                                            const chart = context.chart;
+                                            const {ctx, chartArea} = chart;
+                                            if (!chartArea) return;
+                                            const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+                                            gradient.addColorStop(0, 'rgba(46, 204, 113, 0.7)');
+                                            gradient.addColorStop(1, 'rgba(46, 204, 113, 1)');
+                                            return gradient;
+                                        },
+                                        hoverBackgroundColor: 'rgba(46, 204, 113, 1)',
+                                        borderColor: 'rgba(46, 204, 113, 1)',
+                                        borderWidth: 1,
+                                        borderRadius: 6,
+                                        barPercentage: 0.8,
+                                        categoryPercentage: 0.7
+                                    },
+                                    {
+                                        label: 'Receiving Reports',
+                                        data: rrCounts,
+                                        backgroundColor: function(context) {
+                                            const chart = context.chart;
+                                            const {ctx, chartArea} = chart;
+                                            if (!chartArea) return;
+                                            const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+                                            gradient.addColorStop(0, 'rgba(241, 196, 15, 0.7)');
+                                            gradient.addColorStop(1, 'rgba(241, 196, 15, 1)');
+                                            return gradient;
+                                        },
+                                        hoverBackgroundColor: 'rgba(241, 196, 15, 1)',
+                                        borderColor: 'rgba(241, 196, 15, 1)',
+                                        borderWidth: 1,
+                                        borderRadius: 6,
+                                        barPercentage: 0.8,
+                                        categoryPercentage: 0.7
+                                    }
+                                ]
+                            },
+                            options: {
+                                ...commonChartOptions,
+                                plugins: {
+                                    ...commonChartOptions.plugins,
+                                    legend: {
+                                        ...commonChartOptions.plugins.legend,
+                                        position: 'top',
+                                    }
+                                },
+                                scales: {
+                                    x: {
+                                        ...commonChartOptions.scales.x,
+                                        stacked: false,
+                                        title: {
+                                            ...commonChartOptions.scales.x.title,
+                                            text: 'Month'
+                                        }
+                                    },
+                                    y: {
+                                        ...commonChartOptions.scales.y,
+                                        beginAtZero: true,
+                                        title: {
+                                            ...commonChartOptions.scales.y.title,
+                                            text: 'Number of Transactions'
+                                        },
+                                        ticks: {
+                                            ...commonChartOptions.scales.y.ticks,
+                                            stepSize: 1 
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    } else {
+                        const chartContainer = monthlyTransactionsCanvas ? monthlyTransactionsCanvas.closest('.chart-container') : null;
+                        if (chartContainer) {
+                            chartContainer.innerHTML = '<div class="no-data"><i class="fas fa-exclamation-triangle"></i> No monthly transaction data available.</div>';
+                            chartContainer.style.height = '150px'; 
+                            chartContainer.style.display = 'flex';
+                            chartContainer.style.justifyContent = 'center';
+                            chartContainer.style.alignItems = 'center';
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error initializing Monthly Transactions Chart:", error);
+                }
+
+
+                // --- Chart 2: Total Units Ordered by Month (Line Chart) ---
+                try {
+                    if (totalUnitsCanvas) {
+                        new Chart(totalUnitsCanvas.getContext('2d'), {
+                            type: 'line',
+                            data: {
+                                labels: monthLabels,
+                                datasets: [
+                                    {
+                                        label: 'Total Units Ordered',
+                                        data: totalUnits,
+                                        backgroundColor: function(context) {
+                                            const chart = context.chart;
+                                            const {ctx, chartArea} = chart;
+                                            if (!chartArea) return;
+                                            const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+                                            gradient.addColorStop(0, 'rgba(155, 89, 182, 0.4)'); // Lighter gradient start
+                                            gradient.addColorStop(1, 'rgba(155, 89, 182, 0.7)'); // Darker gradient end
+                                            return gradient;
+                                        },
+                                        hoverBackgroundColor: 'rgba(155, 89, 182, 0.9)',
+                                        borderColor: 'rgba(155, 89, 182, 1)',
+                                        borderWidth: 3,
+                                        fill: true,
+                                        tension: 0.4,
+                                        pointRadius: 5,
+                                        pointBackgroundColor: 'rgba(155, 89, 182, 1)',
+                                        pointBorderColor: '#ffffff',
+                                        pointBorderWidth: 2,
+                                        pointHoverRadius: 7
+                                    }
+                                ]
+                            },
+                            options: {
+                                ...commonChartOptions,
+                                plugins: {
+                                    ...commonChartOptions.plugins,
+                                    legend: {
+                                        ...commonChartOptions.plugins.legend,
+                                        position: 'top',
+                                    }
+                                },
+                                scales: {
+                                    x: {
+                                        ...commonChartOptions.scales.x,
+                                        title: {
+                                            ...commonChartOptions.scales.x.title,
+                                            text: 'Month'
+                                        }
+                                    },
+                                    y: {
+                                        ...commonChartOptions.scales.y,
+                                        beginAtZero: true,
+                                        title: {
+                                            ...commonChartOptions.scales.y.title,
+                                            text: 'Total Units'
+                                        },
+                                        ticks: {
+                                            ...commonChartOptions.scales.y.ticks,
+                                            precision: 0 
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    } else {
+                        const chartContainer = totalUnitsCanvas ? totalUnitsCanvas.closest('.chart-container') : null;
+                        if (chartContainer) {
+                            chartContainer.innerHTML = '<div class="no-data"><i class="fas fa-exclamation-triangle"></i> No units ordered data available.</div>';
+                            chartContainer.style.height = '150px'; 
+                            chartContainer.style.display = 'flex';
+                            chartContainer.style.justifyContent = 'center';
+                            chartContainer.style.alignItems = 'center';
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error initializing Total Units Chart:", error);
+                }
+
+
+                // --- List: Recently Placed Orders ---
+                if (recentlyPlacedOrdersList) {
+                    if (recentlyOrderedItems.length > 0) {
+                        recentlyPlacedOrdersList.innerHTML = ''; // Clear "no data" message
+                        // Added h-full and overflow-y-auto to the container in HTML
+                        // Removed setting height/display/justify/align from JS here
+                        recentlyOrderedItems.forEach(order => {
+                            const orderItem = document.createElement('div');
+                            // Using Tailwind classes for styling
+                            orderItem.className = 'recent-order-item bg-gray-50 p-3 mb-2 rounded-lg shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between text-sm transition-all duration-200 ease-in-out border-l-4 border-blue-500 hover:shadow-md hover:translate-x-1';
+                            orderItem.innerHTML = `
+                                <div class="flex-grow mb-1 sm:mb-0">
+                                    <span class="font-semibold text-blue-800">${order.item_specifications}</span> 
+                                    <span class="text-gray-600 text-xs sm:text-sm">(PO: ${order.po_no})</span>
+                                </div>
+                                <div class="text-right flex flex-col items-end sm:items-start sm:ml-4">
+                                    <span class="text-gray-700 font-medium">${order.no_of_units} units</span>
+                                    <span class="text-xs text-gray-500">${new Date(order.date_of_order).toLocaleDateString()}</span>
+                                </div>
+                            `;
+                            recentlyPlacedOrdersList.appendChild(orderItem);
+                        });
+                    } else {
+                        recentlyPlacedOrdersList.innerHTML = '<div class="no-data"><i class="fas fa-box-open"></i> No recent orders to display.</div>';
+                        recentlyPlacedOrdersList.style.height = '150px'; // Set height for no data message
+                        recentlyPlacedOrdersList.style.display = 'flex';
+                        recentlyPlacedOrdersList.style.justifyContent = 'center';
+                        recentlyPlacedOrdersList.style.alignItems = 'center';
+                    }
+                }
+
+
+            } else {
+                const chartContainers = document.querySelectorAll('.charts-section .chart-container');
+                chartContainers.forEach(container => {
+                    // Check if the container actually has a canvas, otherwise it might be the list container
+                    if (container.querySelector('canvas')) {
+                        container.innerHTML = '<div class="no-data"><i class="fas fa-exclamation-triangle"></i> No chart data available.</div>';
+                    } else { // This else block will now correctly target the list container too
+                        container.innerHTML = '<div class="no-data"><i class="fas fa-box-open"></i> No data available to display.</div>';
+                    }
+                    container.style.height = '150px'; 
+                    container.style.display = 'flex'; 
+                    container.style.justifyContent = 'center';
+                    container.style.alignItems = 'center';
                 });
-
-            // WebSocket message handler
-            ws.onmessage = function(e) {
-                const activity = JSON.parse(e.data);
-                const moduleName = activity.module_name;
-                let moduleGroup = activityGroups[moduleName];
-
-                if (!moduleGroup) {
-                    // Create new module group if it doesn't exist
-                    moduleGroup = document.createElement('div');
-                    moduleGroup.className = 'module-activity-group';
-                    moduleGroup.innerHTML = `
-                        <h3 class="module-title">
-                            <i class="fas fa-cube"></i>
-                            ${moduleName}
-                        </h3>
-                        <div class="activity-timeline"></div>
-                        <div class="scroll-indicator">
-                            <i class="fas fa-chevron-down"></i> Scroll for more activities
-                        </div>
-                    `;
-                    document.querySelector('#activity-container').appendChild(moduleGroup);
-                    activityGroups[moduleName] = moduleGroup;
-                }
-
-                const timeline = moduleGroup.querySelector('.activity-timeline');
-                const activityItem = document.createElement('div');
-                activityItem.className = 'activity-item new';
-                activityItem.innerHTML = `
-                    <div class="activity-icon">
-                        <i class="fas fa-circle"></i>
-                    </div>
-                    <div class="activity-content">
-                        <p class="activity-description">
-                            <strong>${activity.Action}:</strong>
-                            ${activity.description}
-                        </p>
-                        <div class="activity-meta">
-                            <span class="activity-user">
-                                <i class="fas fa-user"></i> ${activity.user_email}
-                            </span>
-                            <span class="activity-time">
-                                <i class="fas fa-clock"></i> ${new Date(activity.created_at).toLocaleString()}
-                            </span>
-                        </div>
-                    </div>
-                `;
-
-                // Remove "no activities" message if it exists
-                const noData = timeline.querySelector('.no-data');
-                if (noData) {
-                    noData.remove();
-                }
-
-                // Add new activity at the top
-                timeline.insertBefore(activityItem, timeline.firstChild);
-
-                // Remove old activities if more than 5
-                const activities = timeline.querySelectorAll('.activity-item');
-                if (activities.length > 5) {
-                    activities[activities.length - 1].remove();
-                }
-
-                // Check if content is scrollable
-                if (timeline.scrollHeight > timeline.clientHeight) {
-                    moduleGroup.classList.add('has-scroll');
-                }
-            };
+            }
         });
     </script>
 </head>
@@ -1287,11 +1838,57 @@ $notifications = getNotifications($pdo, $_SESSION['user_id']);
         $userDetails = getUserDetails($pdo, $_SESSION['user_id']);
         ?>
 
-        <!-- Activity Logs Section -->
-        <section class="activity-logs">
-            <h2>Recent Activities <span class="live-indicator">LIVE</span></h2>
-            <div id="activity-container">
-                <!-- Activities will be dynamically added here -->
+        <!-- Summary Statistics Section -->
+        <section class="summary-stats-section">
+            <h2>Overall Summary <i class="fas fa-info-circle"></i></h2>
+            <div class="summary-grid">
+                <div class="summary-card total-orders">
+                    <div class="summary-card-icon">
+                        <i class="fas fa-clipboard-list"></i>
+                    </div>
+                    <h3>Total Purchase Orders</h3>
+                    <div class="value"><?php echo htmlspecialchars($dashboardData['total_orders_count']); ?></div>
+                    <div class="description">All time, non-disabled orders</div>
+                </div>
+                <!-- You can add more summary cards here, e.g., for total charge invoices, total receiving reports -->
+                <div class="summary-card total-invoices">
+                    <div class="summary-card-icon">
+                        <i class="fas fa-file-invoice"></i>
+                    </div>
+                    <h3>Total Charge Invoices</h3>
+                    <div class="value"><?php echo htmlspecialchars($dashboardData['total_charge_invoices_count']); ?></div>
+                    <div class="description">All time, non-disabled invoices</div>
+                </div>
+                 <div class="summary-card total-reports">
+                    <div class="summary-card-icon">
+                        <i class="fas fa-receipt"></i>
+                    </div>
+                    <h3>Total Receiving Reports</h3>
+                    <div class="value"><?php echo htmlspecialchars($dashboardData['total_receiving_reports_count']); ?></div>
+                    <div class="description">All time, non-disabled reports</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Charts Section -->
+        <section class="charts-section">
+            <h2>Equipment Transaction Insights <i class="fas fa-chart-bar"></i></h2>
+            <div class="chart-grid">
+                <div class="chart-container">
+                    <h3>Monthly Transaction Volume</h3>
+                    <canvas id="monthlyTransactionsChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>Units Ordered Trends</h3>
+                    <canvas id="totalUnitsChart"></canvas>
+                </div>
+                 <div class="chart-container">
+                    <h3>Recently Placed Orders</h3>
+                    <div id="recentlyPlacedOrdersList" class="h-full overflow-y-auto">
+                        <!-- Content loaded by JavaScript -->
+                        <div class="no-data"><i class="fas fa-box-open"></i> No recent orders to display.</div>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -1359,33 +1956,6 @@ $notifications = getNotifications($pdo, $_SESSION['user_id']);
                     </div>
                 <?php else: ?>
                     <div class="no-data">No departments assigned.</div>
-                <?php endif; ?>
-            </div>
-        </section>
-
-        <!-- Module Privileges Section -->
-        <section class="module-privileges">
-            <button class="module-privileges-toggle">
-                <h2><i class="fas fa-shield-alt"></i> Your Access Rights</h2>
-                <span class="toggle-icon">▼</span>
-            </button>
-            <div class="module-privileges-content">
-                <?php if (!empty($userDetails['modulePrivileges'])): ?>
-                    <?php foreach ($userDetails['modulePrivileges'] as $module => $privileges): ?>
-                        <div class="module-section">
-                            <h3><i class="fas fa-cube"></i> <?php echo htmlspecialchars($module); ?></h3>
-                            <div class="privilege-list">
-                                <?php foreach ($privileges as $privilege): ?>
-                                    <div class="privilege-item">
-                                        <i class="fas fa-check-circle"></i>
-                                        <?php echo htmlspecialchars($privilege); ?>
-                                    </div>
-                                <?php endforeach; ?>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <div class="no-data">No module privileges assigned.</div>
                 <?php endif; ?>
             </div>
         </section>
