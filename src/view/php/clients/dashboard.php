@@ -185,10 +185,10 @@ function getMonthlySummaryData($pdo) {
         'charge_invoices_monthly' => [],
         'purchase_orders_monthly' => [],
         'receiving_reports_monthly' => [],
-        'recently_ordered_items' => [], // Changed from top_item_specifications
-        'total_orders_count' => 0, // All-time total purchase orders
-        'total_charge_invoices_count' => 0, // All-time total charge invoices
-        'total_receiving_reports_count' => 0 // All-time total receiving reports
+        'recently_ordered_items' => [], 
+        'total_orders_count' => 0, 
+        'total_charge_invoices_count' => 0, 
+        'total_receiving_reports_count' => 0 
     ];
 
     try {
@@ -207,12 +207,11 @@ function getMonthlySummaryData($pdo) {
         $stmtCI->execute();
         $data['charge_invoices_monthly'] = $stmtCI->fetchAll(PDO::FETCH_ASSOC);
 
-        // Monthly Purchase Orders & Units (last 12 months)
+        // Monthly Purchase Orders (last 12 months) - Removed 'SUM(no_of_units) AS total_units'
         $stmtPO = $pdo->prepare("
             SELECT
                 DATE_FORMAT(date_of_order, '%Y-%m') AS month,
-                COUNT(id) AS count,
-                SUM(no_of_units) AS total_units
+                COUNT(id) AS count
             FROM purchase_order
             WHERE is_disabled = 0
               AND date_of_order IS NOT NULL
@@ -238,12 +237,11 @@ function getMonthlySummaryData($pdo) {
         $stmtRR->execute();
         $data['receiving_reports_monthly'] = $stmtRR->fetchAll(PDO::FETCH_ASSOC);
 
-        // Recently Ordered Items (last 10 orders) - Changed from Top Item Specifications
+        // Recently Ordered Items (last 10 orders) - Removed 'no_of_units' from SELECT statement
         $stmtRecentOrders = $pdo->prepare("
             SELECT
                 po_no,
                 item_specifications,
-                no_of_units,
                 date_of_order
             FROM purchase_order
             WHERE is_disabled = 0
@@ -295,7 +293,6 @@ $dashboardData = getMonthlySummaryData($pdo);
 
 // Encode data as JSON for JavaScript
 echo '<script>';
-// Using JSON_HEX_TAG and JSON_HEX_AMP to prevent potential XSS and malformed HTML issues when embedding JSON in <script> tags
 echo 'const dashboardChartData = ' . json_encode($dashboardData, JSON_HEX_TAG | JSON_HEX_AMP) . ';';
 echo '</script>';
 
@@ -379,175 +376,6 @@ echo '</script>';
             border: 3px solid rgba(255,255,255,0.3);
         }
 
-        /* Module Activity Group Styles (Removed - No longer needed) */
-        /*
-        .module-activity-group {
-            margin-bottom: 30px;
-            background: #fff;
-            border-radius: 16px;
-            padding: 25px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-            max-height: 500px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .module-activity-group:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
-        }
-
-        .module-title {
-            color: #2c3e50;
-            font-size: 1.4em;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #e0e0e0;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-shrink: 0;
-        }
-
-        .module-title::before {
-            content: '';
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            background: #3498db;
-            border-radius: 50%;
-        }
-
-        .activity-timeline {
-            position: relative;
-            padding-left: 30px;
-            overflow-y: auto;
-            max-height: calc(500px - 80px);
-            scrollbar-width: thin;
-            scrollbar-color: #3498db #f0f0f0;
-        }
-
-        .activity-timeline::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        .activity-timeline::-webkit-scrollbar-track {
-            background: #f0f0f0;
-            border-radius: 4px;
-        }
-
-        .activity-timeline::-webkit-scrollbar-thumb {
-            background: #3498db;
-            border-radius: 4px;
-        }
-
-        .activity-timeline::-webkit-scrollbar-thumb:hover {
-            background: #2980b9;
-        }
-
-        .activity-item {
-            position: relative;
-            padding-bottom: 20px;
-            padding-right: 10px;
-        }
-
-        .activity-item:last-child {
-            padding-bottom: 0;
-        }
-
-        .activity-timeline::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 30px;
-            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,1));
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .activity-timeline:not(:hover)::after {
-            opacity: 1;
-        }
-
-        .scroll-indicator {
-            text-align: center;
-            color: #7f8c8d;
-            font-size: 0.9em;
-            margin-top: 10px;
-            display: none;
-        }
-
-        .module-activity-group.has-scroll .scroll-indicator {
-            display: block;
-        }
-
-        .activity-icon {
-            position: absolute;
-            left: -30px;
-            width: 24px;
-            height: 24px;
-            background: #3498db;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 2px 4px rgba(52,152,219,0.3);
-        }
-
-        .activity-content {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            transition: transform 0.2s ease;
-        }
-
-        .activity-content:hover {
-            transform: translateX(5px);
-        }
-
-        .activity-description {
-            margin: 0 0 12px 0;
-            color: #2c3e50;
-            line-height: 1.5;
-            font-size: 1.05em;
-        }
-
-        .activity-description strong {
-            color: #3498db;
-            font-weight: 600;
-        }
-
-        .activity-meta {
-            display: flex;
-            gap: 20px;
-            font-size: 0.95em;
-            color: #7f8c8d;
-        }
-
-        .activity-meta span {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .activity-meta i {
-            font-size: 1em;
-        }
-
-        .activity-user i {
-            color: #3498db;
-        }
-
-        .activity-time i {
-            color: #e67e22;
-        }
-        */
-
         .no-data {
             text-align: center;
             padding: 30px;
@@ -574,20 +402,6 @@ echo '</script>';
                 transform: none;
                 margin: 20px auto 0;
             }
-
-            /*
-            .activity-meta {
-                flex-direction: column;
-                gap: 8px;
-            }
-
-            .module-activity-group {
-                max-height: 400px;
-            }
-
-            .activity-timeline {
-                max-height: calc(400px - 80px);
-            */
         }
 
         /* Add loading animation styles */
@@ -840,7 +654,8 @@ echo '</script>';
             font-weight: 500;
         }
 
-        /* Access Rights Styles */
+        /* Access Rights Styles (no longer present in HTML, CSS still for context) */
+        /*
         .access-rights-card {
             background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
             border-radius: 20px;
@@ -976,6 +791,7 @@ echo '</script>';
                 grid-template-columns: 1fr;
             }
         }
+        */
 
         /* Add animation for new activities */
         @keyframes slideIn {
@@ -1025,150 +841,7 @@ echo '</script>';
                 opacity: 1;
             }
         }
-
-        /* Activity Logs Section (Removed - Styling commented out) */
-        /*
-        .activity-logs {
-            margin-top: 30px;
-        }
-
-        .activity-logs h2 {
-            margin-bottom: 20px;
-            color: #2c3e50;
-            font-size: 1.8em;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        #activity-container {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
-            margin-top: 20px;
-        }
-
-        .module-activity-group {
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            overflow: hidden;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-            display: flex;
-            flex-direction: column;
-            max-height: 600px;
-        }
-
-        .module-activity-group:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-        }
-
-        .module-title {
-            background: linear-gradient(135deg, #3498db, #2980b9);
-            color: white;
-            padding: 20px;
-            margin: 0;
-            font-size: 1.3em;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-
-        .module-title i {
-            font-size: 1.2em;
-        }
-
-        .activity-timeline {
-            padding: 20px;
-            overflow-y: auto;
-            flex-grow: 1;
-            background: #f8f9fa;
-        }
-
-        .activity-item {
-            background: white;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            transition: transform 0.2s ease;
-            position: relative;
-            border-left: 4px solid #3498db;
-        }
-
-        .activity-item:hover {
-            transform: translateX(5px);
-        }
-
-        .activity-item:last-child {
-            margin-bottom: 0;
-        }
-
-        .activity-icon {
-            position: absolute;
-            left: -8px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 16px;
-            height: 16px;
-            background: #3498db;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 0.8em;
-        }
-
-        .activity-content {
-            padding-left: 15px;
-        }
-
-        .activity-description {
-            margin: 0 0 10px 0;
-            color: #2c3e50;
-            line-height: 1.5;
-        }
-
-        .activity-description strong {
-            color: #3498db;
-            font-weight: 600;
-        }
-
-        .activity-meta {
-            display: flex;
-            gap: 15px;
-            font-size: 0.9em;
-            color: #7f8c8d;
-        }
-
-        .activity-meta span {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .activity-meta i {
-            font-size: 1em;
-        }
-
-        .scroll-indicator {
-            background: #f8f9fa;
-            padding: 10px;
-            text-align: center;
-            color: #7f8c8d;
-            font-size: 0.9em;
-            border-top: 1px solid #e9ecef;
-            display: none;
-        }
-
-        .module-activity-group.has-scroll .scroll-indicator {
-            display: block;
-        }
-        */
-
+        
         .no-data {
             text-align: center;
             padding: 20px;
@@ -1236,9 +909,8 @@ echo '</script>';
         }
 
         @media (max-width: 1200px) {
-            #activity-container {
-                grid-template-columns: 1fr; 
-                padding-bottom: 0; 
+            .chart-grid {
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             }
         }
 
@@ -1366,7 +1038,7 @@ echo '</script>';
             align-items: center;
             font-size: 0.95em;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
-            border-left: 4px solid #3498db; /* Subtle blue highlight */
+            border-l-4 border-blue-500; /* Subtle blue highlight */
         }
         .recent-order-item:hover {
             transform: translateX(5px);
@@ -1397,23 +1069,10 @@ echo '</script>';
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // The module privileges toggle button and content are no longer needed
-            // as the entire section is being removed.
-            const toggleBtn = document.querySelector('.module-privileges-toggle');
-            const content = document.querySelector('.module-privileges-content');
-            const icon = document.querySelector('.toggle-icon');
-
-            if (toggleBtn && content && icon) {
-                toggleBtn.addEventListener('click', function() {
-                    content.classList.toggle('active');
-                    icon.style.transform = content.classList.contains('active') ? 'rotate(180deg)' : 'rotate(0)';
-                });
-            }
+            // No need for toggleBtn, content, icon as that HTML section is removed.
 
             // --- Chart.js Initialization ---
             const monthlyTransactionsCanvas = document.getElementById('monthlyTransactionsChart');
-            const totalUnitsCanvas = document.getElementById('totalUnitsChart');
-            // Changed from itemSpecsCanvas to recentlyPlacedOrdersList
             const recentlyPlacedOrdersList = document.getElementById('recentlyPlacedOrdersList');
 
 
@@ -1432,21 +1091,16 @@ echo '</script>';
                 // Helper function to map data to labels for a given month
                 const mapDataToLabels = (data, field, labelKey = 'month') => {
                     const mapped = {};
-                    // Ensure data is an array before attempting to iterate
                     if (!Array.isArray(data)) {
-                        console.warn(`mapDataToLabels: Expected array for data, but received ${typeof data}. Returning array of zeros.`);
                         return Array(monthLabels.length).fill(0);
                     }
                     data.forEach(item => {
-                        // Ensure item[labelKey] is a string before splitting
                         if (typeof item[labelKey] === 'string') {
                             const [year, monthNum] = item[labelKey].split('-').map(Number);
                             const date = new Date(year, monthNum - 1, 1);
                             const label = date.toLocaleString('en-US', { month: 'short', year: 'numeric' });
                             mapped[label] = item[field];
-                        } else {
-                            console.warn(`mapDataToLabels: Invalid labelKey value encountered: ${item[labelKey]}`);
-                        }
+                        } 
                     });
                     return monthLabels.map(label => mapped[label] || 0);
                 };
@@ -1456,10 +1110,7 @@ echo '</script>';
                 const poCounts = mapDataToLabels(dashboardChartData.purchase_orders_monthly, 'count');
                 const rrCounts = mapDataToLabels(dashboardChartData.receiving_reports_monthly, 'count');
 
-                // Data for Total Units Ordered by Month
-                const totalUnits = mapDataToLabels(dashboardChartData.purchase_orders_monthly, 'total_units');
-
-                // Data for Recently Ordered Items (reverted from Top Item Specifications)
+                // Data for Recently Ordered Items
                 const recentlyOrderedItems = (dashboardChartData.recently_ordered_items && Array.isArray(dashboardChartData.recently_ordered_items))
                                             ? dashboardChartData.recently_ordered_items : [];
 
@@ -1469,26 +1120,26 @@ echo '</script>';
                     responsive: true,
                     maintainAspectRatio: false,
                     animation: {
-                        duration: 1000, // General animation time
-                        easing: 'easeInOutQuart' // Smooth animation
+                        duration: 1000, 
+                        easing: 'easeInOutQuart' 
                     },
                     plugins: {
                         legend: {
-                            display: true, // Ensure legends are displayed by default unless explicitly hidden
-                            position: 'bottom', // Default legend position
+                            display: true, 
+                            position: 'bottom', 
                             labels: {
                                 font: {
                                     size: 13,
                                     family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
                                 },
-                                color: '#555', // Darker legend text
-                                usePointStyle: true, // Use point style for all legends
-                                padding: 20 // Padding between legend items
+                                color: '#555', 
+                                usePointStyle: true, 
+                                padding: 20 
                             },
                         },
                         tooltip: {
-                            enabled: true, // Enable tooltips
-                            backgroundColor: 'rgba(39, 55, 70, 0.95)', // Slightly darker, more opaque
+                            enabled: true, 
+                            backgroundColor: 'rgba(39, 55, 70, 0.95)', 
                             titleFont: {
                                 size: 15,
                                 family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
@@ -1501,11 +1152,11 @@ echo '</script>';
                             padding: 12,
                             cornerRadius: 6,
                             displayColors: true,
-                            bodySpacing: 4, // Spacing between body lines
-                            titleSpacing: 6, // Spacing between title and body
+                            bodySpacing: 4, 
+                            titleSpacing: 6, 
                         },
                         title: {
-                            display: false, // Set to false here, as titles are in h3 tags within HTML
+                            display: false, 
                             font: {
                                 size: 18,
                                 weight: 'bold',
@@ -1520,7 +1171,7 @@ echo '</script>';
                     scales: {
                         x: {
                             grid: {
-                                display: false, // Hide vertical grid lines
+                                display: false, 
                                 drawOnChartArea: false, 
                             },
                             ticks: {
@@ -1529,8 +1180,8 @@ echo '</script>';
                                     family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
                                     color: '#666'
                                 },
-                                autoSkip: true, // Automatically skip labels to prevent overlap
-                                maxRotation: 45, // Max rotation for x-axis labels
+                                autoSkip: true, 
+                                maxRotation: 45, 
                                 minRotation: 0
                             },
                             title: {
@@ -1546,8 +1197,8 @@ echo '</script>';
                         },
                         y: {
                             grid: {
-                                color: 'rgba(0, 0, 0, 0.05)', // Even lighter horizontal grid lines
-                                drawBorder: false, // Do not draw axis line
+                                color: 'rgba(0, 0, 0, 0.05)', 
+                                drawBorder: false, 
                             },
                             ticks: {
                                 font: {
@@ -1557,7 +1208,7 @@ echo '</script>';
                                 },
                                 callback: function(value) {
                                     if (Number.isInteger(value)) {
-                                        return value; // Ensure integer values for counts/units
+                                        return value; 
                                     }
                                     return null;
                                 }
@@ -1678,7 +1329,8 @@ echo '</script>';
                             }
                         });
                     } else {
-                        const chartContainer = monthlyTransactionsCanvas ? monthlyTransactionsCanvas.closest('.chart-container') : null;
+                        // Display no data message if canvas not found or no data
+                        const chartContainer = document.querySelector('.chart-container:has(#monthlyTransactionsChart)');
                         if (chartContainer) {
                             chartContainer.innerHTML = '<div class="no-data"><i class="fas fa-exclamation-triangle"></i> No monthly transaction data available.</div>';
                             chartContainer.style.height = '150px'; 
@@ -1692,95 +1344,12 @@ echo '</script>';
                 }
 
 
-                // --- Chart 2: Total Units Ordered by Month (Line Chart) ---
-                try {
-                    if (totalUnitsCanvas) {
-                        new Chart(totalUnitsCanvas.getContext('2d'), {
-                            type: 'line',
-                            data: {
-                                labels: monthLabels,
-                                datasets: [
-                                    {
-                                        label: 'Total Units Ordered',
-                                        data: totalUnits,
-                                        backgroundColor: function(context) {
-                                            const chart = context.chart;
-                                            const {ctx, chartArea} = chart;
-                                            if (!chartArea) return;
-                                            const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
-                                            gradient.addColorStop(0, 'rgba(155, 89, 182, 0.4)'); // Lighter gradient start
-                                            gradient.addColorStop(1, 'rgba(155, 89, 182, 0.7)'); // Darker gradient end
-                                            return gradient;
-                                        },
-                                        hoverBackgroundColor: 'rgba(155, 89, 182, 0.9)',
-                                        borderColor: 'rgba(155, 89, 182, 1)',
-                                        borderWidth: 3,
-                                        fill: true,
-                                        tension: 0.4,
-                                        pointRadius: 5,
-                                        pointBackgroundColor: 'rgba(155, 89, 182, 1)',
-                                        pointBorderColor: '#ffffff',
-                                        pointBorderWidth: 2,
-                                        pointHoverRadius: 7
-                                    }
-                                ]
-                            },
-                            options: {
-                                ...commonChartOptions,
-                                plugins: {
-                                    ...commonChartOptions.plugins,
-                                    legend: {
-                                        ...commonChartOptions.plugins.legend,
-                                        position: 'top',
-                                    }
-                                },
-                                scales: {
-                                    x: {
-                                        ...commonChartOptions.scales.x,
-                                        title: {
-                                            ...commonChartOptions.scales.x.title,
-                                            text: 'Month'
-                                        }
-                                    },
-                                    y: {
-                                        ...commonChartOptions.scales.y,
-                                        beginAtZero: true,
-                                        title: {
-                                            ...commonChartOptions.scales.y.title,
-                                            text: 'Total Units'
-                                        },
-                                        ticks: {
-                                            ...commonChartOptions.scales.y.ticks,
-                                            precision: 0 
-                                        }
-                                    }
-                                }
-                            }
-                        });
-                    } else {
-                        const chartContainer = totalUnitsCanvas ? totalUnitsCanvas.closest('.chart-container') : null;
-                        if (chartContainer) {
-                            chartContainer.innerHTML = '<div class="no-data"><i class="fas fa-exclamation-triangle"></i> No units ordered data available.</div>';
-                            chartContainer.style.height = '150px'; 
-                            chartContainer.style.display = 'flex';
-                            chartContainer.style.justifyContent = 'center';
-                            chartContainer.style.alignItems = 'center';
-                        }
-                    }
-                } catch (error) {
-                    console.error("Error initializing Total Units Chart:", error);
-                }
-
-
                 // --- List: Recently Placed Orders ---
                 if (recentlyPlacedOrdersList) {
                     if (recentlyOrderedItems.length > 0) {
-                        recentlyPlacedOrdersList.innerHTML = ''; // Clear "no data" message
-                        // Added h-full and overflow-y-auto to the container in HTML
-                        // Removed setting height/display/justify/align from JS here
+                        recentlyPlacedOrdersList.innerHTML = ''; 
                         recentlyOrderedItems.forEach(order => {
                             const orderItem = document.createElement('div');
-                            // Using Tailwind classes for styling
                             orderItem.className = 'recent-order-item bg-gray-50 p-3 mb-2 rounded-lg shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between text-sm transition-all duration-200 ease-in-out border-l-4 border-blue-500 hover:shadow-md hover:translate-x-1';
                             orderItem.innerHTML = `
                                 <div class="flex-grow mb-1 sm:mb-0">
@@ -1788,7 +1357,6 @@ echo '</script>';
                                     <span class="text-gray-600 text-xs sm:text-sm">(PO: ${order.po_no})</span>
                                 </div>
                                 <div class="text-right flex flex-col items-end sm:items-start sm:ml-4">
-                                    <span class="text-gray-700 font-medium">${order.no_of_units} units</span>
                                     <span class="text-xs text-gray-500">${new Date(order.date_of_order).toLocaleDateString()}</span>
                                 </div>
                             `;
@@ -1796,7 +1364,7 @@ echo '</script>';
                         });
                     } else {
                         recentlyPlacedOrdersList.innerHTML = '<div class="no-data"><i class="fas fa-box-open"></i> No recent orders to display.</div>';
-                        recentlyPlacedOrdersList.style.height = '150px'; // Set height for no data message
+                        recentlyPlacedOrdersList.style.height = '150px'; 
                         recentlyPlacedOrdersList.style.display = 'flex';
                         recentlyPlacedOrdersList.style.justifyContent = 'center';
                         recentlyPlacedOrdersList.style.alignItems = 'center';
@@ -1805,13 +1373,13 @@ echo '</script>';
 
 
             } else {
+                // Handle cases where dashboardChartData is completely empty or undefined
                 const chartContainers = document.querySelectorAll('.charts-section .chart-container');
                 chartContainers.forEach(container => {
-                    // Check if the container actually has a canvas, otherwise it might be the list container
-                    if (container.querySelector('canvas')) {
+                    if (container.querySelector('canvas')) { // Target chart canvases
                         container.innerHTML = '<div class="no-data"><i class="fas fa-exclamation-triangle"></i> No chart data available.</div>';
-                    } else { // This else block will now correctly target the list container too
-                        container.innerHTML = '<div class="no-data"><i class="fas fa-box-open"></i> No data available to display.</div>';
+                    } else if (container.id === 'recentlyPlacedOrdersList') { // Target the list container specifically
+                         container.innerHTML = '<div class="no-data"><i class="fas fa-box-open"></i> No data available to display.</div>';
                     }
                     container.style.height = '150px'; 
                     container.style.display = 'flex'; 
@@ -1850,7 +1418,6 @@ echo '</script>';
                     <div class="value"><?php echo htmlspecialchars($dashboardData['total_orders_count']); ?></div>
                     <div class="description">All time, non-disabled orders</div>
                 </div>
-                <!-- You can add more summary cards here, e.g., for total charge invoices, total receiving reports -->
                 <div class="summary-card total-invoices">
                     <div class="summary-card-icon">
                         <i class="fas fa-file-invoice"></i>
@@ -1878,11 +1445,8 @@ echo '</script>';
                     <h3>Monthly Transaction Volume</h3>
                     <canvas id="monthlyTransactionsChart"></canvas>
                 </div>
+                <!-- Removed Units Ordered Trends chart -->
                 <div class="chart-container">
-                    <h3>Units Ordered Trends</h3>
-                    <canvas id="totalUnitsChart"></canvas>
-                </div>
-                 <div class="chart-container">
                     <h3>Recently Placed Orders</h3>
                     <div id="recentlyPlacedOrdersList" class="h-full overflow-y-auto">
                         <!-- Content loaded by JavaScript -->
