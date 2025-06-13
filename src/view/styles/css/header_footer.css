@@ -338,20 +338,39 @@ body {
     }
 
     .user-profile {
-        padding: 0.4rem 0.8rem;
+        padding: 0.4rem;
+        background: transparent;
     }
 
-    .user-name {
-        font-size: 0.85rem;
-    }
-
-    .user-role {
-        font-size: 0.7rem;
+    .user-info {
+        display: none;
     }
 
     .profile-picture {
         width: 35px;
         height: 35px;
+        margin: 0;
+    }
+
+    .profile-picture-container {
+        margin: 0;
+    }
+
+    .dropdown-indicator {
+        width: 12px;
+        height: 12px;
+        font-size: 0.6rem;
+    }
+
+    /* Adjust dropdown menu position for mobile */
+    .dropdown-menu {
+        right: -10px;
+        min-width: 180px;
+    }
+
+    .dropdown-menu a {
+        padding: 0.6rem 1rem;
+        font-size: 0.85rem;
     }
 
     /* Dashboard specific styles */
