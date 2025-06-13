@@ -68,6 +68,16 @@ body {
     color: #E2E8F0;
     letter-spacing: -0.5px;
     margin-left: 5px;
+    white-space: nowrap;
+}
+
+.logo-acronym {
+    display: none;
+    font-family: 'Poppins', sans-serif;
+    font-size: 2rem;
+    font-weight: 700;
+    color: #38BDF8;
+    letter-spacing: -0.5px;
 }
 
 .logo-subtext {
@@ -297,25 +307,51 @@ body {
 
 @media (max-width: 768px) {
     .header {
-        flex-direction: column;
-        gap: 1.5rem;
-        padding: 1.5rem;
+        padding: 8px 15px;
+        left: var(--sidebar-collapsed-width, 70px);
     }
 
     .logo-container {
-        flex-direction: column;
-        text-align: center;
+        gap: 0.8rem;
+    }
+
+    .logo-icon {
+        width: 35px;
+        height: 35px;
+    }
+
+    .logo-icon svg {
+        width: 22px;
+        height: 22px;
+    }
+
+    .logo-text {
+        display: none;
+    }
+
+    .logo-acronym {
+        display: block;
     }
 
     .header-widgets {
-        flex-direction: column;
-        gap: 1rem;
-        width: 100%;
+        gap: 1.5rem;
     }
 
     .user-profile {
-        width: 100%;
-        justify-content: center;
+        padding: 0.4rem 0.8rem;
+    }
+
+    .user-name {
+        font-size: 0.85rem;
+    }
+
+    .user-role {
+        font-size: 0.7rem;
+    }
+
+    .profile-picture {
+        width: 35px;
+        height: 35px;
     }
 
     /* Dashboard specific styles */
@@ -374,12 +410,6 @@ body {
     .equipment-status .main-content.sidebar-collapsed {
         margin-left: 60px;
         width: calc(100% - 60px);
-    }
-}
-
-@media (max-width: 768px) {
-    .header {
-        left: 220px; /* Match the sidebar's responsive width */
     }
 }
 

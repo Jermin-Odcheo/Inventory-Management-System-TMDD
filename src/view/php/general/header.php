@@ -96,6 +96,7 @@ $roles_display = implode(', ', array_filter(array_unique($roles)));
             </div>
             <div>
                 <div class="logo-text">Inventory Management System</div>
+                <div class="logo-acronym">IMS</div>
             </div>
         </div>
 
