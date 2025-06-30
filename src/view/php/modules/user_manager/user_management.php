@@ -816,6 +816,15 @@ try {
         .modal .select2-container--open {
             z-index: 1060 !important; /* Higher than modal content */
         }
+        /* Ensure modals are not overlapped by the header */
+        #createUserModal .modal-dialog,
+        #editUserModal .modal-dialog,
+        #confirmDeleteModal .modal-dialog {
+            margin-top: 120px !important; /* Adjust as needed for your header height */
+        }
+        #editUserModal .modal-dialog {
+            margin-top: 90px !important; /* Slightly higher than other modals */
+        }
     </style>
 </head>
 
