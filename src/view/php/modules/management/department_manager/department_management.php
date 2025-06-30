@@ -607,6 +607,13 @@ if (isset($_GET["q"])) {
             content: "\f0dd";
             opacity: 1;
         }
+
+        /* Ensure modals are not overlapped by the header */
+        #addDepartmentModal .modal-dialog,
+        #editDepartmentModal .modal-dialog,
+        #deleteDepartmentModal .modal-dialog {
+            margin-top: 120px !important; /* Adjusted to appear lower on the page */
+        }
     </style>
 
 </head>
